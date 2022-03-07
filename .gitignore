@@ -1,0 +1,29 @@
+# Node / NPM / Yarn
+node_modules
+
+# Build
+/artifacts
+/cache
+/abi
+
+# Secrets
+.env
+.env.*
+
+# OS
+.DS_Store
+
+# IntelliJ IDEA
+*.iml
+*.iws
+*.ipr
+.idea/**
+
+# Code IDE
+.vscode/
+
+# Test Coverage
+coverage*
+
+# Environment Config
+environments.js

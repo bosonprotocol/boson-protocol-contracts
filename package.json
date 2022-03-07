@@ -1,0 +1,55 @@
+{
+    "name": "@bosonprotocol/boson-protocol-contracts",
+    "version": "0.2.0",
+    "description": "Boson Protocol core exchange mechanism",
+    "author": "Boson Protocol Maintainers",
+    "license": "GPL-3.0-or-later",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/bosonprotocol/boson-protocol-contracts.git"
+    },
+    "bugs": {
+        "url": "https://github.com/bosonprotocol/boson-protocol-contracts/issues"
+    },
+    "homepage": "https://github.com/bosonprotocol/boson-protocol-contracts",
+    "keywords": [
+        "blockchain",
+        "boson",
+        "ethereum",
+        "nft",
+        "solidity",
+        "web3"
+    ],
+    "scripts": {
+        "build": "npx hardhat compile",
+        "test": "npx hardhat test",
+        "lint": "solhint 'contracts/**/*.sol'",
+        "size": "npx hardhat size-contracts",
+        "deploy-suite:local": "npx hardhat run --network hardhat scripts/deploy-suite.js",
+        "deploy-suite:rinkeby": "npx hardhat run --network rinkeby scripts/deploy-suite.js >> logs/rinkeby.deploy.contracts.txt",
+        "deploy-suite:mainnet": "npx hardhat run --network mainnet scripts/deploy-suite.js >> logs/mainnet.deploy.contracts.txt",
+        "manage-roles:rinkeby": " npx hardhat --network rinkeby run scripts/manage-roles.js >> logs/rinkeby.manage.roles.txt",
+        "manage-roles:mainnet": " npx hardhat --network mainnet run scripts/manage-roles.js >> logs/mainnet.manage.roles.txt"
+    },
+    "dependencies": {
+        "@openzeppelin/contracts": "^4.4.2",
+        "@openzeppelin/contracts-upgradeable": "^4.4.2"
+    },
+    "devDependencies": {
+        "@nomiclabs/hardhat-ethers": "^2.0.4",
+        "@nomiclabs/hardhat-etherscan": "^3.0.0",
+        "@nomiclabs/hardhat-waffle": "^2.0.2",
+        "@nomiclabs/hardhat-web3": "^2.0.0",
+        "@openzeppelin/test-helpers": "^0.5.15",
+        "chai": "^4.3.6",
+        "eip55": "^2.1.0",
+        "ethereum-waffle": "^3.4.0",
+        "ethers": "^5.5.4",
+        "hardhat": "^2.8.3",
+        "hardhat-contract-sizer": "^2.4.0",
+        "hardhat-gas-reporter": "^1.0.7",
+        "solidity-coverage": "^0.7.18-eip165.0",
+        "solhint": "^3.3.7",
+        "web3": "^1.7.0"
+    }
+}
