@@ -2,8 +2,8 @@ const environments = require('../environments');
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const network = hre.network.name;
-const {ContractAddresses} = require('./constants/contract-addresses');
-const {RoleAssignments} = require('./constants/role-assignments');
+const {ContractAddresses} = require('./config/contract-addresses');
+const {RoleAssignments} = require('./config/role-assignments');
 const Role = require("./domain/Role");
 
 /**
@@ -18,7 +18,7 @@ const Role = require("./domain/Role");
  *     the assignments.
  *
  * Preparation:
- *  1.  Edit scripts/constants/role-assignments.js
+ *  1.  Edit scripts/config/role-assignments.js
  *  1a. Add new address / role assignments following existing config
  *  1b. To remove an existing role assignment, delete role from addresses' roles array
  *  1b. If removing all roles from a previously roled address,
