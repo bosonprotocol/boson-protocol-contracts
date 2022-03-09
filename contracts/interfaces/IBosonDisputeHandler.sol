@@ -13,7 +13,7 @@ import "../domain/BosonTypes.sol";
 interface IBosonDisputeHandler {
 
     /// Events
-    event DisputeRaised(uint256 indexed offerId, address indexed buyer, address indexed seller, string complaint);
+    event DisputeRaised(uint256 indexed exchangeId, uint256 indexed buyerId, uint256 indexed sellerId, string complaint);
 
     /**
      * @notice Raise a dispute

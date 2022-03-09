@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "../../interfaces/IBosonOfferHandler.sol";
+import "../../interfaces/IBosonExchangeHandler.sol";
 import "../../domain/BosonConstants.sol";
 import "../../domain/BosonTypes.sol";
 import "./ClientLib.sol";
@@ -31,20 +32,20 @@ abstract contract ClientBase is BosonTypes, BosonConstants {
     }
 
     /**
-     * @notice Get the info about the given offer
+     * @notice Get the info about the offer associated with a voucher's exchange
      *
-     * @param _offerId - the id of the offer to fetch
+     * @param _exchangeId - the id of the exchange
      * @return success - the offer was found
      * @return offer - the offer associated with the _offerId
      */
-    function getBosonOffer(uint256 _offerId)
+    function getBosonOffer(uint256 _exchangeId)
     internal
     view
     returns (bool success, Offer memory offer)
     {
         ClientLib.ProxyStorage memory ps = ClientLib.proxyStorage();
-        return IBosonOfferHandler(ps.protocolDiamond).getOffer(_offerId);
-
+        (bool found, Exchange memory exchange) = IBosonExchangeHandler(ps.protocolDiamond).getExchange(_exchangeId);
+        return IBosonOfferHandler(ps.protocolDiamond).getOffer(exchange.offerId);
     }
 
 }

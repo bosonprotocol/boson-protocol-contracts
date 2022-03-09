@@ -6,7 +6,7 @@ import "../domain/BosonTypes.sol";
 /**
  * @title ProtocolLib
  *
- * @dev Provides access to the the Protocol Storage and Intializer slots for Protocol facets
+ * @dev Provides access to the the Protocol Storage and Initializer slots for Protocol facets
  *
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
@@ -17,45 +17,76 @@ library ProtocolLib {
 
     struct ProtocolStorage {
 
-        // Address of the Boson Protocol multi-sig wallet
-        address payable multisigAddress;
+        // Address of the Boson Protocol treasury
+        address payable treasuryAddress;
 
         // Address of the Boson Token (ERC-20 contract)
         address payable tokenAddress;
 
-        // Address of the Boson Protocol Voucher NFT contract (proxy)
+        // Address of the Boson Protocol Voucher proxy
         address voucherAddress;
 
         // Percentage that will be taken as a fee from the net of a Boson Protocol exchange
-        uint16 feePercentage;         // 1.75% = 175, 100% = 10000
+        uint16 protocolFeePercentage;         // 1.75% = 175, 100% = 10000
 
-        // next offer id
+        // Next offer id
         uint256 nextOfferId;
+
+        // Next exchange id
+        uint256 nextExchangeId;
+
+        // Next account id
+        uint256 nextAccountId;
+
+        // Next group id
+        uint256 nextGroupId;
+
+        // Next twin id
+        uint256 nextBundleId;
+
+        // Next twin id
+        uint256 nextTwinId;
 
         // offer id => offer
         mapping(uint256 => BosonTypes.Offer) offers;
 
+        // exchange id => exchange
+        mapping(uint256 => BosonTypes.Exchange) exchanges;
+
+        // exchange id => dispute
+        mapping(uint256 => BosonTypes.Dispute) disputes;
+
+        // seller id => seller
+        mapping(uint256 => BosonTypes.Seller) sellers;
+
+        // buyer id => buyer
+        mapping(uint256 => BosonTypes.Buyer) buyers;
+
+        // group id => group
+        mapping(uint256 => BosonTypes.Group) groups;
+
+        // bundle id => bundle
+        mapping(uint256 => BosonTypes.Bundle) bundles;
+
+        // twin id => twin
+        mapping(uint256 => BosonTypes.Twin) twins;
+
     }
 
+    // Individual facet initialization states
     struct ProtocolInitializers {
 
-        // FundsHandlerFacet initialization state
-        bool cashierFacet;
+        bool fundsHandler;
 
-        // ConfigHandlerFacet initialization state
-        bool configFacet;
+        bool configHandler;
 
-        // DisputeHandlerFacet initialization state
-        bool disputeFacet;
+        bool disputeHandler;
 
-        // ExchangeHandlerFacet initialization state
-        bool exchangeFacet;
+        bool exchangeHandler;
 
-        // OfferHandlerFacet initialization state
-        bool offerFacet;
+        bool offerHandler;
 
-        // TwinHandlerFacet initialization state
-        bool twinningFacet;
+        bool twinHandler;
 
     }
 
@@ -73,10 +104,24 @@ library ProtocolLib {
         }
     }
 
+
+    /**
+     * @notice Gets the details about a given seller
+     *
+     * @param _sellerId - the id of the seller
+     * @return seller - the seller details. See {BosonTypes.Seller}
+     */
+    function getSeller(uint256 _sellerId)
+    internal
+    view
+    returns(BosonTypes.Seller storage seller) {
+        seller = protocolStorage().sellers[_sellerId];
+    }
+
     /**
      * @notice Gets the details about a given offer
      *
-     * @param _offerId - the id of the offer to check
+     * @param _offerId - the id of the offer
      * @return offer - the offer details. See {BosonTypes.Offer}
      */
     function getOffer(uint256 _offerId)
@@ -84,6 +129,19 @@ library ProtocolLib {
     view
     returns(BosonTypes.Offer storage offer) {
         offer = protocolStorage().offers[_offerId];
+    }
+
+    /**
+     * @notice Gets the details about a given exchange
+     *
+     * @param _exchangeId - the id of the exchange
+     * @return exchange - the exchange details. See {BosonTypes.Exchange}
+     */
+    function getExchange(uint256 _exchangeId)
+    internal
+    view
+    returns(BosonTypes.Exchange storage exchange) {
+        exchange = protocolStorage().exchanges[_exchangeId];
     }
 
 }

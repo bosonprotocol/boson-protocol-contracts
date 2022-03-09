@@ -19,8 +19,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     modifier onlyUnInitialized()
     {
         ProtocolLib.ProtocolInitializers storage pi = ProtocolLib.protocolInitializers();
-        require(!pi.configFacet, ALREADY_INITIALIZED);
-        pi.configFacet = true;
+        require(!pi.configHandler, ALREADY_INITIALIZED);
+        pi.configHandler = true;
         _;
     }
 
@@ -28,13 +28,13 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @notice Facet Initializer
      *
      * @param _tokenAddress - address of Boson Token (ERC-20) contract
-     * @param _multisigAddress - address of Boson Protocol DAO multi-sig wallet
-     * @param _feePercentage - percentage that will be taken as a fee from the net of a Boson Protocol exchange (after royalties)
+     * @param _treasuryAddress - address of Boson Protocol DAO multi-sig wallet
+     * @param _protocolFeePercentage - percentage that will be taken as a fee from the net of a Boson Protocol exchange (after royalties)
      */
     function initialize(
         address payable _tokenAddress,
-        address payable _multisigAddress,
-        uint16 _feePercentage
+        address payable _treasuryAddress,
+        uint16 _protocolFeePercentage
     )
     public
     onlyUnInitialized
@@ -45,8 +45,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         // Initialize protocol config params
         ProtocolLib.ProtocolStorage storage ps = ProtocolLib.protocolStorage();
         ps.tokenAddress = _tokenAddress;
-        ps.multisigAddress = _multisigAddress;
-        ps.feePercentage = _feePercentage;
+        ps.treasuryAddress = _treasuryAddress;
+        ps.protocolFeePercentage = _protocolFeePercentage;
     }
 
     /**
@@ -80,29 +80,29 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the address of the Boson Protocol multi-sig wallet.
      *
-     * Emits a MultisigAddressChanged event.
+     * Emits a TreasuryAddressChanged event.
      *
-     * @param _multisigAddress - the address of the multi-sig wallet
+     * @param _treasuryAddress - the address of the multi-sig wallet
      */
-    function setMultisigAddress(address payable _multisigAddress)
+    function setTreasuryAddress(address payable _treasuryAddress)
     external
     override
     onlyRole(ADMIN)
     {
-        protocolStorage().multisigAddress = _multisigAddress;
-        emit MultisigAddressChanged(_multisigAddress);
+        protocolStorage().treasuryAddress = _treasuryAddress;
+        emit TreasuryAddressChanged(_treasuryAddress);
     }
 
     /**
-     * @notice The multisigAddress getter
+     * @notice The treasuryAddress getter
      */
-    function getMultisigAddress()
+    function getTreasuryAddress()
     external
     override
     view
     returns (address payable)
     {
-        return protocolStorage().multisigAddress;
+        return protocolStorage().treasuryAddress;
     }
 
     /**
@@ -137,32 +137,37 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @notice Sets the protocol fee percentage.
      * Emits a FeePercentageChanged event.
      *
-     * @param _feePercentage - the percentage that will be taken as a fee from the net of a Boson Protocol sale or auction (after royalties)
+     * @param _protocolFeePercentage - the percentage that will be taken as a fee from the net of a Boson Protocol sale or auction (after royalties)
      *
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setFeePercentage(uint16 _feePercentage)
+    function setProtocolFeePercentage(uint16 _protocolFeePercentage)
     external
     override
     onlyRole(ADMIN)
     {
-        require(_feePercentage > 0 && _feePercentage <= 10000,
+        // Make sure percentage is between 1 - 10000
+        require(_protocolFeePercentage > 0 && _protocolFeePercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
-        protocolStorage().feePercentage = _feePercentage;
-        emit FeePercentageChanged(_feePercentage);
+
+        // Store fee percentage
+        protocolStorage().protocolFeePercentage = _protocolFeePercentage;
+
+        // Notify watchers of state change
+        emit ProtocolFeePercentageChanged(_protocolFeePercentage);
     }
 
     /**
-     * @notice The feePercentage getter
+     * @notice Get the protocol fee percentage
      */
-    function getFeePercentage()
+    function getProtocolFeePercentage()
     external
     override
     view
     returns (uint16)
     {
-        return protocolStorage().feePercentage;
+        return protocolStorage().protocolFeePercentage;
     }
 
 }

@@ -19,8 +19,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     modifier onlyUnInitialized()
     {
         ProtocolLib.ProtocolInitializers storage pi = ProtocolLib.protocolInitializers();
-        require(!pi.offerFacet, ALREADY_INITIALIZED);
-        pi.offerFacet = true;
+        require(!pi.offerHandler, ALREADY_INITIALIZED);
+        pi.offerHandler = true;
         _;
     }
 
@@ -66,20 +66,23 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
 
         // Set offer props individually since memory structs can't be copied to storage
         offer.id = offerId;
+        offer.sellerId = _offer.sellerId;
         offer.price = _offer.price;
-        offer.deposit = _offer.deposit;
-        offer.quantity = _offer.quantity;
+        offer.sellerDeposit = _offer.sellerDeposit;
+        offer.buyerCancelPenalty = _offer.buyerCancelPenalty;
+        offer.quantityAvailable = _offer.quantityAvailable;
         offer.validFromDate = _offer.validFromDate;
         offer.validUntilDate = _offer.validUntilDate;
-        offer.redeemableDate = _offer.redeemableDate;
+        offer.redeemableFromDate = _offer.redeemableFromDate;
+        offer.fulfillmentPeriodDuration = _offer.fulfillmentPeriodDuration;
         offer.voucherValidDuration = _offer.voucherValidDuration;
-        offer.seller = _offer.seller;
         offer.exchangeToken = _offer.exchangeToken;
         offer.metadataUri = _offer.metadataUri;
         offer.metadataHash = _offer.metadataHash;
+        offer.voided = _offer.voided;
 
         // Notify watchers of state change
-        emit OfferCreated(offerId, _offer.seller, _offer);
+        emit OfferCreated(offerId, _offer.sellerId, _offer);
     }
 
     /**
@@ -106,8 +109,9 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         // Offer must already exist
         require(offer.id == _offerId, NO_SUCH_OFFER);
 
-        // Caller must be seller
-        require(offer.seller == msg.sender, NOT_SELLER);
+        // Caller must be seller's operator address
+        Seller storage seller = ProtocolLib.getSeller(offer.sellerId);
+        require(seller.operator == msg.sender, NOT_OPERATOR);
 
         // Offer must not already be voided
         require(!offer.voided, OFFER_ALREADY_VOIDED);
@@ -116,7 +120,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         offer.voided = true;
 
         // Notify listeners of state change
-        emit OfferVoided(_offerId, msg.sender);
+        emit OfferVoided(_offerId, seller.id);
 
     }
 
