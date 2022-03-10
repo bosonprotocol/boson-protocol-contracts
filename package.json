@@ -26,9 +26,9 @@
         "lint": "solhint 'contracts/**/*.sol'",
         "size": "npx hardhat size-contracts",
         "deploy-suite:local": "npx hardhat run --network hardhat scripts/deploy-suite.js",
-        "deploy-suite:rinkeby": "npx hardhat run --network rinkeby scripts/deploy-suite.js >> logs/rinkeby.deploy.contracts.txt",
+        "deploy-suite:ropsten": "npx hardhat run --network ropsten scripts/deploy-suite.js >> logs/ropsten.deploy.contracts.txt",
         "deploy-suite:mainnet": "npx hardhat run --network mainnet scripts/deploy-suite.js >> logs/mainnet.deploy.contracts.txt",
-        "manage-roles:rinkeby": " npx hardhat --network rinkeby run scripts/manage-roles.js >> logs/rinkeby.manage.roles.txt",
+        "manage-roles:ropsten": " npx hardhat --network ropsten run scripts/manage-roles.js >> logs/ropsten.manage.roles.txt",
         "manage-roles:mainnet": " npx hardhat --network mainnet run scripts/manage-roles.js >> logs/mainnet.manage.roles.txt"
     },
     "dependencies": {
@@ -42,6 +42,7 @@
         "@nomiclabs/hardhat-web3": "^2.0.0",
         "@openzeppelin/test-helpers": "^0.5.15",
         "chai": "^4.3.6",
+        "dotenv": "^16.0.0",
         "eip55": "^2.1.0",
         "ethereum-waffle": "^3.4.0",
         "ethers": "^5.5.4",

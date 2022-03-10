@@ -2,10 +2,10 @@ const {ContractAddresses} = require('./contract-addresses');
 const Role = require("../domain/Role");
 
 /**
- * Role assignments for access control in the Boson Protocl contract suite
+ * Role assignments for access control in the Boson Protocol contract suite
  *
  * Process:
- *  1.  Edit scripts/constants/role-assignments.js
+ *  1.  Edit scripts/config/role-assignments.js
  *  1a. Add new address / role assignments following existing config
  *  1b. Remove an existing role assignment, delete role from addresses' role array
  *  1b. If removing all roles from a previously roled-address,
