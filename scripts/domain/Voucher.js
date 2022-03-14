@@ -8,8 +8,10 @@ const ethers = require("ethers");
  */
 class Voucher {
 
-    constructor (exchangeId) {
+    constructor (exchangeId, committedDate, redeemedDate) {
         this.exchangeId = exchangeId;
+        this.committedDate = committedDate;
+        this.redeemedDate = redeemedDate;
     }
 
     /**
@@ -18,8 +20,8 @@ class Voucher {
      * @returns {Voucher}
      */
     static fromObject(o) {
-        const {exchangeId} = o;
-        return new Voucher(exchangeId);
+        const {exchangeId, committedDate, redeemedDate} = o;
+        return new Voucher(exchangeId, committedDate, redeemedDate);
     }
 
     /**
@@ -64,13 +66,48 @@ class Voucher {
     }
 
     /**
+     * Is this Voucher instance's committedDate field valid?
+     * Must be a string representation of a big number
+     * @returns {boolean}
+     */
+    committedDateIsValid() {
+        let valid = false;
+        let {committedDate} = this;
+        try {
+            valid = (
+                typeof committedDate === "string" &&
+                typeof ethers.BigNumber.from(committedDate) === "object"
+            )
+        } catch(e){}
+        return valid;
+    }
+
+    /**
+     * Is this Voucher instance's redeemedDate field valid?
+     * Must be a string representation of a big number
+     * @returns {boolean}
+     */
+    redeemedDateIsValid() {
+        let valid = false;
+        let {redeemedDate} = this;
+        try {
+            valid = (
+                typeof redeemedDate === "string" &&
+                typeof ethers.BigNumber.from(redeemedDate) === "object"
+            )
+        } catch(e){}
+        return valid;
+    }
+
+    /**
      * Is this Voucher instance valid?
      * @returns {boolean}
      */
     isValid() {
         return (
-            this.exchangeIdIsValid() // &&
-            // ...
+            this.exchangeIdIsValid() &&
+            this.committedDateIsValid() &&
+            this.redeemedDateIsValid()
         );
     };
 

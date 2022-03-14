@@ -8,7 +8,7 @@ describe("Voucher", function() {
 
     // Suite-wide scope
     let voucher, object, promoted, clone, dehydrated, rehydrated, key, value;
-    let exchangeId;
+    let exchangeId, committedDate, redeemedDate;
 
     context("📋 Constructor", async function () {
 
@@ -16,12 +16,14 @@ describe("Voucher", function() {
 
             // Required constructor params
             exchangeId = "2112";
+            committedDate = "1661441758";
+            redeemedDate = "1661441758";
 
         });
 
         it("Should allow creation of valid, fully populated Voucher instance", async function () {
 
-            voucher = new Voucher(exchangeId);
+            voucher = new Voucher(exchangeId, committedDate, redeemedDate);
             expect(voucher.exchangeIdIsValid()).is.true;
             expect(voucher.isValid()).is.true;
 
@@ -37,7 +39,7 @@ describe("Voucher", function() {
             exchangeId = "5150";
 
             // Create a valid voucher, then set fields in tests directly
-            voucher = new Voucher(exchangeId);
+            voucher = new Voucher(exchangeId, committedDate, redeemedDate);
             expect(voucher.isValid()).is.true;
 
         });
@@ -71,6 +73,63 @@ describe("Voucher", function() {
 
         });
 
+        it("Always present, committedDate must be the string representation of a BigNumber", async function() {
+
+            // Invalid field value
+            voucher.committedDate = "zedzdeadbaby";
+            expect(voucher.committedDateIsValid()).is.false;
+            expect(voucher.isValid()).is.false;
+
+            // Invalid field value
+            voucher.committedDate = new Date();
+            expect(voucher.committedDateIsValid()).is.false;
+            expect(voucher.isValid()).is.false;
+
+            // Invalid field value
+            voucher.committedDate = 12;
+            expect(voucher.committedDateIsValid()).is.false;
+            expect(voucher.isValid()).is.false;
+
+            // Valid field value
+            voucher.committedDate = "0";
+            expect(voucher.committedDateIsValid()).is.true;
+            expect(voucher.isValid()).is.true;
+
+            // Valid field value
+            voucher.committedDate = "126";
+            expect(voucher.committedDateIsValid()).is.true;
+            expect(voucher.isValid()).is.true;
+
+        });
+
+        it("Always present, redeemedDate must be the string representation of a BigNumber", async function() {
+
+            // Invalid field value
+            voucher.redeemedDate = "zedzdeadbaby";
+            expect(voucher.redeemedDateIsValid()).is.false;
+            expect(voucher.isValid()).is.false;
+
+            // Invalid field value
+            voucher.redeemedDate = new Date();
+            expect(voucher.redeemedDateIsValid()).is.false;
+            expect(voucher.isValid()).is.false;
+
+            // Invalid field value
+            voucher.redeemedDate = 12;
+            expect(voucher.redeemedDateIsValid()).is.false;
+            expect(voucher.isValid()).is.false;
+
+            // Valid field value
+            voucher.redeemedDate = "0";
+            expect(voucher.redeemedDateIsValid()).is.true;
+            expect(voucher.isValid()).is.true;
+
+            // Valid field value
+            voucher.redeemedDate = "126";
+            expect(voucher.redeemedDateIsValid()).is.true;
+            expect(voucher.isValid()).is.true;
+
+        });
     })
 
     context("📋 Utility functions", async function () {
@@ -81,12 +140,14 @@ describe("Voucher", function() {
             exchangeId = "90125";
 
             // Create a valid voucher, then set fields in tests directly
-            voucher = new Voucher(exchangeId);
+            voucher = new Voucher(exchangeId, committedDate, redeemedDate);
             expect(voucher.isValid()).is.true;
 
             // Get plain object
             object = {
-                exchangeId
+                exchangeId,
+                committedDate,
+                redeemedDate
             }
 
         })
