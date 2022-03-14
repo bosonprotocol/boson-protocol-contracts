@@ -12,16 +12,16 @@ class Offer {
     /*
         struct Offer {
             uint256 id;
+            uint256 sellerId;
             uint256 price;
-            uint256 deposit;
-            uint256 penalty;
-            uint256 quantity;
+            uint256 sellerDeposit;
+            uint256 buyerCancelPenalty;
+            uint256 quantityAvailable;
             uint256 validFromDate;
             uint256 validUntilDate;
-            uint256 redeemableDate;
+            uint256 redeemableFromDate;
             uint256 fulfillmentPeriodDuration;
             uint256 voucherValidDuration;
-            address payable seller;
             address exchangeToken;
             string metadataUri;
             string metadataHash;
@@ -31,32 +31,32 @@ class Offer {
 
     constructor (
             id,
+            sellerId,
             price,
-            deposit,
-            penalty,
-            quantity,
+            sellerDeposit,
+            buyerCancelPenalty,
+            quantityAvailable,
             validFromDate,
             validUntilDate,
-            redeemableDate,
+            redeemableFromDate,
             fulfillmentPeriodDuration,
             voucherValidDuration,
-            seller,
             exchangeToken,
             metadataUri,
             metadataHash,
             voided
         ) {
         this.id = id;
+        this.sellerId = sellerId;
         this.price = price;
-        this.deposit = deposit;
-        this.penalty = penalty;
-        this.quantity = quantity;
+        this.sellerDeposit = sellerDeposit;
+        this.buyerCancelPenalty = buyerCancelPenalty;
+        this.quantityAvailable = quantityAvailable;
         this.validFromDate = validFromDate;
         this.validUntilDate = validUntilDate;
-        this.redeemableDate = redeemableDate;
+        this.redeemableFromDate = redeemableFromDate;
         this.voucherValidDuration = voucherValidDuration;
         this.fulfillmentPeriodDuration = fulfillmentPeriodDuration;
-        this.seller = seller;
         this.exchangeToken = exchangeToken;
         this.metadataUri = metadataUri;
         this.metadataHash = metadataHash;
@@ -71,16 +71,16 @@ class Offer {
     static fromObject(o) {
         const {
             id,
+            sellerId,
             price,
-            deposit,
-            penalty,
-            quantity,
+            sellerDeposit,
+            buyerCancelPenalty,
+            quantityAvailable,
             validFromDate,
             validUntilDate,
-            redeemableDate,
+            redeemableFromDate,
             fulfillmentPeriodDuration,
             voucherValidDuration,
-            seller,
             exchangeToken,
             metadataUri,
             metadataHash,
@@ -89,16 +89,16 @@ class Offer {
 
         return new Offer(
             id,
+            sellerId,
             price,
-            deposit,
-            penalty,
-            quantity,
+            sellerDeposit,
+            buyerCancelPenalty,
+            quantityAvailable,
             validFromDate,
             validUntilDate,
-            redeemableDate,
+            redeemableFromDate,
             fulfillmentPeriodDuration,
             voucherValidDuration,
-            seller,
             exchangeToken,
             metadataUri,
             metadataHash,
@@ -114,16 +114,16 @@ class Offer {
     static fromStruct( struct ) {
 
         let id,
+            sellerId,
             price,
-            deposit,
-            penalty,
-            quantity,
+            sellerDeposit,
+            buyerCancelPenalty,
+            quantityAvailable,
             validFromDate,
             validUntilDate,
-            redeemableDate,
+            redeemableFromDate,
             fulfillmentPeriodDuration,
             voucherValidDuration,
-            seller,
             exchangeToken,
             metadataUri,
             metadataHash,
@@ -131,16 +131,16 @@ class Offer {
 
         // destructure struct
         [   id,
+            sellerId,
             price,
-            deposit,
-            penalty,
-            quantity,
+            sellerDeposit,
+            buyerCancelPenalty,
+            quantityAvailable,
             validFromDate,
             validUntilDate,
-            redeemableDate,
+            redeemableFromDate,
             fulfillmentPeriodDuration,
             voucherValidDuration,
-            seller,
             exchangeToken,
             metadataUri,
             metadataHash,
@@ -150,16 +150,16 @@ class Offer {
         return Offer.fromObject(
             {
                 id: id.toString(),
+                sellerId: sellerId.toString(),
                 price: price.toString(),
-                deposit: deposit.toString(),
-                penalty: penalty.toString(),
-                quantity: quantity.toString(),
+                sellerDeposit: sellerDeposit.toString(),
+                buyerCancelPenalty: buyerCancelPenalty.toString(),
+                quantityAvailable: quantityAvailable.toString(),
                 validFromDate: validFromDate.toString(),
                 validUntilDate: validUntilDate.toString(),
-                redeemableDate: redeemableDate.toString(),
+                redeemableFromDate: redeemableFromDate.toString(),
                 fulfillmentPeriodDuration: fulfillmentPeriodDuration.toString(),
                 voucherValidDuration: voucherValidDuration.toString(),
-                seller,
                 exchangeToken,
                 metadataUri,
                 metadataHash,
@@ -192,16 +192,16 @@ class Offer {
     toStruct() {
         return[
             this.id,
+            this.sellerId,
             this.price,
-            this.deposit,
-            this.penalty,
-            this.quantity,
+            this.sellerDeposit,
+            this.buyerCancelPenalty,
+            this.quantityAvailable,
             this.validFromDate,
             this.validUntilDate,
-            this.redeemableDate,
+            this.redeemableFromDate,
             this.fulfillmentPeriodDuration,
             this.voucherValidDuration,
-            this.seller,
             this.exchangeToken,
             this.metadataUri,
             this.metadataHash,
@@ -238,6 +238,23 @@ class Offer {
     }
 
     /**
+     * Is this Offer instance's sellerId field valid?
+     * Must be a string representation of a big number
+     * @returns {boolean}
+     */
+    sellerIdIsValid() {
+        let valid = false;
+        let {sellerId} = this;
+        try {
+            valid = (
+                typeof sellerId === "string" &&
+                typeof ethers.BigNumber.from(sellerId) === "object"
+            )
+        } catch(e){}
+        return valid;
+    }
+
+    /**
      * Is this Offer instance's price field valid?
      * Must be a string representation of a big number
      * @returns {boolean}
@@ -255,51 +272,51 @@ class Offer {
     }
 
     /**
-     * Is this Offer instance's deposit field valid?
+     * Is this Offer instance's sellerDeposit field valid?
      * Must be a string representation of a big number
      * @returns {boolean}
      */
-    depositIsValid() {
+    sellerDepositIsValid() {
         let valid = false;
-        let {deposit} = this;
+        let {sellerDeposit} = this;
         try {
             valid = (
-                typeof deposit === "string" &&
-                typeof ethers.BigNumber.from(deposit) === "object"
+                typeof sellerDeposit === "string" &&
+                typeof ethers.BigNumber.from(sellerDeposit) === "object"
             )
         } catch(e){}
         return valid;
     }
 
     /**
-     * Is this Offer instance's penalty field valid?
+     * Is this Offer instance's buyerCancelPenalty field valid?
      * Must be a string representation of a big number
      * @returns {boolean}
      */
-    penaltyIsValid() {
+    buyerCancelPenaltyIsValid() {
         let valid = false;
-        let {penalty} = this;
+        let {buyerCancelPenalty} = this;
         try {
             valid = (
-                typeof penalty === "string" &&
-                typeof ethers.BigNumber.from(penalty) === "object"
+                typeof buyerCancelPenalty === "string" &&
+                typeof ethers.BigNumber.from(buyerCancelPenalty) === "object"
             )
         } catch(e){}
         return valid;
     }
 
     /**
-     * Is this Offer instance's quantity field valid?
+     * Is this Offer instance's quantityAvailable field valid?
      * Must be a string representation of a big number
      * @returns {boolean}
      */
-    quantityIsValid() {
+    quantityAvailableIsValid() {
         let valid = false;
-        let {quantity} = this;
+        let {quantityAvailable} = this;
         try {
             valid = (
-                typeof quantity === "string" &&
-                typeof ethers.BigNumber.from(quantity) === "object"
+                typeof quantityAvailable === "string" &&
+                typeof ethers.BigNumber.from(quantityAvailable) === "object"
             )
         } catch(e){}
         return valid;
@@ -342,18 +359,18 @@ class Offer {
     }
 
     /**
-     * Is this Offer instance's redeemableDate field valid?
+     * Is this Offer instance's redeemableFromDate field valid?
      * Must be a string representation of a big number
      * TODO: make sure it's time within a reasonable range?
      * @returns {boolean}
      */
-    redeemableDateIsValid() {
+    redeemableFromDateIsValid() {
         let valid = false;
-        let {redeemableDate} = this;
+        let {redeemableFromDate} = this;
         try {
             valid = (
-                typeof redeemableDate === "string" &&
-                typeof ethers.BigNumber.from(redeemableDate) === "object"
+                typeof redeemableFromDate === "string" &&
+                typeof ethers.BigNumber.from(redeemableFromDate) === "object"
             )
         } catch(e){}
         return valid;
@@ -389,22 +406,6 @@ class Offer {
             valid = (
                 typeof voucherValidDuration === "string" &&
                 typeof ethers.BigNumber.from(voucherValidDuration) === "object"
-            )
-        } catch(e){}
-        return valid;
-    }
-
-    /**
-     * Is this Offer instance's seller field valid?
-     * Must be a string repesenting an eip55 compliant Ethereum address
-     * @returns {boolean}
-     */
-    sellerIsValid() {
-        let valid = false;
-        let {seller} = this;
-        try {
-            valid = (
-                eip55.verify(eip55.encode(seller))
             )
         } catch(e){}
         return valid;
@@ -484,16 +485,16 @@ class Offer {
     isValid() {
         return (
             this.idIsValid() &&
+            this.sellerIdIsValid() &&
             this.priceIsValid() &&
-            this.depositIsValid() &&
-            this.penaltyIsValid() &&
-            this.quantityIsValid() &&
+            this.sellerDepositIsValid() &&
+            this.buyerCancelPenaltyIsValid() &&
+            this.quantityAvailableIsValid() &&
             this.validFromDateIsValid() &&
             this.validUntilDateIsValid() &&
-            this.redeemableDateIsValid() &&
+            this.redeemableFromDateIsValid() &&
             this.fulfillmentPeriodDurationIsValid() &&
             this.voucherValidDurationIsValid() &&
-            this.sellerIsValid() &&
             this.exchangeTokenIsValid() &&
             this.metadataUriIsValid() &&
             this.metadataHashIsValid() &&
