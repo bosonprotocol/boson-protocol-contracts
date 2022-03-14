@@ -5,12 +5,12 @@ const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefi
 class EvaluationMethod {}
 
 EvaluationMethod.None = 0;
-EvaluationMethod.AnyBalance = 1;
+EvaluationMethod.AboveThreshold = 1;
 EvaluationMethod.SpecificToken = 2;
 
 EvaluationMethod.Modes = [
     EvaluationMethod.None,
-    EvaluationMethod.AnyBalance,
+    EvaluationMethod.AboveThreshold,
     EvaluationMethod.SpecificToken
 ];
 

@@ -72,7 +72,7 @@ describe("Condition", function() {
             expect(condition.isValid()).is.false;
 
             // Valid field value
-            condition.method = EvaluationMethod.AnyBalance;
+            condition.method = EvaluationMethod.AboveThreshold;
             expect(condition.methodIsValid()).is.true;
             expect(condition.isValid()).is.true;
         });
@@ -165,7 +165,7 @@ describe("Condition", function() {
         beforeEach( async function () {
 
             // Required constructor params
-            method = EvaluationMethod.AnyBalance;
+            method = EvaluationMethod.AboveThreshold;
 
             // Create a valid condition, then set fields in tests directly
             condition = new Condition(method, tokenAddress, tokenId, threshold);
