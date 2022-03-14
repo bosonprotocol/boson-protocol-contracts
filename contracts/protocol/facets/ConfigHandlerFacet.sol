@@ -62,7 +62,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolStorage().tokenAddress = _tokenAddress;
-        emit TokenAddressChanged(_tokenAddress);
+        emit TokenAddressChanged(_tokenAddress, msg.sender);
     }
 
     /**
@@ -90,7 +90,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolStorage().treasuryAddress = _treasuryAddress;
-        emit TreasuryAddressChanged(_treasuryAddress);
+        emit TreasuryAddressChanged(_treasuryAddress, msg.sender);
     }
 
     /**
@@ -118,7 +118,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolStorage().voucherAddress = _voucherAddress;
-        emit VoucherAddressChanged(_voucherAddress);
+        emit VoucherAddressChanged(_voucherAddress, msg.sender);
     }
 
     /**
@@ -155,7 +155,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         protocolStorage().protocolFeePercentage = _protocolFeePercentage;
 
         // Notify watchers of state change
-        emit ProtocolFeePercentageChanged(_protocolFeePercentage);
+        emit ProtocolFeePercentageChanged(_protocolFeePercentage, msg.sender);
     }
 
     /**
