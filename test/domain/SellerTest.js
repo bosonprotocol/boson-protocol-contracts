@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const Seller = require("../../scripts/domain/Seller");
+const Resolver = require("../../scripts/domain/Resolver");
 
 /**
  *  Test the Seller domain entity
@@ -10,21 +11,23 @@ describe("Seller", function() {
     let seller, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
     let accounts, id, operator, authorizer, treasury, active;
 
+    beforeEach( async function () {
+
+        // Get a list of accounts
+        accounts = await ethers.getSigners();
+        operator = accounts[0].address;
+        authorizer = accounts[1].address;
+        treasury = accounts[2].address;
+
+        // Required constructor params
+        id = "78";
+        active = true;
+
+    });
+
     context("📋 Constructor", async function () {
 
-        beforeEach( async function () {
-
-            // Get a list of accounts
-            accounts = await ethers.getSigners();
-            operator = authorizer = treasury = accounts[1].address;
-
-            // Required constructor params
-            id = "0";
-            active = true;
-        });
-
         it("Should allow creation of valid, fully populated Seller instance", async function () {
-            id = "150";
 
             // Create a valid seller
             seller = new Seller(id, operator, authorizer, treasury, active);
@@ -43,12 +46,10 @@ describe("Seller", function() {
 
         beforeEach( async function () {
 
-            // Required constructor params
-            id = "99";
-
             // Create a valid seller, then set fields in tests directly
             seller = new Seller(id, operator, authorizer, treasury, active);
             expect(seller.isValid()).is.true;
+
         });
 
         it("Always present, id must be the string representation of a BigNumber", async function() {
@@ -175,14 +176,12 @@ describe("Seller", function() {
             expect(seller.isValid()).is.true;
 
         });
+
     })
 
     context("📋 Utility functions", async function () {
 
         beforeEach( async function () {
-
-            // Required constructor params
-            id = "2";
 
             // Create a valid seller, then set fields in tests directly
             seller = new Seller(id, operator, authorizer, treasury, active);
@@ -196,6 +195,15 @@ describe("Seller", function() {
                 treasury,
                 active
             }
+
+            // Struct representation
+            struct = [
+                id,
+                operator,
+                authorizer,
+                treasury,
+                active
+            ]
 
         })
 
@@ -213,6 +221,16 @@ describe("Seller", function() {
                 for ([key, value] of Object.entries(seller)) {
                     expect(JSON.stringify(promoted[key]) === JSON.stringify(value)).is.true;
                 }
+
+            });
+
+            it("Seller.fromStruct() should return a Seller instance from a struct representation", async function () {
+
+                // Get struct from instance
+                seller = Seller.fromStruct(struct)
+
+                // Ensure it is valid
+                expect(seller.isValid()).to.be.true;
 
             });
 
@@ -261,7 +279,7 @@ describe("Seller", function() {
 
             });
 
-            it("Seller.toStruct() should return a struct representation of the Seller instance", async function () {
+            it("instance.toStruct() should return a struct representation of the Seller instance", async function () {
 
                 // Get struct from seller
                 struct = seller.toStruct();
@@ -273,6 +291,7 @@ describe("Seller", function() {
                 expect(seller.isValid()).to.be.true;
 
             });
+
         });
 
     });

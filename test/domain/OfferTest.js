@@ -57,8 +57,6 @@ describe("Offer", function() {
 
         it("Should allow creation of valid, fully populated Offer instance", async function () {
 
-            id = "2112";
-
             // Create a valid offer, then set fields in tests directly
             offer = new Offer(
                 id,
@@ -86,9 +84,6 @@ describe("Offer", function() {
     context("📋 Field validations", async function () {
 
         beforeEach( async function () {
-
-            // Required constructor params
-            id = "5150";
 
             // Create a valid offer, then set fields in tests directly
             offer = new Offer(

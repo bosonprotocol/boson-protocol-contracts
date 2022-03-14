@@ -40,6 +40,41 @@ class Twin {
     }
 
     /**
+     * Get a new Twin instance from a returned struct representation
+     * @param struct
+     * @returns {*}
+     */
+    static fromStruct( struct ) {
+
+        let id,
+            sellerId,
+            supplyAvailable,
+            supplyIds,
+            tokenId,
+            tokenAddress;
+
+        // destructure struct
+        [   id,
+            sellerId,
+            supplyAvailable,
+            supplyIds,
+            tokenId,
+            tokenAddress
+        ] = struct;
+
+        return Twin.fromObject(
+            {
+                id: id.toString(),
+                sellerId: sellerId.toString(),
+                supplyAvailable: supplyAvailable.toString(),
+                supplyIds: supplyIds.map(supplyId => supplyId.toString()),
+                tokenId: tokenId.toString(),
+                tokenAddress
+            }
+        );
+    }
+
+    /**
      * Get a database representation of this Twin instance
      * @returns {object}
      */
@@ -53,6 +88,21 @@ class Twin {
      */
     toString() {
         return JSON.stringify(this);
+    }
+
+    /**
+     * Get a struct representation of this Twin instance
+     * @returns {string}
+     */
+    toStruct() {
+        return [
+            this.id,
+            this.sellerId,
+            this.supplyAvailable,
+            this.supplyIds,
+            this.tokenId,
+            this.tokenAddress
+        ]
     }
 
     /**

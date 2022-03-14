@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const Exchange = require("../../scripts/domain/Exchange");
+const Resolver = require("../../scripts/domain/Resolver");
 
 /**
  *  Test the Exchange domain entity
@@ -7,18 +8,18 @@ const Exchange = require("../../scripts/domain/Exchange");
 describe("Exchange", function() {
 
     // Suite-wide scope
-    let exchange, object, promoted, clone, dehydrated, rehydrated, key, value;
+    let exchange, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
     let id, offerId
 
+    beforeEach( async function () {
+
+        // Required constructor params
+        id = "50";
+        offerId = "2112";
+
+    });
+
     context("📋 Constructor", async function () {
-
-        beforeEach( async function () {
-
-            // Required constructor params
-            id = "50";
-            offerId = "2112";
-
-        });
 
         it("Should allow creation of valid, fully populated Exchange instance", async function () {
 
@@ -34,10 +35,6 @@ describe("Exchange", function() {
     context("📋 Field validations", async function () {
 
         beforeEach( async function () {
-
-            // Required constructor params
-            id = "99";
-            offerId = "5150";
 
             // Create a valid exchange, then set fields in tests directly
             exchange = new Exchange(id, offerId);
@@ -108,10 +105,6 @@ describe("Exchange", function() {
 
         beforeEach( async function () {
 
-            // Required constructor params
-            id = "2";
-            offerId = "90125";
-
             // Create a valid exchange, then set fields in tests directly
             exchange = new Exchange(id, offerId);
             expect(exchange.isValid()).is.true;
@@ -120,7 +113,13 @@ describe("Exchange", function() {
             object = {
                 id,
                 offerId
-            }
+            };
+
+            // Struct representation
+            struct = [
+                id,
+                offerId
+            ];
 
         })
 
@@ -138,6 +137,16 @@ describe("Exchange", function() {
                 for ([key, value] of Object.entries(exchange)) {
                     expect(JSON.stringify(promoted[key]) === JSON.stringify(value)).is.true;
                 }
+
+            });
+
+            it("Exchange.toStruct() should return an Exchange instance from a struct representation", async function () {
+
+                // Get instance from struct
+                exchange = Exchange.fromStruct(struct)
+
+                // Ensure it marshals back to a valid exchange
+                expect(exchange.isValid()).to.be.true;
 
             });
 
@@ -183,6 +192,19 @@ describe("Exchange", function() {
                 for ([key, value] of Object.entries(exchange)) {
                     expect(JSON.stringify(object[key]) === JSON.stringify(value)).is.true;
                 }
+
+            });
+
+            it("instance.toStruct() should return a struct representation of the Exchange instance", async function () {
+
+                // Get struct from resolver
+                struct = exchange.toStruct();
+
+                // Marshal back to a exchange instance
+                exchange = Exchange.fromStruct(struct)
+
+                // Ensure it marshals back to a valid exchange
+                expect(exchange.isValid()).to.be.true;
 
             });
 

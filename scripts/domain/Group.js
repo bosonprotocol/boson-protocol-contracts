@@ -1,41 +1,43 @@
 const NODE = (typeof module !== 'undefined' && typeof module.exports !== 'undefined');
 const ethers = require("ethers");
+const Condition = require("./Condition");
 
 /**
- * Boson Protocol Domain Entity: Bundle
+ * Boson Protocol Domain Entity: Group
  *
- * See: {BosonTypes.Bundle}
+ * See: {BosonTypes.Group}
  */
-class Bundle {
+class Group {
 
     /*
-        struct Bundle {
+        struct Group {
             uint256 id;
             uint256 sellerId;
-            uint256[] offerIds;
-            uint256[] twinIds;
+            Offer[] offers;
+            Condition condition;
         }
     */
 
-    constructor (id, sellerId, offerIds, twinIds) {
+    constructor (id, sellerId, offerIds, condition) {
         this.id = id;
         this.sellerId = sellerId;
         this.offerIds = offerIds;
-        this.twinIds = twinIds;
+        this.condition = condition;
     }
 
     /**
-     * Get a new Bundle instance from a pojo representation
+     * Get a new Group instance from a pojo representation
      * @param o
-     * @returns {Bundle}
+     * @returns {Group}
      */
     static fromObject(o) {
-        const {id, sellerId, offerIds, twinIds} = o;
-        return new Bundle(id, sellerId, offerIds, twinIds);
+        const {id, sellerId, offerIds, condition} = o;
+        let c = Condition.fromObject(condition);
+        return new Group(id, sellerId, offerIds, c);
     }
 
     /**
-     * Get a new Bundle instance from a returned struct representation
+     * Get a new Group instance from a returned struct representation
      * @param struct
      * @returns {*}
      */
@@ -44,27 +46,27 @@ class Bundle {
         let id,
             sellerId,
             offerIds,
-            twinIds;
+            condition;
 
         // destructure struct
         [   id,
             sellerId,
             offerIds,
-            twinIds
+            condition
         ] = struct;
 
-        return Bundle.fromObject(
+        return Group.fromObject(
             {
                 id: id.toString(),
                 sellerId: sellerId.toString(),
                 offerIds: offerIds.map(offerId => offerId.toString()),
-                twinIds: twinIds.map(twinId => twinId.toString())
+                condition: Condition.fromStruct(condition).toObject()
             }
         );
     }
 
     /**
-     * Get a database representation of this Bundle instance
+     * Get a database representation of this Group instance
      * @returns {object}
      */
     toObject() {
@@ -72,7 +74,7 @@ class Bundle {
     }
 
     /**
-     * Get a string representation of this Bundle instance
+     * Get a string representation of this Group instance
      * @returns {string}
      */
     toString() {
@@ -80,28 +82,28 @@ class Bundle {
     }
 
     /**
-     * Get a struct representation of this Bundle instance
+     * Get a struct representation of this Group instance
      * @returns {string}
      */
     toStruct() {
-        return [
+        return[
             this.id,
             this.sellerId,
             this.offerIds,
-            this.twinIds
+            this.condition.toStruct()
         ]
     }
 
     /**
-     * Clone this Bundle
-     * @returns {Bundle}
+     * Clone this Group
+     * @returns {Group}
      */
     clone () {
-        return Bundle.fromObject(this.toObject());
+        return Group.fromObject(this.toObject());
     }
 
     /**
-     * Is this Bundle instance's id field valid?
+     * Is this Group instance's id field valid?
      * Must be a string representation of a big number
      * @returns {boolean}
      */
@@ -118,7 +120,7 @@ class Bundle {
     }
 
     /**
-     * Is this Bundle instance's sellerId field valid?
+     * Is this Group instance's sellerId field valid?
      * Must be a string representation of a big number
      * @returns {boolean}
      */
@@ -135,7 +137,7 @@ class Bundle {
     }
 
     /**
-     * Is this Bundle instance's offerIds field valid?
+     * Is this Group instance's offerIds field valid?
      * Must be an array of numbers
      * @returns {boolean}
      */
@@ -157,29 +159,25 @@ class Bundle {
     }
 
     /**
-     * Is this Bundle instance's twinIds field valid?
+     * Is this Group instance's condition field valid?
      * Must be an array of numbers
      * @returns {boolean}
      */
-    twinIdsIsValid() {
+    conditionIsValid() {
         let valid = false;
-        let {twinIds} = this;
+        let {condition} = this;
         try {
-            const twinIdsIsArray = Array.isArray(twinIds);
-            if (twinIdsIsArray) {
-                twinIds.forEach((twinId) => {
-                    valid = (
-                        typeof twinId === "string" &&
-                        typeof ethers.BigNumber.from(twinId) === "object"
-                    )
-                })
-            }
+            valid = (
+                typeof condition === "object" &&
+                condition.constructor.name === "Condition" &&
+                condition.isValid()
+            )
         } catch(e){}
         return valid;
     }
 
     /**
-     * Is this Bundle instance valid?
+     * Is this Group instance valid?
      * @returns {boolean}
      */
     isValid() {
@@ -187,7 +185,7 @@ class Bundle {
             this.idIsValid() &&
             this.sellerIdIsValid() &&
             this.offerIdsIsValid() &&
-            this.twinIdsIsValid()
+            this.conditionIsValid()
         );
     };
 
@@ -195,11 +193,11 @@ class Bundle {
 
 // Export
 if (NODE) {
-    module.exports = Bundle;
+    module.exports = Group;
 } else {
     // Namespace the export in browsers
     if (window) {
         if (!window.Boson) window.Boson = {};
-        window.Boson.Bundle = Bundle;
+        window.Boson.Group = Group;
     }
 }

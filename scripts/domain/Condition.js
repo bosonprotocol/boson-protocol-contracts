@@ -85,7 +85,7 @@ class Condition {
      * @returns {string}
      */
     toStruct() {
-        return[
+        return [
             this.method,
             this.tokenAddress,
             this.tokenId,

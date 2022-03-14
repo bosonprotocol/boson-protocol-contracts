@@ -7,16 +7,19 @@ const Bundle = require("../../scripts/domain/Bundle.js");
 describe("Bundle", function() {
 
     // Suite-wide scope
-    let bundle, object, promoted, clone, dehydrated, rehydrated, key, value;
+    let bundle, object, struct, promoted, clone, dehydrated, rehydrated, key, value;
     let id, sellerId, offerIds, twinIds;
 
-    context("📋 Constructor", async function () {
+    beforeEach( async function () {
 
-        beforeEach( async function () {
-            // Required constructor params
-            id = sellerId = "21";
-            offerIds = twinIds = ['1', '2']
-        });
+        // Required constructor params
+        id = sellerId = "90125";
+        offerIds = ["1", "2", "4", "8"];
+        twinIds = ["16", "32"];
+
+    });
+
+    context("📋 Constructor", async function () {
 
         it("Should allow creation of valid, fully populated Bundle instance", async function () {
 
@@ -35,10 +38,7 @@ describe("Bundle", function() {
 
         beforeEach( async function () {
 
-            // Required constructor params
-            id = sellerId = "51";
-
-            // Create a valid twin, then set fields in tests directly
+            // Create a valid bundle, then set fields in tests directly
             bundle = new Bundle(id, sellerId, offerIds, twinIds);
             expect(bundle.isValid()).is.true;
 
@@ -165,9 +165,6 @@ describe("Bundle", function() {
 
         beforeEach( async function () {
 
-            // Required constructor params
-            id = sellerId = "90125";
-
             // Create a valid bundle, then set fields in tests directly
             bundle = new Bundle(id, sellerId, offerIds, twinIds);
             expect(bundle.isValid()).is.true;
@@ -179,6 +176,14 @@ describe("Bundle", function() {
                 offerIds,
                 twinIds
             }
+
+            // Struct representation
+            struct = [
+                id,
+                sellerId,
+                offerIds,
+                twinIds
+            ]
 
         })
 
@@ -199,6 +204,16 @@ describe("Bundle", function() {
 
             });
 
+            it("Bundle.fromStruct() should return a Bundle instance with the same values as the given struct", async function () {
+
+                // Get condition from struct
+                bundle = Bundle.fromStruct(struct);
+
+                // Ensure it marshals back to a valid bundle
+                expect(bundle.isValid()).to.be.true;
+
+            });
+
         });
 
         context("👉 Instance", async function () {
@@ -210,21 +225,6 @@ describe("Bundle", function() {
 
                 for ([key, value] of Object.entries(bundle)) {
                     expect(JSON.stringify(rehydrated[key]) === JSON.stringify(value)).is.true;
-                }
-
-            });
-
-            it("instance.clone() should return another Bundle instance with the same property values", async function () {
-
-                // Get plain object
-                clone = bundle.clone();
-
-                // Is an Bundle instance
-                expect(clone instanceof Bundle).is.true;
-
-                // Key values all match
-                for ([key, value] of Object.entries(bundle)) {
-                    expect(JSON.stringify(clone[key]) === JSON.stringify(value)).is.true;
                 }
 
             });
@@ -243,6 +243,35 @@ describe("Bundle", function() {
                 }
 
             });
+
+            it("Bundle.toStruct() should return a struct representation of the Bundle instance", async function () {
+
+                // Get struct from bundle
+                struct = bundle.toStruct();
+
+                // Marshal back to a bundle instance
+                bundle = Bundle.fromStruct(struct)
+
+                // Ensure it marshals back to a valid bundle
+                expect(bundle.isValid()).to.be.true;
+
+            });
+
+            it("instance.clone() should return another Bundle instance with the same property values", async function () {
+
+                // Get plain object
+                clone = bundle.clone();
+
+                // Is an Bundle instance
+                expect(clone instanceof Bundle).is.true;
+
+                // Key values all match
+                for ([key, value] of Object.entries(bundle)) {
+                    expect(JSON.stringify(clone[key]) === JSON.stringify(value)).is.true;
+                }
+
+            });
+
         });
     })
 });

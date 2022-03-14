@@ -25,6 +25,32 @@ class Voucher {
     }
 
     /**
+     * Get a new Voucher instance from a returned struct representation
+     * @param struct
+     * @returns {*}
+     */
+    static fromStruct( struct ) {
+
+        let exchangeId,
+            committedDate,
+            redeemedDate;
+
+        // destructure struct
+        [   exchangeId,
+            committedDate,
+            redeemedDate
+        ] = struct;
+
+        return Voucher.fromObject(
+            {
+                exchangeId: exchangeId.toString(),
+                committedDate: committedDate.toString(),
+                redeemedDate: redeemedDate.toString()
+            }
+        );
+    }
+
+    /**
      * Get a database representation of this Voucher instance
      * @returns {object}
      */
@@ -38,6 +64,18 @@ class Voucher {
      */
     toString() {
         return JSON.stringify(this);
+    }
+
+    /**
+     * Get a struct representation of this Voucher instance
+     * @returns {string}
+     */
+    toStruct() {
+        return [
+            this.exchangeId,
+            this.committedDate,
+            this.redeemedDate
+        ]
     }
 
     /**

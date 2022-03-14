@@ -24,6 +24,29 @@ class Exchange {
     }
 
     /**
+     * Get a new Exchange instance from a returned struct representation
+     * @param struct
+     * @returns {*}
+     */
+    static fromStruct( struct ) {
+
+        let id,
+            offerId;
+
+        // destructure struct
+        [   id,
+            offerId
+        ] = struct;
+
+        return Exchange.fromObject(
+            {
+                id: id.toString(),
+                offerId: offerId.toString()
+            }
+        );
+    }
+
+    /**
      * Get a database representation of this Exchange instance
      * @returns {object}
      */
@@ -37,6 +60,17 @@ class Exchange {
      */
     toString() {
         return JSON.stringify(this);
+    }
+
+    /**
+     * Get a struct representation of this Exchange instance
+     * @returns {string}
+     */
+    toStruct() {
+        return [
+            this.id,
+            this.offerId
+        ]
     }
 
     /**

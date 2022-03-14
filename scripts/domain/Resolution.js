@@ -23,6 +23,27 @@ class Resolution {
     }
 
     /**
+     * Get a new Resolution instance from a returned struct representation
+     * @param struct
+     * @returns {*}
+     */
+    static fromStruct( struct ) {
+
+        let buyerPercent;
+
+        // destructure struct
+        [
+            buyerPercent
+        ] = struct;
+
+        return Resolution.fromObject(
+            {
+                buyerPercent: buyerPercent.toString()
+            }
+        );
+    }
+
+    /**
      * Get a database representation of this Resolution instance
      * @returns {object}
      */
@@ -36,6 +57,16 @@ class Resolution {
      */
     toString() {
         return JSON.stringify(this);
+    }
+
+    /**
+     * Get a struct representation of this Resolution instance
+     * @returns {string}
+     */
+    toStruct() {
+        return [
+            this.buyerPercent
+        ]
     }
 
     /**

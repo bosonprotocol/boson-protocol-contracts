@@ -9,17 +9,18 @@ describe("Dispute", function() {
 
     // Suite-wide scope
     let dispute, object, promoted, clone, dehydrated, rehydrated, key, value;
-    let exchangeId, complaint, state;
+    let exchangeId, complaint, state, struct;
+
+    beforeEach( async function () {
+
+        // Required constructor params
+        exchangeId = "2112";
+        complaint = "complain text";
+        state = DisputeState.Disputed;
+
+    });
 
     context("📋 Constructor", async function () {
-
-        beforeEach( async function () {
-
-            // Required constructor params
-            exchangeId = "2112";
-            complaint = "complain text";
-            state = DisputeState.Disputed;
-        });
 
         it("Should allow creation of valid, fully populated Dispute instance", async function () {
 
@@ -35,12 +36,10 @@ describe("Dispute", function() {
 
         beforeEach( async function () {
 
-            // Required constructor params
-            exchangeId = "5150";
-
             // Create a valid dispute, then set fields in tests directly
             dispute = new Dispute(exchangeId, complaint, state);
             expect(dispute.isValid()).is.true;
+
         });
 
         it("Always present, exchangeId must be the string representation of a BigNumber", async function() {
@@ -124,25 +123,29 @@ describe("Dispute", function() {
 
         beforeEach( async function () {
 
-            // Required constructor params
-            exchangeId = "90125";
-
             // Create a valid dispute, then set fields in tests directly
             dispute = new Dispute(exchangeId, complaint, state);
             expect(dispute.isValid()).is.true;
+
+            // Get plain object
+            object = {
+                exchangeId,
+                complaint,
+                state
+            };
+
+            // Struct representation
+            struct = [
+                exchangeId,
+                complaint,
+                state
+            ]
 
         })
 
         context("👉 Static", async function () {
 
             it("Dispute.fromObject() should return a Dispute instance with the same values as the given plain object", async function () {
-
-                // Get plain object
-                object = {
-                    exchangeId,
-                    complaint,
-                    state
-                }
 
                 // Promote to instance
                 promoted = Dispute.fromObject(object);
@@ -156,6 +159,7 @@ describe("Dispute", function() {
                 }
 
             });
+
         });
 
         context("👉 Instance", async function () {
@@ -200,6 +204,7 @@ describe("Dispute", function() {
                 }
 
             });
+
         });
 
     })

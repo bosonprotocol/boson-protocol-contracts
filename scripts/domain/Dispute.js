@@ -25,6 +25,32 @@ class Dispute {
     }
 
     /**
+     * Get a new Dispute instance from a returned struct representation
+     * @param struct
+     * @returns {*}
+     */
+    static fromStruct( struct ) {
+
+        let exchangeId,
+            complaint,
+            state;
+
+        // destructure struct
+        [   exchangeId,
+            complaint,
+            state
+        ] = struct;
+
+        return Voucher.fromObject(
+            {
+                exchangeId: exchangeId.toString(),
+                complaint,
+                state
+            }
+        );
+    }
+
+    /**
      * Get a database representation of this Dispute instance
      * @returns {object}
      */
@@ -38,6 +64,18 @@ class Dispute {
      */
     toString() {
         return JSON.stringify(this);
+    }
+
+    /**
+     * Get a struct representation of this Dispute instance
+     * @returns {string}
+     */
+    toStruct() {
+        return [
+            this.exchangeId,
+            this.complaint,
+            this.state
+        ]
     }
 
     /**

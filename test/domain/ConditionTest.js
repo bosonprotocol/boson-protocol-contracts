@@ -1,6 +1,7 @@
 const { expect } = require("chai");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
+const Buyer = require("../../scripts/domain/Buyer");
 
 /**
  *  Test the Condition domain entity
@@ -179,6 +180,14 @@ describe("Condition", function() {
                 threshold
             }
 
+            // Struct representation
+            struct = [
+                method,
+                tokenAddress,
+                tokenId,
+                threshold
+            ]
+
         })
 
         context("👉 Static", async function () {
@@ -198,6 +207,16 @@ describe("Condition", function() {
 
             });
 
+            it("Condition.fromStruct() should return a Condition instance from a struct representation", async function () {
+
+                // Get condition from struct
+                condition = Condition.fromStruct(struct);
+
+                // Ensure it marshals back to a valid condition
+                expect(condition.isValid()).to.be.true;
+
+            });
+
         });
 
         context("👉 Instance", async function () {
@@ -209,21 +228,6 @@ describe("Condition", function() {
 
                 for ([key, value] of Object.entries(condition)) {
                     expect(JSON.stringify(rehydrated[key]) === JSON.stringify(value)).is.true;
-                }
-
-            });
-
-            it("instance.clone() should return another Condition instance with the same property values", async function () {
-
-                // Get plain object
-                clone = condition.clone();
-
-                // Is a Condition instance
-                expect(clone instanceof Condition).is.true;
-
-                // Key values all match
-                for ([key, value] of Object.entries(condition)) {
-                    expect(JSON.stringify(clone[key]) === JSON.stringify(value)).is.true;
                 }
 
             });
@@ -243,18 +247,35 @@ describe("Condition", function() {
 
             });
 
-            it("Condition.toStruct() should return a struct representation of the Condition instance", async function () {
+            it("instance.toStruct() should return a struct representation of the Condition instance", async function () {
 
                 // Get struct from condition
                 struct = condition.toStruct();
 
-                // Marshal back to a condition instance
+                // Marshal back to a buyer instance
                 condition = Condition.fromStruct(struct)
 
                 // Ensure it marshals back to a valid condition
                 expect(condition.isValid()).to.be.true;
 
             });
+
+            it("instance.clone() should return another Condition instance with the same property values", async function () {
+
+                // Get plain object
+                clone = condition.clone();
+
+                // Is a Condition instance
+                expect(clone instanceof Condition).is.true;
+
+                // Key values all match
+                for ([key, value] of Object.entries(condition)) {
+                    expect(JSON.stringify(clone[key]) === JSON.stringify(value)).is.true;
+                }
+
+            });
+
         });
+
     });
 });

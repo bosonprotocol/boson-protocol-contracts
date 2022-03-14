@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const Buyer = require("../../scripts/domain/Buyer");
+const Twin = require("../../scripts/domain/Twin");
 
 /**
  *  Test the Buyer domain entity
@@ -145,6 +146,13 @@ describe("Buyer", function() {
                 active
             }
 
+            // Struct representation
+            struct = [
+                id,
+                wallet,
+                active
+            ]
+
         })
 
         context("👉 Static", async function () {
@@ -164,6 +172,16 @@ describe("Buyer", function() {
 
             });
 
+            it("Buyer.fromStruct() should return a Buyer instance from a struct representation", async function () {
+
+                // Get an instance from the struct
+                buyer = Buyer.fromStruct(struct);
+
+                // Ensure it is valid
+                expect(buyer.isValid()).to.be.true;
+
+            });
+
         });
 
         context("👉 Instance", async function () {
@@ -175,21 +193,6 @@ describe("Buyer", function() {
 
                 for ([key, value] of Object.entries(buyer)) {
                     expect(JSON.stringify(rehydrated[key]) === JSON.stringify(value)).is.true;
-                }
-
-            });
-
-            it("instance.clone() should return another Buyer instance with the same property values", async function () {
-
-                // Get plain object
-                clone = buyer.clone();
-
-                // Is a Buyer instance
-                expect(clone instanceof Buyer).is.true;
-
-                // Key values all match
-                for ([key, value] of Object.entries(buyer)) {
-                    expect(JSON.stringify(clone[key]) === JSON.stringify(value)).is.true;
                 }
 
             });
@@ -221,6 +224,22 @@ describe("Buyer", function() {
                 expect(buyer.isValid()).to.be.true;
 
             });
+
+            it("instance.clone() should return another Buyer instance with the same property values", async function () {
+
+                // Get plain object
+                clone = buyer.clone();
+
+                // Is a Buyer instance
+                expect(clone instanceof Buyer).is.true;
+
+                // Key values all match
+                for ([key, value] of Object.entries(buyer)) {
+                    expect(JSON.stringify(clone[key]) === JSON.stringify(value)).is.true;
+                }
+
+            });
+
         });
     });
 });

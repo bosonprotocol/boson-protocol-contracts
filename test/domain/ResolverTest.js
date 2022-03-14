@@ -10,21 +10,21 @@ describe("Resolver", function() {
     let resolver, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
     let accounts, id, wallet, active;
 
+    beforeEach( async function () {
+
+        // Get a list of accounts
+        accounts = await ethers.getSigners();
+        wallet = accounts[1].address;
+
+        // Required constructor params
+        id = "170";
+        active = true;
+
+    });
+
     context("📋 Constructor", async function () {
 
-        beforeEach( async function () {
-
-            // Get a list of accounts
-            accounts = await ethers.getSigners();
-            wallet = accounts[1].address;
-
-            // Required constructor params
-            id = "0";
-            active = true;
-        });
-
         it("Should allow creation of valid, fully populated Resolver instance", async function () {
-            id = "170";
 
             // Create a valid resolver
             resolver = new Resolver(id, wallet, active);
@@ -41,12 +41,10 @@ describe("Resolver", function() {
 
         beforeEach( async function () {
 
-            // Required constructor params
-            id = "299";
-
             // Create a valid resolver, then set fields in tests directly
             resolver = new Resolver(id, wallet, active);
             expect(resolver.isValid()).is.true;
+
         });
 
         it("Always present, id must be the string representation of a BigNumber", async function() {
@@ -125,14 +123,12 @@ describe("Resolver", function() {
             expect(resolver.isValid()).is.true;
 
         });
+
     })
 
     context("📋 Utility functions", async function () {
 
         beforeEach( async function () {
-
-            // Required constructor params
-            id = "2";
 
             // Create a valid resolver, then set fields in tests directly
             resolver = new Resolver(id, wallet, active);
@@ -144,6 +140,13 @@ describe("Resolver", function() {
                 wallet,
                 active
             }
+
+            // Struct representation
+            struct = [
+                id,
+                wallet,
+                active
+            ]
 
         })
 
@@ -161,6 +164,16 @@ describe("Resolver", function() {
                 for ([key, value] of Object.entries(resolver)) {
                     expect(JSON.stringify(promoted[key]) === JSON.stringify(value)).is.true;
                 }
+
+            });
+
+            it("Resolver.fromStruct() should return a Resolver instance from a struct representation", async function () {
+
+                // Get struct from instance
+                resolver = Resolver.fromStruct(struct)
+
+                // Ensure it is valid
+                expect(resolver.isValid()).to.be.true;
 
             });
 
@@ -209,7 +222,7 @@ describe("Resolver", function() {
 
             });
 
-            it("Resolver.toStruct() should return a struct representation of the Resolver instance", async function () {
+            it("instance.toStruct() should return a struct representation of the Resolver instance", async function () {
 
                 // Get struct from resolver
                 struct = resolver.toStruct();
@@ -221,6 +234,7 @@ describe("Resolver", function() {
                 expect(resolver.isValid()).to.be.true;
 
             });
+
         });
     });
 });

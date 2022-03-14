@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const Resolution = require("../../scripts/domain/Resolution");
+const Resolver = require("../../scripts/domain/Resolver");
 
 /**
  *  Test the Resolution domain entity
@@ -7,17 +8,17 @@ const Resolution = require("../../scripts/domain/Resolution");
 describe("Resolution", function() {
 
     // Suite-wide scope
-    let resolution, object, promoted, clone, dehydrated, rehydrated, key, value;
+    let resolution, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
     let buyerPercent;
 
+    beforeEach( async function () {
+
+        // Required constructor params
+        buyerPercent = "21";
+
+    });
+
     context("📋 Constructor", async function () {
-
-        beforeEach( async function () {
-
-            // Required constructor params
-            buyerPercent = "21";
-
-        });
 
         it("Should allow creation of valid, fully populated Resolution instance", async function () {
 
@@ -32,9 +33,6 @@ describe("Resolution", function() {
     context("📋 Field validations", async function () {
 
         beforeEach( async function () {
-
-            // Required constructor params
-            buyerPercent = "51";
 
             // Create a valid resolution, then set fields in tests directly
             resolution = new Resolution(buyerPercent);
@@ -82,9 +80,6 @@ describe("Resolution", function() {
 
         beforeEach( async function () {
 
-            // Required constructor params
-            buyerPercent = "5000";
-
             // Create a valid resolution, then set fields in tests directly
             resolution = new Resolution(buyerPercent);
             expect(resolution.isValid()).is.true;
@@ -93,6 +88,11 @@ describe("Resolution", function() {
             object = {
                 buyerPercent
             }
+
+            // Get struct representation
+            struct = [
+                buyerPercent
+            ]
 
         })
 
@@ -110,6 +110,16 @@ describe("Resolution", function() {
                 for ([key, value] of Object.entries(resolution)) {
                     expect(JSON.stringify(promoted[key]) === JSON.stringify(value)).is.true;
                 }
+
+            });
+
+            it("Resolution.toStruct() should return a Resolution instance from a struct representation", async function () {
+
+                // Marshal back to a resolution instance
+                resolution = Resolution.fromStruct(struct)
+
+                // Ensure it marshals back to a valid resolution
+                expect(resolution.isValid()).to.be.true;
 
             });
 
@@ -157,6 +167,20 @@ describe("Resolution", function() {
                 }
 
             });
+
+            it("instance.toStruct() should return a struct representation of the Resolution instance", async function () {
+
+                // Get struct from instance
+                struct = resolution.toStruct();
+
+                // Marshal back to a resolution instance
+                resolution = Resolution.fromStruct(struct)
+
+                // Ensure it marshals back to a valid resolution
+                expect(resolution.isValid()).to.be.true;
+
+            });
+
         });
 
     })

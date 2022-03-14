@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const Twin = require("../../scripts/domain/Twin.js");
+const Condition = require("../../scripts/domain/Condition");
 
 /**
  *  Test the Twin domain entity
@@ -7,20 +8,24 @@ const Twin = require("../../scripts/domain/Twin.js");
 describe("Twin", function() {
 
     // Suite-wide scope
-    let twin, object, promoted, clone, dehydrated, rehydrated, key, value;
-    let id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress;
+    let twin, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
+    let accounts, id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress;
+
+    beforeEach( async function () {
+
+        // Get a list of accounts
+        accounts = await ethers.getSigners();
+
+        // Required constructor params
+        id = "1000";
+        sellerId = "12";
+        supplyAvailable = "500";
+        tokenId = "4096";
+        supplyIds = ['1', '2']
+        tokenAddress = accounts[0].address;
+    });
 
     context("📋 Constructor", async function () {
-
-        beforeEach( async function () {
-            // Get a list of accounts
-            accounts = await ethers.getSigners();
-
-            // Required constructor params
-            id = sellerId = supplyAvailable = tokenId = "21";
-            supplyIds = ['1', '2']
-            tokenAddress = accounts[0].address;
-        });
 
         it("Should allow creation of valid, fully populated Twin instance", async function () {
 
@@ -40,9 +45,6 @@ describe("Twin", function() {
     context("📋 Field validations", async function () {
 
         beforeEach( async function () {
-
-            // Required constructor params
-            id = sellerId = supplyAvailable = tokenId = "51";
 
             // Create a valid twin, then set fields in tests directly
             twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
@@ -218,16 +220,12 @@ describe("Twin", function() {
             expect(twin.isValid()).is.true;
 
         });
+
     })
 
     context("📋 Utility functions", async function () {
 
         beforeEach( async function () {
-
-            // Required constructor params
-            id = sellerId = supplyAvailable = tokenId = "90125";
-            supplyIds = ['123', '456']
-            tokenAddress = accounts[0].address;
 
             // Create a valid twin, then set fields in tests directly
             twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
@@ -241,7 +239,17 @@ describe("Twin", function() {
                 supplyIds,
                 tokenId,
                 tokenAddress
-            }
+            };
+
+            // Struct representation
+            struct = [
+                id,
+                sellerId,
+                supplyAvailable,
+                supplyIds,
+                tokenId,
+                tokenAddress
+            ];
 
         })
 
@@ -259,6 +267,16 @@ describe("Twin", function() {
                 for ([key, value] of Object.entries(twin)) {
                     expect(JSON.stringify(promoted[key]) === JSON.stringify(value)).is.true;
                 }
+
+            });
+
+            it("Twin.fromStruct() should return a Twin instance from a struct representation", async function () {
+
+                // Get an instance from the struct
+                twin = Twin.fromStruct(struct);
+
+                // Ensure it is valid
+                expect(twin.isValid()).to.be.true;
 
             });
 
@@ -306,6 +324,20 @@ describe("Twin", function() {
                 }
 
             });
+
+            it("instance.toStruct() should return a struct representation of the Twin instance", async function () {
+
+                // Get struct from twin
+                struct = twin.toStruct();
+
+                // Marshal back to a twin instance
+                twin = Twin.fromStruct(struct)
+
+                // Ensure it marshals back to a valid twin
+                expect(twin.isValid()).to.be.true;
+
+            });
+
         });
 
     })
