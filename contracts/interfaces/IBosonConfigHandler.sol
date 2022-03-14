@@ -13,10 +13,10 @@ import "../domain/BosonTypes.sol";
 interface IBosonConfigHandler {
 
     /// Events
-    event VoucherAddressChanged(address indexed voucher);
-    event TokenAddressChanged(address indexed tokenAddress);
-    event TreasuryAddressChanged(address indexed treasuryAddress);
-    event ProtocolFeePercentageChanged(uint16 indexed feePercentage);
+    event VoucherAddressChanged(address indexed voucher, address indexed changedBy);
+    event TokenAddressChanged(address indexed tokenAddress, address indexed changedBy);
+    event TreasuryAddressChanged(address indexed treasuryAddress, address indexed changedBy);
+    event ProtocolFeePercentageChanged(uint16 indexed feePercentage, address indexed changedBy);
 
     /**
      * @notice Sets the address of the Boson Token (ERC-20) contract.

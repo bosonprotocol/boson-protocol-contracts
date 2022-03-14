@@ -10,7 +10,6 @@ contract BosonTypes {
 
     enum EvaluationMethod {
         None,
-        AnyBalance,
         AboveThreshold,
         SpecificToken
     }
@@ -30,7 +29,6 @@ contract BosonTypes {
         Escalated,
         Decided
     }
-
 
     struct Seller {
         uint256 id;
