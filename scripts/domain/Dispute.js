@@ -8,8 +8,10 @@ const ethers = require("ethers");
  */
 class Dispute {
 
-    constructor (exchangeId) {
+    constructor (exchangeId, complaint, state) {
         this.exchangeId = exchangeId;
+        this.complaint = complaint;
+        this.state = state;
     }
 
     /**
@@ -18,8 +20,8 @@ class Dispute {
      * @returns {Dispute}
      */
     static fromObject(o) {
-        const {exchangeId} = o;
-        return new Dispute(exchangeId);
+        const {exchangeId, complaint, state} = o;
+        return new Dispute(exchangeId, complaint, state);
     }
 
     /**
@@ -64,12 +66,47 @@ class Dispute {
     }
 
     /**
+     * Is this Dispute instance's complaint field valid?
+     * Must be a string
+     * @returns {boolean}
+     */
+    complaintIsValid() {
+        let valid = false;
+        let {complaint} = this;
+        try {
+            valid = (
+                typeof complaint === "string"
+            )
+        } catch(e){}
+        return valid;
+    }
+
+    /**
+     * Is this Dispute instance's state field valid?
+     * Must be a number representation of a big number
+     * @returns {boolean}
+     */
+    stateIsValid() {
+        let valid = false;
+        let {state} = this;
+        try {
+            valid = (
+                typeof state === "number" &&
+                typeof ethers.BigNumber.from(state) === "object"
+            )
+        } catch(e){}
+        return valid;
+    }
+
+    /**
      * Is this Dispute instance valid?
      * @returns {boolean}
      */
     isValid() {
         return (
-            this.exchangeIdIsValid() // &&
+            this.exchangeIdIsValid() &&
+            this.complaintIsValid() &&
+            this.stateIsValid() // &&
             // ...
         );
     };
