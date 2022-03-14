@@ -167,7 +167,6 @@ describe("Bundle", function() {
 
             // Required constructor params
             id = sellerId = "90125";
-            supplyIds = ['123', '456']
 
             // Create a valid bundle, then set fields in tests directly
             bundle = new Bundle(id, sellerId, offerIds, twinIds);

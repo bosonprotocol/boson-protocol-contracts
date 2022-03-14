@@ -42,7 +42,7 @@ describe("Resolution", function() {
 
         });
 
-        it("Always present, buyerPercent must be the string representation of a BigNumber", async function() {
+        it("Always present, buyerPercent must be the string representation of a BigNumber between 0 and 10000", async function() {
 
             // Invalid field value
             resolution.buyerPercent = "zedzdeadbaby";
@@ -60,12 +60,17 @@ describe("Resolution", function() {
             expect(resolution.isValid()).is.false;
 
             // Valid field value
+            resolution.buyerPercent = "12000";
+            expect(resolution.buyerPercentIsValid()).is.false;
+            expect(resolution.isValid()).is.false;
+
+            // Valid field value
             resolution.buyerPercent = "0";
             expect(resolution.buyerPercentIsValid()).is.true;
             expect(resolution.isValid()).is.true;
 
             // Valid field value
-            resolution.buyerPercent = "126";
+            resolution.buyerPercent = "10000";
             expect(resolution.buyerPercentIsValid()).is.true;
             expect(resolution.isValid()).is.true;
 
@@ -78,7 +83,7 @@ describe("Resolution", function() {
         beforeEach( async function () {
 
             // Required constructor params
-            buyerPercent = "90125";
+            buyerPercent = "5000";
 
             // Create a valid resolution, then set fields in tests directly
             resolution = new Resolution(buyerPercent);

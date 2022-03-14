@@ -9,7 +9,7 @@ describe("Condition", function() {
 
     // Suite-wide scope
     let condition, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-    let method, tokenAddress, tokenId, threshold;
+    let accounts, method, tokenAddress, tokenId, threshold;
 
     context("📋 Constructor", async function () {
 

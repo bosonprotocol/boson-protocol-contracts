@@ -8,7 +8,7 @@ describe("Seller", function() {
 
     // Suite-wide scope
     let seller, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-    let id, operator, authorizer, treasury, active;
+    let accounts, id, operator, authorizer, treasury, active;
 
     context("📋 Constructor", async function () {
 

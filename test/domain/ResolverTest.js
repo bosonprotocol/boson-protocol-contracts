@@ -8,7 +8,7 @@ describe("Resolver", function() {
 
     // Suite-wide scope
     let resolver, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-    let id, wallet, active;
+    let accounts, id, wallet, active;
 
     context("📋 Constructor", async function () {
 

@@ -49,6 +49,7 @@ class Resolution {
     /**
      * Is this Resolution instance's buyerPercent field valid?
      * Must be a string representation of a big number
+     * Must be between 0 and 10000 (0% - 100%)
      * @returns {boolean}
      */
     buyerPercentIsValid() {
@@ -57,7 +58,9 @@ class Resolution {
         try {
             valid = (
                 typeof buyerPercent === "string" &&
-                typeof ethers.BigNumber.from(buyerPercent) === "object"
+                typeof ethers.BigNumber.from(buyerPercent) === "object" &&
+                Number(buyerPercent) >= 0 &&
+                Number(buyerPercent) <= 10000
             )
         } catch(e){}
         return valid;
