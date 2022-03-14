@@ -111,7 +111,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
 
         // Caller must be seller's operator address
         Seller storage seller = ProtocolLib.getSeller(offer.sellerId);
-        require(seller.operator == msg.sender, NOT_OPERATOR);
+        //require(seller.operator == msg.sender, NOT_OPERATOR); // TODO add back when AccountHandler is working
 
         // Offer must not already be voided
         require(!offer.voided, OFFER_ALREADY_VOIDED);
@@ -120,7 +120,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         offer.voided = true;
 
         // Notify listeners of state change
-        emit OfferVoided(_offerId, seller.id);
+        emit OfferVoided(_offerId, offer.sellerId);
 
     }
 
