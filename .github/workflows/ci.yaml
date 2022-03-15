@@ -2,7 +2,7 @@ name: Contracts CI
 
 on:
   push:
-    branches: [ add-ci-to-gha ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
     types: [ opened, reopened, synchronize, ready_for_review ]
