@@ -13,7 +13,7 @@ import "../domain/BosonTypes.sol";
 interface IBosonExchangeHandler {
 
     /// Events
-    event BuyerCommitted(uint256 indexed offerId, address indexed buyer, address indexed seller);
+    event BuyerCommitted(uint256 indexed offerId, uint256 indexed buyerId, address indexed exchangeId, BosonTypes.Exchange exchange);
 
     /**
      * @notice Commit to an offer (first step of an exchange)
@@ -35,5 +35,17 @@ interface IBosonExchangeHandler {
         uint256 _offerId
     )
     external;
+
+    /**
+     * @notice Gets the details about a given exchange.
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return success - the exchange was found
+     * @return exchange - the exchange details. See {BosonTypes.Exchange}
+     */
+    function getExchange(uint256 _exchangeId)
+    external
+    view
+    returns(bool success, BosonTypes.Exchange memory exchange);
 
 }

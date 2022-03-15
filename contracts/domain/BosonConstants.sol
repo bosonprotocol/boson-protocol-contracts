@@ -9,18 +9,25 @@ pragma solidity ^0.8.0;
 contract BosonConstants {
 
     // Access Control Roles
-    bytes32 internal constant ADMIN    = keccak256("ADMIN");      // Role Admin
-    bytes32 internal constant PROTOCOL = keccak256("PROTOCOL");   // Role for facets of the ProtocolDiamond
-    bytes32 internal constant CLIENT   = keccak256("CLIENT");     // Role for clients of the ProtocolDiamond
-    bytes32 internal constant UPGRADER = keccak256("UPGRADER");   // Role for performing contract and config upgrades
+    bytes32 internal constant ADMIN     = keccak256("ADMIN");      // Role Admin
+    bytes32 internal constant PROTOCOL  = keccak256("PROTOCOL");   // Role for facets of the ProtocolDiamond
+    bytes32 internal constant CLIENT    = keccak256("CLIENT");     // Role for clients of the ProtocolDiamond
+    bytes32 internal constant UPGRADER  = keccak256("UPGRADER");   // Role for performing contract and config upgrades
+    bytes32 internal constant RESOLVER  = keccak256("RESOLVER");   // Role for resolving the outcome of an escalated dispute
+    bytes32 internal constant FEE_COLLECTOR  = keccak256("FEE_COLLECTOR");   // Role for collecting fees from the protocol
 
     // Revert Reasons: Facet initializer related
     string internal constant ALREADY_INITIALIZED = "Already initialized";
 
-    // Revert Reasons: Offer / Seller related
-    string internal constant NOT_SELLER = "Not seller";
+    // Revert Reasons: Seller related
+    string internal constant NOT_OPERATOR = "Not seller's operator";
+
+    // Revert Reasons: Offer related
     string internal constant NO_SUCH_OFFER = "No such offer";
     string internal constant OFFER_ALREADY_VOIDED = "Offer already voided";
     string internal constant OFFER_PERIOD_INVALID = "Offer period invalid";
+
+    // Revert Reasons: Exchange related
+    string internal constant NO_SUCH_EXCHANGE = "No such exchange";
 
 }

@@ -19,8 +19,8 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     modifier onlyUnInitialized()
     {
         ProtocolLib.ProtocolInitializers storage pi = ProtocolLib.protocolInitializers();
-        require(!pi.disputeFacet, ALREADY_INITIALIZED);
-        pi.disputeFacet = true;
+        require(!pi.disputeHandler, ALREADY_INITIALIZED);
+        pi.disputeHandler = true;
         _;
     }
 
@@ -44,24 +44,27 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * - a dispute already exists
      * - the complaint is blank
      *
-     * @param _offerId - the id of the associated offer
+     * @param _exchangeId - the id of the associated exchange
      * @param _complaint - the buyer's complaint description
      */
     function raiseDispute(
-        uint256 _offerId,
+        uint256 _exchangeId,
         string calldata _complaint
     )
     external
     override
     {
-        // Get the offer, revert if it doesn't exist
-        Offer storage offer = ProtocolLib.getOffer(_offerId);
-        require (offer.id == _offerId, BosonConstants.NO_SUCH_OFFER);
+        // Get the exchange, revert if it doesn't exist
+        Exchange storage exchange = ProtocolLib.getExchange(_exchangeId);
+        require (exchange.id == _exchangeId, BosonConstants.NO_SUCH_EXCHANGE);
 
-        // TODO implement further checks and raise dispute
+        Offer storage offer = ProtocolLib.getOffer(exchange.offerId);
+        require (offer.id == exchange.offerId, BosonConstants.NO_SUCH_OFFER);
+
+        // TODO implement further checks, create and store dispute
 
         // Notify watchers of state change
-        emit DisputeRaised(_offerId, msg.sender, offer.seller, _complaint);
+        emit DisputeRaised(_exchangeId, exchange.buyerId, offer.sellerId, _complaint);
 
     }
 

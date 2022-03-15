@@ -10,16 +10,16 @@ describe("Offer", function() {
     let offer, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
     let accounts, oneMonth, twoMonths, oneWeek;
     let id,
+        sellerId,
         price,
-        deposit,
-        penalty,
-        quantity,
+        sellerDeposit,
+        buyerCancelPenalty,
+        quantityAvailable,
         validFromDate,
         validUntilDate,
-        redeemableDate,
+        redeemableFromDate,
         fulfillmentPeriodDuration,
         voucherValidDuration,
-        seller,
         exchangeToken,
         metadataUri,
         metadataHash,
@@ -36,17 +36,16 @@ describe("Offer", function() {
         twoMonths = oneMonth * 2;  //  2 months in milliseconds
 
         // Required constructor params
-        id = "0";
+        id = sellerId = "0";
         price = ethers.utils.parseUnits("1.5", "ether").toString();
-        deposit = price = ethers.utils.parseUnits("0.25", "ether").toString();
-        penalty = price = ethers.utils.parseUnits("0.05", "ether").toString();
-        quantity = "1";
+        sellerDeposit = price = ethers.utils.parseUnits("0.25", "ether").toString();
+        buyerCancelPenalty = price = ethers.utils.parseUnits("0.05", "ether").toString();
+        quantityAvailable = "1";
         validFromDate = ethers.BigNumber.from(Date.now()).toString();                   // valid from now
         validUntilDate = ethers.BigNumber.from(Date.now() + (oneMonth * 6)).toString(); // until 6 months
-        redeemableDate = ethers.BigNumber.from(Date.now() + oneWeek).toString();        // redeemable in 1 week
+        redeemableFromDate = ethers.BigNumber.from(Date.now() + oneWeek).toString();    // redeemable in 1 week
         fulfillmentPeriodDuration = oneMonth.toString();                                // fulfillment period is one month
         voucherValidDuration = oneMonth.toString();                                     // offers valid for one month
-        seller = accounts[0].address;
         exchangeToken = ethers.constants.AddressZero.toString();                        // Zero addy ~ chain base currency
         metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
         metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
@@ -58,21 +57,19 @@ describe("Offer", function() {
 
         it("Should allow creation of valid, fully populated Offer instance", async function () {
 
-            id = "2112";
-
             // Create a valid offer, then set fields in tests directly
             offer = new Offer(
                 id,
+                sellerId,
                 price,
-                deposit,
-                penalty,
-                quantity,
+                sellerDeposit,
+                buyerCancelPenalty,
+                quantityAvailable,
                 validFromDate,
                 validUntilDate,
-                redeemableDate,
+                redeemableFromDate,
                 fulfillmentPeriodDuration,
                 voucherValidDuration,
-                seller,
                 exchangeToken,
                 metadataUri,
                 metadataHash,
@@ -88,22 +85,19 @@ describe("Offer", function() {
 
         beforeEach( async function () {
 
-            // Required constructor params
-            id = "5150";
-
             // Create a valid offer, then set fields in tests directly
             offer = new Offer(
                 id,
+                sellerId,
                 price,
-                deposit,
-                penalty,
-                quantity,
+                sellerDeposit,
+                buyerCancelPenalty,
+                quantityAvailable,
                 validFromDate,
                 validUntilDate,
-                redeemableDate,
+                redeemableFromDate,
                 fulfillmentPeriodDuration,
                 voucherValidDuration,
-                seller,
                 exchangeToken,
                 metadataUri,
                 metadataHash,
@@ -170,89 +164,89 @@ describe("Offer", function() {
 
         });
 
-        it("Always present, deposit must be the string representation of a BigNumber", async function() {
+        it("Always present, sellerDeposit must be the string representation of a BigNumber", async function() {
 
             // Invalid field value
-            offer.deposit = "zedzdeadbaby";
-            expect(offer.depositIsValid()).is.false;
+            offer.sellerDeposit = "zedzdeadbaby";
+            expect(offer.sellerDepositIsValid()).is.false;
             expect(offer.isValid()).is.false;
 
             // Invalid field value
-            offer.deposit = new Date();
-            expect(offer.depositIsValid()).is.false;
+            offer.sellerDeposit = new Date();
+            expect(offer.sellerDepositIsValid()).is.false;
             expect(offer.isValid()).is.false;
 
             // Invalid field value
-            offer.deposit = 12;
-            expect(offer.depositIsValid()).is.false;
+            offer.sellerDeposit = 12;
+            expect(offer.sellerDepositIsValid()).is.false;
             expect(offer.isValid()).is.false;
 
             // Valid field value
-            offer.deposit = "0";
-            expect(offer.depositIsValid()).is.true;
+            offer.sellerDeposit = "0";
+            expect(offer.sellerDepositIsValid()).is.true;
             expect(offer.isValid()).is.true;
 
             // Valid field value
-            offer.deposit = "126";
-            expect(offer.depositIsValid()).is.true;
-            expect(offer.isValid()).is.true;
-
-        });
-
-        it("Always present, penalty must be the string representation of a BigNumber", async function() {
-
-            // Invalid field value
-            offer.penalty = "zedzdeadbaby";
-            expect(offer.penaltyIsValid()).is.false;
-            expect(offer.isValid()).is.false;
-
-            // Invalid field value
-            offer.penalty = new Date();
-            expect(offer.penaltyIsValid()).is.false;
-            expect(offer.isValid()).is.false;
-
-            // Invalid field value
-            offer.penalty = 12;
-            expect(offer.penaltyIsValid()).is.false;
-            expect(offer.isValid()).is.false;
-
-            // Valid field value
-            offer.penalty = "0";
-            expect(offer.penaltyIsValid()).is.true;
-            expect(offer.isValid()).is.true;
-
-            // Valid field value
-            offer.penalty = "126";
-            expect(offer.penaltyIsValid()).is.true;
+            offer.sellerDeposit = "126";
+            expect(offer.sellerDepositIsValid()).is.true;
             expect(offer.isValid()).is.true;
 
         });
 
-        it("Always present, quantity must be the string representation of a BigNumber", async function() {
+        it("Always present, buyerCancelPenalty must be the string representation of a BigNumber", async function() {
 
             // Invalid field value
-            offer.quantity = "zedzdeadbaby";
-            expect(offer.quantityIsValid()).is.false;
+            offer.buyerCancelPenalty = "zedzdeadbaby";
+            expect(offer.buyerCancelPenaltyIsValid()).is.false;
             expect(offer.isValid()).is.false;
 
             // Invalid field value
-            offer.quantity = new Date();
-            expect(offer.quantityIsValid()).is.false;
+            offer.buyerCancelPenalty = new Date();
+            expect(offer.buyerCancelPenaltyIsValid()).is.false;
             expect(offer.isValid()).is.false;
 
             // Invalid field value
-            offer.quantity = 12;
-            expect(offer.quantityIsValid()).is.false;
+            offer.buyerCancelPenalty = 12;
+            expect(offer.buyerCancelPenaltyIsValid()).is.false;
             expect(offer.isValid()).is.false;
 
             // Valid field value
-            offer.quantity = "0";
-            expect(offer.quantityIsValid()).is.true;
+            offer.buyerCancelPenalty = "0";
+            expect(offer.buyerCancelPenaltyIsValid()).is.true;
             expect(offer.isValid()).is.true;
 
             // Valid field value
-            offer.quantity = "126";
-            expect(offer.quantityIsValid()).is.true;
+            offer.buyerCancelPenalty = "126";
+            expect(offer.buyerCancelPenaltyIsValid()).is.true;
+            expect(offer.isValid()).is.true;
+
+        });
+
+        it("Always present, quantityAvailable must be the string representation of a BigNumber", async function() {
+
+            // Invalid field value
+            offer.quantityAvailable = "zedzdeadbaby";
+            expect(offer.quantityAvailableIsValid()).is.false;
+            expect(offer.isValid()).is.false;
+
+            // Invalid field value
+            offer.quantityAvailable = new Date();
+            expect(offer.quantityAvailableIsValid()).is.false;
+            expect(offer.isValid()).is.false;
+
+            // Invalid field value
+            offer.quantityAvailable = 12;
+            expect(offer.quantityAvailableIsValid()).is.false;
+            expect(offer.isValid()).is.false;
+
+            // Valid field value
+            offer.quantityAvailable = "0";
+            expect(offer.quantityAvailableIsValid()).is.true;
+            expect(offer.isValid()).is.true;
+
+            // Valid field value
+            offer.quantityAvailable = "126";
+            expect(offer.quantityAvailableIsValid()).is.true;
             expect(offer.isValid()).is.true;
 
         });
@@ -315,31 +309,31 @@ describe("Offer", function() {
 
         });
 
-        it("Always present, redeemableDate must be the string representation of a BigNumber", async function() {
+        it("Always present, redeemableFromDate must be the string representation of a BigNumber", async function() {
 
             // Invalid field value
-            offer.redeemableDate = "zedzdeadbaby";
-            expect(offer.redeemableDateIsValid()).is.false;
+            offer.redeemableFromDate = "zedzdeadbaby";
+            expect(offer.redeemableFromDateIsValid()).is.false;
             expect(offer.isValid()).is.false;
 
             // Invalid field value
-            offer.redeemableDate = new Date();
-            expect(offer.redeemableDateIsValid()).is.false;
+            offer.redeemableFromDate = new Date();
+            expect(offer.redeemableFromDateIsValid()).is.false;
             expect(offer.isValid()).is.false;
 
             // Invalid field value
-            offer.redeemableDate = 12;
-            expect(offer.redeemableDateIsValid()).is.false;
+            offer.redeemableFromDate = 12;
+            expect(offer.redeemableFromDateIsValid()).is.false;
             expect(offer.isValid()).is.false;
 
             // Valid field value
-            offer.redeemableDate = "0";
-            expect(offer.redeemableDateIsValid()).is.true;
+            offer.redeemableFromDate = "0";
+            expect(offer.redeemableFromDateIsValid()).is.true;
             expect(offer.isValid()).is.true;
 
             // Valid field value
-            offer.redeemableDate = "126";
-            expect(offer.redeemableDateIsValid()).is.true;
+            offer.redeemableFromDate = "126";
+            expect(offer.redeemableFromDateIsValid()).is.true;
             expect(offer.isValid()).is.true;
 
         });
@@ -402,26 +396,31 @@ describe("Offer", function() {
 
         });
 
-        it("Always present, seller must be a string representation of an EIP-55 compliant address", async function() {
+        it("Always present, sellerId must be the string representation of a BigNumber", async function() {
 
             // Invalid field value
-            offer.seller = "0xASFADF";
-            expect(offer.sellerIsValid()).is.false;
+            offer.sellerId = "zedzdeadbaby";
+            expect(offer.sellerIdIsValid()).is.false;
             expect(offer.isValid()).is.false;
 
             // Invalid field value
-            offer.seller = "zedzdeadbaby";
-            expect(offer.sellerIsValid()).is.false;
+            offer.sellerId = new Date();
+            expect(offer.sellerIdIsValid()).is.false;
+            expect(offer.isValid()).is.false;
+
+            // Invalid field value
+            offer.sellerId = 12;
+            expect(offer.sellerIdIsValid()).is.false;
             expect(offer.isValid()).is.false;
 
             // Valid field value
-            offer.seller = accounts[0].address;
-            expect(offer.sellerIsValid()).is.true;
+            offer.sellerId = "0";
+            expect(offer.sellerIdIsValid()).is.true;
             expect(offer.isValid()).is.true;
 
             // Valid field value
-            offer.seller = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
-            expect(offer.sellerIsValid()).is.true;
+            offer.sellerId = "126";
+            expect(offer.sellerIdIsValid()).is.true;
             expect(offer.isValid()).is.true;
 
         });
@@ -519,21 +518,21 @@ describe("Offer", function() {
         beforeEach( async function () {
 
             // Required constructor params
-            id = "90125";
+            id = sellerId = "90125";
 
             // Create a valid offer, then set fields in tests directly
             offer = new Offer(
                 id,
+                sellerId,
                 price,
-                deposit,
-                penalty,
-                quantity,
+                sellerDeposit,
+                buyerCancelPenalty,
+                quantityAvailable,
                 validFromDate,
                 validUntilDate,
-                redeemableDate,
+                redeemableFromDate,
                 fulfillmentPeriodDuration,
                 voucherValidDuration,
-                seller,
                 exchangeToken,
                 metadataUri,
                 metadataHash,
@@ -544,16 +543,16 @@ describe("Offer", function() {
             // Create plain object
             object = {
                 id,
+                sellerId,
                 price,
-                deposit,
-                penalty,
-                quantity,
+                sellerDeposit,
+                buyerCancelPenalty,
+                quantityAvailable,
                 validFromDate,
                 validUntilDate,
-                redeemableDate,
+                redeemableFromDate,
                 fulfillmentPeriodDuration,
                 voucherValidDuration,
-                seller,
                 exchangeToken,
                 metadataUri,
                 metadataHash,
@@ -582,16 +581,16 @@ describe("Offer", function() {
 
                 struct = [
                     offer.id,
+                    offer.sellerId,
                     offer.price,
-                    offer.deposit,
-                    offer.penalty,
-                    offer.quantity,
+                    offer.sellerDeposit,
+                    offer.buyerCancelPenalty,
+                    offer.quantityAvailable,
                     offer.validFromDate,
                     offer.validUntilDate,
-                    offer.redeemableDate,
+                    offer.redeemableFromDate,
                     offer.fulfillmentPeriodDuration,
                     offer.voucherValidDuration,
-                    offer.seller,
                     offer.exchangeToken,
                     offer.metadataUri,
                     offer.metadataHash,

@@ -13,8 +13,8 @@ import "../domain/BosonTypes.sol";
 interface IBosonOfferHandler {
 
     /// Events
-    event OfferCreated(uint256 indexed offerId, address indexed seller, BosonTypes.Offer offer);
-    event OfferVoided(uint256 indexed offerId, address indexed seller);
+    event OfferCreated(uint256 indexed offerId, uint256 indexed sellerId, BosonTypes.Offer offer);
+    event OfferVoided(uint256 indexed offerId, uint256 indexed sellerId);
 
     /**
      * @notice Creates an offer

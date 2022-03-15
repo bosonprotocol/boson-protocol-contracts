@@ -13,10 +13,10 @@ import "../domain/BosonTypes.sol";
 interface IBosonConfigHandler {
 
     /// Events
-    event VoucherAddressChanged(address indexed voucher);
-    event TokenAddressChanged(address indexed tokenAddress);
-    event MultisigAddressChanged(address indexed multisigAddress);
-    event FeePercentageChanged(uint16 indexed feePercentage);
+    event VoucherAddressChanged(address indexed voucher, address indexed changedBy);
+    event TokenAddressChanged(address indexed tokenAddress, address indexed changedBy);
+    event TreasuryAddressChanged(address indexed treasuryAddress, address indexed changedBy);
+    event ProtocolFeePercentageChanged(uint16 indexed feePercentage, address indexed changedBy);
 
     /**
      * @notice Sets the address of the Boson Token (ERC-20) contract.
@@ -37,19 +37,19 @@ interface IBosonConfigHandler {
     returns (address payable);
 
     /**
-     * @notice Sets the address of the Boson Protocol multi-sig wallet.
+     * @notice Sets the address of the Boson Protocol treasury.
      *
-     * Emits a MultisigAddressChanged event.
+     * Emits a TreasuryAddressChanged event.
      *
-     * @param _multisigAddress - the address of the multi-sig wallet
+     * @param _treasuryAddress - the address of the treasury
      */
-    function setMultisigAddress(address payable _multisigAddress)
+    function setTreasuryAddress(address payable _treasuryAddress)
     external;
 
     /**
-     * @notice The multisigAddress getter
+     * @notice The treasuryAddress getter
      */
-    function getMultisigAddress()
+    function getTreasuryAddress()
     external
     view
     returns (address payable);
@@ -75,17 +75,20 @@ interface IBosonConfigHandler {
     /**
      * @notice Sets the protocol fee percentage.
      *
-     * Emits a FeePercentageChanged event.
+     * Emits a ProtocolFeePercentageChanged event.
+     *
+     * Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
      *
      * @param _feePercentage - the percentage that will be taken as a fee from the net of a Boson Protocol exchange
      */
-    function setFeePercentage(uint16 _feePercentage)
+    function setProtocolFeePercentage(uint16 _feePercentage)
     external;
 
     /**
-     * @notice The feePercentage getter
+     * @notice Get the protocol fee percentage
      */
-    function getFeePercentage()
+    function getProtocolFeePercentage()
     external
     view
     returns (uint16);

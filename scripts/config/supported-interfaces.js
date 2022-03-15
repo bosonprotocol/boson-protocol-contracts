@@ -2,13 +2,13 @@
  * ERC-165 identifiers for interfaces implemented by the Boson Protocol
  */
 exports.InterfaceIds = {
-    IBosonConfigHandler:    "0x1753a1ce",
+    IBosonConfigHandler:    "0x01e751ae",
     IBosonDisputeHandler:   "0x5aef573c",
-    IBosonExchangeHandler:  "0x1f317d1c",
+    IBosonExchangeHandler:  "0x14ac255b",
     IBosonFundsHandler:     "0x00000000",
-    IBosonOfferHandler:     "0xaf7dd438",
+    IBosonOfferHandler:     "0xfb7774d3",
     IBosonTwinHandler:      "0x00000000",
-    IBosonVoucher:          "0x2c4d3f99",
+    IBosonVoucher:          "0x8a75c03e",
     IBosonClient:           "0xc4c6c36b",
     IDiamondCut:            "0x1f931c1c",
     IDiamondLoupe:          "0x48e2b093",

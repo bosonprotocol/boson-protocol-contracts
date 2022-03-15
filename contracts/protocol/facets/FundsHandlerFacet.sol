@@ -19,8 +19,8 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
     modifier onlyUnInitialized()
     {
         ProtocolLib.ProtocolInitializers storage pi = ProtocolLib.protocolInitializers();
-        require(!pi.offerFacet, ALREADY_INITIALIZED);
-        pi.cashierFacet = true;
+        require(!pi.offerHandler, ALREADY_INITIALIZED);
+        pi.fundsHandler = true;
         _;
     }
 

@@ -19,8 +19,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     modifier onlyUnInitialized()
     {
         ProtocolLib.ProtocolInitializers storage pi = ProtocolLib.protocolInitializers();
-        require(!pi.exchangeFacet, ALREADY_INITIALIZED);
-        pi.exchangeFacet = true;
+        require(!pi.exchangeHandler, ALREADY_INITIALIZED);
+        pi.exchangeHandler = true;
         _;
     }
 
@@ -45,6 +45,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
      * - offerId is invalid
      * - offer has been voided
      * - offer has expired
+     * - offer's quantity available is zero
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
@@ -60,11 +61,35 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         Offer storage offer = ProtocolLib.getOffer(_offerId);
         require (offer.id == _offerId, BosonConstants.NO_SUCH_OFFER);
 
-        // TODO implement further checks, create exchange, issue voucher
+        // TODO 1) implement further requires (see above), create exchange, issue voucher
+
+        // TODO 2) get buyer struct if it exists or create and store new one
+
+        // TODO 3) create and store a new exchange
+
+        // TODO 4) create a new exchange
+
+        // TODO 5) decrement offer's quantity available
 
         // Notify watchers of state change
-        emit BuyerCommitted(_offerId, _buyer, offer.seller);
+        // emit BuyerCommitted(_offerId, buyer.id, exchange.id, exchange);
 
     }
-    
+
+    /**
+     * @notice Gets the details about a given exchange.
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return success - the exchange was found
+     * @return exchange - the exchange details. See {BosonTypes.Exchange}
+     */
+    function getExchange(uint256 _exchangeId)
+    external
+    view
+    returns(bool success, BosonTypes.Exchange memory exchange) {
+        exchange = ProtocolLib.getExchange(_exchangeId);
+        success = (exchange.id == _exchangeId);
+    }
+
+
 }

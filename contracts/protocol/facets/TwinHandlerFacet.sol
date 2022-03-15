@@ -19,8 +19,8 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
     modifier onlyUnInitialized()
     {
         ProtocolLib.ProtocolInitializers storage pi = ProtocolLib.protocolInitializers();
-        require(!pi.twinningFacet, ALREADY_INITIALIZED);
-        pi.twinningFacet = true;
+        require(!pi.twinHandler, ALREADY_INITIALIZED);
+        pi.twinHandler = true;
         _;
     }
 

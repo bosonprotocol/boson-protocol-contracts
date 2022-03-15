@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "../../../interfaces/IBosonVoucher.sol";
 import "../../../interfaces/IBosonClient.sol";
 import "../../../interfaces/IBosonOfferHandler.sol";
@@ -9,48 +9,50 @@ import "../ClientBase.sol";
 
 /**
  * @title BosonVoucher
- * @notice This is the Boson Protocol ERC-1155 NFT Voucher contract.
+ * @notice This is the Boson Protocol ERC-721 NFT Voucher contract.
  *
  * Key features:
  * - Only PROTOCOL-roled addresses can issue vouchers, i.e., the ProtocolDiamond or an EOA for testing
  * - Newly minted voucher NFTs are automatically transferred to the buyer
  */
-contract BosonVoucher is IBosonVoucher, ClientBase, ERC1155Upgradeable {
+contract BosonVoucher is IBosonVoucher, ClientBase, ERC721Upgradeable {
+
+    string internal constant VOUCHER_NAME = "Boson Voucher";
+    string internal constant VOUCHER_SYMBOL = "BOSON_VOUCHER";
 
     /**
      * @notice Initializer
      */
     function initialize()
     public {
-        __ERC1155_init_unchained("");
+        __ERC721_init_unchained(VOUCHER_NAME, VOUCHER_SYMBOL);
     }
 
     /**
-     * @notice Issue one or more vouchers to a given buyer
+     * @notice Issue a voucher to a buyer
      *
      * Minted voucher supply is sent to the buyer.
      * Caller must have PROTOCOL role.
      *
-     * @param _offerId - the id of the offer (corresponds to the ERC-1155 token id)
-     * @param _supply - how many vouchers to issue
+     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
      * @param _buyer - the buyer of the vouchers
      */
-    function issueVouchers(uint256 _offerId, uint256 _supply, address payable _buyer)
+    function issueVoucher(uint256 _exchangeId, Buyer calldata _buyer)
     external
     override
     onlyRole(PROTOCOL)
     {
-        // Mint the vouchers, sending them to the buyer
-        _mint(_buyer, _offerId, _supply, new bytes(0x0));
+        // Mint the voucher, sending it to the buyer
+        _mint(_buyer.wallet, _exchangeId);
 
     }
 
     /**
      * @notice Redeem a voucher
      *
-     * @param _offerId - the id of the offer (corresponds to the ERC-1155 token id)
+     * @param _exchangeId - the id of the exchange (corresponds to the ERC-1155 token id)
      */
-    function redeemVoucher(uint256 _offerId, address payable _holder)
+    function redeemVoucher(uint256 _exchangeId, address payable _holder)
     external
     override
     {
@@ -73,7 +75,7 @@ contract BosonVoucher is IBosonVoucher, ClientBase, ERC1155Upgradeable {
     function supportsInterface(bytes4 interfaceId)
     public
     view
-    override(ERC1155Upgradeable, IERC165Upgradeable)
+    override(ERC721Upgradeable, IERC165Upgradeable)
     returns (bool)
     {
         return (
@@ -91,16 +93,16 @@ contract BosonVoucher is IBosonVoucher, ClientBase, ERC1155Upgradeable {
      * replaceable baseURI template, since the latter is not compatible
      * with IPFS hashes.
      *
-     * @param _offerId - id of the offer to get the URI for
+     * @param _exchangeId - id of the voucher's associated exchange
      * @return the uri for the associated offer's off-chain metadata (blank if not found)
      */
-    function uri(uint256 _offerId)
+    function tokenURI(uint256 _exchangeId)
     public
     view
     override
     returns (string memory)
     {
-        (bool success, Offer memory offer) = getBosonOffer(_offerId);
+        (bool success, Offer memory offer) = getBosonOffer(_exchangeId);
         return success ? offer.metadataUri : "";
     }
 
