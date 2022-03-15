@@ -1,0 +1,59 @@
+name: Contracts CI
+
+on:
+  push:
+    branches: [ add-ci-to-gha ]
+  pull_request:
+    branches: [ main ]
+    types: [ opened, reopened, synchronize, ready_for_review ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
+    name: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Setup node
+        uses: actions/setup-node@v2.5.1
+        with:
+          node-version: '16.14.x'
+          cache: 'npm'
+      - run: npm install
+      - name: Prepare Environment
+        shell: bash
+        run: |
+          cp .env.example .env
+      - run: npm run build
+      - run: npm run lint
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
+    name: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Setup node
+        uses: actions/setup-node@v2.5.1
+        with:
+          node-version: '16.14.x'
+          cache: 'npm'
+      - name: Install Dependencies
+        run: npm install
+      - name: Prepare Environment
+        shell: bash
+        run: |
+          cp .env.example .env
+      - name: Compile Contracts
+        run: npm run build
+      - name: Contract Sizing
+        run: npm run size
+      - name: Unit tests
+        run: npm run test
