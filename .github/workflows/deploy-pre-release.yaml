@@ -5,7 +5,7 @@ on:
 jobs:
   ropsten_deploy:
     runs-on: ubuntu-latest
-    if: github.ref_type == 'tag' && contains(github.ref_name, '-rc.')
+    if: github.ref_type == 'tag' && contains(github.ref_name, '-rc')
     env:
       DEPLOYER_GAS_LIMIT: ${{ secrets.DEPLOYER_GAS_LIMIT }}
       DEPLOYER_ROPSTEN_TXNODE: ${{ secrets.DEPLOYER_ROPSTEN_TXNODE }}
