@@ -58,6 +58,15 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         // validUntil date must be in the future
         require(_offer.validUntilDate > block.timestamp, OFFER_PERIOD_INVALID);
 
+        // redeemableFromDate should be before offer expires
+        require(_offer.redeemableFromDate < _offer.validUntilDate, OFFER_PERIOD_INVALID);
+
+        // buyerCancelPenalty should be less or equal to product price
+        require(_offer.buyerCancelPenalty <= _offer.price, OFFER_PENALTY_INVALID);
+
+        // when creating offer, it cannot be set to voided
+        require(!_offer.voided, OFFER_MUST_BE_ACTIVE);
+
         // Get the next offerId and increment the counter
         uint256 offerId = protocolStorage().nextOfferId++;
 
@@ -79,8 +88,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         offer.exchangeToken = _offer.exchangeToken;
         offer.metadataUri = _offer.metadataUri;
         offer.metadataHash = _offer.metadataHash;
-        offer.voided = _offer.voided;
-
+      
         // Notify watchers of state change
         emit OfferCreated(offerId, _offer.sellerId, _offer);
     }

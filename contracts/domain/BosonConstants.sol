@@ -26,6 +26,8 @@ contract BosonConstants {
     string internal constant NO_SUCH_OFFER = "No such offer";
     string internal constant OFFER_ALREADY_VOIDED = "Offer already voided";
     string internal constant OFFER_PERIOD_INVALID = "Offer period invalid";
+    string internal constant OFFER_PENALTY_INVALID = "Offer penalty invalid";
+    string internal constant OFFER_MUST_BE_ACTIVE = "Offer must be active";
 
     // Revert Reasons: Exchange related
     string internal constant NO_SUCH_EXCHANGE = "No such exchange";
