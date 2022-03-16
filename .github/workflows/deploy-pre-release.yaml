@@ -10,7 +10,7 @@ jobs:
       DEPLOYER_GAS_LIMIT: ${{ secrets.DEPLOYER_GAS_LIMIT }}
       DEPLOYER_ROPSTEN_TXNODE: ${{ secrets.DEPLOYER_ROPSTEN_TXNODE }}
       DEPLOYER_ROPSTEN_KEY: ${{ secrets.DEPLOYER_ROPSTEN_KEY }}
-      ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+      DEPLOYER_ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
     name: ropsten_deploy
     steps:
       - name: Checkout repository
