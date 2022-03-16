@@ -228,12 +228,13 @@ describe("IBosonOfferHandler", function() {
 
             it("should emit an OfferVoided event", async function () {
 
-                // TODO: call getOffer with offerId to check the seller id in the event
+                // call getOffer with offerId to check the seller id in the event
+                let getOffer = await offerHandler.getOffer(id);
 
                 // Void the offer, testing for the event
                 await expect(offerHandler.connect(seller).voidOffer(id))
                     .to.emit(offerHandler, 'OfferVoided')
-                    .withArgs(id, "0");
+                    .withArgs(id, getOffer.offer.sellerId);
 
             });
 
