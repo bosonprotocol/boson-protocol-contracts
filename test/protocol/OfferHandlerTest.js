@@ -180,6 +180,36 @@ describe("IBosonOfferHandler", function() {
                         .to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
                 });
 
+                it("Redeemable from date is before offer expires", async function () {
+
+                    // Set redeemeable from after the expiration date
+                    offer.redeemableFromDate = ethers.BigNumber.from(offer.validUntilDate).add(10).toString();  
+
+                    // Attempt to Create an offer, expecting revert
+                    await expect(offerHandler.connect(seller).createOffer(offer))
+                        .to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+                });
+
+                it("Buyer cancel penalty is less than item price", async function () {
+
+                    // Set buyer cancel penalty higher than offer price
+                    offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();  
+
+                    // Attempt to Create an offer, expecting revert
+                    await expect(offerHandler.connect(seller).createOffer(offer))
+                        .to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
+                });
+
+                it("Offer cannot be voided at the time of the creation", async function () {
+
+                    // Set voided flag to true
+                    offer.voided = true;
+
+                    // Attempt to Create an offer, expecting revert
+                    await expect(offerHandler.connect(seller).createOffer(offer))
+                        .to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
+                });
+
             });
 
         });

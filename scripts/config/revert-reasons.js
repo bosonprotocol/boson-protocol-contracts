@@ -10,5 +10,7 @@ exports.RevertReasons = {
     NOT_OPERATOR: "Not seller's operator",
     NO_SUCH_OFFER: "No such offer",
     OFFER_ALREADY_VOIDED: "Offer already voided",
-    OFFER_PERIOD_INVALID: "Offer period invalid"
+    OFFER_PERIOD_INVALID: "Offer period invalid",
+    OFFER_PENALTY_INVALID : "Offer penalty invalid",
+    OFFER_MUST_BE_ACTIVE : "Offer must be active",
 }

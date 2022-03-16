@@ -61,7 +61,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         // redeemableFromDate should be before offer expires
         require(_offer.redeemableFromDate < _offer.validUntilDate, OFFER_PERIOD_INVALID);
 
-        // buyerCancelPenalty should be less or equal to product price
+        // buyerCancelPenalty should be less or equal to the item price
         require(_offer.buyerCancelPenalty <= _offer.price, OFFER_PENALTY_INVALID);
 
         // when creating offer, it cannot be set to voided
@@ -90,7 +90,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         offer.metadataHash = _offer.metadataHash;
       
         // Notify watchers of state change
-        emit OfferCreated(offerId, _offer.sellerId, _offer);
+        emit OfferCreated(offerId, _offer.sellerId, offer);
     }
 
     /**
