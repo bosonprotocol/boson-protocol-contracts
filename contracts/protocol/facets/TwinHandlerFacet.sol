@@ -5,6 +5,7 @@ import "../../interfaces/IBosonTwinHandler.sol";
 import "../../diamond/DiamondLib.sol";
 import "../ProtocolBase.sol";
 import "../ProtocolLib.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 /**
  * @title TwinHandlerFacet
@@ -23,5 +24,58 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
         DiamondLib.addSupportedInterface(type(IBosonTwinHandler).interfaceId);
     }
 
-    
+    /**
+     * @notice Creates a Twin.
+     *
+     * Emits a TwinCreated event if successful.
+     *
+     * Reverts if:
+     * - Not approved to transfer the seller's token
+     *
+     * @param _twin - the fully populated struct with twin id set to 0x0
+     */
+    function addTwin(
+        Twin calldata _twin
+    )
+    external
+    override
+    {
+        // Protocol must be approved to transfer seller’s tokens
+        require(isTokenTransferApproved(_twin.tokenAddress, _twin.sellerId), NO_TRANSFER_APPROVED);
+
+        // Get the next twinId and increment the counter
+        uint256 twinId = protocolStorage().nextTwinId++;
+
+        // Get storage location for twin
+        Twin storage twin = ProtocolLib.getTwin(twinId);
+
+        // Set twin props individually since memory structs can't be copied to storage
+        twin.id = twinId;
+        twin.sellerId = _twin.sellerId;
+        twin.supplyAvailable = _twin.supplyAvailable;
+        twin.supplyIds = _twin.supplyIds;
+        twin.tokenId = _twin.tokenId;
+        twin.tokenAddress = _twin.tokenAddress;
+
+        // Notify watchers of state change
+        emit TwinCreated(twinId, _twin.sellerId, _twin);
+    }
+
+    /**
+     * @notice Check if Protocol is approved to transfer seller’s tokens.
+     *
+     * @param _tokenAddress - the address of the seller's twin token contract.
+     * @param _sellerId - the id of the seller.
+     * @return _isApproved - the approve status.
+     */
+    function isTokenTransferApproved(
+        address _tokenAddress,
+        uint256 _sellerId
+    ) internal view returns(bool _isApproved) {
+        Seller storage seller = ProtocolLib.getSeller(_sellerId);
+        _isApproved = IERC721(_tokenAddress).isApprovedForAll(
+            seller.operator,
+            msg.sender
+        );
+    }
 }

@@ -124,4 +124,16 @@ library ProtocolLib {
         }
     }
 
+    /**
+     * @notice Gets the details about a given twin
+     *
+     * @param _twinId - the id of the twin
+     * @return twin - the twin details. See {BosonTypes.Twin}
+     */
+    function getTwin(uint256 _twinId)
+    internal
+    view
+    returns(BosonTypes.Twin storage twin) {
+        twin = protocolStorage().twins[_twinId];
+    }
 }

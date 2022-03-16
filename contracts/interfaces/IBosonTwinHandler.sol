@@ -12,4 +12,19 @@ import "../domain/BosonTypes.sol";
  */
 interface IBosonTwinHandler {
 
+    /// Events
+    event TwinCreated(uint256 indexed twinId, uint256 indexed sellerId, BosonTypes.Twin twin);
+
+    /**
+     * @notice Creates an Twin
+     *
+     * Emits an TwinCreated event if successful.
+     *
+     * Reverts if:
+     * - Not approved to transfer the seller's token
+     *
+     * @param _twin - the fully populated struct with twin id set to 0x0
+     */
+    function addTwin(BosonTypes.Twin calldata _twin)
+    external;
 }
