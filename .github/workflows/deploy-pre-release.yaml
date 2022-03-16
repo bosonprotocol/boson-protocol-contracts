@@ -5,7 +5,6 @@ on:
 jobs:
   ropsten_deploy:
     runs-on: ubuntu-latest
-    if: github.ref_type == 'tag' && contains(github.ref_name, '-rc')
     env:
       DEPLOYER_GAS_LIMIT: ${{ secrets.DEPLOYER_GAS_LIMIT }}
       DEPLOYER_ROPSTEN_TXNODE: ${{ secrets.DEPLOYER_ROPSTEN_TXNODE }}
@@ -37,9 +36,3 @@ jobs:
         with:
           name: ropsten-deploy-contracts-logs
           path: logs/ropsten.deploy.contracts.txt
-      - run: npm run manage-roles:ropsten
-      - name: Upload Ropsten manage roles output
-        uses: actions/upload-artifact@v2
-        with:
-          name: ropsten-manage-roles-logs
-          path: logs/ropsten.manage.roles.txt
