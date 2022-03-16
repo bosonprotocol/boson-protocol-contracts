@@ -19,7 +19,8 @@ Done or in progress are:
   - 👉 Github Actions for CI
   
 ## Developers
-  - [Architecture](docs/architecture.md) - Start with the big picture.
   - [Setup](docs/setup.md) - Get going quickly on your local system.
   - [Tasks](docs/tasks.md) - Build, test, analyse, and deploy.
+  - [Architecture](docs/architecture.md) - Start with the big picture.
+  - [Domain Model](docs/domain.md) - Entities and their relationships.
   
