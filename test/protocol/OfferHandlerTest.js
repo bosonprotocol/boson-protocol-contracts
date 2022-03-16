@@ -149,7 +149,7 @@ describe("IBosonOfferHandler", function() {
 
             it("should ignore any provided id and assign the next available", async function () {
 
-                offer.id == "444";
+                offer.id = "444";
 
                 // Create an offer, testing for the event
                 await expect(offerHandler.connect(seller).createOffer(offer))
