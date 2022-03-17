@@ -145,6 +145,24 @@ describe("IBosonOfferHandler", function() {
                 await expect(offerHandler.connect(seller).createOffer(offer))
                     .to.emit(offerHandler, 'OfferCreated')
                     .withArgs(nextOfferId, offer.sellerId, offerStruct);
+
+            });
+
+            it("should emit an OfferCreated event and update state", async function () {
+
+                // Create an offer
+                await offerHandler.connect(seller).createOffer(offer);
+
+                // Get the offer as a struct
+                [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+
+                // Parse into entity
+                let returnedOffer = Offer.fromStruct(offerStruct);
+
+                // Returned values should match the input in createOffer
+                for ([key, value] of Object.entries(offer)) {
+                    expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+                }
             });
 
             it("should ignore any provided id and assign the next available", async function () {
@@ -229,13 +247,32 @@ describe("IBosonOfferHandler", function() {
             it("should emit an OfferVoided event", async function () {
 
                 // call getOffer with offerId to check the seller id in the event
-                let getOffer = await offerHandler.getOffer(id);
+                [, offerStruct] = await offerHandler.getOffer(id);
+
+                expect(offerStruct.voided).is.false;
 
                 // Void the offer, testing for the event
                 await expect(offerHandler.connect(seller).voidOffer(id))
                     .to.emit(offerHandler, 'OfferVoided')
-                    .withArgs(id, getOffer.offer.sellerId);
+                    .withArgs(id, offerStruct.sellerId);
 
+                // Voided field should be updated
+                [, offerStruct] = await offerHandler.getOffer(id);
+                expect(offerStruct.voided).is.true;
+            });
+
+            it("should update state", async function () {
+
+                // Voided field should be initially false
+                [, offerStruct] = await offerHandler.getOffer(id);
+                expect(offerStruct.voided).is.false;
+
+                // Void the offer
+                await offerHandler.connect(seller).voidOffer(id); 
+
+                // Voided field should be updated
+                [, offerStruct] = await offerHandler.getOffer(id);
+                expect(offerStruct.voided).is.true;
             });
 
             context("💔 Revert Reasons", async function () {
@@ -302,6 +339,19 @@ describe("IBosonOfferHandler", function() {
 
                 // Validate
                 expect(success).to.be.false;
+
+            });
+
+            it("should return the details of the offer as a struct if found", async function () {
+
+                // Get the offer as a struct
+                [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+
+                // Parse into entity
+                offer = Offer.fromStruct(offerStruct);
+
+                // Validate
+                expect(offer.isValid()).to.be.true;
 
             });
 
