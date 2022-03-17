@@ -311,10 +311,15 @@ describe("IBosonOfferHandler", function() {
                 [success, offerStruct] = await offerHandler.connect(rando).getOffer(id);
 
                 // Parse into entity
-                offer = Offer.fromStruct(offerStruct);
+                let returnedOffer = Offer.fromStruct(offerStruct);
+
+                // Returned values should match the input in createOffer
+                for ([key, value] of Object.entries(offer)) {
+                    expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+                }
 
                 // Validate
-                expect(offer.isValid()).to.be.true;
+                expect(returnedOffer.isValid()).to.be.true;
 
             });
 
