@@ -47,7 +47,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * @param _offer - the fully populated struct with offer id set to 0x0
      */
     function createOffer(
-        Offer calldata _offer
+        Offer memory _offer
     )
     external
     override
@@ -89,8 +89,11 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         offer.metadataUri = _offer.metadataUri;
         offer.metadataHash = _offer.metadataHash;
       
+        // modify incoming struct so event value represents true state
+        _offer.id = offerId;
+
         // Notify watchers of state change
-        emit OfferCreated(offerId, _offer.sellerId, offer);
+        emit OfferCreated(offerId, _offer.sellerId, _offer);
     }
 
     /**
