@@ -29,6 +29,7 @@ describe("IBosonOfferHandler", function() {
         redeemableFromDate,
         fulfillmentPeriodDuration,
         voucherValidDuration,
+        activeExchanges,
         seller,
         exchangeToken,
         metadataUri,
@@ -107,6 +108,7 @@ describe("IBosonOfferHandler", function() {
             redeemableFromDate = ethers.BigNumber.from(Date.now() + oneWeek).toString();    // redeemable in 1 week
             fulfillmentPeriodDuration = oneMonth.toString();                                // fulfillment period is one month
             voucherValidDuration = oneMonth.toString();                                     // offers valid for one month
+            activeExchanges = "0";
             exchangeToken = ethers.constants.AddressZero.toString();                        // Zero addy ~ chain base currency
             metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
             metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
@@ -125,6 +127,7 @@ describe("IBosonOfferHandler", function() {
                 redeemableFromDate,
                 fulfillmentPeriodDuration,
                 voucherValidDuration,
+                activeExchanges,
                 exchangeToken,
                 metadataUri,
                 metadataHash,
@@ -475,6 +478,59 @@ describe("IBosonOfferHandler", function() {
                 
                 // Validate
                 expect(typeof voided === "boolean").to.be.true;
+
+            });
+
+        });
+
+        context("👉 isOfferUpdateable()", async function () {
+
+            beforeEach( async function () {
+
+                // Create an offer
+                await offerHandler.connect(seller).createOffer(offer);
+
+                // id of the current offer and increment nextOfferId
+                id = nextOfferId++;
+
+            });
+
+            it("should return true for success if offer is found, regardless of updateable status", async function () {
+
+                // Get the success flag
+                [success, ] = await offerHandler.connect(rando).isOfferUpdateable(id);
+
+                // Validate
+                expect(success).to.be.true;
+
+                // Void offer
+                await offerHandler.connect(seller).voidOffer(id);
+
+                // Get the success flag
+                [success, ] = await offerHandler.connect(rando).isOfferUpdateable(id);
+
+                // Validate
+                expect(success).to.be.true;
+
+            });
+
+            it("should return false for success if offer is not found", async function () {
+
+                // Get the success flag
+                [success, ] = await offerHandler.connect(rando).isOfferUpdateable(invalidOfferId);
+
+                // Validate
+                expect(success).to.be.false;
+
+            });
+
+            it("should return the value as a bool if found", async function () {
+
+                // Get the offer as a struct
+                [, updateable] = await offerHandler.connect(rando).isOfferUpdateable(id);
+                
+                // Validate
+                expect(typeof updateable === "boolean").to.be.true;
 
             });
 

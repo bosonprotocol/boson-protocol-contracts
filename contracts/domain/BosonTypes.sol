@@ -62,6 +62,7 @@ contract BosonTypes {
         uint256 redeemableFromDate;
         uint256 fulfillmentPeriodDuration;
         uint256 voucherValidDuration;
+        uint256 activeExchanges;
         address exchangeToken;
         string metadataUri;
         string metadataHash;

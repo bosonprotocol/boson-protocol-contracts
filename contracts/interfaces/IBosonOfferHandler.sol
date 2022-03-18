@@ -72,7 +72,6 @@ interface IBosonOfferHandler {
     view
     returns(uint256 nextOfferId);
 
-
     /**
      * @notice Tells if offer is voided or not
      *
@@ -84,4 +83,21 @@ interface IBosonOfferHandler {
     external
     view
     returns(bool success, bool offerVoided);
+    
+    /**
+     * @notice Tells if offer is can be updated or not
+     *
+     * Offer is updateable if:
+     * - is not voided
+     * - has no unfinalized exchanges
+     * - has no unfinalized disputes
+     *
+     * @param _offerId - the id of the offer to check
+     * @return success - the offer was found
+     * @return offerUpdateable - true if updateable, false otherwise
+     */
+    function isOfferUpdateable(uint256 _offerId)
+    external
+    view
+    returns(bool success, bool offerUpdateable);
 }

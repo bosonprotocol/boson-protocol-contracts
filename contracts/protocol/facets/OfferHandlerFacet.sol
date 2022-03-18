@@ -186,4 +186,28 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
 
     }
 
+
+    /**
+     * @notice Tells if offer is can be updated or not
+     *
+     * Offer is updateable if:
+     * - is not voided
+     * - has no unfinalized exchanges
+     * - has no unfinalized disputes
+     *
+     * @param _offerId - the id of the offer to check
+     * @return success - the offer was found
+     * @return offerUpdateable - true if updateable, false otherwise
+     */
+    function isOfferUpdateable(uint256 _offerId)
+    public
+    view
+    returns(bool success, bool offerUpdateable) {
+
+        Offer memory offer = ProtocolLib.getOffer(_offerId);
+        success = (offer.id == _offerId);
+        offerUpdateable = !offer.voided && (offer.activeExchanges == 0);
+
+    }
+
 }
