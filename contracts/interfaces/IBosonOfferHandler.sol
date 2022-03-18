@@ -14,6 +14,7 @@ interface IBosonOfferHandler {
 
     /// Events
     event OfferCreated(uint256 indexed offerId, uint256 indexed sellerId, BosonTypes.Offer offer);
+    event OfferUpdated(uint256 indexed offerId, uint256 indexed sellerId, BosonTypes.Offer offer);
     event OfferVoided(uint256 indexed offerId, uint256 indexed sellerId);
 
     /**
@@ -27,8 +28,23 @@ interface IBosonOfferHandler {
      *
      * @param _offer - the fully populated struct with offer id set to 0x0
      */
-    function createOffer(BosonTypes.Offer calldata _offer)
+    function createOffer(BosonTypes.Offer memory _offer)
     external;
+
+    /**
+     * @notice Updates an existing offer.
+     *
+     * Emits an OfferCreated event if successful.
+     *
+     * Reverts if:
+     * - Offer is not updateable, i.e. is voided or some exchanges are active
+     * - Any other validation for offer creation fails
+     *
+     * @param _offer - the fully populated struct with offer id set to offer to be updated, active exchanges set to 0 and voided set to false
+     */
+    function updateOffer(
+        BosonTypes.Offer memory _offer
+    ) external;
 
     /**
      * @notice Voids a given offer

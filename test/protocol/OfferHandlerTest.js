@@ -94,11 +94,11 @@ describe("IBosonOfferHandler", function() {
             twoMonths = oneMonth * 2;  //  2 months in milliseconds
 
             // The first offer id
-            nextOfferId = "0";
+            nextOfferId = "1";
             invalidOfferId = "666";
 
             // Required constructor params
-            id = sellerId = "0"; // argument sent to contract for createOffer will be ignored
+            id = sellerId = "1"; // argument sent to contract for createOffer will be ignored
             price = ethers.utils.parseUnits("1.5", "ether").toString();
             sellerDeposit = price = ethers.utils.parseUnits("0.25", "ether").toString();
             buyerCancelPenalty = price = ethers.utils.parseUnits("0.05", "ether").toString();
@@ -188,6 +188,16 @@ describe("IBosonOfferHandler", function() {
                     .withArgs(nextOfferId, offer.sellerId, offerStruct);
             });
 
+            xit("should ignore any provided seller and assign seller id of msg.sender", async function () {
+
+                offer.seller = rando;
+
+                // Create an offer, testing for the event
+                await expect(offerHandler.connect(seller).createOffer(offer))
+                    .to.emit(offerHandler, 'OfferCreated')
+                    .withArgs(nextOfferId, offer.sellerId, offerStruct);
+            });
+
             context("💔 Revert Reasons", async function () {
 
                 it("Valid from date is greater than valid until date", async function () {
@@ -238,6 +248,136 @@ describe("IBosonOfferHandler", function() {
 
                     // Attempt to Create an offer, expecting revert
                     await expect(offerHandler.connect(seller).createOffer(offer))
+                        .to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
+                });
+
+            });
+
+        });
+
+        context("👉 updateOffer()", async function () {
+            beforeEach( async function () {
+
+                // Create an offer
+                await offerHandler.connect(seller).createOffer(offer);
+
+                // id of the current offer and increment nextOfferId
+                id = nextOfferId++;
+
+                // set the new fields
+                offer.id = id.toString();
+                offer.buyerCancelPenalty = ethers.utils.parseUnits("0.02", "ether").toString();
+                offer.price = ethers.utils.parseUnits("0.1", "ether").toString();
+
+                offerStruct = offer.toStruct();
+
+            });
+
+            it("should emit an OfferUpdated event", async function () {
+              
+                // Create an offer, testing for the event
+                await expect(offerHandler.connect(seller).updateOffer(offer))
+                    .to.emit(offerHandler, 'OfferUpdated')
+                    .withArgs(id, offer.sellerId, offerStruct);
+
+            });
+
+            it("should update state", async function () {
+
+                // Create an offer
+                await offerHandler.connect(seller).updateOffer(offer);
+
+                // Get the offer as a struct
+                [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+
+                // Parse into entity
+                let returnedOffer = Offer.fromStruct(offerStruct);
+
+                // Returned values should match the input in createOffer
+                for ([key, value] of Object.entries(offer)) {
+                    expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+                }
+            });
+
+            it("should ignore any provided activeExchanges and assign 0", async function () {
+
+                offer.activeExchanges = "444";
+
+                // Create an offer, testing for the event
+                await expect(offerHandler.connect(seller).updateOffer(offer))
+                    .to.emit(offerHandler, 'OfferUpdated')
+                    .withArgs(offer.id, offer.sellerId, offerStruct);
+            });
+
+            context("💔 Revert Reasons", async function () {
+                xit("Non-seller tries to update the offer", async function () {
+
+
+                });
+
+                it("Offer is not updateable, since its voided", async function () {
+
+                    // Void an offer
+                    await offerHandler.connect(seller).voidOffer(id);
+
+                    // Attempt to Create an offer, expecting revert
+                    await expect(offerHandler.connect(seller).updateOffer(offer))
+                        .to.revertedWith(RevertReasons.OFFER_NOT_UPDATEABLE);
+                });
+
+                xit("Offer is not updateable, since some exchanges are not ended yet", async function () {
+
+
+                });
+
+                it("Valid from date is greater than valid until date", async function () {
+
+                    // Reverse the from and until dates
+                    offer.validFromDate = ethers.BigNumber.from(Date.now() + (oneMonth * 6)).toString();   // 6 months from now
+                    offer.validUntilDate = ethers.BigNumber.from(Date.now()).toString();                   // now
+
+                    // Attempt to Create an offer, expecting revert
+                    await expect(offerHandler.connect(seller).updateOffer(offer))
+                        .to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+                });
+
+                it("Valid until date is not in the future", async function () {
+
+                    // Set until date in the past
+                    offer.validUntilDate = ethers.BigNumber.from(Date.now() - (oneMonth * 6)).toString();   // 6 months ago
+
+                    // Attempt to Create an offer, expecting revert
+                    await expect(offerHandler.connect(seller).updateOffer(offer))
+                        .to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+                });
+
+                it("Redeemable from date is before offer expires", async function () {
+
+                    // Set redeemeable from after the expiration date
+                    offer.redeemableFromDate = ethers.BigNumber.from(offer.validUntilDate).add(10).toString();  
+
+                    // Attempt to Create an offer, expecting revert
+                    await expect(offerHandler.connect(seller).updateOffer(offer))
+                        .to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+                });
+
+                it("Buyer cancel penalty is less than item price", async function () {
+
+                    // Set buyer cancel penalty higher than offer price
+                    offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();  
+
+                    // Attempt to Create an offer, expecting revert
+                    await expect(offerHandler.connect(seller).updateOffer(offer))
+                        .to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
+                });
+
+                it("Offer cannot be voided at the time of the creation", async function () {
+
+                    // Set voided flag to true
+                    offer.voided = true;
+
+                    // Attempt to Create an offer, expecting revert
+                    await expect(offerHandler.connect(seller).updateOffer(offer))
                         .to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
                 });
 

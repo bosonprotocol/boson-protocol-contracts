@@ -6,7 +6,7 @@ exports.InterfaceIds = {
     IBosonDisputeHandler:   "0x5aef573c",
     IBosonExchangeHandler:  "0x14ac255b",
     IBosonFundsHandler:     "0x00000000",
-    IBosonOfferHandler:     "0xc7fbf175",
+    IBosonOfferHandler:     "0x58e7db45",
     IBosonTwinHandler:      "0x00000000",
     IBosonVoucher:          "0x8a75c03e",
     IBosonClient:           "0xc4c6c36b",
