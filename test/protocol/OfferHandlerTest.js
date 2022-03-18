@@ -178,6 +178,16 @@ describe("IBosonOfferHandler", function() {
                     .withArgs(nextOfferId, offer.sellerId, offerStruct);
             });
 
+            it("should ignore any provided activeExchanges and assign 0", async function () {
+
+                offer.activeExchanges = "444";
+
+                // Create an offer, testing for the event
+                await expect(offerHandler.connect(seller).createOffer(offer))
+                    .to.emit(offerHandler, 'OfferCreated')
+                    .withArgs(nextOfferId, offer.sellerId, offerStruct);
+            });
+
             context("💔 Revert Reasons", async function () {
 
                 it("Valid from date is greater than valid until date", async function () {

@@ -91,6 +91,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
       
         // modify incoming struct so event value represents true state
         _offer.id = offerId;
+        _offer.activeExchanges = 0;
 
         // Notify watchers of state change
         emit OfferCreated(offerId, _offer.sellerId, _offer);
