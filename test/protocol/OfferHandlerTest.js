@@ -148,7 +148,7 @@ describe("IBosonOfferHandler", function() {
 
             });
 
-            it("should emit an OfferCreated event and update state", async function () {
+            it("should update state", async function () {
 
                 // Create an offer
                 await offerHandler.connect(seller).createOffer(offer);
@@ -267,12 +267,20 @@ describe("IBosonOfferHandler", function() {
                 [, offerStruct] = await offerHandler.getOffer(id);
                 expect(offerStruct.voided).is.false;
 
+                // Get the voided status
+                [, voided] = await offerHandler.isOfferVoided(id);
+                expect(voided).to.be.false;
+
                 // Void the offer
                 await offerHandler.connect(seller).voidOffer(id); 
 
                 // Voided field should be updated
                 [, offerStruct] = await offerHandler.getOffer(id);
                 expect(offerStruct.voided).is.true;
+
+                // Get the voided status
+                [, voided] = await offerHandler.isOfferVoided(id);
+                expect(voided).to.be.true;
             });
 
             context("💔 Revert Reasons", async function () {
@@ -355,25 +363,6 @@ describe("IBosonOfferHandler", function() {
 
             });
 
-            it("should return the details of the offer as a struct if found", async function () {
-
-                // Get the offer as a struct
-                [success, offerStruct] = await offerHandler.connect(rando).getOffer(id);
-
-                // Parse into entity
-                let returnedOffer = Offer.fromStruct(offerStruct);
-
-                // Returned values should match the input in createOffer
-                for ([key, value] of Object.entries(offer)) {
-                    expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
-                }
-
-                // Validate
-                expect(returnedOffer.isValid()).to.be.true;
-
-            });
-
-
         });
 
         context("👉 getNextOfferId()", async function () {
@@ -433,6 +422,59 @@ describe("IBosonOfferHandler", function() {
 
                 // Verify expectation
                 expect(nextOfferId.toString() == expected).to.be.true;
+
+            });
+
+        });
+
+        context("👉 isOfferVoided()", async function () {
+
+            beforeEach( async function () {
+
+                // Create an offer
+                await offerHandler.connect(seller).createOffer(offer);
+
+                // id of the current offer and increment nextOfferId
+                id = nextOfferId++;
+
+            });
+
+            it("should return true for success if offer is found, regardless of voided status", async function () {
+
+                // Get the success flag
+                [success, ] = await offerHandler.connect(rando).isOfferVoided(id);
+
+                // Validate
+                expect(success).to.be.true;
+
+                // Void offer
+                await offerHandler.connect(seller).voidOffer(id);
+
+                // Get the success flag
+                [success, ] = await offerHandler.connect(rando).isOfferVoided(id);
+
+                // Validate
+                expect(success).to.be.true;
+
+            });
+
+            it("should return false for success if offer is not found", async function () {
+
+                // Get the success flag
+                [success, ] = await offerHandler.connect(rando).isOfferVoided(invalidOfferId);
+
+                // Validate
+                expect(success).to.be.false;
+
+            });
+
+            it("should return the value as a bool if found", async function () {
+
+                // Get the offer as a struct
+                [, voided] = await offerHandler.connect(rando).isOfferVoided(id);
+                
+                // Validate
+                expect(typeof voided === "boolean").to.be.true;
 
             });
 

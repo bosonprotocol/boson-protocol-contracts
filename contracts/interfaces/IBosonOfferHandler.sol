@@ -71,4 +71,17 @@ interface IBosonOfferHandler {
     external
     view
     returns(uint256 nextOfferId);
+
+
+    /**
+     * @notice Tells if offer is voided or not
+     *
+     * @param _offerId - the id of the offer to check
+     * @return success - the offer was found
+     * @return offerVoided - true if voided, false otherwise
+     */
+    function isOfferVoided(uint256 _offerId)
+    external
+    view
+    returns(bool success, bool offerVoided);
 }

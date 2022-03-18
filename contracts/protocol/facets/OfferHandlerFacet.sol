@@ -168,4 +168,22 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
 
     }
 
+    /**
+     * @notice Tells if offer is voided or not
+     *
+     * @param _offerId - the id of the offer to check
+     * @return success - the offer was found
+     * @return offerVoided - true if voided, false otherwise
+     */
+    function isOfferVoided(uint256 _offerId)
+    public
+    view
+    returns(bool success, bool offerVoided) {
+
+        Offer memory offer = ProtocolLib.getOffer(_offerId);
+        success = (offer.id == _offerId);
+        offerVoided = offer.voided;
+
+    }
+
 }
