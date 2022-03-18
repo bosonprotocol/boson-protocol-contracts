@@ -417,6 +417,25 @@ describe("IBosonOfferHandler", function() {
 
             });
 
+            it("should not be incremented when only getNextOfferId is called", async function () {
+
+                // What we expect the next offer id to be
+                expected = nextOfferId;
+
+                // Get the next offer id
+                nextOfferId = await offerHandler.connect(rando).getNextOfferId();
+
+                // Verify expectation
+                expect(nextOfferId.toString() == expected).to.be.true;
+
+                // Call again
+                nextOfferId = await offerHandler.connect(rando).getNextOfferId();
+
+                // Verify expectation
+                expect(nextOfferId.toString() == expected).to.be.true;
+
+            });
+
         });
 
     });
