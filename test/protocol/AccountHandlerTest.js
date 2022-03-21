@@ -86,15 +86,13 @@ const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-proto
             // Get the next offer id
             nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
-            console.log("expected is %s, while actual is %s ", expected, nextAccountId);
-
             // Verify expectation
             expect(nextAccountId.toString() == expected).to.be.true;
 
         });
     
     /*
-        Uncomment after createAccount function has been implemented
+        Uncomment after create account functions has been implemented
 
         it("should be incremented after an offer is created", async function () {
 
