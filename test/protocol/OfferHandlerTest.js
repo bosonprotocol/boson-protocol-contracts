@@ -221,16 +221,6 @@ describe("IBosonOfferHandler", function() {
                         .to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
                 });
 
-                it("Redeemable from date is before offer expires", async function () {
-
-                    // Set redeemeable from after the expiration date
-                    offer.redeemableFromDate = ethers.BigNumber.from(offer.validUntilDate).add(10).toString();  
-
-                    // Attempt to Create an offer, expecting revert
-                    await expect(offerHandler.connect(seller).createOffer(offer))
-                        .to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
-                });
-
                 it("Buyer cancel penalty is less than item price", async function () {
 
                     // Set buyer cancel penalty higher than offer price
@@ -345,16 +335,6 @@ describe("IBosonOfferHandler", function() {
 
                     // Set until date in the past
                     offer.validUntilDate = ethers.BigNumber.from(Date.now() - (oneMonth * 6)).toString();   // 6 months ago
-
-                    // Attempt to Create an offer, expecting revert
-                    await expect(offerHandler.connect(seller).updateOffer(offer))
-                        .to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
-                });
-
-                it("Redeemable from date is before offer expires", async function () {
-
-                    // Set redeemeable from after the expiration date
-                    offer.redeemableFromDate = ethers.BigNumber.from(offer.validUntilDate).add(10).toString();  
 
                     // Attempt to Create an offer, expecting revert
                     await expect(offerHandler.connect(seller).updateOffer(offer))

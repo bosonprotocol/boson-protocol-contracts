@@ -99,7 +99,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * Reverts if:
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
-     * - Redeemable from date is greater than valid until date
      * - Buyer cancel penalty is greater than price
      * - Voided is set to true
      *
@@ -113,9 +112,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
 
         // validUntil date must be in the future
         require(_offer.validUntilDate > block.timestamp, OFFER_PERIOD_INVALID);
-
-        // redeemableFromDate should be before offer expires
-        require(_offer.redeemableFromDate < _offer.validUntilDate, OFFER_PERIOD_INVALID);
 
         // buyerCancelPenalty should be less or equal to the item price
         require(_offer.buyerCancelPenalty <= _offer.price, OFFER_PENALTY_INVALID);
