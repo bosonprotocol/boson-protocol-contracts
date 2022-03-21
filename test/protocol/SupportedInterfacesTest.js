@@ -75,6 +75,14 @@ describe("SupportedInterfaces", function() {
 
             });
 
+            it("getIBosonAccountHandler() should return expected id", async function () {
+
+                const expected = InterfaceIds.IBosonAccountHandler;
+                const actual = await supportedInterfaces.getIBosonAccountHandler();
+                assert.equal(actual, expected);
+
+            });
+
         });
 
         context("👉 Protocol Clients", async function () {
