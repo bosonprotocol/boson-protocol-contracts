@@ -65,6 +65,23 @@ interface IBosonOfferHandler {
     external;
 
     /**
+     * @notice Sets new valid until date
+     *
+     * Emits an OfferUpdated event if successful.
+     *
+     * Reverts if:
+     * - Offer does not exist
+     * - Caller is not the seller (TODO)
+     * - New valid until date is before existing valid until dates
+     *
+     *  @param _offerId - the id of the offer to check
+     *  @param _validUntilDate - new valid until date
+     */
+    function extendOffer(
+        uint256 _offerId, uint _validUntilDate
+    ) external;
+
+    /**
      * @notice Gets the details about a given offer.
      *
      * @param _offerId - the id of the offer to check
