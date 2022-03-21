@@ -8,6 +8,7 @@ exports.InterfaceIds = {
     IBosonFundsHandler:     "0x00000000",
     IBosonOfferHandler:     "0xfb7774d3",
     IBosonTwinHandler:      "0x00000000",
+    IBosonAccountHandler:   "0xab00c0da",
     IBosonVoucher:          "0x8a75c03e",
     IBosonClient:           "0xc4c6c36b",
     IDiamondCut:            "0x1f931c1c",
