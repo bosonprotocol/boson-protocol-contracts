@@ -33,7 +33,7 @@ const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-proto
         await accessController.grantRole(Role.UPGRADER, deployer.address);
 
         // Cut the protocol handler facets into the Diamond
-        [accountrHandlerFacet] = await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet"]);
+        [accountHandlerFacet] = await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet"]);
 
         // Cast Diamond to IERC165
         erc165 = await ethers.getContractAt('IERC165', protocolDiamond.address);
