@@ -310,7 +310,7 @@ describe("IBosonOfferHandler", function() {
             });
 
             context("💔 Revert Reasons", async function () {
-                xit("Non-seller tries to update the offer", async function () {
+                xit("Caller is not seller", async function () {
 
 
                 });

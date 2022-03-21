@@ -32,6 +32,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     onlyUnInitialized
     {
         DiamondLib.addSupportedInterface(type(IBosonOfferHandler).interfaceId);
+        protocolStorage().nextOfferId++;
     }
 
     /**
@@ -51,7 +52,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     override
     {
         // Get the next offerId and increment the counter
-        uint256 offerId = ++protocolStorage().nextOfferId;
+        uint256 offerId = protocolStorage().nextOfferId++;
 
         // modify incoming struct so event value represents true state
         _offer.id = offerId;
@@ -214,7 +215,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     view
     returns(uint256 nextOfferId) {
 
-        nextOfferId = ProtocolLib.protocolStorage().nextOfferId + 1;
+        nextOfferId = ProtocolLib.protocolStorage().nextOfferId;
 
     }
 
