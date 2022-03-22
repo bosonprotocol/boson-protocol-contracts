@@ -3,6 +3,9 @@
  */
 exports.RevertReasons = {
 
+    //General
+    INVALID_ADDRESS: "Invalid Address",
+
     // Facet initializer related
     ALREADY_INITIALIZED: "Already initialized",
 

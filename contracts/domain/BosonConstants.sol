@@ -7,7 +7,6 @@ pragma solidity ^0.8.0;
  * @notice Constants used by the Boson Protocol contract ecosystem.
  */
 contract BosonConstants {
-
     // Access Control Roles
     bytes32 internal constant ADMIN     = keccak256("ADMIN");      // Role Admin
     bytes32 internal constant PROTOCOL  = keccak256("PROTOCOL");   // Role for facets of the ProtocolDiamond
@@ -16,6 +15,9 @@ contract BosonConstants {
     bytes32 internal constant RESOLVER  = keccak256("RESOLVER");   // Role for resolving the outcome of an escalated dispute
     bytes32 internal constant FEE_COLLECTOR  = keccak256("FEE_COLLECTOR");   // Role for collecting fees from the protocol
 
+    //Revert Reasons: General
+    string internal constant INVALID_ADDRESS = "Invalid address";
+   
     // Revert Reasons: Facet initializer related
     string internal constant ALREADY_INITIALIZED = "Already initialized";
 

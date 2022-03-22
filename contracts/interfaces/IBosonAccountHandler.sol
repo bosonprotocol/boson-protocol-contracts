@@ -12,6 +12,21 @@ import "../domain/BosonTypes.sol";
  */
 interface IBosonAccountHandler {
 
+    /// Events
+    event SellerCreated(uint256 indexed sellerId, BosonTypes.Seller seller);
+
+    /**
+     * @notice Creates a seller
+     *
+     * Emits an SellerCreated event if successful.
+     *
+     * Reverts if:
+     * - Address values are zero address
+     *
+     * @param _seller - the fully populated struct with seller id set to 0x0
+     */
+    function createSeller(BosonTypes.Seller calldata _seller)
+    external;
 
     /**
      * @notice Gets the next account Id that can be assigned to an account.

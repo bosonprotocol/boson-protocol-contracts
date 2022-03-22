@@ -59,6 +59,15 @@ library ProtocolLib {
         // seller id => seller
         mapping(uint256 => BosonTypes.Seller) sellers;
 
+        //seller operator address => sellerId
+        mapping(address => uint256) operatorsToSellers;
+
+        //seller admin address => sellerId
+        mapping(address => uint256) adminsToSellers;
+
+        //seller clerk address => sellerId
+        mapping(address => uint256) cerksToSellers;
+
         // buyer id => buyer
         mapping(uint256 => BosonTypes.Buyer) buyers;
 

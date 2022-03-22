@@ -44,7 +44,7 @@ const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-proto
     });
 
     // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
-    context("📋 Interfaces", async function () {
+    context.only("📋 Interfaces", async function () {
 
         context("👉 supportsInterface()", async function () {
 
