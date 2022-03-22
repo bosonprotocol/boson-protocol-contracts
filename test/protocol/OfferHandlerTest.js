@@ -186,7 +186,8 @@ describe("IBosonOfferHandler", function() {
             });
 
             xit("should ignore any provided seller and assign seller id of msg.sender", async function () {
-
+                // TODO: add when accounthandler is finished
+                
                 offer.seller = rando;
 
                 // Create an offer, testing for the event
@@ -298,7 +299,7 @@ describe("IBosonOfferHandler", function() {
                 });
                 
                 xit("Caller is not seller", async function () {
-
+                    // TODO: add when accounthandler is finished
 
                 });
 
@@ -312,8 +313,8 @@ describe("IBosonOfferHandler", function() {
                         .to.revertedWith(RevertReasons.OFFER_NOT_UPDATEABLE);
                 });
 
-                xit("Offer is not updateable, since some exchanges are not ended yet", async function () {
-
+                xit("Offer is not updateable, since some exchanges exist", async function () {
+                    // TODO: add when exchangeHandlerFacet.commitToOffer is implemented
 
                 });
 
@@ -504,7 +505,7 @@ describe("IBosonOfferHandler", function() {
                 });
                 
                 xit("Caller is not seller", async function () {
-
+                    // TODO: add when accounthandler is finished
 
                 });
 

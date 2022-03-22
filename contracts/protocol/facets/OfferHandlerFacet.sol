@@ -293,9 +293,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
 
         Offer memory offer = ProtocolLib.getOffer(_offerId);
         success = (offer.id == _offerId);
-        offerUpdateable = !offer.voided; 
-        // add && exchangeByOffer[_offerId].length == 0;
-
+        offerUpdateable = !offer.voided &&
+            (protocolStorage().exchangeByOffer[_offerId].length == 0); 
     }
 
 }
