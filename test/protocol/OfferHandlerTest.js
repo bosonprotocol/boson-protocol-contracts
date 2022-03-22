@@ -29,7 +29,6 @@ describe("IBosonOfferHandler", function() {
         redeemableFromDate,
         fulfillmentPeriodDuration,
         voucherValidDuration,
-        activeExchanges,
         seller,
         exchangeToken,
         metadataUri,
@@ -108,7 +107,6 @@ describe("IBosonOfferHandler", function() {
             redeemableFromDate = ethers.BigNumber.from(Date.now() + oneWeek).toString();    // redeemable in 1 week
             fulfillmentPeriodDuration = oneMonth.toString();                                // fulfillment period is one month
             voucherValidDuration = oneMonth.toString();                                     // offers valid for one month
-            activeExchanges = "0";
             exchangeToken = ethers.constants.AddressZero.toString();                        // Zero addy ~ chain base currency
             metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
             metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
@@ -127,7 +125,6 @@ describe("IBosonOfferHandler", function() {
                 redeemableFromDate,
                 fulfillmentPeriodDuration,
                 voucherValidDuration,
-                activeExchanges,
                 exchangeToken,
                 metadataUri,
                 metadataHash,
@@ -171,16 +168,6 @@ describe("IBosonOfferHandler", function() {
             it("should ignore any provided id and assign the next available", async function () {
 
                 offer.id = "444";
-
-                // Create an offer, testing for the event
-                await expect(offerHandler.connect(seller).createOffer(offer))
-                    .to.emit(offerHandler, 'OfferCreated')
-                    .withArgs(nextOfferId, offer.sellerId, offerStruct);
-            });
-
-            it("should ignore any provided activeExchanges and assign 0", async function () {
-
-                offer.activeExchanges = "444";
 
                 // Create an offer, testing for the event
                 await expect(offerHandler.connect(seller).createOffer(offer))
@@ -289,24 +276,14 @@ describe("IBosonOfferHandler", function() {
                 }
             });
 
-            it("should ignore any provided activeExchanges and assign 0", async function () {
-
-                offer.activeExchanges = "444";
-
-                // Update an offer, testing for the event
-                await expect(offerHandler.connect(seller).updateOffer(offer))
-                    .to.emit(offerHandler, 'OfferUpdated')
-                    .withArgs(offer.id, offer.sellerId, offerStruct);
-            });
-
             context("💔 Revert Reasons", async function () {
                 it("Offer does not exist", async function () {
 
                     // Set invalid id
-                    id = "444";
+                    offer.id = "444";
 
                     // Attempt to void the offer, expecting revert
-                    await expect(offerHandler.connect(seller).updateOffer(id))
+                    await expect(offerHandler.connect(seller).updateOffer(offer))
                         .to.revertedWith(RevertReasons.OFFER_NOT_UPDATEABLE);
                 });
                 

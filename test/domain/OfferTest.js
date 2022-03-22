@@ -20,7 +20,6 @@ describe("Offer", function() {
         redeemableFromDate,
         fulfillmentPeriodDuration,
         voucherValidDuration,
-        activeExchanges,
         exchangeToken,
         metadataUri,
         metadataHash,
@@ -47,7 +46,6 @@ describe("Offer", function() {
         redeemableFromDate = ethers.BigNumber.from(Date.now() + oneWeek).toString();    // redeemable in 1 week
         fulfillmentPeriodDuration = oneMonth.toString();                                // fulfillment period is one month
         voucherValidDuration = oneMonth.toString();                                     // offers valid for one month
-        activeExchanges = "0";
         exchangeToken = ethers.constants.AddressZero.toString();                        // Zero addy ~ chain base currency
         metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
         metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
@@ -72,7 +70,6 @@ describe("Offer", function() {
                 redeemableFromDate,
                 fulfillmentPeriodDuration,
                 voucherValidDuration,
-                activeExchanges,
                 exchangeToken,
                 metadataUri,
                 metadataHash,
@@ -101,7 +98,6 @@ describe("Offer", function() {
                 redeemableFromDate,
                 fulfillmentPeriodDuration,
                 voucherValidDuration,
-                activeExchanges,
                 exchangeToken,
                 metadataUri,
                 metadataHash,
@@ -371,35 +367,6 @@ describe("Offer", function() {
 
         });
 
-        it("Always present, activeExchanges must be the string representation of a BigNumber", async function() {
-
-            // Invalid field value
-            offer.activeExchanges = "zedzdeadbaby";
-            expect(offer.activeExchangesIsValid()).is.false;
-            expect(offer.isValid()).is.false;
-
-            // Invalid field value
-            offer.activeExchanges = new Date();
-            expect(offer.activeExchangesIsValid()).is.false;
-            expect(offer.isValid()).is.false;
-
-            // Invalid field value
-            offer.activeExchanges = 12;
-            expect(offer.activeExchangesIsValid()).is.false;
-            expect(offer.isValid()).is.false;
-
-            // Valid field value
-            offer.activeExchanges = "0";
-            expect(offer.activeExchangesIsValid()).is.true;
-            expect(offer.isValid()).is.true;
-
-            // Valid field value
-            offer.activeExchanges = "126";
-            expect(offer.activeExchangesIsValid()).is.true;
-            expect(offer.isValid()).is.true;
-
-        });
-
         it("Always present, fulfillmentPeriodDuration must be the string representation of a BigNumber", async function() {
 
             // Invalid field value
@@ -566,7 +533,6 @@ describe("Offer", function() {
                 redeemableFromDate,
                 fulfillmentPeriodDuration,
                 voucherValidDuration,
-                activeExchanges,
                 exchangeToken,
                 metadataUri,
                 metadataHash,
@@ -587,7 +553,6 @@ describe("Offer", function() {
                 redeemableFromDate,
                 fulfillmentPeriodDuration,
                 voucherValidDuration,
-                activeExchanges,
                 exchangeToken,
                 metadataUri,
                 metadataHash,
@@ -626,7 +591,6 @@ describe("Offer", function() {
                     offer.redeemableFromDate,
                     offer.fulfillmentPeriodDuration,
                     offer.voucherValidDuration,
-                    offer.activeExchanges,
                     offer.exchangeToken,
                     offer.metadataUri,
                     offer.metadataHash,

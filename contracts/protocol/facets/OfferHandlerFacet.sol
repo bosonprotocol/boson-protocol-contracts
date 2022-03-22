@@ -56,7 +56,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
 
         // modify incoming struct so event value represents true state
         _offer.id = offerId;
-        _offer.activeExchanges = 0;
 
         storeOffer(_offer);
       
@@ -84,9 +83,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         (bool success, bool updateable) = isOfferUpdateable(_offer.id);
         require(success && updateable, OFFER_NOT_UPDATEABLE);
     
-        // modify incoming struct so event value represents true state
-         _offer.activeExchanges = 0;
-
         storeOffer(_offer);
 
         // Notify watchers of state change
@@ -298,7 +294,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
 
         Offer memory offer = ProtocolLib.getOffer(_offerId);
         success = (offer.id == _offerId);
-        offerUpdateable = !offer.voided && (offer.activeExchanges == 0);
+        offerUpdateable = !offer.voided; 
+        // add && exchangeByOffer[_offerId].length == 0;
 
     }
 

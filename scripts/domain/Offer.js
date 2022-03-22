@@ -21,7 +21,6 @@ class Offer {
             uint256 validUntilDate;
             uint256 redeemableFromDate;
             uint256 fulfillmentPeriodDuration;
-            uint256 activeExchanges;
             uint256 voucherValidDuration;
             address exchangeToken;
             string metadataUri;
@@ -42,7 +41,6 @@ class Offer {
             redeemableFromDate,
             fulfillmentPeriodDuration,
             voucherValidDuration,
-            activeExchanges,
             exchangeToken,
             metadataUri,
             metadataHash,
@@ -58,7 +56,6 @@ class Offer {
         this.validUntilDate = validUntilDate;
         this.redeemableFromDate = redeemableFromDate;
         this.voucherValidDuration = voucherValidDuration;
-        this.activeExchanges = activeExchanges;
         this.fulfillmentPeriodDuration = fulfillmentPeriodDuration;
         this.exchangeToken = exchangeToken;
         this.metadataUri = metadataUri;
@@ -84,7 +81,6 @@ class Offer {
             redeemableFromDate,
             fulfillmentPeriodDuration,
             voucherValidDuration,
-            activeExchanges,
             exchangeToken,
             metadataUri,
             metadataHash,
@@ -103,7 +99,6 @@ class Offer {
             redeemableFromDate,
             fulfillmentPeriodDuration,
             voucherValidDuration,
-            activeExchanges,
             exchangeToken,
             metadataUri,
             metadataHash,
@@ -129,7 +124,6 @@ class Offer {
             redeemableFromDate,
             fulfillmentPeriodDuration,
             voucherValidDuration,
-            activeExchanges,
             exchangeToken,
             metadataUri,
             metadataHash,
@@ -147,7 +141,6 @@ class Offer {
             redeemableFromDate,
             fulfillmentPeriodDuration,
             voucherValidDuration,
-            activeExchanges,
             exchangeToken,
             metadataUri,
             metadataHash,
@@ -167,7 +160,6 @@ class Offer {
                 redeemableFromDate: redeemableFromDate.toString(),
                 fulfillmentPeriodDuration: fulfillmentPeriodDuration.toString(),
                 voucherValidDuration: voucherValidDuration.toString(),
-                activeExchanges: activeExchanges.toString(),
                 exchangeToken,
                 metadataUri,
                 metadataHash,
@@ -210,7 +202,6 @@ class Offer {
             this.redeemableFromDate,
             this.fulfillmentPeriodDuration,
             this.voucherValidDuration,
-            this.activeExchanges,
             this.exchangeToken,
             this.metadataUri,
             this.metadataHash,
@@ -421,23 +412,6 @@ class Offer {
     }
 
     /**
-     * Is this Offer instance's activeExchanges field valid?
-     * Must be a string representation of a big number
-     * @returns {boolean}
-     */
-    activeExchangesIsValid() {
-        let valid = false;
-        let {activeExchanges} = this;
-        try {
-            valid = (
-                typeof activeExchanges === "string" &&
-                typeof ethers.BigNumber.from(activeExchanges) === "object"
-            )
-        } catch(e){}
-        return valid;
-    }
-
-    /**
      * Is this Offer instance's exchangeToken field valid?
      * Must be a eip55 compliant Ethereum address
      * Use "0x000.." for chain base currency, e.g., ETH
@@ -521,7 +495,6 @@ class Offer {
             this.redeemableFromDateIsValid() &&
             this.fulfillmentPeriodDurationIsValid() &&
             this.voucherValidDurationIsValid() &&
-            this.activeExchangesIsValid() &&
             this.exchangeTokenIsValid() &&
             this.metadataUriIsValid() &&
             this.metadataHashIsValid() &&
