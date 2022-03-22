@@ -73,6 +73,10 @@ library ProtocolLib {
 
         // offer id => exchange ids
         mapping(uint256 => uint256[]) exchangeByOffer;
+
+        // offer id => group ids
+        mapping(uint256 => uint256) groupByOffer;
+                
     }
 
     // Individual facet initialization states
@@ -146,6 +150,19 @@ library ProtocolLib {
     view
     returns(BosonTypes.Exchange storage exchange) {
         exchange = protocolStorage().exchanges[_exchangeId];
+    }
+
+    /**
+     * @notice Gets the details about a given group
+     *
+     * @param _groupId - the id of the group
+     * @return group - the group details. See {BosonTypes.Gxchange}
+     */
+    function getGroup(uint256 _groupId)
+    internal
+    view
+    returns(BosonTypes.Group storage group) {
+        group = protocolStorage().groups[_groupId];
     }
 
 }

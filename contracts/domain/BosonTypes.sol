@@ -71,7 +71,7 @@ contract BosonTypes {
     struct Group {
         uint256 id;
         uint256 sellerId;
-        Offer[] offers;
+        uint256[] offerIds;
         Condition condition;
     }
 
