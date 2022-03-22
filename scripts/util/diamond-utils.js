@@ -23,6 +23,20 @@ function getSelectors (contract) {
   return selectors
 }
 
+// get interface id
+function getInterfaceId (contract) {
+  const signatures = Object.keys(contract.interface.functions)
+  const selectors = signatures.reduce((acc, val) => {
+    if (val !== 'initialize()') {
+      acc.push(ethers.BigNumber.from(contract.interface.getSighash(val)))
+    }
+    return acc
+  }, [])
+  let interfaceId = selectors.reduce((pv,cv)=> pv.xor(cv),ethers.BigNumber.from("0x00000000"));
+  return interfaceId.isZero() ? "0x00000000" : interfaceId.toHexString()
+}
+
+
 // get function selector from function signature
 function getSelector (func) {
   const abiInterface = new ethers.utils.Interface([func])
@@ -104,3 +118,4 @@ exports.findAddressPositionInFacets = findAddressPositionInFacets;
 exports.getFacetAddCut = getFacetAddCut;
 exports.getFacetReplaceCut = getFacetReplaceCut;
 exports.getFacetRemoveCut = getFacetRemoveCut;
+exports.getInterfaceId = getInterfaceId;
