@@ -187,7 +187,7 @@ describe("IBosonOfferHandler", function() {
 
             xit("should ignore any provided seller and assign seller id of msg.sender", async function () {
                 // TODO: add when accounthandler is finished
-                
+
                 offer.seller = rando;
 
                 // Create an offer, testing for the event
@@ -292,6 +292,13 @@ describe("IBosonOfferHandler", function() {
 
                     // Set invalid id
                     offer.id = "444";
+
+                    // Attempt to void the offer, expecting revert
+                    await expect(offerHandler.connect(seller).updateOffer(offer))
+                        .to.revertedWith(RevertReasons.OFFER_NOT_UPDATEABLE);
+
+                    // Set invalid id
+                    offer.id = "0";
 
                     // Attempt to void the offer, expecting revert
                     await expect(offerHandler.connect(seller).updateOffer(offer))
@@ -424,6 +431,13 @@ describe("IBosonOfferHandler", function() {
                     // Attempt to void the offer, expecting revert
                     await expect(offerHandler.connect(seller).voidOffer(id))
                         .to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+
+                    // Set invalid id
+                    id = "0";
+
+                    // Attempt to void the offer, expecting revert
+                    await expect(offerHandler.connect(seller).voidOffer(id))
+                        .to.revertedWith(RevertReasons.NO_SUCH_OFFER);
                 });
 
                 xit("Caller is not seller", async function () {
@@ -498,6 +512,13 @@ describe("IBosonOfferHandler", function() {
 
                     // Set invalid id
                     id = "444";
+
+                    // Attempt to void the offer, expecting revert
+                    await expect(offerHandler.connect(seller).extendOffer(id, offer.validUntilDate))
+                        .to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+
+                    // Set invalid id
+                    id = "0";
 
                     // Attempt to void the offer, expecting revert
                     await expect(offerHandler.connect(seller).extendOffer(id, offer.validUntilDate))
