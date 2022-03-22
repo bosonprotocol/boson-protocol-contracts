@@ -52,13 +52,13 @@ interface IBosonOfferHandler {
      * @notice Gets the details about a given offer.
      *
      * @param _offerId - the id of the offer to check
-     * @return success - the offer was found
+     * @return exists - the offer was found
      * @return offer - the offer details. See {BosonTypes.Offer}
      */
     function getOffer(uint256 _offerId)
     external
     view
-    returns(bool success, BosonTypes.Offer memory offer);
+    returns(bool exists, BosonTypes.Offer memory offer);
 
     /**
      * @notice Gets the next offer id.

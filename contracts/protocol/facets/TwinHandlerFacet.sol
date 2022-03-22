@@ -14,22 +14,11 @@ import "../ProtocolLib.sol";
 contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
 
     /**
-     * @dev Modifier to protect initializer function from being invoked twice.
-     */
-    modifier onlyUnInitialized()
-    {
-        ProtocolLib.ProtocolInitializers storage pi = ProtocolLib.protocolInitializers();
-        require(!pi.twinHandler, ALREADY_INITIALIZED);
-        pi.twinHandler = true;
-        _;
-    }
-
-    /**
      * @notice Facet Initializer
      */
     function initialize()
     public
-    onlyUnInitialized
+    onlyUnInitialized(type(IBosonTwinHandler).interfaceId)
     {
         DiamondLib.addSupportedInterface(type(IBosonTwinHandler).interfaceId);
     }

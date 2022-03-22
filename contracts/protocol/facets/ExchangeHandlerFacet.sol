@@ -14,22 +14,11 @@ import "../ProtocolLib.sol";
 contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
 
     /**
-     * @dev Modifier to protect initializer function from being invoked twice.
-     */
-    modifier onlyUnInitialized()
-    {
-        ProtocolLib.ProtocolInitializers storage pi = ProtocolLib.protocolInitializers();
-        require(!pi.exchangeHandler, ALREADY_INITIALIZED);
-        pi.exchangeHandler = true;
-        _;
-    }
-
-    /**
      * @notice Facet Initializer
      */
     function initialize()
     public
-    onlyUnInitialized
+    onlyUnInitialized(type(IBosonExchangeHandler).interfaceId)
     {
         DiamondLib.addSupportedInterface(type(IBosonExchangeHandler).interfaceId);
     }
@@ -58,8 +47,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     override
     {
         // Get the offer, revert if it doesn't exist
-        Offer storage offer = ProtocolLib.getOffer(_offerId);
-        require (offer.id == _offerId, BosonConstants.NO_SUCH_OFFER);
+        (bool exists, Offer storage offer) = fetchOffer(_offerId);
+        require (exists, NO_SUCH_OFFER);
 
         // TODO 1) implement further requires (see above), create exchange, issue voucher
 
@@ -80,15 +69,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
      * @notice Gets the details about a given exchange.
      *
      * @param _exchangeId - the id of the exchange to check
-     * @return success - the exchange was found
+     * @return exists - the exchange was found
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
      */
     function getExchange(uint256 _exchangeId)
     external
     view
-    returns(bool success, BosonTypes.Exchange memory exchange) {
-        exchange = ProtocolLib.getExchange(_exchangeId);
-        success = (exchange.id == _exchangeId);
+    returns(bool exists, BosonTypes.Exchange memory exchange) {
+        return fetchExchange(_exchangeId);
     }
 
 

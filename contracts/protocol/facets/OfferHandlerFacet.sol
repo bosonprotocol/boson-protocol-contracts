@@ -14,22 +14,11 @@ import { ProtocolLib } from "../ProtocolLib.sol";
 contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
 
     /**
-     * @dev Modifier to protect initializer function from being invoked twice.
-     */
-    modifier onlyUnInitialized()
-    {
-        ProtocolLib.ProtocolInitializers storage pi = ProtocolLib.protocolInitializers();
-        require(!pi.offerHandler, ALREADY_INITIALIZED);
-        pi.offerHandler = true;
-        _;
-    }
-
-    /**
      * @notice Facet Initializer
      */
     function initialize()
     public
-    onlyUnInitialized
+    onlyUnInitialized(type(IBosonOfferHandler).interfaceId)
     {
         DiamondLib.addSupportedInterface(type(IBosonOfferHandler).interfaceId);
     }
@@ -59,10 +48,10 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         require(_offer.validUntilDate > block.timestamp, OFFER_PERIOD_INVALID);
 
         // Get the next offerId and increment the counter
-        uint256 offerId = protocolStorage().nextOfferId++;
+        uint256 offerId = protocolCounters().nextOfferId++;
 
         // Get storage location for offer
-        Offer storage offer = ProtocolLib.getOffer(offerId);
+        (bool exists, Offer storage offer) = fetchOffer(offerId);
 
         // Set offer props individually since memory structs can't be copied to storage
         offer.id = offerId;
@@ -103,14 +92,18 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     external
     override
     {
+        bool exists;
+        Offer storage offer;
+        Seller storage seller;
+
         // Get offer
-        Offer storage offer = ProtocolLib.getOffer(_offerId);
+        (exists, offer) = fetchOffer(_offerId);
 
         // Offer must already exist
-        require(offer.id == _offerId, NO_SUCH_OFFER);
+        require(exists, NO_SUCH_OFFER);
 
         // Caller must be seller's operator address
-        Seller storage seller = ProtocolLib.getSeller(offer.sellerId);
+        (exists, seller) = fetchSeller(offer.sellerId);
         //require(seller.operator == msg.sender, NOT_OPERATOR); // TODO add back when AccountHandler is working
 
         // Offer must not already be voided
@@ -128,16 +121,15 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * @notice Gets the details about a given offer.
      *
      * @param _offerId - the id of the offer to check
-     * @return success - the offer was found
+     * @return exists - the offer was found
      * @return offer - the offer details. See {BosonTypes.Offer}
      */
     function getOffer(uint256 _offerId)
     external
     view
-    returns(bool success, Offer memory offer) {
+    returns(bool exists, Offer memory offer) {
 
-        offer = ProtocolLib.getOffer(_offerId);
-        success = (offer.id == _offerId);
+       return fetchOffer(_offerId);
 
     }
 
@@ -153,7 +145,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     view
     returns(uint256 nextOfferId) {
 
-        nextOfferId = ProtocolLib.protocolStorage().nextOfferId;
+        nextOfferId = protocolCounters().nextOfferId;
 
     }
 
