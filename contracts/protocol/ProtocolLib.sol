@@ -71,6 +71,8 @@ library ProtocolLib {
         // twin id => twin
         mapping(uint256 => BosonTypes.Twin) twins;
 
+        
+
     }
 
     // Individual facet initialization states

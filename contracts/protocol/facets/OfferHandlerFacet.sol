@@ -32,7 +32,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     onlyUnInitialized
     {
         DiamondLib.addSupportedInterface(type(IBosonOfferHandler).interfaceId);
-        protocolStorage().nextOfferId++;
     }
 
     /**

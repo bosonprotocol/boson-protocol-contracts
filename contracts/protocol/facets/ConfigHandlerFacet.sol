@@ -47,6 +47,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         ps.tokenAddress = _tokenAddress;
         ps.treasuryAddress = _treasuryAddress;
         ps.protocolFeePercentage = _protocolFeePercentage;
+
+        ps.nextOfferId++;
     }
 
     /**

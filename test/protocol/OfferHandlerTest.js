@@ -1,6 +1,7 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
+const { gasLimit } = require('../../environments');
 
 const Role = require("../../scripts/domain/Role");
 const Offer = require("../../scripts/domain/Offer");
@@ -8,6 +9,7 @@ const { InterfaceIds } = require('../../scripts/config/supported-interfaces.js')
 const { RevertReasons } = require('../../scripts/config/revert-reasons.js');
 const { deployProtocolDiamond } = require('../../scripts/util/deploy-protocol-diamond.js');
 const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-protocol-handler-facets.js');
+const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protocol-config-facet.js');
 
 /**
  *  Test the Boson Offer Handler interface
@@ -51,6 +53,14 @@ describe("IBosonOfferHandler", function() {
 
         // Cut the protocol handler facets into the Diamond
         [offerHandlerFacet] = await deployProtocolHandlerFacets(protocolDiamond, ["OfferHandlerFacet"]);
+
+        // Add config Handler, so offer id starts at 1
+        const protocolConfig = [
+            '0x0000000000000000000000000000000000000000',
+            '0x0000000000000000000000000000000000000000',
+            '0'
+        ];
+        [configHandlerFacet] = await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
         // Cast Diamond to IERC165
         erc165 = await ethers.getContractAt('IERC165', protocolDiamond.address);
