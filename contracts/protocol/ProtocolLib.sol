@@ -55,6 +55,10 @@ library ProtocolLib {
 
         // offer id => exchange ids
         mapping(uint256 => uint256[]) exchangesByOffer;
+
+        // offer id => group ids
+        mapping(uint256 => uint256) groupByOffer;
+                
     }
 
     // Incrementing ID counters
@@ -122,6 +126,19 @@ library ProtocolLib {
         assembly {
             pi.slot := position
         }
+    }
+
+    /**
+     * @notice Gets the details about a given group
+     *
+     * @param _groupId - the id of the group
+     * @return group - the group details. See {BosonTypes.Gxchange}
+     */
+    function getGroup(uint256 _groupId)
+    internal
+    view
+    returns(BosonTypes.Group storage group) {
+        group = protocolStorage().groups[_groupId];
     }
 
 }

@@ -23,6 +23,10 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         DiamondLib.addSupportedInterface(type(IBosonOfferHandler).interfaceId);
     }
 
+    /////////////////////////////////////
+    ///    SINGLE OFFER MANAGEMENT    ///
+    /////////////////////////////////////
+
     /**
      * @notice Creates an offer.
      *
@@ -290,6 +294,61 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
             exists &&
             !offer.voided &&
             (protocolStorage().exchangesByOffer[_offerId].length == 0);
+        
+    }
+
+    //////////////////////////////
+    ///    GROUP MANAGEMENT    ///
+    //////////////////////////////
+
+    /**
+     * @notice Creates a group.
+     *
+     * Emits an GroupCreated event if successful.
+     *
+     * Reverts if:
+     * 
+     * - seller does not match caller
+     * - any of offers belongs to different seller
+     * - any of offers does not exist
+     *
+     * @param _group - the fully populated struct with group id set to 0x0
+     */
+    function createGroup(
+        Group memory _group
+    )
+    external
+    override
+    {
+        // TODO: check seller ID matches msg.sender
+
+        // make sure all offers exist and belong to the seller
+        for (uint i = 0; i < _group.offerIds.length; i++) {
+            getValidOffer(_group.offerIds[i]);
         }
+
+        // Get the next group and increment the counter
+        uint256 groupId = protocolCounters().nextGroupId++;
+
+        // modify incoming struct so event value represents true state
+        _group.id = groupId;
+        
+        // Get storage location for offer
+        Group storage group = ProtocolLib.getGroup(groupId);
+
+        // Set offer props individually since memory structs can't be copied to storage
+        group.id = _group.id;
+        group.sellerId = _group.sellerId;
+        group.offerIds = _group.offerIds;
+        group.condition = _group.condition;
+
+        // Add to groupByOffer mapping
+        for (uint i = 0; i < _group.offerIds.length; i++) {
+            protocolStorage().groupByOffer[_group.offerIds[i]] = groupId;
+        }      
+      
+        // Notify watchers of state change
+        emit GroupCreated(groupId, _group.sellerId, _group);
+    }
 
 }
