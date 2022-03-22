@@ -4,7 +4,7 @@ const { expect } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
 const Offer = require("../../scripts/domain/Offer");
-const { InterfaceIds } = require('../../scripts/config/supported-interfaces.js');
+const { getInterfaceIds } = require('../../scripts/config/supported-interfaces.js');
 const { RevertReasons } = require('../../scripts/config/revert-reasons.js');
 const { deployProtocolDiamond } = require('../../scripts/util/deploy-protocol-diamond.js');
 const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-protocol-handler-facets.js');
@@ -15,6 +15,7 @@ const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-proto
 describe("IBosonOfferHandler", function() {
 
     // Common vars
+    let InterfaceIds;
     let accounts, deployer, rando;
     let erc165, protocolDiamond, diamondLoupe, diamondCut, accessController, offerHandler, offerHandlerFacet, offerStruct;
     let offer, nextOfferId, invalidOfferId, oneMonth, twoMonths, oneWeek, support, expected, success;
@@ -34,6 +35,13 @@ describe("IBosonOfferHandler", function() {
         metadataUri,
         metadataHash,
         voided;
+
+    before (async function() {
+    
+        // get interface Ids    
+        InterfaceIds = await getInterfaceIds();
+    
+    })
 
     beforeEach( async function () {
 
