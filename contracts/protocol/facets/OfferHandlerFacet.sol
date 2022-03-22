@@ -154,17 +154,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     override
     {
         // Get offer
-        Offer storage offer = ProtocolLib.getOffer(_offerId);
-
-        // Offer must already exist
-        require(offer.id == _offerId, NO_SUCH_OFFER);
-
-        // Caller must be seller's operator address
-        Seller storage seller = ProtocolLib.getSeller(offer.sellerId);
-        //require(seller.operator == msg.sender, NOT_OPERATOR); // TODO add back when AccountHandler is working
-
-        // Offer must not already be voided
-        require(!offer.voided, OFFER_ALREADY_VOIDED);
+        Offer storage offer = getValidOffer(_offerId);
 
         // Void the offer
         offer.voided = true;
@@ -194,7 +184,33 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     override
     {
         // Get offer
-        Offer storage offer = ProtocolLib.getOffer(_offerId);
+        Offer storage offer = getValidOffer(_offerId);
+
+        // New valid until date must be greater than existing one
+        require(offer.validUntilDate < _validUntilDate, OFFER_PERIOD_INVALID);
+
+        // Void the offer
+        offer.validUntilDate = _validUntilDate;
+
+        // Notify watchers of state change
+        emit OfferUpdated(offer.id, offer.sellerId, offer);
+    }
+
+    /**
+     * @notice Gets offer from protocol storage, makes sure it exist and not voided
+     *
+     * Emits an OfferUpdated event if successful.
+     *
+     * Reverts if:
+     * - Offer does not exist
+     * - Caller is not the seller (TODO)
+     * - Offer already voided
+     *
+     *  @param _offerId - the id of the offer to check
+     */
+    function getValidOffer(uint256 _offerId) internal view returns (Offer storage offer){
+        // Get offer
+        offer = ProtocolLib.getOffer(_offerId);
 
         // Offer must already exist
         require(offer.id == _offerId, NO_SUCH_OFFER);
@@ -205,15 +221,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
 
         // Offer must not already be voided
         require(!offer.voided, OFFER_ALREADY_VOIDED);
-
-        // New valid until date must be greater than existing one
-        require(offer.validUntilDate < _validUntilDate, OFFER_PERIOD_INVALID);
-
-        // Void the offer
-        offer.validUntilDate = _validUntilDate;
-
-        // Notify watchers of state change
-        emit OfferUpdated(offer.id, offer.sellerId, offer);
     }
 
     /**
@@ -263,6 +270,9 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     public
     view
     returns(bool success, bool offerVoided) {
+        if (_offerId == 0) {
+            return (false, false);
+        }
 
         Offer memory offer = ProtocolLib.getOffer(_offerId);
         success = (offer.id == _offerId);
