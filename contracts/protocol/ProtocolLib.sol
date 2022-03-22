@@ -90,6 +90,8 @@ library ProtocolLib {
 
         bool twinHandler;
 
+        bool accountHandler;
+
     }
 
     function protocolStorage() internal pure returns (ProtocolStorage storage ps) {

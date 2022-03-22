@@ -1,5 +1,5 @@
 const { getFacetAddCut } = require('./diamond-utils.js')
-const { InterfaceIds } = require('../config/supported-interfaces.js')
+const { getInterfaceIds } = require('../config/supported-interfaces.js')
 const hre = require("hardhat");
 const ethers = hre.ethers;
 
@@ -12,6 +12,9 @@ const ethers = hre.ethers;
  * @returns {Promise<(*|*|*)[]>}
  */
 async function deployProtocolDiamond (gasLimit) {
+  
+  // Get interface Ids
+  const InterfaceIds = await getInterfaceIds();
 
   // Core interfaces that will be supported at the Diamond address
   const interfaces = [

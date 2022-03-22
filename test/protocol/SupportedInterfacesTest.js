@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { assert } = require("chai");
-const { InterfaceIds } = require('../../scripts/config/supported-interfaces.js');
+const { getInterfaceIds } = require('../../scripts/config/supported-interfaces.js');
 
 /**
  *  Test the SupportedInterfaces contract
@@ -10,9 +10,14 @@ const { InterfaceIds } = require('../../scripts/config/supported-interfaces.js')
  *  the current ERC-165 interface id of a contract during development.
  */
 describe("SupportedInterfaces", function() {
+    
 
     // Shared args
-    let SupportedInterfaces, supportedInterfaces;
+    let SupportedInterfaces, supportedInterfaces, InterfaceIds;
+
+    before (async function() {
+        InterfaceIds = await getInterfaceIds();
+    })
 
     beforeEach( async function () {
 
@@ -71,6 +76,14 @@ describe("SupportedInterfaces", function() {
 
                 const expected = InterfaceIds.IBosonTwinHandler;
                 const actual = await supportedInterfaces.getIBosonTwinHandler();
+                assert.equal(actual, expected);
+
+            });
+
+            it("getIBosonAccountHandler() should return expected id", async function () {
+
+                const expected = InterfaceIds.IBosonAccountHandler;
+                const actual = await supportedInterfaces.getIBosonAccountHandler();
                 assert.equal(actual, expected);
 
             });
