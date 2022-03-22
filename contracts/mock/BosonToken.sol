@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-
 /**
  * @title BosonToken
  *
@@ -9,6 +8,9 @@ pragma solidity ^0.8.0;
 contract BosonToken {
 
     mapping(address => uint256) internal balances;
+    mapping(address => mapping(address => uint256)) internal allowances;
+
+    event Approval(address indexed owner, address indexed spender, uint256 value);
 
     /**
       * @notice Sets the balance for a mock holder address.
@@ -30,6 +32,40 @@ contract BosonToken {
     view
     returns (uint256) {
         return balances[_holder];
+    }
+
+    /**
+     * @notice The faux ERC-20 allowance implementation
+     */
+    function allowance(address _owner, address _spender)
+    public
+    view
+    returns (uint256) {
+        return allowances[_owner][_spender];
+    }
+
+    /**
+     * @notice The faux ERC-20 approve implementation
+     */
+    function approve(address spender, uint256 amount)
+    public
+    virtual
+    returns (bool) {
+        address owner = msg.sender;
+        _approve(owner, spender, amount);
+        return true;
+    }
+
+    /**
+     * @notice The faux ERC-20 _approve implementation
+     */
+    function _approve(
+        address _owner,
+        address _spender,
+        uint256 _amount
+    ) internal virtual {
+        allowances[_owner][_spender] = _amount;
+        emit Approval(_owner, _spender, _amount);
     }
 
     receive() external payable {}
