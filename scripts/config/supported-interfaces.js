@@ -20,6 +20,7 @@ const interfaces = [
     'IERC165',     
 ]
 
+// manually add the interfaces that currently cannot be calculated
 const otherInterfaces = {
     'IBosonVoucher':    "0x8a75c03e",
     'IERC1155':         "0xd9b67a26",
