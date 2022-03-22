@@ -27,9 +27,7 @@ function getSelectors (contract) {
 function getInterfaceId (contract) {
   const signatures = Object.keys(contract.interface.functions)
   const selectors = signatures.reduce((acc, val) => {
-    if (val !== 'initialize()') {
-      acc.push(ethers.BigNumber.from(contract.interface.getSighash(val)))
-    }
+    acc.push(ethers.BigNumber.from(contract.interface.getSighash(val)))
     return acc
   }, [])
   let interfaceId = selectors.reduce((pv,cv)=> pv.xor(cv),ethers.BigNumber.from("0x00000000"));
