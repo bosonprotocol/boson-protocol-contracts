@@ -3,7 +3,7 @@ const ethers = hre.ethers;
 const { expect } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
-const { InterfaceIds } = require('../../scripts/config/supported-interfaces.js');
+const { getInterfaceIds } = require('../../scripts/config/supported-interfaces.js');
 const { RevertReasons } = require('../../scripts/config/revert-reasons.js');
 const { deployProtocolDiamond } = require('../../scripts/util/deploy-protocol-diamond.js');
 const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-protocol-handler-facets.js');
@@ -14,9 +14,17 @@ const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-proto
  describe("IBosonAccountHandler", function() {
 
     // Common vars
+    let InterfaceIds;
     let accounts, deployer, rando;
     let erc165, protocolDiamond, diamondLoupe, diamondCut, accessController, accountHandler, accountrHandlerFacet, accountStruct;
     let expected, nextAccountId;
+
+    before (async function() {
+        
+        // get interface Ids    
+        InterfaceIds = await getInterfaceIds();
+    
+    })
 
     beforeEach( async function () {
 
@@ -86,15 +94,13 @@ const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-proto
             // Get the next offer id
             nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
-            console.log("expected is %s, while actual is %s ", expected, nextAccountId);
-
             // Verify expectation
             expect(nextAccountId.toString() == expected).to.be.true;
 
         });
     
     /*
-        Uncomment after createAccount function has been implemented
+        Uncomment after create account functions has been implemented
 
         it("should be incremented after an offer is created", async function () {
 

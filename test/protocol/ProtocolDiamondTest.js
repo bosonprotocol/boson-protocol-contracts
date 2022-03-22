@@ -6,7 +6,7 @@ const Role = require("../../scripts/domain/Role");
 const Facet = require("../../scripts/domain/Facet");
 const { deployProtocolDiamond } = require('../../scripts/util/deploy-protocol-diamond.js');
 const { getSelectors, FacetCutAction, removeSelectors } = require('../../scripts/util/diamond-utils.js')
-const {InterfaceIds} = require("../../scripts/config/supported-interfaces");
+const { getInterfaceIds } = require("../../scripts/config/supported-interfaces");
 
 /**
  * Test the Protocol Diamond contract and its core facets
@@ -31,6 +31,7 @@ describe('ProtocolDiamond', async function () {
   const gasLimit = 1600000;
 
   // Common vars
+  let InterfaceIds;
   let accounts, deployer, admin, upgrader, rando;
   let protocolDiamond, diamondLoupe, diamondCut;
   let loupeFacetViaDiamond, cutFacetViaDiamond;
@@ -42,6 +43,13 @@ describe('ProtocolDiamond', async function () {
   let interfaces, facets, facetCuts, result;
   let initFunction, initInterface, initCallData;
   let discard, support, erc165;
+
+  before (async function() {
+    
+    // get interface Ids    
+    InterfaceIds = await getInterfaceIds();
+
+  })  
 
   beforeEach(async function () {
 
