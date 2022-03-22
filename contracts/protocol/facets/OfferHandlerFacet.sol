@@ -213,7 +213,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         offer = ProtocolLib.getOffer(_offerId);
 
         // Offer must already exist
-        require(offer.id == _offerId, NO_SUCH_OFFER);
+        require(_offerId !=0 && offer.id == _offerId, NO_SUCH_OFFER);
 
         // Caller must be seller's operator address
         Seller storage seller = ProtocolLib.getSeller(offer.sellerId);
