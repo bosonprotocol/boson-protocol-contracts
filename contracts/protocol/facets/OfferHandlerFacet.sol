@@ -42,7 +42,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * Reverts if:
      * - internal any of validations to store offer fails
      *
-     * @param _offer - the fully populated struct with offer id set to 0x0, active exchanges set to 0 and voided set to false
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      */
     function createOffer(
         Offer memory _offer
@@ -68,10 +68,10 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * Emits an OfferUpdated event if successful.
      *
      * Reverts if:
-     * - Offer is not updateable, i.e. is voided or some exchanges are active
+     * - Offer is not updateable, i.e. is voided or some exchanges exist
      * - Any other validation for offer creation fails
      *
-     * @param _offer - the fully populated struct with offer id set to offer to be updated, active exchanges set to 0 and voided set to false
+     * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      */
     function updateOffer(
         Offer memory _offer
@@ -97,7 +97,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * - Buyer cancel penalty is greater than price
      * - Voided is set to true
      *
-     * @param _offer - the fully populated struct with offer id set to offer to be updated, active exchanges set to 0 and voided set to false
+     * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      */
     function storeOffer(Offer memory _offer) internal {
         // TODO: check seller ID matches msg.sender
