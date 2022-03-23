@@ -19,7 +19,8 @@ contract BosonConstants {
     // Revert Reasons: Facet initializer related
     string internal constant ALREADY_INITIALIZED = "Already initialized";
 
-    // Revert Reasons: Seller related
+    // Revert Reasons: Access related
+    string internal constant ACCESS_DENIED = "Access denied, caller doesn't have role";
     string internal constant NOT_OPERATOR = "Not seller's operator";
 
     // Revert Reasons: Offer related
