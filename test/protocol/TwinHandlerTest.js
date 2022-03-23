@@ -1,12 +1,14 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { expect } = require("chai");
+const { expect, assert } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
 const Twin = require("../../scripts/domain/Twin");
 const { InterfaceIds } = require('../../scripts/config/supported-interfaces.js');
+const { RevertReasons } = require('../../scripts/config/revert-reasons.js');
 const { deployProtocolDiamond } = require('../../scripts/util/deploy-protocol-diamond.js');
 const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-protocol-handler-facets.js');
+const { assertEventEmitted } = require("../../testHelpers/events");
 
 /**
  *  Test the Boson Twin Handler interface
@@ -22,6 +24,7 @@ describe("IBosonTwinHandler", function() {
         accessController,
         twinHandler,
         twinHandlerFacet,
+        TwinHandlerFacet_Factory,
         twinStruct,
         MockBosonToken_Factory,
         MockForeign721_Factory,
@@ -70,6 +73,8 @@ describe("IBosonTwinHandler", function() {
         await contractBosonToken.deployed();
         await contractForeign721.deployed();
         await contractForeign1155.deployed();
+
+        TwinHandlerFacet_Factory = await ethers.getContractFactory('TwinHandlerFacet');
     });
 
     // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -118,140 +123,236 @@ describe("IBosonTwinHandler", function() {
 
         context("👉 createTwin()", async function () {
             it("should emit a TwinCreated event", async function () {
+                twin.tokenAddress = contractBosonToken.address;
 
-                // Add a twin, testing for the event
-                await expect(twinHandler.connect(seller).createTwin(twin))
-                    .to.emit(twinHandler, 'TwinCreated')
-                    .withArgs(nextTwinId, twin.sellerId);
-                
+                // Approving the twinHandler contract to transfer seller's tokens
+                await contractBosonToken.connect(seller).approve(twinHandler.address, 1);
+
+                // Create a twin, testing for the event
+                const tx = await twinHandler.connect(seller).createTwin(twin, seller.address);
+                const txReceipt = await tx.wait();
+
+                assertEventEmitted(
+                    txReceipt,
+                    TwinHandlerFacet_Factory,
+                    'TwinCreated',
+                    function(eventArgs) {
+                        assert.equal(
+                            eventArgs.twinId.toString(),
+                            twin.id,
+                            'Twin Id is incorrect'
+                        );
+                        assert.equal(
+                            eventArgs.sellerId.toString(),
+                            twin.sellerId,
+                            'Seller Id is incorrect'
+                        );
+                        assert.equal(
+                            eventArgs.twin[2].toString(),
+                            twin.supplyAvailable,
+                            "Twin struct's supplyAvailable is incorrect"
+                        );
+                        assert.equal(
+                            eventArgs.twin[3].toString(),
+                            twin.supplyIds.toString(),
+                            "Twin struct's supplyIds is incorrect"
+                        );
+                        assert.equal(
+                            eventArgs.twin[4].toString(),
+                            twin.tokenId.toString(),
+                            "Twin struct's tokenId is incorrect"
+                        );
+                        assert.equal(
+                            eventArgs.twin[5],
+                            twin.tokenAddress,
+                            "Twin struct's tokenAddress is incorrect"
+                        );
+                    }
+                );
             });
 
             it("should ignore any provided id and assign the next available", async function () {
                 twin.id = "444";
 
-                // Add a twin, testing for the event
-                await expect(twinHandler.connect(seller).createTwin(twin))
-                    .to.emit(twinHandler, 'TwinCreated')
-                    .withArgs(nextTwinId, twin.sellerId);
-            });
-        });
+                // Approving the twinHandler contract to transfer seller's tokens
+                await contractBosonToken.connect(seller).approve(twinHandler.address, 1);
 
-        context("👉 isTokenTransferApproved()", async function () {
-            context("👉 ERC20 ", async function () {
-                it("should return false if protocol is Not approved to transfer the token", async function () {
-                    twin.tokenAddress = contractBosonToken.address;
+                // Create a twin, testing for the event
+                const tx = await twinHandler.connect(seller).createTwin(twin, seller.address);
+                const txReceipt = await tx.wait();
 
-                    // Is the transfer approved?
-                    tokenIsApproved = await twinHandler.connect(seller).isTokenTransferApproved(
-                        twin.tokenAddress,
-                        seller.address,
-                        ethers.constants.AddressZero
-                    );
-
-                    // Verify expectation
-                    expect(tokenIsApproved).to.be.false;
-                });
-
-                it("should return true if protocol is approved to transfer the token", async function () {
-                    twin.tokenAddress = contractBosonToken.address;
-
-                    await expect(contractBosonToken.connect(seller).approve(deployer.address, 1))
-                    .to.emit(contractBosonToken, 'Approval')
-                    .withArgs(seller.address, deployer.address, 1);
-
-
-                    // Is the transfer approved?
-                    tokenIsApproved = await twinHandler.connect(seller).isTokenTransferApproved(
-                        twin.tokenAddress,
-                        seller.address,
-                        deployer.address
-                    );
-
-                    // // Verify expectation
-                    expect(tokenIsApproved).to.be.true;
-                });
-            });
-
-            context("👉 ERC721 ", async function () {
-                it("should return false if protocol is Not approved to transfer the token", async function () {
-                    twin.tokenAddress = contractForeign721.address;
-
-                    // Is the transfer approved?
-                    tokenIsApproved = await twinHandler.connect(seller).isTokenTransferApproved(
-                        twin.tokenAddress,
-                        seller.address,
-                        ethers.constants.AddressZero
-                    );
-
-                    // Verify expectation
-                    expect(tokenIsApproved).to.be.false;
-                });
-
-                it("should return true if protocol is approved to transfer the token", async function () {
-                    twin.tokenAddress = contractForeign721.address;
-
-                    await contractForeign721.connect(seller).mint(twin.tokenId);
-                    await contractForeign721.connect(seller).setApprovalForAll(deployer.address, true);
-
-                    // Is the transfer approved?
-                    tokenIsApproved = await twinHandler.connect(seller).isTokenTransferApproved(
-                        twin.tokenAddress,
-                        seller.address,
-                        deployer.address
-                    );
-
-                    // Verify expectation
-                    expect(tokenIsApproved).to.be.true;
-                });
+                assertEventEmitted(
+                    txReceipt,
+                    TwinHandlerFacet_Factory,
+                    'TwinCreated',
+                    function(eventArgs) {
+                        assert.equal(
+                            eventArgs.twinId.toString(),
+                            nextTwinId,
+                            'Twin Id is incorrect'
+                        );
+                        assert.equal(
+                            eventArgs.sellerId.toString(),
+                            twin.sellerId,
+                            'Seller Id is incorrect'
+                        );
+                        assert.equal(
+                            eventArgs.twin[2].toString(),
+                            twin.supplyAvailable,
+                            "Twin struct's supplyAvailable is incorrect"
+                        );
+                        assert.equal(
+                            eventArgs.twin[3].toString(),
+                            twin.supplyIds.toString(),
+                            "Twin struct's supplyIds is incorrect"
+                        );
+                        assert.equal(
+                            eventArgs.twin[4].toString(),
+                            twin.tokenId.toString(),
+                            "Twin struct's tokenId is incorrect"
+                        );
+                        assert.equal(
+                            eventArgs.twin[5],
+                            twin.tokenAddress,
+                            "Twin struct's tokenAddress is incorrect"
+                        );
+                    }
+                );
             });
 
-            context("👉 ERC1155 ", async function () {
-                it("should return false if protocol is Not approved to transfer the token", async function () {
-                    twin.tokenAddress = contractForeign1155.address;
+            it("should emit a TwinCreated event for ERC721 token address", async function () {
+                twin.tokenAddress = contractForeign721.address;
 
-                    // Is the transfer approved?
-                    tokenIsApproved = await twinHandler.connect(seller).isTokenTransferApproved(
-                        twin.tokenAddress,
-                        seller.address,
-                        ethers.constants.AddressZero
-                    );
+                // Mint a token and approve twinHandler contract to transfer it
+                await contractForeign721.connect(seller).mint(twin.tokenId);
+                await contractForeign721.connect(seller).setApprovalForAll(twinHandler.address, true);
 
-                    // Verify expectation
-                    expect(tokenIsApproved).to.be.false;
-                });
+                // Create a twin, testing for the event
+                const tx = await twinHandler.connect(seller).createTwin(twin, seller.address);
+                const txReceipt = await tx.wait();
 
-                it("should return true if protocol is approved to transfer the token", async function () {
-                    twin.tokenAddress = contractForeign1155.address;
+                assertEventEmitted(
+                    txReceipt,
+                    TwinHandlerFacet_Factory,
+                    'TwinCreated',
+                    function(eventArgs) {
+                        assert.equal(
+                            eventArgs.twinId.toString(),
+                            twin.id,
+                            'Twin Id is incorrect'
+                        );
+                        assert.equal(
+                            eventArgs.sellerId.toString(),
+                            twin.sellerId,
+                            'Seller Id is incorrect'
+                        );
+                        assert.equal(
+                            eventArgs.twin[2].toString(),
+                            twin.supplyAvailable,
+                            "Twin struct's supplyAvailable is incorrect"
+                        );
+                        assert.equal(
+                            eventArgs.twin[3].toString(),
+                            twin.supplyIds.toString(),
+                            "Twin struct's supplyIds is incorrect"
+                        );
+                        assert.equal(
+                            eventArgs.twin[4].toString(),
+                            twin.tokenId.toString(),
+                            "Twin struct's tokenId is incorrect"
+                        );
+                        assert.equal(
+                            eventArgs.twin[5],
+                            twin.tokenAddress,
+                            "Twin struct's tokenAddress is incorrect"
+                        );
+                    }
+                );
+            });
 
-                    await contractForeign1155.connect(seller).mint(twin.tokenId, twin.supplyIds[0]);
-                    await contractForeign1155.connect(seller).setApprovalForAll(deployer.address, true);
+            it("should emit a TwinCreated event for ERC1155 token address", async function () {
+                twin.tokenAddress = contractForeign1155.address;
 
-                    // Is the transfer approved?
-                    tokenIsApproved = await twinHandler.connect(seller).isTokenTransferApproved(
-                        twin.tokenAddress,
-                        seller.address,
-                        deployer.address
-                    );
+                // Mint a token and approve twinHandler contract to transfer it
+                await contractForeign1155.connect(seller).mint(twin.tokenId, twin.supplyIds[0]);
+                await contractForeign1155.connect(seller).setApprovalForAll(twinHandler.address, true);
 
-                    // Verify expectation
-                    expect(tokenIsApproved).to.be.true;
-                });
+                // Create a twin, testing for the event
+                const tx = await twinHandler.connect(seller).createTwin(twin, seller.address);
+                const txReceipt = await tx.wait();
+
+                assertEventEmitted(
+                    txReceipt,
+                    TwinHandlerFacet_Factory,
+                    'TwinCreated',
+                    function(eventArgs) {
+                        assert.equal(
+                            eventArgs.twinId.toString(),
+                            twin.id,
+                            'Twin Id is incorrect'
+                        );
+                        assert.equal(
+                            eventArgs.sellerId.toString(),
+                            twin.sellerId,
+                            'Seller Id is incorrect'
+                        );
+                        assert.equal(
+                            eventArgs.twin[2].toString(),
+                            twin.supplyAvailable,
+                            "Twin struct's supplyAvailable is incorrect"
+                        );
+                        assert.equal(
+                            eventArgs.twin[3].toString(),
+                            twin.supplyIds.toString(),
+                            "Twin struct's supplyIds is incorrect"
+                        );
+                        assert.equal(
+                            eventArgs.twin[4].toString(),
+                            twin.tokenId.toString(),
+                            "Twin struct's tokenId is incorrect"
+                        );
+                        assert.equal(
+                            eventArgs.twin[5],
+                            twin.tokenAddress,
+                            "Twin struct's tokenAddress is incorrect"
+                        );
+                    }
+                );
             });
 
             context("💔 Revert Reasons", async function () {
+                it("should revert if protocol is not approved to transfer the ERC20 token", async function () {
+                    //ERC20 token address
+                    twin.tokenAddress = contractBosonToken.address;
+
+                    await expect(twinHandler.connect(seller).createTwin(twin, seller.address))
+                    .to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
+                });
+
+                it("should revert if protocol is not approved to transfer the ERC721 token", async function () {
+                    //ERC721 token address
+                    twin.tokenAddress = contractForeign721.address;
+
+                    await expect(twinHandler.connect(seller).createTwin(twin, seller.address))
+                    .to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
+                });
+
+                it("should revert if protocol is not approved to transfer the ERC1155 token", async function () {
+                    //ERC1155 token address
+                    twin.tokenAddress = contractForeign1155.address;
+
+                    await expect(twinHandler.connect(seller).createTwin(twin, seller.address))
+                    .to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
+                });
+
                 it("Token address is unsupported", async function () {
                     //Unsupported token address
                     twin.tokenAddress = ethers.constants.AddressZero;
 
-                    await expect(twinHandler.connect(seller).isTokenTransferApproved(
-                        twin.tokenAddress,
-                        seller.address,
-                        deployer.address
-                    )).to.be.reverted;
+                    await expect(twinHandler.connect(seller).createTwin(twin, seller.address))
+                    .to.be.reverted;
                 });
             });
-
         });
     });
-
 });

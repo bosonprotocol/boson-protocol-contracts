@@ -14,4 +14,7 @@ exports.RevertReasons = {
     OFFER_PENALTY_INVALID : "Offer penalty invalid",
     OFFER_MUST_BE_ACTIVE : "Offer must be active",
     OFFER_NOT_UPDATEABLE: "Offer not updateable",
+
+    // Twin related
+    NO_TRANSFER_APPROVED: "No transfer approved"
 }
