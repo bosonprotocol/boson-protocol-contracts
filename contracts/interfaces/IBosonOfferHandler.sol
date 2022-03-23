@@ -34,7 +34,7 @@ interface IBosonOfferHandler {
     /**
      * @notice Updates an existing offer.
      *
-     * Emits an OfferCreated event if successful.
+     * Emits an OfferUpdated event if successful.
      *
      * Reverts if:
      * - Offer is not updateable, i.e. is voided or some exchanges are active
@@ -122,8 +122,7 @@ interface IBosonOfferHandler {
      *
      * Offer is updateable if:
      * - is not voided
-     * - has no unfinalized exchanges
-     * - has no unfinalized disputes
+     * - has no exchanges
      *
      * @param _offerId - the id of the offer to check
      * @return success - the offer was found

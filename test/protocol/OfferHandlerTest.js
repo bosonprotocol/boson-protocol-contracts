@@ -191,6 +191,15 @@ describe("IBosonOfferHandler", function() {
                 await expect(offerHandler.connect(seller).createOffer(offer))
                     .to.emit(offerHandler, 'OfferCreated')
                     .withArgs(nextOfferId, offer.sellerId, offerStruct);
+
+                // wrong offer id should not exist
+                [success, ] = await offerHandler.connect(rando).getOffer(offer.id);
+                expect(success).to.be.false;
+
+                // next offer id should exist
+                [success, ] = await offerHandler.connect(rando).getOffer(nextOfferId);
+                expect(success).to.be.true;
+
             });
 
             xit("should ignore any provided seller and assign seller id of msg.sender", async function () {
@@ -301,14 +310,14 @@ describe("IBosonOfferHandler", function() {
                     // Set invalid id
                     offer.id = "444";
 
-                    // Attempt to void the offer, expecting revert
+                    // Attempt to update the offer, expecting revert
                     await expect(offerHandler.connect(seller).updateOffer(offer))
                         .to.revertedWith(RevertReasons.OFFER_NOT_UPDATEABLE);
 
                     // Set invalid id
                     offer.id = "0";
 
-                    // Attempt to void the offer, expecting revert
+                    // Attempt to update the offer, expecting revert
                     await expect(offerHandler.connect(seller).updateOffer(offer))
                         .to.revertedWith(RevertReasons.OFFER_NOT_UPDATEABLE);
                 });
@@ -548,7 +557,7 @@ describe("IBosonOfferHandler", function() {
                         .to.revertedWith(RevertReasons.OFFER_ALREADY_VOIDED);
                 });
 
-                it("New valid until date is lower than the existing valid until date", async function () {
+                it.only("New valid until date is lower than the existing valid until date", async function () {
                     
                     // Make the valid until date the same as the existing offer
                     offer.validUntilDate = ethers.BigNumber.from(offer.validUntilDate).sub("10000").toString();
@@ -557,7 +566,7 @@ describe("IBosonOfferHandler", function() {
                     .to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
 
                     // Make new the valid until date less than existing one
-                    offer.validUntilDate = ethers.BigNumber.from(offer.validUntilDate).sub("10000").toString();
+                    offer.validUntilDate = ethers.BigNumber.from(offer.validUntilDate).sub("1").toString();
 
                     // Attempt to update an offer, expecting revert
                     await expect(offerHandler.connect(seller).extendOffer(offer.id, offer.validUntilDate))

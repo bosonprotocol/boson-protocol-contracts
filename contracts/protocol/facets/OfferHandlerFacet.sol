@@ -193,13 +193,11 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         offer.validUntilDate = _validUntilDate;
 
         // Notify watchers of state change
-        emit OfferUpdated(offer.id, offer.sellerId, offer);
+        emit OfferUpdated(_offerId, offer.sellerId, offer);
     }
 
     /**
      * @notice Gets offer from protocol storage, makes sure it exist and not voided
-     *
-     * Emits an OfferUpdated event if successful.
      *
      * Reverts if:
      * - Offer does not exist
@@ -234,13 +232,10 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     external
     view
     returns(bool success, Offer memory offer) {
-        if (_offerId == 0) {
-            return (false, offer);
+        if (_offerId != 0) {
+            offer = ProtocolLib.getOffer(_offerId);
+            success = (offer.id == _offerId);
         }
-
-        offer = ProtocolLib.getOffer(_offerId);
-        success = (offer.id == _offerId);
-
     }
 
     /**
@@ -270,14 +265,11 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     public
     view
     returns(bool success, bool offerVoided) {
-        if (_offerId == 0) {
-            return (false, false);
+        if (_offerId != 0) {
+            Offer memory offer = ProtocolLib.getOffer(_offerId);
+            success = (offer.id == _offerId);
+            offerVoided = offer.voided;
         }
-
-        Offer memory offer = ProtocolLib.getOffer(_offerId);
-        success = (offer.id == _offerId);
-        offerVoided = offer.voided;
-
     }
 
 
@@ -286,8 +278,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      *
      * Offer is updateable if:
      * - is not voided
-     * - has no unfinalized exchanges
-     * - has no unfinalized disputes
+     * - has no exchanges
      *
      * @param _offerId - the id of the offer to check
      * @return success - the offer was found
@@ -297,14 +288,11 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     public
     view
     returns(bool success, bool offerUpdateable) {
-        if (_offerId == 0) {
-            return (false, false);
+        if (_offerId != 0) {
+            Offer memory offer = ProtocolLib.getOffer(_offerId);
+            success = (offer.id == _offerId);
+            offerUpdateable = !offer.voided &&
+                (protocolStorage().exchangeByOffer[_offerId].length == 0); 
         }
-
-        Offer memory offer = ProtocolLib.getOffer(_offerId);
-        success = (offer.id == _offerId);
-        offerUpdateable = !offer.voided &&
-            (protocolStorage().exchangeByOffer[_offerId].length == 0); 
     }
-
 }
