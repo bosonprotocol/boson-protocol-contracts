@@ -557,7 +557,7 @@ describe("IBosonOfferHandler", function() {
                         .to.revertedWith(RevertReasons.OFFER_ALREADY_VOIDED);
                 });
 
-                it.only("New valid until date is lower than the existing valid until date", async function () {
+                it("New valid until date is lower than the existing valid until date", async function () {
                     
                     // Make the valid until date the same as the existing offer
                     offer.validUntilDate = ethers.BigNumber.from(offer.validUntilDate).sub("10000").toString();
