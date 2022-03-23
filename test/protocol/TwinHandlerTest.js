@@ -4,7 +4,7 @@ const { expect, assert } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
 const Twin = require("../../scripts/domain/Twin");
-const { InterfaceIds } = require('../../scripts/config/supported-interfaces.js');
+const { getInterfaceIds } = require('../../scripts/config/supported-interfaces.js');
 const { RevertReasons } = require('../../scripts/config/revert-reasons.js');
 const { deployProtocolDiamond } = require('../../scripts/util/deploy-protocol-diamond.js');
 const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-protocol-handler-facets.js');
@@ -16,6 +16,7 @@ const { assertEventEmitted } = require("../../testHelpers/events");
 describe("IBosonTwinHandler", function() {
 
     // Common vars
+    let InterfaceIds;
     let accounts, deployer;
     let erc165,
         protocolDiamond,
@@ -39,6 +40,11 @@ describe("IBosonTwinHandler", function() {
         supplyIds,
         tokenId,
         tokenAddress;
+
+    before (async function() {
+        // get interface Ids
+        InterfaceIds = await getInterfaceIds();
+    });
 
     beforeEach( async function () {
         // Make accounts available
