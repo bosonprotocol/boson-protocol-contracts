@@ -23,7 +23,6 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase, ReentrancyGuard {
     public
     onlyUnInitialized(type(IBosonTwinHandler).interfaceId)
     {
-        // theowner = msg.sender;
         DiamondLib.addSupportedInterface(type(IBosonTwinHandler).interfaceId);
     }
 
@@ -43,6 +42,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase, ReentrancyGuard {
         address _sellerOperator
     )
     external
+    nonReentrant
     override
     {
         // Protocol must be approved to transfer seller’s tokens
