@@ -40,12 +40,11 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
 
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
-        pc.nextOfferId = 1;
-        pc.nextAccountId = 1;
-        pc.nextBundleId = 1;
         pc.nextAccountId = 1;
         pc.nextBundleId = 1;
         pc.nextExchangeId = 1;
+        pc.nextGroupId = 1;
+        pc.nextOfferId = 1;
         pc.nextTwinId = 1;
 
     }
