@@ -136,8 +136,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * - Offer is not owned by caller
      * - Offer has already been voided
      *
-     * @param _
-     - the id of the offer to check
+     * @param _offerId - the id of the offer to check
      */
     function voidOffer(uint256 _offerId)
     external
