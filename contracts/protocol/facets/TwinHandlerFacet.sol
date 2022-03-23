@@ -5,17 +5,17 @@ import "../../interfaces/IBosonTwinHandler.sol";
 import "../../diamond/DiamondLib.sol";
 import "../ProtocolBase.sol";
 import "../ProtocolLib.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "../../interfaces/IERC721ERC1155.sol";
 
 /**
  * @title TwinHandlerFacet
  *
  * @notice Manages digital twinning associated with exchanges within the protocol
  */
-contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase, ReentrancyGuard {
+contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
     /**
      * @notice Facet Initializer
      */
@@ -42,7 +42,6 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase, ReentrancyGuard {
         address _sellerOperator
     )
     external
-    nonReentrant
     override
     {
         // Protocol must be approved to transfer seller’s tokens
@@ -65,7 +64,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase, ReentrancyGuard {
         twin.tokenAddress = _twin.tokenAddress;
 
         // Notify watchers of state change
-        emit TwinCreated(twinId, _twin.sellerId, _twin);
+        emit TwinCreated(twin.id, _twin.sellerId, _twin);
     }
 
     /**
@@ -81,27 +80,16 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase, ReentrancyGuard {
         address _operator,
         address _spender
     ) internal view returns(bool _isApproved) {
-        _isApproved = false;
-
         try IERC20(_tokenAddress).allowance(
             _operator,
             _spender
         ) returns(uint256 _allowance) {
             if (_allowance > 0) {_isApproved = true; }
         } catch {
-            bool _isERC721 = IERC721(_tokenAddress).supportsInterface(0x80ac58cd) || IERC721(_tokenAddress).supportsInterface(0x5b5e139f);
-            bool _isERC1155 = IERC1155(_tokenAddress).supportsInterface(0xd9b67a26) || IERC1155(_tokenAddress).supportsInterface(0x0e89341c);
-            if (_isERC721) {
-                _isApproved = IERC721(_tokenAddress).isApprovedForAll(
-                    _operator,
-                    _spender
-                );
-            } else if (_isERC1155) {
-                _isApproved = IERC1155(_tokenAddress).isApprovedForAll(
-                    _operator,
-                    _spender
-                );
-            }
+            _isApproved = IERC721ERC1155(_tokenAddress).isApprovedForAll(
+                _operator,
+                _spender
+            );
         }
     }
 }

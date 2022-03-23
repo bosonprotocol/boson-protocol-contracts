@@ -154,6 +154,16 @@ describe("IBosonTwinHandler", function() {
                             'Seller Id is incorrect'
                         );
                         assert.equal(
+                            eventArgs.twin[0].toString(),
+                            twin.id,
+                            "Twin struct's id is incorrect"
+                        );
+                        assert.equal(
+                            eventArgs.twin[1].toString(),
+                            twin.sellerId,
+                            "Twin struct's sellerId is incorrect"
+                        );
+                        assert.equal(
                             eventArgs.twin[2].toString(),
                             twin.supplyAvailable,
                             "Twin struct's supplyAvailable is incorrect"
@@ -172,6 +182,13 @@ describe("IBosonTwinHandler", function() {
                             eventArgs.twin[5],
                             twin.tokenAddress,
                             "Twin struct's tokenAddress is incorrect"
+                        );
+
+                        // Unable to match whole eventArgs.twin struct. Hence confirming the Struct size.
+                        assert.equal(
+                            eventArgs.twin.length,
+                            Object.keys(twin).length,
+                            "Twin struct does not match"
                         );
                     }
                 );
@@ -203,6 +220,16 @@ describe("IBosonTwinHandler", function() {
                             'Seller Id is incorrect'
                         );
                         assert.equal(
+                            eventArgs.twin[0].toString(),
+                            twin.id,
+                            "Twin struct's id is incorrect"
+                        );
+                        assert.equal(
+                            eventArgs.twin[1].toString(),
+                            twin.sellerId,
+                            "Twin struct's sellerId is incorrect"
+                        );
+                        assert.equal(
                             eventArgs.twin[2].toString(),
                             twin.supplyAvailable,
                             "Twin struct's supplyAvailable is incorrect"
@@ -221,6 +248,13 @@ describe("IBosonTwinHandler", function() {
                             eventArgs.twin[5],
                             twin.tokenAddress,
                             "Twin struct's tokenAddress is incorrect"
+                        );
+
+                        // Unable to match whole eventArgs.twin struct. Hence confirming the Struct size.
+                        assert.equal(
+                            eventArgs.twin.length,
+                            Object.keys(twin).length,
+                            "Twin struct does not match"
                         );
                     }
                 );
@@ -253,6 +287,16 @@ describe("IBosonTwinHandler", function() {
                             'Seller Id is incorrect'
                         );
                         assert.equal(
+                            eventArgs.twin[0].toString(),
+                            twin.id,
+                            "Twin struct's id is incorrect"
+                        );
+                        assert.equal(
+                            eventArgs.twin[1].toString(),
+                            twin.sellerId,
+                            "Twin struct's sellerId is incorrect"
+                        );
+                        assert.equal(
                             eventArgs.twin[2].toString(),
                             twin.supplyAvailable,
                             "Twin struct's supplyAvailable is incorrect"
@@ -271,6 +315,13 @@ describe("IBosonTwinHandler", function() {
                             eventArgs.twin[5],
                             twin.tokenAddress,
                             "Twin struct's tokenAddress is incorrect"
+                        );
+
+                        // Unable to match whole eventArgs.twin struct. Hence confirming the Struct size.
+                        assert.equal(
+                            eventArgs.twin.length,
+                            Object.keys(twin).length,
+                            "Twin struct does not match"
                         );
                     }
                 );
