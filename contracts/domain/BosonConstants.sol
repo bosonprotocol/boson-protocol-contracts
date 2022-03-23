@@ -16,24 +16,18 @@ contract BosonConstants {
     bytes32 internal constant RESOLVER  = keccak256("RESOLVER");   // Role for resolving the outcome of an escalated dispute
     bytes32 internal constant FEE_COLLECTOR  = keccak256("FEE_COLLECTOR");   // Role for collecting fees from the protocol
 
-    // Revert Reasons: Access related
-    string internal constant ACCESS_DENIED = "Access denied, caller doesn't have role";
-
     // Revert Reasons: Facet initializer related
     string internal constant ALREADY_INITIALIZED = "Already initialized";
 
     // Revert Reasons: Seller related
-    string internal constant NO_SUCH_SELLER = "No such seller";
     string internal constant NOT_OPERATOR = "Not seller's operator";
 
     // Revert Reasons: Offer related
     string internal constant NO_SUCH_OFFER = "No such offer";
-    string internal constant OFFER_ALREADY_EXISTS = "Offer already exists";
     string internal constant OFFER_ALREADY_VOIDED = "Offer already voided";
     string internal constant OFFER_PERIOD_INVALID = "Offer period invalid";
 
     // Revert Reasons: Exchange related
     string internal constant NO_SUCH_EXCHANGE = "No such exchange";
-    string internal constant EXCHANGE_ALREADY_EXISTS = "Exchange already exists";
 
 }

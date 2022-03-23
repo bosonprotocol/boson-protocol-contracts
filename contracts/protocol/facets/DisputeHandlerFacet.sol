@@ -29,8 +29,6 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * Emits an DisputeCreated event if successful.
      *
      * Reverts if:
-     * - exchange does not exist
-     * - offer associated with exchange does not exist
      * - caller does not hold a voucher for the given offer id
      * - a dispute already exists
      * - the complaint is blank
@@ -45,17 +43,12 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     external
     override
     {
-        bool exists;
-        Exchange storage exchange;
-        Offer storage offer;
-
         // Get the exchange, revert if it doesn't exist
-        (exists, exchange) = fetchExchange(_exchangeId);
-        require(exists, NO_SUCH_EXCHANGE);
+        Exchange storage exchange = ProtocolLib.getExchange(_exchangeId);
+        require (exchange.id == _exchangeId, BosonConstants.NO_SUCH_EXCHANGE);
 
-        // Get the offer, revert if it doesn't exist
-        (exists, offer) = fetchOffer(exchange.offerId);
-        require(exists, NO_SUCH_OFFER);
+        Offer storage offer = ProtocolLib.getOffer(exchange.offerId);
+        require (offer.id == exchange.offerId, BosonConstants.NO_SUCH_OFFER);
 
         // TODO implement further checks, create and store dispute
 

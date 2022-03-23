@@ -47,8 +47,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     override
     {
         // Get the offer, revert if it doesn't exist
-        (bool exists, Offer storage offer) = fetchOffer(_offerId);
-        require (exists, NO_SUCH_OFFER);
+        Offer storage offer = ProtocolLib.getOffer(_offerId);
+        require (offer.id == _offerId, BosonConstants.NO_SUCH_OFFER);
 
         // TODO 1) implement further requires (see above), create exchange, issue voucher
 
@@ -69,14 +69,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
      * @notice Gets the details about a given exchange.
      *
      * @param _exchangeId - the id of the exchange to check
-     * @return exists - the exchange was found
+     * @return success - the exchange was found
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
      */
     function getExchange(uint256 _exchangeId)
     external
     view
-    returns(bool exists, BosonTypes.Exchange memory exchange) {
-        return fetchExchange(_exchangeId);
+    returns(bool success, BosonTypes.Exchange memory exchange) {
+        exchange = ProtocolLib.getExchange(_exchangeId);
+        success = (exchange.id == _exchangeId);
     }
 
 

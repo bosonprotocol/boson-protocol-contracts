@@ -51,7 +51,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         uint256 offerId = protocolCounters().nextOfferId++;
 
         // Get storage location for offer
-        (bool exists, Offer storage offer) = fetchOffer(offerId);
+        Offer storage offer = ProtocolLib.getOffer(offerId);
 
         // Set offer props individually since memory structs can't be copied to storage
         offer.id = offerId;
@@ -92,18 +92,14 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     external
     override
     {
-        bool exists;
-        Offer storage offer;
-        Seller storage seller;
-
         // Get offer
-        (exists, offer) = fetchOffer(_offerId);
+        Offer storage offer = ProtocolLib.getOffer(_offerId);
 
         // Offer must already exist
-        require(exists, NO_SUCH_OFFER);
+        require(offer.id == _offerId, NO_SUCH_OFFER);
 
         // Caller must be seller's operator address
-        (exists, seller) = fetchSeller(offer.sellerId);
+        Seller storage seller = ProtocolLib.getSeller(offer.sellerId);
         //require(seller.operator == msg.sender, NOT_OPERATOR); // TODO add back when AccountHandler is working
 
         // Offer must not already be voided
@@ -121,15 +117,16 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * @notice Gets the details about a given offer.
      *
      * @param _offerId - the id of the offer to check
-     * @return exists - the offer was found
+     * @return success - the offer was found
      * @return offer - the offer details. See {BosonTypes.Offer}
      */
     function getOffer(uint256 _offerId)
     external
     view
-    returns(bool exists, Offer memory offer) {
+    returns(bool success, Offer memory offer) {
 
-       return fetchOffer(_offerId);
+        offer = ProtocolLib.getOffer(_offerId);
+        success = (offer.id == _offerId);
 
     }
 
