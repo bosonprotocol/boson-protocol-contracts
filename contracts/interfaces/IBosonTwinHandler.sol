@@ -13,7 +13,7 @@ import "../domain/BosonTypes.sol";
 interface IBosonTwinHandler {
 
     /// Events
-    event TwinCreated(uint256 indexed twinId, uint256 indexed sellerId);
+    event TwinCreated(uint256 indexed twinId, uint256 indexed sellerId, BosonTypes.Twin twin);
 
     /**
      * @notice Creates a Twin
@@ -24,18 +24,8 @@ interface IBosonTwinHandler {
      * - Not approved to transfer the seller's token
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
+     * @param _sellerOperator - placeholder for seller's operator address. TODO: Remove when Create seller is implemented.
      */
-    function createTwin(BosonTypes.Twin memory _twin)
+    function createTwin(BosonTypes.Twin memory _twin, address _sellerOperator)
     external;
-
-    /**
-     * @notice Check if Protocol's treasuryAddress is approved to transfer seller’s tokens.
-     *
-     * @param _tokenAddress - the address of the seller's twin token contract.
-     * @param _operator - the seller's operator address.
-     * @param _spender - the treasuryAddress of protocol.
-     * @return _isApproved - the approve status.
-     */
-    function isTokenTransferApproved(address _tokenAddress, address _operator, address _spender)
-    external view returns(bool _isApproved);
 }

@@ -36,16 +36,19 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase, ReentrancyGuard {
      * - Not approved to transfer the seller's token
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
+     * @param _sellerOperator - placeholder for seller's operator address. TODO: Remove when Create seller is implemented.
      */
     function createTwin(
-        Twin memory _twin
+        Twin memory _twin,
+        address _sellerOperator
     )
     external
     override
     {
         // Protocol must be approved to transfer seller’s tokens
         // Seller storage seller = ProtocolLib.getSeller(_twin.sellerId);
-        // require(isTokenTransferApproved(_twin.tokenAddress, seller.operator, protocolStorage().treasuryAddress), NO_TRANSFER_APPROVED); // TODO add back when AccountHandler is working
+        // require(isTokenTransferApproved(_twin.tokenAddress, seller.operator, address(this)), NO_TRANSFER_APPROVED); // TODO add back when AccountHandler is working
+        require(isTokenTransferApproved(_twin.tokenAddress, _sellerOperator, address(this)), NO_TRANSFER_APPROVED);
 
         // Get the next twinId and increment the counter
         uint256 twinId = protocolStorage().nextTwinId++;
@@ -62,7 +65,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase, ReentrancyGuard {
         twin.tokenAddress = _twin.tokenAddress;
 
         // Notify watchers of state change
-        emit TwinCreated(twinId, _twin.sellerId);
+        emit TwinCreated(twinId, _twin.sellerId, _twin);
     }
 
     /**
@@ -77,7 +80,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase, ReentrancyGuard {
         address _tokenAddress,
         address _operator,
         address _spender
-    ) external view returns(bool _isApproved) {
+    ) internal view returns(bool _isApproved) {
         _isApproved = false;
 
         try IERC20(_tokenAddress).allowance(
