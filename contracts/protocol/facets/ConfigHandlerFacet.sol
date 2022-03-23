@@ -37,6 +37,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         ps.treasuryAddress = _treasuryAddress;
         ps.protocolFeePercentage = _protocolFeePercentage;
 
+
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
         pc.nextOfferId = 1;
