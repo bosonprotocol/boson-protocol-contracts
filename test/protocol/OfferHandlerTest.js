@@ -10,6 +10,9 @@ const { RevertReasons } = require('../../scripts/config/revert-reasons.js');
 const { deployProtocolDiamond } = require('../../scripts/util/deploy-protocol-diamond.js');
 const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-protocol-handler-facets.js');
 const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protocol-config-facet.js');
+const Group = require("../../scripts/domain/Group");
+const Condition = require("../../scripts/domain/Condition");
+const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 
 /**
  *  Test the Boson Offer Handler interface
@@ -802,6 +805,109 @@ describe("IBosonOfferHandler", function() {
 
         });
 
+
+        context.only("🗄 grouping", async function() {
+            let group, nextGroupId, invalidGroupId;
+            let offerIds, condition
+
+            beforeEach( async function () {
+  
+                // The first group id
+                nextGroupId = "1";
+                invalidGroupId = "666";
+            
+                let offers = offerStructs = [];
+                // create 5 offers
+                for (let i = 0; i < 5; i++) {
+
+                    // Required constructor params
+                    id = sellerId = "1"; // argument sent to contract for createGroup will be ignored
+                    price = ethers.utils.parseUnits(`${1.5+i*1}`, "ether").toString();
+                    sellerDeposit = price = ethers.utils.parseUnits(`${0.25+i*0.1}`, "ether").toString();
+                    buyerCancelPenalty = price = ethers.utils.parseUnits(`${0.05+i*0.1}`, "ether").toString();
+                    quantityAvailable = `${i*2}`;
+                    validFromDate = ethers.BigNumber.from(Date.now() +  (oneMonth * i)).toString();                 
+                    validUntilDate = ethers.BigNumber.from(Date.now() + (oneMonth * 6 * (i+1))).toString();         
+                    redeemableFromDate = ethers.BigNumber.from(validUntilDate + oneWeek).toString();                
+                    fulfillmentPeriodDuration = oneMonth.toString();                                
+                    voucherValidDuration = oneMonth.toString();                                     
+                    exchangeToken = ethers.constants.AddressZero.toString();                        
+                    metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+                    metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
+                    voided = false;
+        
+                    // Create a valid offer, then set fields in tests directly
+                    offer = new Offer(
+                        id,
+                        sellerId,
+                        price,
+                        sellerDeposit,
+                        buyerCancelPenalty,
+                        quantityAvailable,
+                        validFromDate,
+                        validUntilDate,
+                        redeemableFromDate,
+                        fulfillmentPeriodDuration,
+                        voucherValidDuration,
+                        exchangeToken,
+                        metadataUri,
+                        metadataHash,
+                        voided
+                    );
+                    expect(offer.isValid()).is.true;
+        
+                    // How that offer looks as a returned struct
+                    offerStruct = offer.toStruct();
+
+                    offers.push(offer);
+                    offerStructs.push(offerStruct);
+
+                    await offerHandler.connect(seller).createOffer(offer);
+                }
+
+                // Required constructor params for Condition
+                method = EvaluationMethod.AboveThreshold;
+                tokenAddress = accounts[0].address; // just need an address
+                tokenId = "5150";
+                threshold = "1";
+
+                // Required constructor params for Group
+                id = nextGroupId;
+                sellerId = "12";
+                offerIds = ["2", "3" ,"5"];
+    
+                condition = new Condition(method, tokenAddress, tokenId, threshold);
+                expect(condition.isValid()).to.be.true;
+
+                group = new Group(
+                    nextGroupId,
+                    sellerId,
+                    offerIds,
+                    condition
+                )
+
+                expect(group.isValid()).is.true;
+        
+                // How that offer looks as a returned struct
+                groupStruct = group.toStruct();
+    
+            });
+            
+            context("👉 createGroup()", async function () {
+
+                it.only("should emit an GroupCreated event", async function () {
+    
+                    // Create an offer, testing for the event
+                    await expect(offerHandler.connect(seller).createGroup(group))
+                        .to.emit(offerHandler, 'GroupCreated')
+                        .withArgs(nextGroupId, group.sellerId, groupStruct);
+    
+                });
+    
+
+    
+            });
+        });
     });
 
 });

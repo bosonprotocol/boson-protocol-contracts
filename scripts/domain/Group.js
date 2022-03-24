@@ -13,7 +13,7 @@ class Group {
         struct Group {
             uint256 id;
             uint256 sellerId;
-            Offer[] offers;
+            Offer[] offerIds;
             Condition condition;
         }
     */
