@@ -24,7 +24,7 @@ describe("IBosonOfferHandler", function() {
     let InterfaceIds;
     let accounts, deployer, rando;
     let erc165, protocolDiamond, diamondLoupe, diamondCut, accessController, offerHandler, offerHandlerFacet, offerStruct;
-    let offer, nextOfferId, invalidOfferId, oneMonth, twoMonths, oneWeek, support, expected, success;
+    let offer, nextOfferId, invalidOfferId, oneMonth, twoMonths, oneWeek, support, expected, exists;
     let id,
         sellerId,
         price,
@@ -197,12 +197,12 @@ describe("IBosonOfferHandler", function() {
                     .withArgs(nextOfferId, offer.sellerId, offerStruct);
 
                 // wrong offer id should not exist
-                [success, ] = await offerHandler.connect(rando).getOffer(offer.id);
-                expect(success).to.be.false;
+                [exists, ] = await offerHandler.connect(rando).getOffer(offer.id);
+                expect(exists).to.be.false;
 
                 // next offer id should exist
-                [success, ] = await offerHandler.connect(rando).getOffer(nextOfferId);
-                expect(success).to.be.true;
+                [exists, ] = await offerHandler.connect(rando).getOffer(nextOfferId);
+                expect(exists).to.be.true;
 
             });
 
@@ -603,23 +603,23 @@ describe("IBosonOfferHandler", function() {
 
             });
 
-            it("should return true for success if offer is found", async function () {
+            it("should return true for exists if offer is found", async function () {
 
-                // Get the success flag
-                [success, ] = await offerHandler.connect(rando).getOffer(id);
+                // Get the exists flag
+                [exists, ] = await offerHandler.connect(rando).getOffer(id);
 
                 // Validate
-                expect(success).to.be.true;
+                expect(exists).to.be.true;
 
             });
 
-            it("should return false for success if offer is not found", async function () {
+            it("should return false for exists if offer is not found", async function () {
 
-                // Get the success flag
-                [success, ] = await offerHandler.connect(rando).getOffer(invalidOfferId);
+                // Get the exists flag
+                [exists, ] = await offerHandler.connect(rando).getOffer(invalidOfferId);
 
                 // Validate
-                expect(success).to.be.false;
+                expect(exists).to.be.false;
 
             });
 
@@ -712,32 +712,32 @@ describe("IBosonOfferHandler", function() {
 
             });
 
-            it("should return true for success if offer is found, regardless of voided status", async function () {
+            it("should return true for exists if offer is found, regardless of voided status", async function () {
 
-                // Get the success flag
-                [success, ] = await offerHandler.connect(rando).isOfferVoided(id);
+                // Get the exists flag
+                [exists, ] = await offerHandler.connect(rando).isOfferVoided(id);
 
                 // Validate
-                expect(success).to.be.true;
+                expect(exists).to.be.true;
 
                 // Void offer
                 await offerHandler.connect(seller).voidOffer(id);
 
-                // Get the success flag
-                [success, ] = await offerHandler.connect(rando).isOfferVoided(id);
+                // Get the exists flag
+                [exists, ] = await offerHandler.connect(rando).isOfferVoided(id);
 
                 // Validate
-                expect(success).to.be.true;
+                expect(exists).to.be.true;
 
             });
 
-            it("should return false for success if offer is not found", async function () {
+            it("should return false for exists if offer is not found", async function () {
 
-                // Get the success flag
-                [success, ] = await offerHandler.connect(rando).isOfferVoided(invalidOfferId);
+                // Get the exists flag
+                [exists, ] = await offerHandler.connect(rando).isOfferVoided(invalidOfferId);
 
                 // Validate
-                expect(success).to.be.false;
+                expect(exists).to.be.false;
 
             });
 
@@ -765,32 +765,32 @@ describe("IBosonOfferHandler", function() {
 
             });
 
-            it("should return true for success if offer is found, regardless of updateable status", async function () {
+            it("should return true for exists if offer is found, regardless of updateable status", async function () {
 
-                // Get the success flag
-                [success, ] = await offerHandler.connect(rando).isOfferUpdateable(id);
+                // Get the exists flag
+                [exists, ] = await offerHandler.connect(rando).isOfferUpdateable(id);
 
                 // Validate
-                expect(success).to.be.true;
+                expect(exists).to.be.true;
 
                 // Void offer
                 await offerHandler.connect(seller).voidOffer(id);
 
-                // Get the success flag
-                [success, ] = await offerHandler.connect(rando).isOfferUpdateable(id);
+                // Get the exists flag
+                [exists, ] = await offerHandler.connect(rando).isOfferUpdateable(id);
 
                 // Validate
-                expect(success).to.be.true;
+                expect(exists).to.be.true;
 
             });
 
-            it("should return false for success if offer is not found", async function () {
+            it("should return false for exists if offer is not found", async function () {
 
-                // Get the success flag
-                [success, ] = await offerHandler.connect(rando).isOfferUpdateable(invalidOfferId);
+                // Get the exists flag
+                [exists, ] = await offerHandler.connect(rando).isOfferUpdateable(invalidOfferId);
 
                 // Validate
-                expect(success).to.be.false;
+                expect(exists).to.be.false;
 
             });
 

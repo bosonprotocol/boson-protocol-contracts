@@ -92,7 +92,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
         seller = protocolStorage().sellers[_sellerId];
 
         // Determine existence
-        exists = (seller.id > 0 && seller.id == _sellerId);
+        exists = (_sellerId > 0 && seller.id == _sellerId);
     }
 
     /**
@@ -111,7 +111,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
         offer = protocolStorage().offers[_offerId];
 
         // Determine existence
-        exists = (offer.id > 0 && offer.id == _offerId);
+        exists = (_offerId > 0 && offer.id == _offerId);
 
     }
 
@@ -151,7 +151,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
         exchange = protocolStorage().exchanges[_exchangeId];
 
         // Determine existence
-        exists = (exchange.id > 0 && exchange.id == _exchangeId);
+        exists = (_exchangeId > 0 && exchange.id == _exchangeId);
 
     }
 
