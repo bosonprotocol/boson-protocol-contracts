@@ -323,31 +323,29 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     {
         // TODO: check seller ID matches msg.sender
 
-        // make sure all offers exist and belong to the seller
-        for (uint i = 0; i < _group.offerIds.length; i++) {
-            getValidOffer(_group.offerIds[i]);
-        }
-
         // Get the next group and increment the counter
         uint256 groupId = protocolCounters().nextGroupId++;
 
-        // modify incoming struct so event value represents true state
-        _group.id = groupId;
-        
-        // Get storage location for offer
+        for (uint i = 0; i < _group.offerIds.length; i++) {
+            // make sure all offers exist and belong to the seller
+            getValidOffer(_group.offerIds[i]);
+            
+            // Add to groupByOffer mapping
+            require(protocolStorage().groupByOffer[_group.offerIds[i]] == 0, "offer part of a storage");
+            protocolStorage().groupByOffer[_group.offerIds[i]] = groupId;
+        }
+       
+        // Get storage location for group
         (,Group storage group) = fetchGroup(groupId);
 
-        // Set offer props individually since memory structs can't be copied to storage
+        // Set group props individually since memory structs can't be copied to storage
         group.id = _group.id;
         group.sellerId = _group.sellerId;
         group.offerIds = _group.offerIds;
         group.condition = _group.condition;
 
-        // Add to groupByOffer mapping
-        for (uint i = 0; i < _group.offerIds.length; i++) {
-            require(protocolStorage().groupByOffer[_group.offerIds[i]] != 0, "offer part of a storage");
-            protocolStorage().groupByOffer[_group.offerIds[i]] = groupId;
-        }      
+        // modify incoming struct so event value represents true state
+        _group.id = groupId; 
       
         // Notify watchers of state change
         emit GroupCreated(groupId, _group.sellerId, _group);
