@@ -900,7 +900,7 @@ describe("IBosonOfferHandler", function() {
             
             context("👉 createGroup()", async function () {
 
-                it.only("should emit an GroupCreated event", async function () {
+                it("should emit an GroupCreated event", async function () {
 
                     // Create a group, testing for the event
                     const tx = await offerHandler.connect(seller).createGroup(group);
@@ -951,7 +951,132 @@ describe("IBosonOfferHandler", function() {
                         }
                     );
     
-                });  
+                });
+
+                xit("should update state", async function () {
+
+                    // Create an offer
+                    await offerHandler.connect(seller).createGroup(group);
+    
+                    // Get the offer as a struct
+                    [, groupStruct] = await offerHandler.connect(rando).getGroup(id);
+    
+                    // Parse into entity
+                    let returnedGroup = Offer.fromStruct(groupStruct);
+    
+                    // Returned values should match the input in createOffer
+                    for ([key, value] of Object.entries(group)) {
+                        expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+                    }
+                });
+    
+                it("should ignore any provided id and assign the next available", async function () {
+    
+                    group.id = "444";
+    
+                    // Create a group, testing for the event
+                    const tx = await offerHandler.connect(seller).createGroup(group);
+                    const txReceipt = await tx.wait();
+
+                    assertEventEmitted(
+                        txReceipt,
+                        offerHandlerFacet_Factory,
+                        'GroupCreated',
+                        function(eventArgs) {
+                            assert.equal(
+                                eventArgs.groupId.toString(),
+                                nextGroupId,
+                                'Group Id is incorrect'
+                            );
+                            assert.equal(
+                                eventArgs.sellerId.toString(),
+                                group.sellerId,
+                                'Seller Id is incorrect'
+                            );
+                            assert.equal(
+                                eventArgs.group.id.toString(),
+                                nextGroupId,
+                                "Group struct's id is incorrect"
+                            );
+                            assert.equal(
+                                eventArgs.group.sellerId.toString(),
+                                group.sellerId,
+                                "Group struct's sellerId is incorrect"
+                            );
+                            assert.equal(
+                                eventArgs.group.offerIds.toString(),
+                                group.offerIds,
+                                "Group struct's offerIds array is incorrect"
+                            );
+                            assert.equal(
+                                eventArgs.group.condition.toString(),
+                                group.condition.toStruct(),
+                                "Group struct's condition is incorrect"
+                            );
+    
+                            // Unable to match whole eventArgs.twin struct. Hence confirming the Struct size.
+                            assert.equal(
+                                eventArgs.group.length,
+                                Object.keys(group).length,
+                                "Group struct does not match"
+                            );
+                        }
+                    );
+    
+                    // // wrong offer id should not exist
+                    // [exists, ] = await offerHandler.connect(rando).getGroup(group.id);
+                    // expect(sucexistscess).to.be.false;
+    
+                    // // next offer id should exist
+                    // [exists, ] = await offerHandler.connect(rando).getOffer(nextGroupId);
+                    // expect(exists).to.be.true;
+    
+                });
+
+                xit("should create group without any offer", async function () {
+
+                });
+    
+                xit("should ignore any provided seller and assign seller id of msg.sender", async function () {
+                    // TODO: add when accounthandler is finished
+    
+                    offer.seller = rando;
+    
+                    // Create an offer, testing for the event
+                    await expect(offerHandler.connect(seller).createOffer(offer))
+                        .to.emit(offerHandler, 'OfferCreated')
+                        .withArgs(nextOfferId, offer.sellerId, offerStruct);
+                });
+    
+                context("💔 Revert Reasons", async function () {
+    
+                    xit("Caller is not the seller of all groups", async function () {
+                        // TODO whan account handler is implemented
+    
+                    });
+    
+                    xit("Offer is already part of another group", async function () {
+    
+                        // Set until date in the past
+                        offer.validUntilDate = ethers.BigNumber.from(Date.now() - (oneMonth * 6)).toString();   // 6 months ago
+    
+                        // Attempt to Create an offer, expecting revert
+                        await expect(offerHandler.connect(seller).createOffer(offer))
+                            .to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+                    });
+    
+                    xit("Offer is duplicated", async function () {
+    
+                        // Set buyer cancel penalty higher than offer price
+                        offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();  
+    
+                        // Attempt to Create an offer, expecting revert
+                        await expect(offerHandler.connect(seller).createOffer(offer))
+                            .to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
+                    });
+    
+    
+                });
     
             });
         });
