@@ -6,8 +6,6 @@ import "../../diamond/DiamondLib.sol";
 import "../ProtocolBase.sol";
 import "../ProtocolLib.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "../../interfaces/IERC721ERC1155.sol";
 
 /**
@@ -52,6 +50,9 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
         // Get the next twinId and increment the counter
         uint256 twinId = protocolStorage().nextTwinId++;
 
+        // modify incoming struct so event value represents true state
+        _twin.id = twinId;
+
         // Get storage location for twin
         Twin storage twin = ProtocolLib.getTwin(twinId);
 
@@ -64,7 +65,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
         twin.tokenAddress = _twin.tokenAddress;
 
         // Notify watchers of state change
-        emit TwinCreated(twin.id, _twin.sellerId, _twin);
+        emit TwinCreated(twinId, _twin.sellerId, _twin);
     }
 
     /**
@@ -90,6 +91,23 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
                 _operator,
                 _spender
             );
+        }
+    }
+
+    /**
+     * @notice Gets the details about a given twin.
+     *
+     * @param _twinId - the id of the twin to check
+     * @return success - the twin was found
+     * @return twin - the twin details. See {BosonTypes.Twin}
+     */
+    function getTwin(uint256 _twinId)
+    external
+    view
+    returns(bool success, Twin memory twin) {
+        if (_twinId != 0) {
+            twin = ProtocolLib.getTwin(_twinId);
+            success = (twin.id == _twinId);
         }
     }
 }

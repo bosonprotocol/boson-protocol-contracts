@@ -17,7 +17,7 @@ describe("IBosonTwinHandler", function() {
 
     // Common vars
     let InterfaceIds;
-    let accounts, deployer;
+    let accounts, deployer, rando;
     let erc165,
         protocolDiamond,
         diamondLoupe,
@@ -25,15 +25,15 @@ describe("IBosonTwinHandler", function() {
         accessController,
         twinHandler,
         twinHandlerFacet,
-        TwinHandlerFacet_Factory,
         twinStruct,
+        TwinHandlerFacet_Factory,
         MockBosonToken_Factory,
         MockForeign721_Factory,
         MockForeign1155_Factory,
         contractBosonToken,
         contractForeign721,
         contractForeign1155;
-    let twin, nextTwinId, support;
+    let twin, nextTwinId, invalidTwinId, support;
     let id,
         sellerId,
         supplyAvailable,
@@ -51,7 +51,7 @@ describe("IBosonTwinHandler", function() {
         accounts = await ethers.getSigners();
         deployer = accounts[0];
         seller = accounts[1];
-        
+        rando = accounts[2];
         
         // Deploy the Protocol Diamond
         [protocolDiamond, diamondLoupe, diamondCut, accessController] = await deployProtocolDiamond();
@@ -103,10 +103,11 @@ describe("IBosonTwinHandler", function() {
     context("📋 Twin Handler Methods", async function () {
         beforeEach( async function () {
             // The first twin id
-            nextTwinId = "0";
+            nextTwinId = "1";
+            invalidTwinId = "222";
 
             // Required constructor params
-            id = sellerId = "0";
+            id = sellerId = "1";
             supplyAvailable = "500";
             tokenId = "4096";
             supplyIds = ['1', '2'];
@@ -145,7 +146,7 @@ describe("IBosonTwinHandler", function() {
                     function(eventArgs) {
                         assert.equal(
                             eventArgs.twinId.toString(),
-                            twin.id,
+                            nextTwinId,
                             'Twin Id is incorrect'
                         );
                         assert.equal(
@@ -155,7 +156,7 @@ describe("IBosonTwinHandler", function() {
                         );
                         assert.equal(
                             eventArgs.twin[0].toString(),
-                            twin.id,
+                            nextTwinId,
                             "Twin struct's id is incorrect"
                         );
                         assert.equal(
@@ -221,7 +222,7 @@ describe("IBosonTwinHandler", function() {
                         );
                         assert.equal(
                             eventArgs.twin[0].toString(),
-                            twin.id,
+                            nextTwinId,
                             "Twin struct's id is incorrect"
                         );
                         assert.equal(
@@ -258,6 +259,14 @@ describe("IBosonTwinHandler", function() {
                         );
                     }
                 );
+
+                // wrong twin id should not exist
+                [success, ] = await twinHandler.connect(rando).getTwin(twin.id);
+                expect(success).to.be.false;
+
+                // next twin id should exist
+                [success, ] = await twinHandler.connect(rando).getTwin(nextTwinId);
+                expect(success).to.be.true;
             });
 
             it("should emit a TwinCreated event for ERC721 token address", async function () {
@@ -410,6 +419,53 @@ describe("IBosonTwinHandler", function() {
                     .to.be.reverted;
                 });
             });
+        });
+
+        context("👉 getTwin()", async function () {
+
+            beforeEach( async function () {
+
+                // Create a twin
+                await twinHandler.connect(seller).createTwin(twin);
+
+                // id of the current twin and increment nextTwinId
+                id = nextTwinId++;
+
+            });
+
+            it("should return true for success if twin is found", async function () {
+
+                // Get the success flag
+                [success, ] = await twinHandler.connect(rando).getTwin(id);
+
+                // Validate
+                expect(success).to.be.true;
+
+            });
+
+            it("should return false for success if twin is not found", async function () {
+
+                // Get the success flag
+                [success, ] = await twinHandler.connect(rando).getTwin(invalidTwinId);
+
+                // Validate
+                expect(success).to.be.false;
+
+            });
+
+            it("should return the details of the twin as a struct if found", async function () {
+
+                // Get the twin as a struct
+                [, twinStruct] = await twinHandler.connect(rando).getTwin(id);
+
+                // Parse into entity
+                twin = Twin.fromStruct(twinStruct);
+
+                // Validate
+                expect(twin.isValid()).to.be.true;
+
+            });
+
         });
     });
 });
