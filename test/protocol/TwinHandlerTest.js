@@ -426,7 +426,7 @@ describe("IBosonTwinHandler", function() {
                     twin.tokenAddress = ethers.constants.AddressZero;
 
                     await expect(twinHandler.connect(seller).createTwin(twin, seller.address))
-                    .to.be.reverted;
+                    .to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
                 });
             });
         });

@@ -16,5 +16,6 @@ exports.RevertReasons = {
     OFFER_NOT_UPDATEABLE: "Offer not updateable",
 
     // Twin related
-    NO_TRANSFER_APPROVED: "No transfer approved"
+    NO_TRANSFER_APPROVED: "No transfer approved",
+    UNSUPPORTED_TOKEN: "Unsupported token"
 }

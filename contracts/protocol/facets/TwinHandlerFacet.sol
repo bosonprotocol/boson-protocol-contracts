@@ -5,8 +5,7 @@ import "../../interfaces/IBosonTwinHandler.sol";
 import "../../diamond/DiamondLib.sol";
 import "../ProtocolBase.sol";
 import "../ProtocolLib.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../../interfaces/IERC721ERC1155.sol";
+import "../../utils/TokenApprovalChecker.sol";
 
 /**
  * @title TwinHandlerFacet
@@ -14,6 +13,8 @@ import "../../interfaces/IERC721ERC1155.sol";
  * @notice Manages digital twinning associated with exchanges within the protocol
  */
 contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
+    TokenApprovalChecker public tokenApprovalChecker;
+
     /**
      * @notice Facet Initializer
      */
@@ -80,17 +81,16 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
         address _tokenAddress,
         address _operator,
         address _spender
-    ) internal view returns(bool _isApproved) {
-        try IERC20(_tokenAddress).allowance(
-            _operator,
-            _spender
-        ) returns(uint256 _allowance) {
-            if (_allowance > 0) {_isApproved = true; }
-        } catch {
-            _isApproved = IERC721ERC1155(_tokenAddress).isApprovedForAll(
-                _operator,
-                _spender
-            );
+    )
+    internal
+    returns(bool _isApproved) {
+        tokenApprovalChecker = new TokenApprovalChecker();
+
+        try tokenApprovalChecker.isSpenderApproved(_tokenAddress, _operator, _spender) returns (bool _approved) {
+            _isApproved = _approved;
+        }
+        catch {
+            revert(UNSUPPORTED_TOKEN);
         }
     }
 
