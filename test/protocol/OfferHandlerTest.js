@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { expect } = require("chai");
+const { assert, expect } = require("chai");
 const { gasLimit } = require('../../environments');
 
 const Role = require("../../scripts/domain/Role");
@@ -13,6 +13,7 @@ const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protoco
 const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
+const { assertEventEmitted } = require("../../testHelpers/events");
 
 /**
  *  Test the Boson Offer Handler interface
@@ -808,7 +809,8 @@ describe("IBosonOfferHandler", function() {
 
         context.only("🗄 grouping", async function() {
             let group, nextGroupId, invalidGroupId;
-            let offerIds, condition
+            let offerIds, condition;
+            let offerHandlerFacet_Factory;
 
             beforeEach( async function () {
   
@@ -890,21 +892,66 @@ describe("IBosonOfferHandler", function() {
         
                 // How that offer looks as a returned struct
                 groupStruct = group.toStruct();
+
+                // initialize offerHandler
+                offerHandlerFacet_Factory = await ethers.getContractFactory('OfferHandlerFacet');
     
             });
             
             context("👉 createGroup()", async function () {
 
                 it.only("should emit an GroupCreated event", async function () {
-    
-                    // Create an offer, testing for the event
-                    await expect(offerHandler.connect(seller).createGroup(group))
-                        .to.emit(offerHandler, 'GroupCreated')
-                        .withArgs(nextGroupId, group.sellerId, groupStruct);
-    
-                });
-    
 
+                    // Create a group, testing for the event
+                    const tx = await offerHandler.connect(seller).createGroup(group);
+                    const txReceipt = await tx.wait();
+
+                    assertEventEmitted(
+                        txReceipt,
+                        offerHandlerFacet_Factory,
+                        'GroupCreated',
+                        function(eventArgs) {
+                            assert.equal(
+                                eventArgs.groupId.toString(),
+                                group.id,
+                                'Group Id is incorrect'
+                            );
+                            assert.equal(
+                                eventArgs.sellerId.toString(),
+                                group.sellerId,
+                                'Seller Id is incorrect'
+                            );
+                            assert.equal(
+                                eventArgs.group.id.toString(),
+                                group.id,
+                                "Group struct's id is incorrect"
+                            );
+                            assert.equal(
+                                eventArgs.group.sellerId.toString(),
+                                group.sellerId,
+                                "Group struct's sellerId is incorrect"
+                            );
+                            assert.equal(
+                                eventArgs.group.offerIds.toString(),
+                                group.offerIds,
+                                "Group struct's offerIds array is incorrect"
+                            );
+                            assert.equal(
+                                eventArgs.group.condition.toString(),
+                                group.condition.toStruct(),
+                                "Group struct's condition is incorrect"
+                            );
+    
+                            // Unable to match whole eventArgs.twin struct. Hence confirming the Struct size.
+                            assert.equal(
+                                eventArgs.group.length,
+                                Object.keys(group).length,
+                                "Group struct does not match"
+                            );
+                        }
+                    );
+    
+                });  
     
             });
         });
