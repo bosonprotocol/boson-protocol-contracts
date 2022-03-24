@@ -23,6 +23,7 @@ contract BosonConstants {
 
     // Revert Reasons: Seller related
     string internal constant NOT_OPERATOR = "Not seller's operator";
+    string internal constant SELLER_MUBT_BE_ACTIVE = "Seller must be active";
 
     // Revert Reasons: Offer related
     string internal constant NO_SUCH_OFFER = "No such offer";

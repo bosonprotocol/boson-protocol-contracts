@@ -3,6 +3,7 @@ const ethers = hre.ethers;
 const { expect } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
+const Seller = require("../../scripts/domain/Seller");
 const { getInterfaceIds } = require('../../scripts/config/supported-interfaces.js');
 const { RevertReasons } = require('../../scripts/config/revert-reasons.js');
 const { deployProtocolDiamond } = require('../../scripts/util/deploy-protocol-diamond.js');
@@ -16,8 +17,10 @@ const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-proto
     // Common vars
     let InterfaceIds;
     let accounts, deployer, rando;
-    let erc165, protocolDiamond, diamondLoupe, diamondCut, accessController, accountHandler, accountrHandlerFacet, accountStruct;
+    let erc165, protocolDiamond, diamondLoupe, diamondCut, accessController, accountHandler, accountrHandlerFacet;
+    let seller, sellerStruct, sellerId, active;
     let expected, nextAccountId;
+
 
     before (async function() {
         
@@ -29,10 +32,14 @@ const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-proto
     beforeEach( async function () {
 
         // Make accounts available
-        accounts = await ethers.getSigners();
-        deployer = accounts[0];
-        seller = accounts[1];
-        rando = accounts[2];
+         accounts = await ethers.getSigners();
+         deployer = accounts[0];
+         operator = accounts[1];
+         admin = accounts[2];
+         clerk = accounts[3];
+         treasury = accounts[4];
+         rando = accounts[5];
+ 
         
         // Deploy the Protocol Diamond
         [protocolDiamond, diamondLoupe, diamondCut, accessController] = await deployProtocolDiamond();
@@ -41,7 +48,7 @@ const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-proto
         await accessController.grantRole(Role.UPGRADER, deployer.address);
 
         // Cut the protocol handler facets into the Diamond
-        [accountHandlerFacet] = await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet"]);
+        [accountrHandlerFacet] = await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet"]);
 
         // Cast Diamond to IERC165
         erc165 = await ethers.getContractAt('IERC165', protocolDiamond.address);
@@ -52,7 +59,7 @@ const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-proto
     });
 
     // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
-    context.only("📋 Interfaces", async function () {
+    context("📋 Interfaces", async function () {
 
         context("👉 supportsInterface()", async function () {
 
@@ -73,52 +80,72 @@ const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-proto
 
     });
 
-    context("👉 getNextAccountId()", async function () {
+     // All supported methods
+     context("📋 Seller Handler Methods", async function () {
 
         beforeEach( async function () {
-            nextAccountId = 0;
 
-            // Create an offer
-           // await accountHandler.connect(rando).createAccount(offer);
+            // The first offer id
+            nextAccountId = "0";
+            invalidAccountId = "666";
 
-            // id of the current offer and increment nextAccountId
-           // id = nextAccountId++;
+            // Required constructor params
+            id = sellerId = "0"; // argument sent to contract for createOffer will be ignored
+          
+            active = true;
 
-        });
+            // Create a valid offer, then set fields in tests directly
+            seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
+            expect(seller.isValid()).is.true;
 
-        it("should return the next offer id", async function () {
-
-            // What we expect the next offer id to be
-            expected = nextAccountId;
-
-            // Get the next offer id
-            nextAccountId = await accountHandler.connect(rando).getNextAccountId();
-
-            // Verify expectation
-            expect(nextAccountId.toString() == expected).to.be.true;
+            // How that offer looks as a returned struct
+            sellerStruct = seller.toStruct();
 
         });
-    
-    /*
-        Uncomment after create account functions has been implemented
 
-        it("should be incremented after an offer is created", async function () {
+        context("👉 getNextAccountId()", async function () {
 
-            // Create another offer
-            await accountHandler.connect(seller).createAccount(offer);
+            beforeEach( async function () {
+         
+                // Create a seller
+                await accountHandler.connect(admin).createSeller(seller);
 
-            // What we expect the next offer id to be
-            expected = ++nextAccountId;
+                // id of the current offer and increment nextAccountId
+                id = nextAccountId++;
 
-            // Get the next offer id
-            nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+            });
 
-            // Verify expectation
-            expect(nextAccountId.toString() == expected).to.be.true;
+            it("should return the next offer id", async function () {
+
+                // What we expect the next offer id to be
+                expected = nextAccountId;
+
+                // Get the next offer id
+                nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+
+                // Verify expectation
+                expect(nextAccountId.toString() == expected).to.be.true;
+
+            });
+        
+
+            it("should be incremented after a seller is created", async function () {
+
+                // Create another seller
+                await accountHandler.connect(admin).createSeller(seller);
+
+                // What we expect the next account id to be
+                expected = ++nextAccountId;
+
+                // Get the next account id
+                nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+
+                // Verify expectation
+                expect(nextAccountId.toString() == expected).to.be.true;
+
+            });
+        
 
         });
-    */
-
-    });
-
+     });
  });
