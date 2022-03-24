@@ -152,4 +152,5 @@ interface IBosonOfferHandler {
         BosonTypes.Group memory _group
     )
     external;
+
 }
