@@ -14,16 +14,25 @@ import "../domain/BosonConstants.sol";
 abstract contract ProtocolBase is BosonTypes, BosonConstants {
 
     /**
+     * @dev Modifier to protect initializer function from being invoked twice.
+     */
+    modifier onlyUnInitialized(bytes4 interfaceId)
+    {
+        ProtocolLib.ProtocolInitializers storage pi = protocolInitializers();
+        require(!pi.initializedInterfaces[interfaceId], ALREADY_INITIALIZED);
+        pi.initializedInterfaces[interfaceId] = true;
+        _;
+    }
+
+    /**
      * @dev Modifier that checks that an offer exists
      *
      * Reverts if the offer does not exist
      */
     modifier offerExists(uint256 _offerId) {
 
-        ProtocolLib.ProtocolStorage storage ps = ProtocolLib.protocolStorage();
-
-        // Make sure the offer exists
-        require(_offerId < ps.nextOfferId, "Offer does not exist");
+        // Make sure the offer exists TODO: remove me, not used and not the way to check
+        require(_offerId >0 && _offerId <  protocolCounters().nextOfferId, "Offer does not exist");
         _;
     }
 
@@ -47,6 +56,24 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function protocolStorage() internal pure returns (ProtocolLib.ProtocolStorage storage ps) {
         ps = ProtocolLib.protocolStorage();
+    }
+
+    /**
+     * @dev Get the Protocol Counters slot
+     *
+     * @return pc the Protocol Counters slot
+     */
+    function protocolCounters() internal pure returns (ProtocolLib.ProtocolCounters storage pc) {
+        pc = ProtocolLib.protocolCounters();
+    }
+
+    /**
+     * @dev Get the Protocol Initializers slot
+     *
+     * @return pi the Protocol Initializers slot
+     */
+    function protocolInitializers() internal pure returns (ProtocolLib.ProtocolInitializers storage pi) {
+        pi = ProtocolLib.protocolInitializers();
     }
 
 }

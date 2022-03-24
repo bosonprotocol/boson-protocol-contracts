@@ -14,22 +14,11 @@ import "../ProtocolLib.sol";
 contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
     /**
-     * @dev Modifier to protect initializer function from being invoked twice.
-     */
-    modifier onlyUnInitialized()
-    {
-        ProtocolLib.ProtocolInitializers storage pi = ProtocolLib.protocolInitializers();
-        require(!pi.disputeHandler, ALREADY_INITIALIZED);
-        pi.disputeHandler = true;
-        _;
-    }
-
-    /**
      * @notice Facet Initializer
      */
     function initialize()
     public
-    onlyUnInitialized
+    onlyUnInitialized(type(IBosonDisputeHandler).interfaceId)
     {
         DiamondLib.addSupportedInterface(type(IBosonDisputeHandler).interfaceId);
     }

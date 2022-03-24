@@ -6,15 +6,15 @@ import "../domain/BosonTypes.sol";
 /**
  * @title ProtocolLib
  *
- * @dev Provides access to the the Protocol Storage and Initializer slots for Protocol facets
- *
- * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
+ * @dev Provides access to the Protocol Storage, Counters, and Initializer slots for Facets
  */
 library ProtocolLib {
 
     bytes32 internal constant PROTOCOL_STORAGE_POSITION = keccak256("boson.protocol.storage");
-    bytes32 internal constant PROTOCOL_INITIALIZERS_POSITION = keccak256("boson.protocol.storage.initializers");
+    bytes32 internal constant PROTOCOL_COUNTERS_POSITION = keccak256("boson.protocol.counters");
+    bytes32 internal constant PROTOCOL_INITIALIZERS_POSITION = keccak256("boson.protocol.initializers");
 
+    // Shared storage for all protocol facets
     struct ProtocolStorage {
 
         // Address of the Boson Protocol treasury
@@ -28,24 +28,6 @@ library ProtocolLib {
 
         // Percentage that will be taken as a fee from the net of a Boson Protocol exchange
         uint16 protocolFeePercentage;         // 1.75% = 175, 100% = 10000
-
-        // Next offer id
-        uint256 nextOfferId;
-
-        // Next exchange id
-        uint256 nextExchangeId;
-
-        // Next account id
-        uint256 nextAccountId;
-
-        // Next group id
-        uint256 nextGroupId;
-
-        // Next twin id
-        uint256 nextBundleId;
-
-        // Next twin id
-        uint256 nextTwinId;
 
         // offer id => offer
         mapping(uint256 => BosonTypes.Offer) offers;
@@ -75,25 +57,42 @@ library ProtocolLib {
         mapping(uint256 => uint256[]) exchangeByOffer;
     }
 
-    // Individual facet initialization states
-    struct ProtocolInitializers {
+    // Incrementing ID counters
+    struct ProtocolCounters {
 
-        bool fundsHandler;
+        // Next account id
+        uint256 nextAccountId;
 
-        bool configHandler;
+        // Next offer id
+        uint256 nextOfferId;
 
-        bool disputeHandler;
+        // Next exchange id
+        uint256 nextExchangeId;
 
-        bool exchangeHandler;
+        // Next twin id
+        uint256 nextTwinId;
 
-        bool offerHandler;
+        // Next group id
+        uint256 nextGroupId;
 
-        bool twinHandler;
-
-        bool accountHandler;
+        // Next twin id
+        uint256 nextBundleId;
 
     }
 
+    // Individual facet initialization states
+    struct ProtocolInitializers {
+
+        // interface id => initialized?
+        mapping(bytes4 => bool) initializedInterfaces;
+
+    }
+
+    /**
+     * @dev Get the protocol storage slot
+     *
+     * @return ps the the protocol storage slot
+     */
     function protocolStorage() internal pure returns (ProtocolStorage storage ps) {
         bytes32 position = PROTOCOL_STORAGE_POSITION;
         assembly {
@@ -101,6 +100,23 @@ library ProtocolLib {
         }
     }
 
+    /**
+     * @dev Get the protocol counters slot
+     *
+     * @return pc the the protocol counters slot
+     */
+    function protocolCounters() internal pure returns (ProtocolCounters storage pc) {
+        bytes32 position = PROTOCOL_COUNTERS_POSITION;
+        assembly {
+            pc.slot := position
+        }
+    }
+
+    /**
+     * @dev Get the protocol initializers slot
+     *
+     * @return pi the the protocol initializers slot
+     */
     function protocolInitializers() internal pure returns (ProtocolInitializers storage pi) {
         bytes32 position = PROTOCOL_INITIALIZERS_POSITION;
         assembly {

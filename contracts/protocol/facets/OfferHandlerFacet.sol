@@ -14,22 +14,11 @@ import { ProtocolLib } from "../ProtocolLib.sol";
 contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
 
     /**
-     * @dev Modifier to protect initializer function from being invoked twice.
-     */
-    modifier onlyUnInitialized()
-    {
-        ProtocolLib.ProtocolInitializers storage pi = ProtocolLib.protocolInitializers();
-        require(!pi.offerHandler, ALREADY_INITIALIZED);
-        pi.offerHandler = true;
-        _;
-    }
-
-    /**
      * @notice Facet Initializer
      */
     function initialize()
     public
-    onlyUnInitialized
+    onlyUnInitialized(type(IBosonOfferHandler).interfaceId)
     {
         DiamondLib.addSupportedInterface(type(IBosonOfferHandler).interfaceId);
     }
@@ -49,10 +38,10 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     )
     external
     override
-    {
+    {        
         // Get the next offerId and increment the counter
-        uint256 offerId = protocolStorage().nextOfferId++;
-
+        uint256 offerId = protocolCounters().nextOfferId++;
+        
         // modify incoming struct so event value represents true state
         _offer.id = offerId;
 
@@ -250,7 +239,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     view
     returns(uint256 nextOfferId) {
 
-        nextOfferId = ProtocolLib.protocolStorage().nextOfferId;
+        nextOfferId = protocolCounters().nextOfferId;
 
     }
 

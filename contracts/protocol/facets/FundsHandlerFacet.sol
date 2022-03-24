@@ -14,22 +14,11 @@ import "../ProtocolLib.sol";
 contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
 
     /**
-     * @dev Modifier to protect initializer function from being invoked twice.
-     */
-    modifier onlyUnInitialized()
-    {
-        ProtocolLib.ProtocolInitializers storage pi = ProtocolLib.protocolInitializers();
-        require(!pi.offerHandler, ALREADY_INITIALIZED);
-        pi.fundsHandler = true;
-        _;
-    }
-
-    /**
      * @notice Facet Initializer
      */
     function initialize()
     public
-    onlyUnInitialized
+    onlyUnInitialized(type(IBosonFundsHandler).interfaceId)
     {
         DiamondLib.addSupportedInterface(type(IBosonFundsHandler).interfaceId);
     }

@@ -14,22 +14,11 @@ import "../ProtocolLib.sol";
 contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
 
     /**
-     * @dev Modifier to protect initializer function from being invoked twice.
-     */
-    modifier onlyUnInitialized()
-    {
-        ProtocolLib.ProtocolInitializers storage pi = ProtocolLib.protocolInitializers();
-        require(!pi.exchangeHandler, ALREADY_INITIALIZED);
-        pi.exchangeHandler = true;
-        _;
-    }
-
-    /**
      * @notice Facet Initializer
      */
     function initialize()
     public
-    onlyUnInitialized
+    onlyUnInitialized(type(IBosonExchangeHandler).interfaceId)
     {
         DiamondLib.addSupportedInterface(type(IBosonExchangeHandler).interfaceId);
     }
