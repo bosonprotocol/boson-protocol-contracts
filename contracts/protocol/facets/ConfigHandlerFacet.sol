@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "../../interfaces/IBosonConfigHandler.sol";
-import "../../diamond/DiamondLib.sol";
-import "../ProtocolBase.sol";
-import "../ProtocolLib.sol";
+import { IBosonConfigHandler } from  "../../interfaces/IBosonConfigHandler.sol";
+import { DiamondLib } from  "../../diamond/DiamondLib.sol";
+import { ProtocolBase } from  "../ProtocolBase.sol";
+import { ProtocolLib } from  "../ProtocolLib.sol";
 
 /**
  * @title ConfigHandlerFacet
@@ -12,17 +12,6 @@ import "../ProtocolLib.sol";
  * @notice Handles management of various protocol-related settings.
  */
 contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
-
-    /**
-     * @dev Modifier to protect initializer function from being invoked twice.
-     */
-    modifier onlyUnInitialized()
-    {
-        ProtocolLib.ProtocolInitializers storage pi = ProtocolLib.protocolInitializers();
-        require(!pi.configHandler, ALREADY_INITIALIZED);
-        pi.configHandler = true;
-        _;
-    }
 
     /**
      * @notice Facet Initializer
@@ -37,16 +26,27 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         uint16 _protocolFeePercentage
     )
     public
-    onlyUnInitialized
+    onlyUnInitialized(type(IBosonConfigHandler).interfaceId)
     {
         // Register supported interfaces
         DiamondLib.addSupportedInterface(type(IBosonConfigHandler).interfaceId);
 
         // Initialize protocol config params
-        ProtocolLib.ProtocolStorage storage ps = ProtocolLib.protocolStorage();
+        ProtocolLib.ProtocolStorage storage ps = protocolStorage();
         ps.tokenAddress = _tokenAddress;
         ps.treasuryAddress = _treasuryAddress;
         ps.protocolFeePercentage = _protocolFeePercentage;
+
+
+        // Initialize protocol counters
+        ProtocolLib.ProtocolCounters storage pc = protocolCounters();
+        pc.nextAccountId = 1;
+        pc.nextBundleId = 1;
+        pc.nextExchangeId = 1;
+        pc.nextGroupId = 1;
+        pc.nextOfferId = 1;
+        pc.nextTwinId = 1;
+
     }
 
     /**

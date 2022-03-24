@@ -1,7 +1,6 @@
 /**
  * ERC-165 identifiers for interfaces implemented by the Boson Protocol
  */
-
 const { getInterfaceId } = require('../../scripts/util/diamond-utils.js')
 const hre = require("hardhat");
 const ethers = hre.ethers;

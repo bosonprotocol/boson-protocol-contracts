@@ -27,7 +27,7 @@ abstract contract ClientBase is BosonTypes, BosonConstants {
      * See: {AccessController.hasRole}
      */
     modifier onlyRole(bytes32 role) {
-        require(ClientLib.hasRole(role), "Access denied, caller doesn't have role");
+        require(ClientLib.hasRole(role), ACCESS_DENIED);
         _;
     }
 
@@ -35,17 +35,18 @@ abstract contract ClientBase is BosonTypes, BosonConstants {
      * @notice Get the info about the offer associated with a voucher's exchange
      *
      * @param _exchangeId - the id of the exchange
-     * @return success - the offer was found
+     * @return exists - the offer was found
      * @return offer - the offer associated with the _offerId
      */
     function getBosonOffer(uint256 _exchangeId)
     internal
     view
-    returns (bool success, Offer memory offer)
+    returns (bool exists, Offer memory offer)
     {
         ClientLib.ProxyStorage memory ps = ClientLib.proxyStorage();
-        (bool found, Exchange memory exchange) = IBosonExchangeHandler(ps.protocolDiamond).getExchange(_exchangeId);
+        (, Exchange memory exchange) = IBosonExchangeHandler(ps.protocolDiamond).getExchange(_exchangeId);
         return IBosonOfferHandler(ps.protocolDiamond).getOffer(exchange.offerId);
+
     }
 
 }

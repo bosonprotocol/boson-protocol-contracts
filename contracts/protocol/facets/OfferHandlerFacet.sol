@@ -14,22 +14,11 @@ import { ProtocolLib } from "../ProtocolLib.sol";
 contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
 
     /**
-     * @dev Modifier to protect initializer function from being invoked twice.
-     */
-    modifier onlyUnInitialized()
-    {
-        ProtocolLib.ProtocolInitializers storage pi = ProtocolLib.protocolInitializers();
-        require(!pi.offerHandler, ALREADY_INITIALIZED);
-        pi.offerHandler = true;
-        _;
-    }
-
-    /**
      * @notice Facet Initializer
      */
     function initialize()
     public
-    onlyUnInitialized
+    onlyUnInitialized(type(IBosonOfferHandler).interfaceId)
     {
         DiamondLib.addSupportedInterface(type(IBosonOfferHandler).interfaceId);
     }
@@ -40,32 +29,86 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * Emits an OfferCreated event if successful.
      *
      * Reverts if:
-     * - Valid from date is greater than valid until date
-     * - Valid until date is not in the future
-     * - TODO Add more offer validity checks
+     * - internal any of validations to store offer fails
      *
-     * @param _offer - the fully populated struct with offer id set to 0x0
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      */
     function createOffer(
-        Offer calldata _offer
+        Offer memory _offer
+    )
+    external
+    override
+    {        
+        // Get the next offerId and increment the counter
+        uint256 offerId = protocolCounters().nextOfferId++;
+        
+        // modify incoming struct so event value represents true state
+        _offer.id = offerId;
+
+        storeOffer(_offer);
+      
+        // Notify watchers of state change
+        emit OfferCreated(offerId, _offer.sellerId, _offer);
+    }
+
+    /**
+     * @notice Updates an existing offer.
+     *
+     * Emits an OfferUpdated event if successful.
+     *
+     * Reverts if:
+     * - Offer is not updateable, i.e. is voided or some exchanges exist
+     * - Any other validation for offer creation fails
+     *
+     * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
+     */
+    function updateOffer(
+        Offer memory _offer
     )
     external
     override
     {
+        // Offer must be updateable
+        (, bool updateable) = isOfferUpdateable(_offer.id);
+        require(updateable, OFFER_NOT_UPDATEABLE);
+
+        storeOffer(_offer);
+
+        // Notify watchers of state change
+        emit OfferUpdated(_offer.id, _offer.sellerId, _offer);
+    }
+    
+    /**
+     * @notice Validates offer struct and store it to storage
+     *
+     * Reverts if:
+     * - Valid from date is greater than valid until date
+     * - Valid until date is not in the future
+     * - Buyer cancel penalty is greater than price
+     * - Voided is set to true
+     *
+     * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
+     */
+    function storeOffer(Offer memory _offer) internal {
+        // TODO: check seller ID matches msg.sender
+
         // validFrom date must be less than validUntil date
         require(_offer.validFromDate < _offer.validUntilDate, OFFER_PERIOD_INVALID);
 
         // validUntil date must be in the future
         require(_offer.validUntilDate > block.timestamp, OFFER_PERIOD_INVALID);
 
-        // Get the next offerId and increment the counter
-        uint256 offerId = protocolStorage().nextOfferId++;
+        // buyerCancelPenalty should be less or equal to the item price
+        require(_offer.buyerCancelPenalty <= _offer.price, OFFER_PENALTY_INVALID);
+
+        // when creating offer, it cannot be set to voided
+        require(!_offer.voided, OFFER_MUST_BE_ACTIVE);
 
         // Get storage location for offer
-        Offer storage offer = ProtocolLib.getOffer(offerId);
+        (,Offer storage offer) = fetchOffer(_offer.id);
 
         // Set offer props individually since memory structs can't be copied to storage
-        offer.id = offerId;
+        offer.id = _offer.id;
         offer.sellerId = _offer.sellerId;
         offer.price = _offer.price;
         offer.sellerDeposit = _offer.sellerDeposit;
@@ -79,10 +122,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         offer.exchangeToken = _offer.exchangeToken;
         offer.metadataUri = _offer.metadataUri;
         offer.metadataHash = _offer.metadataHash;
-        offer.voided = _offer.voided;
 
-        // Notify watchers of state change
-        emit OfferCreated(offerId, _offer.sellerId, _offer);
     }
 
     /**
@@ -104,17 +144,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     override
     {
         // Get offer
-        Offer storage offer = ProtocolLib.getOffer(_offerId);
-
-        // Offer must already exist
-        require(offer.id == _offerId, NO_SUCH_OFFER);
-
-        // Caller must be seller's operator address
-        Seller storage seller = ProtocolLib.getSeller(offer.sellerId);
-        //require(seller.operator == msg.sender, NOT_OPERATOR); // TODO add back when AccountHandler is working
-
-        // Offer must not already be voided
-        require(!offer.voided, OFFER_ALREADY_VOIDED);
+        Offer storage offer = getValidOffer(_offerId);
 
         // Void the offer
         offer.voided = true;
@@ -125,20 +155,80 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     }
 
     /**
+     * @notice Sets new valid until date
+     *
+     * Emits an OfferUpdated event if successful.
+     *
+     * Reverts if:
+     * - Offer does not exist
+     * - Caller is not the seller (TODO)
+     * - New valid until date is before existing valid until dates
+     *
+     *  @param _offerId - the id of the offer to check
+     *  @param _validUntilDate - new valid until date
+     */
+    function extendOffer(
+        uint256 _offerId, uint _validUntilDate
+    )
+    external
+    override
+    {
+        // Get offer
+        Offer storage offer = getValidOffer(_offerId);
+
+        // New valid until date must be greater than existing one
+        require(offer.validUntilDate < _validUntilDate, OFFER_PERIOD_INVALID);
+
+        // Void the offer
+        offer.validUntilDate = _validUntilDate;
+
+        // Notify watchers of state change
+        emit OfferUpdated(_offerId, offer.sellerId, offer);
+    }
+
+    /**
+     * @notice Gets offer from protocol storage, makes sure it exist and not voided
+     *
+     * Reverts if:
+     * - Offer does not exist
+     * - Caller is not the seller (TODO)
+     * - Offer already voided
+     *
+     *  @param _offerId - the id of the offer to check
+     */
+    function getValidOffer(uint256 _offerId) internal view returns (Offer storage offer){
+
+        bool exists;
+        Seller storage seller;
+
+        // Get offer
+        (exists, offer) = fetchOffer(_offerId);
+
+        // Offer must already exist
+        require(exists, NO_SUCH_OFFER);
+
+        // Get seller, we assume seller exists if offer exists
+        (,seller) = fetchSeller(offer.sellerId);
+
+        // Caller must be seller's operator address
+        //require(seller.operator == msg.sender, NOT_OPERATOR); // TODO add back when AccountHandler is working
+
+        // Offer must not already be voided
+        require(!offer.voided, OFFER_ALREADY_VOIDED);
+    }
+
+    /**
      * @notice Gets the details about a given offer.
      *
      * @param _offerId - the id of the offer to check
-     * @return success - the offer was found
+     * @return exists - the offer was found
      * @return offer - the offer details. See {BosonTypes.Offer}
      */
     function getOffer(uint256 _offerId)
     external
     view
-    returns(bool success, Offer memory offer) {
-
-        offer = ProtocolLib.getOffer(_offerId);
-        success = (offer.id == _offerId);
-
+    returns(bool exists, Offer memory offer) {
+        return fetchOffer(_offerId);
     }
 
     /**
@@ -153,8 +243,53 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     view
     returns(uint256 nextOfferId) {
 
-        nextOfferId = ProtocolLib.protocolStorage().nextOfferId;
+        nextOfferId = protocolCounters().nextOfferId;
 
     }
+
+    /**
+     * @notice Tells if offer is voided or not
+     *
+     * @param _offerId - the id of the offer to check
+     * @return exists - the offer was found
+     * @return offerVoided - true if voided, false otherwise
+     */
+    function isOfferVoided(uint256 _offerId)
+    public
+    view
+    returns(bool exists, bool offerVoided) {
+        Offer memory offer;
+        (exists, offer) = fetchOffer(_offerId);
+        offerVoided = offer.voided;
+    }
+
+
+    /**
+     * @notice Tells if offer is can be updated or not
+     *
+     * Offer is updateable if:
+     * - it exists
+     * - is not voided
+     * - has no exchanges
+     *
+     * @param _offerId - the id of the offer to check
+     * @return exists - the offer was found
+     * @return offerUpdateable - true if updateable, false otherwise
+     */
+    function isOfferUpdateable(uint256 _offerId)
+    public
+    view
+    returns(bool exists, bool offerUpdateable)
+    {
+        // Get the offer
+        Offer storage offer;
+        (exists, offer) = fetchOffer(_offerId);
+
+        // Offer must exist, not be voided, and have no exchanges to be updateable
+        offerUpdateable =
+            exists &&
+            !offer.voided &&
+            (protocolStorage().exchangesByOffer[_offerId].length == 0);
+        }
 
 }

@@ -21,7 +21,8 @@ contract BosonConstants {
     // Revert Reasons: Facet initializer related
     string internal constant ALREADY_INITIALIZED = "Already initialized";
 
-    // Revert Reasons: Seller related
+    // Revert Reasons: Access related
+    string internal constant ACCESS_DENIED = "Access denied, caller doesn't have role";
     string internal constant NOT_OPERATOR = "Not seller's operator";
     string internal constant SELLER_MUBT_BE_ACTIVE = "Seller must be active";
 
@@ -29,6 +30,9 @@ contract BosonConstants {
     string internal constant NO_SUCH_OFFER = "No such offer";
     string internal constant OFFER_ALREADY_VOIDED = "Offer already voided";
     string internal constant OFFER_PERIOD_INVALID = "Offer period invalid";
+    string internal constant OFFER_PENALTY_INVALID = "Offer penalty invalid";
+    string internal constant OFFER_MUST_BE_ACTIVE = "Offer must be active";
+    string internal constant OFFER_NOT_UPDATEABLE = "Offer not updateable";
 
     // Revert Reasons: Exchange related
     string internal constant NO_SUCH_EXCHANGE = "No such exchange";

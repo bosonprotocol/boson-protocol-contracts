@@ -10,22 +10,11 @@ import { ProtocolLib } from "../ProtocolLib.sol";
 contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
 
     /**
-     * @dev Modifier to protect initializer function from being invoked twice.
-     */
-    modifier onlyUnInitialized()
-    {
-        ProtocolLib.ProtocolInitializers storage pi = ProtocolLib.protocolInitializers();
-        require(!pi.accountHandler, ALREADY_INITIALIZED);
-        pi.accountHandler = true;
-        _;
-    }
-
-    /**
      * @notice Facet Initializer
      */
     function initialize()
     public
-    onlyUnInitialized
+    onlyUnInitialized(type(IBosonAccountHandler).interfaceId)
     {
         DiamondLib.addSupportedInterface(type(IBosonAccountHandler).interfaceId);
     }
@@ -48,7 +37,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
         require(_seller.active, SELLER_MUBT_BE_ACTIVE);
 
         // Get the next account Id and increment the counter
-        uint256 sellerId = protocolStorage().nextAccountId++;
+        uint256 sellerId = protocolCounters().nextAccountId++;
 
         _seller.id = sellerId;
         storeSeller(_seller);
@@ -77,7 +66,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
         require(_seller.admin != address(0) &&  _seller.operator != address(0) && _seller.clerk != address(0) && _seller.treasury != address(0), INVALID_ADDRESS);
 
         // Get storage location for seller
-        Seller storage seller = ProtocolLib.getSeller(_seller.id);
+        (,Seller storage seller) = fetchSeller(_seller.id);
 
         // Set seller props individually since memory structs can't be copied to storage
         seller.id = _seller.id;
@@ -99,7 +88,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
     override
     view 
     returns(uint256 nextAccountId) {
-        nextAccountId = ProtocolLib.protocolStorage().nextAccountId;
+        nextAccountId = protocolCounters().nextAccountId;
     }
 
 }
