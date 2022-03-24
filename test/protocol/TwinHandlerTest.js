@@ -1,6 +1,7 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect, assert } = require("chai");
+const { gasLimit } = require('../../environments');
 
 const Role = require("../../scripts/domain/Role");
 const Twin = require("../../scripts/domain/Twin");
@@ -8,6 +9,7 @@ const { getInterfaceIds } = require('../../scripts/config/supported-interfaces.j
 const { RevertReasons } = require('../../scripts/config/revert-reasons.js');
 const { deployProtocolDiamond } = require('../../scripts/util/deploy-protocol-diamond.js');
 const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-protocol-handler-facets.js');
+const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protocol-config-facet.js');
 const { assertEventEmitted } = require("../../testHelpers/events");
 
 /**
@@ -61,6 +63,14 @@ describe("IBosonTwinHandler", function() {
 
         // Cut the protocol handler facets into the Diamond
         [twinHandlerFacet] = await deployProtocolHandlerFacets(protocolDiamond, ["TwinHandlerFacet"]);
+
+        // Add config Handler, so twin id starts at 1
+        const protocolConfig = [
+            '0x0000000000000000000000000000000000000000',
+            '0x0000000000000000000000000000000000000000',
+            '0'
+        ];
+        [configHandlerFacet] = await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
         // Cast Diamond to IERC165
         erc165 = await ethers.getContractAt('IERC165', protocolDiamond.address);
@@ -287,7 +297,7 @@ describe("IBosonTwinHandler", function() {
                     function(eventArgs) {
                         assert.equal(
                             eventArgs.twinId.toString(),
-                            twin.id,
+                            nextTwinId,
                             'Twin Id is incorrect'
                         );
                         assert.equal(
@@ -297,7 +307,7 @@ describe("IBosonTwinHandler", function() {
                         );
                         assert.equal(
                             eventArgs.twin[0].toString(),
-                            twin.id,
+                            nextTwinId,
                             "Twin struct's id is incorrect"
                         );
                         assert.equal(
@@ -425,8 +435,11 @@ describe("IBosonTwinHandler", function() {
 
             beforeEach( async function () {
 
+                // Approving the twinHandler contract to transfer seller's tokens
+                await contractBosonToken.connect(seller).approve(twinHandler.address, 1);
+
                 // Create a twin
-                await twinHandler.connect(seller).createTwin(twin);
+                await twinHandler.connect(seller).createTwin(twin, seller.address);
 
                 // id of the current twin and increment nextTwinId
                 id = nextTwinId++;

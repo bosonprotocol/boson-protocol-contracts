@@ -48,7 +48,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
         require(isTokenTransferApproved(_twin.tokenAddress, _sellerOperator, address(this)), NO_TRANSFER_APPROVED);
 
         // Get the next twinId and increment the counter
-        uint256 twinId = protocolStorage().nextTwinId++;
+        uint256 twinId = protocolCounters().nextTwinId++;
 
         // modify incoming struct so event value represents true state
         _twin.id = twinId;
