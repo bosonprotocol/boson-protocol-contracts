@@ -40,12 +40,12 @@ interface IBosonExchangeHandler {
      * @notice Gets the details about a given exchange.
      *
      * @param _exchangeId - the id of the exchange to check
-     * @return success - the exchange was found
+     * @return exists - the exchange was found
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
      */
     function getExchange(uint256 _exchangeId)
     external
     view
-    returns(bool success, BosonTypes.Exchange memory exchange);
+    returns(bool exists, BosonTypes.Exchange memory exchange);
 
 }

@@ -102,8 +102,8 @@ contract BosonVoucher is IBosonVoucher, ClientBase, ERC721Upgradeable {
     override
     returns (string memory)
     {
-        (bool success, Offer memory offer) = getBosonOffer(_exchangeId);
-        return success ? offer.metadataUri : "";
+        (bool exists, Offer memory offer) = getBosonOffer(_exchangeId);
+        return exists ? offer.metadataUri : "";
     }
 
 }

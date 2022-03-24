@@ -85,13 +85,13 @@ interface IBosonOfferHandler {
      * @notice Gets the details about a given offer.
      *
      * @param _offerId - the id of the offer to check
-     * @return success - the offer was found
+     * @return exists - the offer was found
      * @return offer - the offer details. See {BosonTypes.Offer}
      */
     function getOffer(uint256 _offerId)
     external
     view
-    returns(bool success, BosonTypes.Offer memory offer);
+    returns(bool exists, BosonTypes.Offer memory offer);
 
     /**
      * @notice Gets the next offer id.
@@ -109,27 +109,28 @@ interface IBosonOfferHandler {
      * @notice Tells if offer is voided or not
      *
      * @param _offerId - the id of the offer to check
-     * @return success - the offer was found
+     * @return exists - the offer was found
      * @return offerVoided - true if voided, false otherwise
      */
     function isOfferVoided(uint256 _offerId)
     external
     view
-    returns(bool success, bool offerVoided);
+    returns(bool exists, bool offerVoided);
     
     /**
      * @notice Tells if offer is can be updated or not
      *
      * Offer is updateable if:
+     * - it exists
      * - is not voided
      * - has no exchanges
      *
      * @param _offerId - the id of the offer to check
-     * @return success - the offer was found
+     * @return exists - the offer was found
      * @return offerUpdateable - true if updateable, false otherwise
      */
     function isOfferUpdateable(uint256 _offerId)
     external
     view
-    returns(bool success, bool offerUpdateable);
+    returns(bool exists, bool offerUpdateable);
 }

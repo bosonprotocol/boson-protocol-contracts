@@ -68,9 +68,10 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     external
     override
     {
-        (bool success, bool updateable) = isOfferUpdateable(_offer.id);
-        require(success && updateable, OFFER_NOT_UPDATEABLE);
-    
+        // Offer must be updateable
+        (, bool updateable) = isOfferUpdateable(_offer.id);
+        require(updateable, OFFER_NOT_UPDATEABLE);
+
         storeOffer(_offer);
 
         // Notify watchers of state change
@@ -104,7 +105,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         require(!_offer.voided, OFFER_MUST_BE_ACTIVE);
 
         // Get storage location for offer
-        Offer storage offer = ProtocolLib.getOffer(_offer.id);
+        (,Offer storage offer) = fetchOffer(_offer.id);
 
         // Set offer props individually since memory structs can't be copied to storage
         offer.id = _offer.id;
@@ -196,14 +197,20 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      *  @param _offerId - the id of the offer to check
      */
     function getValidOffer(uint256 _offerId) internal view returns (Offer storage offer){
+
+        bool exists;
+        Seller storage seller;
+
         // Get offer
-        offer = ProtocolLib.getOffer(_offerId);
+        (exists, offer) = fetchOffer(_offerId);
 
         // Offer must already exist
-        require(_offerId !=0 && offer.id == _offerId, NO_SUCH_OFFER);
+        require(exists, NO_SUCH_OFFER);
+
+        // Get seller, we assume seller exists if offer exists
+        (,seller) = fetchSeller(offer.sellerId);
 
         // Caller must be seller's operator address
-        Seller storage seller = ProtocolLib.getSeller(offer.sellerId);
         //require(seller.operator == msg.sender, NOT_OPERATOR); // TODO add back when AccountHandler is working
 
         // Offer must not already be voided
@@ -214,17 +221,14 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * @notice Gets the details about a given offer.
      *
      * @param _offerId - the id of the offer to check
-     * @return success - the offer was found
+     * @return exists - the offer was found
      * @return offer - the offer details. See {BosonTypes.Offer}
      */
     function getOffer(uint256 _offerId)
     external
     view
-    returns(bool success, Offer memory offer) {
-        if (_offerId != 0) {
-            offer = ProtocolLib.getOffer(_offerId);
-            success = (offer.id == _offerId);
-        }
+    returns(bool exists, Offer memory offer) {
+        return fetchOffer(_offerId);
     }
 
     /**
@@ -247,18 +251,16 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * @notice Tells if offer is voided or not
      *
      * @param _offerId - the id of the offer to check
-     * @return success - the offer was found
+     * @return exists - the offer was found
      * @return offerVoided - true if voided, false otherwise
      */
     function isOfferVoided(uint256 _offerId)
     public
     view
-    returns(bool success, bool offerVoided) {
-        if (_offerId != 0) {
-            Offer memory offer = ProtocolLib.getOffer(_offerId);
-            success = (offer.id == _offerId);
-            offerVoided = offer.voided;
-        }
+    returns(bool exists, bool offerVoided) {
+        Offer memory offer;
+        (exists, offer) = fetchOffer(_offerId);
+        offerVoided = offer.voided;
     }
 
 
@@ -266,22 +268,28 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * @notice Tells if offer is can be updated or not
      *
      * Offer is updateable if:
+     * - it exists
      * - is not voided
      * - has no exchanges
      *
      * @param _offerId - the id of the offer to check
-     * @return success - the offer was found
+     * @return exists - the offer was found
      * @return offerUpdateable - true if updateable, false otherwise
      */
     function isOfferUpdateable(uint256 _offerId)
     public
     view
-    returns(bool success, bool offerUpdateable) {
-        if (_offerId != 0) {
-            Offer memory offer = ProtocolLib.getOffer(_offerId);
-            success = (offer.id == _offerId);
-            offerUpdateable = !offer.voided &&
-                (protocolStorage().exchangeByOffer[_offerId].length == 0); 
+    returns(bool exists, bool offerUpdateable)
+    {
+        // Get the offer
+        Offer storage offer;
+        (exists, offer) = fetchOffer(_offerId);
+
+        // Offer must exist, not be voided, and have no exchanges to be updateable
+        offerUpdateable =
+            exists &&
+            !offer.voided &&
+            (protocolStorage().exchangesByOffer[_offerId].length == 0);
         }
-    }
+
 }

@@ -54,7 +54,7 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Twin) twins;
 
         // offer id => exchange ids
-        mapping(uint256 => uint256[]) exchangeByOffer;
+        mapping(uint256 => uint256[]) exchangesByOffer;
     }
 
     // Incrementing ID counters
@@ -122,46 +122,6 @@ library ProtocolLib {
         assembly {
             pi.slot := position
         }
-    }
-
-
-    /**
-     * @notice Gets the details about a given seller
-     *
-     * @param _sellerId - the id of the seller
-     * @return seller - the seller details. See {BosonTypes.Seller}
-     */
-    function getSeller(uint256 _sellerId)
-    internal
-    view
-    returns(BosonTypes.Seller storage seller) {
-        seller = protocolStorage().sellers[_sellerId];
-    }
-
-    /**
-     * @notice Gets the details about a given offer
-     *
-     * @param _offerId - the id of the offer
-     * @return offer - the offer details. See {BosonTypes.Offer}
-     */
-    function getOffer(uint256 _offerId)
-    internal
-    view
-    returns(BosonTypes.Offer storage offer) {
-        offer = protocolStorage().offers[_offerId];
-    }
-
-    /**
-     * @notice Gets the details about a given exchange
-     *
-     * @param _exchangeId - the id of the exchange
-     * @return exchange - the exchange details. See {BosonTypes.Exchange}
-     */
-    function getExchange(uint256 _exchangeId)
-    internal
-    view
-    returns(BosonTypes.Exchange storage exchange) {
-        exchange = protocolStorage().exchanges[_exchangeId];
     }
 
 }
