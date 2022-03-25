@@ -817,7 +817,6 @@ describe("IBosonOfferHandler", function() {
                 nextGroupId = "1";
                 invalidGroupId = "666";
  
-                let offers = offerStructs = [];
                 // create 5 offers
                 for (let i = 0; i < 5; i++) {
 
@@ -857,12 +856,6 @@ describe("IBosonOfferHandler", function() {
                     );
                     expect(offer.isValid()).is.true;
         
-                    // How that offer looks as a returned struct
-                    offerStruct = offer.toStruct();
-
-                    offers.push(offer);
-                    offerStructs.push(offerStruct);
-
                     await offerHandler.connect(seller).createOffer(offer);
                 }
 
@@ -941,7 +934,7 @@ describe("IBosonOfferHandler", function() {
                                 "Group struct's condition is incorrect"
                             );
     
-                            // Unable to match whole eventArgs.twin struct. Hence confirming the Struct size.
+                            // Unable to match whole eventArgs.group struct. Hence confirming the Struct size.
                             assert.equal(
                                 eventArgs.group.length,
                                 Object.keys(group).length,
@@ -1013,7 +1006,7 @@ describe("IBosonOfferHandler", function() {
                                 "Group struct's condition is incorrect"
                             );
     
-                            // Unable to match whole eventArgs.twin struct. Hence confirming the Struct size.
+                            // Unable to match whole eventArgs.group struct. Hence confirming the Struct size.
                             assert.equal(
                                 eventArgs.group.length,
                                 Object.keys(group).length,

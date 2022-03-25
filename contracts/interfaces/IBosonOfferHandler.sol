@@ -138,7 +138,7 @@ interface IBosonOfferHandler {
     /**
      * @notice Creates a group.
      *
-     * Emits an GroupCreated event if successful.
+     * Emits a GroupCreated event if successful.
      *
      * Reverts if:
      * 
