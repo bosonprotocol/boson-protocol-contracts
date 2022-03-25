@@ -351,4 +351,18 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         emit GroupCreated(groupId, _group.sellerId, _group);
     }
 
+    /**
+     * @notice Gets the details about a given group.
+     *
+     * @param _groupId - the id of the group to check
+     * @return exists - the offer was found
+     * @return group - the offer details. See {BosonTypes.Group}
+     */
+    function getGroup(uint256 _groupId)
+    external
+    view
+    returns(bool exists, Group memory group) {
+        return fetchGroup(_groupId);
+    }
+
 }
