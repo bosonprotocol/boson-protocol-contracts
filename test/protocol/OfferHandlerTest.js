@@ -806,9 +806,8 @@ describe("IBosonOfferHandler", function() {
 
         });
 
-
-        context.only("🗄 grouping", async function() {
-            let group, nextGroupId;
+        context("🗄 grouping", async function() {
+            let group, nextGroupId, invalidGroupId;
             let offerIds, condition;
             let offerHandlerFacet_Factory;
 
@@ -816,7 +815,8 @@ describe("IBosonOfferHandler", function() {
   
                 // The first group id
                 nextGroupId = "1";
-            
+                invalidGroupId = "666";
+ 
                 let offers = offerStructs = [];
                 // create 5 offers
                 for (let i = 0; i < 5; i++) {
@@ -952,16 +952,16 @@ describe("IBosonOfferHandler", function() {
     
                 });
 
-                xit("should update state", async function () {
+                it("should update state", async function () {
 
                     // Create an offer
                     await offerHandler.connect(seller).createGroup(group);
     
                     // Get the offer as a struct
-                    [, groupStruct] = await offerHandler.connect(rando).getGroup(id);  // <- getGroup not implemented yet, therefor this test is skipped
-    
+                    [, groupStruct] = await offerHandler.connect(rando).getGroup(nextGroupId);
+
                     // Parse into entity
-                    let returnedGroup = Offer.fromStruct(groupStruct);
+                    let returnedGroup = Group.fromStruct(groupStruct);
     
                     // Returned values should match the input in createOffer
                     for ([key, value] of Object.entries(group)) {
@@ -1022,13 +1022,13 @@ describe("IBosonOfferHandler", function() {
                         }
                     );
     
-                    // // wrong offer id should not exist
-                    // [exists, ] = await offerHandler.connect(rando).getGroup(group.id);    // <- getGroup not implemented yet, therefor this test is skipped
-                    // expect(sucexistscess).to.be.false;
+                    // wrong group id should not exist
+                    [exists, ] = await offerHandler.connect(rando).getGroup(group.id);    
+                    expect(exists).to.be.false;
     
-                    // // next offer id should exist
-                    // [exists, ] = await offerHandler.connect(rando).getGroup(nextGroupId);  // <- getGroup not implemented yet, therefor this test is skipped
-                    // expect(exists).to.be.true;
+                    // next group id should exist
+                    [exists, returned] = await offerHandler.connect(rando).getGroup(nextGroupId);  
+                    expect(exists).to.be.true;
     
                 });
 
@@ -1085,6 +1085,53 @@ describe("IBosonOfferHandler", function() {
                         await expect(offerHandler.connect(seller).createGroup(group))
                             .to.revertedWith(RevertReasons.OFFER_ALREADY_IN_GROUP);
                     });    
+    
+                });
+    
+            });
+
+            context("👉 getGroup()", async function () {
+
+                beforeEach( async function () {
+    
+                    // Create an group
+                    await offerHandler.connect(seller).createGroup(group);
+    
+                    // id of the current group and increment nextGroupId
+                    id = nextGroupId++;
+    
+                });
+    
+                it("should return true for exists if offer is found", async function () {
+    
+                    // Get the exists flag
+                    [exists, ] = await offerHandler.connect(rando).getGroup(id);
+    
+                    // Validate
+                    expect(exists).to.be.true;
+    
+                });
+    
+                it("should return false for exists if offer is not found", async function () {
+    
+                    // Get the exists flag
+                    [exists, ] = await offerHandler.connect(rando).getGroup(invalidGroupId);
+    
+                    // Validate
+                    expect(exists).to.be.false;
+    
+                });
+    
+                it("should return the details of the group as a struct if found", async function () {
+    
+                    // Get the group as a struct
+                    [, groupStruct] = await offerHandler.connect(rando).getGroup(id);
+    
+                    // Parse into entity
+                    group = Group.fromStruct(groupStruct);
+    
+                    // Validate
+                    expect(group.isValid()).to.be.true;
     
                 });
     
