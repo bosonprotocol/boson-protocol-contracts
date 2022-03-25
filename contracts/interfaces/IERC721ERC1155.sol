@@ -6,11 +6,11 @@ pragma solidity ^0.8.0;
 import "./IERC165.sol";
 
 /**
- * @dev Required interface of an ERC721 compliant contract.
+ * @dev Interface of a ERC721 and ERC1155 compliant contract.
  */
 interface IERC721ERC1155 is IERC165 {
     /**
-     * @dev Returns if the `operator` is allowed to manage all of the assets of `owner`.
+     * @dev Returns if the `operator` is allowed to manage the assets of `owner`.
      *
      * See {setApprovalForAll}
      */

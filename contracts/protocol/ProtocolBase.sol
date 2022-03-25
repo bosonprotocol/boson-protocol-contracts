@@ -135,4 +135,22 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
 
     }
 
+    /**
+     * @notice Fetches a given twin from storage by id
+     *
+     * @param _twinId - the id of the twin
+     * @return exists - whether the twin exists
+     * @return twin - the twin details. See {BosonTypes.Twin}
+     */
+    function fetchTwin(uint256 _twinId)
+    internal
+    view
+    returns(bool exists, BosonTypes.Twin storage twin) {
+
+        // Get the twin's slot
+        twin = protocolStorage().twins[_twinId];
+
+        // Determine existence
+        exists = (_twinId > 0 && twin.id == _twinId);
+    }
 }

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "../../interfaces/IBosonTwinHandler.sol";
-import "../../diamond/DiamondLib.sol";
-import "../ProtocolBase.sol";
-import "../ProtocolLib.sol";
-import "../../utils/TokenApprovalChecker.sol";
+import { IBosonTwinHandler } from "../../interfaces/IBosonTwinHandler.sol";
+import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import { ProtocolBase } from "../ProtocolBase.sol";
+import { ProtocolLib } from "../ProtocolLib.sol";
+import { TokenChecker } from "../../utils/TokenChecker.sol";
 
 /**
  * @title TwinHandlerFacet
@@ -13,7 +13,7 @@ import "../../utils/TokenApprovalChecker.sol";
  * @notice Manages digital twinning associated with exchanges within the protocol
  */
 contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
-    TokenApprovalChecker public tokenApprovalChecker;
+    TokenChecker public tokenChecker;
 
     /**
      * @notice Facet Initializer
@@ -55,7 +55,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
         _twin.id = twinId;
 
         // Get storage location for twin
-        Twin storage twin = ProtocolLib.getTwin(twinId);
+        (,Twin storage twin) = fetchTwin(_twin.id);
 
         // Set twin props individually since memory structs can't be copied to storage
         twin.id = twinId;
@@ -84,9 +84,9 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
     )
     internal
     returns(bool _isApproved) {
-        tokenApprovalChecker = new TokenApprovalChecker();
+        tokenChecker = new TokenChecker();
 
-        try tokenApprovalChecker.isSpenderApproved(_tokenAddress, _operator, _spender) returns (bool _approved) {
+        try tokenChecker.isSpenderApproved(_tokenAddress, _operator, _spender) returns (bool _approved) {
             _isApproved = _approved;
         }
         catch {
@@ -98,16 +98,13 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
      * @notice Gets the details about a given twin.
      *
      * @param _twinId - the id of the twin to check
-     * @return success - the twin was found
+     * @return exists - the twin was found
      * @return twin - the twin details. See {BosonTypes.Twin}
      */
     function getTwin(uint256 _twinId)
     external
     view
-    returns(bool success, Twin memory twin) {
-        if (_twinId != 0) {
-            twin = ProtocolLib.getTwin(_twinId);
-            success = (twin.id == _twinId);
-        }
+    returns(bool exists, Twin memory twin) {
+        return fetchTwin(_twinId);
     }
 }

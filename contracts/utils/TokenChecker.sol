@@ -3,10 +3,9 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/IERC721ERC1155.sol";
-import "../interfaces/ITokenApprovalChecker.sol";
+import "../interfaces/ITokenChecker.sol";
 
-contract TokenApprovalChecker is ITokenApprovalChecker{
-
+contract TokenChecker is ITokenChecker {
     /**
      * @notice Check if spender is approved to transfer the tokens.
      *

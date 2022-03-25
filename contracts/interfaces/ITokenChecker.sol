@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-interface ITokenApprovalChecker {
-
+/**
+ * @dev Interface to check if spender is approved to use ERC20, ERC721 and ERC1155 tokens.
+ */
+interface ITokenChecker {
     /**
      * @notice Check if spender is approved to transfer the tokens.
      *

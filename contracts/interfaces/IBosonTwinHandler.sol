@@ -33,11 +33,11 @@ interface IBosonTwinHandler {
      * @notice Gets the details about a given twin.
      *
      * @param _twinId - the id of the twin to check
-     * @return success - the twin was found
+     * @return exists - the twin was found
      * @return twin - the twin details. See {BosonTypes.Twin}
      */
     function getTwin(uint256 _twinId)
     external
     view
-    returns(bool success, BosonTypes.Twin memory twin);
+    returns(bool exists, BosonTypes.Twin memory twin);
 }
