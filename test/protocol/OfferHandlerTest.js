@@ -1020,7 +1020,7 @@ describe("IBosonOfferHandler", function() {
                     expect(exists).to.be.false;
     
                     // next group id should exist
-                    [exists, returned] = await offerHandler.connect(rando).getGroup(nextGroupId);  
+                    [exists, ] = await offerHandler.connect(rando).getGroup(nextGroupId);
                     expect(exists).to.be.true;
     
                 });
@@ -1032,9 +1032,9 @@ describe("IBosonOfferHandler", function() {
                     // Create a group, testing for the event
                     await offerHandler.connect(seller).createGroup(group);
 
-                    // // next offer id should exist
-                    // [exists, ] = await offerHandler.connect(rando).getGroup(nextGroupId);  // <- getGroup not implemented yet, therefor this test is skipped
-                    // expect(exists).to.be.true;
+                    // group should have no offers
+                    [, returnedGroup] = await offerHandler.connect(rando).getGroup(nextGroupId);  
+                    assert.equal(returnedGroup.offerIds,group.offerIds.toString(), "Offer ids should be empty");
 
                 });
     
