@@ -808,7 +808,7 @@ describe("IBosonOfferHandler", function() {
 
 
         context.only("🗄 grouping", async function() {
-            let group, nextGroupId, invalidGroupId;
+            let group, nextGroupId;
             let offerIds, condition;
             let offerHandlerFacet_Factory;
 
@@ -816,7 +816,6 @@ describe("IBosonOfferHandler", function() {
   
                 // The first group id
                 nextGroupId = "1";
-                invalidGroupId = "666";
             
                 let offers = offerStructs = [];
                 // create 5 offers
@@ -959,7 +958,7 @@ describe("IBosonOfferHandler", function() {
                     await offerHandler.connect(seller).createGroup(group);
     
                     // Get the offer as a struct
-                    [, groupStruct] = await offerHandler.connect(rando).getGroup(id);
+                    [, groupStruct] = await offerHandler.connect(rando).getGroup(id);  // <- getGroup not implemented yet, therefor this test is skipped
     
                     // Parse into entity
                     let returnedGroup = Offer.fromStruct(groupStruct);
@@ -1024,16 +1023,25 @@ describe("IBosonOfferHandler", function() {
                     );
     
                     // // wrong offer id should not exist
-                    // [exists, ] = await offerHandler.connect(rando).getGroup(group.id);
+                    // [exists, ] = await offerHandler.connect(rando).getGroup(group.id);    // <- getGroup not implemented yet, therefor this test is skipped
                     // expect(sucexistscess).to.be.false;
     
                     // // next offer id should exist
-                    // [exists, ] = await offerHandler.connect(rando).getOffer(nextGroupId);
+                    // [exists, ] = await offerHandler.connect(rando).getGroup(nextGroupId);  // <- getGroup not implemented yet, therefor this test is skipped
                     // expect(exists).to.be.true;
     
                 });
 
-                xit("should create group without any offer", async function () {
+                it("should create group without any offer", async function () {
+
+                    group.offerIds = [];
+    
+                    // Create a group, testing for the event
+                    await offerHandler.connect(seller).createGroup(group);
+
+                    // // next offer id should exist
+                    // [exists, ] = await offerHandler.connect(rando).getGroup(nextGroupId);  // <- getGroup not implemented yet, therefor this test is skipped
+                    // expect(exists).to.be.true;
 
                 });
     
@@ -1043,7 +1051,7 @@ describe("IBosonOfferHandler", function() {
                     offer.seller = rando;
     
                     // Create an offer, testing for the event
-                    await expect(offerHandler.connect(seller).createOffer(offer))
+                    await expect(offerHandler.connect(seller).createGroup(offer))
                         .to.emit(offerHandler, 'OfferCreated')
                         .withArgs(nextOfferId, offer.sellerId, offerStruct);
                 });
@@ -1055,26 +1063,28 @@ describe("IBosonOfferHandler", function() {
     
                     });
     
-                    xit("Offer is already part of another group", async function () {
+                    it("Offer is already part of another group", async function () {
+                        
+                        // create first group
+                        await offerHandler.connect(seller).createGroup(group);
+
+                        // Set add offer that is already part of another group
+                        group.offerIds = ["1","2","4"]
     
-                        // Set until date in the past
-                        offer.validUntilDate = ethers.BigNumber.from(Date.now() - (oneMonth * 6)).toString();   // 6 months ago
-    
-                        // Attempt to Create an offer, expecting revert
-                        await expect(offerHandler.connect(seller).createOffer(offer))
-                            .to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+                        // Attempt to create an group, expecting revert
+                        await expect(offerHandler.connect(seller).createGroup(group))
+                            .to.revertedWith(RevertReasons.OFFER_ALREADY_IN_GROUP);
                     });
     
-                    xit("Offer is duplicated", async function () {
+                    it("Offer is duplicated", async function () {
     
-                        // Set buyer cancel penalty higher than offer price
-                        offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();  
+                        // Try to add the same offer twice
+                        group.offerIds = ["1","1","4"]
     
-                        // Attempt to Create an offer, expecting revert
-                        await expect(offerHandler.connect(seller).createOffer(offer))
-                            .to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
-                    });
-    
+                        // Attempt to create an group, expecting revert
+                        await expect(offerHandler.connect(seller).createGroup(group))
+                            .to.revertedWith(RevertReasons.OFFER_ALREADY_IN_GROUP);
+                    });    
     
                 });
     

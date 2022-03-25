@@ -30,6 +30,7 @@ contract BosonConstants {
     string internal constant OFFER_PENALTY_INVALID = "Offer penalty invalid";
     string internal constant OFFER_MUST_BE_ACTIVE = "Offer must be active";
     string internal constant OFFER_NOT_UPDATEABLE = "Offer not updateable";
+    string internal constant OFFER_ALREADY_IN_GROUP = "Offer already in group";
 
     // Revert Reasons: Exchange related
     string internal constant NO_SUCH_EXCHANGE = "No such exchange";

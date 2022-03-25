@@ -331,7 +331,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
             getValidOffer(_group.offerIds[i]);
             
             // Add to groupByOffer mapping
-            require(protocolStorage().groupByOffer[_group.offerIds[i]] == 0, "offer part of a storage");
+            require(protocolStorage().groupByOffer[_group.offerIds[i]] == 0, OFFER_ALREADY_IN_GROUP);
             protocolStorage().groupByOffer[_group.offerIds[i]] = groupId;
         }
        
