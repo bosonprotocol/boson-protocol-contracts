@@ -19,6 +19,6 @@ exports.RevertReasons = {
     OFFER_NOT_UPDATEABLE: "Offer not updateable",
 
     //Seller-related
-    SELLER_MUBT_BE_ACTIVE: "Seller must be active",
+    SELLER_MUST_BE_ACTIVE: "Seller must be active",
     SELLER_ADDRESS_MUST_BE_UNIQUE: "Seller address cannot be assigned to another seller Id"
 }

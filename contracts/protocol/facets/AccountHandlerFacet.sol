@@ -34,7 +34,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
     override
     {
         //Check active is not set to false
-        require(_seller.active, SELLER_MUBT_BE_ACTIVE);
+        require(_seller.active, SELLER_MUST_BE_ACTIVE);
 
         // Get the next account Id and increment the counter
         uint256 sellerId = protocolCounters().nextAccountId++;

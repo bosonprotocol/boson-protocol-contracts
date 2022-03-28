@@ -54,7 +54,7 @@ const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protoco
         // Cut the protocol handler facets into the Diamond
         [accountrHandlerFacet] = await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet"]);
 
-        // Add config Handler, so offer id starts at 1
+        // Add config Handler, so seller id starts at 1
         const protocolConfig = [
             '0x0000000000000000000000000000000000000000',
             '0x0000000000000000000000000000000000000000',
@@ -98,7 +98,7 @@ const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protoco
 
         beforeEach( async function () {
 
-            // The first offer id
+            // The first seller id
             nextAccountId = "1";
             invalidAccountId = "666";
 
@@ -107,11 +107,11 @@ const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protoco
           
             active = true;
 
-            // Create a valid offer, then set fields in tests directly
+            // Create a valid seller, then set fields in tests directly
             seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
             expect(seller.isValid()).is.true;
 
-            // How that offer looks as a returned struct
+            // How that seller looks as a returned struct
             sellerStruct = seller.toStruct();
 
         });
@@ -131,7 +131,7 @@ const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protoco
                 // Create a seller
                 await accountHandler.connect(admin).createSeller(seller);
 
-                // Get the offer as a struct
+                // Get the seller as a struct
                 [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
 
                 // Parse into entity
@@ -188,7 +188,7 @@ const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protoco
 
                     // Attempt to Create a seller, expecting revert
                     await expect(accountHandler.connect(admin).createSeller(seller))
-                        .to.revertedWith(RevertReasons.SELLER_MUBT_BE_ACTIVE);
+                        .to.revertedWith(RevertReasons.SELLER_MUST_BE_ACTIVE);
 
                 });
 
@@ -263,10 +263,10 @@ const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protoco
 
             it("should return the next account id", async function () {
 
-                // What we expect the next offer id to be
+                // What we expect the next seller id to be
                 expected = nextAccountId;
 
-                // Get the next offer id
+                // Get the next seller id
                 nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
                 // Verify expectation
@@ -298,10 +298,10 @@ const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protoco
 
             it("should not be incremented when only getNextSellerId is called", async function () {
 
-                // What we expect the next offer id to be
+                // What we expect the next seller id to be
                 expected = nextAccountId;
 
-                // Get the next offer id
+                // Get the next seller id
                 nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
                 // Verify expectation
