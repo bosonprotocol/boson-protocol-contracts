@@ -2,14 +2,14 @@
 pragma solidity ^0.8.0;
 
 /**
- * @title Test4FacetFallback
+ * @title FallbackError
  *
  * @notice Mock contract having a fallback function for Unit Testing
  */
-contract Test4FacetFallback {
+contract FallbackError {
 
     /**
-     * Fallback function
+     * @notice Fallback function
      */
     fallback() external payable { revert("Error from fallback function"); }
 

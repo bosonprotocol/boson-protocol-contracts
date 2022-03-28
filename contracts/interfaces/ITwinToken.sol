@@ -6,13 +6,17 @@ pragma solidity ^0.8.0;
 import "./IERC165.sol";
 
 /**
- * @dev Interface of a ERC721 and ERC1155 compliant contract.
+ * @title ITwinToken
+ *
+ * @notice The minimum interface a Twin token must expose to be supported by the Boson Protocol
  */
 interface ITwinToken is IERC165 {
     /**
-     * @dev Returns if the `operator` is allowed to manage the assets of `owner`.
+     * @notice Returns true if the `operator` is allowed to manage the assets of `owner`.
      *
-     * See {setApprovalForAll}
+     * @param _owner - the token owner address.
+     * @param _operator - the operator address.
+     * @return _isApproved - the approval was found.
      */
-    function isApprovedForAll(address owner, address operator) external view returns (bool);
+    function isApprovedForAll(address _owner, address _operator) external view returns (bool _isApproved);
 }
