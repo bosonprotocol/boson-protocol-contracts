@@ -14,7 +14,6 @@ import "../../interfaces/ITwinToken.sol";
  * @notice Manages digital twinning associated with exchanges within the protocol
  */
 contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
-    // TokenChecker public tokenChecker;
 
     /**
      * @notice Facet Initializer
@@ -44,8 +43,6 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
     external
     override
     {
-        require(_twin.tokenAddress != address(0), UNSUPPORTED_TOKEN);
-
         // Protocol must be approved to transfer seller’s tokens
         // Seller storage seller = ProtocolLib.getSeller(_twin.sellerId);
         require(isProtocolApproved(_twin.tokenAddress, _sellerOperator, address(this)), NO_TRANSFER_APPROVED); // TODO replace _sellerOperator with seller.operator
@@ -84,16 +81,19 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
         address _operator,
         address _protocol
     ) internal view returns (bool _approved){
+        require(_tokenAddress != address(0), UNSUPPORTED_TOKEN);
+
         try IERC20(_tokenAddress).allowance(
             _operator,
             _protocol
         ) returns(uint256 _allowance) {
             if (_allowance > 0) {_approved = true; }
         } catch {
-            _approved = ITwinToken(_tokenAddress).isApprovedForAll(
-                _operator,
-                _protocol
-            );
+            try ITwinToken(_tokenAddress).isApprovedForAll(_operator, _protocol) returns (bool _isApproved) {
+                _approved = _isApproved;
+            } catch {
+                revert(UNSUPPORTED_TOKEN);
+            }
         }
     }
 

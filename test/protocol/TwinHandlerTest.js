@@ -32,9 +32,11 @@ describe("IBosonTwinHandler", function() {
         MockBosonToken_Factory,
         MockForeign721_Factory,
         MockForeign1155_Factory,
+        MockTest4FacetFallback_Factory,
         contractBosonToken,
         contractForeign721,
-        contractForeign1155;
+        contractForeign1155,
+        contractTest4FacetFallback;
     let twin, nextTwinId, invalidTwinId, support;
     let id,
         sellerId,
@@ -81,14 +83,17 @@ describe("IBosonTwinHandler", function() {
         MockBosonToken_Factory = await ethers.getContractFactory('BosonToken');
         MockForeign721_Factory = await ethers.getContractFactory('Foreign721');
         MockForeign1155_Factory = await ethers.getContractFactory('Foreign1155');
+        MockTest4FacetFallback_Factory = await ethers.getContractFactory('Test4FacetFallback');
 
         contractBosonToken = await MockBosonToken_Factory.deploy();
         contractForeign721 = await MockForeign721_Factory.deploy();
         contractForeign1155 = await MockForeign1155_Factory.deploy();
+        contractTest4FacetFallback = await MockTest4FacetFallback_Factory.deploy();
 
         await contractBosonToken.deployed();
         await contractForeign721.deployed();
         await contractForeign1155.deployed();
+        await contractTest4FacetFallback.deployed();
 
         TwinHandlerFacet_Factory = await ethers.getContractFactory('TwinHandlerFacet');
     });
@@ -295,12 +300,27 @@ describe("IBosonTwinHandler", function() {
                     .to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
                 });
 
-                it("Token address is unsupported", async function () {
-                    //Unsupported token address
-                    twin.tokenAddress = ethers.constants.AddressZero;
+                context("Token address is unsupported", async function () {
+                    it("Token address is a zero address", async function () {
+                        twin.tokenAddress = ethers.constants.AddressZero;
 
-                    await expect(twinHandler.connect(seller).createTwin(twin, seller.address))
-                    .to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
+                        await expect(twinHandler.connect(seller).createTwin(twin, seller.address))
+                        .to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
+                    });
+
+                    it("Token address is a contract address that does not support the isApprovedForAll", async function () {
+                        twin.tokenAddress = twinHandler.address;
+
+                        await expect(twinHandler.connect(seller).createTwin(twin, seller.address))
+                        .to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
+                    });
+
+                    it("Token address is a contract that has a fallback", async function () {
+                        twin.tokenAddress = contractTest4FacetFallback.address;
+
+                        await expect(twinHandler.connect(seller).createTwin(twin, seller.address))
+                        .to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
+                    });
                 });
             });
         });
