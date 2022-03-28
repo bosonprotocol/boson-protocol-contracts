@@ -23,6 +23,8 @@
     "scripts": {
         "build": "npx hardhat compile",
         "test": "npx hardhat test",
+        "check:contracts": "solhint 'contracts/**/*.sol' && prettier --list-different contracts/**/*.sol",
+        "check:scripts": "eslint test/**/*.js && prettier --list-different test/**/*.js && prettier --list-different scripts/**/*.js",
         "tidy:contracts": "solhint --fix 'contracts/**/*.sol' && prettier --write contracts/**/*.sol",
         "tidy:scripts": "eslint --fix test/**/*.js && prettier --write test/**/*.js && prettier --write scripts/**/*.js",
         "size": "npx hardhat size-contracts",
