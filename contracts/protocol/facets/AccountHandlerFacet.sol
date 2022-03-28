@@ -25,7 +25,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
      * Emits a SellerCreated event if successful.
      *
      * Reverts if:
-     * - Seller is not active (active == false)
+     * - Seller is not active (if active == false)
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
      */
@@ -55,7 +55,8 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
      * @notice Validates seller struct and stores it to storage
      *
      * Reverts if:
-     * - Addresses are the zero address
+     * - Address values are zero address
+     * - Addresses are not unique to this seller
      *
      * @param _seller - the fully populated struct with seller id set
      */

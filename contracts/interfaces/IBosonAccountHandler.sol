@@ -22,6 +22,8 @@ interface IBosonAccountHandler {
      *
      * Reverts if:
      * - Address values are zero address
+     * - Active is not true
+     * - Addresses are not unique to this seller
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
      */

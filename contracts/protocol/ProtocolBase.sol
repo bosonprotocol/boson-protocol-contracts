@@ -88,7 +88,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     view
     returns(bool exists, BosonTypes.Seller storage seller) {
 
-        // Get the offer's slot
+        // Get the seller's slot
         seller = protocolStorage().sellers[_sellerId];
 
         // Determine existence
