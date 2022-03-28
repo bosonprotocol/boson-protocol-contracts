@@ -34,7 +34,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
     override
     {
         //Check active is not set to false
-        require(_seller.active, SELLER_MUBT_BE_ACTIVE);
+        require(_seller.active, SELLER_MUST_BE_ACTIVE);
 
         // Get the next account Id and increment the counter
         uint256 sellerId = protocolCounters().nextAccountId++;
@@ -64,10 +64,17 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
     function storeSeller(Seller memory _seller) internal 
     {
         //Check for zero address
-        require(_seller.admin != address(0) &&  _seller.operator != address(0) && _seller.clerk != address(0) && _seller.treasury != address(0), INVALID_ADDRESS);
+        require(_seller.admin != address(0) &&  
+                _seller.operator != address(0) && 
+                _seller.clerk != address(0) && 
+                _seller.treasury != address(0), 
+                INVALID_ADDRESS);
 
         //check that the addresses are unique to one seller Id
-        require(protocolStorage().sellerByOperator[_seller.operator] == 0 && protocolStorage().sellerByAdmin[_seller.admin] == 0 && protocolStorage().sellerByClerk[_seller.clerk] == 0,  SELLER_ADDRESS_MUST_BE_UNIQUE);
+        require(protocolStorage().sellerByOperator[_seller.operator] == 0 && 
+                protocolStorage().sellerByAdmin[_seller.admin] == 0 && 
+                protocolStorage().sellerByClerk[_seller.clerk] == 0,  
+                SELLER_ADDRESS_MUST_BE_UNIQUE);
 
         // Get storage location for seller
         (,Seller storage seller) = fetchSeller(_seller.id);
