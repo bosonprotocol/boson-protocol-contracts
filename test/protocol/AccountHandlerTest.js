@@ -249,6 +249,53 @@ const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protoco
 
         });
 
+        context("👉 getSeller()", async function () {
+
+            beforeEach( async function () {
+
+                // Create a seller
+                await accountHandler.connect(admin).createSeller(seller);
+
+                // id of the current seller and increment nextAccountId
+                id = nextAccountId++;
+
+            });
+
+            it("should return true for exists if selelr is found", async function () {
+
+                // Get the exists flag
+                [exists, ] = await accountHandler.connect(rando).getSeller(id);
+
+                // Validate
+                expect(exists).to.be.true;
+
+            });
+
+            it("should return false for exists if seller is not found", async function () {
+
+                // Get the exists flag
+                [exists, ] = await accountHandler.connect(rando).getSeller(invalidAccountId);
+
+                // Validate
+                expect(exists).to.be.false;
+
+            });
+
+            it("should return the details of the seller as a struct if found", async function () {
+
+                // Get the seller as a struct
+                [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
+
+                // Parse into entity
+                seller = Seller.fromStruct(sellerStruct);
+
+                // Validate
+                expect(seller.isValid()).to.be.true;
+
+            });
+
+        });
+
         context("👉 getNextAccountId()", async function () {
 
             beforeEach( async function () {
