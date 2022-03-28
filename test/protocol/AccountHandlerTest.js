@@ -261,7 +261,7 @@ const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protoco
 
             });
 
-            it("should return true for exists if selelr is found", async function () {
+            it("should return true for exists if seller is found", async function () {
 
                 // Get the exists flag
                 [exists, ] = await accountHandler.connect(rando).getSeller(id);
