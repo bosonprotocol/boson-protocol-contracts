@@ -5,7 +5,8 @@ import { IBosonTwinHandler } from "../../interfaces/IBosonTwinHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../ProtocolBase.sol";
 import { ProtocolLib } from "../ProtocolLib.sol";
-import { TokenChecker } from "../../utils/TokenChecker.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "../../interfaces/ITwinToken.sol";
 
 /**
  * @title TwinHandlerFacet
@@ -13,7 +14,7 @@ import { TokenChecker } from "../../utils/TokenChecker.sol";
  * @notice Manages digital twinning associated with exchanges within the protocol
  */
 contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
-    TokenChecker public tokenChecker;
+    // TokenChecker public tokenChecker;
 
     /**
      * @notice Facet Initializer
@@ -43,10 +44,11 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
     external
     override
     {
+        require(_twin.tokenAddress != address(0), UNSUPPORTED_TOKEN);
+
         // Protocol must be approved to transfer seller’s tokens
         // Seller storage seller = ProtocolLib.getSeller(_twin.sellerId);
-        // require(isTokenTransferApproved(_twin.tokenAddress, seller.operator, address(this)), NO_TRANSFER_APPROVED); // TODO add back when AccountHandler is working
-        require(isTokenTransferApproved(_twin.tokenAddress, _sellerOperator, address(this)), NO_TRANSFER_APPROVED);
+        require(isProtocolApproved(_twin.tokenAddress, _sellerOperator, address(this)), NO_TRANSFER_APPROVED); // TODO replace _sellerOperator with seller.operator
 
         // Get the next twinId and increment the counter
         uint256 twinId = protocolCounters().nextTwinId++;
@@ -70,27 +72,28 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
     }
 
     /**
-     * @notice Check if Protocol's treasuryAddress is approved to transfer seller’s tokens.
+     * @notice Check if protocol is approved to transfer the tokens.
      *
      * @param _tokenAddress - the address of the seller's twin token contract.
      * @param _operator - the seller's operator address.
-     * @param _spender - the treasuryAddress of protocol.
-     * @return _isApproved - the approve status.
+     * @param _protocol - the protocol address.
+     * @return _approved - the approve status.
      */
-    function isTokenTransferApproved(
+    function isProtocolApproved(
         address _tokenAddress,
         address _operator,
-        address _spender
-    )
-    internal
-    returns(bool _isApproved) {
-        tokenChecker = new TokenChecker();
-
-        try tokenChecker.isSpenderApproved(_tokenAddress, _operator, _spender) returns (bool _approved) {
-            _isApproved = _approved;
-        }
-        catch {
-            revert(UNSUPPORTED_TOKEN);
+        address _protocol
+    ) internal view returns (bool _approved){
+        try IERC20(_tokenAddress).allowance(
+            _operator,
+            _protocol
+        ) returns(uint256 _allowance) {
+            if (_allowance > 0) {_approved = true; }
+        } catch {
+            _approved = ITwinToken(_tokenAddress).isApprovedForAll(
+                _operator,
+                _protocol
+            );
         }
     }
 

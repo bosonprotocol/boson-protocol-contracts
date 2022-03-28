@@ -10,7 +10,7 @@ const { RevertReasons } = require('../../scripts/config/revert-reasons.js');
 const { deployProtocolDiamond } = require('../../scripts/util/deploy-protocol-diamond.js');
 const { deployProtocolHandlerFacets } = require('../../scripts/util/deploy-protocol-handler-facets.js');
 const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protocol-config-facet.js');
-const { assertEventEmitted } = require("../../testHelpers/events");
+const { getEvent } = require("../../scripts/util/test-events.js");
 
 /**
  *  Test the Boson Twin Handler interface
@@ -149,59 +149,21 @@ describe("IBosonTwinHandler", function() {
                 const tx = await twinHandler.connect(seller).createTwin(twin, seller.address);
                 const txReceipt = await tx.wait();
 
-                assertEventEmitted(
-                    txReceipt,
-                    TwinHandlerFacet_Factory,
-                    'TwinCreated',
-                    function(eventArgs) {
-                        assert.equal(
-                            eventArgs.twinId.toString(),
-                            nextTwinId,
-                            'Twin Id is incorrect'
-                        );
-                        assert.equal(
-                            eventArgs.sellerId.toString(),
-                            twin.sellerId,
-                            'Seller Id is incorrect'
-                        );
-                        assert.equal(
-                            eventArgs.twin[0].toString(),
-                            nextTwinId,
-                            "Twin struct's id is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[1].toString(),
-                            twin.sellerId,
-                            "Twin struct's sellerId is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[2].toString(),
-                            twin.supplyAvailable,
-                            "Twin struct's supplyAvailable is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[3].toString(),
-                            twin.supplyIds.toString(),
-                            "Twin struct's supplyIds is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[4].toString(),
-                            twin.tokenId.toString(),
-                            "Twin struct's tokenId is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[5],
-                            twin.tokenAddress,
-                            "Twin struct's tokenAddress is incorrect"
-                        );
-
-                        // Unable to match whole eventArgs.twin struct. Hence confirming the Struct size.
-                        assert.equal(
-                            eventArgs.twin.length,
-                            Object.keys(twin).length,
-                            "Twin struct does not match"
-                        );
-                    }
+                const event = getEvent(txReceipt, TwinHandlerFacet_Factory, 'TwinCreated');
+                assert.equal(
+                    event.twinId.toString(),
+                    nextTwinId,
+                    'Twin Id is incorrect'
+                );
+                assert.equal(
+                    event.sellerId.toString(),
+                    twin.sellerId,
+                    'Seller Id is incorrect'
+                );
+                assert.equal(
+                    Twin.fromStruct(event.twin).toString(),
+                    twin.toString(),
+                    "Twin struct is incorrect"
                 );
             });
 
@@ -215,59 +177,30 @@ describe("IBosonTwinHandler", function() {
                 const tx = await twinHandler.connect(seller).createTwin(twin, seller.address);
                 const txReceipt = await tx.wait();
 
-                assertEventEmitted(
-                    txReceipt,
-                    TwinHandlerFacet_Factory,
-                    'TwinCreated',
-                    function(eventArgs) {
-                        assert.equal(
-                            eventArgs.twinId.toString(),
-                            nextTwinId,
-                            'Twin Id is incorrect'
-                        );
-                        assert.equal(
-                            eventArgs.sellerId.toString(),
-                            twin.sellerId,
-                            'Seller Id is incorrect'
-                        );
-                        assert.equal(
-                            eventArgs.twin[0].toString(),
-                            nextTwinId,
-                            "Twin struct's id is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[1].toString(),
-                            twin.sellerId,
-                            "Twin struct's sellerId is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[2].toString(),
-                            twin.supplyAvailable,
-                            "Twin struct's supplyAvailable is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[3].toString(),
-                            twin.supplyIds.toString(),
-                            "Twin struct's supplyIds is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[4].toString(),
-                            twin.tokenId.toString(),
-                            "Twin struct's tokenId is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[5],
-                            twin.tokenAddress,
-                            "Twin struct's tokenAddress is incorrect"
-                        );
+                const event = getEvent(txReceipt, TwinHandlerFacet_Factory, 'TwinCreated');
+                assert.equal(
+                    event.twinId.toString(),
+                    nextTwinId,
+                    'Twin Id is incorrect'
+                );
+                assert.equal(
+                    event.sellerId.toString(),
+                    twin.sellerId,
+                    'Seller Id is incorrect'
+                );
+                assert.notEqual(
+                    Twin.fromStruct(event.twin).toString(),
+                    twin.toString(),
+                    "Twin struct is incorrect"
+                );
 
-                        // Unable to match whole eventArgs.twin struct. Hence confirming the Struct size.
-                        assert.equal(
-                            eventArgs.twin.length,
-                            Object.keys(twin).length,
-                            "Twin struct does not match"
-                        );
-                    }
+                // should match the expected twin
+                let expectedTwin = twin.clone();
+                expectedTwin.id = nextTwinId;
+                assert.equal(
+                    Twin.fromStruct(event.twin).toString(),
+                    expectedTwin.toString(),
+                    "Expected Twin struct is incorrect"
                 );
 
                 // wrong twin id should not exist
@@ -290,59 +223,21 @@ describe("IBosonTwinHandler", function() {
                 const tx = await twinHandler.connect(seller).createTwin(twin, seller.address);
                 const txReceipt = await tx.wait();
 
-                assertEventEmitted(
-                    txReceipt,
-                    TwinHandlerFacet_Factory,
-                    'TwinCreated',
-                    function(eventArgs) {
-                        assert.equal(
-                            eventArgs.twinId.toString(),
-                            nextTwinId,
-                            'Twin Id is incorrect'
-                        );
-                        assert.equal(
-                            eventArgs.sellerId.toString(),
-                            twin.sellerId,
-                            'Seller Id is incorrect'
-                        );
-                        assert.equal(
-                            eventArgs.twin[0].toString(),
-                            nextTwinId,
-                            "Twin struct's id is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[1].toString(),
-                            twin.sellerId,
-                            "Twin struct's sellerId is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[2].toString(),
-                            twin.supplyAvailable,
-                            "Twin struct's supplyAvailable is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[3].toString(),
-                            twin.supplyIds.toString(),
-                            "Twin struct's supplyIds is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[4].toString(),
-                            twin.tokenId.toString(),
-                            "Twin struct's tokenId is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[5],
-                            twin.tokenAddress,
-                            "Twin struct's tokenAddress is incorrect"
-                        );
-
-                        // Unable to match whole eventArgs.twin struct. Hence confirming the Struct size.
-                        assert.equal(
-                            eventArgs.twin.length,
-                            Object.keys(twin).length,
-                            "Twin struct does not match"
-                        );
-                    }
+                const event = getEvent(txReceipt, TwinHandlerFacet_Factory, 'TwinCreated');
+                assert.equal(
+                    event.twinId.toString(),
+                    nextTwinId,
+                    'Twin Id is incorrect'
+                );
+                assert.equal(
+                    event.sellerId.toString(),
+                    twin.sellerId,
+                    'Seller Id is incorrect'
+                );
+                assert.equal(
+                    Twin.fromStruct(event.twin).toString(),
+                    twin.toString(),
+                    "Twin struct is incorrect"
                 );
             });
 
@@ -357,42 +252,21 @@ describe("IBosonTwinHandler", function() {
                 const tx = await twinHandler.connect(seller).createTwin(twin, seller.address);
                 const txReceipt = await tx.wait();
 
-                assertEventEmitted(
-                    txReceipt,
-                    TwinHandlerFacet_Factory,
-                    'TwinCreated',
-                    function(eventArgs) {
-                        assert.equal(
-                            eventArgs.twinId.toString(),
-                            twin.id,
-                            'Twin Id is incorrect'
-                        );
-                        assert.equal(
-                            eventArgs.sellerId.toString(),
-                            twin.sellerId,
-                            'Seller Id is incorrect'
-                        );
-                        assert.equal(
-                            eventArgs.twin[2].toString(),
-                            twin.supplyAvailable,
-                            "Twin struct's supplyAvailable is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[3].toString(),
-                            twin.supplyIds.toString(),
-                            "Twin struct's supplyIds is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[4].toString(),
-                            twin.tokenId.toString(),
-                            "Twin struct's tokenId is incorrect"
-                        );
-                        assert.equal(
-                            eventArgs.twin[5],
-                            twin.tokenAddress,
-                            "Twin struct's tokenAddress is incorrect"
-                        );
-                    }
+                const event = getEvent(txReceipt, TwinHandlerFacet_Factory, 'TwinCreated');
+                assert.equal(
+                    event.twinId.toString(),
+                    nextTwinId,
+                    'Twin Id is incorrect'
+                );
+                assert.equal(
+                    event.sellerId.toString(),
+                    twin.sellerId,
+                    'Seller Id is incorrect'
+                );
+                assert.equal(
+                    Twin.fromStruct(event.twin).toString(),
+                    twin.toString(),
+                    "Twin struct is incorrect"
                 );
             });
 

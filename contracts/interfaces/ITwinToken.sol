@@ -8,7 +8,7 @@ import "./IERC165.sol";
 /**
  * @dev Interface of a ERC721 and ERC1155 compliant contract.
  */
-interface IERC721ERC1155 is IERC165 {
+interface ITwinToken is IERC165 {
     /**
      * @dev Returns if the `operator` is allowed to manage the assets of `owner`.
      *
