@@ -882,7 +882,7 @@ describe("IBosonOfferHandler", function() {
 
                 expect(group.isValid()).is.true;
         
-                // How that offer looks as a returned struct
+                // How that group looks as a returned struct
                 groupStruct = group.toStruct();
 
                 // initialize offerHandler

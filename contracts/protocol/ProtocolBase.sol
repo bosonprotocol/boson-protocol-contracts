@@ -127,7 +127,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     view
     returns(bool exists, BosonTypes.Group storage group) {
 
-        // Get the exchange's slot
+        // Get the group's slot
         group = protocolStorage().groups[_groupId];
 
         // Determine existence

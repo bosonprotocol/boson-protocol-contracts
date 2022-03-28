@@ -145,6 +145,7 @@ interface IBosonOfferHandler {
      * - seller does not match caller
      * - any of offers belongs to different seller
      * - any of offers does not exist
+     * - offer exists in a different group
      *
      * @param _group - the fully populated struct with group id set to 0x0
      */
