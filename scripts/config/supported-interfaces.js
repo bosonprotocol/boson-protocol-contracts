@@ -30,7 +30,7 @@ const otherInterfaces = {
 async function getInterfaceIds() {
     let interfaceIds = {};
     for (const interface of interfaces) {
-        let contractInstance = await ethers.getContractAt(interface, "0x000000000000000000000000000000000000");
+        let contractInstance = await ethers.getContractAt(interface, ethers.constants.AddressZero);
         interfaceIds[interface] = getInterfaceId(contractInstance);
     }
     return {...interfaceIds, ...otherInterfaces};
