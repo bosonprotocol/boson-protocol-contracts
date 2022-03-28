@@ -19,7 +19,7 @@ const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protoco
     // Common vars
     let InterfaceIds;
     let accounts, deployer, rando;
-    let erc165, protocolDiamond, diamondLoupe, diamondCut, accessController, accountHandler, accountrHandlerFacet, configHandlerFacet, protocolConfig, gasLimit;
+    let erc165, protocolDiamond, diamondLoupe, diamondCut, accessController, accountHandler, accountHandlerFacet, configHandlerFacet, protocolConfig, gasLimit;
     let seller, sellerStruct, sellerId, active;
     let expected, nextAccountId;
 
@@ -52,7 +52,7 @@ const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protoco
         await accessController.grantRole(Role.UPGRADER, deployer.address);
 
         // Cut the protocol handler facets into the Diamond
-        [accountrHandlerFacet] = await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet"]);
+        [accountHandlerFacet] = await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet"]);
 
         // Add config Handler, so seller id starts at 1
         const protocolConfig = [
