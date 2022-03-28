@@ -29,6 +29,18 @@ interface IBosonAccountHandler {
     external;
 
     /**
+     * @notice Gets the details about a seller.
+     *
+     * @param _sellerId - the id of the seller to check
+     * @return exists - the seller was found
+     * @return seller - the seller details. See {BosonTypes.Seller}
+     */
+    function getSeller(uint256 _sellerId)
+    external
+    view
+    returns(bool exists, BosonTypes.Seller memory seller);
+
+    /**
      * @notice Gets the next account Id that can be assigned to an account.
      *
      *  Does not increment the counter.

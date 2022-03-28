@@ -65,6 +65,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
         //Check for zero address
         require(_seller.admin != address(0) &&  _seller.operator != address(0) && _seller.clerk != address(0) && _seller.treasury != address(0), INVALID_ADDRESS);
 
+        //check that the addresses are unique to one seller Id
+        require(protocolStorage().sellerByOperator[_seller.operator] == 0 && protocolStorage().sellerByAdmin[_seller.admin] == 0 && protocolStorage().sellerByClerk[_seller.clerk] == 0,  SELLER_ADDRESS_MUST_BE_UNIQUE);
+
         // Get storage location for seller
         (,Seller storage seller) = fetchSeller(_seller.id);
 
@@ -76,6 +79,21 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
         seller.treasury = _seller.treasury;
         seller.active = _seller.active;
        
+    }
+
+     /**
+     * @notice Gets the details about a seller.
+     *
+     * @param _sellerId - the id of the seller to check
+     * @return exists - the seller was found
+     * @return seller - the seller details. See {BosonTypes.Seller}
+     */
+    function getSeller(uint256 _sellerId)
+    external
+    view
+    returns(bool exists, Seller memory seller) 
+    {
+        return fetchSeller(_sellerId);
     }
 
     /**

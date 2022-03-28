@@ -24,7 +24,10 @@ contract BosonConstants {
     // Revert Reasons: Access related
     string internal constant ACCESS_DENIED = "Access denied, caller doesn't have role";
     string internal constant NOT_OPERATOR = "Not seller's operator";
+
+    //Revert Reasons: Seller-related
     string internal constant SELLER_MUBT_BE_ACTIVE = "Seller must be active";
+    string internal constant SELLER_ADDRESS_MUST_BE_UNIQUE = "Seller address cannot be assigned to another seller Id";
 
     // Revert Reasons: Offer related
     string internal constant NO_SUCH_OFFER = "No such offer";
