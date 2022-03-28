@@ -37,7 +37,7 @@ describe("IBosonTwinHandler", function() {
         contractForeign721,
         contractForeign1155,
         contractTest4FacetFallback;
-    let twin, nextTwinId, invalidTwinId, support;
+    let twin, nextTwinId, invalidTwinId, support, twinInstance;
     let id,
         sellerId,
         supplyAvailable,
@@ -155,6 +155,11 @@ describe("IBosonTwinHandler", function() {
                 const txReceipt = await tx.wait();
 
                 const event = getEvent(txReceipt, TwinHandlerFacet_Factory, 'TwinCreated');
+
+                twinInstance = Twin.fromStruct(event.twin);
+                // Validate the instance
+                expect(twinInstance.isValid()).to.be.true;
+
                 assert.equal(
                     event.twinId.toString(),
                     nextTwinId,
@@ -183,6 +188,11 @@ describe("IBosonTwinHandler", function() {
                 const txReceipt = await tx.wait();
 
                 const event = getEvent(txReceipt, TwinHandlerFacet_Factory, 'TwinCreated');
+
+                twinInstance = Twin.fromStruct(event.twin);
+                // Validate the instance
+                expect(twinInstance.isValid()).to.be.true;
+
                 assert.equal(
                     event.twinId.toString(),
                     nextTwinId,
@@ -229,6 +239,11 @@ describe("IBosonTwinHandler", function() {
                 const txReceipt = await tx.wait();
 
                 const event = getEvent(txReceipt, TwinHandlerFacet_Factory, 'TwinCreated');
+
+                twinInstance = Twin.fromStruct(event.twin);
+                // Validate the instance
+                expect(twinInstance.isValid()).to.be.true;
+
                 assert.equal(
                     event.twinId.toString(),
                     nextTwinId,
@@ -258,6 +273,11 @@ describe("IBosonTwinHandler", function() {
                 const txReceipt = await tx.wait();
 
                 const event = getEvent(txReceipt, TwinHandlerFacet_Factory, 'TwinCreated');
+
+                twinInstance = Twin.fromStruct(event.twin);
+                // Validate the instance
+                expect(twinInstance.isValid()).to.be.true;
+
                 assert.equal(
                     event.twinId.toString(),
                     nextTwinId,
