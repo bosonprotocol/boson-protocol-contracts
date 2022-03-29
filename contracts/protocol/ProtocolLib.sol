@@ -132,5 +132,4 @@ library ProtocolLib {
             pi.slot := position
         }
     }
-
 }
