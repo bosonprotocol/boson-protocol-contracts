@@ -2,7 +2,11 @@
  * Reasons for Boson Protocol transactions to revert
  */
 exports.RevertReasons = {
-  //General
+  
+  // Access related
+  ACCESS_DENIED: "Access denied, caller doesn't have role",
+
+  // General
   INVALID_ADDRESS: "Invalid address",
 
   // Facet initializer related
@@ -17,7 +21,11 @@ exports.RevertReasons = {
   OFFER_MUST_BE_ACTIVE: "Offer must be active",
   OFFER_NOT_UPDATEABLE: "Offer not updateable",
 
-  //Seller-related
+  // Seller-related
   SELLER_MUST_BE_ACTIVE: "Seller must be active",
   SELLER_ADDRESS_MUST_BE_UNIQUE: "Seller address cannot be assigned to another seller Id",
+  
+  // Twin related
+  NO_TRANSFER_APPROVED: "No transfer approved",
+  UNSUPPORTED_TOKEN: "Unsupported token"
 };

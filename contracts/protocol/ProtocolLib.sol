@@ -23,6 +23,8 @@ library ProtocolLib {
         address voucherAddress;
         // Percentage that will be taken as a fee from the net of a Boson Protocol exchange
         uint16 protocolFeePercentage; // 1.75% = 175, 100% = 10000
+        // limit how many offers can be added to the group
+        uint16 maxOffersPerGroup;
         // offer id => offer
         mapping(uint256 => BosonTypes.Offer) offers;
         // exchange id => exchange
@@ -47,6 +49,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Twin) twins;
         // offer id => exchange ids
         mapping(uint256 => uint256[]) exchangesByOffer;
+
+
     }
 
     // Incrementing ID counters
