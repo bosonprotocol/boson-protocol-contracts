@@ -125,7 +125,7 @@ const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protoco
 
             it("caller is not the admin", async function ()  {
 
-                // Attempt to Create a seller, expecting revert
+                // Attempt to set new max offer per group, expecting revert
                 await expect(configHandler.connect(rando).setMaxOffersPerGroup(maxOffersPerGroup))
                     .to.revertedWith(RevertReasons.ACCESS_DENIED);
 
@@ -143,7 +143,7 @@ const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protoco
 
         it("Initial values are correct", async function () {
 
-            // Set new max offer per group, testing for the event
+            // Verify that initial values matches those in constructor
             expect(await configHandler.connect(rando).getTreasuryAddress()).to.equal(treasury.address, 'Invalid treasury address');
             expect(await configHandler.connect(rando).getTokenAddress()).to.equal(token.address, 'Invalid token address');
             expect(await configHandler.connect(rando).getProtocolFeePercentage()).to.equal(protocolFee, 'Invalid protocol fee');
