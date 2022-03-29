@@ -1066,7 +1066,7 @@ describe("IBosonOfferHandler", function() {
     
                         // Attempt to create an group, expecting revert
                         await expect(offerHandler.connect(seller).createGroup(group))
-                            .to.revertedWith(RevertReasons.OFFER_ALREADY_IN_GROUP);
+                            .to.revertedWith(RevertReasons.OFFER_MUST_BE_UNIQUE);
                     });
     
                     it("Offer is duplicated", async function () {
@@ -1076,7 +1076,7 @@ describe("IBosonOfferHandler", function() {
     
                         // Attempt to create an group, expecting revert
                         await expect(offerHandler.connect(seller).createGroup(group))
-                            .to.revertedWith(RevertReasons.OFFER_ALREADY_IN_GROUP);
+                            .to.revertedWith(RevertReasons.OFFER_MUST_BE_UNIQUE);
                     });    
     
                 });
