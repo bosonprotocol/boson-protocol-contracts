@@ -41,13 +41,7 @@ describe("IBosonConfigHandler", function () {
     protocolFee = 12;
     maxOffersPerGroup = 100;
 
-    const protocolConfig = [
-      token.address,
-      treasury.address,
-      protocolFee,
-      maxOffersPerGroup]
-    ;
-
+    const protocolConfig = [token.address, treasury.address, protocolFee, maxOffersPerGroup];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
     // Cast Diamond to IERC165
