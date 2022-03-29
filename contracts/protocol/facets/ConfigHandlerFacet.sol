@@ -23,7 +23,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     function initialize(
         address payable _tokenAddress,
         address payable _treasuryAddress,
-        uint16 _protocolFeePercentage
+        uint16 _protocolFeePercentage,
+        uint16 _maxOffersPerGroup
     )
     public
     onlyUnInitialized(type(IBosonConfigHandler).interfaceId)
@@ -36,6 +37,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         ps.tokenAddress = _tokenAddress;
         ps.treasuryAddress = _treasuryAddress;
         ps.protocolFeePercentage = _protocolFeePercentage;
+        ps.maxOffersPerGroup = _maxOffersPerGroup;
 
 
         // Initialize protocol counters
@@ -168,6 +170,35 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     returns (uint16)
     {
         return protocolStorage().protocolFeePercentage;
+    }
+
+
+     /**
+     * @notice Sets the maximum numbers of offers that can be added to a group in a single transaction
+     *
+     * Emits a MaxOffersPerGroupChanged event.
+     *
+     * @param _maxOffersPerGroup - the maximum length of {BosonTypes.Group.offerIds}
+     */
+    function setMaxOffersPerGroup(uint16 _maxOffersPerGroup)
+    external
+    override
+    onlyRole(ADMIN)
+    {
+        protocolStorage().maxOffersPerGroup = _maxOffersPerGroup;
+        emit MaxOffersPerGroupChanged(_maxOffersPerGroup, msg.sender);
+    }
+
+    /**
+     * @notice Get the maximum offers per group
+     */
+    function getMaxOffersPerGroup()
+    external
+    override
+    view
+    returns (uint16)
+    {
+        return protocolStorage().maxOffersPerGroup;
     }
 
 }
