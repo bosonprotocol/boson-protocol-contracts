@@ -13,7 +13,7 @@ const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protoco
 const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
-const { assertEventEmitted } = require("../../testHelpers/events");
+const { getEvent } = require("../../scripts/util/test-events.js");
 
 /**
  *  Test the Boson Offer Handler interface
@@ -898,51 +898,28 @@ describe("IBosonOfferHandler", function() {
                     const tx = await offerHandler.connect(seller).createGroup(group);
                     const txReceipt = await tx.wait();
 
-                    assertEventEmitted(
-                        txReceipt,
-                        offerHandlerFacet_Factory,
-                        'GroupCreated',
-                        function(eventArgs) {
-                            assert.equal(
-                                eventArgs.groupId.toString(),
-                                group.id,
-                                'Group Id is incorrect'
-                            );
-                            assert.equal(
-                                eventArgs.sellerId.toString(),
-                                group.sellerId,
-                                'Seller Id is incorrect'
-                            );
-                            assert.equal(
-                                eventArgs.group.id.toString(),
-                                group.id,
-                                "Group struct's id is incorrect"
-                            );
-                            assert.equal(
-                                eventArgs.group.sellerId.toString(),
-                                group.sellerId,
-                                "Group struct's sellerId is incorrect"
-                            );
-                            assert.equal(
-                                eventArgs.group.offerIds.toString(),
-                                group.offerIds,
-                                "Group struct's offerIds array is incorrect"
-                            );
-                            assert.equal(
-                                eventArgs.group.condition.toString(),
-                                group.condition.toStruct(),
-                                "Group struct's condition is incorrect"
-                            );
-    
-                            // Unable to match whole eventArgs.group struct. Hence confirming the Struct size.
-                            assert.equal(
-                                eventArgs.group.length,
-                                Object.keys(group).length,
-                                "Group struct does not match"
-                            );
-                        }
+                    const event = getEvent(txReceipt, offerHandlerFacet_Factory, 'GroupCreated');
+
+                    groupInstance = Group.fromStruct(event.group);
+                    // Validate the instance
+                    expect(groupInstance.isValid()).to.be.true;
+
+                    assert.equal(
+                        event.groupId.toString(),
+                        group.id,
+                        'Group Id is incorrect'
                     );
-    
+                    assert.equal(
+                        event.sellerId.toString(),
+                        group.sellerId,
+                        'Seller Id is incorrect'
+                    );
+                    assert.equal(
+                        groupInstance.toString(),
+                        group.toString(),
+                        "Group struct is incorrect"
+                    );   
+                            
                 });
 
                 it("should update state", async function () {
@@ -970,49 +947,26 @@ describe("IBosonOfferHandler", function() {
                     const tx = await offerHandler.connect(seller).createGroup(group);
                     const txReceipt = await tx.wait();
 
-                    assertEventEmitted(
-                        txReceipt,
-                        offerHandlerFacet_Factory,
-                        'GroupCreated',
-                        function(eventArgs) {
-                            assert.equal(
-                                eventArgs.groupId.toString(),
-                                nextGroupId,
-                                'Group Id is incorrect'
-                            );
-                            assert.equal(
-                                eventArgs.sellerId.toString(),
-                                group.sellerId,
-                                'Seller Id is incorrect'
-                            );
-                            assert.equal(
-                                eventArgs.group.id.toString(),
-                                nextGroupId,
-                                "Group struct's id is incorrect"
-                            );
-                            assert.equal(
-                                eventArgs.group.sellerId.toString(),
-                                group.sellerId,
-                                "Group struct's sellerId is incorrect"
-                            );
-                            assert.equal(
-                                eventArgs.group.offerIds.toString(),
-                                group.offerIds,
-                                "Group struct's offerIds array is incorrect"
-                            );
-                            assert.equal(
-                                eventArgs.group.condition.toString(),
-                                group.condition.toStruct(),
-                                "Group struct's condition is incorrect"
-                            );
-    
-                            // Unable to match whole eventArgs.group struct. Hence confirming the Struct size.
-                            assert.equal(
-                                eventArgs.group.length,
-                                Object.keys(group).length,
-                                "Group struct does not match"
-                            );
-                        }
+                    const event = getEvent(txReceipt, offerHandlerFacet_Factory, 'GroupCreated');
+
+                    groupInstance = Group.fromStruct(event.group);
+                    // Validate the instance
+                    expect(groupInstance.isValid()).to.be.true;
+
+                    assert.equal(
+                        event.groupId.toString(),
+                        nextGroupId,
+                        'Group Id is incorrect'
+                    );
+                    assert.equal(
+                        event.sellerId.toString(),
+                        group.sellerId,
+                        'Seller Id is incorrect'
+                    );
+                    assert.equal(
+                        groupInstance.toStruct().toString(),
+                        groupStruct.toString(),
+                        "Group struct is incorrect"
                     );
     
                     // wrong group id should not exist
