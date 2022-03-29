@@ -23,7 +23,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     function initialize(
         address payable _tokenAddress,
         address payable _treasuryAddress,
-        uint16 _protocolFeePercentage
+        uint16 _protocolFeePercentage,
+        uint16 _maxOffersPerGroup
     )
     public
     onlyUnInitialized(type(IBosonConfigHandler).interfaceId)
@@ -36,6 +37,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         ps.tokenAddress = _tokenAddress;
         ps.treasuryAddress = _treasuryAddress;
         ps.protocolFeePercentage = _protocolFeePercentage;
+        ps.maxOffersPerGroup = _maxOffersPerGroup;
 
 
         // Initialize protocol counters

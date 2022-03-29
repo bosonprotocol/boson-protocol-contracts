@@ -29,6 +29,7 @@ function getConfig() {
 
     // Protocol configuration params
     const feePercentage = "150"; // 1.5%  = 150
+    const maxOffersPerGroup = "100";
 
     // Boson Token (ERC-20) contract address
     const TOKEN = {
@@ -48,6 +49,7 @@ function getConfig() {
             tokenAddress: TOKEN[network],
             multisigAddress: MULTISIG[network],
             feePercentage,
+            maxOffersPerGroup
     };
 }
 

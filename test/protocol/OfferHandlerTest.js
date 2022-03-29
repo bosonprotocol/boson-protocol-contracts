@@ -66,7 +66,8 @@ describe("IBosonOfferHandler", function() {
         const protocolConfig = [
             '0x0000000000000000000000000000000000000000',
             '0x0000000000000000000000000000000000000000',
-            '0'
+            '0',
+            '100'
         ];
         [configHandlerFacet] = await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 

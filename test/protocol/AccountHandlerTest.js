@@ -58,7 +58,8 @@ const { deployProtocolConfigFacet } = require('../../scripts/util/deploy-protoco
         const protocolConfig = [
             '0x0000000000000000000000000000000000000000',
             '0x0000000000000000000000000000000000000000',
-            '0'
+            '0',
+            '100'
         ];
 
         [configHandlerFacet] = await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
