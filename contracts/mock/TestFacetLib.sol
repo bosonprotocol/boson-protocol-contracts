@@ -9,17 +9,13 @@ pragma solidity ^0.8.0;
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 library TestFacetLib {
-
     bytes32 internal constant TEST_FACET_STORAGE_POSITION = keccak256("diamond.test.facet.storage");
 
     struct TestFacetStorage {
-
         // a test address
         address testAddress;
-
         // facet initialization state
         bool initialized;
-
     }
 
     function testFacetStorage() internal pure returns (TestFacetStorage storage tfs) {
@@ -28,5 +24,4 @@ library TestFacetLib {
             tfs.slot := position
         }
     }
-
 }

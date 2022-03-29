@@ -11,7 +11,6 @@ import "../domain/BosonTypes.sol";
  * The ERC-165 identifier for this interface is: 0x1753a1ce
  */
 interface IBosonConfigHandler {
-
     /// Events
     event VoucherAddressChanged(address indexed voucher, address indexed changedBy);
     event TokenAddressChanged(address indexed tokenAddress, address indexed changedBy);
@@ -25,16 +24,12 @@ interface IBosonConfigHandler {
      *
      * @param _token - the address of the token contract
      */
-    function setTokenAddress(address payable _token)
-    external;
+    function setTokenAddress(address payable _token) external;
 
     /**
      * @notice The tokenAddress getter
      */
-    function getTokenAddress()
-    external
-    view
-    returns (address payable);
+    function getTokenAddress() external view returns (address payable);
 
     /**
      * @notice Sets the address of the Boson Protocol treasury.
@@ -43,16 +38,12 @@ interface IBosonConfigHandler {
      *
      * @param _treasuryAddress - the address of the treasury
      */
-    function setTreasuryAddress(address payable _treasuryAddress)
-    external;
+    function setTreasuryAddress(address payable _treasuryAddress) external;
 
     /**
      * @notice The treasuryAddress getter
      */
-    function getTreasuryAddress()
-    external
-    view
-    returns (address payable);
+    function getTreasuryAddress() external view returns (address payable);
 
     /**
      * @notice Sets the address of the Voucher NFT address (proxy)
@@ -61,16 +52,12 @@ interface IBosonConfigHandler {
      *
      * @param _voucher - the address of the nft contract
      */
-    function setVoucherAddress(address _voucher)
-    external;
+    function setVoucherAddress(address _voucher) external;
 
     /**
      * @notice The Voucher address getter
      */
-    function getVoucherAddress()
-    external
-    view
-    returns (address);
+    function getVoucherAddress() external view returns (address);
 
     /**
      * @notice Sets the protocol fee percentage.
@@ -82,15 +69,10 @@ interface IBosonConfigHandler {
      *
      * @param _feePercentage - the percentage that will be taken as a fee from the net of a Boson Protocol exchange
      */
-    function setProtocolFeePercentage(uint16 _feePercentage)
-    external;
+    function setProtocolFeePercentage(uint16 _feePercentage) external;
 
     /**
      * @notice Get the protocol fee percentage
      */
-    function getProtocolFeePercentage()
-    external
-    view
-    returns (uint16);
-
+    function getProtocolFeePercentage() external view returns (uint16);
 }

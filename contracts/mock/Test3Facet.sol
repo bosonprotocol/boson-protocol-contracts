@@ -13,8 +13,7 @@ import "../domain/BosonConstants.sol";
  * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract Test3Facet is BosonConstants{
-    
+contract Test3Facet is BosonConstants {
     modifier onlyUnInitialized() {
         TestFacetLib.TestFacetStorage storage tfs = TestFacetLib.testFacetStorage();
         require(!tfs.initialized, ALREADY_INITIALIZED);
@@ -42,5 +41,4 @@ contract Test3Facet is BosonConstants{
         TestFacetLib.TestFacetStorage storage tfs = TestFacetLib.testFacetStorage();
         return tfs.testAddress;
     }
-
 }

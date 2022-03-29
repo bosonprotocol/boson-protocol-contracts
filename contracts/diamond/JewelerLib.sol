@@ -24,7 +24,6 @@ import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
  */
 
 library JewelerLib {
-
     event DiamondCut(IDiamondCut.FacetCut[] _diamondCut, address _init, bytes _calldata);
 
     bytes32 internal constant CLEAR_ADDRESS_MASK = bytes32(uint256(0xffffffffffffffffffffffff));
@@ -46,7 +45,6 @@ library JewelerLib {
         address _init,
         bytes memory _calldata
     ) internal {
-
         // Get the diamond storage slot
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
 
@@ -58,11 +56,9 @@ library JewelerLib {
         // Check if last selector slot is full
         // N.B.: selectorCount & 7 is a gas-efficient equivalent to selectorCount % 8
         if (selectorCount & 7 > 0) {
-
             // get last selectorSlot
             // N.B.: selectorCount >> 3 is a gas-efficient equivalent to selectorCount / 8
             selectorSlot = ds.selectorSlots[selectorCount >> 3];
-
         }
 
         // Cut the facets
@@ -84,10 +80,8 @@ library JewelerLib {
         // Update last selector slot
         // N.B.: selectorCount & 7 is a gas-efficient equivalent to selectorCount % 8
         if (selectorCount & 7 > 0) {
-
             // N.B.: selectorCount >> 3 is a gas-efficient equivalent to selectorCount / 8
             ds.selectorSlots[selectorCount >> 3] = selectorSlot;
-
         }
 
         // Notify listeners of state change
@@ -120,31 +114,33 @@ library JewelerLib {
         IDiamondCut.FacetCutAction _action,
         bytes4[] memory _selectors
     ) internal returns (uint256, bytes32) {
-
         // Make sure there are some selectors to work with
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
         require(_selectors.length > 0, "LibDiamondCut: No selectors in facet to cut");
 
         // Add a selector
         if (_action == IDiamondCut.FacetCutAction.Add) {
-
             // Make sure facet being added has code
             enforceHasContractCode(_newFacetAddress, "LibDiamondCut: Add facet has no code");
 
             // Iterate selectors
             for (uint256 selectorIndex; selectorIndex < _selectors.length; selectorIndex++) {
-
                 // Make sure function doesn't already exist
                 bytes4 selector = _selectors[selectorIndex];
                 bytes32 oldFacet = ds.facets[selector];
-                require(address(bytes20(oldFacet)) == address(0), "LibDiamondCut: Can't add function that already exists");
+                require(
+                    address(bytes20(oldFacet)) == address(0),
+                    "LibDiamondCut: Can't add function that already exists"
+                );
 
                 // add facet for selector
                 ds.facets[selector] = bytes20(_newFacetAddress) | bytes32(_selectorCount);
                 uint256 selectorInSlotPosition = (_selectorCount & 7) << 5;
 
                 // clear selector position in slot and add selector
-                _selectorSlot = (_selectorSlot & ~(CLEAR_SELECTOR_MASK >> selectorInSlotPosition)) | (bytes32(selector) >> selectorInSlotPosition);
+                _selectorSlot =
+                    (_selectorSlot & ~(CLEAR_SELECTOR_MASK >> selectorInSlotPosition)) |
+                    (bytes32(selector) >> selectorInSlotPosition);
 
                 // if slot is full then write it to storage
                 if (selectorInSlotPosition == 224) {
@@ -156,15 +152,13 @@ library JewelerLib {
                 _selectorCount++;
             }
 
-        // Replace a selector
+            // Replace a selector
         } else if (_action == IDiamondCut.FacetCutAction.Replace) {
-
             // Make sure replacement facet has code
             enforceHasContractCode(_newFacetAddress, "LibDiamondCut: Replace facet has no code");
 
             // Iterate selectors
             for (uint256 selectorIndex; selectorIndex < _selectors.length; selectorIndex++) {
-
                 // Make sure function doesn't already exist
                 bytes4 selector = _selectors[selectorIndex];
                 bytes32 oldFacet = ds.facets[selector];
@@ -172,17 +166,18 @@ library JewelerLib {
 
                 // only useful if immutable functions exist
                 require(oldFacetAddress != address(this), "LibDiamondCut: Can't replace immutable function");
-                require(oldFacetAddress != _newFacetAddress, "LibDiamondCut: Can't replace function with same function");
+                require(
+                    oldFacetAddress != _newFacetAddress,
+                    "LibDiamondCut: Can't replace function with same function"
+                );
                 require(oldFacetAddress != address(0), "LibDiamondCut: Can't replace function that doesn't exist");
 
                 // replace old facet address
                 ds.facets[selector] = (oldFacet & CLEAR_ADDRESS_MASK) | bytes20(_newFacetAddress);
-
             }
 
-        // Remove a selector
+            // Remove a selector
         } else if (_action == IDiamondCut.FacetCutAction.Remove) {
-
             // Make sure facet address is zero address
             require(_newFacetAddress == address(0), "LibDiamondCut: Remove facet address must be address(0)");
 
@@ -192,7 +187,6 @@ library JewelerLib {
 
             // Iterate selectors
             for (uint256 selectorIndex; selectorIndex < _selectors.length; selectorIndex++) {
-
                 // Get previous selector slot, wrapping around to last from zero
                 if (_selectorSlot == 0) {
                     selectorSlotCount--;
@@ -211,10 +205,16 @@ library JewelerLib {
                     // get selector and facet, making sure it exists
                     bytes4 selector = _selectors[selectorIndex];
                     bytes32 oldFacet = ds.facets[selector];
-                    require(address(bytes20(oldFacet)) != address(0), "LibDiamondCut: Can't remove function that doesn't exist");
+                    require(
+                        address(bytes20(oldFacet)) != address(0),
+                        "LibDiamondCut: Can't remove function that doesn't exist"
+                    );
 
                     // only useful if immutable functions exist
-                    require(address(bytes20(oldFacet)) != address(this), "LibDiamondCut: Can't remove immutable function");
+                    require(
+                        address(bytes20(oldFacet)) != address(this),
+                        "LibDiamondCut: Can't remove immutable function"
+                    );
 
                     // replace selector with last selector in ds.facets
                     // gets the last selector
@@ -231,7 +231,6 @@ library JewelerLib {
 
                 // Update selector slot if count changed
                 if (oldSelectorsSlotCount != selectorSlotCount) {
-
                     bytes32 oldSelectorSlot = ds.selectorSlots[oldSelectorsSlotCount];
 
                     // clears the selector we are deleting and puts the last selector in its place.
@@ -241,7 +240,6 @@ library JewelerLib {
 
                     // update storage with the modified slot
                     ds.selectorSlots[oldSelectorsSlotCount] = oldSelectorSlot;
-
                 } else {
                     // clears the selector we are deleting and puts the last selector in its place.
                     _selectorSlot =
@@ -258,7 +256,6 @@ library JewelerLib {
 
             // Update selector count
             _selectorCount = selectorSlotCount * 8 + selectorInSlotIndex;
-
         }
 
         // return updated selector count and selector slot for
@@ -272,14 +269,10 @@ library JewelerLib {
      * @param _calldata - the
      */
     function initializeDiamondCut(address _init, bytes memory _calldata) internal {
-
         // If _init is not populated, then _calldata must also be unpopulated
         if (_init == address(0)) {
-
             require(_calldata.length == 0, "LibDiamondCut: _init is address(0) but_calldata is not empty");
-
         } else {
-
             // Revert if _calldata is not populated
             require(_calldata.length > 0, "LibDiamondCut: _calldata is empty but _init is not address(0)");
 
@@ -300,7 +293,6 @@ library JewelerLib {
                     revert("LibDiamondCut: _init function reverted");
                 }
             }
-
         }
     }
 

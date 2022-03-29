@@ -9,92 +9,66 @@ import "../domain/BosonTypes.sol";
  * @dev Provides access to the Protocol Storage, Counters, and Initializer slots for Facets
  */
 library ProtocolLib {
-
     bytes32 internal constant PROTOCOL_STORAGE_POSITION = keccak256("boson.protocol.storage");
     bytes32 internal constant PROTOCOL_COUNTERS_POSITION = keccak256("boson.protocol.counters");
     bytes32 internal constant PROTOCOL_INITIALIZERS_POSITION = keccak256("boson.protocol.initializers");
 
     // Shared storage for all protocol facets
     struct ProtocolStorage {
-
         // Address of the Boson Protocol treasury
         address payable treasuryAddress;
-
         // Address of the Boson Token (ERC-20 contract)
         address payable tokenAddress;
-
         // Address of the Boson Protocol Voucher proxy
         address voucherAddress;
-
         // Percentage that will be taken as a fee from the net of a Boson Protocol exchange
-        uint16 protocolFeePercentage;         // 1.75% = 175, 100% = 10000
-
+        uint16 protocolFeePercentage; // 1.75% = 175, 100% = 10000
         // offer id => offer
         mapping(uint256 => BosonTypes.Offer) offers;
-
         // exchange id => exchange
         mapping(uint256 => BosonTypes.Exchange) exchanges;
-
         // exchange id => dispute
         mapping(uint256 => BosonTypes.Dispute) disputes;
-
         // seller id => seller
         mapping(uint256 => BosonTypes.Seller) sellers;
-
         //seller operator address => sellerId
         mapping(address => uint256) sellerByOperator;
-
         //seller admin address => sellerId
         mapping(address => uint256) sellerByAdmin;
-
         //seller clerk address => sellerId
         mapping(address => uint256) sellerByClerk;
-
         // buyer id => buyer
         mapping(uint256 => BosonTypes.Buyer) buyers;
-
         // group id => group
         mapping(uint256 => BosonTypes.Group) groups;
-
         // bundle id => bundle
         mapping(uint256 => BosonTypes.Bundle) bundles;
-
         // twin id => twin
         mapping(uint256 => BosonTypes.Twin) twins;
-
         // offer id => exchange ids
         mapping(uint256 => uint256[]) exchangesByOffer;
     }
 
     // Incrementing ID counters
     struct ProtocolCounters {
-
         // Next account id
         uint256 nextAccountId;
-
         // Next offer id
         uint256 nextOfferId;
-
         // Next exchange id
         uint256 nextExchangeId;
-
         // Next twin id
         uint256 nextTwinId;
-
         // Next group id
         uint256 nextGroupId;
-
         // Next twin id
         uint256 nextBundleId;
-
     }
 
     // Individual facet initialization states
     struct ProtocolInitializers {
-
         // interface id => initialized?
         mapping(bytes4 => bool) initializedInterfaces;
-
     }
 
     /**
@@ -132,5 +106,4 @@ library ProtocolLib {
             pi.slot := position
         }
     }
-
 }

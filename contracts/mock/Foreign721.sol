@@ -9,7 +9,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
  * @notice Mock ERC-(721/2981) NFT for Unit Testing
  */
 contract Foreign721 is ERC721Upgradeable {
-
     string public constant TOKEN_NAME = "Foreign721";
     string public constant TOKEN_SYMBOL = "721Test";
 
@@ -20,6 +19,4 @@ contract Foreign721 is ERC721Upgradeable {
     function mint(uint256 _tokenId) public {
         _mint(msg.sender, _tokenId);
     }
-
-
 }

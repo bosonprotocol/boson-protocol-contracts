@@ -14,7 +14,7 @@ import { TestFacetLib } from "./TestFacetLib.sol";
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract Test2FacetUpgrade {
-
-    function test2Func13() external pure returns (string memory) {return "json";}
-
+    function test2Func13() external pure returns (string memory) {
+        return "json";
+    }
 }

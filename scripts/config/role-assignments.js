@@ -1,4 +1,4 @@
-const {ContractAddresses} = require('./contract-addresses');
+const { ContractAddresses } = require("./contract-addresses");
 const Role = require("../domain/Role");
 
 /**
@@ -15,37 +15,29 @@ const Role = require("../domain/Role");
  *  3. Save changes to the repo as a record of who has what roles
  */
 exports.RoleAssignments = {
-
-    "ropsten": {
-
-        "Deployer / role admin address":
-            {
-                address: "",
-                roles: [Role.ADMIN, Role.UPGRADER]
-            },
-
-        "ProtocolDiamond contract": // For minting vouchers
-            {
-                address: ContractAddresses.ropsten.ProtocolDiamond,
-                roles: [Role.PROTOCOL]
-            },
-
+  ropsten: {
+    "Deployer / role admin address": {
+      address: "",
+      roles: [Role.ADMIN, Role.UPGRADER],
     },
 
-    "mainnet": {
+    // For minting vouchers
+    "ProtocolDiamond contract": {
+      address: ContractAddresses.ropsten.ProtocolDiamond,
+      roles: [Role.PROTOCOL],
+    },
+  },
 
-        "Deployer / role admin address":
-            {
-                address: "",
-                roles: [Role.ADMIN, Role.UPGRADER]
-            },
+  mainnet: {
+    "Deployer / role admin address": {
+      address: "",
+      roles: [Role.ADMIN, Role.UPGRADER],
+    },
 
-        "ProtocolDiamond contract": // For minting vouchers
-            {
-                address: ContractAddresses.mainnet.ProtocolDiamond,
-                roles: [Role.PROTOCOL]
-            },
-
-    }
-
+    // For minting vouchers
+    "ProtocolDiamond contract": {
+      address: ContractAddresses.mainnet.ProtocolDiamond,
+      roles: [Role.PROTOCOL],
+    },
+  },
 };

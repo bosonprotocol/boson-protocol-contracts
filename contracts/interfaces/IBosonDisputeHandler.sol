@@ -11,9 +11,13 @@ import "../domain/BosonTypes.sol";
  * The ERC-165 identifier for this interface is: 0x5aef573c
  */
 interface IBosonDisputeHandler {
-
     /// Events
-    event DisputeRaised(uint256 indexed exchangeId, uint256 indexed buyerId, uint256 indexed sellerId, string complaint);
+    event DisputeRaised(
+        uint256 indexed exchangeId,
+        uint256 indexed buyerId,
+        uint256 indexed sellerId,
+        string complaint
+    );
 
     /**
      * @notice Raise a dispute
@@ -28,10 +32,5 @@ interface IBosonDisputeHandler {
      * @param _offerId - the id of the associated offer
      * @param _complaint - the buyer's complaint description
      */
-    function raiseDispute(
-        uint256 _offerId,
-        string calldata _complaint
-    )
-    external;
-
+    function raiseDispute(uint256 _offerId, string calldata _complaint) external;
 }

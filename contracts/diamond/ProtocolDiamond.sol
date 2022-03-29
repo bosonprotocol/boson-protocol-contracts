@@ -21,7 +21,6 @@ import { JewelerLib } from "./JewelerLib.sol";
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract ProtocolDiamond {
-
     /**
      * @notice Constructor
      *
@@ -38,7 +37,6 @@ contract ProtocolDiamond {
         IDiamondCut.FacetCut[] memory _facetCuts,
         bytes4[] memory _interfaceIds
     ) payable {
-
         // Get the DiamondStorage struct
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
 
@@ -54,7 +52,6 @@ contract ProtocolDiamond {
                 DiamondLib.addSupportedInterface(_interfaceIds[x]);
             }
         }
-
     }
 
     /**
@@ -63,10 +60,8 @@ contract ProtocolDiamond {
      * @param _interfaceId - the sighash of the given interface
      */
     function supportsInterface(bytes4 _interfaceId) external view returns (bool) {
-
         // Get the DiamondStorage struct
-        return DiamondLib.supportsInterface(_interfaceId) ;
-
+        return DiamondLib.supportsInterface(_interfaceId);
     }
 
     /**
@@ -76,7 +71,6 @@ contract ProtocolDiamond {
      * function if a facet is found and returns any value.
      */
     fallback() external payable {
-
         // Get the DiamondStorage struct
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
 
@@ -90,14 +84,13 @@ contract ProtocolDiamond {
             let result := delegatecall(gas(), facet, 0, calldatasize(), 0, 0)
             returndatacopy(0, 0, returndatasize())
             switch result
-                case 0 {
-                    revert(0, returndatasize())
-                }
-                default {
-                    return(0, returndatasize())
-                }
+            case 0 {
+                revert(0, returndatasize())
+            }
+            default {
+                return(0, returndatasize())
+            }
         }
-
     }
 
     /// Contract can receive ETH
