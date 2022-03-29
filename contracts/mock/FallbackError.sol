@@ -7,10 +7,10 @@ pragma solidity ^0.8.0;
  * @notice Mock contract having a fallback function for Unit Testing
  */
 contract FallbackError {
-
     /**
      * @notice Fallback function
      */
-    fallback() external payable { revert("Error from fallback function"); }
-
+    fallback() external payable {
+        revert("Error from fallback function");
+    }
 }

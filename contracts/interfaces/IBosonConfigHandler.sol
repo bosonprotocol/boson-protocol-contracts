@@ -17,7 +17,7 @@ interface IBosonConfigHandler {
     event TreasuryAddressChanged(address indexed treasuryAddress, address indexed changedBy);
     event ProtocolFeePercentageChanged(uint16 feePercentage, address indexed changedBy);
     event MaxOffersPerGroupChanged(uint16 maxOffersPerGroup, address indexed changedBy);
-    
+
     /**
      * @notice Sets the address of the Boson Token (ERC-20) contract.
      *
@@ -75,11 +75,7 @@ interface IBosonConfigHandler {
     /**
      * @notice Get the protocol fee percentage
      */
-    function getProtocolFeePercentage()
-    external
-    view
-    returns (uint16);
-
+    function getProtocolFeePercentage() external view returns (uint16);
 
     /**
      * @notice Sets the maximum numbers of offers that can be added to a group in a single transaction
@@ -88,15 +84,10 @@ interface IBosonConfigHandler {
      *
      * @param _maxOffersPerGroup - the maximum length of {BosonTypes.Group.offerIds}
      */
-    function setMaxOffersPerGroup(uint16 _maxOffersPerGroup)
-    external;
+    function setMaxOffersPerGroup(uint16 _maxOffersPerGroup) external;
 
     /**
      * @notice Get the maximum offers per group
      */
-    function getMaxOffersPerGroup()
-    external
-    view
-    returns (uint16);
-
+    function getMaxOffersPerGroup() external view returns (uint16);
 }

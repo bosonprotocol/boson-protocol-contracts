@@ -63,6 +63,7 @@ describe("IBosonOfferHandler", function () {
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
       "0",
+      "0",
     ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 

@@ -24,7 +24,7 @@ async function deployProtocolConfigFacet(diamond, config, gasLimit) {
 
   // Cut ConfigHandler facet, initializing
   let configInitFunction =
-    "initialize(address payable _tokenAddress, address payable _multisigAddress, uint16 _feePercentage)";
+    "initialize(address payable _tokenAddress, address payable _treasuryAddress, uint16 _protocolFeePercentage, uint16 _maxOffersPerGroup)";
   const configInterface = new ethers.utils.Interface([`function ${configInitFunction}`]);
   const configCallData = configInterface.encodeFunctionData("initialize", config);
   const configHandlerCut = getFacetAddCut(configHandlerFacet, [configInitFunction]);

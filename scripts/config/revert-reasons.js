@@ -2,7 +2,6 @@
  * Reasons for Boson Protocol transactions to revert
  */
 exports.RevertReasons = {
-  
   // Access related
   ACCESS_DENIED: "Access denied, caller doesn't have role",
 
@@ -24,8 +23,8 @@ exports.RevertReasons = {
   // Seller-related
   SELLER_MUST_BE_ACTIVE: "Seller must be active",
   SELLER_ADDRESS_MUST_BE_UNIQUE: "Seller address cannot be assigned to another seller Id",
-  
+
   // Twin related
   NO_TRANSFER_APPROVED: "No transfer approved",
-  UNSUPPORTED_TOKEN: "Unsupported token"
+  UNSUPPORTED_TOKEN: "Unsupported token",
 };

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
+
 /**
  * @title BosonToken
  *
@@ -31,20 +32,14 @@ contract BosonToken {
     /**
      * @notice The faux ERC-20 allowance implementation
      */
-    function allowance(address _owner, address _spender)
-    public
-    view
-    returns (uint256) {
+    function allowance(address _owner, address _spender) public view returns (uint256) {
         return allowances[_owner][_spender];
     }
 
     /**
      * @notice The faux ERC-20 approve implementation
      */
-    function approve(address spender, uint256 amount)
-    public
-    virtual
-    returns (bool) {
+    function approve(address spender, uint256 amount) public virtual returns (bool) {
         address owner = msg.sender;
         _approve(owner, spender, amount);
         return true;
