@@ -9,15 +9,16 @@ describe("Seller", function() {
 
     // Suite-wide scope
     let seller, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-    let accounts, id, operator, authorizer, treasury, active;
+    let accounts, id, operator, admin, clerk, treasury, active;
 
     beforeEach( async function () {
 
         // Get a list of accounts
         accounts = await ethers.getSigners();
         operator = accounts[0].address;
-        authorizer = accounts[1].address;
-        treasury = accounts[2].address;
+        admin = accounts[1].address;
+        clerk = accounts[2].address
+        treasury = accounts[3].address;
 
         // Required constructor params
         id = "78";
@@ -30,10 +31,11 @@ describe("Seller", function() {
         it("Should allow creation of valid, fully populated Seller instance", async function () {
 
             // Create a valid seller
-            seller = new Seller(id, operator, authorizer, treasury, active);
+            seller = new Seller(id, operator, admin, clerk, treasury, active);
             expect(seller.idIsValid()).is.true;
             expect(seller.operatorIsValid()).is.true;
-            expect(seller.authorizerIsValid()).is.true;
+            expect(seller.adminIsValid()).is.true;
+            expect(seller.clerkIsValid()).is.true;
             expect(seller.treasuryIsValid()).is.true;
             expect(seller.activeIsValid()).is.true;
             expect(seller.isValid()).is.true;
@@ -47,7 +49,7 @@ describe("Seller", function() {
         beforeEach( async function () {
 
             // Create a valid seller, then set fields in tests directly
-            seller = new Seller(id, operator, authorizer, treasury, active);
+            seller = new Seller(id, operator, admin, clerk, treasury, active);
             expect(seller.isValid()).is.true;
 
         });
@@ -105,26 +107,50 @@ describe("Seller", function() {
 
         });
 
-        it("Always present, authorizer must be a string representation of an EIP-55 compliant address", async function() {
+        it("Always present, admin must be a string representation of an EIP-55 compliant address", async function() {
 
             // Invalid field value
-            seller.authorizer = "0xASFADF";
-            expect(seller.authorizerIsValid()).is.false;
+            seller.admin = "0xASFADF";
+            expect(seller.adminIsValid()).is.false;
             expect(seller.isValid()).is.false;
 
             // Invalid field value
-            seller.authorizer = "zedzdeadbaby";
-            expect(seller.authorizerIsValid()).is.false;
+            seller.admin = "zedzdeadbaby";
+            expect(seller.adminIsValid()).is.false;
             expect(seller.isValid()).is.false;
 
             // Valid field value
-            seller.authorizer = accounts[0].address;
-            expect(seller.authorizerIsValid()).is.true;
+            seller.admin = accounts[0].address;
+            expect(seller.adminIsValid()).is.true;
             expect(seller.isValid()).is.true;
 
             // Valid field value
-            seller.authorizer = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
-            expect(seller.authorizerIsValid()).is.true;
+            seller.admin = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
+            expect(seller.adminIsValid()).is.true;
+            expect(seller.isValid()).is.true;
+
+        });
+
+        it("Always present, clerk must be a string representation of an EIP-55 compliant address", async function() {
+
+            // Invalid field value
+            seller.clerk = "0xASFADF";
+            expect(seller.clerkIsValid()).is.false;
+            expect(seller.isValid()).is.false;
+
+            // Invalid field value
+            seller.clerk = "zedzdeadbaby";
+            expect(seller.clerkIsValid()).is.false;
+            expect(seller.isValid()).is.false;
+
+            // Valid field value
+            seller.clerk = accounts[0].address;
+            expect(seller.clerkIsValid()).is.true;
+            expect(seller.isValid()).is.true;
+
+            // Valid field value
+            seller.clerk = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
+            expect(seller.clerkIsValid()).is.true;
             expect(seller.isValid()).is.true;
 
         });
@@ -152,6 +178,7 @@ describe("Seller", function() {
             expect(seller.isValid()).is.true;
 
         });
+
 
         it("Always present, active must be a boolean", async function() {
 
@@ -184,14 +211,15 @@ describe("Seller", function() {
         beforeEach( async function () {
 
             // Create a valid seller, then set fields in tests directly
-            seller = new Seller(id, operator, authorizer, treasury, active);
+            seller = new Seller(id, operator, admin, clerk, treasury, active);
             expect(seller.isValid()).is.true;
 
             // Get plain object
             object = {
                 id,
                 operator,
-                authorizer,
+                admin,
+                clerk,
                 treasury,
                 active
             }
@@ -200,7 +228,8 @@ describe("Seller", function() {
             struct = [
                 id,
                 operator,
-                authorizer,
+                admin,
+                clerk,
                 treasury,
                 active
             ]

@@ -41,6 +41,15 @@ library ProtocolLib {
         // seller id => seller
         mapping(uint256 => BosonTypes.Seller) sellers;
 
+        //seller operator address => sellerId
+        mapping(address => uint256) sellerByOperator;
+
+        //seller admin address => sellerId
+        mapping(address => uint256) sellerByAdmin;
+
+        //seller clerk address => sellerId
+        mapping(address => uint256) sellerByClerk;
+
         // buyer id => buyer
         mapping(uint256 => BosonTypes.Buyer) buyers;
 
@@ -127,18 +136,4 @@ library ProtocolLib {
             pi.slot := position
         }
     }
-
-    /**
-     * @notice Gets the details about a given group
-     *
-     * @param _groupId - the id of the group
-     * @return group - the group details. See {BosonTypes.Gxchange}
-     */
-    function getGroup(uint256 _groupId)
-    internal
-    view
-    returns(BosonTypes.Group storage group) {
-        group = protocolStorage().groups[_groupId];
-    }
-
 }

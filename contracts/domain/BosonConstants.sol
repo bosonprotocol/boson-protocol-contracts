@@ -7,7 +7,6 @@ pragma solidity ^0.8.0;
  * @notice Constants used by the Boson Protocol contract ecosystem.
  */
 contract BosonConstants {
-
     // Access Control Roles
     bytes32 internal constant ADMIN     = keccak256("ADMIN");      // Role Admin
     bytes32 internal constant PROTOCOL  = keccak256("PROTOCOL");   // Role for facets of the ProtocolDiamond
@@ -16,12 +15,19 @@ contract BosonConstants {
     bytes32 internal constant RESOLVER  = keccak256("RESOLVER");   // Role for resolving the outcome of an escalated dispute
     bytes32 internal constant FEE_COLLECTOR  = keccak256("FEE_COLLECTOR");   // Role for collecting fees from the protocol
 
+    //Revert Reasons: General
+    string internal constant INVALID_ADDRESS = "Invalid address";
+   
     // Revert Reasons: Facet initializer related
     string internal constant ALREADY_INITIALIZED = "Already initialized";
 
     // Revert Reasons: Access related
     string internal constant ACCESS_DENIED = "Access denied, caller doesn't have role";
     string internal constant NOT_OPERATOR = "Not seller's operator";
+
+    //Revert Reasons: Seller-related
+    string internal constant SELLER_MUST_BE_ACTIVE = "Seller must be active";
+    string internal constant SELLER_ADDRESS_MUST_BE_UNIQUE = "Seller address cannot be assigned to another seller Id";
 
     // Revert Reasons: Offer related
     string internal constant NO_SUCH_OFFER = "No such offer";
@@ -35,4 +41,7 @@ contract BosonConstants {
     // Revert Reasons: Exchange related
     string internal constant NO_SUCH_EXCHANGE = "No such exchange";
 
+    // Revert Reasons: Twin related
+    string internal constant NO_TRANSFER_APPROVED = "No transfer approved";
+    string internal constant UNSUPPORTED_TOKEN = "Unsupported token";
 }

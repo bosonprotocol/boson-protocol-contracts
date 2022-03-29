@@ -3,6 +3,9 @@
  */
 exports.RevertReasons = {
 
+    //General
+    INVALID_ADDRESS: "Invalid address",
+
     // Facet initializer related
     ALREADY_INITIALIZED: "Already initialized",
 
@@ -14,5 +17,13 @@ exports.RevertReasons = {
     OFFER_PENALTY_INVALID : "Offer penalty invalid",
     OFFER_MUST_BE_ACTIVE : "Offer must be active",
     OFFER_NOT_UPDATEABLE: "Offer not updateable",
-    OFFER_ALREADY_IN_GROUP: "Offer already in group"
+    OFFER_ALREADY_IN_GROUP: "Offer already in group",
+
+    //Seller-related
+    SELLER_MUST_BE_ACTIVE: "Seller must be active",
+    SELLER_ADDRESS_MUST_BE_UNIQUE: "Seller address cannot be assigned to another seller Id",
+
+    // Twin related
+    NO_TRANSFER_APPROVED: "No transfer approved",
+    UNSUPPORTED_TOKEN: "Unsupported token"
 }

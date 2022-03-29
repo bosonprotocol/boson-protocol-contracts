@@ -33,7 +33,8 @@ contract BosonTypes {
     struct Seller {
         uint256 id;
         address operator;
-        address authorizer;
+        address admin;
+        address clerk;
         address payable treasury;
         bool active;
     }

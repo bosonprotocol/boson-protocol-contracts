@@ -13,16 +13,18 @@ class Seller {
         struct Seller {
             uint256 id;
             address operator;
-            address authorizer;
+            address admin;
+            address clerk;
             address payable treasury;
             bool active;
         }
     */
 
-    constructor (id, operator, authorizer, treasury, active) {
+    constructor (id, operator, admin, clerk, treasury, active) {
         this.id = id;
         this.operator = operator;
-        this.authorizer = authorizer;
+        this.admin = admin;
+        this.clerk = clerk;
         this.treasury = treasury;
         this.active = active;
     }
@@ -33,8 +35,8 @@ class Seller {
      * @returns {Seller}
      */
     static fromObject(o) {
-        const {id, operator, authorizer, treasury, active} = o;
-        return new Seller(id, operator, authorizer, treasury, active);
+        const {id, operator, admin, clerk, treasury, active} = o;
+        return new Seller(id, operator, admin, clerk, treasury, active);
     }
 
     /**
@@ -46,14 +48,16 @@ class Seller {
 
         let id,
             operator,
-            authorizer,
+            admin,
+            clerk,
             treasury,
             active;
 
         // destructure struct
         [   id,
             operator,
-            authorizer,
+            admin,
+            clerk,
             treasury,
             active
         ] = struct;
@@ -62,7 +66,8 @@ class Seller {
             {
                 id: id.toString(),
                 operator,
-                authorizer,
+                admin,
+                clerk,
                 treasury,
                 active
             }
@@ -93,7 +98,8 @@ class Seller {
         return[
             this.id,
             this.operator,
-            this.authorizer,
+            this.admin,
+            this.clerk,
             this.treasury,
             this.active
         ]
@@ -141,16 +147,32 @@ class Seller {
     }
 
     /**
-     * Is this Seller instance's authorizer field valid?
+     * Is this Seller instance's admin field valid?
      * Must be a eip55 compliant Ethereum address
      * @returns {boolean}
      */
-    authorizerIsValid() {
+    adminIsValid() {
         let valid = false;
-        let {authorizer} = this;
+        let {admin} = this;
         try {
             valid = (
-                eip55.verify(eip55.encode(authorizer))
+                eip55.verify(eip55.encode(admin))
+            )
+        } catch(e){}
+        return valid;
+    }
+
+    /**
+     * Is this Seller instance's clerk field valid?
+     * Must be a eip55 compliant Ethereum address
+     * @returns {boolean}
+     */
+    clerkIsValid() {
+        let valid = false;
+        let {clerk} = this;
+        try {
+            valid = (
+                eip55.verify(eip55.encode(clerk))
             )
         } catch(e){}
         return valid;
@@ -195,7 +217,8 @@ class Seller {
         return (
             this.idIsValid() &&
             this.operatorIsValid() &&
-            this.authorizerIsValid() &&
+            this.adminIsValid() &&
+            this.clerkIsValid() &&
             this.treasuryIsValid() &&
             this.activeIsValid()
         );
