@@ -7,7 +7,6 @@ pragma solidity ^0.8.0;
  * @notice Enums and structs used by the Boson Protocol contract ecosystem.
  */
 contract BosonTypes {
-
     enum EvaluationMethod {
         None,
         AboveThreshold,
@@ -121,9 +120,9 @@ contract BosonTypes {
         uint256 id;
         uint256 sellerId;
         uint256 supplyAvailable; // ERC-1155 / ERC-20
-        uint256[] supplyIds;     // ERC-721
-        uint256 tokenId;         // ERC-1155
-        address tokenAddress;    // all
+        uint256[] supplyIds; // ERC-721
+        uint256 tokenId; // ERC-1155
+        address tokenAddress; // all
     }
 
     struct Bundle {
@@ -132,5 +131,4 @@ contract BosonTypes {
         uint256[] offerIds;
         uint256[] twinIds;
     }
-
 }

@@ -27,59 +27,39 @@ import "./IDiamondLoupe.sol";
  * id in the constants file.
  */
 contract SupportedInterfaces {
-
-    function getIBosonConfigHandler()
-    public pure
-    returns(bytes4 id) {
+    function getIBosonConfigHandler() public pure returns (bytes4 id) {
         id = type(IBosonConfigHandler).interfaceId;
     }
 
-    function getIBosonDisputeHandler()
-    public pure
-    returns(bytes4 id) {
+    function getIBosonDisputeHandler() public pure returns (bytes4 id) {
         id = type(IBosonDisputeHandler).interfaceId;
     }
 
-    function getIBosonExchangeHandler()
-    public pure
-    returns(bytes4 id) {
+    function getIBosonExchangeHandler() public pure returns (bytes4 id) {
         id = type(IBosonExchangeHandler).interfaceId;
     }
 
-    function getIBosonFundsHandler()
-    public pure
-    returns(bytes4 id) {
+    function getIBosonFundsHandler() public pure returns (bytes4 id) {
         id = type(IBosonFundsHandler).interfaceId;
     }
 
-    function getIBosonOfferHandler()
-    public pure
-    returns(bytes4 id) {
+    function getIBosonOfferHandler() public pure returns (bytes4 id) {
         id = type(IBosonOfferHandler).interfaceId;
     }
 
-    function getIBosonTwinHandler()
-    public pure
-    returns(bytes4 id) {
+    function getIBosonTwinHandler() public pure returns (bytes4 id) {
         id = type(IBosonTwinHandler).interfaceId;
     }
 
-    function getIBosonAccountHandler()
-    public pure
-    returns(bytes4 id) {
+    function getIBosonAccountHandler() public pure returns (bytes4 id) {
         id = type(IBosonAccountHandler).interfaceId;
     }
 
-    function getIBosonVoucher()
-    public pure
-    returns(bytes4 id) {
+    function getIBosonVoucher() public pure returns (bytes4 id) {
         id = type(IBosonVoucher).interfaceId;
     }
 
-    function getIBosonClient()
-    public pure
-    returns(bytes4 id) {
+    function getIBosonClient() public pure returns (bytes4 id) {
         id = type(IBosonClient).interfaceId;
     }
-
 }

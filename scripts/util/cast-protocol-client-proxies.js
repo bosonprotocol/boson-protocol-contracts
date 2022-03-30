@@ -16,28 +16,27 @@ const ethers = hre.ethers;
  * an array of contract abstractions with the implementation abi
  *
  * @param protocolClientProxies
- * @param gasLimit - gasLimit for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
-async function castProtocolClientProxies(protocolClientProxies, gasLimit) {
+async function castProtocolClientProxies(protocolClientProxies) {
+  let bosonVoucherProxy;
 
-    // Destructure the protocol client proxies
-    [bosonVoucherProxy] = protocolClientProxies;
+  // Destructure the protocol client proxies
+  [bosonVoucherProxy] = protocolClientProxies;
 
-    // Cast the Proxies to the appropriate interfaces for further interaction
-    const bosonVoucher = await ethers.getContractAt('BosonVoucher', bosonVoucherProxy.address);
+  // Cast the Proxies to the appropriate interfaces for further interaction
+  const bosonVoucher = await ethers.getContractAt("BosonVoucher", bosonVoucherProxy.address);
 
-    return [bosonVoucher];
-
+  return [bosonVoucher];
 }
 
 if (require.main === module) {
-    castProtocolClientProxies()
-      .then(() => process.exit(0))
-      .catch(error => {
-        console.error(error)
-        process.exit(1)
-      })
+  castProtocolClientProxies()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
 }
 
 exports.castProtocolClientProxies = castProtocolClientProxies;

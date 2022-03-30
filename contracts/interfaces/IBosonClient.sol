@@ -23,7 +23,6 @@ import { IBosonConfigHandler } from "./IBosonConfigHandler.sol";
  * The ERC-165 identifier for this interface is: 0x9bc69c79 // TODO: Recalc
  */
 interface IBosonClient {
-
     // Events
     event Upgraded(address indexed implementation);
     event ProtocolAddressChanged(address indexed protocol);
@@ -69,6 +68,5 @@ interface IBosonClient {
      *
      * @return the address of the ProtocolDiamond
      */
-    function getProtocolAddress() external view returns(address);
-
+    function getProtocolAddress() external view returns (address);
 }

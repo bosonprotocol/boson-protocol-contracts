@@ -21,26 +21,26 @@ const ethers = hre.ethers;
  * @returns {Promise<(*|*|*)[]>}
  */
 async function deployProtocolClientProxies(protocolClients, protocolClientArgs, gasLimit) {
+  let bosonVoucherImpl;
 
-    // Destructure the protocol client implementations
-    [bosonVoucherImpl] = protocolClients;
+  // Destructure the protocol client implementations
+  [bosonVoucherImpl] = protocolClients;
 
-    // Deploy the ClientProxy for BosonVoucher
-    const ClientProxy = await ethers.getContractFactory("ClientProxy");
-    const clientProxy = await ClientProxy.deploy(...protocolClientArgs, bosonVoucherImpl.address, {gasLimit});
-    await clientProxy.deployed();
+  // Deploy the ClientProxy for BosonVoucher
+  const ClientProxy = await ethers.getContractFactory("ClientProxy");
+  const clientProxy = await ClientProxy.deploy(...protocolClientArgs, bosonVoucherImpl.address, { gasLimit });
+  await clientProxy.deployed();
 
-    return [clientProxy];
-
+  return [clientProxy];
 }
 
 if (require.main === module) {
-    deployProtocolClientProxies()
-      .then(() => process.exit(0))
-      .catch(error => {
-        console.error(error)
-        process.exit(1)
-      })
+  deployProtocolClientProxies()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
 }
 
 exports.deployProtocolClientProxies = deployProtocolClientProxies;

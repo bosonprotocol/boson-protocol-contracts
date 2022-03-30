@@ -1,4 +1,4 @@
-const { getFacetAddCut } = require('./diamond-utils.js')
+const { getFacetAddCut } = require("./diamond-utils.js");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 
@@ -14,32 +14,32 @@ const ethers = hre.ethers;
  * @returns {Promise<(*|*|*)[]>}
  */
 async function deployProtocolConfigFacet(diamond, config, gasLimit) {
+  // Deploy the ConfigHandler Facet
+  const ConfigHandlerFacet = await ethers.getContractFactory("ConfigHandlerFacet");
+  const configHandlerFacet = await ConfigHandlerFacet.deploy({ gasLimit });
+  await configHandlerFacet.deployed();
 
-    // Deploy the ConfigHandler Facet
-    const ConfigHandlerFacet = await ethers.getContractFactory("ConfigHandlerFacet");
-    const configHandlerFacet = await ConfigHandlerFacet.deploy({gasLimit});
-    await configHandlerFacet.deployed();
+  // Cast Diamond to DiamondCutFacet
+  const cutFacet = await ethers.getContractAt("DiamondCutFacet", diamond.address);
 
-    // Cast Diamond to DiamondCutFacet
-    const cutFacet = await ethers.getContractAt('DiamondCutFacet', diamond.address);
+  // Cut ConfigHandler facet, initializing
+  let configInitFunction =
+    "initialize(address payable _tokenAddress, address payable _treasuryAddress, uint16 _protocolFeePercentage, uint16 _maxOffersPerGroup)";
+  const configInterface = new ethers.utils.Interface([`function ${configInitFunction}`]);
+  const configCallData = configInterface.encodeFunctionData("initialize", config);
+  const configHandlerCut = getFacetAddCut(configHandlerFacet, [configInitFunction]);
+  await cutFacet.diamondCut([configHandlerCut], configHandlerFacet.address, configCallData, { gasLimit });
 
-    // Cut ConfigHandler facet, initializing
-    let configInitFunction = "initialize(address payable _tokenAddress, address payable _multisigAddress, uint16 _feePercentage, uint16 _maxOffersPerGroup)";
-    const configInterface = new ethers.utils.Interface([`function ${configInitFunction}`]);
-    const configCallData = configInterface.encodeFunctionData("initialize", config);
-    const configHandlerCut = getFacetAddCut(configHandlerFacet, [configInitFunction]);
-    await cutFacet.diamondCut([configHandlerCut], configHandlerFacet.address, configCallData, {gasLimit});
-
-    return [configHandlerFacet];
+  return [configHandlerFacet];
 }
 
 if (require.main === module) {
-    deployProtocolConfigFacet()
-      .then(() => process.exit(0))
-      .catch(error => {
-        console.error(error)
-        process.exit(1)
-      })
+  deployProtocolConfigFacet()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
 }
 
 exports.deployProtocolConfigFacet = deployProtocolConfigFacet;

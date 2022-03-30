@@ -14,7 +14,6 @@ pragma solidity ^0.8.0;
  * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
  */
 interface IDiamondLoupe {
-
     struct Facet {
         address facetAddress;
         bytes4[] functionSelectors;

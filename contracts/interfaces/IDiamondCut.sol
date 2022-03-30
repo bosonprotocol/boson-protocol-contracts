@@ -14,10 +14,13 @@ pragma solidity ^0.8.0;
  * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
  */
 interface IDiamondCut {
-
     event DiamondCut(FacetCut[] _diamondCut, address _init, bytes _calldata);
 
-    enum FacetCutAction {Add, Replace, Remove}
+    enum FacetCutAction {
+        Add,
+        Replace,
+        Remove
+    }
 
     struct FacetCut {
         address facetAddress;

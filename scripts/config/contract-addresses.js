@@ -5,17 +5,15 @@
  * Scripts rely on these addresses to be up to date.
  */
 exports.ContractAddresses = {
+  ropsten: {
+    AccessController: "",
+    ProtocolDiamond: "",
+    VoucherProxy: "",
+  },
 
-    "ropsten": {
-        AccessController: "",
-        ProtocolDiamond: "",
-        VoucherProxy: "",
-    },
-
-    "mainnet": {
-        AccessController: "",
-        ProtocolDiamond: "",
-        VoucherProxy: "",
-    },
-
+  mainnet: {
+    AccessController: "",
+    ProtocolDiamond: "",
+    VoucherProxy: "",
+  },
 };

@@ -108,7 +108,8 @@ async function main() {
     const protocolConfig = [
         config.tokenAddress,
         config.multisigAddress,
-        config.feePercentage
+        config.feePercentage,
+        config.maxOffersPerGroup
     ];
     [configHandlerFacet] = await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
     deploymentComplete('ConfigHandlerFacet', configHandlerFacet.address, [], contracts);
