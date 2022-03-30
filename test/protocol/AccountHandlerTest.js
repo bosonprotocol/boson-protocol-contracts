@@ -4,6 +4,7 @@ const { expect } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
+const Buyer = require("../../scripts/domain/Buyer");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -19,6 +20,7 @@ describe("IBosonAccountHandler", function () {
   let accounts, deployer, rando, operator, admin, clerk, treasury, other1, other2;
   let erc165, protocolDiamond, accessController, accountHandler, gasLimit;
   let seller, sellerStruct, active;
+  let buyer, buyerStruct,buyerId;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
 
@@ -78,8 +80,8 @@ describe("IBosonAccountHandler", function () {
     });
   });
 
-  // All supported methods
-  context("📋 Seller Handler Methods", async function () {
+  // All supported Seller methods
+  context("📋 Seller Methods", async function () {
     beforeEach(async function () {
       // The first seller id
       nextAccountId = "1";
@@ -160,7 +162,7 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to Create a seller, expecting revert
           await expect(accountHandler.connect(admin).createSeller(seller)).to.revertedWith(
-            RevertReasons.SELLER_MUST_BE_ACTIVE
+            RevertReasons.MUST_BE_ACTIVE
           );
         });
 
@@ -311,6 +313,178 @@ describe("IBosonAccountHandler", function () {
 
         // Verify expectation
         expect(nextAccountId.toString() == expected).to.be.true;
+      });
+    });
+  });
+
+  // All supported Buyer methods
+  context("📋 Buyer Methods", async function () {
+    beforeEach(async function () {
+      // The first seller id
+      nextAccountId = "1";
+      invalidAccountId = "666";
+
+      // Required constructor params
+      id = "1"; // argument sent to contract for createBuyer will be ignored
+
+      active = true;
+
+      // Create a valid buyer, then set fields in tests directly
+      buyer = new Buyer(id, other1.address, active);
+      expect(buyer.isValid()).is.true;
+
+      // How that buyer looks as a returned struct
+      buyerStruct = buyer.toStruct();
+    });
+
+    context("👉 createBuyer()", async function () {
+      it("should emit a BuyerCreated event", async function () {
+        // Create a buyer, testing for the event
+        await expect(accountHandler.connect(rando).createBuyer(buyer))
+          .to.emit(accountHandler, "BuyerCreated")
+          .withArgs(buyer.id, buyerStruct);
+      });
+
+      it("should update state", async function () {
+        // Create a buyer
+        await accountHandler.connect(rando).createBuyer(buyer);
+
+        // Get the buyer as a struct
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(id);
+
+        // Parse into entity
+        let returnedBuyer = Buyer.fromStruct(buyerStruct);
+
+        // Returned values should match the input in createBuyer
+        for ([key, value] of Object.entries(buyer)) {
+          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
+        }
+
+        //Get buyer id by wallet address
+        [exists, buyerId] = await accountHandler.connect(rando).getBuyerByWallet(other1.address);
+        expect(exists).to.be.true;
+        expect(buyerId).to.equal(id.toString());
+      });
+
+      it("should ignore any provided id and assign the next available", async function () {
+        buyer.id = "444";
+
+         // Create a buyer, testing for the event
+         await expect(accountHandler.connect(rando).createBuyer(buyer))
+         .to.emit(accountHandler, "BuyerCreated")
+         .withArgs(nextAccountId, buyerStruct);
+       
+
+        // wrong buyer id should not exist
+        [exists] = await accountHandler.connect(rando).getBuyer(buyer.id);
+        expect(exists).to.be.false;
+
+        // next buyer id should exist
+        [exists] = await accountHandler.connect(rando).getBuyer(nextAccountId);
+        expect(exists).to.be.true;
+      });
+
+
+      context("💔 Revert Reasons", async function () {
+        it("active is false", async function () {
+          buyer.active = false;
+
+          // Attempt to Create a Buyer, expecting revert
+          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(
+            RevertReasons.MUST_BE_ACTIVE
+          );
+        });
+
+        it("addresses are the zero address", async function () {
+          buyer.wallet = ethers.constants.AddressZero;
+
+          // Attempt to Create a Buyer, expecting revert
+          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
+        });
+
+        it("wallet address is not unique to this buyerId", async function () {
+          // Create a buyer
+          await accountHandler.connect(rando).createBuyer(buyer);
+
+          // Attempt to create another buyer with same wallet address
+          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(
+            RevertReasons.BUYER_ADDRESS_MUST_BE_UNIQUE
+          );
+
+        });
+      });
+    });
+
+    context("👉 getBuyer()", async function () {
+      beforeEach(async function () {
+        // Create a buyer
+        await accountHandler.connect(rando).createBuyer(buyer);
+
+        // id of the current seller and increment nextAccountId
+        id = nextAccountId++;
+      });
+
+      it("should return true for exists if buyer is found", async function () {
+        // Get the exists flag
+        [exists] = await accountHandler.connect(rando).getBuyer(id);
+
+        // Validate
+        expect(exists).to.be.true;
+      });
+
+      it("should return false for exists if buyer is not found", async function () {
+        // Get the exists flag
+        [exists] = await accountHandler.connect(rando).getBuyer(invalidAccountId);
+
+        // Validate
+        expect(exists).to.be.false;
+      });
+
+      it("should return the details of the buyer as a struct if found", async function () {
+         // Get the buyer as a struct
+         [, buyerStruct] = await accountHandler.connect(rando).getBuyer(id);
+
+        // Parse into entity
+        buyer = Buyer.fromStruct(buyerStruct);
+
+        // Validate
+        expect(buyer.isValid()).to.be.true;
+      });
+    });
+
+    context("👉 getBuyerByWallet()", async function () {
+      beforeEach(async function () {
+        // Create a buyer
+        await accountHandler.connect(rando).createBuyer(buyer);
+
+        // id of the current seller and increment nextAccountId
+        id = nextAccountId++;
+      });
+
+      it("should return true for exists if buyer is found", async function () {
+        // Get the exists flag
+        [exists] = await accountHandler.connect(rando).getBuyerByWallet(other1.address);
+
+        // Validate
+        expect(exists).to.be.true;
+      });
+
+      it("should return false for exists if buyer is not found", async function () {
+        // Get the exists flag
+        [exists] = await accountHandler.connect(rando).getBuyer(other2.address);
+
+        // Validate
+        expect(exists).to.be.false;
+      });
+
+      it("should return the buyer id if found", async function () {
+         // Get the buyer as a struct
+         [, buyerId] = await accountHandler.connect(rando).getBuyerByWallet(other1.address);
+
+        // Validate
+        expect(buyerId).to.equal(id.toString());
       });
     });
   });

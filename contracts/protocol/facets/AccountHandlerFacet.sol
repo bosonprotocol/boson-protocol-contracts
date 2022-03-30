@@ -117,6 +117,25 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
     }
 
     /**
+     * @notice Fetches a given buyer from storage by id
+     *
+     * @param _wallet - the wallet address of the buyer
+     * @return exists - whether the buyer Id exists
+     * @return buyerId  - the buyer Id. 
+     */
+    function getBuyerByWallet(address _wallet) 
+    external
+    override
+    view
+    returns (bool exists, uint256 buyerId) {
+        // Get the buyer Id
+        buyerId = protocolStorage().buyerByWallet[_wallet];
+
+        // Determine existence
+        exists = (buyerId > 0 );
+    }
+
+    /**
      * @notice Gets the next account Id that can be assigned to an account.
      *
      * @return nextAccountId - the account Id
@@ -182,7 +201,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
         //Check for zero address
         require(_buyer.wallet != address(0), INVALID_ADDRESS);
 
-        //check that the addresses are unique to one buyer Id
+        //check that the wallet address is unique to one buyer Id
         require(protocolStorage().buyerByWallet[_buyer.wallet] == 0,BUYER_ADDRESS_MUST_BE_UNIQUE);
 
         // Get storage location for buyer
