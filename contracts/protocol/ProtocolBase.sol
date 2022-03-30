@@ -74,6 +74,21 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
+     * @notice Fetches a given buyer from storage by id
+     *
+     * @param _wallet - the wallet address of the buyer
+     * @return exists - whether the buyer Id exists
+     * @return buyerId  - the buyer Id.
+     */
+    function getBuyerIdByWallet(address _wallet) internal view returns (bool exists, uint256 buyerId) {
+        // Get the buyer Id
+        buyerId = protocolStorage().buyerIdByWallet[_wallet];
+
+        // Determine existence
+        exists = (buyerId > 0);
+    }
+
+    /**
      * @notice Fetches a given seller from storage by id
      *
      * @param _sellerId - the id of the seller
@@ -86,6 +101,21 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
 
         // Determine existence
         exists = (_sellerId > 0 && seller.id == _sellerId);
+    }
+
+    /**
+     * @notice Fetches a given buyer from storage by id
+     *
+     * @param _buyerId - the id of the buyer
+     * @return exists - whether the buyer exists
+     * @return buyer - the buyer details. See {BosonTypes.Buyer}
+     */
+    function fetchBuyer(uint256 _buyerId) internal view returns (bool exists, BosonTypes.Buyer storage buyer) {
+        // Get the buyer's's slot
+        buyer = protocolStorage().buyers[_buyerId];
+
+        // Determine existence
+        exists = (_buyerId > 0 && buyer.id == _buyerId);
     }
 
     /**

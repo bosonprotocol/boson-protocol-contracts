@@ -34,7 +34,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
     override
     {
         //Check active is not set to false
-        require(_seller.active, SELLER_MUST_BE_ACTIVE);
+        require(_seller.active, MUST_BE_ACTIVE);
 
         // Get the next account Id and increment the counter
         uint256 sellerId = protocolCounters().nextAccountId++;
@@ -50,7 +50,85 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
         // Notify watchers of state change
         emit SellerCreated(_seller.id, _seller);
     }
+
+    /**
+     * @notice Creates a Buyer
+     *
+     * Emits an BuyerCreated event if successful.
+     *
+     * Reverts if:
+     * - Wallet address is zero address
+     * - Active is not true
+     * - Wallet address is not unique to this buyer
+     *
+     * @param _buyer - the fully populated struct with buyer id set to 0x0
+     */
+    function createBuyer(Buyer memory _buyer) 
+    external
+    override
+    {
+        //Check active is not set to false
+        require(_buyer.active, MUST_BE_ACTIVE);
+
+        // Get the next account Id and increment the counter
+        uint256 buyerId = protocolCounters().nextAccountId++;
+
+        _buyer.id = buyerId;
+        storeBuyer(_buyer);
+
+        //Map the buyer's wallet address to the buyerId.
+        protocolStorage().buyerIdByWallet[_buyer.wallet] = buyerId;
+
+        //Notify watchers of state change
+        emit BuyerCreated(_buyer.id, _buyer);
+
+    }
   
+    /**
+     * @notice Gets the details about a seller.
+     *
+     * @param _sellerId - the id of the seller to check
+     * @return exists - the seller was found
+     * @return seller - the seller details. See {BosonTypes.Seller}
+     */
+    function getSeller(uint256 _sellerId)
+    external
+    override
+    view
+    returns(bool exists, Seller memory seller) 
+    {
+        return fetchSeller(_sellerId);
+    }
+
+    /**
+     * @notice Gets the details about a buyer.
+     *
+     * @param _buyerId - the id of the buyer to check
+     * @return exists - the buyer was found
+     * @return buyer - the buyer details. See {BosonTypes.Buyer}
+     */
+    function getBuyer(uint256 _buyerId)
+    external
+    override
+    view 
+    returns (bool exists, Buyer memory buyer)
+    {
+        return fetchBuyer(_buyerId);
+    }
+
+    /**
+     * @notice Gets the next account Id that can be assigned to an account.
+     *
+     * @return nextAccountId - the account Id
+     */
+    function getNextAccountId()
+    external
+    override
+    view 
+    returns(uint256 nextAccountId) {
+        nextAccountId = protocolCounters().nextAccountId;
+    }
+
     /**
      * @notice Validates seller struct and stores it to storage
      *
@@ -89,32 +167,33 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
        
     }
 
-     /**
-     * @notice Gets the details about a seller.
+    /**
+     * @notice Validates buyer struct and stores it to storage
      *
-     * @param _sellerId - the id of the seller to check
-     * @return exists - the seller was found
-     * @return seller - the seller details. See {BosonTypes.Seller}
+     * Reverts if:
+     * - Wallet address is zero address
+     * - Wallet address is not unique to this buyer
+     *
+     * @param _buyer - the fully populated struct with seller id set
      */
-    function getSeller(uint256 _sellerId)
-    external
-    view
-    returns(bool exists, Seller memory seller) 
+   
+    function storeBuyer(Buyer memory _buyer) internal 
     {
-        return fetchSeller(_sellerId);
+        //Check for zero address
+        require(_buyer.wallet != address(0), INVALID_ADDRESS);
+
+        //check that the wallet address is unique to one buyer Id
+        require(protocolStorage().buyerIdByWallet[_buyer.wallet] == 0,BUYER_ADDRESS_MUST_BE_UNIQUE);
+
+        // Get storage location for buyer
+        (,Buyer storage buyer) = fetchBuyer(_buyer.id);
+
+        // Set buyer props individually since memory structs can't be copied to storage
+        buyer.id = _buyer.id;
+        buyer.wallet = _buyer.wallet;
+        buyer.active = _buyer.active;
     }
 
-    /**
-     * @notice Gets the next account Id that can be assigned to an account.
-     *
-     * @return nextAccountId - the account Id
-     */
-    function getNextAccountId()
-    external
-    override
-    view 
-    returns(uint256 nextAccountId) {
-        nextAccountId = protocolCounters().nextAccountId;
-    }
+   
 
 }
