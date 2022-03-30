@@ -48,6 +48,9 @@ interface IBosonTwinHandler {
      * - any of offers belongs to different seller
      * - any of offers does not exist
      * - offer exists in a different bundle
+     * - any of twins belongs to different seller
+     * - any of twins does not exist
+     * - duplicate twins added in same bundle
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
