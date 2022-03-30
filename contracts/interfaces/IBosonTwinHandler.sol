@@ -51,10 +51,7 @@ interface IBosonTwinHandler {
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
-    function createBundle(
-        BosonTypes.Bundle memory _bundle
-    )
-    external;
+    function createBundle(BosonTypes.Bundle memory _bundle) external;
 
     /**
      * @notice Gets the details about a given bundle.
@@ -63,8 +60,5 @@ interface IBosonTwinHandler {
      * @return exists - the offer was found
      * @return bundle - the offer details. See {BosonTypes.Bundle}
      */
-    function getBundle(uint256 _bundleId)
-    external
-    view
-    returns(bool exists, BosonTypes.Bundle memory bundle);
+    function getBundle(uint256 _bundleId) external view returns (bool exists, BosonTypes.Bundle memory bundle);
 }

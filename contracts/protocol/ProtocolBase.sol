@@ -189,17 +189,12 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the bundle exists
      * @return bundle - the bundle details. See {BosonTypes.Bundle}
      */
-    function fetchBundle(uint256 _bundleId)
-    internal
-    view
-    returns(bool exists, BosonTypes.Bundle storage bundle) {
-
+    function fetchBundle(uint256 _bundleId) internal view returns (bool exists, BosonTypes.Bundle storage bundle) {
         // Get the bundle's slot
         bundle = protocolStorage().bundles[_bundleId];
 
         // Determine existence
         exists = (bundle.id > 0 && bundle.id == _bundleId);
-
     }
 
     /**

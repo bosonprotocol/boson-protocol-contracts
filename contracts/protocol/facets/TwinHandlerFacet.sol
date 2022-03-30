@@ -155,6 +155,14 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
         for (uint i = 0; i < _bundle.twinIds.length; i++) {
             // make sure all twins exist and belong to the seller
             getValidTwin(_bundle.twinIds[i]);
+
+            // Add to bundleByTwin mapping
+            // A twin can belong to multiple bundles
+            require(
+                (protocolStorage().bundleByTwin[_bundle.twinIds[i]] == 0) ||
+                (protocolStorage().bundleByTwin[_bundle.twinIds[i]] != bundleId)
+                , TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE);
+            protocolStorage().bundleByTwin[_bundle.twinIds[i]] = bundleId;
         }
 
         // Get storage location for bundle
