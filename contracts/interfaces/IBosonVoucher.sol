@@ -12,11 +12,7 @@ import "../domain/BosonTypes.sol";
  * The ERC-165 identifier for this interface is: 0x3ade32fd // TODO: recalc
  */
 interface IBosonVoucher is IERC721Upgradeable {
+    function issueVoucher(uint256 _exchangeId, BosonTypes.Buyer calldata _buyer) external;
 
-    function issueVoucher(uint256 _exchangeId, BosonTypes.Buyer calldata _buyer)
-    external;
-
-    function redeemVoucher(uint256 _exchangeId, address payable _holder)
-    external;
-
+    function redeemVoucher(uint256 _exchangeId, address payable _holder) external;
 }

@@ -1,188 +1,151 @@
 const { expect } = require("chai");
 const Resolution = require("../../scripts/domain/Resolution");
-const Resolver = require("../../scripts/domain/Resolver");
 
 /**
  *  Test the Resolution domain entity
  */
-describe("Resolution", function() {
+describe("Resolution", function () {
+  // Suite-wide scope
+  let resolution, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
+  let buyerPercent;
 
-    // Suite-wide scope
-    let resolution, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-    let buyerPercent;
+  beforeEach(async function () {
+    // Required constructor params
+    buyerPercent = "21";
+  });
 
-    beforeEach( async function () {
+  context("📋 Constructor", async function () {
+    it("Should allow creation of valid, fully populated Resolution instance", async function () {
+      resolution = new Resolution(buyerPercent);
+      expect(resolution.buyerPercentIsValid()).is.true;
+      expect(resolution.isValid()).is.true;
+    });
+  });
 
-        // Required constructor params
-        buyerPercent = "21";
-
+  context("📋 Field validations", async function () {
+    beforeEach(async function () {
+      // Create a valid resolution, then set fields in tests directly
+      resolution = new Resolution(buyerPercent);
+      expect(resolution.isValid()).is.true;
     });
 
-    context("📋 Constructor", async function () {
+    it("Always present, buyerPercent must be the string representation of a BigNumber between 0 and 10000", async function () {
+      // Invalid field value
+      resolution.buyerPercent = "zedzdeadbaby";
+      expect(resolution.buyerPercentIsValid()).is.false;
+      expect(resolution.isValid()).is.false;
 
-        it("Should allow creation of valid, fully populated Resolution instance", async function () {
+      // Invalid field value
+      resolution.buyerPercent = new Date();
+      expect(resolution.buyerPercentIsValid()).is.false;
+      expect(resolution.isValid()).is.false;
 
-            resolution = new Resolution(buyerPercent);
-            expect(resolution.buyerPercentIsValid()).is.true;
-            expect(resolution.isValid()).is.true;
+      // Invalid field value
+      resolution.buyerPercent = 12;
+      expect(resolution.buyerPercentIsValid()).is.false;
+      expect(resolution.isValid()).is.false;
 
-        });
+      // Valid field value
+      resolution.buyerPercent = "12000";
+      expect(resolution.buyerPercentIsValid()).is.false;
+      expect(resolution.isValid()).is.false;
 
+      // Valid field value
+      resolution.buyerPercent = "0";
+      expect(resolution.buyerPercentIsValid()).is.true;
+      expect(resolution.isValid()).is.true;
+
+      // Valid field value
+      resolution.buyerPercent = "10000";
+      expect(resolution.buyerPercentIsValid()).is.true;
+      expect(resolution.isValid()).is.true;
+    });
+  });
+
+  context("📋 Utility functions", async function () {
+    beforeEach(async function () {
+      // Create a valid resolution, then set fields in tests directly
+      resolution = new Resolution(buyerPercent);
+      expect(resolution.isValid()).is.true;
+
+      // Get plain object
+      object = {
+        buyerPercent,
+      };
+
+      // Get struct representation
+      struct = [buyerPercent];
     });
 
-    context("📋 Field validations", async function () {
+    context("👉 Static", async function () {
+      it("Resolution.fromObject() should return a Resolution instance with the same values as the given plain object", async function () {
+        // Promote to instance
+        promoted = Resolution.fromObject(object);
 
-        beforeEach( async function () {
+        // Is a Resolution instance
+        expect(promoted instanceof Resolution).is.true;
 
-            // Create a valid resolution, then set fields in tests directly
-            resolution = new Resolution(buyerPercent);
-            expect(resolution.isValid()).is.true;
+        // Key values all match
+        for ([key, value] of Object.entries(resolution)) {
+          expect(JSON.stringify(promoted[key]) === JSON.stringify(value)).is.true;
+        }
+      });
 
-        });
+      it("Resolution.toStruct() should return a Resolution instance from a struct representation", async function () {
+        // Marshal back to a resolution instance
+        resolution = Resolution.fromStruct(struct);
 
-        it("Always present, buyerPercent must be the string representation of a BigNumber between 0 and 10000", async function() {
+        // Ensure it marshals back to a valid resolution
+        expect(resolution.isValid()).to.be.true;
+      });
+    });
 
-            // Invalid field value
-            resolution.buyerPercent = "zedzdeadbaby";
-            expect(resolution.buyerPercentIsValid()).is.false;
-            expect(resolution.isValid()).is.false;
+    context("👉 Instance", async function () {
+      it("instance.toString() should return a JSON string representation of the Resolution instance", async function () {
+        dehydrated = resolution.toString();
+        rehydrated = JSON.parse(dehydrated);
 
-            // Invalid field value
-            resolution.buyerPercent = new Date();
-            expect(resolution.buyerPercentIsValid()).is.false;
-            expect(resolution.isValid()).is.false;
+        for ([key, value] of Object.entries(resolution)) {
+          expect(JSON.stringify(rehydrated[key]) === JSON.stringify(value)).is.true;
+        }
+      });
 
-            // Invalid field value
-            resolution.buyerPercent = 12;
-            expect(resolution.buyerPercentIsValid()).is.false;
-            expect(resolution.isValid()).is.false;
+      it("instance.clone() should return another Resolution instance with the same property values", async function () {
+        // Get plain object
+        clone = resolution.clone();
 
-            // Valid field value
-            resolution.buyerPercent = "12000";
-            expect(resolution.buyerPercentIsValid()).is.false;
-            expect(resolution.isValid()).is.false;
+        // Is an Resolution instance
+        expect(clone instanceof Resolution).is.true;
 
-            // Valid field value
-            resolution.buyerPercent = "0";
-            expect(resolution.buyerPercentIsValid()).is.true;
-            expect(resolution.isValid()).is.true;
+        // Key values all match
+        for ([key, value] of Object.entries(resolution)) {
+          expect(JSON.stringify(clone[key]) === JSON.stringify(value)).is.true;
+        }
+      });
 
-            // Valid field value
-            resolution.buyerPercent = "10000";
-            expect(resolution.buyerPercentIsValid()).is.true;
-            expect(resolution.isValid()).is.true;
+      it("instance.toObject() should return a plain object representation of the Resolution instance", async function () {
+        // Get plain object
+        object = resolution.toObject();
 
-        });
+        // Not an Resolution instance
+        expect(object instanceof Resolution).is.false;
 
-    })
+        // Key values all match
+        for ([key, value] of Object.entries(resolution)) {
+          expect(JSON.stringify(object[key]) === JSON.stringify(value)).is.true;
+        }
+      });
 
-    context("📋 Utility functions", async function () {
+      it("instance.toStruct() should return a struct representation of the Resolution instance", async function () {
+        // Get struct from instance
+        struct = resolution.toStruct();
 
-        beforeEach( async function () {
+        // Marshal back to a resolution instance
+        resolution = Resolution.fromStruct(struct);
 
-            // Create a valid resolution, then set fields in tests directly
-            resolution = new Resolution(buyerPercent);
-            expect(resolution.isValid()).is.true;
-
-            // Get plain object
-            object = {
-                buyerPercent
-            }
-
-            // Get struct representation
-            struct = [
-                buyerPercent
-            ]
-
-        })
-
-        context("👉 Static", async function () {
-
-            it("Resolution.fromObject() should return a Resolution instance with the same values as the given plain object", async function () {
-
-                // Promote to instance
-                promoted = Resolution.fromObject(object);
-
-                // Is a Resolution instance
-                expect(promoted instanceof Resolution).is.true;
-
-                // Key values all match
-                for ([key, value] of Object.entries(resolution)) {
-                    expect(JSON.stringify(promoted[key]) === JSON.stringify(value)).is.true;
-                }
-
-            });
-
-            it("Resolution.toStruct() should return a Resolution instance from a struct representation", async function () {
-
-                // Marshal back to a resolution instance
-                resolution = Resolution.fromStruct(struct)
-
-                // Ensure it marshals back to a valid resolution
-                expect(resolution.isValid()).to.be.true;
-
-            });
-
-        });
-
-        context("👉 Instance", async function () {
-
-            it("instance.toString() should return a JSON string representation of the Resolution instance", async function () {
-
-                dehydrated = resolution.toString();
-                rehydrated = JSON.parse(dehydrated);
-
-                for ([key, value] of Object.entries(resolution)) {
-                    expect(JSON.stringify(rehydrated[key]) === JSON.stringify(value)).is.true;
-                }
-
-            });
-
-            it("instance.clone() should return another Resolution instance with the same property values", async function () {
-
-                // Get plain object
-                clone = resolution.clone();
-
-                // Is an Resolution instance
-                expect(clone instanceof Resolution).is.true;
-
-                // Key values all match
-                for ([key, value] of Object.entries(resolution)) {
-                    expect(JSON.stringify(clone[key]) === JSON.stringify(value)).is.true;
-                }
-
-            });
-
-            it("instance.toObject() should return a plain object representation of the Resolution instance", async function () {
-
-                // Get plain object
-                object = resolution.toObject();
-
-                // Not an Resolution instance
-                expect(object instanceof Resolution).is.false;
-
-                // Key values all match
-                for ([key, value] of Object.entries(resolution)) {
-                    expect(JSON.stringify(object[key]) === JSON.stringify(value)).is.true;
-                }
-
-            });
-
-            it("instance.toStruct() should return a struct representation of the Resolution instance", async function () {
-
-                // Get struct from instance
-                struct = resolution.toStruct();
-
-                // Marshal back to a resolution instance
-                resolution = Resolution.fromStruct(struct)
-
-                // Ensure it marshals back to a valid resolution
-                expect(resolution.isValid()).to.be.true;
-
-            });
-
-        });
-
-    })
-
+        // Ensure it marshals back to a valid resolution
+        expect(resolution.isValid()).to.be.true;
+      });
+    });
+  });
 });

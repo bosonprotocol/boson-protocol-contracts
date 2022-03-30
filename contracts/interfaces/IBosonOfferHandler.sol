@@ -11,7 +11,6 @@ import "../domain/BosonTypes.sol";
  * The ERC-165 identifier for this interface is: 0xaf7dd438
  */
 interface IBosonOfferHandler {
-
     /// Events
     event OfferCreated(uint256 indexed offerId, uint256 indexed sellerId, BosonTypes.Offer offer);
     event OfferUpdated(uint256 indexed offerId, uint256 indexed sellerId, BosonTypes.Offer offer);
@@ -29,8 +28,7 @@ interface IBosonOfferHandler {
      *
      * @param _offer - the fully populated struct with offer id set to 0x0
      */
-    function createOffer(BosonTypes.Offer memory _offer)
-    external;
+    function createOffer(BosonTypes.Offer memory _offer) external;
 
     /**
      * @notice Updates an existing offer.
@@ -43,9 +41,7 @@ interface IBosonOfferHandler {
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated, active exchanges set to 0 and voided set to false
      */
-    function updateOffer(
-        BosonTypes.Offer memory _offer
-    ) external;
+    function updateOffer(BosonTypes.Offer memory _offer) external;
 
     /**
      * @notice Voids a given offer
@@ -62,8 +58,7 @@ interface IBosonOfferHandler {
      *
      * @param _offerId - the id of the offer to check
      */
-    function voidOffer(uint256 _offerId)
-    external;
+    function voidOffer(uint256 _offerId) external;
 
     /**
      * @notice Sets new valid until date
@@ -78,9 +73,7 @@ interface IBosonOfferHandler {
      *  @param _offerId - the id of the offer to check
      *  @param _validUntilDate - new valid until date
      */
-    function extendOffer(
-        uint256 _offerId, uint _validUntilDate
-    ) external;
+    function extendOffer(uint256 _offerId, uint256 _validUntilDate) external;
 
     /**
      * @notice Gets the details about a given offer.
@@ -89,10 +82,7 @@ interface IBosonOfferHandler {
      * @return exists - the offer was found
      * @return offer - the offer details. See {BosonTypes.Offer}
      */
-    function getOffer(uint256 _offerId)
-    external
-    view
-    returns(bool exists, BosonTypes.Offer memory offer);
+    function getOffer(uint256 _offerId) external view returns (bool exists, BosonTypes.Offer memory offer);
 
     /**
      * @notice Gets the next offer id.
@@ -101,10 +91,7 @@ interface IBosonOfferHandler {
      *
      * @return nextOfferId - the next offer id
      */
-    function getNextOfferId()
-    external
-    view
-    returns(uint256 nextOfferId);
+    function getNextOfferId() external view returns (uint256 nextOfferId);
 
     /**
      * @notice Tells if offer is voided or not
@@ -113,11 +100,8 @@ interface IBosonOfferHandler {
      * @return exists - the offer was found
      * @return offerVoided - true if voided, false otherwise
      */
-    function isOfferVoided(uint256 _offerId)
-    external
-    view
-    returns(bool exists, bool offerVoided);
-    
+    function isOfferVoided(uint256 _offerId) external view returns (bool exists, bool offerVoided);
+
     /**
      * @notice Tells if offer is can be updated or not
      *

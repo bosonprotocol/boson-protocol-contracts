@@ -12,12 +12,10 @@ import "../domain/BosonConstants.sol";
  * @notice Provides domain and common modifiers to Protocol facets
  */
 abstract contract ProtocolBase is BosonTypes, BosonConstants {
-
     /**
      * @dev Modifier to protect initializer function from being invoked twice.
      */
-    modifier onlyUnInitialized(bytes4 interfaceId)
-    {
+    modifier onlyUnInitialized(bytes4 interfaceId) {
         ProtocolLib.ProtocolInitializers storage pi = protocolInitializers();
         require(!pi.initializedInterfaces[interfaceId], ALREADY_INITIALIZED);
         pi.initializedInterfaces[interfaceId] = true;
@@ -30,9 +28,8 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * Reverts if the offer does not exist
      */
     modifier offerExists(uint256 _offerId) {
-
         // Make sure the offer exists TODO: remove me, not used and not the way to check
-        require(_offerId >0 && _offerId <  protocolCounters().nextOfferId, "Offer does not exist");
+        require(_offerId > 0 && _offerId < protocolCounters().nextOfferId, "Offer does not exist");
         _;
     }
 
@@ -83,11 +80,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the seller exists
      * @return seller - the seller details. See {BosonTypes.Seller}
      */
-    function fetchSeller(uint256 _sellerId)
-    internal
-    view
-    returns(bool exists, BosonTypes.Seller storage seller) {
-
+    function fetchSeller(uint256 _sellerId) internal view returns (bool exists, BosonTypes.Seller storage seller) {
         // Get the seller's slot
         seller = protocolStorage().sellers[_sellerId];
 
@@ -102,17 +95,12 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the offer exists
      * @return offer - the offer details. See {BosonTypes.Offer}
      */
-    function fetchOffer(uint256 _offerId)
-    internal
-    view
-    returns(bool exists, BosonTypes.Offer storage offer) {
-
+    function fetchOffer(uint256 _offerId) internal view returns (bool exists, BosonTypes.Offer storage offer) {
         // Get the offer's slot
         offer = protocolStorage().offers[_offerId];
 
         // Determine existence
         exists = (_offerId > 0 && offer.id == _offerId);
-
     }
 
     /**
@@ -143,16 +131,15 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
      */
     function fetchExchange(uint256 _exchangeId)
-    internal
-    view
-    returns(bool exists, BosonTypes.Exchange storage exchange) {
-
+        internal
+        view
+        returns (bool exists, BosonTypes.Exchange storage exchange)
+    {
         // Get the exchange's slot
         exchange = protocolStorage().exchanges[_exchangeId];
 
         // Determine existence
         exists = (_exchangeId > 0 && exchange.id == _exchangeId);
-
     }
 
     /**
@@ -162,11 +149,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the twin exists
      * @return twin - the twin details. See {BosonTypes.Twin}
      */
-    function fetchTwin(uint256 _twinId)
-    internal
-    view
-    returns(bool exists, BosonTypes.Twin storage twin) {
-
+    function fetchTwin(uint256 _twinId) internal view returns (bool exists, BosonTypes.Twin storage twin) {
         // Get the twin's slot
         twin = protocolStorage().twins[_twinId];
 

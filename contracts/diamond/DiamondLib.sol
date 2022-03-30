@@ -24,30 +24,23 @@ import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 library DiamondLib {
-
-    bytes32 constant internal DIAMOND_STORAGE_POSITION = keccak256("diamond.standard.diamond.storage");
+    bytes32 internal constant DIAMOND_STORAGE_POSITION = keccak256("diamond.standard.diamond.storage");
 
     struct DiamondStorage {
-
         // maps function selectors to the facets that execute the functions.
         // and maps the selectors to their position in the selectorSlots array.
         // func selector => address facet, selector position
         mapping(bytes4 => bytes32) facets;
-
         // array of slots of function selectors.
         // each slot holds 8 function selectors.
         mapping(uint256 => bytes32) selectorSlots;
-
         // The number of function selectors in selectorSlots
         uint16 selectorCount;
-
         // Used to query if a contract implements an interface.
         // Used to implement ERC-165.
         mapping(bytes4 => bool) supportedInterfaces;
-
         // The Boson Protocol AccessController
         IAccessControlUpgradeable accessController;
-
     }
 
     /**
@@ -68,7 +61,6 @@ library DiamondLib {
      * @param _interfaceId - the interface to add
      */
     function addSupportedInterface(bytes4 _interfaceId) internal {
-
         // Get the DiamondStorage struct
         DiamondStorage storage ds = diamondStorage();
 
@@ -82,12 +74,10 @@ library DiamondLib {
      * @param _interfaceId - the sighash of the given interface
      */
     function supportsInterface(bytes4 _interfaceId) internal view returns (bool) {
-
         // Get the DiamondStorage struct
         DiamondStorage storage ds = diamondStorage();
 
         // Return the value
         return ds.supportedInterfaces[_interfaceId] || false;
     }
-
 }

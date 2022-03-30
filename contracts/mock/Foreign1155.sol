@@ -9,7 +9,6 @@ import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol
  * @notice Mock ERC-(1155/2981) NFT for Unit Testing
  */
 contract Foreign1155 is ERC1155Upgradeable {
-
     /**
      * Mint a Sample NFT
      * @param _tokenId - the token ID to mint an amount of
@@ -18,5 +17,4 @@ contract Foreign1155 is ERC1155Upgradeable {
     function mint(uint256 _tokenId, uint256 _supply) public {
         _mint(msg.sender, _tokenId, _supply, "");
     }
-
 }

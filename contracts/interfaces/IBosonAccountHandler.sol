@@ -11,7 +11,6 @@ import "../domain/BosonTypes.sol";
  * The ERC-165 identifier for this interface is: 0xab00c0da
  */
 interface IBosonAccountHandler {
-
     /// Events
     event SellerCreated(uint256 indexed sellerId, BosonTypes.Seller seller);
 
@@ -27,8 +26,7 @@ interface IBosonAccountHandler {
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
      */
-    function createSeller(BosonTypes.Seller calldata _seller)
-    external;
+    function createSeller(BosonTypes.Seller calldata _seller) external;
 
     /**
      * @notice Gets the details about a seller.
@@ -37,21 +35,14 @@ interface IBosonAccountHandler {
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
      */
-    function getSeller(uint256 _sellerId)
-    external
-    view
-    returns(bool exists, BosonTypes.Seller memory seller);
+    function getSeller(uint256 _sellerId) external view returns (bool exists, BosonTypes.Seller memory seller);
 
     /**
      * @notice Gets the next account Id that can be assigned to an account.
      *
      *  Does not increment the counter.
-     * 
+     *
      * @return nextAccountId - the account Id
      */
-    function getNextAccountId()
-    external
-    view 
-    returns(uint256 nextAccountId);
-
+    function getNextAccountId() external view returns (uint256 nextAccountId);
 }

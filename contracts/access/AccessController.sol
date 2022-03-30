@@ -9,8 +9,7 @@ import "../domain/BosonConstants.sol";
  *
  * @notice Implements centralized role-based access for Boson Protocol contracts.
  */
-contract AccessController is AccessControlUpgradeable, BosonConstants  {
-
+contract AccessController is AccessControlUpgradeable, BosonConstants {
     /**
      * @notice Constructor
      *
@@ -24,5 +23,4 @@ contract AccessController is AccessControlUpgradeable, BosonConstants  {
         _setRoleAdmin(CLIENT, ADMIN);
         _setRoleAdmin(UPGRADER, ADMIN);
     }
-
 }

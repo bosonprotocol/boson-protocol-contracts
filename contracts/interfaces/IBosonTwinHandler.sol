@@ -11,7 +11,6 @@ import "../domain/BosonTypes.sol";
  * The ERC-165 identifier for this interface is: 0x00000000 // TODO: Recalc
  */
 interface IBosonTwinHandler {
-
     /// Events
     event TwinCreated(uint256 indexed twinId, uint256 indexed sellerId, BosonTypes.Twin twin);
 
@@ -26,8 +25,7 @@ interface IBosonTwinHandler {
      * @param _twin - the fully populated struct with twin id set to 0x0
      * @param _sellerOperator - placeholder for seller's operator address. TODO: Remove when Create seller is implemented.
      */
-    function createTwin(BosonTypes.Twin memory _twin, address _sellerOperator)
-    external;
+    function createTwin(BosonTypes.Twin memory _twin, address _sellerOperator) external;
 
     /**
      * @notice Gets the details about a given twin.
@@ -36,8 +34,5 @@ interface IBosonTwinHandler {
      * @return exists - the twin was found
      * @return twin - the twin details. See {BosonTypes.Twin}
      */
-    function getTwin(uint256 _twinId)
-    external
-    view
-    returns(bool exists, BosonTypes.Twin memory twin);
+    function getTwin(uint256 _twinId) external view returns (bool exists, BosonTypes.Twin memory twin);
 }

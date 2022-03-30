@@ -28,7 +28,8 @@ jobs:
         run: |
           cp .env.example .env
       - run: npm run build
-      - run: npm run lint
+      - run: npm run check:contracts
+      - run: npm run check:scripts
 
   test:
     needs: build
