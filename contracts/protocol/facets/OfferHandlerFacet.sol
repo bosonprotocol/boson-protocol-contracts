@@ -324,6 +324,9 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     {
         // TODO: check seller ID matches msg.sender
 
+        // limit maximum number of offers to avoid running into block gas limit in a loop
+        require(_group.offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
+
         // Get the next group and increment the counter
         uint256 groupId = protocolCounters().nextGroupId++;
 
