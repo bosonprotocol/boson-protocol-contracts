@@ -359,11 +359,6 @@ describe("IBosonAccountHandler", function () {
         for ([key, value] of Object.entries(buyer)) {
           expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
         }
-
-        //Get buyer id by wallet address
-        [exists, buyerId] = await accountHandler.connect(rando).getBuyerByWallet(other1.address);
-        expect(exists).to.be.true;
-        expect(buyerId).to.equal(id.toString());
       });
 
       it("should ignore any provided id and assign the next available", async function () {
