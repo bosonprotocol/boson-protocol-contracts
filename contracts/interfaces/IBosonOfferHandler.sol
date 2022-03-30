@@ -16,6 +16,7 @@ interface IBosonOfferHandler {
     event OfferUpdated(uint256 indexed offerId, uint256 indexed sellerId, BosonTypes.Offer offer);
     event OfferVoided(uint256 indexed offerId, uint256 indexed sellerId);
     event GroupCreated(uint256 indexed groupId, uint256 indexed sellerId, BosonTypes.Group group);
+    event GroupUpdated(uint256 indexed groupId, uint256 indexed sellerId, BosonTypes.Group group);
 
     /**
      * @notice Creates an offer

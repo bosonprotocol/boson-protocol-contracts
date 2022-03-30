@@ -914,7 +914,7 @@ describe("IBosonOfferHandler", function () {
         beforeEach(async function () {
           // Create a group
           await offerHandler.connect(seller).createGroup(group);
-  
+
           // id of the current group and increment nextGroupId
           id = nextGroupId++;
 
@@ -926,12 +926,12 @@ describe("IBosonOfferHandler", function () {
 
           condition = new Condition(method, tokenAddress, tokenId, threshold);
           expect(condition.isValid()).to.be.true;
-  
+
           // set the new fields
           group.id = id.toString();
           group.offerIds = ["2", "3", "5"];
           group.condition = condition;
-  
+
           groupStruct = group.toStruct();
         });
 
@@ -956,7 +956,7 @@ describe("IBosonOfferHandler", function () {
           await offerHandler.connect(seller).updateGroup(group);
 
           // Get the group as a struct
-          [, groupStruct] = await offerHandler.connect(rando).getGroup(nextGroupId);
+          [, groupStruct] = await offerHandler.connect(rando).getGroup(group.id);
 
           // Parse into entity
           const returnedGroup = Group.fromStruct(groupStruct);
@@ -971,21 +971,17 @@ describe("IBosonOfferHandler", function () {
           it("Group does not exist", async function () {
             // Set invalid id
             group.id = "444";
-  
+
             // Attempt to update the group, expecting revert
-            await expect(offerHandler.connect(seller).updateGroup(group)).to.revertedWith(
-              RevertReasons.NO_SUCH_GROUP
-            );
-  
+            await expect(offerHandler.connect(seller).updateGroup(group)).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
+
             // Set invalid id
             group.id = "0";
-  
+
             // Attempt to update the offer, expecting revert
-            await expect(offerHandler.connect(seller).updateGroup(group)).to.revertedWith(
-              RevertReasons.NO_SUCH_GROUP
-            );
+            await expect(offerHandler.connect(seller).updateGroup(group)).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
           });
-  
+
           xit("Caller is not seller of a group", async function () {
             // TODO: add when accounthandler is finished
           });
@@ -996,7 +992,7 @@ describe("IBosonOfferHandler", function () {
 
           it("Offer is already part of another group", async function () {
             // create another group
-            group.offerIds = ["1","4"];
+            group.offerIds = ["1", "4"];
             await offerHandler.connect(seller).createGroup(group);
 
             // Add offer that is already part of another group
