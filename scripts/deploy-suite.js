@@ -66,6 +66,7 @@ function getNoArgFacetNames(){
 //        "FundsHandlerFacet", // No functions yet
         "OfferHandlerFacet",
 //        "TwinHandlerFacet"   // No functions yet
+//        "BundleHandlerFacet"
     ];
 
 }
