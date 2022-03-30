@@ -33,12 +33,6 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Dispute) disputes;
         // seller id => seller
         mapping(uint256 => BosonTypes.Seller) sellers;
-        //seller operator address => sellerId
-        mapping(address => uint256) sellerByOperator;
-        //seller admin address => sellerId
-        mapping(address => uint256) sellerByAdmin;
-        //seller clerk address => sellerId
-        mapping(address => uint256) sellerByClerk;
         // buyer id => buyer
         mapping(uint256 => BosonTypes.Buyer) buyers;
         // group id => group
@@ -51,6 +45,14 @@ library ProtocolLib {
         mapping(uint256 => uint256[]) exchangesByOffer;
         // offer id => group id
         mapping(uint256 => uint256) groupByOffer;
+        //seller operator address => sellerId
+        mapping(address => uint256) sellerByOperator;
+        //seller admin address => sellerId
+        mapping(address => uint256) sellerByAdmin;
+        //seller clerk address => sellerId
+        mapping(address => uint256) sellerByClerk;
+        //buyer wallet address => buyerId
+        mapping(address => uint256) buyerByWallet;
     }
 
     // Incrementing ID counters
