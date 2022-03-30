@@ -46,9 +46,6 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
         _;
     }
 
-  
-
-
     /**
      * @dev Get the Protocol Storage slot
      *
@@ -76,7 +73,6 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
         pi = ProtocolLib.protocolInitializers();
     }
 
-  
     /**
      * @notice Fetches a given seller from storage by id
      *

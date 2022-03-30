@@ -20,7 +20,7 @@ describe("IBosonAccountHandler", function () {
   let accounts, deployer, rando, operator, admin, clerk, treasury, other1, other2;
   let erc165, protocolDiamond, accessController, accountHandler, gasLimit;
   let seller, sellerStruct, active;
-  let buyer, buyerStruct,buyerId;
+  let buyer, buyerStruct, buyerId;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
 
@@ -369,11 +369,10 @@ describe("IBosonAccountHandler", function () {
       it("should ignore any provided id and assign the next available", async function () {
         buyer.id = "444";
 
-         // Create a buyer, testing for the event
-         await expect(accountHandler.connect(rando).createBuyer(buyer))
-         .to.emit(accountHandler, "BuyerCreated")
-         .withArgs(nextAccountId, buyerStruct);
-       
+        // Create a buyer, testing for the event
+        await expect(accountHandler.connect(rando).createBuyer(buyer))
+          .to.emit(accountHandler, "BuyerCreated")
+          .withArgs(nextAccountId, buyerStruct);
 
         // wrong buyer id should not exist
         [exists] = await accountHandler.connect(rando).getBuyer(buyer.id);
@@ -384,24 +383,19 @@ describe("IBosonAccountHandler", function () {
         expect(exists).to.be.true;
       });
 
-
       context("💔 Revert Reasons", async function () {
         it("active is false", async function () {
           buyer.active = false;
 
           // Attempt to Create a Buyer, expecting revert
-          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(
-            RevertReasons.MUST_BE_ACTIVE
-          );
+          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
 
         it("addresses are the zero address", async function () {
           buyer.wallet = ethers.constants.AddressZero;
 
           // Attempt to Create a Buyer, expecting revert
-          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(
-            RevertReasons.INVALID_ADDRESS
-          );
+          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
         it("wallet address is not unique to this buyerId", async function () {
@@ -412,7 +406,6 @@ describe("IBosonAccountHandler", function () {
           await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(
             RevertReasons.BUYER_ADDRESS_MUST_BE_UNIQUE
           );
-
         });
       });
     });
@@ -443,8 +436,8 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should return the details of the buyer as a struct if found", async function () {
-         // Get the buyer as a struct
-         [, buyerStruct] = await accountHandler.connect(rando).getBuyer(id);
+        // Get the buyer as a struct
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(id);
 
         // Parse into entity
         buyer = Buyer.fromStruct(buyerStruct);
@@ -480,8 +473,8 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should return the buyer id if found", async function () {
-         // Get the buyer as a struct
-         [, buyerId] = await accountHandler.connect(rando).getBuyerByWallet(other1.address);
+        // Get the buyer as a struct
+        [, buyerId] = await accountHandler.connect(rando).getBuyerByWallet(other1.address);
 
         // Validate
         expect(buyerId).to.equal(id.toString());

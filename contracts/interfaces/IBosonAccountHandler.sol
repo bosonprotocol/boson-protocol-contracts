@@ -66,7 +66,7 @@ interface IBosonAccountHandler {
      *
      * @param _wallet - the wallet address of the buyer
      * @return exists - whether the buyer Id exists
-     * @return buyerId  - the buyer Id. 
+     * @return buyerId  - the buyer Id.
      */
     function getBuyerByWallet(address _wallet) external view returns (bool exists, uint256 buyerId);
 
