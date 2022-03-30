@@ -65,10 +65,10 @@ class Condition {
    * @returns {string}
    */
   toString() {
-    let tmp = {...this};
+    let tmp = { ...this };
     tmp.tokenId = tmp.tokenId.toString();
     tmp.threshold = tmp.threshold.toString();
-    return JSON.stringify(this);
+    return JSON.stringify(tmp);
   }
 
   /**

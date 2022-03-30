@@ -110,17 +110,12 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the group exists
      * @return group - the group details. See {BosonTypes.Group}
      */
-    function fetchGroup(uint256 _groupId)
-    internal
-    view
-    returns(bool exists, BosonTypes.Group storage group) {
-
+    function fetchGroup(uint256 _groupId) internal view returns (bool exists, BosonTypes.Group storage group) {
         // Get the group's slot
         group = protocolStorage().groups[_groupId];
 
         // Determine existence
         exists = (group.id > 0 && group.id == _groupId);
-
     }
 
     /**

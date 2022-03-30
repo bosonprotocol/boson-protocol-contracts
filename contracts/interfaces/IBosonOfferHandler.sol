@@ -114,10 +114,7 @@ interface IBosonOfferHandler {
      * @return exists - the offer was found
      * @return offerUpdateable - true if updateable, false otherwise
      */
-    function isOfferUpdateable(uint256 _offerId)
-    external
-    view
-    returns(bool exists, bool offerUpdateable);
+    function isOfferUpdateable(uint256 _offerId) external view returns (bool exists, bool offerUpdateable);
 
     /**
      * @notice Creates a group.
@@ -125,7 +122,7 @@ interface IBosonOfferHandler {
      * Emits a GroupCreated event if successful.
      *
      * Reverts if:
-     * 
+     *
      * - seller does not match caller
      * - any of offers belongs to different seller
      * - any of offers does not exist
@@ -133,10 +130,7 @@ interface IBosonOfferHandler {
      *
      * @param _group - the fully populated struct with group id set to 0x0
      */
-    function createGroup(
-        BosonTypes.Group memory _group
-    )
-    external;
+    function createGroup(BosonTypes.Group memory _group) external;
 
     /**
      * @notice Gets the details about a given group.
@@ -145,9 +139,5 @@ interface IBosonOfferHandler {
      * @return exists - the offer was found
      * @return group - the offer details. See {BosonTypes.Group}
      */
-    function getGroup(uint256 _groupId)
-    external
-    view
-    returns(bool exists, BosonTypes.Group memory group);
-
+    function getGroup(uint256 _groupId) external view returns (bool exists, BosonTypes.Group memory group);
 }

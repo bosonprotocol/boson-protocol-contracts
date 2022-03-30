@@ -51,7 +51,6 @@ library ProtocolLib {
         mapping(uint256 => uint256[]) exchangesByOffer;
         // offer id => group id
         mapping(uint256 => uint256) groupByOffer;
-                
     }
 
     // Incrementing ID counters
