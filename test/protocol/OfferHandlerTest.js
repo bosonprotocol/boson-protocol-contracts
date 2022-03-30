@@ -907,6 +907,20 @@ describe("IBosonOfferHandler", function () {
               RevertReasons.TOO_MANY_OFFERS
             );
           });
+
+          it("Offer does not exist", async function () {
+            // Invalid offer id
+            group.offerIds = ["1", "999"];
+
+            // Attempt to create a group, expecting revert
+            await expect(offerHandler.connect(seller).createGroup(group)).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+
+            // Invalid offer id
+            group.offerIds = ["0", "4"];
+
+            // Attempt to create a group, expecting revert
+            await expect(offerHandler.connect(seller).createGroup(group)).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+          });
         });
       });
 
@@ -1022,6 +1036,20 @@ describe("IBosonOfferHandler", function () {
             await expect(offerHandler.connect(seller).updateGroup(group)).to.revertedWith(
               RevertReasons.TOO_MANY_OFFERS
             );
+          });
+
+          it("Offer does not exist", async function () {
+            // Set invalid offer id
+            group.offerIds = ["1", "999"];
+
+            // Attempt to update a group, expecting revert
+            await expect(offerHandler.connect(seller).updateGroup(group)).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+
+            // Set invalid offer id
+            group.offerIds = ["0", "2"];
+
+            // Attempt to update a group, expecting revert
+            await expect(offerHandler.connect(seller).updateGroup(group)).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
           });
         });
       });

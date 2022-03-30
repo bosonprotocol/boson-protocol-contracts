@@ -389,7 +389,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         // Get storage location for group
         (,Group storage group) = fetchGroup(_group.id);
 
-        // if offerIds is not empty, remove all mappings
+        // if offerIds in storage is not empty, remove all mappings
         uint offerIdLen = group.offerIds.length;
         for (uint i = 0; i < offerIdLen; i++) {
             delete protocolStorage().groupByOffer[group.offerIds[i]];
