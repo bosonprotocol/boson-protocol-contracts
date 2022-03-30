@@ -20,7 +20,7 @@ describe("IBosonAccountHandler", function () {
   let accounts, deployer, rando, operator, admin, clerk, treasury, other1, other2;
   let erc165, protocolDiamond, accessController, accountHandler, gasLimit;
   let seller, sellerStruct, active;
-  let buyer, buyerStruct, buyerId;
+  let buyer, buyerStruct;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
 
