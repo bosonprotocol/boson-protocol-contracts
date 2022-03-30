@@ -24,7 +24,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         address payable _tokenAddress,
         address payable _treasuryAddress,
         uint16 _protocolFeePercentage,
-        uint16 _maxOffersPerGroup
+        uint16 _maxOffersPerGroup,
+        uint16 _maxTwinsPerBundle
     )
     public
     onlyUnInitialized(type(IBosonConfigHandler).interfaceId)
@@ -38,6 +39,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         ps.treasuryAddress = _treasuryAddress;
         ps.protocolFeePercentage = _protocolFeePercentage;
         ps.maxOffersPerGroup = _maxOffersPerGroup;
+        ps.maxTwinsPerBundle = _maxTwinsPerBundle;
 
 
         // Initialize protocol counters
@@ -201,4 +203,31 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         return protocolStorage().maxOffersPerGroup;
     }
 
+     /**
+     * @notice Sets the maximum numbers of twins that can be added to a bundle in a single transaction
+     *
+     * Emits a MaxTwinsPerBundleChanged event.
+     *
+     * @param _maxTwinsPerBundle - the maximum length of {BosonTypes.Bundle.twinIds}
+     */
+    function setMaxTwinsPerBundle(uint16 _maxTwinsPerBundle)
+    external
+    override
+    onlyRole(ADMIN)
+    {
+        protocolStorage().maxTwinsPerBundle = _maxTwinsPerBundle;
+        emit MaxTwinsPerBundleChanged(_maxTwinsPerBundle, msg.sender);
+    }
+
+    /**
+     * @notice Get the maximum twins per bundle
+     */
+    function getMaxTwinsPerBundle()
+    external
+    override
+    view
+    returns (uint16)
+    {
+        return protocolStorage().maxTwinsPerBundle;
+    }
 }

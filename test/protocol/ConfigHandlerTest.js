@@ -15,7 +15,7 @@ describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
   let accounts, deployer, rando, token, treasury;
-  let protocolFee, maxOffersPerGroup;
+  let protocolFee, maxOffersPerGroup, maxTwinsPerBundle;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
 
   before(async function () {
@@ -40,8 +40,9 @@ describe("IBosonConfigHandler", function () {
     // Set protocol config
     protocolFee = 12;
     maxOffersPerGroup = 100;
+    maxTwinsPerBundle = 100;
 
-    const protocolConfig = [token.address, treasury.address, protocolFee, maxOffersPerGroup];
+    const protocolConfig = [token.address, treasury.address, protocolFee, maxOffersPerGroup, maxTwinsPerBundle];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
     // Cast Diamond to IERC165
@@ -96,6 +97,36 @@ describe("IBosonConfigHandler", function () {
         });
       });
     });
+    context("👉 setMaxTwinsPerBundle()", async function () {
+      beforeEach(async function () {
+        // set new value for max twins per bundle
+        maxTwinsPerBundle = 150;
+      });
+
+      it("should emit a MaxTwinsPerBundleChanged event", async function () {
+        // Set new max twin per bundle, testing for the event
+        await expect(configHandler.connect(deployer).setMaxTwinsPerBundle(maxTwinsPerBundle))
+          .to.emit(configHandler, "MaxTwinsPerBundleChanged")
+          .withArgs(maxTwinsPerBundle, deployer.address);
+      });
+
+      it("should update state", async function () {
+        // Set new max twin per bundle,
+        await configHandler.connect(deployer).setMaxTwinsPerBundle(maxTwinsPerBundle);
+
+        // Verify that nev value is stored
+        expect(await configHandler.connect(rando).getMaxTwinsPerBundle()).to.equal(maxTwinsPerBundle);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("caller is not the admin", async function () {
+          // Attempt to set new max twin per bundle, expecting revert
+          await expect(configHandler.connect(rando).setMaxTwinsPerBundle(maxTwinsPerBundle)).to.revertedWith(
+            RevertReasons.ACCESS_DENIED
+          );
+        });
+      });
+    });
   });
 
   context("📋 Getters", async function () {
@@ -116,6 +147,10 @@ describe("IBosonConfigHandler", function () {
       expect(await configHandler.connect(rando).getMaxOffersPerGroup()).to.equal(
         maxOffersPerGroup,
         "Invalid max groups per offer"
+      );
+      expect(await configHandler.connect(rando).getMaxTwinsPerBundle()).to.equal(
+        maxTwinsPerBundle,
+        "Invalid max bundles per twin"
       );
     });
   });

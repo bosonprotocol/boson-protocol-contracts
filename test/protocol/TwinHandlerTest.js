@@ -92,6 +92,7 @@ describe("IBosonTwinHandler", function () {
       "0x0000000000000000000000000000000000000000",
       "0",
       "100",
+      "100",
     ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
@@ -555,6 +556,16 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
+        it("Adding too many offers", async function () {
+          // Try to add the more than 100 offers
+          bundle.offerIds = [...Array(101).keys()];
+
+          // Attempt to create an bundle, expecting revert
+          await expect(offerHandler.connect(seller).createBundle(bundle)).to.revertedWith(
+            RevertReasons.TOO_MANY_OFFERS
+          );
+        });
+
         it("Twin is already part of another bundle", async function () {
           // create first bundle
           await twinHandler.connect(seller).createBundle(bundle);
@@ -576,6 +587,14 @@ describe("IBosonTwinHandler", function () {
           await expect(twinHandler.connect(seller).createBundle(bundle)).to.revertedWith(
             RevertReasons.TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE
           );
+        });
+
+        it("Adding too many twins", async function () {
+          // Try to add the more than 100 twins
+          bundle.offerIds = [...Array(101).keys()];
+
+          // Attempt to create an bundle, expecting revert
+          await expect(offerHandler.connect(seller).createBundle(bundle)).to.revertedWith(RevertReasons.TOO_MANY_TWINS);
         });
       });
 

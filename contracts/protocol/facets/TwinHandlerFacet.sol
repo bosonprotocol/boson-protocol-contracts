@@ -140,6 +140,8 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
 
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_bundle.offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
+        // limit maximum number of twins to avoid running into block gas limit in a loop
+        require(_bundle.offerIds.length <= protocolStorage().maxTwinsPerBundle, TOO_MANY_TWINS);
 
         // Get the next bundle and increment the counter
         uint256 bundleId = protocolCounters().nextBundleId++;
