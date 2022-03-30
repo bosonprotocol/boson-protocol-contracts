@@ -9,6 +9,9 @@ exports.RevertReasons = {
     // Facet initializer related
     ALREADY_INITIALIZED: "Already initialized",
 
+    // Access related
+    ACCESS_DENIED: "Access denied, caller doesn't have role",
+
     // Offer related
     NOT_OPERATOR: "Not seller's operator",
     NO_SUCH_OFFER: "No such offer",
