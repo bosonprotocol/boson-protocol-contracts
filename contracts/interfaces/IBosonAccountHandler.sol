@@ -62,15 +62,6 @@ interface IBosonAccountHandler {
     function getBuyer(uint256 _buyerId) external view returns (bool exists, BosonTypes.Buyer memory buyer);
 
     /**
-     * @notice Fetches a given buyer from storage by id
-     *
-     * @param _wallet - the wallet address of the buyer
-     * @return exists - whether the buyer Id exists
-     * @return buyerId  - the buyer Id.
-     */
-    function getBuyerByWallet(address _wallet) external view returns (bool exists, uint256 buyerId);
-
-    /**
      * @notice Gets the next account Id that can be assigned to an account.
      *
      *  Does not increment the counter.

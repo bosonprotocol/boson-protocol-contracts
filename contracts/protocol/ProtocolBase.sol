@@ -74,6 +74,21 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
+     * @notice Fetches a given buyer from storage by id
+     *
+     * @param _wallet - the wallet address of the buyer
+     * @return exists - whether the buyer Id exists
+     * @return buyerId  - the buyer Id.
+     */
+    function getBuyerIdByWallet(address _wallet) internal view returns (bool exists, uint256 buyerId) {
+        // Get the buyer Id
+        buyerId = protocolStorage().buyerByWallet[_wallet];
+
+        // Determine existence
+        exists = (buyerId > 0);
+    }
+
+    /**
      * @notice Fetches a given seller from storage by id
      *
      * @param _sellerId - the id of the seller

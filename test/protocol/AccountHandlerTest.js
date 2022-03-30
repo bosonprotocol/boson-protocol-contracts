@@ -446,39 +446,5 @@ describe("IBosonAccountHandler", function () {
         expect(buyer.isValid()).to.be.true;
       });
     });
-
-    context("👉 getBuyerByWallet()", async function () {
-      beforeEach(async function () {
-        // Create a buyer
-        await accountHandler.connect(rando).createBuyer(buyer);
-
-        // id of the current seller and increment nextAccountId
-        id = nextAccountId++;
-      });
-
-      it("should return true for exists if buyer is found", async function () {
-        // Get the exists flag
-        [exists] = await accountHandler.connect(rando).getBuyerByWallet(other1.address);
-
-        // Validate
-        expect(exists).to.be.true;
-      });
-
-      it("should return false for exists if buyer is not found", async function () {
-        // Get the exists flag
-        [exists] = await accountHandler.connect(rando).getBuyer(other2.address);
-
-        // Validate
-        expect(exists).to.be.false;
-      });
-
-      it("should return the buyer id if found", async function () {
-        // Get the buyer as a struct
-        [, buyerId] = await accountHandler.connect(rando).getBuyerByWallet(other1.address);
-
-        // Validate
-        expect(buyerId).to.equal(id.toString());
-      });
-    });
   });
 });
