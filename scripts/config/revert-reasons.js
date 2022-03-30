@@ -32,4 +32,5 @@ exports.RevertReasons = {
   // Twin related
   NO_TRANSFER_APPROVED: "No transfer approved",
   UNSUPPORTED_TOKEN: "Unsupported token",
+  TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE: "Twin already exists in the same bundle",
 };
