@@ -188,7 +188,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
         // Get storage location for buyer
         (,Buyer storage buyer) = fetchBuyer(_buyer.id);
 
-        // Set seller props individually since memory structs can't be copied to storage
+        // Set buyer props individually since memory structs can't be copied to storage
         buyer.id = _buyer.id;
         buyer.wallet = _buyer.wallet;
         buyer.active = _buyer.active;

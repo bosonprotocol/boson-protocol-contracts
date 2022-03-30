@@ -410,7 +410,7 @@ describe("IBosonAccountHandler", function () {
         // Create a buyer
         await accountHandler.connect(rando).createBuyer(buyer);
 
-        // id of the current seller and increment nextAccountId
+        // id of the current buyer and increment nextAccountId
         id = nextAccountId++;
       });
 
