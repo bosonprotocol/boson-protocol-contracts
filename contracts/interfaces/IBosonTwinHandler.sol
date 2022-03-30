@@ -60,8 +60,8 @@ interface IBosonTwinHandler {
      * @notice Gets the details about a given bundle.
      *
      * @param _bundleId - the id of the bundle to check
-     * @return exists - the offer was found
-     * @return bundle - the offer details. See {BosonTypes.Bundle}
+     * @return exists - the bundle was found
+     * @return bundle - the bundle details. See {BosonTypes.Bundle}
      */
     function getBundle(uint256 _bundleId) external view returns (bool exists, BosonTypes.Bundle memory bundle);
 }
