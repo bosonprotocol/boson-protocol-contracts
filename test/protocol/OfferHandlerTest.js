@@ -1032,7 +1032,17 @@ describe("IBosonOfferHandler", function() {
                         // Attempt to create an group, expecting revert
                         await expect(offerHandler.connect(seller).createGroup(group))
                             .to.revertedWith(RevertReasons.OFFER_MUST_BE_UNIQUE);
-                    });    
+                    });
+
+                    it("Adding too many offers", async function () {
+    
+                        // Try to add the more than 100 offers
+                        group.offerIds = [...Array(101).keys()];
+    
+                        // Attempt to create an group, expecting revert
+                        await expect(offerHandler.connect(seller).createGroup(group))
+                            .to.revertedWith(RevertReasons.TOO_MANY_OFFERS);
+                    });  
     
                 });
     
