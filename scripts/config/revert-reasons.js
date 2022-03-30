@@ -19,6 +19,8 @@ exports.RevertReasons = {
   OFFER_PENALTY_INVALID: "Offer penalty invalid",
   OFFER_MUST_BE_ACTIVE: "Offer must be active",
   OFFER_NOT_UPDATEABLE: "Offer not updateable",
+  OFFER_MUST_BE_UNIQUE: "Offer must be unique to a group",
+  TOO_MANY_OFFERS: "Exceeded maximum offers in a single transaction",
 
   // Seller-related
   SELLER_MUST_BE_ACTIVE: "Seller must be active",
