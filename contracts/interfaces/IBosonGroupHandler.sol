@@ -25,6 +25,7 @@ interface IBosonGroupHandler {
      * - any of offers belongs to different seller
      * - any of offers does not exist
      * - offer exists in a different group
+     * - number of offers exceeds maximum allowed number per group
      *
      * @param _group - the fully populated struct with group id set to 0x0
      */
@@ -34,7 +35,7 @@ interface IBosonGroupHandler {
      * @notice Gets the details about a given group.
      *
      * @param _groupId - the id of the group to check
-     * @return exists - the offer was found
+     * @return exists - the group was found
      * @return group - the group details. See {BosonTypes.Group}
      */
     function getGroup(uint256 _groupId) external view returns (bool exists, BosonTypes.Group memory group);
