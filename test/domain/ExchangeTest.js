@@ -1,25 +1,58 @@
 const { expect } = require("chai");
+const Voucher = require("../../scripts/domain/Voucher");
 const Exchange = require("../../scripts/domain/Exchange");
+const ExchangeState = require("../../scripts/domain/ExchangeState");
 
 /**
  *  Test the Exchange domain entity
  */
 describe("Exchange", function () {
   // Suite-wide scope
-  let exchange, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let id, offerId;
+  let object, promoted, clone, dehydrated, rehydrated, key, value, struct;
+  let id, offerId, buyerId;
+  let voucher,
+      voucherStruct,
+      committedDate,
+      validUntilDate,
+      redeemedDate,
+      expired;
+  let exchange,
+      exchangeStruct,
+      finalizedDate,
+      disputed,
+      state;
 
   beforeEach(async function () {
-    // Required constructor params
+    // Required voucher constructor params
+    committedDate = "1661441758";
+    validUntilDate = "166145000";
+    redeemedDate = "1661442001";
+    expired = false;
+    voucher = new Voucher(committedDate, validUntilDate, redeemedDate, expired);
+    voucherStruct = [committedDate, validUntilDate, redeemedDate, expired];
+
+    // Required exchange constructor params
     id = "50";
     offerId = "2112";
+    buyerId = "99";
+    finalizedDate = "1661447000";
+    disputed = false;
+    state = ExchangeState.Completed;
+    exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, disputed, state);
+    exchangeStruct = [id, offerId, buyerId, finalizedDate, voucherStruct, disputed, state];
+
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated Exchange instance", async function () {
-      exchange = new Exchange(id, offerId);
+      exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, disputed, state);
       expect(exchange.idIsValid()).is.true;
       expect(exchange.offerIdIsValid()).is.true;
+      expect(exchange.buyerIdIsValid()).is.true;
+      expect(exchange.finalizedDateIsValid()).is.true;
+      expect(exchange.voucherIsValid()).is.true;
+      expect(exchange.disputedIsValid()).is.true;
+      expect(exchange.stateIsValid()).is.true;
       expect(exchange.isValid()).is.true;
     });
   });
@@ -27,11 +60,11 @@ describe("Exchange", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid exchange, then set fields in tests directly
-      exchange = new Exchange(id, offerId);
+      exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, disputed, state);
       expect(exchange.isValid()).is.true;
     });
 
-    it("Always present, id must be the string representation of a BigNumber", async function () {
+    it("Always present, id must be the string representation of a non-zero BigNumber", async function () {
       // Invalid field value
       exchange.id = "zedzdeadbaby";
       expect(exchange.idIsValid()).is.false;
@@ -47,10 +80,10 @@ describe("Exchange", function () {
       expect(exchange.idIsValid()).is.false;
       expect(exchange.isValid()).is.false;
 
-      // Valid field value
+      // Invalid field value
       exchange.id = "0";
-      expect(exchange.idIsValid()).is.true;
-      expect(exchange.isValid()).is.true;
+      expect(exchange.idIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
 
       // Valid field value
       exchange.id = "126";
@@ -58,7 +91,7 @@ describe("Exchange", function () {
       expect(exchange.isValid()).is.true;
     });
 
-    it("Always present, offerId must be the string representation of a BigNumber", async function () {
+    it("Always present, offerId must be the string representation of a non-zero BigNumber", async function () {
       // Invalid field value
       exchange.offerId = "zedzdeadbaby";
       expect(exchange.offerIdIsValid()).is.false;
@@ -76,30 +109,144 @@ describe("Exchange", function () {
 
       // Valid field value
       exchange.offerId = "0";
-      expect(exchange.offerIdIsValid()).is.true;
-      expect(exchange.isValid()).is.true;
+      expect(exchange.offerIdIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
 
       // Valid field value
       exchange.offerId = "126";
       expect(exchange.offerIdIsValid()).is.true;
       expect(exchange.isValid()).is.true;
     });
+
+    it("Always present, buyerId must be the string representation of a non-zero BigNumber", async function () {
+      // Invalid field value
+      exchange.buyerId = "zedzdeadbaby";
+      expect(exchange.buyerIdIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Invalid field value
+      exchange.buyerId = new Date();
+      expect(exchange.buyerIdIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Invalid field value
+      exchange.buyerId = 12;
+      expect(exchange.buyerIdIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Valid field value
+      exchange.buyerId = "0";
+      expect(exchange.buyerIdIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Valid field value
+      exchange.buyerId = "126";
+      expect(exchange.buyerIdIsValid()).is.true;
+      expect(exchange.isValid()).is.true;
+    });
+
+    it("Always present, disputed must be a boolean", async function () {
+      // Invalid field value
+      exchange.disputed = 12;
+      expect(exchange.disputedIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Invalid field value
+      exchange.disputed = "zedzdeadbaby";
+      expect(exchange.disputedIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Valid field value
+      exchange.disputed = false;
+      expect(exchange.disputedIsValid()).is.true;
+      expect(exchange.isValid()).is.true;
+
+      // Valid field value
+      exchange.disputed = true;
+      expect(exchange.disputedIsValid()).is.true;
+      expect(exchange.isValid()).is.true;
+    });
+
+    it("If present, voucher must be a valid Voucher instance", async function () {
+      // Invalid field value
+      exchange.voucher = 12;
+      expect(exchange.voucherIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Invalid field value
+      exchange.voucher = "zedzdeadbaby";
+      expect(exchange.voucherIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Valid field value
+      exchange.voucher = true;
+      expect(exchange.voucherIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Valid field value
+      exchange.voucher = new Date();
+      expect(exchange.voucherIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Valid field value
+      exchange.voucher = voucher;
+      expect(exchange.voucherIsValid()).is.true;
+      expect(exchange.isValid()).is.true;
+
+    });
+
+    it("If present, finalizedDate must be the string representation of a non-zero BigNumber", async function () {
+      // Invalid field value
+      exchange.finalizedDate = "zedzdeadbaby";
+      expect(exchange.finalizedDateIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Invalid field value
+      exchange.finalizedDate = new Date();
+      expect(exchange.finalizedDateIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Invalid field value
+      exchange.finalizedDate = 12;
+      expect(exchange.finalizedDateIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Valid field value
+      exchange.finalizedDate = "0";
+      expect(exchange.finalizedDateIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Valid field value
+      exchange.finalizedDate = "126";
+      expect(exchange.finalizedDateIsValid()).is.true;
+      expect(exchange.isValid()).is.true;
+
+      // Valid field value
+      exchange.finalizedDate = null;
+      expect(exchange.finalizedDateIsValid()).is.true;
+      expect(exchange.isValid()).is.true;
+
+      // Valid field value
+      exchange.finalizedDate = undefined;
+      expect(exchange.finalizedDateIsValid()).is.true;
+      expect(exchange.isValid()).is.true;
+    });
+
   });
 
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid exchange, then set fields in tests directly
-      exchange = new Exchange(id, offerId);
+      exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, disputed, state);
       expect(exchange.isValid()).is.true;
 
       // Get plain object
       object = {
-        id,
-        offerId,
+        id, offerId, buyerId, finalizedDate, voucher, disputed, state
       };
 
       // Struct representation
-      struct = [id, offerId];
+      struct = [id, offerId, buyerId, finalizedDate, voucherStruct, disputed, state];
     });
 
     context("👉 Static", async function () {
@@ -116,7 +263,7 @@ describe("Exchange", function () {
         }
       });
 
-      it("Exchange.toStruct() should return an Exchange instance from a struct representation", async function () {
+      it("Exchange.fromStruct() should return an Exchange instance from a struct representation", async function () {
         // Get instance from struct
         exchange = Exchange.fromStruct(struct);
 

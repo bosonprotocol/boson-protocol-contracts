@@ -6,10 +6,19 @@ const ethers = require("ethers");
  * See: {BosonTypes.Voucher}
  */
 class Voucher {
-  constructor(exchangeId, committedDate, redeemedDate) {
-    this.exchangeId = exchangeId;
+  /*
+        struct Voucher {
+            uint256 committedDate;
+            uint256 validUntilDate;
+            uint256 redeemedDate;
+        }
+   */
+
+  constructor(committedDate, validUntilDate, redeemedDate, expired) {
     this.committedDate = committedDate;
+    this.validUntilDate = validUntilDate;
     this.redeemedDate = redeemedDate;
+    this.expired = expired
   }
 
   /**
@@ -18,8 +27,8 @@ class Voucher {
    * @returns {Voucher}
    */
   static fromObject(o) {
-    const { exchangeId, committedDate, redeemedDate } = o;
-    return new Voucher(exchangeId, committedDate, redeemedDate);
+    const { committedDate, validUntilDate, redeemedDate, expired } = o;
+    return new Voucher(committedDate, validUntilDate, redeemedDate, expired);
   }
 
   /**
@@ -28,15 +37,16 @@ class Voucher {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let exchangeId, committedDate, redeemedDate;
+    let committedDate, validUntilDate, redeemedDate, expired;
 
     // destructure struct
-    [exchangeId, committedDate, redeemedDate] = struct;
+    [committedDate, validUntilDate, redeemedDate, expired] = struct;
 
     return Voucher.fromObject({
-      exchangeId: exchangeId.toString(),
       committedDate: committedDate.toString(),
+      validUntilDate: validUntilDate.toString(),
       redeemedDate: redeemedDate.toString(),
+      expired: expired
     });
   }
 
@@ -61,7 +71,7 @@ class Voucher {
    * @returns {string}
    */
   toStruct() {
-    return [this.exchangeId, this.committedDate, this.redeemedDate];
+    return [this.committedDate, this.validUntilDate, this.redeemedDate, this.expired];
   }
 
   /**
@@ -73,43 +83,62 @@ class Voucher {
   }
 
   /**
-   * Is this Voucher instance's exchangeId field valid?
-   * Must be a string representation of a big number
-   * @returns {boolean}
-   */
-  exchangeIdIsValid() {
-    let valid = false;
-    let { exchangeId } = this;
-    try {
-      valid = typeof exchangeId === "string" && typeof ethers.BigNumber.from(exchangeId) === "object";
-    } catch (e) {}
-    return valid;
-  }
-
-  /**
    * Is this Voucher instance's committedDate field valid?
-   * Must be a string representation of a big number
+   * If present, must be a string representation of a positive big number
    * @returns {boolean}
    */
   committedDateIsValid() {
     let valid = false;
     let { committedDate } = this;
     try {
-      valid = typeof committedDate === "string" && typeof ethers.BigNumber.from(committedDate) === "object";
+      valid =
+          (committedDate === null || committedDate === undefined) ||
+          (typeof committedDate === "string" && ethers.BigNumber.from(committedDate).gt(0));
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this Voucher instance's validUntilDate field valid?
+   * If present, must be a string representation of a positive big number
+   * @returns {boolean}
+   */
+  validUntilDateIsValid() {
+    let valid = false;
+    let { validUntilDate } = this;
+    try {
+      valid =
+          (validUntilDate === null || validUntilDate === undefined) ||
+          (typeof validUntilDate === "string" && ethers.BigNumber.from(validUntilDate).gt(0));
     } catch (e) {}
     return valid;
   }
 
   /**
    * Is this Voucher instance's redeemedDate field valid?
-   * Must be a string representation of a big number
+   * If present, must be a string representation of a positive big number
    * @returns {boolean}
    */
   redeemedDateIsValid() {
     let valid = false;
     let { redeemedDate } = this;
     try {
-      valid = typeof redeemedDate === "string" && typeof ethers.BigNumber.from(redeemedDate) === "object";
+      valid =
+          (redeemedDate === null || redeemedDate === undefined) ||
+          (typeof redeemedDate === "string" && ethers.BigNumber.from(redeemedDate).gt(0));
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this Exchange instance's expired field valid?
+   * @returns {boolean}
+   */
+  expiredIsValid() {
+    let valid = false;
+    let { expired } = this;
+    try {
+      valid = typeof expired === "boolean";
     } catch (e) {}
     return valid;
   }
@@ -119,7 +148,7 @@ class Voucher {
    * @returns {boolean}
    */
   isValid() {
-    return this.exchangeIdIsValid() && this.committedDateIsValid() && this.redeemedDateIsValid();
+    return this.committedDateIsValid() && this.validUntilDateIsValid() && this.redeemedDateIsValid() && this.expiredIsValid();
   }
 }
 

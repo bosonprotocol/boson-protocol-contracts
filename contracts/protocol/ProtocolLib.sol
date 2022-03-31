@@ -52,7 +52,7 @@ library ProtocolLib {
         //seller clerk address => sellerId
         mapping(address => uint256) sellerByClerk;
         //buyer wallet address => buyerId
-        mapping(address => uint256) buyerIdByWallet;
+        mapping(address => uint256) buyerByWallet;
     }
 
     // Incrementing ID counters

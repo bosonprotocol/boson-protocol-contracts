@@ -15,7 +15,7 @@ contract BosonConstants {
     bytes32 internal constant RESOLVER = keccak256("RESOLVER"); // Role for resolving the outcome of an escalated dispute
     bytes32 internal constant FEE_COLLECTOR = keccak256("FEE_COLLECTOR"); // Role for collecting fees from the protocol
 
-    //Revert Reasons: General
+    // Revert Reasons: General
     string internal constant INVALID_ADDRESS = "Invalid address";
 
     // Revert Reasons: Facet initializer related
@@ -25,8 +25,8 @@ contract BosonConstants {
     string internal constant ACCESS_DENIED = "Access denied, caller doesn't have role";
     string internal constant NOT_OPERATOR = "Not seller's operator";
 
-    //Revert Reasons: Account-related
-    string internal constant MUST_BE_ACTIVE = "Seller must be active";
+    // Revert Reasons: Account-related
+    string internal constant MUST_BE_ACTIVE = "Account must be active";
     string internal constant SELLER_ADDRESS_MUST_BE_UNIQUE = "Seller address cannot be assigned to another seller Id";
     string internal constant BUYER_ADDRESS_MUST_BE_UNIQUE = "Buyer address cannot be assigned to another buyer Id";
 
@@ -38,6 +38,10 @@ contract BosonConstants {
     string internal constant OFFER_MUST_BE_ACTIVE = "Offer must be active";
     string internal constant OFFER_NOT_UPDATEABLE = "Offer not updateable";
     string internal constant OFFER_MUST_BE_UNIQUE = "Offer must be unique to a group";
+    string internal constant OFFER_HAS_BEEN_VOIDED = "Offer has been voided";
+    string internal constant OFFER_HAS_EXPIRED = "Offer has expired";
+    string internal constant OFFER_NOT_AVAILABLE = "Offer is not yet available";
+    string internal constant OFFER_SOLD_OUT = "Offer has sold out";
     string internal constant TOO_MANY_OFFERS = "Exceeded maximum offers in a single transaction";
 
     // Revert Reasons: Exchange related
