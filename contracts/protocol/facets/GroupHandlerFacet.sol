@@ -11,7 +11,7 @@ import { ProtocolLib } from "../ProtocolLib.sol";
  *
  * @notice Handles groups within the protocol
  */
-contract OfferHandlerFacet is IBosonGroupHandler, ProtocolBase {
+contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
 
     /**
      * @notice Facet Initializer
