@@ -21,7 +21,6 @@ interface IBosonGroupHandler {
      *
      * Reverts if:
      *
-     * - seller does not match caller
      * - any of offers belongs to different seller
      * - any of offers does not exist
      * - offer exists in a different group
