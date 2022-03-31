@@ -56,7 +56,8 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
             getValidOffer(_group.offerIds[i]);
             
             // Add to groupByOffer mapping
-            require(protocolStorage().groupByOffer[_group.offerIds[i]] == 0, OFFER_MUST_BE_UNIQUE);
+            (bool exist, ) = getGroupIdByOffer(_group.offerIds[i]);
+            require(!exist, OFFER_MUST_BE_UNIQUE);
             protocolStorage().groupByOffer[_group.offerIds[i]] = groupId;
         }
        
