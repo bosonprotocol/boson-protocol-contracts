@@ -43,9 +43,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
         storeSeller(_seller);
 
         //Map the seller's addresses to the sellerId. It's not necessary to map the treasury address, as it only receives funds
-        protocolStorage().sellerByOperator[_seller.operator] = sellerId;
-        protocolStorage().sellerByAdmin[_seller.admin] = sellerId;
-        protocolStorage().sellerByClerk[_seller.clerk] = sellerId;
+        protocolStorage().sellerIdByOperator[_seller.operator] = sellerId;
+        protocolStorage().sellerIdByAdmin[_seller.admin] = sellerId;
+        protocolStorage().sellerIdByClerk[_seller.clerk] = sellerId;
 
         // Notify watchers of state change
         emit SellerCreated(_seller.id, _seller);
@@ -149,9 +149,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
                 INVALID_ADDRESS);
 
         //check that the addresses are unique to one seller Id
-        require(protocolStorage().sellerByOperator[_seller.operator] == 0 && 
-                protocolStorage().sellerByAdmin[_seller.admin] == 0 && 
-                protocolStorage().sellerByClerk[_seller.clerk] == 0,  
+        require(protocolStorage().sellerIdByOperator[_seller.operator] == 0 && 
+                protocolStorage().sellerIdByAdmin[_seller.admin] == 0 && 
+                protocolStorage().sellerIdByClerk[_seller.clerk] == 0,  
                 SELLER_ADDRESS_MUST_BE_UNIQUE);
 
         // Get storage location for seller
