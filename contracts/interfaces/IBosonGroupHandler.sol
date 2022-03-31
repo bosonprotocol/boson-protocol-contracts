@@ -13,6 +13,7 @@ import "../domain/BosonTypes.sol";
 interface IBosonGroupHandler {
     /// Events
     event GroupCreated(uint256 indexed groupId, uint256 indexed sellerId, BosonTypes.Group group);
+    event GroupUpdated(uint256 indexed groupId, uint256 indexed sellerId, BosonTypes.Group group);
 
     /**
      * @notice Creates a group.
@@ -29,6 +30,24 @@ interface IBosonGroupHandler {
      * @param _group - the fully populated struct with group id set to 0x0
      */
     function createGroup(BosonTypes.Group memory _group) external;
+
+    /**
+     * @notice Adds offers to an existing group
+     *
+     * Emits a GroupUpdated event if successful.
+     *
+     * Reverts if:
+     *
+     * - caller is not the seller
+     * - any of offers belongs to different seller
+     * - any of offers does not exist
+     * - offer exists in a different group
+     * - number of offers exceeds maximum allowed number per group
+     *
+     * @param _groupId  - the id of the group to be updated
+     * @param _offerIds - array of offer ids to be added to the group
+     */
+    function addOffersToGroup(uint256 _groupId, uint256[] calldata _offerIds) external;
 
     /**
      * @notice Gets the details about a given group.

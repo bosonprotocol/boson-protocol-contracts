@@ -43,8 +43,6 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
     external
     override
     {
-        // TODO: check seller ID matches msg.sender
-
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_group.offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
 
@@ -75,6 +73,59 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
       
         // Notify watchers of state change
         emit GroupCreated(groupId, _group.sellerId, _group);
+    }
+
+    /**
+     * @notice Adds offers to an existing group
+     *
+     * Emits a GroupUpdated event if successful.
+     *
+     * Reverts if:
+     * 
+     * - caller is not the seller
+     * - any of offers belongs to different seller
+     * - any of offers does not exist
+     * - offer exists in a different group
+     * - number of offers exceeds maximum allowed number per group
+     *
+     * @param _groupId  - the id of the group to be updated
+     * @param _offerIds - array of offer ids to be added to the group
+     */
+    function addOffersToGroup(
+        uint256 _groupId,
+        uint256[] calldata _offerIds
+    )
+    external
+    override
+    {
+        // limit maximum number of offers to avoid running into block gas limit in a loop
+        require(_offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
+
+        // Get storage location for group
+        (,Group storage group) = fetchGroup(_groupId);
+                
+        // TODO check seller ID matches msg.sender
+        // address sellerId = getSellerIdByOperator(msg.sender);
+        // require(sellerId == group.sellerId, NOT_OPERATOR);
+
+        for (uint i = 0; i < _offerIds.length; i++) {
+            uint offerId = _offerIds[i];
+            // make sure offer exist and belong to the seller
+            getValidOffer(offerId);
+            
+            // Offer should not belong to another group already
+            (bool exist, ) = getGroupIdByOffer(offerId);
+            require(!exist, OFFER_MUST_BE_UNIQUE);
+
+            // add to groupByOffer mapping
+            protocolStorage().groupByOffer[offerId] = _groupId;
+
+            // add to group struct
+            group.offerIds.push(_offerIds[i]);
+        }
+             
+        // Notify watchers of state change
+        emit GroupUpdated(_groupId, group.sellerId, group); // group.sellerId will be replaced by sellerId
     }
 
     /**
