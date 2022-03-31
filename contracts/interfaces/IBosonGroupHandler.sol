@@ -35,7 +35,16 @@ interface IBosonGroupHandler {
      *
      * @param _groupId - the id of the group to check
      * @return exists - the offer was found
-     * @return group - the offer details. See {BosonTypes.Group}
+     * @return group - the group details. See {BosonTypes.Group}
      */
     function getGroup(uint256 _groupId) external view returns (bool exists, BosonTypes.Group memory group);
+
+    /**
+     * @notice Gets the next group id.
+     *
+     * Does not increment the counter.
+     *
+     * @return nextGroupId - the next group id
+     */
+    function getNextGroupId() external view returns (uint256 nextGroupId);
 }
