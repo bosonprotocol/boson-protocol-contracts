@@ -309,6 +309,124 @@ describe("IBosonGroupHandler", function () {
       });
     });
 
+    context("👉 addOfferToGroup()", async function () {
+      beforeEach(async function () {
+        // Create a group
+        await groupHandler.connect(seller).createGroup(group);
+
+        // // id of the current group and increment nextGroupId
+        // id = nextGroupId++;
+
+        // set the new fields
+        offerIdsToAdd = ["1", "4"];
+        group.offerIds = [...group.offerIds, ...offerIdsToAdd];
+        group.condition = condition;
+
+        groupStruct = group.toStruct();
+      });
+
+      it("should emit a GroupUpdated event", async function () {
+        // Add offers to a group, testing for the event
+        const tx = await groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd);
+        const txReceipt = await tx.wait();
+
+        const event = getEvent(txReceipt, groupHandlerFacet_Factory, "GroupUpdated");
+
+        const groupInstance = Group.fromStruct(event.group);
+        // Validate the instance
+        expect(groupInstance.isValid()).to.be.true;
+
+        assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
+        assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+        assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+      });
+
+      it("should update state", async function () {
+        // Add offers to a group,
+        await groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd);
+
+        // Get the group as a struct
+        [, groupStruct] = await groupHandler.connect(rando).getGroup(group.id);
+
+        // Parse into entity
+        const returnedGroup = Group.fromStruct(groupStruct);
+
+        // Returned values should match the input in updateGroup
+        for ([key, value] of Object.entries(group)) {
+          expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Group does not exist", async function () {
+          // Set invalid id
+          group.id = "444";
+
+          // Attempt to add offers to the group, expecting revert
+          await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
+
+          // Set invalid id
+          group.id = "0";
+
+          // Attempt to add offers to offer, expecting revert
+          await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
+        });
+
+        xit("Caller is not seller of a group", async function () {
+          // TODO: add when accounthandler is finished
+        });
+
+        xit("Caller is not the seller of all offers", async function () {
+          // TODO whan account handler is implemented
+        });
+
+        it("Offer is already part of another group", async function () {
+          // create another group
+          group.offerIds = ["1"];
+          await groupHandler.connect(seller).createGroup(group);
+
+          // Attempt to add offers to a group, expecting revert
+          await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.OFFER_MUST_BE_UNIQUE
+          );
+        });
+
+        it("Offer is duplicated", async function () {
+          // Try to add the same offer twice
+          offerIdsToAdd = ["1", "1", "4"];
+
+          // Attempt to add offers to a group, expecting revert
+          await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.OFFER_MUST_BE_UNIQUE
+          );
+        });
+
+        it("Adding too many offers", async function () {
+          // Try to add the more than 100 offers
+          offerIdsToAdd = [...Array(101).keys()];
+
+          // Attempt to add offers to a group, expecting revert
+          await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.TOO_MANY_OFFERS
+          );
+        });
+
+        it("Offer does not exist", async function () {
+          // Set invalid offer id
+          offerIdsToAdd = ["1", "999"];
+
+          // Attempt to add offers to a group, expecting revert
+          await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+
+          // Set invalid offer id
+          offerIdsToAdd = ["0", "2"];
+
+          // Attempt to add offers to a group, expecting revert
+          await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+        });
+      });
+    });
+
     context("👉 getGroup()", async function () {
       beforeEach(async function () {
         // Create a group

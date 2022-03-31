@@ -102,8 +102,10 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
         require(_offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
 
         // Get storage location for group
-        (,Group storage group) = fetchGroup(_groupId);
-                
+        (bool exists ,Group storage group) = fetchGroup(_groupId);
+
+        require(exists, NO_SUCH_GROUP);
+
         // TODO check seller ID matches msg.sender
         // address sellerId = getSellerIdByOperator(msg.sender);
         // require(sellerId == group.sellerId, NOT_OPERATOR);
