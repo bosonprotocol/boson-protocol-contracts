@@ -114,5 +114,4 @@ interface IBosonOfferHandler {
      * @return offerUpdateable - true if updateable, false otherwise
      */
     function isOfferUpdateable(uint256 _offerId) external view returns (bool exists, bool offerUpdateable);
-
 }
