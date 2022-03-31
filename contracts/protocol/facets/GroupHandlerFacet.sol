@@ -34,6 +34,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
      * - any of offers belongs to different seller
      * - any of offers does not exist
      * - offer exists in a different group
+     * - number of offers exceeds maximum allowed number per group
      *
      * @param _group - the fully populated struct with group id set to 0x0
      */
