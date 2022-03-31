@@ -91,5 +91,19 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
         return fetchGroup(_groupId);
     }
 
+     /**
+     * @notice Gets the next group id.
+     *
+     * Does not increment the counter.
+     *
+     * @return nextGroupId - the next offer id
+     */
+    function getNextGroupId()
+    public
+    view
+    returns(uint256 nextGroupId) {
 
+        nextGroupId = protocolCounters().nextGroupId;
+
+    }
 }

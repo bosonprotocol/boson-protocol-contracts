@@ -89,11 +89,11 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
-     * @notice Fetches a given groupId from storage by offerId
+     * @notice Fetches a given group id from storage by offer id
      *
      * @param _offerId - the offer id
-     * @return exists - whether the group Id exists
-     * @return groupId  - the group Id.
+     * @return exists - whether the group id exists
+     * @return groupId  - the group id.
      */
     function getGroupIdByOffer(uint256 _offerId) internal view returns (bool exists, uint256 groupId) {
         // Get the group Id
