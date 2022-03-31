@@ -97,6 +97,8 @@ describe("IBosonBundleHandler", function () {
     twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
     // Cast Diamond to IBundleHandler
     bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
+    // Cast Diamond to IOfferHandler
+    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
 
     // Deploy the mock tokens
     [bosonToken] = await deployMockTokens(gasLimit);
@@ -118,9 +120,6 @@ describe("IBosonBundleHandler", function () {
   // All supported methods
   context("📋 Bundler Handler Methods", async function () {
     beforeEach(async function () {
-      // Cast Diamond to IOfferHandler
-      offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
-
       // create 5 twins
       for (let i = 0; i < 5; i++) {
         // Required constructor params for Twin
@@ -219,14 +218,14 @@ describe("IBosonBundleHandler", function () {
 
         assert.equal(event.bundleId.toString(), nextBundleId, "Bundle Id is incorrect");
         assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
-        assert.equal(Bundle.fromStruct(event.bundle).toString(), bundle.toString(), "Bundle struct is incorrect");
+        assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
       });
 
       it("should update state", async function () {
         // Create a a bundle
         await bundleHandler.connect(seller).createBundle(bundle);
 
-        // Get the offer as a struct
+        // Get the bundle as a struct
         [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleId);
 
         // Parse into entity
@@ -288,6 +287,34 @@ describe("IBosonBundleHandler", function () {
         assert.equal(returnedBundle.twinIds, bundle.twinIds.toString(), "Twin ids should be empty");
       });
 
+      it("Twin is already part of another bundle", async function () {
+        // create first bundle
+        await bundleHandler.connect(seller).createBundle(bundle);
+
+        // Set offer that is NOT already part of another bundle
+        bundle.offerIds = ["1"];
+        // Set twin that is already part of another bundle
+        bundle.twinIds = ["1", "2", "4"];
+
+        const expectedNextBundleId = (parseInt(nextBundleId) + 1).toString();
+        const expectedBundle = bundle.clone();
+        expectedBundle.id = expectedNextBundleId;
+
+        // create another bundle
+        const tx = await bundleHandler.connect(seller).createBundle(bundle);
+        const txReceipt = await tx.wait();
+
+        const event = getEvent(txReceipt, bundleHandlerFacet_Factory, "BundleCreated");
+
+        bundleInstance = Bundle.fromStruct(event.bundle);
+        // Validate the instance
+        expect(bundleInstance.isValid()).to.be.true;
+
+        assert.equal(event.bundleId.toString(), expectedNextBundleId, "Bundle Id is incorrect");
+        assert.equal(event.sellerId.toString(), expectedBundle.sellerId, "Seller Id is incorrect");
+        assert.equal(bundleInstance.toString(), expectedBundle.toString(), "Bundle struct is incorrect");
+      });
+
       xit("should ignore any provided seller and assign seller id of msg.sender", async function () {
         // TODO: add when accounthandler is finished
 
@@ -312,7 +339,7 @@ describe("IBosonBundleHandler", function () {
         // Set add offer that is already part of another bundle
         bundle.offerIds = ["1", "2", "4"];
 
-        // Attempt to create an bundle, expecting revert
+        // Attempt to create a bundle, expecting revert
         await expect(bundleHandler.connect(seller).createBundle(bundle)).to.revertedWith(
           RevertReasons.OFFER_MUST_BE_UNIQUE
         );
@@ -322,7 +349,7 @@ describe("IBosonBundleHandler", function () {
         // Try to add the same offer twice
         bundle.offerIds = ["1", "1", "4"];
 
-        // Attempt to create an bundle, expecting revert
+        // Attempt to create a bundle, expecting revert
         await expect(bundleHandler.connect(seller).createBundle(bundle)).to.revertedWith(
           RevertReasons.OFFER_MUST_BE_UNIQUE
         );
@@ -332,28 +359,15 @@ describe("IBosonBundleHandler", function () {
         // Try to add the more than 100 offers
         bundle.offerIds = [...Array(101).keys()];
 
-        // Attempt to create an bundle, expecting revert
+        // Attempt to create a bundle, expecting revert
         await expect(bundleHandler.connect(seller).createBundle(bundle)).to.revertedWith(RevertReasons.TOO_MANY_OFFERS);
-      });
-
-      it("Twin is already part of another bundle", async function () {
-        // create first bundle
-        await bundleHandler.connect(seller).createBundle(bundle);
-
-        // Set offer that is NOT already part of another bundle
-        bundle.offerIds = ["1"];
-        // Set twin that is already part of another bundle
-        bundle.twinIds = ["1", "2", "4"];
-
-        // Attempt to create an bundle, expecting to NOT revert
-        await expect(bundleHandler.connect(seller).createBundle(bundle)).not.to.be.reverted;
       });
 
       it("Twin is duplicated", async function () {
         // Try to add the same twin twice
         bundle.twinIds = ["1", "1", "4"];
 
-        // Attempt to create an bundle, expecting revert
+        // Attempt to create a bundle, expecting revert
         await expect(bundleHandler.connect(seller).createBundle(bundle)).to.revertedWith(
           RevertReasons.TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE
         );
@@ -363,14 +377,14 @@ describe("IBosonBundleHandler", function () {
         // Try to add the more than 100 twins
         bundle.twinIds = [...Array(101).keys()];
 
-        // Attempt to create an bundle, expecting revert
+        // Attempt to create a bundle, expecting revert
         await expect(bundleHandler.connect(seller).createBundle(bundle)).to.revertedWith(RevertReasons.TOO_MANY_TWINS);
       });
     });
 
     context("👉 getBundle()", async function () {
       beforeEach(async function () {
-        // Create an bundle
+        // Create a bundle
         await bundleHandler.connect(seller).createBundle(bundle);
 
         // id of the current bundle and increment nextBundleId

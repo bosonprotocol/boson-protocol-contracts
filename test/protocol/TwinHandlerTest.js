@@ -62,7 +62,6 @@ describe("IBosonTwinHandler", function () {
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, ["TwinHandlerFacet"]);
-    await deployProtocolHandlerFacets(protocolDiamond, ["OfferHandlerFacet"]);
 
     // Add config Handler, so twin id starts at 1
     const protocolConfig = [

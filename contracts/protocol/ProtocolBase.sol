@@ -194,7 +194,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
         bundle = protocolStorage().bundles[_bundleId];
 
         // Determine existence
-        exists = (bundle.id > 0 && bundle.id == _bundleId);
+        exists = (_bundleId > 0 && bundle.id == _bundleId);
     }
 
     /**
@@ -225,5 +225,35 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
 
         // Offer must not already be voided
         require(!offer.voided, OFFER_ALREADY_VOIDED);
+    }
+
+    /**
+     * @notice Gets the bundle id for a given offer id.
+     *
+     * @param _offerId - the offer Id.
+     * @return exists - whether the bundle Id exists
+     * @return bundleId  - the bundle Id.
+     */
+    function getBundleIdByOffer(uint256 _offerId) internal view returns (bool exists, uint256 bundleId) {
+        // Get the buyer Id
+        bundleId = protocolStorage().bundleByOffer[_offerId];
+
+        // Determine existence
+        exists = (bundleId > 0);
+    }
+
+    /**
+     * @notice Gets the bundle ids for a given twin id.
+     *
+     * @param _twinId - the twin Id.
+     * @return exists - whether the bundle Ids exist
+     * @return bundleIds  - the bundle Ids.
+     */
+    function getBundleIdsByTwin(uint256 _twinId) internal view returns (bool exists, uint256[] memory bundleIds) {
+        // Get the buyer Id
+        bundleIds = protocolStorage().bundlesByTwin[_twinId];
+
+        // Determine existence
+        exists = (bundleIds.length > 0);
     }
 }

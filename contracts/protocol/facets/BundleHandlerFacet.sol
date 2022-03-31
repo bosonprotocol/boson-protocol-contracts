@@ -5,7 +5,6 @@ import { IBosonBundleHandler } from "../../interfaces/IBosonBundleHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../ProtocolBase.sol";
 import { ProtocolLib } from "../ProtocolLib.sol";
-import "./OfferHandlerFacet.sol";
 
 /**
  * @title BundleHandlerFacet
@@ -63,8 +62,10 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
             // make sure all offers exist and belong to the seller
             getValidOffer(_bundle.offerIds[i]);
 
+            (bool bundleByOfferExists, ) = getBundleIdByOffer(_bundle.offerIds[i]);
+            require(!bundleByOfferExists, OFFER_MUST_BE_UNIQUE);
+
             // Add to bundleByOffer mapping
-            require(protocolStorage().bundleByOffer[_bundle.offerIds[i]] == 0, OFFER_MUST_BE_UNIQUE);
             protocolStorage().bundleByOffer[_bundle.offerIds[i]] = bundleId;
         }
 
@@ -72,13 +73,16 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
             // make sure all twins exist and belong to the seller
             getValidTwin(_bundle.twinIds[i]);
 
-            // Add to bundleByTwin mapping
             // A twin can belong to multiple bundles
-            require(
-                (protocolStorage().bundleByTwin[_bundle.twinIds[i]] == 0) ||
-                (protocolStorage().bundleByTwin[_bundle.twinIds[i]] != bundleId)
-                , TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE);
-            protocolStorage().bundleByTwin[_bundle.twinIds[i]] = bundleId;
+            (bool bundlesForTwinExist, uint256[] memory bundles) = getBundleIdsByTwin(_bundle.twinIds[i]);
+            if (bundlesForTwinExist) {
+                for (uint j = 0; j < bundles.length; j++) {
+                    require((bundles[j] != bundleId), TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE);
+                }
+            }
+
+            // Push to bundlesByTwin mapping
+            protocolStorage().bundlesByTwin[_bundle.twinIds[i]].push(bundleId);
         }
 
         // Get storage location for bundle

@@ -7,7 +7,6 @@ import { ProtocolBase } from "../ProtocolBase.sol";
 import { ProtocolLib } from "../ProtocolLib.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/ITwinToken.sol";
-import "./OfferHandlerFacet.sol";
 
 /**
  * @title TwinHandlerFacet
