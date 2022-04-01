@@ -10,6 +10,7 @@ const interfaces = [
   "IBosonDisputeHandler",
   "IBosonExchangeHandler",
   "IBosonFundsHandler",
+  "IBosonGroupHandler",
   "IBosonOfferHandler",
   "IBosonTwinHandler",
   "IBosonAccountHandler",

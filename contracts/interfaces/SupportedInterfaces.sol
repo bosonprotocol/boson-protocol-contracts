@@ -8,6 +8,7 @@ import "./IBosonExchangeHandler.sol";
 import "./IBosonOfferHandler.sol";
 import "./IBosonTwinHandler.sol";
 import "./IBosonAccountHandler.sol";
+import "./IBosonGroupHandler.sol";
 import "./IBosonVoucher.sol";
 import "./IBosonClient.sol";
 import "./IDiamondCut.sol";
@@ -49,6 +50,10 @@ contract SupportedInterfaces {
 
     function getIBosonTwinHandler() public pure returns (bytes4 id) {
         id = type(IBosonTwinHandler).interfaceId;
+    }
+
+    function getIBosonGroupHandler() public pure returns (bytes4 id) {
+        id = type(IBosonGroupHandler).interfaceId;
     }
 
     function getIBosonAccountHandler() public pure returns (bytes4 id) {

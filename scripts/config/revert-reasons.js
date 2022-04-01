@@ -20,6 +20,8 @@ exports.RevertReasons = {
   OFFER_MUST_BE_ACTIVE: "Offer must be active",
   OFFER_NOT_UPDATEABLE: "Offer not updateable",
   OFFER_MUST_BE_UNIQUE: "Offer must be unique to a group",
+
+  // Group related
   TOO_MANY_OFFERS: "Exceeded maximum offers in a single transaction",
 
   // Account-related
