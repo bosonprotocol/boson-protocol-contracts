@@ -99,7 +99,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
      *
      * Does not increment the counter.
      *
-     * @return nextGroupId - the next offer id
+     * @return nextGroupId - the next group id
      */
     function getNextGroupId()
     public
