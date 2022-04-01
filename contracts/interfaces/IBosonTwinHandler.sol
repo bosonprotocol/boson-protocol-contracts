@@ -35,4 +35,13 @@ interface IBosonTwinHandler {
      * @return twin - the twin details. See {BosonTypes.Twin}
      */
     function getTwin(uint256 _twinId) external view returns (bool exists, BosonTypes.Twin memory twin);
+
+    /**
+     * @notice Gets the next twin id.
+     *
+     * Does not increment the counter.
+     *
+     * @return nextTwinId - the next twin id
+     */
+    function getNextTwinId() external view returns (uint256 nextTwinId);
 }

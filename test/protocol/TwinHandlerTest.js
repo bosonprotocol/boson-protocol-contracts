@@ -30,6 +30,7 @@ describe("IBosonTwinHandler", function () {
     foreign1155,
     fallbackError,
     success,
+    expected,
     twin,
     nextTwinId,
     invalidTwinId,
@@ -315,6 +316,61 @@ describe("IBosonTwinHandler", function () {
 
         // Validate
         expect(twin.isValid()).to.be.true;
+      });
+    });
+
+    context("👉 getNextTwinId()", async function () {
+      beforeEach(async function () {
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(seller).approve(twinHandler.address, 1);
+
+        // Create a twin
+        await twinHandler.connect(rando).createTwin(twin, seller.address);
+
+        // id of the current twin and increment nextTwinId
+        id = nextTwinId++;
+      });
+
+      it("should return the next twin id", async function () {
+        // What we expect the next twin id to be
+        expected = nextTwinId;
+
+        // Get the next twin id
+        nextTwinId = await twinHandler.connect(rando).getNextTwinId();
+
+        // Verify expectation
+        expect(nextTwinId.toString() == expected).to.be.true;
+      });
+
+      it("should be incremented after a twin is created", async function () {
+        // Create another twin
+        await twinHandler.connect(seller).createTwin(twin, seller.address);
+
+        // What we expect the next twin id to be
+        expected = ++nextTwinId;
+
+        // Get the next twin id
+        nextTwinId = await twinHandler.connect(rando).getNextTwinId();
+
+        // Verify expectation
+        expect(nextTwinId.toString() == expected).to.be.true;
+      });
+
+      it("should not be incremented when only getNextTwinId is called", async function () {
+        // What we expect the next twin id to be
+        expected = nextTwinId;
+
+        // Get the next twin id
+        nextTwinId = await twinHandler.connect(rando).getNextTwinId();
+
+        // Verify expectation
+        expect(nextTwinId.toString() == expected).to.be.true;
+
+        // Call again
+        nextTwinId = await twinHandler.connect(rando).getNextTwinId();
+
+        // Verify expectation
+        expect(nextTwinId.toString() == expected).to.be.true;
       });
     });
   });

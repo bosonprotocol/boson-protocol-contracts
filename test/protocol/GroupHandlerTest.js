@@ -23,7 +23,7 @@ describe("IBosonGroupHandler", function () {
   let InterfaceIds;
   let accounts, deployer, rando;
   let erc165, protocolDiamond, accessController, offerHandler, groupHandler, key, value;
-  let offer, oneMonth, oneWeek, support, exists;
+  let offer, oneMonth, oneWeek, support, expected, exists;
   let id,
     sellerId,
     price,
@@ -344,6 +344,59 @@ describe("IBosonGroupHandler", function () {
 
         // Validate
         expect(group.isValid()).to.be.true;
+      });
+    });
+
+    context("👉 getNextGroupId()", async function () {
+      beforeEach(async function () {
+        // Create a group
+        await groupHandler.connect(rando).createGroup(group);
+
+        // id of the current group and increment nextGroupId
+        id = nextGroupId++;
+      });
+
+      it("should return the next group id", async function () {
+        // What we expect the next group id to be
+        expected = nextGroupId;
+
+        // Get the next group id
+        nextGroupId = await groupHandler.connect(rando).getNextGroupId();
+
+        // Verify expectation
+        expect(nextGroupId.toString() == expected).to.be.true;
+      });
+
+      it("should be incremented after a group is created", async function () {
+        // Create another group
+        group.offerIds = ["1", "4"];
+        await groupHandler.connect(seller).createGroup(group);
+
+        // What we expect the next group id to be
+        expected = ++nextGroupId;
+
+        // Get the next group id
+        nextGroupId = await groupHandler.connect(rando).getNextGroupId();
+
+        // Verify expectation
+        expect(nextGroupId.toString() == expected).to.be.true;
+      });
+
+      it("should not be incremented when only getNextGroupId is called", async function () {
+        // What we expect the next group id to be
+        expected = nextGroupId;
+
+        // Get the next group id
+        nextGroupId = await groupHandler.connect(rando).getNextGroupId();
+
+        // Verify expectation
+        expect(nextGroupId.toString() == expected).to.be.true;
+
+        // Call again
+        nextGroupId = await groupHandler.connect(rando).getNextGroupId();
+
+        // Verify expectation
+        expect(nextGroupId.toString() == expected).to.be.true;
       });
     });
   });
