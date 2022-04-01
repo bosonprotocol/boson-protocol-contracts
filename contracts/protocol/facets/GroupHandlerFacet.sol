@@ -103,6 +103,9 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
     external
     override
     {
+        // make sure that at least something will be updated
+        require(_offerIds.length != 0, NOTHING_UPDATED);
+
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
 
@@ -156,6 +159,9 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
     external
     override
     {
+        // make sure that at least something will be updated
+        require(_offerIds.length != 0, NOTHING_UPDATED);
+
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
 
@@ -179,10 +185,10 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
             delete protocolStorage().groupIdByOffer[offerId];
 
             // remove from to group struct
-            group.offerIds.push(_offerIds[i]);
             uint256 offerIdsLength = group.offerIds.length;
+
             for (uint j = 0; j < offerIdsLength; j++) {
-                if (group.offerIds[j] == offerId) {
+                if (group.offerIds[j] == offerId) {                    
                     group.offerIds[j] = group.offerIds[offerIdsLength - 1];
                     group.offerIds.pop();
                     break;

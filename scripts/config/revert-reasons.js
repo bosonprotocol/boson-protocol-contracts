@@ -26,7 +26,7 @@ exports.RevertReasons = {
   OFFER_NOT_IN_GROUP: "Offer not part of the group",
   TOO_MANY_OFFERS: "Exceeded maximum offers in a single transaction",
   NOTHING_UPDATED: "Nothing updated",
-  
+
   // Account-related
   MUST_BE_ACTIVE: "Seller must be active",
   SELLER_ADDRESS_MUST_BE_UNIQUE: "Seller address cannot be assigned to another seller Id",
