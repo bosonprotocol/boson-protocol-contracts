@@ -14,7 +14,7 @@ module.exports = {
 
     // Needed for verifying contract code on Etherscan
     "etherscan": {
-        "apiKey": process.env.ETHERSCAN_API_KEY
+        "apiKey": process.env.DEPLOYER_ETHERSCAN_API_KEY
     },
 
     // Needed for Gas Reporter

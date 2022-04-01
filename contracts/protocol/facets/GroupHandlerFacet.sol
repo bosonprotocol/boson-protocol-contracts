@@ -43,7 +43,8 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
     external
     override
     {
-        // TODO: check seller ID matches msg.sender
+        // TODO: assign correct sellerid to the group
+        // _group.sellerId = getSellerIdByOperator(msg.sender); 
 
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_group.offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
