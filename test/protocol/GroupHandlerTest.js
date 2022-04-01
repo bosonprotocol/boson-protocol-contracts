@@ -262,6 +262,21 @@ describe("IBosonGroupHandler", function () {
           // TODO whan account handler is implemented
         });
 
+
+        it("Offer does not exist", async function () {
+          // Invalid offer id
+          group.offerIds = ["1", "999"];
+
+          // Attempt to create a group, expecting revert
+          await expect(groupHandler.connect(seller).createGroup(group)).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+
+          // Invalid offer id
+          group.offerIds = ["0", "4"];
+
+          // Attempt to create a group, expecting revert
+          await expect(groupHandler.connect(seller).createGroup(group)).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+        });
+
         it("Offer is already part of another group", async function () {
           // create first group
           await groupHandler.connect(seller).createGroup(group);
