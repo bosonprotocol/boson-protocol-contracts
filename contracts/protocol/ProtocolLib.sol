@@ -44,7 +44,7 @@ library ProtocolLib {
         // offer id => exchange ids
         mapping(uint256 => uint256[]) exchangesByOffer;
         // offer id => group id
-        mapping(uint256 => uint256) groupByOffer;
+        mapping(uint256 => uint256) groupIdByOffer;
         //seller operator address => sellerId
         mapping(address => uint256) sellerIdByOperator;
         //seller admin address => sellerId

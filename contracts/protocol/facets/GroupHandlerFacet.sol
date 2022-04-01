@@ -43,7 +43,6 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
     external
     override
     {
-
         // TODO: assign correct sellerid to the group
         // _group.sellerId = getSellerIdByOperator(msg.sender); 
 
@@ -54,12 +53,15 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
         uint256 groupId = protocolCounters().nextGroupId++;
 
         for (uint i = 0; i < _group.offerIds.length; i++) {
-            // make sure all offers exist and belong to the seller
+            // make sure offer exists and belongs to the seller
             getValidOffer(_group.offerIds[i]);
             
-            // Add to groupByOffer mapping
-            require(protocolStorage().groupByOffer[_group.offerIds[i]] == 0, OFFER_MUST_BE_UNIQUE);
-            protocolStorage().groupByOffer[_group.offerIds[i]] = groupId;
+            // Offer should not belong to another group already
+            (bool exist, ) = getGroupIdByOffer(_group.offerIds[i]);
+            require(!exist, OFFER_MUST_BE_UNIQUE);
+
+            // add to groupIdByOffer mapping
+            protocolStorage().groupIdByOffer[_group.offerIds[i]] = groupId;
         }
        
         // Get storage location for group
@@ -92,5 +94,19 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
         return fetchGroup(_groupId);
     }
 
+     /**
+     * @notice Gets the next group id.
+     *
+     * Does not increment the counter.
+     *
+     * @return nextGroupId - the next group id
+     */
+    function getNextGroupId()
+    public
+    view
+    returns(uint256 nextGroupId) {
 
+        nextGroupId = protocolCounters().nextGroupId;
+
+    }
 }
