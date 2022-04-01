@@ -1,0 +1,38 @@
+name: Deploy pre-release
+on:
+  release:
+    types: [prereleased]
+jobs:
+  ropsten_deploy:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOYER_GAS_LIMIT: ${{ secrets.DEPLOYER_GAS_LIMIT }}
+      DEPLOYER_ROPSTEN_TXNODE: ${{ secrets.DEPLOYER_ROPSTEN_TXNODE }}
+      DEPLOYER_ROPSTEN_KEY: ${{ secrets.DEPLOYER_ROPSTEN_KEY }}
+      DEPLOYER_ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+    name: ropsten_deploy
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Setup node
+        uses: actions/setup-node@v2.5.1
+        with:
+          node-version: '16.14.x'
+          cache: 'npm'
+      - run: npm install
+      - name: Prepare Environment
+        shell: bash
+        run: |
+          cp .env.example .env
+      - name: Create empty logs directory
+        shell: bash
+        run: |
+          mkdir -p logs
+      - run: npm run deploy-suite:ropsten
+      - name: Upload Ropsten deploy output
+        uses: actions/upload-artifact@v2
+        with:
+          name: ropsten-deploy-contracts-logs
+          path: logs/ropsten.deploy.contracts.txt

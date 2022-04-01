@@ -43,6 +43,9 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
     external
     override
     {
+        // TODO: assign correct sellerid to the group
+        // _group.sellerId = getSellerIdByOperator(msg.sender); 
+
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_group.offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
 
@@ -50,13 +53,15 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
         uint256 groupId = protocolCounters().nextGroupId++;
 
         for (uint i = 0; i < _group.offerIds.length; i++) {
-            // make sure all offers exist and belong to the seller
+            // make sure offer exists and belongs to the seller
             getValidOffer(_group.offerIds[i]);
             
-            // Add to groupByOffer mapping
+            // Offer should not belong to another group already
             (bool exist, ) = getGroupIdByOffer(_group.offerIds[i]);
             require(!exist, OFFER_MUST_BE_UNIQUE);
-            protocolStorage().groupByOffer[_group.offerIds[i]] = groupId;
+
+            // add to groupIdByOffer mapping
+            protocolStorage().groupIdByOffer[_group.offerIds[i]] = groupId;
         }
        
         // Get storage location for group
@@ -120,7 +125,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
             require(!exist, OFFER_MUST_BE_UNIQUE);
 
             // add to groupByOffer mapping
-            protocolStorage().groupByOffer[offerId] = _groupId;
+            protocolStorage().groupIdByOffer[offerId] = _groupId;
 
             // add to group struct
             group.offerIds.push(_offerIds[i]);
@@ -149,7 +154,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
      *
      * Does not increment the counter.
      *
-     * @return nextGroupId - the next offer id
+     * @return nextGroupId - the next group id
      */
     function getNextGroupId()
     public
