@@ -74,11 +74,56 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
-     * @notice Fetches a given buyer from storage by id
+     * @notice Gets a seller Id from storage by operator address
+     *
+     * @param _operator - the operator address of the seller
+     * @return exists - whether the seller Id exists
+     * @return sellerId  - the seller Id
+     */
+    function getSellerIdByOperator(address _operator) internal view returns (bool exists, uint256 sellerId) {
+        // Get the seller Id
+        sellerId = protocolStorage().sellerIdByOperator[_operator];
+
+        // Determine existence
+        exists = (sellerId > 0);
+    }
+
+    /**
+     * @notice Gets a seller Id from storage by admin address
+     *
+     * @param _admin - the admin address of the seller
+     * @return exists - whether the seller Id exists
+     * @return sellerId  - the seller Id
+     */
+    function getSellerIdByAdmin(address _admin) internal view returns (bool exists, uint256 sellerId) {
+        // Get the seller Id
+        sellerId = protocolStorage().sellerIdByAdmin[_admin];
+
+        // Determine existence
+        exists = (sellerId > 0);
+    }
+
+    /**
+     * @notice Gets a seller Id from storage by clerk address
+     *
+     * @param _clerk - the clerk address of the seller
+     * @return exists - whether the seller Id exists
+     * @return sellerId  - the seller Id
+     */
+    function getSellerIdByClerk(address _clerk) internal view returns (bool exists, uint256 sellerId) {
+        // Get the seller Id
+        sellerId = protocolStorage().sellerIdByClerk[_clerk];
+
+        // Determine existence
+        exists = (sellerId > 0);
+    }
+
+    /**
+     * @notice Gets a buyer id from storage by wallet address
      *
      * @param _wallet - the wallet address of the buyer
      * @return exists - whether the buyer Id exists
-     * @return buyerId  - the buyer Id.
+     * @return buyerId  - the buyer Id
      */
     function getBuyerIdByWallet(address _wallet) internal view returns (bool exists, uint256 buyerId) {
         // Get the buyer Id

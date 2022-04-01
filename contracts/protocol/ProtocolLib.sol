@@ -46,11 +46,11 @@ library ProtocolLib {
         // offer id => group id
         mapping(uint256 => uint256) groupIdByOffer;
         //seller operator address => sellerId
-        mapping(address => uint256) sellerByOperator;
+        mapping(address => uint256) sellerIdByOperator;
         //seller admin address => sellerId
-        mapping(address => uint256) sellerByAdmin;
+        mapping(address => uint256) sellerIdByAdmin;
         //seller clerk address => sellerId
-        mapping(address => uint256) sellerByClerk;
+        mapping(address => uint256) sellerIdByClerk;
         //buyer wallet address => buyerId
         mapping(address => uint256) buyerIdByWallet;
     }
