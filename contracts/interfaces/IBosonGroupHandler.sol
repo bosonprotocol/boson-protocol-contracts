@@ -50,6 +50,22 @@ interface IBosonGroupHandler {
     function addOffersToGroup(uint256 _groupId, uint256[] calldata _offerIds) external;
 
     /**
+     * @notice Removes offers from an existing group
+     *
+     * Emits a GroupUpdated event if successful.
+     *
+     * Reverts if:
+     *
+     * - caller is not the seller
+     * - any offer is not part of the group
+     * - number of offers exceeds maximum allowed number per group
+     *
+     * @param _groupId  - the id of the group to be updated
+     * @param _offerIds - array of offer ids to be removed to the group
+     */
+    function removeOffersFromGroup(uint256 _groupId, uint256[] calldata _offerIds) external;
+
+    /**
      * @notice Gets the details about a given group.
      *
      * @param _groupId - the id of the group to check

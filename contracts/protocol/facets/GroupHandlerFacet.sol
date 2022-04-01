@@ -65,7 +65,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
         }
        
         // Get storage location for group
-        (,Group storage group) = fetchGroup(groupId);
+        (, Group storage group) = fetchGroup(groupId);
 
         // Set group props individually since memory structs can't be copied to storage
         group.id = groupId;
@@ -107,7 +107,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
         require(_offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
 
         // Get storage location for group
-        (bool exists ,Group storage group) = fetchGroup(_groupId);
+        (bool exists, Group storage group) = fetchGroup(_groupId);
 
         require(exists, NO_SUCH_GROUP);
 
@@ -124,15 +124,74 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
             (bool exist, ) = getGroupIdByOffer(offerId);
             require(!exist, OFFER_MUST_BE_UNIQUE);
 
-            // add to groupByOffer mapping
+            // add to groupIdByOffer mapping
             protocolStorage().groupIdByOffer[offerId] = _groupId;
 
             // add to group struct
-            group.offerIds.push(_offerIds[i]);
+            group.offerIds.push(offerId);
         }
              
         // Notify watchers of state change
-        emit GroupUpdated(_groupId, group.sellerId, group); // group.sellerId will be replaced by sellerId
+        emit GroupUpdated(_groupId, group.sellerId, group); // TODO: group.sellerId will be replaced by sellerId
+    }
+
+    /**
+     * @notice Removes offers from an existing group
+     *
+     * Emits a GroupUpdated event if successful.
+     *
+     * Reverts if:
+     * 
+     * - caller is not the seller
+     * - any offer is not part of the group
+     * - number of offers exceeds maximum allowed number per group
+     *
+     * @param _groupId  - the id of the group to be updated
+     * @param _offerIds - array of offer ids to be removed to the group
+     */
+    function removeOffersFromGroup(
+        uint256 _groupId,
+        uint256[] calldata _offerIds
+    )
+    external
+    override
+    {
+        // limit maximum number of offers to avoid running into block gas limit in a loop
+        require(_offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
+
+        // Get storage location for group
+        (bool exists, Group storage group) = fetchGroup(_groupId);
+
+        require(exists, NO_SUCH_GROUP);
+
+        // TODO check seller ID matches msg.sender
+        // address sellerId = getSellerIdByOperator(msg.sender);
+        // require(sellerId == group.sellerId, NOT_OPERATOR);
+
+        for (uint i = 0; i < _offerIds.length; i++) {
+            uint offerId = _offerIds[i];
+            
+            // Offer should belong to the group
+            (, uint256 groupId) = getGroupIdByOffer(offerId);
+            require(_groupId == groupId, OFFER_NOT_IN_GROUP);
+
+            // remove groupIdByOffer mapping
+            delete protocolStorage().groupIdByOffer[offerId];
+
+            // remove from to group struct
+            group.offerIds.push(_offerIds[i]);
+            uint256 offerIdsLength = group.offerIds.length;
+            for (uint j = 0; j < offerIdsLength; j++) {
+                if (group.offerIds[j] == offerId) {
+                    group.offerIds[j] = group.offerIds[offerIdsLength - 1];
+                    group.offerIds.pop();
+                    break;
+                }
+            }
+        }
+             
+        // Notify watchers of state change
+        emit GroupUpdated(_groupId, group.sellerId, group); // TODO: group.sellerId will be replaced by sellerId
     }
 
     /**

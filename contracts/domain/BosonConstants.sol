@@ -41,6 +41,7 @@ contract BosonConstants {
 
     // Revert Reasons: Group related
     string internal constant NO_SUCH_GROUP = "No such offer";
+    string internal constant OFFER_NOT_IN_GROUP = "Offer not part of the group";
     string internal constant TOO_MANY_OFFERS = "Exceeded maximum offers in a single transaction";
 
     // Revert Reasons: Exchange related
