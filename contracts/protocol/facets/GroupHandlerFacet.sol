@@ -53,13 +53,15 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
         uint256 groupId = protocolCounters().nextGroupId++;
 
         for (uint i = 0; i < _group.offerIds.length; i++) {
-            // make sure all offers exist and belong to the seller
+            // make sure offer exists and belongs to the seller
             getValidOffer(_group.offerIds[i]);
             
-            // Add to groupByOffer mapping
+            // Offer should not belong to another group already
             (bool exist, ) = getGroupIdByOffer(_group.offerIds[i]);
             require(!exist, OFFER_MUST_BE_UNIQUE);
-            protocolStorage().groupByOffer[_group.offerIds[i]] = groupId;
+
+            // add to groupIdByOffer mapping
+            protocolStorage().groupIdByOffer[_group.offerIds[i]] = groupId;
         }
        
         // Get storage location for group

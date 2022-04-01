@@ -97,7 +97,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function getGroupIdByOffer(uint256 _offerId) internal view returns (bool exists, uint256 groupId) {
         // Get the group Id
-        groupId = protocolStorage().groupByOffer[_offerId];
+        groupId = protocolStorage().groupIdByOffer[_offerId];
 
         // Determine existence
         exists = (groupId > 0);
