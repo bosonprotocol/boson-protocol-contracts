@@ -88,6 +88,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
      * Reverts if:
      * 
      * - caller is not the seller
+    * - offer ids is an empty list
      * - any of offers belongs to different seller
      * - any of offers does not exist
      * - offer exists in a different group
@@ -146,6 +147,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
      * Reverts if:
      * 
      * - caller is not the seller
+     * - offer ids is an empty list
      * - any offer is not part of the group
      * - number of offers exceeds maximum allowed number per group
      *
@@ -184,7 +186,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
             // remove groupIdByOffer mapping
             delete protocolStorage().groupIdByOffer[offerId];
 
-            // remove from to group struct
+            // remove from the group struct
             uint256 offerIdsLength = group.offerIds.length;
 
             for (uint j = 0; j < offerIdsLength; j++) {
