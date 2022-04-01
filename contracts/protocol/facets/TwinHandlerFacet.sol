@@ -110,4 +110,20 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
     returns(bool exists, Twin memory twin) {
         return fetchTwin(_twinId);
     }
+
+    /**
+     * @notice Gets the next twin id.
+     *
+     * Does not increment the counter.
+     *
+     * @return nextTwinId - the next twin id
+     */
+    function getNextTwinId()
+    public
+    view
+    returns(uint256 nextTwinId) {
+
+        nextTwinId = protocolCounters().nextTwinId;
+
+    }
 }
