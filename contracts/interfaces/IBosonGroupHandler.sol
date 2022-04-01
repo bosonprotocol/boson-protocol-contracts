@@ -66,6 +66,22 @@ interface IBosonGroupHandler {
     function removeOffersFromGroup(uint256 _groupId, uint256[] calldata _offerIds) external;
 
     /**
+     * @notice Sets the condition of an existing group.
+     *
+     * Emits a GroupUpdated event if successful.
+     *
+     * Reverts if:
+     *
+     * - seller does not match caller
+     * - group does not exist
+     *
+     * @param _groupId - the id of the group to set the condition
+     * @param _condition - fully populated condition struct
+     *
+     */
+    function setGroupCondition(uint256 _groupId, BosonTypes.Condition calldata _condition) external;
+
+    /**
      * @notice Gets the details about a given group.
      *
      * @param _groupId - the id of the group to check

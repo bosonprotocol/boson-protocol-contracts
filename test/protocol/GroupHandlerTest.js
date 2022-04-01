@@ -552,6 +552,83 @@ describe("IBosonGroupHandler", function () {
       });
     });
 
+    context("👉 setGroupCondition()", async function () {
+      beforeEach(async function () {
+        // Create a group
+        await groupHandler.connect(seller).createGroup(group);
+
+        // id of the current group and increment nextGroupId
+        id = nextGroupId++;
+
+        // Required constructor params for Condition
+        method = EvaluationMethod.SpecificToken;
+        tokenAddress = accounts[1].address; // just need an address
+        tokenId = "88775544";
+        threshold = "0";
+
+        condition = new Condition(method, tokenAddress, tokenId, threshold);
+        expect(condition.isValid()).to.be.true;
+
+        groupStruct = group.toStruct();
+      });
+
+      it("should emit a GroupUpdated event", async function () {
+        // Update a group, testing for the event
+        const tx = await groupHandler.connect(seller).setGroupCondition(group.id, condition);
+        const txReceipt = await tx.wait();
+
+        const event = getEvent(txReceipt, groupHandlerFacet_Factory, "GroupUpdated");
+
+        const groupInstance = Group.fromStruct(event.group);
+        // Validate the instance
+        expect(groupInstance.isValid()).to.be.true;
+
+        group.condition = condition;
+
+        assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
+        assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+        assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+      });
+
+      it("should update state", async function () {
+        // Set a new condition
+        await groupHandler.connect(seller).setGroupCondition(group.id, condition);
+
+        // Get the group as a struct
+        [, groupStruct] = await groupHandler.connect(rando).getGroup(group.id);
+
+        // Parse into entity
+        const returnedGroup = Group.fromStruct(groupStruct);
+
+        // Returned values should match the input in setGroupCondition
+        expect(returnedGroup.condition.toString() === condition.toString()).is.true;
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Group does not exist", async function () {
+          // Set invalid id
+          group.id = "444";
+
+          // Attempt to update the group, expecting revert
+          await expect(groupHandler.connect(seller).setGroupCondition(group.id, condition)).to.revertedWith(
+            RevertReasons.NO_SUCH_GROUP
+          );
+
+          // Set invalid id
+          group.id = "0";
+
+          // Attempt to update the offer, expecting revert
+          await expect(groupHandler.connect(seller).setGroupCondition(group.id, condition)).to.revertedWith(
+            RevertReasons.NO_SUCH_GROUP
+          );
+        });
+
+        xit("Caller is not seller of a group", async function () {
+          // TODO: add when accounthandler is finished
+        });
+      });
+    });
+
     context("👉 getGroup()", async function () {
       beforeEach(async function () {
         // Create a group

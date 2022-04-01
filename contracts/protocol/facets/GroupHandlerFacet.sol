@@ -202,6 +202,38 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
         emit GroupUpdated(_groupId, group.sellerId, group); // TODO: group.sellerId will be replaced by sellerId
     }
 
+      /**
+     * @notice Sets the condition of an existing group.
+     *
+     * Emits a GroupUpdated event if successful.
+     *
+     * Reverts if:
+     * 
+     * - seller does not match caller
+     * - group does not exist
+     *
+     * @param _groupId - the id of the group to set the condition
+     * @param _condition - fully populated condition struct
+     * 
+     */
+    function setGroupCondition(
+        uint256 _groupId,
+        Condition calldata _condition
+    )
+    external
+    override {
+        // verify group exists
+        (bool exists,Group storage group) = fetchGroup(_groupId);
+        require(exists, NO_SUCH_GROUP);
+
+        // TODO: check seller ID matches msg.sender
+
+        group.condition = _condition;
+      
+        // Notify watchers of state change
+        emit GroupUpdated(group.id, group.sellerId, group);
+    }
+
     /**
      * @notice Gets the details about a given group.
      *
