@@ -262,7 +262,6 @@ describe("IBosonGroupHandler", function () {
           // TODO whan account handler is implemented
         });
 
-
         it("Offer does not exist", async function () {
           // Invalid offer id
           group.offerIds = ["1", "999"];
