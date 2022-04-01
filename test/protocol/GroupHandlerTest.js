@@ -309,18 +309,14 @@ describe("IBosonGroupHandler", function () {
       });
     });
 
-    context("👉 addOfferToGroup()", async function () {
+    context("👉 addOffersToGroup()", async function () {
       beforeEach(async function () {
         // Create a group
         await groupHandler.connect(seller).createGroup(group);
 
-        // // id of the current group and increment nextGroupId
-        // id = nextGroupId++;
-
         // set the new fields
-        offerIdsToAdd = ["1", "4"];
+        offerIdsToRemove = ["1", "4"];
         group.offerIds = [...group.offerIds, ...offerIdsToAdd];
-        group.condition = condition;
 
         groupStruct = group.toStruct();
       });
@@ -351,7 +347,7 @@ describe("IBosonGroupHandler", function () {
         // Parse into entity
         const returnedGroup = Group.fromStruct(groupStruct);
 
-        // Returned values should match the input in updateGroup
+        // Returned values should reflect the changes done with addOffersToGroup
         for ([key, value] of Object.entries(group)) {
           expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
         }
@@ -368,7 +364,7 @@ describe("IBosonGroupHandler", function () {
           // Set invalid id
           group.id = "0";
 
-          // Attempt to add offers to offer, expecting revert
+          // Attempt to add offers to group, expecting revert
           await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
         });
 
@@ -411,6 +407,16 @@ describe("IBosonGroupHandler", function () {
           );
         });
 
+        it("Adding nothing", async function () {
+          // Try to add nothing
+          offerIdsToAdd = [];
+
+          // Attempt to add offers from the group, expecting revert
+          await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.NOTHING_UPDATED
+          );
+        });
+
         it("Offer does not exist", async function () {
           // Set invalid offer id
           offerIdsToAdd = ["1", "999"];
@@ -423,6 +429,113 @@ describe("IBosonGroupHandler", function () {
 
           // Attempt to add offers to a group, expecting revert
           await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+        });
+      });
+    });
+
+    context("👉 removeOffersFromGroup()", async function () {
+      beforeEach(async function () {
+
+        group.offerIds = ["1","2","3","4","5"];
+        // Create a group
+        await groupHandler.connect(seller).createGroup(group);
+
+        // set the new fields
+        offerIdsToRemove = ["1", "4"];
+        group.offerIds = ["5","2","3"];  // ["1","2","3","4","5"] -> ["5","2","3","4"] -> ["5","2","3"]
+
+        groupStruct = group.toStruct();
+      });
+
+      it("should emit a GroupUpdated event", async function () {
+        // Remove offers from a group, testing for the event
+        const tx = await groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove);
+        const txReceipt = await tx.wait();
+
+        const event = getEvent(txReceipt, groupHandlerFacet_Factory, "GroupUpdated");
+
+        const groupInstance = Group.fromStruct(event.group);
+        // Validate the instance
+        expect(groupInstance.isValid()).to.be.true;
+
+        assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
+        assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+        assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+      });
+
+      it("should update state", async function () {
+        // Remove offer to a group,
+        await groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove);
+
+        // Get the group as a struct
+        [, groupStruct] = await groupHandler.connect(rando).getGroup(group.id);
+
+        // Parse into entity
+        const returnedGroup = Group.fromStruct(groupStruct);
+
+        // Returned values should  reflect the changes done with removeOffersFromGroup
+        for ([key, value] of Object.entries(group)) {
+          expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Group does not exist", async function () {
+          // Set invalid id
+          group.id = "444";
+
+          // Attempt to remove offers from the group, expecting revert
+          await expect(groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
+
+          // Set invalid id
+          group.id = "0";
+
+          // Attempt to remove offers from group, expecting revert
+          await expect(groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
+        });
+
+        xit("Caller is not seller of a group", async function () {
+          // TODO: add when accounthandler is finished
+        });
+
+
+        it("Offer is not a part of the group", async function () {
+          // inexisting offer
+          group.offerIds = ["6"];
+
+          // Attempt to remove offers from the group, expecting revert
+          await expect(groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
+            RevertReasons.OFFER_NOT_IN_GROUP
+          );
+
+          // create an offer and add it to another group
+          await offerHandler.connect(seller).createOffer(offer);
+          await groupHandler.connect(seller).createGroup(group);
+
+          // Attempt to remove offers to a group, expecting revert
+          await expect(groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
+            RevertReasons.OFFER_NOT_IN_GROUP
+          );
+        });
+
+        it("Removing too many offers", async function () {
+          // Try to remove the more than 100 offers
+          offerIdsToRemove = [...Array(101).keys()];
+
+          // Attempt to remove offers from the group, expecting revert
+          await expect(groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
+            RevertReasons.TOO_MANY_OFFERS
+          );
+        });
+
+        it("Removing nothing", async function () {
+          // Try to remove nothing
+          offerIdsToRemove = [];
+
+          // Attempt to remove offers from the group, expecting revert
+          await expect(groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
+            RevertReasons.NOTHING_UPDATED
+          );
         });
       });
     });
