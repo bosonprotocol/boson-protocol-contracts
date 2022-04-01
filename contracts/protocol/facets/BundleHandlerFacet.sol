@@ -65,8 +65,8 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
             (bool bundleByOfferExists, ) = getBundleIdByOffer(_bundle.offerIds[i]);
             require(!bundleByOfferExists, OFFER_MUST_BE_UNIQUE);
 
-            // Add to bundleByOffer mapping
-            protocolStorage().bundleByOffer[_bundle.offerIds[i]] = bundleId;
+            // Add to bundleIdByOffer mapping
+            protocolStorage().bundleIdByOffer[_bundle.offerIds[i]] = bundleId;
         }
 
         for (uint i = 0; i < _bundle.twinIds.length; i++) {
@@ -74,15 +74,15 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
             getValidTwin(_bundle.twinIds[i]);
 
             // A twin can belong to multiple bundles
-            (bool bundlesForTwinExist, uint256[] memory bundles) = getBundleIdsByTwin(_bundle.twinIds[i]);
+            (bool bundlesForTwinExist, uint256[] memory bundleIds) = getBundleIdsByTwin(_bundle.twinIds[i]);
             if (bundlesForTwinExist) {
-                for (uint j = 0; j < bundles.length; j++) {
-                    require((bundles[j] != bundleId), TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE);
+                for (uint j = 0; j < bundleIds.length; j++) {
+                    require((bundleIds[j] != bundleId), TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE);
                 }
             }
 
-            // Push to bundlesByTwin mapping
-            protocolStorage().bundlesByTwin[_bundle.twinIds[i]].push(bundleId);
+            // Push to bundleIdsByTwin mapping
+            protocolStorage().bundleIdsByTwin[_bundle.twinIds[i]].push(bundleId);
         }
 
         // Get storage location for bundle
@@ -136,10 +136,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
      * @return exists - the bundle was found
      * @return bundle - the bundle details. See {BosonTypes.Bundle}
      */
-    function getBundle(uint256 _bundleId)
-    external
-    view
-    returns(bool exists, Bundle memory bundle) {
+    function getBundle(uint256 _bundleId) external view returns(bool exists, Bundle memory bundle) {
         return fetchBundle(_bundleId);
     }
 }
