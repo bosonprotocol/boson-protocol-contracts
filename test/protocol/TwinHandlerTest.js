@@ -371,6 +371,6 @@ describe("IBosonTwinHandler", function () {
         // Verify expectation
         expect(nextTwinId.toString() == expected).to.be.true;
       });
-    })
+    });
   });
 });
