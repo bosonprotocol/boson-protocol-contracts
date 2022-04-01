@@ -43,6 +43,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
     external
     override
     {
+
         // TODO: assign correct sellerid to the group
         // _group.sellerId = getSellerIdByOperator(msg.sender); 
 
