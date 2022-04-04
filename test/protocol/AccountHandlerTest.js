@@ -17,9 +17,9 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 describe("IBosonAccountHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury, other1, other2;
+  let accounts, deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, other4;
   let erc165, protocolDiamond, accessController, accountHandler, gasLimit;
-  let seller, sellerStruct, active;
+  let seller, sellerStruct, active, seller2;
   let buyer, buyerStruct;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
@@ -40,6 +40,8 @@ describe("IBosonAccountHandler", function () {
     rando = accounts[5];
     other1 = accounts[6];
     other2 = accounts[7];
+    other3 = accounts[8];
+    other4 = accounts[9];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -89,7 +91,6 @@ describe("IBosonAccountHandler", function () {
 
       // Required constructor params
       id = "1"; // argument sent to contract for createSeller will be ignored
-
       active = true;
 
       // Create a valid seller, then set fields in tests directly
@@ -227,8 +228,14 @@ describe("IBosonAccountHandler", function () {
         // Create a seller
         await accountHandler.connect(admin).createSeller(seller);
 
-        // id of the current seller and increment nextAccountId
-        id = nextAccountId++;
+        // Required constructor params
+        id = "2"; // argument sent to contract for createSeller will be ignored
+
+        // Create a another seller
+        seller2 = new Seller(id, other1.address, other2.address, other3.address, other4.address, active);
+        expect(seller2.isValid()).is.true;
+
+        await accountHandler.connect(rando).createSeller(seller2);
       });
 
       it("should return true for exists if seller is found", async function () {
@@ -247,7 +254,7 @@ describe("IBosonAccountHandler", function () {
         expect(exists).to.be.false;
       });
 
-      it("should return the details of the seller as a struct if found", async function () {
+      it("should return the details of the correct seller as a struct if found", async function () {
         // Get the seller as a struct
         [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
 
@@ -256,6 +263,101 @@ describe("IBosonAccountHandler", function () {
 
         // Validate
         expect(seller.isValid()).to.be.true;
+      });
+    });
+
+    context("👉 getSellerByAddress()", async function () {
+      beforeEach(async function () {
+        // Create a seller
+        await accountHandler.connect(rando).createSeller(seller);
+
+        // Required constructor params
+        id = "2"; // argument sent to contract for createSeller will be ignored
+        active = true;
+
+        // Create a another seller
+        seller2 = new Seller(id, other1.address, other2.address, other3.address, other4.address, active);
+        expect(seller2.isValid()).is.true;
+
+        await accountHandler.connect(rando).createSeller(seller2);
+      });
+
+      it("should return the correct seller when searching on operator address", async function () {
+        [exists, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(operator.address);
+
+        expect(exists).is.true;
+
+        // Parse into entity
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+
+        // Returned values should match the input in createSeller
+        for ([key, value] of Object.entries(seller)) {
+          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should return the correct seller when searching on admin address", async function () {
+        [exists, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(admin.address);
+
+        expect(exists).is.true;
+
+        // Parse into entity
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+
+        // Returned values should match the input in createSeller
+        for ([key, value] of Object.entries(seller)) {
+          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should return the correct seller when searching on clerk address", async function () {
+        [exists, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(clerk.address);
+
+        expect(exists).is.true;
+
+        // Parse into entity
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+
+        // Returned values should match the input in createSeller
+        for ([key, value] of Object.entries(seller)) {
+          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should return exists false and default values when searching on treasury address", async function () {
+        [exists, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(treasury.address);
+
+        expect(exists).is.false;
+
+        // Parse into entity
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+
+        // Returned values should be the default value for it's data type
+        for ([key, value] of Object.entries(returnedSeller)) {
+          if (key != "active") {
+            expect(value == 0).is.true || expect(value == 0x0000000000000000000000000000000000000000).is.true;
+          } else {
+            expect(value).is.false;
+          }
+        }
+      });
+
+      it("should return exists false and default values when searching on unassociated address", async function () {
+        [exists, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(deployer.address);
+
+        expect(exists).is.false;
+
+        // Parse into entity
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+
+        // Returned values should be the default value for it's data type
+        for ([key, value] of Object.entries(returnedSeller)) {
+          if (key != "active") {
+            expect(value == 0).is.true || expect(value == 0x0000000000000000000000000000000000000000).is.true;
+          } else {
+            expect(value).is.false;
+          }
+        }
       });
     });
 
