@@ -472,7 +472,7 @@ describe("IBosonGroupHandler", function () {
       });
 
       it("should update state", async function () {
-        // Remove offer to a group,
+        // Remove offer from a group,
         await groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove);
 
         // Get the group as a struct
@@ -524,7 +524,7 @@ describe("IBosonGroupHandler", function () {
           group.offerIds = ["6"];
           await groupHandler.connect(seller).createGroup(group);
 
-          // Attempt to remove offers to a group, expecting revert
+          // Attempt to remove offers from a group, expecting revert
           await expect(groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
             RevertReasons.OFFER_NOT_IN_GROUP
           );
