@@ -307,6 +307,41 @@ describe("IBosonGroupHandler", function () {
           // Attempt to create a group, expecting revert
           await expect(groupHandler.connect(seller).createGroup(group)).to.revertedWith(RevertReasons.TOO_MANY_OFFERS);
         });
+
+        it("Condition 'None' has some values in other fields", async function () {
+          method = EvaluationMethod.None;
+          condition = new Condition(method, tokenAddress, tokenId, threshold);
+          group.condition = condition;
+
+          // Attempt to update the offer, expecting revert
+          await expect(groupHandler.connect(seller).createGroup(group)).to.revertedWith(
+            RevertReasons.INVALID_CONDITION_PARAMETERS
+          );
+        });
+
+        it("Condition 'AboveThreshold' has zero token contract address", async function () {
+          method = EvaluationMethod.AboveThreshold;
+          tokenAddress = ethers.constants.AddressZero;
+          condition = new Condition(method, tokenAddress, tokenId, threshold);
+          group.condition = condition;
+
+          // Attempt to update the offer, expecting revert
+          await expect(groupHandler.connect(seller).createGroup(group)).to.revertedWith(
+            RevertReasons.INVALID_CONDITION_PARAMETERS
+          );
+        });
+
+        it("Condition 'SpecificToken' has has zero token contract address", async function () {
+          method = EvaluationMethod.SpecificToken;
+          tokenAddress = ethers.constants.AddressZero;
+          condition = new Condition(method, tokenAddress, tokenId, threshold);
+          group.condition = condition;
+
+          // Attempt to update the offer, expecting revert
+          await expect(groupHandler.connect(seller).createGroup(group)).to.revertedWith(
+            RevertReasons.INVALID_CONDITION_PARAMETERS
+          );
+        });
       });
     });
 
@@ -625,6 +660,38 @@ describe("IBosonGroupHandler", function () {
 
         xit("Caller is not seller of a group", async function () {
           // TODO: add when accounthandler is finished
+        });
+
+        it("Condition 'None' has some values in other fields", async function () {
+          method = EvaluationMethod.None;
+          condition = new Condition(method, tokenAddress, tokenId, threshold);
+
+          // Attempt to update the offer, expecting revert
+          await expect(groupHandler.connect(seller).setGroupCondition(group.id, condition)).to.revertedWith(
+            RevertReasons.INVALID_CONDITION_PARAMETERS
+          );
+        });
+
+        it("Condition 'AboveThreshold' has zero token contract address", async function () {
+          method = EvaluationMethod.AboveThreshold;
+          tokenAddress = ethers.constants.AddressZero;
+          condition = new Condition(method, tokenAddress, tokenId, threshold);
+
+          // Attempt to update the offer, expecting revert
+          await expect(groupHandler.connect(seller).setGroupCondition(group.id, condition)).to.revertedWith(
+            RevertReasons.INVALID_CONDITION_PARAMETERS
+          );
+        });
+
+        it("Condition 'SpecificToken' has has zero token contract address", async function () {
+          method = EvaluationMethod.SpecificToken;
+          tokenAddress = ethers.constants.AddressZero;
+          condition = new Condition(method, tokenAddress, tokenId, threshold);
+
+          // Attempt to update the offer, expecting revert
+          await expect(groupHandler.connect(seller).setGroupCondition(group.id, condition)).to.revertedWith(
+            RevertReasons.INVALID_CONDITION_PARAMETERS
+          );
         });
       });
     });

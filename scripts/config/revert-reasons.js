@@ -26,6 +26,7 @@ exports.RevertReasons = {
   OFFER_NOT_IN_GROUP: "Offer not part of the group",
   TOO_MANY_OFFERS: "Exceeded maximum offers in a single transaction",
   NOTHING_UPDATED: "Nothing updated",
+  INVALID_CONDITION_PARAMETERS: "Invalid condition parameters",
 
   // Account-related
   MUST_BE_ACTIVE: "Seller must be active",
