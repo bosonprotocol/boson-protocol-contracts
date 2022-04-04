@@ -96,6 +96,7 @@ contract BosonTypes {
         uint256 committedDate;
         uint256 validUntilDate;
         uint256 redeemedDate;
+        bool expired;
     }
 
     struct Dispute {

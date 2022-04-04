@@ -18,7 +18,7 @@ class Voucher {
     this.committedDate = committedDate;
     this.validUntilDate = validUntilDate;
     this.redeemedDate = redeemedDate;
-    this.expired = expired
+    this.expired = expired;
   }
 
   /**
@@ -46,7 +46,7 @@ class Voucher {
       committedDate: committedDate.toString(),
       validUntilDate: validUntilDate.toString(),
       redeemedDate: redeemedDate.toString(),
-      expired: expired
+      expired: expired,
     });
   }
 
@@ -92,8 +92,9 @@ class Voucher {
     let { committedDate } = this;
     try {
       valid =
-          (committedDate === null || committedDate === undefined) ||
-          (typeof committedDate === "string" && ethers.BigNumber.from(committedDate).gt(0));
+        committedDate === null ||
+        committedDate === undefined ||
+        (typeof committedDate === "string" && ethers.BigNumber.from(committedDate).gt(0));
     } catch (e) {}
     return valid;
   }
@@ -108,8 +109,9 @@ class Voucher {
     let { validUntilDate } = this;
     try {
       valid =
-          (validUntilDate === null || validUntilDate === undefined) ||
-          (typeof validUntilDate === "string" && ethers.BigNumber.from(validUntilDate).gt(0));
+        validUntilDate === null ||
+        validUntilDate === undefined ||
+        (typeof validUntilDate === "string" && ethers.BigNumber.from(validUntilDate).gt(0));
     } catch (e) {}
     return valid;
   }
@@ -124,8 +126,9 @@ class Voucher {
     let { redeemedDate } = this;
     try {
       valid =
-          (redeemedDate === null || redeemedDate === undefined) ||
-          (typeof redeemedDate === "string" && ethers.BigNumber.from(redeemedDate).gt(0));
+        redeemedDate === null ||
+        redeemedDate === undefined ||
+        (typeof redeemedDate === "string" && ethers.BigNumber.from(redeemedDate).gt(0));
     } catch (e) {}
     return valid;
   }
@@ -148,7 +151,9 @@ class Voucher {
    * @returns {boolean}
    */
   isValid() {
-    return this.committedDateIsValid() && this.validUntilDateIsValid() && this.redeemedDateIsValid() && this.expiredIsValid();
+    return (
+      this.committedDateIsValid() && this.validUntilDateIsValid() && this.redeemedDateIsValid() && this.expiredIsValid()
+    );
   }
 }
 

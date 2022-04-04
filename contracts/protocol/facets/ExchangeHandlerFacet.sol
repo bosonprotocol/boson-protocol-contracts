@@ -50,10 +50,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     external
     override
     {
-        bool exists;
-        Offer storage offer;
+        // Make sure buyer address is not zero address
+        require(_buyer != address(0), INVALID_ADDRESS);
 
         // Get the offer
+        bool exists;
+        Offer storage offer;
         (exists, offer) = fetchOffer(_offerId);
 
         // Make sure offer exists, is available, and isn't void, expired, or sold out
@@ -89,11 +91,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         }
 
         // Create and store a new exchange
-        uint256 exchangeId = protocolCounters().nextAccountId++;
+        uint256 exchangeId = protocolCounters().nextExchangeId++;
         Exchange storage exchange = protocolStorage().exchanges[exchangeId];
+        exchange.id = exchangeId;
         exchange.offerId = _offerId;
         exchange.buyerId = buyerId;
         exchange.state = ExchangeState.Committed;
+        exchange.voucher.committedDate = block.timestamp;
 
         // Decrement offer's quantity available
         offer.quantityAvailable--;

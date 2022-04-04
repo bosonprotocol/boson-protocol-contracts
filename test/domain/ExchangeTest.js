@@ -10,17 +10,8 @@ describe("Exchange", function () {
   // Suite-wide scope
   let object, promoted, clone, dehydrated, rehydrated, key, value, struct;
   let id, offerId, buyerId;
-  let voucher,
-      voucherStruct,
-      committedDate,
-      validUntilDate,
-      redeemedDate,
-      expired;
-  let exchange,
-      exchangeStruct,
-      finalizedDate,
-      disputed,
-      state;
+  let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
+  let exchange, finalizedDate, disputed, state;
 
   beforeEach(async function () {
     // Required voucher constructor params
@@ -39,8 +30,6 @@ describe("Exchange", function () {
     disputed = false;
     state = ExchangeState.Completed;
     exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, disputed, state);
-    exchangeStruct = [id, offerId, buyerId, finalizedDate, voucherStruct, disputed, state];
-
   });
 
   context("📋 Constructor", async function () {
@@ -192,7 +181,6 @@ describe("Exchange", function () {
       exchange.voucher = voucher;
       expect(exchange.voucherIsValid()).is.true;
       expect(exchange.isValid()).is.true;
-
     });
 
     it("If present, finalizedDate must be the string representation of a non-zero BigNumber", async function () {
@@ -231,7 +219,6 @@ describe("Exchange", function () {
       expect(exchange.finalizedDateIsValid()).is.true;
       expect(exchange.isValid()).is.true;
     });
-
   });
 
   context("📋 Utility functions", async function () {
@@ -242,7 +229,13 @@ describe("Exchange", function () {
 
       // Get plain object
       object = {
-        id, offerId, buyerId, finalizedDate, voucher, disputed, state
+        id,
+        offerId,
+        buyerId,
+        finalizedDate,
+        voucher,
+        disputed,
+        state,
       };
 
       // Struct representation

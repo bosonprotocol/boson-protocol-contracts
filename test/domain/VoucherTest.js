@@ -150,7 +150,7 @@ describe("Voucher", function () {
         committedDate,
         validUntilDate,
         redeemedDate,
-        expired
+        expired,
       };
 
       // Struct representation

@@ -59,7 +59,7 @@ class Exchange {
       finalizedDate: finalizedDate.toString(),
       voucher: Voucher.fromStruct(voucher),
       disputed,
-      state
+      state,
     });
   }
 
@@ -84,7 +84,15 @@ class Exchange {
    * @returns {string}
    */
   toStruct() {
-    return [this.id, this.offerId, this.buyerId, this.finalizedDate, this.voucher.toStruct(), this.disputed, this.state];
+    return [
+      this.id,
+      this.offerId,
+      this.buyerId,
+      this.finalizedDate,
+      this.voucher.toStruct(),
+      this.disputed,
+      this.state,
+    ];
   }
 
   /**
@@ -147,12 +155,12 @@ class Exchange {
     let { finalizedDate } = this;
     try {
       valid =
-          (finalizedDate === null || finalizedDate === undefined) ||
-          (typeof finalizedDate === "string" && ethers.BigNumber.from(finalizedDate).gt(0));
+        finalizedDate === null ||
+        finalizedDate === undefined ||
+        (typeof finalizedDate === "string" && ethers.BigNumber.from(finalizedDate).gt(0));
     } catch (e) {}
     return valid;
   }
-
 
   /**
    * Is this Exchange instance's disputed field valid?
@@ -176,9 +184,7 @@ class Exchange {
     let valid = false;
     let { voucher } = this;
     try {
-      valid =
-          (voucher === null || voucher === undefined) ||
-          (typeof voucher === "object" && voucher.isValid())
+      valid = voucher === null || voucher === undefined || (typeof voucher === "object" && voucher.isValid());
     } catch (e) {}
     return valid;
   }
@@ -202,13 +208,13 @@ class Exchange {
    */
   isValid() {
     return (
-        this.idIsValid() &&
-        this.offerIdIsValid() &&
-        this.buyerIdIsValid() &&
-        this.finalizedDateIsValid() &&
-        this.voucherIsValid() &&
-        this.disputedIsValid() &&
-        this.stateIsValid()
+      this.idIsValid() &&
+      this.offerIdIsValid() &&
+      this.buyerIdIsValid() &&
+      this.finalizedDateIsValid() &&
+      this.voucherIsValid() &&
+      this.disputedIsValid() &&
+      this.stateIsValid()
     );
   }
 }
