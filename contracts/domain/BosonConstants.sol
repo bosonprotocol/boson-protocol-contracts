@@ -44,6 +44,11 @@ contract BosonConstants {
     string internal constant NO_SUCH_EXCHANGE = "No such exchange";
 
     // Revert Reasons: Twin related
+    string internal constant NO_SUCH_TWIN = "No such twin";
     string internal constant NO_TRANSFER_APPROVED = "No transfer approved";
     string internal constant UNSUPPORTED_TOKEN = "Unsupported token";
+
+    // Revert Reasons: Bundle related
+    string internal constant TOO_MANY_TWINS = "Exceeded maximum twins in a single transaction";
+    string internal constant TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE = "Twin already exists in the same bundle";
 }

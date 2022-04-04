@@ -25,6 +25,8 @@ library ProtocolLib {
         uint16 protocolFeePercentage; // 1.75% = 175, 100% = 10000
         // limit how many offers can be added to the group
         uint16 maxOffersPerGroup;
+        // limit how many twins can be added to the bundle
+        uint16 maxTwinsPerBundle;
         // offer id => offer
         mapping(uint256 => BosonTypes.Offer) offers;
         // exchange id => exchange
@@ -43,6 +45,10 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Twin) twins;
         // offer id => exchange ids
         mapping(uint256 => uint256[]) exchangesByOffer;
+        // offer id => bundle id
+        mapping(uint256 => uint256) bundleIdByOffer;
+        // twin id => bundle ids
+        mapping(uint256 => uint256[]) bundleIdsByTwin;
         // offer id => group id
         mapping(uint256 => uint256) groupIdByOffer;
         //seller operator address => sellerId
