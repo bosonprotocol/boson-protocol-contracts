@@ -115,19 +115,19 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
     {
         uint sellerId;
 
-        (exists, sellerId ) = getSellerIdByOperator(_associatedAddress);
+        (exists, sellerId) = getSellerIdByOperator(_associatedAddress);
         if(exists) {
-            return this.getSeller(sellerId);
+            return fetchSeller(sellerId);
         } 
 
-        (exists, sellerId ) = getSellerIdByAdmin(_associatedAddress);
+        (exists, sellerId) = getSellerIdByAdmin(_associatedAddress);
         if(exists) {
-            return this.getSeller(sellerId);
+            return fetchSeller(sellerId);
         } 
 
-        (exists, sellerId ) = getSellerIdByClerk(_associatedAddress);
+        (exists, sellerId) = getSellerIdByClerk(_associatedAddress);
         if(exists) {
-            return this.getSeller(sellerId);
+            return fetchSeller(sellerId);
         } 
     }
 

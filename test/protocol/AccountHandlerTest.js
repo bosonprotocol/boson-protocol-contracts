@@ -335,7 +335,7 @@ describe("IBosonAccountHandler", function () {
         // Returned values should be the default value for it's data type
         for ([key, value] of Object.entries(returnedSeller)) {
           if (key != "active") {
-            expect(value == 0).is.true || expect(value == 0x0000000000000000000000000000000000000000).is.true;
+            expect(value == 0).is.true || expect(value === ethers.constants.AddressZero).is.true;
           } else {
             expect(value).is.false;
           }
@@ -353,7 +353,7 @@ describe("IBosonAccountHandler", function () {
         // Returned values should be the default value for it's data type
         for ([key, value] of Object.entries(returnedSeller)) {
           if (key != "active") {
-            expect(value == 0).is.true || expect(value == 0x0000000000000000000000000000000000000000).is.true;
+            expect(value == 0).is.true || expect(value === ethers.constants.AddressZero).is.true;
           } else {
             expect(value).is.false;
           }
