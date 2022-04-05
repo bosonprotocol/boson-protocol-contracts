@@ -5,14 +5,14 @@ const { expect, assert } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
+const Offer = require("../../scripts/domain/Offer");
+const ExchangeState = require("../../scripts/domain/ExchangeState");
 const { getEvent } = require("../../scripts/util/test-events.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
-const Offer = require("../../scripts/domain/Offer");
-const ExchangeState = require("../../scripts/domain/ExchangeState");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 
 /**
@@ -224,6 +224,7 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("offer id is invalid", async function () {
+          // An invalid offer id
           offerId = "666";
 
           // Attempt to commit, expecting revert

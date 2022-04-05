@@ -277,7 +277,7 @@ describe("IBosonAccountHandler", function () {
         nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
         // Verify expectation
-        expect(nextAccountId.toString() === expected).to.be.true;
+        expect(nextAccountId.toString() == expected).to.be.true;
       });
 
       it("should be incremented after a seller is created", async function () {
@@ -296,7 +296,7 @@ describe("IBosonAccountHandler", function () {
         nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
         // Verify expectation
-        expect(nextAccountId.toString() === expected).to.be.true;
+        expect(nextAccountId.toString() == expected).to.be.true;
       });
 
       it("should not be incremented when only getNextSellerId is called", async function () {
@@ -307,13 +307,13 @@ describe("IBosonAccountHandler", function () {
         nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
         // Verify expectation
-        expect(nextAccountId.toString() === expected).to.be.true;
+        expect(nextAccountId.toString() == expected).to.be.true;
 
         // Call again
         nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
         // Verify expectation
-        expect(nextAccountId.toString() === expected).to.be.true;
+        expect(nextAccountId.toString() == expected).to.be.true;
       });
     });
   });
