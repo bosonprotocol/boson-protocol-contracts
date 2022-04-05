@@ -270,18 +270,18 @@ describe("IBosonAccountHandler", function () {
         // id of the current seller and increment nextAccountId
         id = nextAccountId++;
 
-        //Set new field values
-        seller.id = id.toString();
+        //Set updated values
+        seller.id = id.toString(); //same value
         seller.operator = other1.address;
         seller.admin = other2.address;
         seller.clerk = other3.address;
-        seller.treasury = other3.address;
+        seller.treasury = other4.address;
         seller.active = false;
 
         sellerStruct = seller.toStruct();
       });
 
-      it("should emit an SellerUpdated event", async function () {
+      it("should emit a SellerUpdated event", async function () {
         // Update a seller, testing for the event
         await expect(accountHandler.connect(admin).updateSeller(seller))
         .to.emit(accountHandler, "SellerUpdated")
@@ -305,7 +305,7 @@ describe("IBosonAccountHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
-        it("Sellerdoes not exist", async function () {
+        it("Seller does not exist", async function () {
           // Set invalid id
           seller.id = "444";
 
@@ -352,6 +352,41 @@ describe("IBosonAccountHandler", function () {
           // Attempt to update a seller, expecting revert
           await expect(accountHandler.connect(admin).updateSeller(seller)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
+          );
+        });
+
+        it("addresses are not unique to this seller Id", async function () {
+          seller.id = "2"
+          seller.active = true;
+          sellerStruct = seller.toStruct();
+
+          //Create second seller (has values other1.address, other2.address, etc.)
+          await expect(accountHandler.connect(rando).createSeller(seller))
+          .to.emit(accountHandler, "SellerCreated")
+          .withArgs(nextAccountId, sellerStruct);
+
+          //Set operator address value to be same as first seller created in Seller Methods beforeEach
+          seller.operator = operator.address //already being used by seller 1
+     
+          // Attempt to update seller 2 with non-unique operator, expecting revert
+          await expect(accountHandler.connect(other2).updateSeller(seller)).to.revertedWith(
+            RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
+          );
+
+          seller.admin = admin.address; //already being used by seller 1
+          seller.operator = other1.address;
+
+          // Attempt to update a seller with non-unique admin, expecting revert
+          await expect(accountHandler.connect(other2).updateSeller(seller)).to.revertedWith(
+            RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
+          );
+
+          seller.clerk = clerk.address; //already being used by seller 1
+          seller.admin = other2.address;
+
+          // Attempt to Update a seller with non-unique clerk, expecting revert
+          await expect(accountHandler.connect(other2).updateSeller(seller)).to.revertedWith(
+            RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
         });
 
