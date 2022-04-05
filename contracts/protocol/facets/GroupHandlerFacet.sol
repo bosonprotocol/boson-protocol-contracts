@@ -43,8 +43,10 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
     external
     override
     {
-        // TODO: assign correct sellerid to the group
-        // _group.sellerId = getSellerIdByOperator(msg.sender); 
+        // get seller id, make sure it exists and store it to incoming struct
+        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+        require(exists, NO_SUCH_SELLER);
+        _group.sellerId = sellerId;
 
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_group.offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
@@ -120,9 +122,11 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
 
         require(exists, NO_SUCH_GROUP);
 
-        // TODO check seller ID matches msg.sender
-        // address sellerId = getSellerIdByOperator(msg.sender);
-        // require(sellerId == group.sellerId, NOT_OPERATOR);
+        // Get seller id, we assume seller id exists if group exists
+        (, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+
+        // Caller's seller id must match group seller id
+        require(sellerId == group.sellerId, NOT_OPERATOR);
 
         for (uint i = 0; i < _offerIds.length; i++) {
             uint offerId = _offerIds[i];
@@ -141,7 +145,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
         }
              
         // Notify watchers of state change
-        emit GroupUpdated(_groupId, group.sellerId, group); // TODO: group.sellerId will be replaced by sellerId
+        emit GroupUpdated(_groupId, sellerId, group);
     }
 
     /**
@@ -178,9 +182,11 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
 
         require(exists, NO_SUCH_GROUP);
 
-        // TODO check seller ID matches msg.sender
-        // address sellerId = getSellerIdByOperator(msg.sender);
-        // require(sellerId == group.sellerId, NOT_OPERATOR);
+        // Get seller id, we assume seller id exists if group exists
+        (, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+
+        // Caller's seller id must match group seller id
+        require(sellerId == group.sellerId, NOT_OPERATOR);
 
         for (uint i = 0; i < _offerIds.length; i++) {
             uint offerId = _offerIds[i];
@@ -205,7 +211,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
         }
              
         // Notify watchers of state change
-        emit GroupUpdated(_groupId, group.sellerId, group); // TODO: group.sellerId will be replaced by sellerId
+        emit GroupUpdated(_groupId, sellerId, group);
     }
 
       /**
@@ -236,12 +242,16 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
         (bool exists,Group storage group) = fetchGroup(_groupId);
         require(exists, NO_SUCH_GROUP);
 
-        // TODO: check seller ID matches msg.sender
+        // Get seller id, we assume seller id exists if offer exists
+        (, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+
+        // Caller's seller id must match group seller id
+        require(sellerId == group.sellerId, NOT_OPERATOR);
 
         group.condition = _condition;
       
         // Notify watchers of state change
-        emit GroupUpdated(group.id, group.sellerId, group);
+        emit GroupUpdated(group.id, sellerId, group);
     }
 
 
