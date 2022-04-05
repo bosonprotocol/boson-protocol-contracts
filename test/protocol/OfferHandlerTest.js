@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { assert, expect } = require("chai");
+const { expect } = require("chai");
 const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
@@ -10,10 +10,6 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
-const Group = require("../../scripts/domain/Group");
-const Condition = require("../../scripts/domain/Condition");
-const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
-const { getEvent } = require("../../scripts/util/test-events.js");
 
 /**
  *  Test the Boson Offer Handler interface
@@ -38,7 +34,7 @@ describe("IBosonOfferHandler", function () {
     seller,
     exchangeToken,
     metadataUri,
-    metadataHash,
+    offerChecksum,
     voided;
 
   before(async function () {
@@ -68,6 +64,7 @@ describe("IBosonOfferHandler", function () {
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
       "0",
+      "100",
       "100",
     ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
@@ -115,8 +112,8 @@ describe("IBosonOfferHandler", function () {
       fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
       voucherValidDuration = oneMonth.toString(); // offers valid for one month
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-      metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-      metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
+      offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
+      metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
       voided = false;
 
       // Create a valid offer, then set fields in tests directly
@@ -134,7 +131,7 @@ describe("IBosonOfferHandler", function () {
         voucherValidDuration,
         exchangeToken,
         metadataUri,
-        metadataHash,
+        offerChecksum,
         voided
       );
       expect(offer.isValid()).is.true;
@@ -708,244 +705,6 @@ describe("IBosonOfferHandler", function () {
         [, updateable] = await offerHandler.connect(rando).isOfferUpdateable(id);
         // Validate
         expect(typeof updateable === "boolean").to.be.true;
-      });
-    });
-
-    context("🗄 grouping", async function () {
-      let group, nextGroupId, invalidGroupId;
-      let offerIds, condition;
-      let offerHandlerFacet_Factory;
-      let method, tokenAddress, tokenId, threshold;
-      let groupStruct;
-
-      beforeEach(async function () {
-        // The first group id
-        nextGroupId = "1";
-        invalidGroupId = "666";
-
-        // create 5 offers
-        for (let i = 0; i < 5; i++) {
-          // Required constructor params
-          id = sellerId = "1"; // argument sent to contract for createGroup will be ignored
-          price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
-          sellerDeposit = price = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
-          buyerCancelPenalty = price = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
-          quantityAvailable = `${i * 2}`;
-          validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
-          validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
-          redeemableFromDate = ethers.BigNumber.from(validUntilDate + oneWeek).toString();
-          fulfillmentPeriodDuration = oneMonth.toString();
-          voucherValidDuration = oneMonth.toString();
-          exchangeToken = ethers.constants.AddressZero.toString();
-          metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-          metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
-          voided = false;
-
-          // Create a valid offer, then set fields in tests directly
-          offer = new Offer(
-            id,
-            sellerId,
-            price,
-            sellerDeposit,
-            buyerCancelPenalty,
-            quantityAvailable,
-            validFromDate,
-            validUntilDate,
-            redeemableFromDate,
-            fulfillmentPeriodDuration,
-            voucherValidDuration,
-            exchangeToken,
-            metadataUri,
-            metadataHash,
-            voided
-          );
-          expect(offer.isValid()).is.true;
-
-          await offerHandler.connect(seller).createOffer(offer);
-        }
-
-        // Required constructor params for Condition
-        method = EvaluationMethod.AboveThreshold;
-        tokenAddress = accounts[0].address; // just need an address
-        tokenId = "5150";
-        threshold = "1";
-
-        // Required constructor params for Group
-        id = nextGroupId;
-        sellerId = "12";
-        offerIds = ["2", "3", "5"];
-
-        condition = new Condition(method, tokenAddress, tokenId, threshold);
-        expect(condition.isValid()).to.be.true;
-
-        group = new Group(nextGroupId, sellerId, offerIds, condition);
-
-        expect(group.isValid()).is.true;
-
-        // How that group looks as a returned struct
-        groupStruct = group.toStruct();
-
-        // initialize offerHandler
-        offerHandlerFacet_Factory = await ethers.getContractFactory("OfferHandlerFacet");
-      });
-
-      context("👉 createGroup()", async function () {
-        it("should emit an GroupCreated event", async function () {
-          // Create a group, testing for the event
-          const tx = await offerHandler.connect(seller).createGroup(group);
-          const txReceipt = await tx.wait();
-
-          const event = getEvent(txReceipt, offerHandlerFacet_Factory, "GroupCreated");
-
-          const groupInstance = Group.fromStruct(event.group);
-          // Validate the instance
-          expect(groupInstance.isValid()).to.be.true;
-
-          assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
-          assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
-          assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
-        });
-
-        it("should update state", async function () {
-          // Create an offer
-          await offerHandler.connect(seller).createGroup(group);
-
-          // Get the offer as a struct
-          [, groupStruct] = await offerHandler.connect(rando).getGroup(nextGroupId);
-
-          // Parse into entity
-          const returnedGroup = Group.fromStruct(groupStruct);
-
-          // Returned values should match the input in createOffer
-          for ([key, value] of Object.entries(group)) {
-            expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
-          }
-        });
-
-        it("should ignore any provided id and assign the next available", async function () {
-          group.id = "444";
-
-          // Create a group, testing for the event
-          const tx = await offerHandler.connect(seller).createGroup(group);
-          const txReceipt = await tx.wait();
-
-          const event = getEvent(txReceipt, offerHandlerFacet_Factory, "GroupCreated");
-
-          const groupInstance = Group.fromStruct(event.group);
-          // Validate the instance
-          expect(groupInstance.isValid()).to.be.true;
-
-          assert.equal(event.groupId.toString(), nextGroupId, "Group Id is incorrect");
-          assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
-          assert.equal(groupInstance.toStruct().toString(), groupStruct.toString(), "Group struct is incorrect");
-
-          // wrong group id should not exist
-          [exists] = await offerHandler.connect(rando).getGroup(group.id);
-          expect(exists).to.be.false;
-
-          // next group id should exist
-          [exists] = await offerHandler.connect(rando).getGroup(nextGroupId);
-          expect(exists).to.be.true;
-        });
-
-        it("should create group without any offer", async function () {
-          group.offerIds = [];
-
-          // Create a group, testing for the event
-          await offerHandler.connect(seller).createGroup(group);
-
-          // group should have no offers
-          let returnedGroup;
-          [, returnedGroup] = await offerHandler.connect(rando).getGroup(nextGroupId);
-          assert.equal(returnedGroup.offerIds, group.offerIds.toString(), "Offer ids should be empty");
-        });
-
-        xit("should ignore any provided seller and assign seller id of msg.sender", async function () {
-          // TODO: add when accounthandler is finished
-
-          offer.seller = rando;
-
-          // Create an offer, testing for the event
-          await expect(offerHandler.connect(seller).createGroup(offer))
-            .to.emit(offerHandler, "OfferCreated")
-            .withArgs(nextOfferId, offer.sellerId, offerStruct);
-        });
-
-        context("💔 Revert Reasons", async function () {
-          xit("Caller is not the seller of all groups", async function () {
-            // TODO whan account handler is implemented
-          });
-
-          it("Offer is already part of another group", async function () {
-            // create first group
-            await offerHandler.connect(seller).createGroup(group);
-
-            // Set add offer that is already part of another group
-            group.offerIds = ["1", "2", "4"];
-
-            // Attempt to create an group, expecting revert
-            await expect(offerHandler.connect(seller).createGroup(group)).to.revertedWith(
-              RevertReasons.OFFER_MUST_BE_UNIQUE
-            );
-          });
-
-          it("Offer is duplicated", async function () {
-            // Try to add the same offer twice
-            group.offerIds = ["1", "1", "4"];
-
-            // Attempt to create an group, expecting revert
-            await expect(offerHandler.connect(seller).createGroup(group)).to.revertedWith(
-              RevertReasons.OFFER_MUST_BE_UNIQUE
-            );
-          });
-
-          it("Adding too many offers", async function () {
-            // Try to add the more than 100 offers
-            group.offerIds = [...Array(101).keys()];
-
-            // Attempt to create an group, expecting revert
-            await expect(offerHandler.connect(seller).createGroup(group)).to.revertedWith(
-              RevertReasons.TOO_MANY_OFFERS
-            );
-          });
-        });
-      });
-
-      context("👉 getGroup()", async function () {
-        beforeEach(async function () {
-          // Create an group
-          await offerHandler.connect(seller).createGroup(group);
-
-          // id of the current group and increment nextGroupId
-          id = nextGroupId++;
-        });
-
-        it("should return true for exists if offer is found", async function () {
-          // Get the exists flag
-          [exists] = await offerHandler.connect(rando).getGroup(id);
-
-          // Validate
-          expect(exists).to.be.true;
-        });
-
-        it("should return false for exists if offer is not found", async function () {
-          // Get the exists flag
-          [exists] = await offerHandler.connect(rando).getGroup(invalidGroupId);
-
-          // Validate
-          expect(exists).to.be.false;
-        });
-
-        it("should return the details of the group as a struct if found", async function () {
-          // Get the group as a struct
-          [, groupStruct] = await offerHandler.connect(rando).getGroup(id);
-
-          // Parse into entity
-          group = Group.fromStruct(groupStruct);
-
-          // Validate
-          expect(group.isValid()).to.be.true;
-        });
       });
     });
   });

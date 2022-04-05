@@ -74,11 +74,56 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
-     * @notice Fetches a given buyer from storage by id
+     * @notice Gets a seller Id from storage by operator address
+     *
+     * @param _operator - the operator address of the seller
+     * @return exists - whether the seller Id exists
+     * @return sellerId  - the seller Id
+     */
+    function getSellerIdByOperator(address _operator) internal view returns (bool exists, uint256 sellerId) {
+        // Get the seller Id
+        sellerId = protocolStorage().sellerIdByOperator[_operator];
+
+        // Determine existence
+        exists = (sellerId > 0);
+    }
+
+    /**
+     * @notice Gets a seller Id from storage by admin address
+     *
+     * @param _admin - the admin address of the seller
+     * @return exists - whether the seller Id exists
+     * @return sellerId  - the seller Id
+     */
+    function getSellerIdByAdmin(address _admin) internal view returns (bool exists, uint256 sellerId) {
+        // Get the seller Id
+        sellerId = protocolStorage().sellerIdByAdmin[_admin];
+
+        // Determine existence
+        exists = (sellerId > 0);
+    }
+
+    /**
+     * @notice Gets a seller Id from storage by clerk address
+     *
+     * @param _clerk - the clerk address of the seller
+     * @return exists - whether the seller Id exists
+     * @return sellerId  - the seller Id
+     */
+    function getSellerIdByClerk(address _clerk) internal view returns (bool exists, uint256 sellerId) {
+        // Get the seller Id
+        sellerId = protocolStorage().sellerIdByClerk[_clerk];
+
+        // Determine existence
+        exists = (sellerId > 0);
+    }
+
+    /**
+     * @notice Gets a buyer id from storage by wallet address
      *
      * @param _wallet - the wallet address of the buyer
      * @return exists - whether the buyer Id exists
-     * @return buyerId  - the buyer Id.
+     * @return buyerId  - the buyer Id
      */
     function getBuyerIdByWallet(address _wallet) internal view returns (bool exists, uint256 buyerId) {
         // Get the buyer Id
@@ -86,6 +131,21 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
 
         // Determine existence
         exists = (buyerId > 0);
+    }
+
+    /**
+     * @notice Gets a group id from storage by offer id
+     *
+     * @param _offerId - the offer id
+     * @return exists - whether the group id exists
+     * @return groupId  - the group id.
+     */
+    function getGroupIdByOffer(uint256 _offerId) internal view returns (bool exists, uint256 groupId) {
+        // Get the group Id
+        groupId = protocolStorage().groupIdByOffer[_offerId];
+
+        // Determine existence
+        exists = (groupId > 0);
     }
 
     /**
@@ -145,7 +205,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
         group = protocolStorage().groups[_groupId];
 
         // Determine existence
-        exists = (group.id > 0 && group.id == _groupId);
+        exists = (_groupId > 0 && group.id == _groupId);
     }
 
     /**
@@ -180,5 +240,80 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
 
         // Determine existence
         exists = (_twinId > 0 && twin.id == _twinId);
+    }
+
+    /**
+     * @notice Fetches a given bundle from storage by id
+     *
+     * @param _bundleId - the id of the bundle
+     * @return exists - whether the bundle exists
+     * @return bundle - the bundle details. See {BosonTypes.Bundle}
+     */
+    function fetchBundle(uint256 _bundleId) internal view returns (bool exists, BosonTypes.Bundle storage bundle) {
+        // Get the bundle's slot
+        bundle = protocolStorage().bundles[_bundleId];
+
+        // Determine existence
+        exists = (_bundleId > 0 && bundle.id == _bundleId);
+    }
+
+    /**
+     * @notice Gets offer from protocol storage, makes sure it exist and not voided
+     *
+     * Reverts if:
+     * - Offer does not exist
+     * - Caller is not the seller (TODO)
+     * - Offer already voided
+     *
+     *  @param _offerId - the id of the offer to check
+     */
+    function getValidOffer(uint256 _offerId) internal view returns (Offer storage offer) {
+        bool exists;
+        Seller storage seller;
+
+        // Get offer
+        (exists, offer) = fetchOffer(_offerId);
+
+        // Offer must already exist
+        require(exists, NO_SUCH_OFFER);
+
+        // Get seller, we assume seller exists if offer exists
+        (, seller) = fetchSeller(offer.sellerId);
+
+        // Caller must be seller's operator address
+        //require(seller.operator == msg.sender, NOT_OPERATOR); // TODO add back when AccountHandler is working
+
+        // Offer must not already be voided
+        require(!offer.voided, OFFER_ALREADY_VOIDED);
+    }
+
+    /**
+     * @notice Gets the bundle id for a given offer id.
+     *
+     * @param _offerId - the offer Id.
+     * @return exists - whether the bundle Id exists
+     * @return bundleId  - the bundle Id.
+     */
+    function getBundleIdByOffer(uint256 _offerId) internal view returns (bool exists, uint256 bundleId) {
+        // Get the buyer Id
+        bundleId = protocolStorage().bundleIdByOffer[_offerId];
+
+        // Determine existence
+        exists = (bundleId > 0);
+    }
+
+    /**
+     * @notice Gets the bundle ids for a given twin id.
+     *
+     * @param _twinId - the twin Id.
+     * @return exists - whether the bundle Ids exist
+     * @return bundleIds  - the bundle Ids.
+     */
+    function getBundleIdsByTwin(uint256 _twinId) internal view returns (bool exists, uint256[] memory bundleIds) {
+        // Get the buyer Id
+        bundleIds = protocolStorage().bundleIdsByTwin[_twinId];
+
+        // Determine existence
+        exists = (bundleIds.length > 0);
     }
 }

@@ -64,7 +64,7 @@ contract BosonTypes {
         uint256 voucherValidDuration;
         address exchangeToken;
         string metadataUri;
-        string metadataHash;
+        string offerChecksum;
         bool voided;
     }
 

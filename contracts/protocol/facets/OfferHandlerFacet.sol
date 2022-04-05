@@ -23,10 +23,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         DiamondLib.addSupportedInterface(type(IBosonOfferHandler).interfaceId);
     }
 
-    /////////////////////////////////////
-    ///    SINGLE OFFER MANAGEMENT    ///
-    /////////////////////////////////////
-
     /**
      * @notice Creates an offer.
      *
@@ -125,7 +121,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         offer.voucherValidDuration = _offer.voucherValidDuration;
         offer.exchangeToken = _offer.exchangeToken;
         offer.metadataUri = _offer.metadataUri;
-        offer.metadataHash = _offer.metadataHash;
+        offer.offerChecksum = _offer.offerChecksum;
 
     }
 
@@ -188,37 +184,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
 
         // Notify watchers of state change
         emit OfferUpdated(_offerId, offer.sellerId, offer);
-    }
-
-    /**
-     * @notice Gets offer from protocol storage, makes sure it exist and not voided
-     *
-     * Reverts if:
-     * - Offer does not exist
-     * - Caller is not the seller (TODO)
-     * - Offer already voided
-     *
-     *  @param _offerId - the id of the offer to check
-     */
-    function getValidOffer(uint256 _offerId) internal view returns (Offer storage offer){
-
-        bool exists;
-        Seller storage seller;
-
-        // Get offer
-        (exists, offer) = fetchOffer(_offerId);
-
-        // Offer must already exist
-        require(exists, NO_SUCH_OFFER);
-
-        // Get seller, we assume seller exists if offer exists
-        (,seller) = fetchSeller(offer.sellerId);
-
-        // Caller must be seller's operator address
-        //require(seller.operator == msg.sender, NOT_OPERATOR); // TODO add back when AccountHandler is working
-
-        // Offer must not already be voided
-        require(!offer.voided, OFFER_ALREADY_VOIDED);
     }
 
     /**
@@ -297,76 +262,5 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         
     }
 
-
-    //////////////////////////////
-    ///    GROUP MANAGEMENT    ///
-    //////////////////////////////
-
-    /**
-     * @notice Creates a group.
-     *
-     * Emits a GroupCreated event if successful.
-     *
-     * Reverts if:
-     * 
-     * - seller does not match caller
-     * - any of offers belongs to different seller
-     * - any of offers does not exist
-     * - offer exists in a different group
-     *
-     * @param _group - the fully populated struct with group id set to 0x0
-     */
-    function createGroup(
-        Group memory _group
-    )
-    external
-    override
-    {
-        // TODO: check seller ID matches msg.sender
-
-        // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_group.offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
-
-        // Get the next group and increment the counter
-        uint256 groupId = protocolCounters().nextGroupId++;
-
-        for (uint i = 0; i < _group.offerIds.length; i++) {
-            // make sure all offers exist and belong to the seller
-            getValidOffer(_group.offerIds[i]);
-            
-            // Add to groupByOffer mapping
-            require(protocolStorage().groupByOffer[_group.offerIds[i]] == 0, OFFER_MUST_BE_UNIQUE);
-            protocolStorage().groupByOffer[_group.offerIds[i]] = groupId;
-        }
-       
-        // Get storage location for group
-        (,Group storage group) = fetchGroup(groupId);
-
-        // Set group props individually since memory structs can't be copied to storage
-        group.id = groupId;
-        group.sellerId = _group.sellerId;
-        group.offerIds = _group.offerIds;
-        group.condition = _group.condition;
-
-        // modify incoming struct so event value represents true state
-        _group.id = groupId; 
-      
-        // Notify watchers of state change
-        emit GroupCreated(groupId, _group.sellerId, _group);
-    }
-
-    /**
-     * @notice Gets the details about a given group.
-     *
-     * @param _groupId - the id of the group to check
-     * @return exists - the offer was found
-     * @return group - the offer details. See {BosonTypes.Group}
-     */
-    function getGroup(uint256 _groupId)
-    external
-    view
-    returns(bool exists, Group memory group) {
-        return fetchGroup(_groupId);
-    }
 
 }

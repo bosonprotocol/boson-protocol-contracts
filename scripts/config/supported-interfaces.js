@@ -7,9 +7,11 @@ const ethers = hre.ethers;
 
 const interfaces = [
   "IBosonConfigHandler",
+  "IBosonBundleHandler",
   "IBosonDisputeHandler",
   "IBosonExchangeHandler",
   "IBosonFundsHandler",
+  "IBosonGroupHandler",
   "IBosonOfferHandler",
   "IBosonTwinHandler",
   "IBosonAccountHandler",
