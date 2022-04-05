@@ -69,6 +69,18 @@ interface IBosonAccountHandler {
     function getSeller(uint256 _sellerId) external view returns (bool exists, BosonTypes.Seller memory seller);
 
     /**
+     * @notice Gets the details about a seller by an address associated with that seller: operator, admin, or clerk address.
+     *
+     * @param _associatedAddress - the address associated with the seller. Must be an operator, admin, or clerk address.
+     * @return exists - the seller was found
+     * @return seller - the seller details. See {BosonTypes.Seller}
+     */
+    function getSellerByAddress(address _associatedAddress)
+        external
+        view
+        returns (bool exists, BosonTypes.Seller memory seller);
+
+    /**
      * @notice Gets the details about a buyer.
      *
      * @param _buyerId - the id of the buyer to check
