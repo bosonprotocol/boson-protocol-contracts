@@ -262,8 +262,8 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      *
      * Reverts if:
      * - Offer does not exist
-     * - Caller is not the seller (TODO)
      * - Offer already voided
+     * - Caller is not the seller
      *
      *  @param _offerId - the id of the offer to check
      */
@@ -277,14 +277,14 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
         // Offer must already exist
         require(exists, NO_SUCH_OFFER);
 
+        // Offer must not already be voided
+        require(!offer.voided, OFFER_ALREADY_VOIDED);
+
         // Get seller, we assume seller exists if offer exists
         (, seller) = fetchSeller(offer.sellerId);
 
         // Caller must be seller's operator address
-        //require(seller.operator == msg.sender, NOT_OPERATOR); // TODO add back when AccountHandler is working
-
-        // Offer must not already be voided
-        require(!offer.voided, OFFER_ALREADY_VOIDED);
+        require(seller.operator == msg.sender, NOT_OPERATOR);
     }
 
     /**
