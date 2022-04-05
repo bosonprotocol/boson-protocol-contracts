@@ -147,12 +147,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
      *
      * @return nextBundleId - the next bundle id
      */
-    function getNextBundleId()
-    public
-    view
-    returns(uint256 nextBundleId) {
-
+    function getNextBundleId() public view returns(uint256 nextBundleId) {
         nextBundleId = protocolCounters().nextBundleId;
-
     }
 }
