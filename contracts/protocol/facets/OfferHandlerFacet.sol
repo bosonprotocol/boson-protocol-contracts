@@ -121,7 +121,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         offer.voucherValidDuration = _offer.voucherValidDuration;
         offer.exchangeToken = _offer.exchangeToken;
         offer.metadataUri = _offer.metadataUri;
-        offer.metadataHash = _offer.metadataHash;
+        offer.offerChecksum = _offer.offerChecksum;
 
     }
 

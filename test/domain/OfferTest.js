@@ -23,7 +23,7 @@ describe("Offer", function () {
     voucherValidDuration,
     exchangeToken,
     metadataUri,
-    metadataHash,
+    offerChecksum,
     voided;
 
   beforeEach(async function () {
@@ -46,8 +46,8 @@ describe("Offer", function () {
     fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
     voucherValidDuration = oneMonth.toString(); // offers valid for one month
     exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-    metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-    metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
+    offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
+    metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
     voided = false;
   });
 
@@ -68,7 +68,7 @@ describe("Offer", function () {
         voucherValidDuration,
         exchangeToken,
         metadataUri,
-        metadataHash,
+        offerChecksum,
         voided
       );
       expect(offer.isValid()).is.true;
@@ -92,7 +92,7 @@ describe("Offer", function () {
         voucherValidDuration,
         exchangeToken,
         metadataUri,
-        metadataHash,
+        offerChecksum,
         voided
       );
       expect(offer.isValid()).is.true;
@@ -434,20 +434,20 @@ describe("Offer", function () {
       expect(offer.isValid()).is.true;
     });
 
-    it("Always present, metadataHash must be a non-empty string", async function () {
+    it("Always present, offerChecksum must be a non-empty string", async function () {
       // Invalid field value
-      offer.metadataHash = 12;
-      expect(offer.metadataHashIsValid()).is.false;
+      offer.offerChecksum = 12;
+      expect(offer.offerChecksumIsValid()).is.false;
       expect(offer.isValid()).is.false;
 
       // Valid field value
-      offer.metadataHash = "zedzdeadbaby";
-      expect(offer.metadataHashIsValid()).is.true;
+      offer.offerChecksum = "zedzdeadbaby";
+      expect(offer.offerChecksumIsValid()).is.true;
       expect(offer.isValid()).is.true;
 
       // Valid field value
-      offer.metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-      expect(offer.metadataHashIsValid()).is.true;
+      offer.offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+      expect(offer.offerChecksumIsValid()).is.true;
       expect(offer.isValid()).is.true;
     });
 
@@ -494,7 +494,7 @@ describe("Offer", function () {
         voucherValidDuration,
         exchangeToken,
         metadataUri,
-        metadataHash,
+        offerChecksum,
         voided
       );
       expect(offer.isValid()).is.true;
@@ -514,7 +514,7 @@ describe("Offer", function () {
         voucherValidDuration,
         exchangeToken,
         metadataUri,
-        metadataHash,
+        offerChecksum,
         voided,
       };
     });
@@ -548,7 +548,7 @@ describe("Offer", function () {
           offer.voucherValidDuration,
           offer.exchangeToken,
           offer.metadataUri,
-          offer.metadataHash,
+          offer.offerChecksum,
           offer.voided,
         ];
 

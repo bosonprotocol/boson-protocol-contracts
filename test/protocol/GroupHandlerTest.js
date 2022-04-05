@@ -38,7 +38,7 @@ describe("IBosonGroupHandler", function () {
     seller,
     exchangeToken,
     metadataUri,
-    metadataHash,
+    offerChecksum,
     voided;
   let group, nextGroupId, invalidGroupId;
   let offerIds, condition;
@@ -124,8 +124,8 @@ describe("IBosonGroupHandler", function () {
         fulfillmentPeriodDuration = oneMonth.toString();
         voucherValidDuration = oneMonth.toString();
         exchangeToken = ethers.constants.AddressZero.toString();
-        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
+        offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
+        metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
         voided = false;
 
         // Create a valid offer, then set fields in tests directly
@@ -143,7 +143,7 @@ describe("IBosonGroupHandler", function () {
           voucherValidDuration,
           exchangeToken,
           metadataUri,
-          metadataHash,
+          offerChecksum,
           voided
         );
         expect(offer.isValid()).is.true;
