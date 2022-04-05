@@ -314,7 +314,7 @@ describe("IBosonGroupHandler", function () {
           condition = new Condition(method, tokenAddress, tokenId, threshold);
           group.condition = condition;
 
-          // Attempt to update the offer, expecting revert
+          // Attempt to create the group, expecting revert
           await expect(groupHandler.connect(seller).createGroup(group)).to.revertedWith(
             RevertReasons.INVALID_CONDITION_PARAMETERS
           );
@@ -326,7 +326,7 @@ describe("IBosonGroupHandler", function () {
           condition = new Condition(method, tokenAddress, tokenId, threshold);
           group.condition = condition;
 
-          // Attempt to update the offer, expecting revert
+          // Attempt to create the group, expecting revert
           await expect(groupHandler.connect(seller).createGroup(group)).to.revertedWith(
             RevertReasons.INVALID_CONDITION_PARAMETERS
           );
@@ -338,7 +338,7 @@ describe("IBosonGroupHandler", function () {
           condition = new Condition(method, tokenAddress, tokenId, threshold);
           group.condition = condition;
 
-          // Attempt to update the offer, expecting revert
+          // Attempt to create the group, expecting revert
           await expect(groupHandler.connect(seller).createGroup(group)).to.revertedWith(
             RevertReasons.INVALID_CONDITION_PARAMETERS
           );
@@ -653,7 +653,7 @@ describe("IBosonGroupHandler", function () {
           // Set invalid id
           group.id = "0";
 
-          // Attempt to update the offer, expecting revert
+          // Attempt to update the group, expecting revert
           await expect(groupHandler.connect(seller).setGroupCondition(group.id, condition)).to.revertedWith(
             RevertReasons.NO_SUCH_GROUP
           );
@@ -667,7 +667,7 @@ describe("IBosonGroupHandler", function () {
           method = EvaluationMethod.None;
           condition = new Condition(method, tokenAddress, tokenId, threshold);
 
-          // Attempt to update the offer, expecting revert
+          // Attempt to update the group, expecting revert
           await expect(groupHandler.connect(seller).setGroupCondition(group.id, condition)).to.revertedWith(
             RevertReasons.INVALID_CONDITION_PARAMETERS
           );
@@ -678,7 +678,7 @@ describe("IBosonGroupHandler", function () {
           tokenAddress = ethers.constants.AddressZero;
           condition = new Condition(method, tokenAddress, tokenId, threshold);
 
-          // Attempt to update the offer, expecting revert
+          // Attempt to update the group, expecting revert
           await expect(groupHandler.connect(seller).setGroupCondition(group.id, condition)).to.revertedWith(
             RevertReasons.INVALID_CONDITION_PARAMETERS
           );
@@ -689,7 +689,7 @@ describe("IBosonGroupHandler", function () {
           tokenAddress = ethers.constants.AddressZero;
           condition = new Condition(method, tokenAddress, tokenId, threshold);
 
-          // Attempt to update the offer, expecting revert
+          // Attempt to update the group, expecting revert
           await expect(groupHandler.connect(seller).setGroupCondition(group.id, condition)).to.revertedWith(
             RevertReasons.INVALID_CONDITION_PARAMETERS
           );
