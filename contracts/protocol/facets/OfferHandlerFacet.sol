@@ -86,11 +86,11 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         (, bool updateable) = isOfferUpdateable(_offer.id);
         require(updateable, OFFER_NOT_UPDATEABLE);
 
-        // Get seller, we assume seller exists if offer exists
-        (, Seller storage seller) = fetchSeller(_offer.sellerId);
+        // Get seller id, we assume seller id exists if offer exists
+        (, uint256 sellerId) = getSellerIdByOperator(msg.sender);
 
-        // Caller must be seller's operator address
-        require(seller.operator == msg.sender, NOT_OPERATOR);
+        // Caller's seller id must match offer seller id
+        require(sellerId == _offer.sellerId, NOT_OPERATOR);
 
         storeOffer(_offer);
 
