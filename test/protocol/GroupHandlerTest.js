@@ -267,20 +267,42 @@ describe("IBosonGroupHandler", function () {
         assert.equal(returnedGroup.offerIds, group.offerIds.toString(), "Offer ids should be empty");
       });
 
-      xit("should ignore any provided seller and assign seller id of msg.sender", async function () {
-        // TODO: add when accounthandler is finished
-
-        group.seller = rando;
+      it("should ignore any provided seller and assign seller id of msg.sender", async function () {
+        // set some other sellerId
+        offer.sellerId = "123";
 
         // Create a group, testing for the event
-        await expect(groupHandler.connect(operator).createGroup(group))
-          .to.emit(groupHandler, "GroupCreated")
-          .withArgs(nextGroupId, group.sellerId, groupStruct);
+        const tx = await groupHandler.connect(operator).createGroup(group);
+        const txReceipt = await tx.wait();
+
+        const event = getEvent(txReceipt, groupHandlerFacet_Factory, "GroupCreated");
+
+        const groupInstance = Group.fromStruct(event.group);
+        // Validate the instance
+        expect(groupInstance.isValid()).to.be.true;
+
+        assert.equal(event.groupId.toString(), nextGroupId, "Group Id is incorrect");
+        assert.equal(event.sellerId.toString(), sellerId, "Seller Id is incorrect");
+        assert.equal(groupInstance.toStruct().toString(), groupStruct.toString(), "Group struct is incorrect");
       });
 
       context("💔 Revert Reasons", async function () {
-        xit("Caller is not the seller of all offers", async function () {
-          // TODO whan account handler is implemented
+        it.only("Caller not operator of any seller", async function () {
+          // Attempt to Create a group, expecting revert
+          await expect(groupHandler.connect(rando).createGroup(group)).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
+        });
+
+        it("Caller is not the seller of all offers", async function () {
+          // create another seller and an offer
+          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          await accountHandler.connect(rando).createSeller(seller);
+          await offerHandler.connect(rando).createOffer(offer); // creates an offer with id 6
+
+          // add offer belonging to another seller
+          group.offerIds = ["2", "6"];
+
+          // Attempt to create a group, expecting revert
+          await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
         it("Offer does not exist", async function () {
@@ -430,12 +452,26 @@ describe("IBosonGroupHandler", function () {
           );
         });
 
-        xit("Caller is not seller of a group", async function () {
-          // TODO: add when accounthandler is finished
+        it("Caller is not the seller of the group", async function () {
+          // Attempt to add offers to group, expecting revert
+          await expect(groupHandler.connect(rando).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
         });
 
-        xit("Caller is not the seller of all offers", async function () {
-          // TODO whan account handler is implemented
+        it("Caller is not the seller of all offers", async function () {
+          // create another seller and an offer
+          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          await accountHandler.connect(rando).createSeller(seller);
+          await offerHandler.connect(rando).createOffer(offer); // creates an offer with id 6
+
+          // add offer belonging to another seller
+          offerIdsToAdd = ["1", "6"];
+
+          // Attempt to add offers to group, expecting revert
+          await expect(groupHandler.connect(operator).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
         });
 
         it("Offer is already part of another group", async function () {
@@ -550,21 +586,24 @@ describe("IBosonGroupHandler", function () {
           group.id = "444";
 
           // Attempt to remove offers from the group, expecting revert
-          await expect(groupHandler.connect(operator).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
-            RevertReasons.NO_SUCH_GROUP
-          );
+          await expect(
+            groupHandler.connect(operator).removeOffersFromGroup(group.id, offerIdsToRemove)
+          ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
 
           // Set invalid id
           group.id = "0";
 
           // Attempt to remove offers from group, expecting revert
-          await expect(groupHandler.connect(operator).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
-            RevertReasons.NO_SUCH_GROUP
-          );
+          await expect(
+            groupHandler.connect(operator).removeOffersFromGroup(group.id, offerIdsToRemove)
+          ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
         });
 
-        xit("Caller is not seller of a group", async function () {
-          // TODO: add when accounthandler is finished
+        it("Caller is not the seller of the group", async function () {
+          // Attempt to remove offers from the group, expecting revert
+          await expect(groupHandler.connect(rando).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
         });
 
         it("Offer is not a part of the group", async function () {
@@ -572,9 +611,9 @@ describe("IBosonGroupHandler", function () {
           offerIdsToRemove = ["6"];
 
           // Attempt to remove offers from the group, expecting revert
-          await expect(groupHandler.connect(operator).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
-            RevertReasons.OFFER_NOT_IN_GROUP
-          );
+          await expect(
+            groupHandler.connect(operator).removeOffersFromGroup(group.id, offerIdsToRemove)
+          ).to.revertedWith(RevertReasons.OFFER_NOT_IN_GROUP);
 
           // create an offer and add it to another group
           await offerHandler.connect(operator).createOffer(offer);
@@ -582,9 +621,9 @@ describe("IBosonGroupHandler", function () {
           await groupHandler.connect(operator).createGroup(group);
 
           // Attempt to remove offers from a group, expecting revert
-          await expect(groupHandler.connect(operator).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
-            RevertReasons.OFFER_NOT_IN_GROUP
-          );
+          await expect(
+            groupHandler.connect(operator).removeOffersFromGroup(group.id, offerIdsToRemove)
+          ).to.revertedWith(RevertReasons.OFFER_NOT_IN_GROUP);
         });
 
         it("Removing too many offers", async function () {
@@ -592,9 +631,9 @@ describe("IBosonGroupHandler", function () {
           offerIdsToRemove = [...Array(101).keys()];
 
           // Attempt to remove offers from the group, expecting revert
-          await expect(groupHandler.connect(operator).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
-            RevertReasons.TOO_MANY_OFFERS
-          );
+          await expect(
+            groupHandler.connect(operator).removeOffersFromGroup(group.id, offerIdsToRemove)
+          ).to.revertedWith(RevertReasons.TOO_MANY_OFFERS);
         });
 
         it("Removing nothing", async function () {
@@ -602,9 +641,9 @@ describe("IBosonGroupHandler", function () {
           offerIdsToRemove = [];
 
           // Attempt to remove offers from the group, expecting revert
-          await expect(groupHandler.connect(operator).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
-            RevertReasons.NOTHING_UPDATED
-          );
+          await expect(
+            groupHandler.connect(operator).removeOffersFromGroup(group.id, offerIdsToRemove)
+          ).to.revertedWith(RevertReasons.NOTHING_UPDATED);
         });
       });
     });
@@ -680,8 +719,11 @@ describe("IBosonGroupHandler", function () {
           );
         });
 
-        xit("Caller is not seller of a group", async function () {
-          // TODO: add when accounthandler is finished
+        it("Caller is not the seller of the group", async function () {
+          // Attempt to remove offers from the group, expecting revert
+          await expect(groupHandler.connect(rando).setGroupCondition(group.id, condition)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
         });
 
         it("Condition 'None' has some values in other fields", async function () {
