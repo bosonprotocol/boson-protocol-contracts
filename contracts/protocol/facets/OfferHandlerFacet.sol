@@ -29,6 +29,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * Emits an OfferCreated event if successful.
      *
      * Reverts if:
+     * - seller does not exist
      * - internal any of validations to store offer fails
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
@@ -39,6 +40,11 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     external
     override
     {        
+        // get seller id, make sure it exists and store it to incoming struct
+        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+        require(exists, NO_SUCH_SELLER);
+        _offer.sellerId = sellerId;
+
         // Get the next offerId and increment the counter
         uint256 offerId = protocolCounters().nextOfferId++;
         
@@ -58,6 +64,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      *
      * Reverts if:
      * - Offer is not updateable, i.e. is voided or some exchanges exist
+     * - Caller is not the seller
      * - Any other validation for offer creation fails
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
@@ -71,6 +78,12 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         // Offer must be updateable
         (, bool updateable) = isOfferUpdateable(_offer.id);
         require(updateable, OFFER_NOT_UPDATEABLE);
+
+        // Get seller, we assume seller exists if offer exists
+        (, Seller storage seller) = fetchSeller(_offer.sellerId);
+
+        // Caller must be seller's operator address
+        require(seller.operator == msg.sender, NOT_OPERATOR);
 
         storeOffer(_offer);
 
@@ -90,8 +103,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      */
     function storeOffer(Offer memory _offer) internal {
-        // TODO: check seller ID matches msg.sender
-
         // validFrom date must be less than validUntil date
         require(_offer.validFromDate < _offer.validUntilDate, OFFER_PERIOD_INVALID);
 

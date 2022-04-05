@@ -26,6 +26,7 @@ contract BosonConstants {
     string internal constant NOT_OPERATOR = "Not seller's operator";
 
     //Revert Reasons: Account-related
+    string internal constant NO_SUCH_SELLER = "No such seller";
     string internal constant MUST_BE_ACTIVE = "Seller must be active";
     string internal constant SELLER_ADDRESS_MUST_BE_UNIQUE = "Seller address cannot be assigned to another seller Id";
     string internal constant BUYER_ADDRESS_MUST_BE_UNIQUE = "Buyer address cannot be assigned to another buyer Id";
