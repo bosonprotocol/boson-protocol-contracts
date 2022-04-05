@@ -38,7 +38,12 @@ contract BosonConstants {
     string internal constant OFFER_MUST_BE_ACTIVE = "Offer must be active";
     string internal constant OFFER_NOT_UPDATEABLE = "Offer not updateable";
     string internal constant OFFER_MUST_BE_UNIQUE = "Offer must be unique to a group";
+
+    // Revert Reasons: Group related
+    string internal constant NO_SUCH_GROUP = "No such offer";
+    string internal constant OFFER_NOT_IN_GROUP = "Offer not part of the group";
     string internal constant TOO_MANY_OFFERS = "Exceeded maximum offers in a single transaction";
+    string internal constant NOTHING_UPDATED = "Nothing updated";
 
     // Revert Reasons: Exchange related
     string internal constant NO_SUCH_EXCHANGE = "No such exchange";
