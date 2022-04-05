@@ -114,10 +114,10 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
         //Check that msg.sender is the admin address for this seller
         require(seller.admin  == msg.sender, NOT_ADMIN); 
 
-        //check that the addresses are unique to one seller Id
-        require(protocolStorage().sellerIdByOperator[_seller.operator] == 0 && 
-                protocolStorage().sellerIdByAdmin[_seller.admin] == 0 && 
-                protocolStorage().sellerIdByClerk[_seller.clerk] == 0,  
+        //Check that the addresses are unique to one seller Id -- not used or are used by this seller id. Checking this seller id is necessary because one or more addresses may not change
+        require((protocolStorage().sellerIdByOperator[_seller.operator] == 0 || protocolStorage().sellerIdByOperator[_seller.operator] == _seller.id) && 
+                (protocolStorage().sellerIdByAdmin[_seller.admin] == 0 || protocolStorage().sellerIdByAdmin[_seller.admin]  == _seller.id) && 
+                (protocolStorage().sellerIdByClerk[_seller.clerk] == 0 || protocolStorage().sellerIdByClerk[_seller.clerk]  == _seller.id),  
                 SELLER_ADDRESS_MUST_BE_UNIQUE);
 
    

@@ -19,7 +19,7 @@ describe("IBosonAccountHandler", function () {
   let InterfaceIds;
   let accounts, deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, other4;
   let erc165, protocolDiamond, accessController, accountHandler, gasLimit;
-  let seller, sellerStruct, active, seller2;
+  let seller, sellerStruct, active, seller2, seller2Struct, id2;
   let buyer, buyerStruct;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
@@ -371,9 +371,9 @@ describe("IBosonAccountHandler", function () {
 
         // id of the current seller and increment nextAccountId
         id = nextAccountId++;
+      });
 
-        //Set updated values
-        seller.id = id.toString(); //same value
+      it("should emit a SellerUpdated event with correct values if values change", async function () {
         seller.operator = other1.address;
         seller.admin = other2.address;
         seller.clerk = other3.address;
@@ -381,29 +381,169 @@ describe("IBosonAccountHandler", function () {
         seller.active = false;
 
         sellerStruct = seller.toStruct();
-      });
 
-      it("should emit a SellerUpdated event", async function () {
         // Update a seller, testing for the event
         await expect(accountHandler.connect(admin).updateSeller(seller))
         .to.emit(accountHandler, "SellerUpdated")
         .withArgs(seller.id, sellerStruct);
       });
 
-      it("should update state", async function () {
+      it("should emit a SellerUpdated event withcorrect values if values stay the same", async function () {
+        // Update a seller, testing for the event
+        await expect(accountHandler.connect(admin).updateSeller(seller))
+        .to.emit(accountHandler, "SellerUpdated")
+        .withArgs(seller.id, sellerStruct);
+      });
+
+      it("should update state of all fields exceipt Id" , async function () {
+        seller.operator = other1.address;
+        seller.admin = other2.address;
+        seller.clerk = other3.address;
+        seller.treasury = other4.address;
+        seller.active = false;
+
+        sellerStruct = seller.toStruct();
+
         // Update a seller
         await accountHandler.connect(admin).updateSeller(seller);
 
         // Get the seller as a struct
-        [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
+        [, sellerStruct] = await accountHandler.connect(rando).getSeller(seller.id);
 
         // Parse into entity
         let returnedSeller = Seller.fromStruct(sellerStruct);
 
-        // Returned values should match the input in createSeller
+        // Returned values should match the input in updateSeller
         for ([key, value] of Object.entries(seller)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
         }
+      });
+
+      it("should update state correctly if values are the same" , async function () {
+        // Update a seller
+        await accountHandler.connect(admin).updateSeller(seller);
+
+        // Get the seller as a struct
+        [, sellerStruct] = await accountHandler.connect(rando).getSeller(seller.id);
+
+        // Parse into entity
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+
+        // Returned values should match the input in updateSeller
+        for ([key, value] of Object.entries(seller)) {
+          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update only active flag" , async function () {
+        seller.active = false;
+
+        sellerStruct = seller.toStruct();
+
+        // Update a seller
+        await accountHandler.connect(admin).updateSeller(seller);
+
+        // Get the seller as a struct
+        [, sellerStruct] = await accountHandler.connect(rando).getSeller(seller.id);
+
+        // Parse into entity
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+
+        // Returned values should match the input in updateSeller
+        for ([key, value] of Object.entries(seller)) {
+          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update only one address" , async function () {
+        seller.operator = other1.address;
+
+        sellerStruct = seller.toStruct();
+
+        // Update a seller
+        await accountHandler.connect(admin).updateSeller(seller);
+
+        // Get the seller as a struct
+        [, sellerStruct] = await accountHandler.connect(rando).getSeller(seller.id);
+
+        // Parse into entity
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+
+        // Returned values should match the input in updateSeller
+        for ([key, value] of Object.entries(seller)) {
+          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update the correct seller" , async function () {
+        // Confgiure another seller
+        id2 = nextAccountId++;
+        seller2 = new Seller(id2.toString(), other1.address, other2.address, other3.address, other4.address, active);
+        expect(seller2.isValid()).is.true;
+
+        seller2Struct = seller2.toStruct();
+
+        //Create selelr2, testing for the event
+        await expect(accountHandler.connect(rando).createSeller(seller2))
+         .to.emit(accountHandler, "SellerCreated")
+         .withArgs(seller2.id, seller2Struct);
+
+        //Update first seller
+        seller.operator = rando.address;
+        seller.admin = rando.address;
+        seller.clerk = rando.address;
+        seller.treasury = rando.address;
+        seller.active = false;
+
+        sellerStruct = seller.toStruct();
+
+        // Update a seller
+        await accountHandler.connect(admin).updateSeller(seller);
+
+        // Get the first seller as a struct
+        [, sellerStruct] = await accountHandler.connect(rando).getSeller(seller.id);
+
+        // Parse into entity
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+
+        // Returned values should match the input in updateSeller
+        for ([key, value] of Object.entries(seller)) {
+          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+
+       //Check seller2 hasn't been changed
+       [ , seller2Struct] = await accountHandler.connect(rando).getSeller(seller2.id);
+
+       // Parse into entity
+       let returnedSeller2 = Seller.fromStruct(seller2Struct);
+
+        // Returned values should match the input in updateSeller
+        for ([key, value] of Object.entries(seller2)) {
+          expect(JSON.stringify(returnedSeller2[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should be able to only update with new admin address" , async function () {
+        seller.admin = other2.address;
+        sellerStruct = seller.toStruct();
+
+        // Update a seller, testing for the event
+        await expect(accountHandler.connect(admin).updateSeller(seller))
+         .to.emit(accountHandler, "SellerUpdated")
+         .withArgs(seller.id, sellerStruct);
+
+        seller.admin = other3.address;
+        sellerStruct = seller.toStruct();
+
+        // Update a seller, testing for the event
+        await expect(accountHandler.connect(other2).updateSeller(seller))
+         .to.emit(accountHandler, "SellerUpdated")
+         .withArgs(seller.id, sellerStruct);
+
+        // Attempt to update the seller with original admin address, expecting revert
+        await expect(accountHandler.connect(admin).updateSeller(seller)).to.revertedWith(
+          RevertReasons.NOT_ADMIN
+        );
       });
 
       context("💔 Revert Reasons", async function () {
@@ -435,6 +575,7 @@ describe("IBosonAccountHandler", function () {
         it("addresses are the zero address", async function () {
           seller.operator = ethers.constants.AddressZero;
 
+
           // Attempt to update a seller, expecting revert
           await expect(accountHandler.connect(admin).updateSeller(seller)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
@@ -444,6 +585,7 @@ describe("IBosonAccountHandler", function () {
           seller.clerk = ethers.constants.AddressZero;
 
           // Attempt to update a seller, expecting revert
+       
           await expect(accountHandler.connect(admin).updateSeller(seller)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
@@ -455,14 +597,19 @@ describe("IBosonAccountHandler", function () {
           await expect(accountHandler.connect(admin).updateSeller(seller)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
+   
         });
 
         it("addresses are not unique to this seller Id", async function () {
           seller.id = "2"
+          seller.operator = other1.address;
+          seller.admin = other2.address;
+          seller.clerk = other3.address;
+          seller.treasury = other4.address;
           seller.active = true;
           sellerStruct = seller.toStruct();
 
-          //Create second seller (has values other1.address, other2.address, etc.)
+          //Create second seller 
           await expect(accountHandler.connect(rando).createSeller(seller))
           .to.emit(accountHandler, "SellerCreated")
           .withArgs(nextAccountId, sellerStruct);
