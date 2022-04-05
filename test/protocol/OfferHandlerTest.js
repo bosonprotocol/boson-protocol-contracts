@@ -202,26 +202,20 @@ describe("IBosonOfferHandler", function () {
         expect(exists).to.be.true;
       });
 
-      xit("should ignore any provided seller and assign seller id of msg.sender", async function () {
+      it("should ignore any provided seller and assign seller id of msg.sender", async function () {
         // set some address random address
-        offer.sellerId = rando.address;
+        offer.sellerId = "123";
 
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOffer(offer))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct);
       });
 
       context("💔 Revert Reasons", async function () {
-        xit("Caller not operator of any seller", async function () {
-          // Reverse the from and until dates
-          offer.validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
-          offer.validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
-
+        it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
-            RevertReasons.OFFER_PERIOD_INVALID
-          );
+          await expect(offerHandler.connect(rando).createOffer(offer)).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
         });
 
         it("Valid from date is greater than valid until date", async function () {
@@ -325,8 +319,18 @@ describe("IBosonOfferHandler", function () {
           );
         });
 
-        xit("Caller is not seller", async function () {
-          // TODO: add when accounthandler is finished
+        it("Caller is not seller", async function () {
+          // caller is not the operator of any seller
+          // Attempt to update the offer, expecting revert
+          await expect(offerHandler.connect(rando).updateOffer(offer)).to.revertedWith(RevertReasons.NOT_OPERATOR);
+
+          // caller is an operator of another seller
+          // Create a valid seller, then set fields in tests directly
+          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          await accountHandler.connect(rando).createSeller(seller);
+
+          // Attempt to update the offer, expecting revert
+          await expect(offerHandler.connect(rando).updateOffer(offer)).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
         it("Offer is not updateable, since its voided", async function () {
@@ -447,11 +451,18 @@ describe("IBosonOfferHandler", function () {
           await expect(offerHandler.connect(operator).voidOffer(id)).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
         });
 
-        xit("Caller is not seller", async function () {
-          // TODO: add back when AccountHandler is working
+        it("Caller is not seller", async function () {
+          // caller is not the operator of any seller
+          // Attempt to update the offer, expecting revert
+          await expect(offerHandler.connect(rando).voidOffer(id)).to.revertedWith(RevertReasons.NOT_OPERATOR);
 
-          // Attempt to void the offer from a rando account, expecting revert
-          await expect(offerHandler.connect(rando).voidOffer(id)).to.revertedWith(RevertReasons.NOT_SELLER);
+          // caller is an operator of another seller
+          // Create a valid seller, then set fields in tests directly
+          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          await accountHandler.connect(rando).createSeller(seller);
+
+          // Attempt to update the offer, expecting revert
+          await expect(offerHandler.connect(rando).voidOffer(id)).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
         it("Offer already voided", async function () {
@@ -524,8 +535,22 @@ describe("IBosonOfferHandler", function () {
           );
         });
 
-        xit("Caller is not seller", async function () {
-          // TODO: add when accounthandler is finished
+        it("Caller is not seller", async function () {
+          // caller is not the operator of any seller
+          // Attempt to update the offer, expecting revert
+          await expect(offerHandler.connect(rando).extendOffer(id, offer.validUntilDate)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+
+          // caller is an operator of another seller
+          // Create a valid seller, then set fields in tests directly
+          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          await accountHandler.connect(rando).createSeller(seller);
+
+          // Attempt to update the offer, expecting revert
+          await expect(offerHandler.connect(rando).extendOffer(id, offer.validUntilDate)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
         });
 
         it("Offer is not extendable, since its voided", async function () {
