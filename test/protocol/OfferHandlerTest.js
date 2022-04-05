@@ -34,7 +34,7 @@ describe("IBosonOfferHandler", function () {
     seller,
     exchangeToken,
     metadataUri,
-    metadataHash,
+    offerChecksum,
     voided;
 
   before(async function () {
@@ -111,8 +111,8 @@ describe("IBosonOfferHandler", function () {
       fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
       voucherValidDuration = oneMonth.toString(); // offers valid for one month
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-      metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-      metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
+      offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
+      metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
       voided = false;
 
       // Create a valid offer, then set fields in tests directly
@@ -130,7 +130,7 @@ describe("IBosonOfferHandler", function () {
         voucherValidDuration,
         exchangeToken,
         metadataUri,
-        metadataHash,
+        offerChecksum,
         voided
       );
       expect(offer.isValid()).is.true;
