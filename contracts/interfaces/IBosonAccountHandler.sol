@@ -53,6 +53,7 @@ interface IBosonAccountHandler {
      * - Address values are zero address
      * - Addresses are not unique to this seller
      * - Caller is not the admin address of the seller
+     * - Seller does not exist
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
      */

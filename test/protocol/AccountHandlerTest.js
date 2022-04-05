@@ -17,7 +17,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 describe("IBosonAccountHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury, other1, other2;
+  let accounts, deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, other4;
   let erc165, protocolDiamond, accessController, accountHandler, gasLimit;
   let seller, sellerStruct, active;
   let buyer, buyerStruct;
@@ -40,6 +40,8 @@ describe("IBosonAccountHandler", function () {
     rando = accounts[5];
     other1 = accounts[6];
     other2 = accounts[7];
+    other3 = accounts[8];
+    other4 = accounts[9];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -257,6 +259,104 @@ describe("IBosonAccountHandler", function () {
         // Validate
         expect(seller.isValid()).to.be.true;
       });
+    });
+
+    context("👉 updateSeller()", async function () {
+      beforeEach(async function () {
+
+        // Create a seller
+        await accountHandler.connect(admin).createSeller(seller);
+
+        // id of the current seller and increment nextAccountId
+        id = nextAccountId++;
+
+        //Set new field values
+        seller.id = id.toString();
+        seller.operator = other1.address;
+        seller.admin = other2.address;
+        seller.clerk = other3.address;
+        seller.treasury = other3.address;
+        seller.active = false;
+
+        sellerStruct = seller.toStruct();
+      });
+
+      it("should emit an SellerUpdated event", async function () {
+        // Update a seller, testing for the event
+        await expect(accountHandler.connect(admin).updateSeller(seller))
+        .to.emit(accountHandler, "SellerUpdated")
+        .withArgs(seller.id, sellerStruct);
+      });
+
+      it("should update state", async function () {
+        // Update a seller
+        await accountHandler.connect(admin).updateSeller(seller);
+
+        // Get the seller as a struct
+        [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
+
+        // Parse into entity
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+
+        // Returned values should match the input in createSeller
+        for ([key, value] of Object.entries(seller)) {
+          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Sellerdoes not exist", async function () {
+          // Set invalid id
+          seller.id = "444";
+
+          // Attempt to update the seller, expecting revert
+          await expect(accountHandler.connect(admin).updateSeller(seller)).to.revertedWith(
+            RevertReasons.NO_SUCH_SELLER
+          );
+
+          // Set invalid id
+          seller.id = "0";
+
+          // Attempt to update the seller, expecting revert
+          await expect(accountHandler.connect(admin).updateSeller(seller)).to.revertedWith(
+            RevertReasons.NO_SUCH_SELLER
+          );
+        });
+
+        it("Caller is not seller admin", async function () {
+          // Attempt to update the seller, expecting revert
+          await expect(accountHandler.connect(operator).updateSeller(seller)).to.revertedWith(
+            RevertReasons.NOT_ADMIN
+          );
+        });
+
+        it("addresses are the zero address", async function () {
+          seller.operator = ethers.constants.AddressZero;
+
+          // Attempt to update a seller, expecting revert
+          await expect(accountHandler.connect(admin).updateSeller(seller)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
+
+          seller.operator = other1.address;
+          seller.clerk = ethers.constants.AddressZero;
+
+          // Attempt to update a seller, expecting revert
+          await expect(accountHandler.connect(admin).updateSeller(seller)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
+
+          seller.clerk = other3.address;
+          seller.admin = ethers.constants.AddressZero;
+
+          // Attempt to update a seller, expecting revert
+          await expect(accountHandler.connect(admin).updateSeller(seller)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
+        });
+
+      });
+      
     });
 
     context("👉 getNextAccountId()", async function () {
