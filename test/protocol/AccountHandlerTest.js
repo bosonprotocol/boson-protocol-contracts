@@ -316,7 +316,6 @@ describe("IBosonAccountHandler", function () {
 
         expect(exists).is.true;
 
-
         // Parse into entity
         let returnedSeller = Seller.fromStruct(sellerStruct);
 
@@ -325,8 +324,8 @@ describe("IBosonAccountHandler", function () {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
         }
       });
-      
-       it("should return exists false and default values when searching on treasury address", async function () {
+
+      it("should return exists false and default values when searching on treasury address", async function () {
         [exists, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(treasury.address);
 
         expect(exists).is.false;
@@ -365,7 +364,6 @@ describe("IBosonAccountHandler", function () {
 
     context("👉 updateSeller()", async function () {
       beforeEach(async function () {
-
         // Create a seller
         await accountHandler.connect(admin).createSeller(seller);
 
@@ -384,18 +382,18 @@ describe("IBosonAccountHandler", function () {
 
         // Update a seller, testing for the event
         await expect(accountHandler.connect(admin).updateSeller(seller))
-        .to.emit(accountHandler, "SellerUpdated")
-        .withArgs(seller.id, sellerStruct);
+          .to.emit(accountHandler, "SellerUpdated")
+          .withArgs(seller.id, sellerStruct);
       });
 
       it("should emit a SellerUpdated event withcorrect values if values stay the same", async function () {
         // Update a seller, testing for the event
         await expect(accountHandler.connect(admin).updateSeller(seller))
-        .to.emit(accountHandler, "SellerUpdated")
-        .withArgs(seller.id, sellerStruct);
+          .to.emit(accountHandler, "SellerUpdated")
+          .withArgs(seller.id, sellerStruct);
       });
 
-      it("should update state of all fields exceipt Id" , async function () {
+      it("should update state of all fields exceipt Id", async function () {
         seller.operator = other1.address;
         seller.admin = other2.address;
         seller.clerk = other3.address;
@@ -419,7 +417,7 @@ describe("IBosonAccountHandler", function () {
         }
       });
 
-      it("should update state correctly if values are the same" , async function () {
+      it("should update state correctly if values are the same", async function () {
         // Update a seller
         await accountHandler.connect(admin).updateSeller(seller);
 
@@ -435,7 +433,7 @@ describe("IBosonAccountHandler", function () {
         }
       });
 
-      it("should update only active flag" , async function () {
+      it("should update only active flag", async function () {
         seller.active = false;
 
         sellerStruct = seller.toStruct();
@@ -455,7 +453,7 @@ describe("IBosonAccountHandler", function () {
         }
       });
 
-      it("should update only one address" , async function () {
+      it("should update only one address", async function () {
         seller.operator = other1.address;
 
         sellerStruct = seller.toStruct();
@@ -475,7 +473,7 @@ describe("IBosonAccountHandler", function () {
         }
       });
 
-      it("should update the correct seller" , async function () {
+      it("should update the correct seller", async function () {
         // Confgiure another seller
         id2 = nextAccountId++;
         seller2 = new Seller(id2.toString(), other1.address, other2.address, other3.address, other4.address, active);
@@ -485,8 +483,8 @@ describe("IBosonAccountHandler", function () {
 
         //Create selelr2, testing for the event
         await expect(accountHandler.connect(rando).createSeller(seller2))
-         .to.emit(accountHandler, "SellerCreated")
-         .withArgs(seller2.id, seller2Struct);
+          .to.emit(accountHandler, "SellerCreated")
+          .withArgs(seller2.id, seller2Struct);
 
         //Update first seller
         seller.operator = rando.address;
@@ -511,11 +509,11 @@ describe("IBosonAccountHandler", function () {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
         }
 
-       //Check seller2 hasn't been changed
-       [ , seller2Struct] = await accountHandler.connect(rando).getSeller(seller2.id);
+        //Check seller2 hasn't been changed
+        [, seller2Struct] = await accountHandler.connect(rando).getSeller(seller2.id);
 
-       // Parse into entity
-       let returnedSeller2 = Seller.fromStruct(seller2Struct);
+        // Parse into entity
+        let returnedSeller2 = Seller.fromStruct(seller2Struct);
 
         // Returned values should match the input in updateSeller
         for ([key, value] of Object.entries(seller2)) {
@@ -523,27 +521,25 @@ describe("IBosonAccountHandler", function () {
         }
       });
 
-      it("should be able to only update with new admin address" , async function () {
+      it("should be able to only update with new admin address", async function () {
         seller.admin = other2.address;
         sellerStruct = seller.toStruct();
 
         // Update a seller, testing for the event
         await expect(accountHandler.connect(admin).updateSeller(seller))
-         .to.emit(accountHandler, "SellerUpdated")
-         .withArgs(seller.id, sellerStruct);
+          .to.emit(accountHandler, "SellerUpdated")
+          .withArgs(seller.id, sellerStruct);
 
         seller.admin = other3.address;
         sellerStruct = seller.toStruct();
 
         // Update a seller, testing for the event
         await expect(accountHandler.connect(other2).updateSeller(seller))
-         .to.emit(accountHandler, "SellerUpdated")
-         .withArgs(seller.id, sellerStruct);
+          .to.emit(accountHandler, "SellerUpdated")
+          .withArgs(seller.id, sellerStruct);
 
         // Attempt to update the seller with original admin address, expecting revert
-        await expect(accountHandler.connect(admin).updateSeller(seller)).to.revertedWith(
-          RevertReasons.NOT_ADMIN
-        );
+        await expect(accountHandler.connect(admin).updateSeller(seller)).to.revertedWith(RevertReasons.NOT_ADMIN);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -567,14 +563,11 @@ describe("IBosonAccountHandler", function () {
 
         it("Caller is not seller admin", async function () {
           // Attempt to update the seller, expecting revert
-          await expect(accountHandler.connect(operator).updateSeller(seller)).to.revertedWith(
-            RevertReasons.NOT_ADMIN
-          );
+          await expect(accountHandler.connect(operator).updateSeller(seller)).to.revertedWith(RevertReasons.NOT_ADMIN);
         });
 
         it("addresses are the zero address", async function () {
           seller.operator = ethers.constants.AddressZero;
-
 
           // Attempt to update a seller, expecting revert
           await expect(accountHandler.connect(admin).updateSeller(seller)).to.revertedWith(
@@ -585,7 +578,7 @@ describe("IBosonAccountHandler", function () {
           seller.clerk = ethers.constants.AddressZero;
 
           // Attempt to update a seller, expecting revert
-       
+
           await expect(accountHandler.connect(admin).updateSeller(seller)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
@@ -597,11 +590,10 @@ describe("IBosonAccountHandler", function () {
           await expect(accountHandler.connect(admin).updateSeller(seller)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
-   
         });
 
         it("addresses are not unique to this seller Id", async function () {
-          seller.id = "2"
+          seller.id = "2";
           seller.operator = other1.address;
           seller.admin = other2.address;
           seller.clerk = other3.address;
@@ -609,14 +601,14 @@ describe("IBosonAccountHandler", function () {
           seller.active = true;
           sellerStruct = seller.toStruct();
 
-          //Create second seller 
+          //Create second seller
           await expect(accountHandler.connect(rando).createSeller(seller))
-          .to.emit(accountHandler, "SellerCreated")
-          .withArgs(nextAccountId, sellerStruct);
+            .to.emit(accountHandler, "SellerCreated")
+            .withArgs(nextAccountId, sellerStruct);
 
           //Set operator address value to be same as first seller created in Seller Methods beforeEach
-          seller.operator = operator.address //already being used by seller 1
-     
+          seller.operator = operator.address; //already being used by seller 1
+
           // Attempt to update seller 2 with non-unique operator, expecting revert
           await expect(accountHandler.connect(other2).updateSeller(seller)).to.revertedWith(
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
