@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import "./IBosonBundleHandler.sol";
 import "./IBosonFundsHandler.sol";
 import "./IBosonConfigHandler.sol";
 import "./IBosonDisputeHandler.sol";
@@ -28,6 +29,10 @@ import "./IDiamondLoupe.sol";
  * id in the constants file.
  */
 contract SupportedInterfaces {
+    function getIBosonBundleHandler() public pure returns (bytes4 id) {
+        id = type(IBosonBundleHandler).interfaceId;
+    }
+
     function getIBosonConfigHandler() public pure returns (bytes4 id) {
         id = type(IBosonConfigHandler).interfaceId;
     }

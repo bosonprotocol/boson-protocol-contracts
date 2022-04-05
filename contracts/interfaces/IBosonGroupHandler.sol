@@ -39,10 +39,13 @@ interface IBosonGroupHandler {
      * Reverts if:
      *
      * - caller is not the seller
+     * - offer ids is an empty list
+     * - number of offers exceeds maximum allowed number per group
+     * - group does not exist
      * - any of offers belongs to different seller
      * - any of offers does not exist
      * - offer exists in a different group
-     * - number of offers exceeds maximum allowed number per group
+     * - offer ids contains duplicated offers
      *
      * @param _groupId  - the id of the group to be updated
      * @param _offerIds - array of offer ids to be added to the group
@@ -57,8 +60,10 @@ interface IBosonGroupHandler {
      * Reverts if:
      *
      * - caller is not the seller
-     * - any offer is not part of the group
+     * - offer ids is an empty list
      * - number of offers exceeds maximum allowed number per group
+     * - group does not exist
+     * - any offer is not part of the group
      *
      * @param _groupId  - the id of the group to be updated
      * @param _offerIds - array of offer ids to be removed to the group
