@@ -22,8 +22,11 @@ interface IBosonOfferHandler {
      * Emits an OfferCreated event if successful.
      *
      * Reverts if:
+     * - seller does not exist
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
+     * - Buyer cancel penalty is greater than price
+     * - Voided is set to true
      *
      * @param _offer - the fully populated struct with offer id set to 0x0
      */
@@ -35,8 +38,12 @@ interface IBosonOfferHandler {
      * Emits an OfferUpdated event if successful.
      *
      * Reverts if:
-     * - Offer is not updateable, i.e. is voided or some exchanges are active
-     * - Any other validation for offer creation fails
+     * - Offer is not updateable, i.e. is voided or some exchanges exist
+     * - Caller is not the seller
+     * - Valid from date is greater than valid until date
+     * - Valid until date is not in the future
+     * - Buyer cancel penalty is greater than price
+     * - Voided is set to true
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated, active exchanges set to 0 and voided set to false
      */

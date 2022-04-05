@@ -25,6 +25,7 @@ exports.RevertReasons = {
   TOO_MANY_OFFERS: "Exceeded maximum offers in a single transaction",
 
   // Account-related
+  NO_SUCH_SELLER: "No such seller",
   MUST_BE_ACTIVE: "Seller must be active",
   SELLER_ADDRESS_MUST_BE_UNIQUE: "Seller address cannot be assigned to another seller Id",
   BUYER_ADDRESS_MUST_BE_UNIQUE: "Buyer address cannot be assigned to another buyer Id",

@@ -30,7 +30,10 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      *
      * Reverts if:
      * - seller does not exist
-     * - internal any of validations to store offer fails
+     * - Valid from date is greater than valid until date
+     * - Valid until date is not in the future
+     * - Buyer cancel penalty is greater than price
+     * - Voided is set to true
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      */
@@ -65,7 +68,10 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * Reverts if:
      * - Offer is not updateable, i.e. is voided or some exchanges exist
      * - Caller is not the seller
-     * - Any other validation for offer creation fails
+     * - Valid from date is greater than valid until date
+     * - Valid until date is not in the future
+     * - Buyer cancel penalty is greater than price
+     * - Voided is set to true
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      */
