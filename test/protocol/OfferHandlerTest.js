@@ -201,7 +201,7 @@ describe("IBosonOfferHandler", function () {
       });
 
       it("should ignore any provided seller and assign seller id of msg.sender", async function () {
-        // set some address random address
+        // set some other sellerId
         offer.sellerId = "123";
 
         // Create an offer, testing for the event
