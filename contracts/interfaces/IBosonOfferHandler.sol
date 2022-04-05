@@ -38,6 +38,7 @@ interface IBosonOfferHandler {
      * Emits an OfferUpdated event if successful.
      *
      * Reverts if:
+     * - Offer does not exist
      * - Offer is not updateable, i.e. is voided or some exchanges exist
      * - Caller is not the seller
      * - Valid from date is greater than valid until date
@@ -60,7 +61,8 @@ interface IBosonOfferHandler {
      *
      * Reverts if:
      * - Offer ID is invalid
-     * - Offer is not owned by caller
+     * - Caller is not the operator of the offer
+     * - Offer has already been voided
      *
      * @param _offerId - the id of the offer to check
      */
@@ -73,7 +75,7 @@ interface IBosonOfferHandler {
      *
      * Reverts if:
      * - Offer does not exist
-     * - Caller is not the seller (TODO)
+     * - Caller is not the operator of the offer
      * - New valid until date is before existing valid until dates
      *
      *  @param _offerId - the id of the offer to check

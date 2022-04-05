@@ -66,6 +66,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * Emits an OfferUpdated event if successful.
      *
      * Reverts if:
+     * - Offer does not exist
      * - Offer is not updateable, i.e. is voided or some exchanges exist
      * - Caller is not the seller
      * - Valid from date is greater than valid until date
@@ -146,12 +147,14 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * @notice Voids a given offer.
      *
      * Emits an OfferVoided event if successful.
+     *
+     * Note:
      * Existing exchanges are not affected.
      * No further vouchers can be issued against a voided offer.
      *
      * Reverts if:
      * - Offer ID is invalid
-     * - Offer is not owned by caller
+     * - Caller is not the operator of the offer
      * - Offer has already been voided
      *
      * @param _offerId - the id of the offer to check
@@ -160,7 +163,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     external
     override
     {
-        // Get offer
+        // Get offer, make sure the caller is the operator
         Offer storage offer = getValidOffer(_offerId);
 
         // Void the offer
@@ -178,7 +181,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      *
      * Reverts if:
      * - Offer does not exist
-     * - Caller is not the seller (TODO)
+     * - Caller is not the operator of the offer
      * - New valid until date is before existing valid until dates
      *
      *  @param _offerId - the id of the offer to check
@@ -190,7 +193,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     external
     override
     {
-        // Get offer
+        // Get offer, make sure the caller is the operator
         Offer storage offer = getValidOffer(_offerId);
 
         // New valid until date must be greater than existing one
