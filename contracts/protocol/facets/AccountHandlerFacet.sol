@@ -83,6 +83,43 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
         emit BuyerCreated(_buyer.id, _buyer);
 
     }
+
+     /**
+     * @notice Updates a seller
+     *
+     * Emits a SellerUpdated event if successful.
+     *
+     * Reverts if:
+     * - Address values are zero address
+     * - Addresses are not unique to this seller
+     * - Caller is not the admin address of the seller
+     *
+     * @param _seller - the fully populated struct with seller id set to 0x0
+     */
+    function updateSeller(Seller memory _seller)
+    external
+    override
+    {
+        uint sellerId;
+
+        (, sellerId) = getSellerIdByAdmin(msg.sender);
+        require(sellerId == _seller.id, NOT_ADMIN); 
+
+        //Delete current mappings
+        delete protocolStorage().sellerIdByOperator[_seller.operator];
+        delete protocolStorage().sellerIdByAdmin[_seller.admin];
+        delete protocolStorage().sellerIdByClerk[_seller.clerk];
+
+        storeSeller(_seller);
+
+        //Map the seller's addresses to the sellerId. It's not necessary to map the treasury address, as it only receives funds
+        protocolStorage().sellerIdByOperator[_seller.operator] = sellerId;
+        protocolStorage().sellerIdByAdmin[_seller.admin] = sellerId;
+        protocolStorage().sellerIdByClerk[_seller.clerk] = sellerId;
+
+        // Notify watchers of state change
+        emit SellerUpdated(_seller.id, _seller);
+    }
   
     /**
      * @notice Gets the details about a seller.

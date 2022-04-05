@@ -13,12 +13,13 @@ import "../domain/BosonTypes.sol";
 interface IBosonAccountHandler {
     /// Events
     event SellerCreated(uint256 indexed sellerId, BosonTypes.Seller seller);
+    event SellerUpdated(uint256 indexed sellerId, BosonTypes.Seller seller);
     event BuyerCreated(uint256 indexed buyerId, BosonTypes.Buyer buyer);
 
     /**
      * @notice Creates a seller
      *
-     * Emits an SellerCreated event if successful.
+     * Emits a SellerCreated event if successful.
      *
      * Reverts if:
      * - Address values are zero address
@@ -27,12 +28,12 @@ interface IBosonAccountHandler {
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
      */
-    function createSeller(BosonTypes.Seller calldata _seller) external;
+    function createSeller(BosonTypes.Seller memory _seller) external;
 
     /**
      * @notice Creates a Buyer
      *
-     * Emits an BuyerCreated event if successful.
+     * Emits a BuyerCreated event if successful.
      *
      * Reverts if:
      * - Wallet address is zero address
@@ -41,7 +42,21 @@ interface IBosonAccountHandler {
      *
      * @param _buyer - the fully populated struct with buyer id set to 0x0
      */
-    function createBuyer(BosonTypes.Buyer calldata _buyer) external;
+    function createBuyer(BosonTypes.Buyer memory _buyer) external;
+
+    /**
+     * @notice Updates a seller
+     *
+     * Emits a SellerUpdated event if successful.
+     *
+     * Reverts if:
+     * - Address values are zero address
+     * - Addresses are not unique to this seller
+     * - Caller is not the admin address of the seller
+     *
+     * @param _seller - the fully populated struct with seller id set to 0x0
+     */
+    function updateSeller(BosonTypes.Seller memory _seller) external;
 
     /**
      * @notice Gets the details about a seller.
