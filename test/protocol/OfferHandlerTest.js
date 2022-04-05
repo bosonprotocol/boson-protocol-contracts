@@ -61,8 +61,6 @@ describe("IBosonOfferHandler", function () {
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet"]);
-
-    // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, ["OfferHandlerFacet"]);
 
     // Add config Handler, so offer id starts at 1
