@@ -23,7 +23,7 @@ const { delay, deploymentComplete, verifyOnEtherscan } = require("./util/report-
 
 /**
  * Get the configuration data to be passed to the ConfigHandlerFacet initializer
- * @returns {{tokenAddress: string, treasuryAddress: string, voucherAddress: string, feePercentage: string, maxOffersPerGroup: string, maxTwinsPerBundle: string}}
+ * @returns {{tokenAddress: string, treasuryAddress: string, voucherAddress: string, feePercentage: string, maxOffersPerGroup: string, maxTwinsPerBundle: string, maxOffersPerBundle: string}}
  */
 function getConfig() {
 
@@ -31,6 +31,7 @@ function getConfig() {
     const feePercentage = "150"; // 1.5%  = 150
     const maxOffersPerGroup = "100";
     const maxTwinsPerBundle = "100";
+    const maxOffersPerBundle = "100";
 
     // Boson Token (ERC-20) contract address
     const TOKEN = {
@@ -59,7 +60,8 @@ function getConfig() {
             voucherAddress: VOUCHER[network],
             feePercentage,
             maxOffersPerGroup,
-            maxTwinsPerBundle
+            maxTwinsPerBundle,
+            maxOffersPerBundle
     };
 }
 
@@ -122,7 +124,8 @@ async function main() {
         config.voucherAddress,
         config.feePercentage,
         config.maxOffersPerGroup,
-        config.maxTwinsPerBundle
+        config.maxTwinsPerBundle,
+        config.maxOffersPerBundle
     ];
     [configHandlerFacet] = await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
     deploymentComplete('ConfigHandlerFacet', configHandlerFacet.address, [], contracts);
