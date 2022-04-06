@@ -29,7 +29,11 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * Emits an OfferCreated event if successful.
      *
      * Reverts if:
-     * - internal any of validations to store offer fails
+     * - seller does not exist
+     * - Valid from date is greater than valid until date
+     * - Valid until date is not in the future
+     * - Buyer cancel penalty is greater than price
+     * - Voided is set to true
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      */
@@ -39,6 +43,11 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     external
     override
     {        
+        // get seller id, make sure it exists and store it to incoming struct
+        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+        require(exists, NO_SUCH_SELLER);
+        _offer.sellerId = sellerId;
+
         // Get the next offerId and increment the counter
         uint256 offerId = protocolCounters().nextOfferId++;
         
@@ -57,8 +66,13 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * Emits an OfferUpdated event if successful.
      *
      * Reverts if:
+     * - Offer does not exist
      * - Offer is not updateable, i.e. is voided or some exchanges exist
-     * - Any other validation for offer creation fails
+     * - Caller is not the seller
+     * - Valid from date is greater than valid until date
+     * - Valid until date is not in the future
+     * - Buyer cancel penalty is greater than price
+     * - Voided is set to true
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      */
@@ -71,6 +85,12 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         // Offer must be updateable
         (, bool updateable) = isOfferUpdateable(_offer.id);
         require(updateable, OFFER_NOT_UPDATEABLE);
+
+        // Get seller id, we assume seller id exists if offer exists
+        (, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+
+        // Caller's seller id must match offer seller id
+        require(sellerId == _offer.sellerId, NOT_OPERATOR);
 
         storeOffer(_offer);
 
@@ -90,8 +110,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      */
     function storeOffer(Offer memory _offer) internal {
-        // TODO: check seller ID matches msg.sender
-
         // validFrom date must be less than validUntil date
         require(_offer.validFromDate < _offer.validUntilDate, OFFER_PERIOD_INVALID);
 
@@ -129,12 +147,14 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * @notice Voids a given offer.
      *
      * Emits an OfferVoided event if successful.
+     *
+     * Note:
      * Existing exchanges are not affected.
      * No further vouchers can be issued against a voided offer.
      *
      * Reverts if:
      * - Offer ID is invalid
-     * - Offer is not owned by caller
+     * - Caller is not the operator of the offer
      * - Offer has already been voided
      *
      * @param _offerId - the id of the offer to check
@@ -143,7 +163,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     external
     override
     {
-        // Get offer
+        // Get offer, make sure the caller is the operator
         Offer storage offer = getValidOffer(_offerId);
 
         // Void the offer
@@ -161,7 +181,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      *
      * Reverts if:
      * - Offer does not exist
-     * - Caller is not the seller (TODO)
+     * - Caller is not the operator of the offer
      * - New valid until date is before existing valid until dates
      *
      *  @param _offerId - the id of the offer to check
@@ -173,7 +193,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     external
     override
     {
-        // Get offer
+        // Get offer, make sure the caller is the operator
         Offer storage offer = getValidOffer(_offerId);
 
         // New valid until date must be greater than existing one
