@@ -8,7 +8,7 @@ import "../domain/BosonTypes.sol";
  *
  * @notice Manages bundling associated with offers and twins within the protocol
  *
- * The ERC-165 identifier for this interface is: 0xdfe8e2e8
+ * The ERC-165 identifier for this interface is: 0x3c91ae92
  */
 interface IBosonBundleHandler {
     /// Events
