@@ -470,7 +470,7 @@ describe("IBosonOfferHandler", function () {
 
           // Attempt to void the offer again, expecting revert
           await expect(offerHandler.connect(operator).voidOffer(id)).to.revertedWith(
-            RevertReasons.OFFER_ALREADY_VOIDED
+            RevertReasons.OFFER_HAS_BEEN_VOIDED
           );
         });
       });
@@ -558,7 +558,7 @@ describe("IBosonOfferHandler", function () {
 
           // Attempt to update an offer, expecting revert
           await expect(offerHandler.connect(operator).extendOffer(offer.id, offer.validUntilDate)).to.revertedWith(
-            RevertReasons.OFFER_ALREADY_VOIDED
+            RevertReasons.OFFER_HAS_BEEN_VOIDED
           );
         });
 

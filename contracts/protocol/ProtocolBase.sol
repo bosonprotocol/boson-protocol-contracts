@@ -278,7 +278,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
         require(exists, NO_SUCH_OFFER);
 
         // Offer must not already be voided
-        require(!offer.voided, OFFER_ALREADY_VOIDED);
+        require(!offer.voided, OFFER_HAS_BEEN_VOIDED);
 
         // Get seller, we assume seller exists if offer exists
         (, seller) = fetchSeller(offer.sellerId);
