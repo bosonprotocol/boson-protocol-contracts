@@ -6,7 +6,6 @@ import { IBosonAccountHandler } from "../../interfaces/IBosonAccountHandler.sol"
 import { IBosonVoucher } from "../../interfaces/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../ProtocolBase.sol";
-import { ProtocolLib } from "../ProtocolLib.sol";
 
 /**
  * @title ExchangeHandlerFacet

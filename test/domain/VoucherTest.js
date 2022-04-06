@@ -26,6 +26,15 @@ describe("Voucher", function () {
       expect(voucher.expiredIsValid()).is.true;
       expect(voucher.isValid()).is.true;
     });
+
+    it("Should allow creation of valid, partially populated Voucher instance", async function () {
+      voucher = new Voucher(null, null, null, expired);
+      expect(voucher.committedDateIsValid()).is.true;
+      expect(voucher.validUntilDateIsValid()).is.true;
+      expect(voucher.redeemedDateIsValid()).is.true;
+      expect(voucher.expiredIsValid()).is.true;
+      expect(voucher.isValid()).is.true;
+    });
   });
 
   context("📋 Field validations", async function () {

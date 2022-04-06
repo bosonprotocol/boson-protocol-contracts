@@ -6,6 +6,7 @@ const Role = require("../../scripts/domain/Role");
 const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
 const Offer = require("../../scripts/domain/Offer");
+const Seller = require("../../scripts/domain/Seller");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const { getEvent } = require("../../scripts/util/test-events.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -21,9 +22,9 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, operator;
-  let erc165, protocolDiamond, accessController, exchangeHandler, offerHandler, bosonVoucher, gasLimit;
-  let id, buyer, buyerId, offer, offerId, sellerId;
+  let accounts, deployer, operator, admin, clerk, treasury;
+  let erc165, protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, bosonVoucher, gasLimit;
+  let id, buyer, buyerId, offer, offerId, seller, sellerId;
   let block, blockNumber, tx, txReceipt, event, clients;
   let support, oneMonth, oneWeek;
   let price,
@@ -55,7 +56,10 @@ describe("IBosonExchangeHandler", function () {
     accounts = await ethers.getSigners();
     deployer = accounts[0];
     operator = accounts[1];
-    buyer = accounts[2];
+    admin = accounts[2];
+    clerk = accounts[3];
+    treasury = accounts[4];
+    buyer = accounts[5];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -94,6 +98,9 @@ describe("IBosonExchangeHandler", function () {
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
 
+    // Cast Diamond to IBosonAccountHandler
+    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+
     // Cast Diamond to IBosonOfferHandler
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
 
@@ -118,7 +125,8 @@ describe("IBosonExchangeHandler", function () {
   context("📋 Exchange Handler Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
-      id = offerId = buyerId = sellerId = "1";
+      id = offerId = sellerId = "1";
+      buyerId = "2"; // created after seller
 
       // Create an offer to commit to
       oneWeek = 604800 * 1000; //  7 days in milliseconds
@@ -140,6 +148,11 @@ describe("IBosonExchangeHandler", function () {
       metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
       metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
       voided = false;
+
+      // Create a valid seller
+      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
+      expect(seller.isValid()).is.true;
+      await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid offer entity
       offer = new Offer(
@@ -197,7 +210,7 @@ describe("IBosonExchangeHandler", function () {
 
         assert.equal(event.exchangeId.toString(), id, "Exchange id is incorrect");
         assert.equal(event.offerId.toString(), offerId, "Offer id is incorrect");
-        assert.equal(event.buyerId.toString(), offerId, "Buyer id is incorrect");
+        assert.equal(event.buyerId.toString(), buyerId, "Buyer id is incorrect");
         assert.equal(
           Exchange.fromStruct(event.exchange).toString(),
           Exchange.fromStruct(exchangeStruct).toString(),

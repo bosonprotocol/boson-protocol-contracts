@@ -145,6 +145,16 @@ describe("Exchange", function () {
       expect(exchange.disputedIsValid()).is.false;
       expect(exchange.isValid()).is.false;
 
+      // Invalid field value
+      exchange.disputed = null;
+      expect(exchange.disputedIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
+      // Invalid field value
+      exchange.disputed = undefined;
+      expect(exchange.disputedIsValid()).is.false;
+      expect(exchange.isValid()).is.false;
+
       // Valid field value
       exchange.disputed = false;
       expect(exchange.disputedIsValid()).is.true;

@@ -58,7 +58,7 @@ library ProtocolLib {
         //seller clerk address => sellerId
         mapping(address => uint256) sellerIdByClerk;
         //buyer wallet address => buyerId
-        mapping(address => uint256) buyerByWallet;
+        mapping(address => uint256) buyerIdByWallet;
     }
 
     // Incrementing ID counters
