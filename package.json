@@ -30,6 +30,7 @@
         "size": "npx hardhat size-contracts",
         "coverage": "npx hardhat coverage",
         "deploy-suite:local": "npx hardhat run --network hardhat scripts/deploy-suite.js",
+        "deploy-suite:test": "npx hardhat run --network test scripts/deploy-suite.js",
         "deploy-suite:ropsten": "npx hardhat run --network ropsten scripts/deploy-suite.js >> logs/ropsten.deploy.contracts.txt",
         "deploy-suite:mainnet": "npx hardhat run --network mainnet scripts/deploy-suite.js >> logs/mainnet.deploy.contracts.txt",
         "manage-roles:ropsten": " npx hardhat --network ropsten run scripts/manage-roles.js >> logs/ropsten.manage.roles.txt",
