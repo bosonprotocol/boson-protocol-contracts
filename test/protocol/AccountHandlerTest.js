@@ -59,6 +59,7 @@ describe("IBosonAccountHandler", function () {
       "0",
       "0",
       "0",
+      "0",
     ];
 
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
