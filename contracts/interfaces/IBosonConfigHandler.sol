@@ -8,7 +8,7 @@ import "../domain/BosonTypes.sol";
  *
  * @notice Handles management of various protocol-related settings.
  *
- * The ERC-165 identifier for this interface is: 0x1753a1ce
+ * The ERC-165 identifier for this interface is: 0x19037fd6
  */
 interface IBosonConfigHandler {
     /// Events

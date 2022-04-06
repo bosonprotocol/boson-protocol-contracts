@@ -43,7 +43,14 @@ describe("IBosonConfigHandler", function () {
     maxTwinsPerBundle = 100;
     maxOffersPerBundle = 100;
 
-    const protocolConfig = [token.address, treasury.address, protocolFee, maxOffersPerGroup, maxTwinsPerBundle, maxOffersPerBundle];
+    const protocolConfig = [
+      token.address,
+      treasury.address,
+      protocolFee,
+      maxOffersPerGroup,
+      maxTwinsPerBundle,
+      maxOffersPerBundle,
+    ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
     // Cast Diamond to IERC165
