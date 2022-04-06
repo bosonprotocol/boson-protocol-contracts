@@ -751,5 +751,117 @@ describe("IBosonBundleHandler", function () {
         });
       });
     });
+
+    context("👉 removeTwinsFromBundle()", async function () {
+      beforeEach(async function () {
+        bundle.twinIds = ["1", "2", "3", "4", "5"];
+        // Create a bundle
+        await bundleHandler.connect(seller).createBundle(bundle);
+
+        // set the new fields
+        twinIdsToRemove = ["1", "4"];
+        bundle.twinIds = ["5", "2", "3"]; // ["1","2","3","4","5"] -> ["5","2","3","4"] -> ["5","2","3"]
+
+        bundleStruct = bundle.toStruct();
+      });
+
+      it("should emit a BundleUpdated event", async function () {
+        // Remove twins from a bundle, testing for the event
+        const tx = await bundleHandler.connect(seller).removeTwinsFromBundle(bundle.id, twinIdsToRemove);
+        const txReceipt = await tx.wait();
+
+        const event = getEvent(txReceipt, bundleHandlerFacet_Factory, "BundleUpdated");
+
+        const bundleInstance = Bundle.fromStruct(event.bundle);
+        // Validate the instance
+        expect(bundleInstance.isValid()).to.be.true;
+
+        assert.equal(event.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
+        assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+      });
+
+      it("should update state", async function () {
+        // Remove twin from a bundle,
+        await bundleHandler.connect(seller).removeTwinsFromBundle(bundle.id, twinIdsToRemove);
+
+        // Get the bundle as a struct
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundle.id);
+
+        // Parse into entity
+        const returnedBundle = Bundle.fromStruct(bundleStruct);
+
+        // Returned values should  reflect the changes done with removeTwinsFromBundle
+        for ([key, value] of Object.entries(bundle)) {
+          expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Bundle does not exist", async function () {
+          // Set invalid id
+          bundle.id = "444";
+
+          // Attempt to remove twins from the bundle, expecting revert
+          await expect(bundleHandler.connect(seller).removeTwinsFromBundle(bundle.id, twinIdsToRemove)).to.revertedWith(
+            RevertReasons.NO_SUCH_BUNDLE
+          );
+
+          // Set invalid id
+          bundle.id = "0";
+
+          // Attempt to remove twins from bundle, expecting revert
+          await expect(bundleHandler.connect(seller).removeTwinsFromBundle(bundle.id, twinIdsToRemove)).to.revertedWith(
+            RevertReasons.NO_SUCH_BUNDLE
+          );
+        });
+
+        xit("Caller is not seller of a bundle", async function () {
+          // TODO: add when accounthandler is finished
+        });
+
+        it("Twin is not a part of the bundle", async function () {
+          // inexisting twin
+          twinIdsToRemove = ["6"];
+
+          // Attempt to remove twins from the bundle, expecting revert
+          await expect(bundleHandler.connect(seller).removeTwinsFromBundle(bundle.id, twinIdsToRemove)).to.revertedWith(
+            RevertReasons.TWIN_NOT_IN_BUNDLE
+          );
+
+          // create a twin and add it to another bundle
+          await bosonToken.connect(seller).approve(twinHandler.address, 1);
+          await twinHandler.connect(seller).createTwin(twin, seller.address);
+          bundle.twinIds = ["6"];
+          bundle.offerIds = ["1"];
+          await bundleHandler.connect(seller).createBundle(bundle);
+
+          // Attempt to remove twins from a bundle, expecting revert
+          await expect(bundleHandler.connect(seller).removeTwinsFromBundle(bundle.id, twinIdsToRemove)).to.revertedWith(
+            RevertReasons.TWIN_NOT_IN_BUNDLE
+          );
+        });
+
+        it("Removing too many twins", async function () {
+          // Try to remove the more than 100 twins
+          twinIdsToRemove = [...Array(101).keys()];
+
+          // Attempt to remove twins from the bundle, expecting revert
+          await expect(bundleHandler.connect(seller).removeTwinsFromBundle(bundle.id, twinIdsToRemove)).to.revertedWith(
+            RevertReasons.TOO_MANY_TWINS
+          );
+        });
+
+        it("Removing nothing", async function () {
+          // Try to remove nothing
+          twinIdsToRemove = [];
+
+          // Attempt to remove twins from the bundle, expecting revert
+          await expect(bundleHandler.connect(seller).removeTwinsFromBundle(bundle.id, twinIdsToRemove)).to.revertedWith(
+            RevertReasons.NOTHING_UPDATED
+          );
+        });
+      });
+    });
   });
 });
