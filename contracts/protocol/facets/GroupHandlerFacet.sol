@@ -287,6 +287,67 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
         }
     }
 
+      /**
+     * @notice Sets the condition of an existing group.
+     *
+     * Emits a GroupUpdated event if successful.
+     *
+     * Reverts if:
+     * 
+     * - condition includes invalid combination of fields
+     * - seller does not match caller
+     * - group does not exist
+     *
+     * @param _groupId - the id of the group to set the condition
+     * @param _condition - fully populated condition struct
+     * 
+     */
+    function setGroupCondition(
+        uint256 _groupId,
+        Condition calldata _condition
+    )
+    external
+    override {
+        // validate condition parameters
+        require(validateCondition(_condition), INVALID_CONDITION_PARAMETERS);
+        
+        // verify group exists
+        (bool exists,Group storage group) = fetchGroup(_groupId);
+        require(exists, NO_SUCH_GROUP);
+
+        // TODO: check seller ID matches msg.sender
+
+        group.condition = _condition;
+      
+        // Notify watchers of state change
+        emit GroupUpdated(group.id, group.sellerId, group);
+    }
+
+
+    /**
+     * @dev this might change, depending on how checks at the time of the commit will be implemented
+     * @notice Validates that condition parameters make sense 
+     *
+     * Reverts if:
+     * 
+     * - evaluation method None has fields different from 0
+     * - evaluation method AboveThreshold contract address is zero address
+     * - evaluation method SpecificToken contract address is zero address
+     *
+     * @param _condition - fully populated condition struct
+     * @return valid - validity of condition
+     * 
+     */
+    function validateCondition(Condition memory _condition) internal pure returns (bool valid) {
+        if (_condition.method == EvaluationMethod.None) {
+            valid  = _condition.tokenAddress == address(0) && _condition.tokenId == 0 && _condition.threshold == 0;
+        } else if (_condition.method ==  EvaluationMethod.AboveThreshold) {
+            valid = _condition.tokenAddress != address(0);
+        } else if (_condition.method ==  EvaluationMethod.SpecificToken){
+            valid = _condition.tokenAddress != address(0);
+        }
+    }
+
     /**
      * @notice Gets the details about a given group.
      *

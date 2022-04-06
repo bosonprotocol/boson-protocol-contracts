@@ -22,7 +22,7 @@ class Offer {
             uint256 voucherValidDuration;
             address exchangeToken;
             string metadataUri;
-            string metadataHash;
+            string offerChecksum;
             bool voided;
         }
     */
@@ -41,7 +41,7 @@ class Offer {
     voucherValidDuration,
     exchangeToken,
     metadataUri,
-    metadataHash,
+    offerChecksum,
     voided
   ) {
     this.id = id;
@@ -57,7 +57,7 @@ class Offer {
     this.fulfillmentPeriodDuration = fulfillmentPeriodDuration;
     this.exchangeToken = exchangeToken;
     this.metadataUri = metadataUri;
-    this.metadataHash = metadataHash;
+    this.offerChecksum = offerChecksum;
     this.voided = voided;
   }
 
@@ -81,7 +81,7 @@ class Offer {
       voucherValidDuration,
       exchangeToken,
       metadataUri,
-      metadataHash,
+      offerChecksum,
       voided,
     } = o;
 
@@ -99,7 +99,7 @@ class Offer {
       voucherValidDuration,
       exchangeToken,
       metadataUri,
-      metadataHash,
+      offerChecksum,
       voided
     );
   }
@@ -123,7 +123,7 @@ class Offer {
       voucherValidDuration,
       exchangeToken,
       metadataUri,
-      metadataHash,
+      offerChecksum,
       voided;
 
     // destructure struct
@@ -141,7 +141,7 @@ class Offer {
       voucherValidDuration,
       exchangeToken,
       metadataUri,
-      metadataHash,
+      offerChecksum,
       voided,
     ] = struct;
 
@@ -159,7 +159,7 @@ class Offer {
       voucherValidDuration: voucherValidDuration.toString(),
       exchangeToken,
       metadataUri,
-      metadataHash,
+      offerChecksum,
       voided,
     });
   }
@@ -199,7 +199,7 @@ class Offer {
       this.voucherValidDuration,
       this.exchangeToken,
       this.metadataUri,
-      this.metadataHash,
+      this.offerChecksum,
       this.voided,
     ];
   }
@@ -405,16 +405,16 @@ class Offer {
   }
 
   /**
-   * Is this Offer instance's metadataHash field valid?
+   * Is this Offer instance's offerChecksum field valid?
    * Always present, must be a string
    *
    * @returns {boolean}
    */
-  metadataHashIsValid() {
+  offerChecksumIsValid() {
     let valid = false;
-    let { metadataHash } = this;
+    let { offerChecksum } = this;
     try {
-      valid = typeof metadataHash === "string";
+      valid = typeof offerChecksum === "string";
     } catch (e) {}
     return valid;
   }
@@ -451,7 +451,7 @@ class Offer {
       this.voucherValidDurationIsValid() &&
       this.exchangeTokenIsValid() &&
       this.metadataUriIsValid() &&
-      this.metadataHashIsValid() &&
+      this.offerChecksumIsValid() &&
       this.voidedIsValid()
     );
   }
