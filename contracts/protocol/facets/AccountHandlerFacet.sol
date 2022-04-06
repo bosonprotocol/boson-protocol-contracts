@@ -105,7 +105,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
     override
     {
         bool exists;
-        Seller memory seller;
+        Seller storage seller;
 
         //Check Seller exists in sellers mapping
         (exists, seller) = fetchSeller(_seller.id);
