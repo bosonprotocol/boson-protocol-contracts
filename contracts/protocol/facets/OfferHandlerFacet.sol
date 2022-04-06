@@ -38,10 +38,61 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      */
     function createOffer(
-        Offer memory _offer
+        Offer calldata _offer
     )
     external
     override
+    {        
+        createOfferInternal(_offer);
+    }
+
+    /**
+     * @notice Creates batch of offers.
+     *
+     * Emits an OfferCreated event for every offer if successful.
+     *
+     * Reverts if, for any offer:
+     * - seller does not exist
+     * - Valid from date is greater than valid until date
+     * - Valid until date is not in the future
+     * - Buyer cancel penalty is greater than price
+     * - Voided is set to true
+     *
+     * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
+     */
+    function createBatchOffer(
+        Offer[] calldata _offers
+    )
+    external
+    override
+    {       
+
+        // limit maximum number of offers to avoid running into block gas limit in a loop
+        require(_offers.length <= protocolStorage().maxOffersPerBatch, TOO_MANY_OFFERS);
+        for (uint i = 0; i < _offers.length; i++) { 
+            createOfferInternal(_offers[i]);
+        }
+    }
+
+
+    /**
+     * @dev Internal helper to create offer, which can be reused between creatOffer and createBatchOffer
+     *
+     * Emits an OfferCreated event if successful.
+     *
+     * Reverts if:
+     * - seller does not exist
+     * - Valid from date is greater than valid until date
+     * - Valid until date is not in the future
+     * - Buyer cancel penalty is greater than price
+     * - Voided is set to true
+     *
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     */
+    function createOfferInternal(
+        Offer memory _offer
+    )
+    internal
     {        
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);

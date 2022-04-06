@@ -33,6 +33,22 @@ interface IBosonOfferHandler {
     function createOffer(BosonTypes.Offer memory _offer) external;
 
     /**
+     * @notice Creates batch of offers.
+     *
+     * Emits an OfferCreated event for every offer if successful.
+     *
+     * Reverts if, for any offer:
+     * - seller does not exist
+     * - Valid from date is greater than valid until date
+     * - Valid until date is not in the future
+     * - Buyer cancel penalty is greater than price
+     * - Voided is set to true
+     *
+     * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
+     */
+    function createBatchOffer(BosonTypes.Offer[] calldata _offers) external;
+
+    /**
      * @notice Updates an existing offer.
      *
      * Emits an OfferUpdated event if successful.
