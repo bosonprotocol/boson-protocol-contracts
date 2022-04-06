@@ -386,7 +386,7 @@ describe("IBosonAccountHandler", function () {
           .withArgs(seller.id, sellerStruct);
       });
 
-      it("should emit a SellerUpdated event withcorrect values if values stay the same", async function () {
+      it("should emit a SellerUpdated event with correct values if values stay the same", async function () {
         // Update a seller, testing for the event
         await expect(accountHandler.connect(admin).updateSeller(seller))
           .to.emit(accountHandler, "SellerUpdated")
@@ -481,7 +481,7 @@ describe("IBosonAccountHandler", function () {
 
         seller2Struct = seller2.toStruct();
 
-        //Create selelr2, testing for the event
+        //Create seller2, testing for the event
         await expect(accountHandler.connect(rando).createSeller(seller2))
           .to.emit(accountHandler, "SellerCreated")
           .withArgs(seller2.id, seller2Struct);
@@ -515,7 +515,7 @@ describe("IBosonAccountHandler", function () {
         // Parse into entity
         let returnedSeller2 = Seller.fromStruct(seller2Struct);
 
-        // Returned values should match the input in updateSeller
+        //returnedSeller2 should still contain original values
         for ([key, value] of Object.entries(seller2)) {
           expect(JSON.stringify(returnedSeller2[key]) === JSON.stringify(value)).is.true;
         }

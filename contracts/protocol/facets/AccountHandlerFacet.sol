@@ -25,6 +25,8 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
      * Emits a SellerCreated event if successful.
      *
      * Reverts if:
+     * - Address values are zero address
+     * - Addresses are not unique to this seller
      * - Seller is not active (if active == false)
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
