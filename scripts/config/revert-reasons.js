@@ -26,9 +26,11 @@ exports.RevertReasons = {
   OFFER_NOT_IN_GROUP: "Offer not part of the group",
   TOO_MANY_OFFERS: "Exceeded maximum offers in a single transaction",
   NOTHING_UPDATED: "Nothing updated",
+  INVALID_CONDITION_PARAMETERS: "Invalid condition parameters",
 
   // Account-related
   MUST_BE_ACTIVE: "Account must be active",
+  NO_SUCH_SELLER: "No such seller",
   SELLER_ADDRESS_MUST_BE_UNIQUE: "Seller address cannot be assigned to another seller Id",
   BUYER_ADDRESS_MUST_BE_UNIQUE: "Buyer address cannot be assigned to another buyer Id",
 

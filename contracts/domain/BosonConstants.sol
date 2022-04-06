@@ -26,6 +26,7 @@ contract BosonConstants {
     string internal constant NOT_OPERATOR = "Not seller's operator";
 
     // Revert Reasons: Account-related
+    string internal constant NO_SUCH_SELLER = "No such seller";
     string internal constant MUST_BE_ACTIVE = "Account must be active";
     string internal constant SELLER_ADDRESS_MUST_BE_UNIQUE = "Seller address cannot be assigned to another seller Id";
     string internal constant BUYER_ADDRESS_MUST_BE_UNIQUE = "Buyer address cannot be assigned to another buyer Id";
@@ -48,6 +49,7 @@ contract BosonConstants {
     string internal constant OFFER_NOT_IN_GROUP = "Offer not part of the group";
     string internal constant TOO_MANY_OFFERS = "Exceeded maximum offers in a single transaction";
     string internal constant NOTHING_UPDATED = "Nothing updated";
+    string internal constant INVALID_CONDITION_PARAMETERS = "Invalid condition parameters";
 
     // Revert Reasons: Exchange related
     string internal constant NO_SUCH_EXCHANGE = "No such exchange";
