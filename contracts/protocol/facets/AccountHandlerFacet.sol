@@ -25,6 +25,8 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
      * Emits a SellerCreated event if successful.
      *
      * Reverts if:
+     * - Address values are zero address
+     * - Addresses are not unique to this seller
      * - Seller is not active (if active == false)
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
@@ -39,13 +41,14 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
         // Get the next account Id and increment the counter
         uint256 sellerId = protocolCounters().nextAccountId++;
 
+        //check that the addresses are unique to one seller Id
+        require(protocolStorage().sellerIdByOperator[_seller.operator] == 0 && 
+                protocolStorage().sellerIdByAdmin[_seller.admin] == 0 && 
+                protocolStorage().sellerIdByClerk[_seller.clerk] == 0,  
+                SELLER_ADDRESS_MUST_BE_UNIQUE);
+
         _seller.id = sellerId;
         storeSeller(_seller);
-
-        //Map the seller's addresses to the sellerId. It's not necessary to map the treasury address, as it only receives funds
-        protocolStorage().sellerIdByOperator[_seller.operator] = sellerId;
-        protocolStorage().sellerIdByAdmin[_seller.admin] = sellerId;
-        protocolStorage().sellerIdByClerk[_seller.clerk] = sellerId;
 
         // Notify watchers of state change
         emit SellerCreated(_seller.id, _seller);
@@ -82,6 +85,54 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
         //Notify watchers of state change
         emit BuyerCreated(_buyer.id, _buyer);
 
+    }
+
+     /**
+     * @notice Updates a seller. All fiels should be filled, even those staying the same.
+     *
+     * Emits a SellerUpdated event if successful.
+     *
+     * Reverts if:
+     * - Address values are zero address
+     * - Addresses are not unique to this seller
+     * - Caller is not the admin address of the seller
+     * - Seller does not exist
+     *
+     * @param _seller - the fully populated struct with seller id set to 0x0
+     */
+    function updateSeller(Seller memory _seller)
+    external
+    override
+    {
+        bool exists;
+        Seller storage seller;
+
+        //Check Seller exists in sellers mapping
+        (exists, seller) = fetchSeller(_seller.id);
+
+        //Seller must already exist
+        require(exists, NO_SUCH_SELLER);
+
+        //Check that msg.sender is the admin address for this seller
+        require(seller.admin  == msg.sender, NOT_ADMIN); 
+
+        //Check that the addresses are unique to one seller Id -- not used or are used by this seller id. Checking this seller id is necessary because one or more addresses may not change
+        require((protocolStorage().sellerIdByOperator[_seller.operator] == 0 || protocolStorage().sellerIdByOperator[_seller.operator] == _seller.id) && 
+                (protocolStorage().sellerIdByAdmin[_seller.admin] == 0 || protocolStorage().sellerIdByAdmin[_seller.admin]  == _seller.id) && 
+                (protocolStorage().sellerIdByClerk[_seller.clerk] == 0 || protocolStorage().sellerIdByClerk[_seller.clerk]  == _seller.id),  
+                SELLER_ADDRESS_MUST_BE_UNIQUE);
+
+   
+        //Delete current mappings
+        delete protocolStorage().sellerIdByOperator[_seller.operator];
+        delete protocolStorage().sellerIdByAdmin[_seller.admin];
+        delete protocolStorage().sellerIdByClerk[_seller.clerk];
+   
+
+        storeSeller(_seller);
+
+        // Notify watchers of state change
+        emit SellerUpdated(_seller.id, _seller);
     }
   
     /**
@@ -179,12 +230,6 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
                 _seller.treasury != address(0), 
                 INVALID_ADDRESS);
 
-        //check that the addresses are unique to one seller Id
-        require(protocolStorage().sellerIdByOperator[_seller.operator] == 0 && 
-                protocolStorage().sellerIdByAdmin[_seller.admin] == 0 && 
-                protocolStorage().sellerIdByClerk[_seller.clerk] == 0,  
-                SELLER_ADDRESS_MUST_BE_UNIQUE);
-
         // Get storage location for seller
         (,Seller storage seller) = fetchSeller(_seller.id);
 
@@ -195,6 +240,11 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
         seller.clerk = _seller.clerk;
         seller.treasury = _seller.treasury;
         seller.active = _seller.active;
+
+        //Map the seller's addresses to the seller Id. It's not necessary to map the treasury address, as it only receives funds
+        protocolStorage().sellerIdByOperator[_seller.operator] = _seller.id;
+        protocolStorage().sellerIdByAdmin[_seller.admin] = _seller.id;
+        protocolStorage().sellerIdByClerk[_seller.clerk] = _seller.id;
        
     }
 

@@ -50,7 +50,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
         // TODO: check seller ID matches msg.sender
 
         // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_bundle.offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
+        require(_bundle.offerIds.length <= protocolStorage().maxOffersPerBundle, TOO_MANY_OFFERS);
 
         // limit maximum number of twins to avoid running into block gas limit in a loop
         require(_bundle.twinIds.length <= protocolStorage().maxTwinsPerBundle, TOO_MANY_TWINS);
@@ -138,5 +138,16 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
      */
     function getBundle(uint256 _bundleId) external view returns(bool exists, Bundle memory bundle) {
         return fetchBundle(_bundleId);
+    }
+
+    /**
+     * @notice Gets the next bundle id.
+     *
+     * Does not increment the counter.
+     *
+     * @return nextBundleId - the next bundle id
+     */
+    function getNextBundleId() public view returns(uint256 nextBundleId) {
+        nextBundleId = protocolCounters().nextBundleId;
     }
 }

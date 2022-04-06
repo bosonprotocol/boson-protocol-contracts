@@ -72,6 +72,7 @@ describe("IBosonTwinHandler", function () {
       "0",
       "100",
       "100",
+      "100",
     ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 

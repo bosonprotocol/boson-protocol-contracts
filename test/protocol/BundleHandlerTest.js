@@ -44,7 +44,7 @@ describe("IBosonBundleHandler", function () {
   let seller, active;
   let bundleStruct;
   let bundle, bundleId, offerIds, twinIds, nextBundleId, invalidBundleId, bundleInstance;
-  let offer, oneMonth, oneWeek, exists;
+  let offer, oneMonth, oneWeek, exists, expected;
   let offerId,
     price,
     sellerDeposit,
@@ -93,6 +93,7 @@ describe("IBosonBundleHandler", function () {
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
       "0",
+      "100",
       "100",
       "100",
     ];
@@ -441,6 +442,59 @@ describe("IBosonBundleHandler", function () {
 
         // Validate
         expect(bundle.isValid()).to.be.true;
+      });
+    });
+
+    context("👉 getNextBundleId()", async function () {
+      beforeEach(async function () {
+        // Create a bundle
+        await bundleHandler.connect(rando).createBundle(bundle);
+
+        // id of the current bundle and increment nextBundleId
+        id = nextBundleId++;
+      });
+
+      it("should return the next bundle id", async function () {
+        // What we expect the next bundle id to be
+        expected = nextBundleId;
+
+        // Get the next bundle id
+        nextBundleId = await bundleHandler.connect(rando).getNextBundleId();
+
+        // Verify expectation
+        expect(nextBundleId.toString() == expected).to.be.true;
+      });
+
+      it("should be incremented after a bundle is created", async function () {
+        // Create another bundle
+        bundle.offerIds = ["1", "4"];
+        await bundleHandler.connect(seller).createBundle(bundle);
+
+        // What we expect the next bundle id to be
+        expected = ++nextBundleId;
+
+        // Get the next bundle id
+        nextBundleId = await bundleHandler.connect(rando).getNextBundleId();
+
+        // Verify expectation
+        expect(nextBundleId.toString() == expected).to.be.true;
+      });
+
+      it("should not be incremented when only getNextBundleId is called", async function () {
+        // What we expect the next bundle id to be
+        expected = nextBundleId;
+
+        // Get the next bundle id
+        nextBundleId = await bundleHandler.connect(rando).getNextBundleId();
+
+        // Verify expectation
+        expect(nextBundleId.toString() == expected).to.be.true;
+
+        // Call again
+        nextBundleId = await bundleHandler.connect(rando).getNextBundleId();
+
+        // Verify expectation
+        expect(nextBundleId.toString() == expected).to.be.true;
       });
     });
   });
