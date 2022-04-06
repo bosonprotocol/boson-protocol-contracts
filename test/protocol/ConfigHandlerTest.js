@@ -92,7 +92,7 @@ describe("IBosonConfigHandler", function () {
         // Set new max offer per group,
         await configHandler.connect(deployer).setMaxOffersPerGroup(maxOffersPerGroup);
 
-        // Verify that nev value is stored
+        // Verify that new value is stored
         expect(await configHandler.connect(rando).getMaxOffersPerGroup()).to.equal(maxOffersPerGroup);
       });
 
@@ -122,7 +122,7 @@ describe("IBosonConfigHandler", function () {
         // Set new max twin per bundle,
         await configHandler.connect(deployer).setMaxTwinsPerBundle(maxTwinsPerBundle);
 
-        // Verify that nev value is stored
+        // Verify that new value is stored
         expect(await configHandler.connect(rando).getMaxTwinsPerBundle()).to.equal(maxTwinsPerBundle);
       });
 
@@ -152,7 +152,7 @@ describe("IBosonConfigHandler", function () {
         // Set new max offer per bundle,
         await configHandler.connect(deployer).setMaxOffersPerBundle(maxOffersPerBundle);
 
-        // Verify that nev value is stored
+        // Verify that new value is stored
         expect(await configHandler.connect(rando).getMaxOffersPerBundle()).to.equal(maxOffersPerBundle);
       });
 
