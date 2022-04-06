@@ -258,7 +258,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
         offerUpdateable =
             exists &&
             !offer.voided &&
-            (protocolStorage().exchangesByOffer[_offerId].length == 0);
+            (protocolStorage().exchangeIdsByOffer[_offerId].length == 0);
         
     }
 

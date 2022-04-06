@@ -98,6 +98,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         exchange.state = ExchangeState.Committed;
         exchange.voucher.committedDate = block.timestamp;
 
+        // Map the offerId to the exchangeId as one-to-many
+        protocolStorage().exchangeIdsByOffer[_offerId].push(exchangeId);
+
         // Decrement offer's quantity available
         offer.quantityAvailable--;
 
