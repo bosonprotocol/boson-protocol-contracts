@@ -4,6 +4,7 @@ const { expect, assert } = require("chai");
 const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
+const Seller = require("../../scripts/domain/Seller");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
 const Offer = require("../../scripts/domain/Offer");
@@ -21,11 +22,12 @@ const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 describe("IBosonBundleHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, seller;
+  let accounts, deployer, rando, operator, admin, clerk, treasury;
   let erc165,
     protocolDiamond,
     accessController,
     twinHandler,
+    accountHandler,
     bundleHandler,
     bosonToken,
     twin,
@@ -39,6 +41,7 @@ describe("IBosonBundleHandler", function () {
     key,
     value;
   let offerHandler, bundleHandlerFacet_Factory;
+  let seller, active;
   let bundleStruct;
   let bundle, bundleId, offerIds, twinIds, nextBundleId, invalidBundleId, bundleInstance;
   let offer, oneMonth, oneWeek, exists;
@@ -66,8 +69,11 @@ describe("IBosonBundleHandler", function () {
     // Make accounts available
     accounts = await ethers.getSigners();
     deployer = accounts[0];
-    seller = accounts[1];
-    rando = accounts[2];
+    operator = accounts[1];
+    admin = accounts[2];
+    clerk = accounts[3];
+    treasury = accounts[4];
+    rando = accounts[5];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -76,6 +82,7 @@ describe("IBosonBundleHandler", function () {
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
     // Cut the protocol handler facets into the Diamond
+    await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet"]);
     await deployProtocolHandlerFacets(protocolDiamond, ["TwinHandlerFacet"]);
     await deployProtocolHandlerFacets(protocolDiamond, ["OfferHandlerFacet"]);
     await deployProtocolHandlerFacets(protocolDiamond, ["BundleHandlerFacet"]);
@@ -93,7 +100,8 @@ describe("IBosonBundleHandler", function () {
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
-
+    // Cast Diamond to IBosonAccountHandler
+    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
     // Cast Diamond to ITwinHandler
     twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
     // Cast Diamond to IBundleHandler
@@ -121,6 +129,18 @@ describe("IBosonBundleHandler", function () {
   // All supported methods
   context("📋 Bundler Handler Methods", async function () {
     beforeEach(async function () {
+      // create a seller
+      // Required constructor params
+      id = "1"; // argument sent to contract for createSeller will be ignored
+
+      active = true;
+
+      // Create a valid seller, then set fields in tests directly
+      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
+      expect(seller.isValid()).is.true;
+
+      await accountHandler.connect(admin).createSeller(seller);
+
       // create 5 twins
       for (let i = 0; i < 5; i++) {
         // Required constructor params for Twin
@@ -135,10 +155,10 @@ describe("IBosonBundleHandler", function () {
         expect(twin.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(seller).approve(twinHandler.address, 1);
+        await bosonToken.connect(operator).approve(twinHandler.address, 1);
 
         // Create a twin.
-        await twinHandler.connect(seller).createTwin(twin, seller.address);
+        await twinHandler.connect(operator).createTwin(twin, operator.address);
       }
 
       // create 5 offers
@@ -184,7 +204,7 @@ describe("IBosonBundleHandler", function () {
 
         expect(offer.isValid()).is.true;
 
-        await offerHandler.connect(seller).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer);
       }
 
       // The first bundle id
@@ -208,7 +228,7 @@ describe("IBosonBundleHandler", function () {
 
     context("👉 createBundle()", async function () {
       it("should emit a BundleCreated event", async function () {
-        const tx = await bundleHandler.connect(seller).createBundle(bundle);
+        const tx = await bundleHandler.connect(operator).createBundle(bundle);
         const txReceipt = await tx.wait();
 
         const event = getEvent(txReceipt, bundleHandlerFacet_Factory, "BundleCreated");
@@ -224,7 +244,7 @@ describe("IBosonBundleHandler", function () {
 
       it("should update state", async function () {
         // Create a a bundle
-        await bundleHandler.connect(seller).createBundle(bundle);
+        await bundleHandler.connect(operator).createBundle(bundle);
 
         // Get the bundle as a struct
         [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleId);
@@ -242,7 +262,7 @@ describe("IBosonBundleHandler", function () {
         bundle.id = "444";
 
         // Create a bundle, testing for the event
-        const tx = await bundleHandler.connect(seller).createBundle(bundle);
+        const tx = await bundleHandler.connect(operator).createBundle(bundle);
         const txReceipt = await tx.wait();
 
         const event = getEvent(txReceipt, bundleHandlerFacet_Factory, "BundleCreated");
@@ -268,7 +288,7 @@ describe("IBosonBundleHandler", function () {
         bundle.offerIds = [];
 
         // Create a bundle, testing for the event
-        await bundleHandler.connect(seller).createBundle(bundle);
+        await bundleHandler.connect(operator).createBundle(bundle);
 
         let returnedBundle;
         // bundle should have no offers
@@ -280,7 +300,7 @@ describe("IBosonBundleHandler", function () {
         bundle.twinIds = [];
 
         // Create a bundle, testing for the event
-        await bundleHandler.connect(seller).createBundle(bundle);
+        await bundleHandler.connect(operator).createBundle(bundle);
 
         let returnedBundle;
         // bundle should have no twins
@@ -290,7 +310,7 @@ describe("IBosonBundleHandler", function () {
 
       it("Twin is already part of another bundle", async function () {
         // create first bundle
-        await bundleHandler.connect(seller).createBundle(bundle);
+        await bundleHandler.connect(operator).createBundle(bundle);
 
         // Set offer that is NOT already part of another bundle
         bundle.offerIds = ["1"];
@@ -302,7 +322,7 @@ describe("IBosonBundleHandler", function () {
         expectedBundle.id = expectedNextBundleId;
 
         // create another bundle
-        const tx = await bundleHandler.connect(seller).createBundle(bundle);
+        const tx = await bundleHandler.connect(operator).createBundle(bundle);
         const txReceipt = await tx.wait();
 
         const event = getEvent(txReceipt, bundleHandlerFacet_Factory, "BundleCreated");
@@ -322,7 +342,7 @@ describe("IBosonBundleHandler", function () {
         bundle.seller = rando;
 
         // Create a bundle, testing for the event
-        await expect(bundleHandler.connect(seller).createBundle(bundle))
+        await expect(bundleHandler.connect(operator).createBundle(bundle))
           .to.emit(bundleHandler, "BundleCreated")
           .withArgs(nextBundleId, bundle.sellerId, bundleStruct);
       });
@@ -335,13 +355,13 @@ describe("IBosonBundleHandler", function () {
 
       it("Offer is already part of another bundle", async function () {
         // create first bundle
-        await bundleHandler.connect(seller).createBundle(bundle);
+        await bundleHandler.connect(operator).createBundle(bundle);
 
         // Set add offer that is already part of another bundle
         bundle.offerIds = ["1", "2", "4"];
 
         // Attempt to create a bundle, expecting revert
-        await expect(bundleHandler.connect(seller).createBundle(bundle)).to.revertedWith(
+        await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
           RevertReasons.OFFER_MUST_BE_UNIQUE
         );
       });
@@ -351,7 +371,7 @@ describe("IBosonBundleHandler", function () {
         bundle.offerIds = ["1", "1", "4"];
 
         // Attempt to create a bundle, expecting revert
-        await expect(bundleHandler.connect(seller).createBundle(bundle)).to.revertedWith(
+        await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
           RevertReasons.OFFER_MUST_BE_UNIQUE
         );
       });
@@ -361,7 +381,9 @@ describe("IBosonBundleHandler", function () {
         bundle.offerIds = [...Array(101).keys()];
 
         // Attempt to create a bundle, expecting revert
-        await expect(bundleHandler.connect(seller).createBundle(bundle)).to.revertedWith(RevertReasons.TOO_MANY_OFFERS);
+        await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
+          RevertReasons.TOO_MANY_OFFERS
+        );
       });
 
       it("Twin is duplicated", async function () {
@@ -369,7 +391,7 @@ describe("IBosonBundleHandler", function () {
         bundle.twinIds = ["1", "1", "4"];
 
         // Attempt to create a bundle, expecting revert
-        await expect(bundleHandler.connect(seller).createBundle(bundle)).to.revertedWith(
+        await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
           RevertReasons.TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE
         );
       });
@@ -379,14 +401,16 @@ describe("IBosonBundleHandler", function () {
         bundle.twinIds = [...Array(101).keys()];
 
         // Attempt to create a bundle, expecting revert
-        await expect(bundleHandler.connect(seller).createBundle(bundle)).to.revertedWith(RevertReasons.TOO_MANY_TWINS);
+        await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
+          RevertReasons.TOO_MANY_TWINS
+        );
       });
     });
 
     context("👉 getBundle()", async function () {
       beforeEach(async function () {
         // Create a bundle
-        await bundleHandler.connect(seller).createBundle(bundle);
+        await bundleHandler.connect(operator).createBundle(bundle);
 
         // id of the current bundle and increment nextBundleId
         id = nextBundleId++;

@@ -8,7 +8,7 @@ import "../domain/BosonTypes.sol";
  *
  * @notice Manages creation, voiding, and querying of groups within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xaf7dd438
+ * The ERC-165 identifier for this interface is: 0x85303729
  */
 interface IBosonGroupHandler {
     /// Events
@@ -69,6 +69,22 @@ interface IBosonGroupHandler {
      * @param _offerIds - array of offer ids to be removed to the group
      */
     function removeOffersFromGroup(uint256 _groupId, uint256[] calldata _offerIds) external;
+
+    /**
+     * @notice Sets the condition of an existing group.
+     *
+     * Emits a GroupUpdated event if successful.
+     *
+     * Reverts if:
+     *
+     * - seller does not match caller
+     * - group does not exist
+     *
+     * @param _groupId - the id of the group to set the condition
+     * @param _condition - fully populated condition struct
+     *
+     */
+    function setGroupCondition(uint256 _groupId, BosonTypes.Condition calldata _condition) external;
 
     /**
      * @notice Gets the details about a given group.
