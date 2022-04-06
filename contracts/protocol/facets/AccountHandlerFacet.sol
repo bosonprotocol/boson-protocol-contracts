@@ -101,6 +101,37 @@ contract AccountHandlerFacet is IBosonAccountHandler, ProtocolBase {
     }
 
     /**
+     * @notice Gets the details about a seller using an address associated with that seller: operator, admin, or clerk address.
+     *
+     * @param _associatedAddress - the address associated with the seller. Must be an operator, admin, or clerk address.
+     * @return exists - the seller was found
+     * @return seller - the seller details. See {BosonTypes.Seller}
+     */
+    function getSellerByAddress(address _associatedAddress) 
+    external
+    override
+    view 
+    returns (bool exists, Seller memory seller)
+    {
+        uint sellerId;
+
+        (exists, sellerId) = getSellerIdByOperator(_associatedAddress);
+        if(exists) {
+            return fetchSeller(sellerId);
+        } 
+
+        (exists, sellerId) = getSellerIdByAdmin(_associatedAddress);
+        if(exists) {
+            return fetchSeller(sellerId);
+        } 
+
+        (exists, sellerId) = getSellerIdByClerk(_associatedAddress);
+        if(exists) {
+            return fetchSeller(sellerId);
+        } 
+    }
+
+    /**
      * @notice Gets the details about a buyer.
      *
      * @param _buyerId - the id of the buyer to check

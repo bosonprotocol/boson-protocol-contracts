@@ -22,7 +22,11 @@ exports.RevertReasons = {
   OFFER_MUST_BE_UNIQUE: "Offer must be unique to a group",
 
   // Group related
+  NO_SUCH_GROUP: "No such offer",
+  OFFER_NOT_IN_GROUP: "Offer not part of the group",
   TOO_MANY_OFFERS: "Exceeded maximum offers in a single transaction",
+  NOTHING_UPDATED: "Nothing updated",
+  INVALID_CONDITION_PARAMETERS: "Invalid condition parameters",
 
   // Account-related
   NO_SUCH_SELLER: "No such seller",

@@ -39,13 +39,14 @@ describe("IBosonGroupHandler", function () {
     voucherValidDuration,
     exchangeToken,
     metadataUri,
-    metadataHash,
+    offerChecksum,
     voided;
   let group, nextGroupId, invalidGroupId;
   let offerIds, condition;
   let groupHandlerFacet_Factory;
   let method, tokenAddress, tokenId, threshold;
   let groupStruct;
+  let offerIdsToAdd, offerIdsToRemove;
 
   before(async function () {
     // get interface Ids
@@ -143,8 +144,8 @@ describe("IBosonGroupHandler", function () {
         fulfillmentPeriodDuration = oneMonth.toString();
         voucherValidDuration = oneMonth.toString();
         exchangeToken = ethers.constants.AddressZero.toString();
-        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
+        offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
+        metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
         voided = false;
 
         // Create a valid offer, then set fields in tests directly
@@ -162,7 +163,7 @@ describe("IBosonGroupHandler", function () {
           voucherValidDuration,
           exchangeToken,
           metadataUri,
-          metadataHash,
+          offerChecksum,
           voided
         );
         expect(offer.isValid()).is.true;
@@ -326,6 +327,392 @@ describe("IBosonGroupHandler", function () {
           // Attempt to create a group, expecting revert
           await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(
             RevertReasons.TOO_MANY_OFFERS
+          );
+        });
+
+        it("Condition 'None' has some values in other fields", async function () {
+          method = EvaluationMethod.None;
+          condition = new Condition(method, tokenAddress, tokenId, threshold);
+          group.condition = condition;
+
+          // Attempt to create the group, expecting revert
+          await expect(groupHandler.connect(seller).createGroup(group)).to.revertedWith(
+            RevertReasons.INVALID_CONDITION_PARAMETERS
+          );
+        });
+
+        it("Condition 'AboveThreshold' has zero token contract address", async function () {
+          method = EvaluationMethod.AboveThreshold;
+          tokenAddress = ethers.constants.AddressZero;
+          condition = new Condition(method, tokenAddress, tokenId, threshold);
+          group.condition = condition;
+
+          // Attempt to create the group, expecting revert
+          await expect(groupHandler.connect(seller).createGroup(group)).to.revertedWith(
+            RevertReasons.INVALID_CONDITION_PARAMETERS
+          );
+        });
+
+        it("Condition 'SpecificToken' has has zero token contract address", async function () {
+          method = EvaluationMethod.SpecificToken;
+          tokenAddress = ethers.constants.AddressZero;
+          condition = new Condition(method, tokenAddress, tokenId, threshold);
+          group.condition = condition;
+
+          // Attempt to create the group, expecting revert
+          await expect(groupHandler.connect(seller).createGroup(group)).to.revertedWith(
+            RevertReasons.INVALID_CONDITION_PARAMETERS
+          );
+        });
+      });
+    });
+
+    context("👉 addOffersToGroup()", async function () {
+      beforeEach(async function () {
+        // Create a group
+        await groupHandler.connect(seller).createGroup(group);
+
+        // set the new fields
+        offerIdsToAdd = ["1", "4"];
+        group.offerIds = [...group.offerIds, ...offerIdsToAdd];
+
+        groupStruct = group.toStruct();
+      });
+
+      it("should emit a GroupUpdated event", async function () {
+        // Add offers to a group, testing for the event
+        const tx = await groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd);
+        const txReceipt = await tx.wait();
+
+        const event = getEvent(txReceipt, groupHandlerFacet_Factory, "GroupUpdated");
+
+        const groupInstance = Group.fromStruct(event.group);
+        // Validate the instance
+        expect(groupInstance.isValid()).to.be.true;
+
+        assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
+        assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+        assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+      });
+
+      it("should update state", async function () {
+        // Add offers to a group,
+        await groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd);
+
+        // Get the group as a struct
+        [, groupStruct] = await groupHandler.connect(rando).getGroup(group.id);
+
+        // Parse into entity
+        const returnedGroup = Group.fromStruct(groupStruct);
+
+        // Returned values should reflect the changes done with addOffersToGroup
+        for ([key, value] of Object.entries(group)) {
+          expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Group does not exist", async function () {
+          // Set invalid id
+          group.id = "444";
+
+          // Attempt to add offers to the group, expecting revert
+          await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.NO_SUCH_GROUP
+          );
+
+          // Set invalid id
+          group.id = "0";
+
+          // Attempt to add offers to group, expecting revert
+          await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.NO_SUCH_GROUP
+          );
+        });
+
+        xit("Caller is not seller of a group", async function () {
+          // TODO: add when accounthandler is finished
+        });
+
+        xit("Caller is not the seller of all offers", async function () {
+          // TODO whan account handler is implemented
+        });
+
+        it("Offer is already part of another group", async function () {
+          // create another group
+          group.offerIds = ["1"];
+          await groupHandler.connect(seller).createGroup(group);
+
+          // Attempt to add offers to a group, expecting revert
+          await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.OFFER_MUST_BE_UNIQUE
+          );
+        });
+
+        it("Offer is duplicated", async function () {
+          // Try to add the same offer twice
+          offerIdsToAdd = ["1", "1", "4"];
+
+          // Attempt to add offers to a group, expecting revert
+          await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.OFFER_MUST_BE_UNIQUE
+          );
+        });
+
+        it("Adding too many offers", async function () {
+          // Try to add the more than 100 offers
+          offerIdsToAdd = [...Array(101).keys()];
+
+          // Attempt to add offers to a group, expecting revert
+          await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.TOO_MANY_OFFERS
+          );
+        });
+
+        it("Adding nothing", async function () {
+          // Try to add nothing
+          offerIdsToAdd = [];
+
+          // Attempt to add offers from the group, expecting revert
+          await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.NOTHING_UPDATED
+          );
+        });
+
+        it("Offer does not exist", async function () {
+          // Set invalid offer id
+          offerIdsToAdd = ["1", "999"];
+
+          // Attempt to add offers to a group, expecting revert
+          await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.NO_SUCH_OFFER
+          );
+
+          // Set invalid offer id
+          offerIdsToAdd = ["0", "2"];
+
+          // Attempt to add offers to a group, expecting revert
+          await expect(groupHandler.connect(seller).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.NO_SUCH_OFFER
+          );
+        });
+      });
+    });
+
+    context("👉 removeOffersFromGroup()", async function () {
+      beforeEach(async function () {
+        group.offerIds = ["1", "2", "3", "4", "5"];
+        // Create a group
+        await groupHandler.connect(seller).createGroup(group);
+
+        // set the new fields
+        offerIdsToRemove = ["1", "4"];
+        group.offerIds = ["5", "2", "3"]; // ["1","2","3","4","5"] -> ["5","2","3","4"] -> ["5","2","3"]
+
+        groupStruct = group.toStruct();
+      });
+
+      it("should emit a GroupUpdated event", async function () {
+        // Remove offers from a group, testing for the event
+        const tx = await groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove);
+        const txReceipt = await tx.wait();
+
+        const event = getEvent(txReceipt, groupHandlerFacet_Factory, "GroupUpdated");
+
+        const groupInstance = Group.fromStruct(event.group);
+        // Validate the instance
+        expect(groupInstance.isValid()).to.be.true;
+
+        assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
+        assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+        assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+      });
+
+      it("should update state", async function () {
+        // Remove offer from a group,
+        await groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove);
+
+        // Get the group as a struct
+        [, groupStruct] = await groupHandler.connect(rando).getGroup(group.id);
+
+        // Parse into entity
+        const returnedGroup = Group.fromStruct(groupStruct);
+
+        // Returned values should  reflect the changes done with removeOffersFromGroup
+        for ([key, value] of Object.entries(group)) {
+          expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Group does not exist", async function () {
+          // Set invalid id
+          group.id = "444";
+
+          // Attempt to remove offers from the group, expecting revert
+          await expect(groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
+            RevertReasons.NO_SUCH_GROUP
+          );
+
+          // Set invalid id
+          group.id = "0";
+
+          // Attempt to remove offers from group, expecting revert
+          await expect(groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
+            RevertReasons.NO_SUCH_GROUP
+          );
+        });
+
+        xit("Caller is not seller of a group", async function () {
+          // TODO: add when accounthandler is finished
+        });
+
+        it("Offer is not a part of the group", async function () {
+          // inexisting offer
+          offerIdsToRemove = ["6"];
+
+          // Attempt to remove offers from the group, expecting revert
+          await expect(groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
+            RevertReasons.OFFER_NOT_IN_GROUP
+          );
+
+          // create an offer and add it to another group
+          await offerHandler.connect(seller).createOffer(offer);
+          group.offerIds = ["6"];
+          await groupHandler.connect(seller).createGroup(group);
+
+          // Attempt to remove offers from a group, expecting revert
+          await expect(groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
+            RevertReasons.OFFER_NOT_IN_GROUP
+          );
+        });
+
+        it("Removing too many offers", async function () {
+          // Try to remove the more than 100 offers
+          offerIdsToRemove = [...Array(101).keys()];
+
+          // Attempt to remove offers from the group, expecting revert
+          await expect(groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
+            RevertReasons.TOO_MANY_OFFERS
+          );
+        });
+
+        it("Removing nothing", async function () {
+          // Try to remove nothing
+          offerIdsToRemove = [];
+
+          // Attempt to remove offers from the group, expecting revert
+          await expect(groupHandler.connect(seller).removeOffersFromGroup(group.id, offerIdsToRemove)).to.revertedWith(
+            RevertReasons.NOTHING_UPDATED
+          );
+        });
+      });
+    });
+
+    context("👉 setGroupCondition()", async function () {
+      beforeEach(async function () {
+        // Create a group
+        await groupHandler.connect(operator).createGroup(group);
+
+        // id of the current group and increment nextGroupId
+        id = nextGroupId++;
+
+        // Required constructor params for Condition
+        method = EvaluationMethod.SpecificToken;
+        tokenAddress = accounts[1].address; // just need an address
+        tokenId = "88775544";
+        threshold = "0";
+
+        condition = new Condition(method, tokenAddress, tokenId, threshold);
+        expect(condition.isValid()).to.be.true;
+
+        groupStruct = group.toStruct();
+      });
+
+      it("should emit a GroupUpdated event", async function () {
+        // Update a group, testing for the event
+        const tx = await groupHandler.connect(seller).setGroupCondition(group.id, condition);
+        const txReceipt = await tx.wait();
+
+        const event = getEvent(txReceipt, groupHandlerFacet_Factory, "GroupUpdated");
+
+        const groupInstance = Group.fromStruct(event.group);
+        // Validate the instance
+        expect(groupInstance.isValid()).to.be.true;
+
+        group.condition = condition;
+
+        assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
+        assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+        assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+      });
+
+      it("should update state", async function () {
+        // Set a new condition
+        await groupHandler.connect(seller).setGroupCondition(group.id, condition);
+
+        // Get the group as a struct
+        [, groupStruct] = await groupHandler.connect(rando).getGroup(group.id);
+
+        // Parse into entity
+        const returnedGroup = Group.fromStruct(groupStruct);
+
+        // Returned values should match the input in setGroupCondition
+        expect(returnedGroup.condition.toString() === condition.toString()).is.true;
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Group does not exist", async function () {
+          // Set invalid id
+          group.id = "444";
+
+          // Attempt to update the group, expecting revert
+          await expect(groupHandler.connect(seller).setGroupCondition(group.id, condition)).to.revertedWith(
+            RevertReasons.NO_SUCH_GROUP
+          );
+
+          // Set invalid id
+          group.id = "0";
+
+          // Attempt to update the group, expecting revert
+          await expect(groupHandler.connect(seller).setGroupCondition(group.id, condition)).to.revertedWith(
+            RevertReasons.NO_SUCH_GROUP
+          );
+        });
+
+        xit("Caller is not seller of a group", async function () {
+          // TODO: add when accounthandler is finished
+        });
+
+        it("Condition 'None' has some values in other fields", async function () {
+          method = EvaluationMethod.None;
+          condition = new Condition(method, tokenAddress, tokenId, threshold);
+
+          // Attempt to update the group, expecting revert
+          await expect(groupHandler.connect(seller).setGroupCondition(group.id, condition)).to.revertedWith(
+            RevertReasons.INVALID_CONDITION_PARAMETERS
+          );
+        });
+
+        it("Condition 'AboveThreshold' has zero token contract address", async function () {
+          method = EvaluationMethod.AboveThreshold;
+          tokenAddress = ethers.constants.AddressZero;
+          condition = new Condition(method, tokenAddress, tokenId, threshold);
+
+          // Attempt to update the group, expecting revert
+          await expect(groupHandler.connect(seller).setGroupCondition(group.id, condition)).to.revertedWith(
+            RevertReasons.INVALID_CONDITION_PARAMETERS
+          );
+        });
+
+        it("Condition 'SpecificToken' has has zero token contract address", async function () {
+          method = EvaluationMethod.SpecificToken;
+          tokenAddress = ethers.constants.AddressZero;
+          condition = new Condition(method, tokenAddress, tokenId, threshold);
+
+          // Attempt to update the group, expecting revert
+          await expect(groupHandler.connect(seller).setGroupCondition(group.id, condition)).to.revertedWith(
+            RevertReasons.INVALID_CONDITION_PARAMETERS
           );
         });
       });

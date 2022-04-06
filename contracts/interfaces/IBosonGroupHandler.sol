@@ -8,11 +8,12 @@ import "../domain/BosonTypes.sol";
  *
  * @notice Manages creation, voiding, and querying of groups within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xaf7dd438
+ * The ERC-165 identifier for this interface is: 0x85303729
  */
 interface IBosonGroupHandler {
     /// Events
     event GroupCreated(uint256 indexed groupId, uint256 indexed sellerId, BosonTypes.Group group);
+    event GroupUpdated(uint256 indexed groupId, uint256 indexed sellerId, BosonTypes.Group group);
 
     /**
      * @notice Creates a group.
@@ -29,6 +30,61 @@ interface IBosonGroupHandler {
      * @param _group - the fully populated struct with group id set to 0x0
      */
     function createGroup(BosonTypes.Group memory _group) external;
+
+    /**
+     * @notice Adds offers to an existing group
+     *
+     * Emits a GroupUpdated event if successful.
+     *
+     * Reverts if:
+     *
+     * - caller is not the seller
+     * - offer ids is an empty list
+     * - number of offers exceeds maximum allowed number per group
+     * - group does not exist
+     * - any of offers belongs to different seller
+     * - any of offers does not exist
+     * - offer exists in a different group
+     * - offer ids contains duplicated offers
+     *
+     * @param _groupId  - the id of the group to be updated
+     * @param _offerIds - array of offer ids to be added to the group
+     */
+    function addOffersToGroup(uint256 _groupId, uint256[] calldata _offerIds) external;
+
+    /**
+     * @notice Removes offers from an existing group
+     *
+     * Emits a GroupUpdated event if successful.
+     *
+     * Reverts if:
+     *
+     * - caller is not the seller
+     * - offer ids is an empty list
+     * - number of offers exceeds maximum allowed number per group
+     * - group does not exist
+     * - any offer is not part of the group
+     *
+     * @param _groupId  - the id of the group to be updated
+     * @param _offerIds - array of offer ids to be removed to the group
+     */
+    function removeOffersFromGroup(uint256 _groupId, uint256[] calldata _offerIds) external;
+
+    /**
+     * @notice Sets the condition of an existing group.
+     *
+     * Emits a GroupUpdated event if successful.
+     *
+     * Reverts if:
+     *
+     * - seller does not match caller
+     * - group does not exist
+     *
+     * @param _groupId - the id of the group to set the condition
+     * @param _condition - fully populated condition struct
+     *
+     */
+    function setGroupCondition(uint256 _groupId, BosonTypes.Condition calldata _condition) external;
 
     /**
      * @notice Gets the details about a given group.
