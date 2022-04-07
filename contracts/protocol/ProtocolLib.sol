@@ -48,7 +48,7 @@ library ProtocolLib {
         // twin id => twin
         mapping(uint256 => BosonTypes.Twin) twins;
         // offer id => exchange ids
-        mapping(uint256 => uint256[]) exchangesByOffer;
+        mapping(uint256 => uint256[]) exchangeIdsByOffer;
         // offer id => bundle id
         mapping(uint256 => uint256) bundleIdByOffer;
         // twin id => bundle ids

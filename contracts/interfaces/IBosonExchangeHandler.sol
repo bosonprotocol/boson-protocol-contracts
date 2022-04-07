@@ -15,7 +15,7 @@ interface IBosonExchangeHandler {
     event BuyerCommitted(
         uint256 indexed offerId,
         uint256 indexed buyerId,
-        address indexed exchangeId,
+        uint256 indexed exchangeId,
         BosonTypes.Exchange exchange
     );
 

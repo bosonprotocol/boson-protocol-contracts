@@ -14,7 +14,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
-  let accounts, deployer, rando, token, treasury;
+  let accounts, deployer, rando, token, treasury, voucher;
   let protocolFee, maxOffersPerGroup, maxTwinsPerBundle, maxOffersPerBundle;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
 
@@ -30,6 +30,7 @@ describe("IBosonConfigHandler", function () {
     rando = accounts[1];
     token = accounts[2];
     treasury = accounts[3];
+    voucher = accounts[4];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -47,6 +48,7 @@ describe("IBosonConfigHandler", function () {
     const protocolConfig = [
       token.address,
       treasury.address,
+      voucher.address,
       protocolFee,
       maxOffersPerGroup,
       maxTwinsPerBundle,

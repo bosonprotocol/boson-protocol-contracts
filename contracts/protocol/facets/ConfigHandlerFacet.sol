@@ -18,11 +18,14 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _tokenAddress - address of Boson Token (ERC-20) contract
      * @param _treasuryAddress - address of Boson Protocol DAO multi-sig wallet
+     * @param _voucherAddress - address of Boson Protocol Voucher NFT contract
      * @param _protocolFeePercentage - percentage that will be taken as a fee from the net of a Boson Protocol exchange (after royalties)
+     * @param _maxOffersPerGroup - the maximum number of offers that a group can contain
      */
     function initialize(
         address payable _tokenAddress,
         address payable _treasuryAddress,
+        address _voucherAddress,
         uint16 _protocolFeePercentage,
         uint16 _maxOffersPerGroup,
         uint16 _maxTwinsPerBundle,
@@ -39,6 +42,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         ProtocolLib.ProtocolStorage storage ps = protocolStorage();
         ps.tokenAddress = _tokenAddress;
         ps.treasuryAddress = _treasuryAddress;
+        ps.voucherAddress = _voucherAddress;
         ps.protocolFeePercentage = _protocolFeePercentage;
         ps.maxOffersPerGroup = _maxOffersPerGroup;
         ps.maxTwinsPerBundle = _maxTwinsPerBundle;
