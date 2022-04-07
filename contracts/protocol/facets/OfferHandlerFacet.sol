@@ -47,7 +47,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
     }
 
     /**
-     * @notice Creates batch of offers.
+     * @notice Creates a batch of offers.
      *
      * Emits an OfferCreated event for every offer if successful.
      *
@@ -60,13 +60,12 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      *
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
      */
-    function createBatchOffer(
+    function createOfferBatch(
         Offer[] calldata _offers
     )
     external
     override
-    {       
-
+    {
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offers.length <= protocolStorage().maxOffersPerBatch, TOO_MANY_OFFERS);
         for (uint i = 0; i < _offers.length; i++) { 

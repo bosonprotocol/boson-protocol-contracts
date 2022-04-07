@@ -17,7 +17,7 @@ interface IBosonConfigHandler {
     event TreasuryAddressChanged(address indexed treasuryAddress, address indexed changedBy);
     event ProtocolFeePercentageChanged(uint16 feePercentage, address indexed changedBy);
     event MaxOffersPerGroupChanged(uint16 maxOffersPerGroup, address indexed changedBy);
-    event MaxOffersPerBatchChanged(uint16 maxTwinsPerBatch, address indexed changedBy);
+    event MaxOffersPerBatchChanged(uint16 maxOffersPerBatch, address indexed changedBy);
     event MaxTwinsPerBundleChanged(uint16 maxTwinsPerBundle, address indexed changedBy);
     event MaxOffersPerBundleChanged(uint16 maxOffersPerBundle, address indexed changedBy);
 

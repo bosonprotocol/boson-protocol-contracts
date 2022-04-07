@@ -33,7 +33,7 @@ interface IBosonOfferHandler {
     function createOffer(BosonTypes.Offer memory _offer) external;
 
     /**
-     * @notice Creates batch of offers.
+     * @notice Creates a batch of offers.
      *
      * Emits an OfferCreated event for every offer if successful.
      *
@@ -46,7 +46,7 @@ interface IBosonOfferHandler {
      *
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
      */
-    function createBatchOffer(BosonTypes.Offer[] calldata _offers) external;
+    function createOfferBatch(BosonTypes.Offer[] calldata _offers) external;
 
     /**
      * @notice Updates an existing offer.
