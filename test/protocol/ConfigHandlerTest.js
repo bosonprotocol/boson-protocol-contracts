@@ -15,7 +15,7 @@ describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
   let accounts, deployer, rando, token, treasury, voucher;
-  let protocolFee, maxOffersPerGroup, maxTwinsPerBundle, maxOffersPerBundle;
+  let protocolFee, maxOffersPerGroup, maxTwinsPerBundle, maxOffersPerBundle, maxOffersPerBatch;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
 
   before(async function () {
@@ -53,7 +53,7 @@ describe("IBosonConfigHandler", function () {
       maxOffersPerGroup,
       maxTwinsPerBundle,
       maxOffersPerBundle,
-      maxOffersPerBatch
+      maxOffersPerBatch,
     ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
@@ -188,7 +188,7 @@ describe("IBosonConfigHandler", function () {
         await configHandler.connect(deployer).setMaxOffersPerBatch(maxOffersPerBatch);
 
         // Verify that new value is stored
-        console.log(await configHandler.connect(rando).getMaxOffersPerBatch())
+        console.log(await configHandler.connect(rando).getMaxOffersPerBatch());
         expect(await configHandler.connect(rando).getMaxOffersPerBatch()).to.equal(maxOffersPerBatch);
       });
 
