@@ -133,13 +133,11 @@ describe("IBosonBundleHandler", function () {
       // create a seller
       // Required constructor params
       id = "1"; // argument sent to contract for createSeller will be ignored
-
       active = true;
 
       // Create a valid seller, then set fields in tests directly
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
-
       await accountHandler.connect(admin).createSeller(seller);
 
       // create 5 twins
@@ -448,7 +446,7 @@ describe("IBosonBundleHandler", function () {
     context("👉 getNextBundleId()", async function () {
       beforeEach(async function () {
         // Create a bundle
-        await bundleHandler.connect(rando).createBundle(bundle);
+        await bundleHandler.connect(operator).createBundle(bundle);
 
         // id of the current bundle and increment nextBundleId
         id = nextBundleId++;
@@ -468,7 +466,7 @@ describe("IBosonBundleHandler", function () {
       it("should be incremented after a bundle is created", async function () {
         // Create another bundle
         bundle.offerIds = ["1", "4"];
-        await bundleHandler.connect(seller).createBundle(bundle);
+        await bundleHandler.connect(operator).createBundle(bundle);
 
         // What we expect the next bundle id to be
         expected = ++nextBundleId;
