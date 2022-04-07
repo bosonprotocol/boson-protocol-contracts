@@ -1,4 +1,6 @@
 const ethers = require("ethers");
+const Voucher = require("./Voucher");
+const ExchangeState = require("./ExchangeState");
 
 /**
  * Boson Protocol Domain Entity: Exchange
@@ -6,9 +8,26 @@ const ethers = require("ethers");
  * See: {BosonTypes.Exchange}
  */
 class Exchange {
-  constructor(id, offerId) {
+  /*
+      struct Exchange {
+            uint256 id;
+            uint256 offerId;
+            uint256 buyerId;
+            uint256 finalizedDate;
+            Voucher voucher;
+            bool disputed;
+            ExchangeState state;
+      }
+   */
+
+  constructor(id, offerId, buyerId, finalizedDate, voucher, disputed, state) {
     this.id = id;
     this.offerId = offerId;
+    this.buyerId = buyerId;
+    this.finalizedDate = finalizedDate;
+    this.voucher = voucher;
+    this.disputed = disputed;
+    this.state = state;
   }
 
   /**
@@ -17,8 +36,9 @@ class Exchange {
    * @returns {Exchange}
    */
   static fromObject(o) {
-    const { id, offerId } = o;
-    return new Exchange(id, offerId);
+    const { id, offerId, buyerId, finalizedDate, disputed, state } = o;
+    const voucher = Voucher.fromObject(o.voucher);
+    return new Exchange(id, offerId, buyerId, finalizedDate, voucher, disputed, state);
   }
 
   /**
@@ -27,14 +47,19 @@ class Exchange {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let id, offerId;
+    let id, offerId, buyerId, finalizedDate, disputed, voucher, state;
 
     // destructure struct
-    [id, offerId] = struct;
+    [id, offerId, buyerId, finalizedDate, voucher, disputed, state] = struct;
 
     return Exchange.fromObject({
       id: id.toString(),
       offerId: offerId.toString(),
+      buyerId: buyerId.toString(),
+      finalizedDate: finalizedDate.toString(),
+      voucher: Voucher.fromStruct(voucher),
+      disputed,
+      state,
     });
   }
 
@@ -59,7 +84,15 @@ class Exchange {
    * @returns {string}
    */
   toStruct() {
-    return [this.id, this.offerId];
+    return [
+      this.id,
+      this.offerId,
+      this.buyerId,
+      this.finalizedDate,
+      this.voucher.toStruct(),
+      this.disputed,
+      this.state,
+    ];
   }
 
   /**
@@ -79,7 +112,7 @@ class Exchange {
     let valid = false;
     let { id } = this;
     try {
-      valid = typeof id === "string" && typeof ethers.BigNumber.from(id) === "object";
+      valid = typeof id === "string" && ethers.BigNumber.from(id).gt(0);
     } catch (e) {}
     return valid;
   }
@@ -93,7 +126,78 @@ class Exchange {
     let valid = false;
     let { offerId } = this;
     try {
-      valid = typeof offerId === "string" && typeof ethers.BigNumber.from(offerId) === "object";
+      valid = typeof offerId === "string" && ethers.BigNumber.from(offerId).gt(0);
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this Exchange instance's buyerId field valid?
+   * Must be a string representation of a big number
+   * @returns {boolean}
+   */
+  buyerIdIsValid() {
+    let valid = false;
+    let { buyerId } = this;
+    try {
+      valid = typeof buyerId === "string" && ethers.BigNumber.from(buyerId).gt(0);
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this Exchange instance's finalizedDate field valid?
+   * If present, must be a string representation of a big number
+   * @returns {boolean}
+   */
+  finalizedDateIsValid() {
+    let valid = false;
+    let { finalizedDate } = this;
+    try {
+      valid =
+        finalizedDate === null ||
+        finalizedDate === undefined ||
+        (typeof finalizedDate === "string" && ethers.BigNumber.from(finalizedDate).gt(0));
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this Exchange instance's disputed field valid?
+   * @returns {boolean}
+   */
+  disputedIsValid() {
+    let valid = false;
+    let { disputed } = this;
+    try {
+      valid = typeof disputed === "boolean";
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this Exchange instance's voucher field valid?
+   * If present, must be a valid Voucher instance
+   * @returns {boolean}
+   */
+  voucherIsValid() {
+    let valid = false;
+    let { voucher } = this;
+    try {
+      valid = voucher === null || voucher === undefined || (typeof voucher === "object" && voucher.isValid());
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this Exchange instance's state field valid?
+   * @returns {boolean}
+   */
+  stateIsValid() {
+    let valid = false;
+    let { state } = this;
+    try {
+      valid = ExchangeState.Modes.includes(state);
     } catch (e) {}
     return valid;
   }
@@ -104,8 +208,13 @@ class Exchange {
    */
   isValid() {
     return (
-      this.idIsValid() && this.offerIdIsValid() // &&
-      // ...
+      this.idIsValid() &&
+      this.offerIdIsValid() &&
+      this.buyerIdIsValid() &&
+      this.finalizedDateIsValid() &&
+      this.voucherIsValid() &&
+      this.disputedIsValid() &&
+      this.stateIsValid()
     );
   }
 }

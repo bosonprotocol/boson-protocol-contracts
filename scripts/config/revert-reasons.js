@@ -14,7 +14,7 @@ exports.RevertReasons = {
   // Offer related
   NOT_OPERATOR: "Not seller's operator",
   NO_SUCH_OFFER: "No such offer",
-  OFFER_ALREADY_VOIDED: "Offer already voided",
+  OFFER_HAS_BEEN_VOIDED: "Offer has been voided",
   OFFER_PERIOD_INVALID: "Offer period invalid",
   OFFER_PENALTY_INVALID: "Offer penalty invalid",
   OFFER_MUST_BE_ACTIVE: "Offer must be active",
@@ -29,10 +29,11 @@ exports.RevertReasons = {
   INVALID_CONDITION_PARAMETERS: "Invalid condition parameters",
 
   // Account-related
+  MUST_BE_ACTIVE: "Account must be active",
   NO_SUCH_SELLER: "No such seller",
-  MUST_BE_ACTIVE: "Seller must be active",
   SELLER_ADDRESS_MUST_BE_UNIQUE: "Seller address cannot be assigned to another seller Id",
   BUYER_ADDRESS_MUST_BE_UNIQUE: "Buyer address cannot be assigned to another buyer Id",
+  NOT_ADMIN: "Not seller's admin",
 
   // Twin related
   NO_TRANSFER_APPROVED: "No transfer approved",

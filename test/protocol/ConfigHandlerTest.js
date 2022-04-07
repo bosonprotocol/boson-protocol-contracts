@@ -14,8 +14,8 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
-  let accounts, deployer, rando, token, treasury;
-  let protocolFee, maxOffersPerGroup, maxTwinsPerBundle;
+  let accounts, deployer, rando, token, treasury, voucher;
+  let protocolFee, maxOffersPerGroup, maxTwinsPerBundle, maxOffersPerBundle;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
 
   before(async function () {
@@ -30,6 +30,7 @@ describe("IBosonConfigHandler", function () {
     rando = accounts[1];
     token = accounts[2];
     treasury = accounts[3];
+    voucher = accounts[4];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -41,8 +42,17 @@ describe("IBosonConfigHandler", function () {
     protocolFee = 12;
     maxOffersPerGroup = 100;
     maxTwinsPerBundle = 100;
+    maxOffersPerBundle = 100;
 
-    const protocolConfig = [token.address, treasury.address, protocolFee, maxOffersPerGroup, maxTwinsPerBundle];
+    const protocolConfig = [
+      token.address,
+      treasury.address,
+      voucher.address,
+      protocolFee,
+      maxOffersPerGroup,
+      maxTwinsPerBundle,
+      maxOffersPerBundle,
+    ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
     // Cast Diamond to IERC165
@@ -84,7 +94,7 @@ describe("IBosonConfigHandler", function () {
         // Set new max offer per group,
         await configHandler.connect(deployer).setMaxOffersPerGroup(maxOffersPerGroup);
 
-        // Verify that nev value is stored
+        // Verify that new value is stored
         expect(await configHandler.connect(rando).getMaxOffersPerGroup()).to.equal(maxOffersPerGroup);
       });
 
@@ -114,7 +124,7 @@ describe("IBosonConfigHandler", function () {
         // Set new max twin per bundle,
         await configHandler.connect(deployer).setMaxTwinsPerBundle(maxTwinsPerBundle);
 
-        // Verify that nev value is stored
+        // Verify that new value is stored
         expect(await configHandler.connect(rando).getMaxTwinsPerBundle()).to.equal(maxTwinsPerBundle);
       });
 
@@ -122,6 +132,36 @@ describe("IBosonConfigHandler", function () {
         it("caller is not the admin", async function () {
           // Attempt to set new max twin per bundle, expecting revert
           await expect(configHandler.connect(rando).setMaxTwinsPerBundle(maxTwinsPerBundle)).to.revertedWith(
+            RevertReasons.ACCESS_DENIED
+          );
+        });
+      });
+    });
+    context("👉 setMaxOffersPerBundle()", async function () {
+      beforeEach(async function () {
+        // set new value for max offers per bundle
+        maxOffersPerBundle = 150;
+      });
+
+      it("should emit a MaxOffersPerBundleChanged event", async function () {
+        // Set new max offer per bundle, testing for the event
+        await expect(configHandler.connect(deployer).setMaxOffersPerBundle(maxOffersPerBundle))
+          .to.emit(configHandler, "MaxOffersPerBundleChanged")
+          .withArgs(maxOffersPerBundle, deployer.address);
+      });
+
+      it("should update state", async function () {
+        // Set new max offer per bundle,
+        await configHandler.connect(deployer).setMaxOffersPerBundle(maxOffersPerBundle);
+
+        // Verify that new value is stored
+        expect(await configHandler.connect(rando).getMaxOffersPerBundle()).to.equal(maxOffersPerBundle);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("caller is not the admin", async function () {
+          // Attempt to set new max offer per bundle, expecting revert
+          await expect(configHandler.connect(rando).setMaxOffersPerBundle(maxOffersPerBundle)).to.revertedWith(
             RevertReasons.ACCESS_DENIED
           );
         });
@@ -151,6 +191,10 @@ describe("IBosonConfigHandler", function () {
       expect(await configHandler.connect(rando).getMaxTwinsPerBundle()).to.equal(
         maxTwinsPerBundle,
         "Invalid max bundles per twin"
+      );
+      expect(await configHandler.connect(rando).getMaxOffersPerBundle()).to.equal(
+        maxOffersPerBundle,
+        "Invalid max bundles per offer"
       );
     });
   });

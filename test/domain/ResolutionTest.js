@@ -91,7 +91,7 @@ describe("Resolution", function () {
         }
       });
 
-      it("Resolution.toStruct() should return a Resolution instance from a struct representation", async function () {
+      it("Resolution.fromStruct() should return a Resolution instance from a struct representation", async function () {
         // Marshal back to a resolution instance
         resolution = Resolution.fromStruct(struct);
 
