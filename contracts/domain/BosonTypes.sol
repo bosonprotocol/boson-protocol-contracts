@@ -86,17 +86,17 @@ contract BosonTypes {
         uint256 id;
         uint256 offerId;
         uint256 buyerId;
+        uint256 finalizedDate;
         Voucher voucher;
-        uint256 committedDate;
-        uint256 redeemedDate;
         bool disputed;
         ExchangeState state;
     }
 
     struct Voucher {
-        uint256 exchangeId;
         uint256 committedDate;
+        uint256 validUntilDate;
         uint256 redeemedDate;
+        bool expired;
     }
 
     struct Dispute {

@@ -23,7 +23,7 @@ const { delay, deploymentComplete, verifyOnEtherscan } = require("./util/report-
 
 /**
  * Get the configuration data to be passed to the ConfigHandlerFacet initializer
- * @returns {{tokenAddress: string, multisigAddress: string, feePercentage: string, maxOffersPerGroup: string, maxTwinsPerBundle: string, maxOffersPerBundle: string}}
+ * @returns {{tokenAddress: string, treasuryAddress: string, voucherAddress: string, feePercentage: string, maxOffersPerGroup: string, maxTwinsPerBundle: string, maxOffersPerBundle: string}}
  */
 function getConfig() {
 
@@ -40,16 +40,24 @@ function getConfig() {
         'hardhat': '0x0000000000000000000000000000000000000000'
     }
 
-    // Multisig contract address
-    const MULTISIG = {
+    // Treasury contract address
+    const TREASURY = {
         'mainnet': '0x4a25E18076DDcFd646ED14ABC07286c2A4c1256A',
+        'ropsten': '0x0000000000000000000000000000000000000000',
+        'hardhat': '0x0000000000000000000000000000000000000000'
+    }
+
+    // Voucher contract address
+    const VOUCHER = {
+        'mainnet': '0x0000000000000000000000000000000000000000',
         'ropsten': '0x0000000000000000000000000000000000000000',
         'hardhat': '0x0000000000000000000000000000000000000000'
     }
 
     return {
             tokenAddress: TOKEN[network],
-            multisigAddress: MULTISIG[network],
+            treasuryAddress: TREASURY[network],
+            voucherAddress: VOUCHER[network],
             feePercentage,
             maxOffersPerGroup,
             maxTwinsPerBundle,
@@ -112,7 +120,8 @@ async function main() {
     // Cut the ConfigHandlerFacet facet into the Diamond
     const protocolConfig = [
         config.tokenAddress,
-        config.multisigAddress,
+        config.treasuryAddress,
+        config.voucherAddress,
         config.feePercentage,
         config.maxOffersPerGroup,
         config.maxTwinsPerBundle,

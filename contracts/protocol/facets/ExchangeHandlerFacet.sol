@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "../../interfaces/IBosonExchangeHandler.sol";
-import "../../diamond/DiamondLib.sol";
-import "../ProtocolBase.sol";
-import "../ProtocolLib.sol";
+import { IBosonExchangeHandler } from "../../interfaces/IBosonExchangeHandler.sol";
+import { IBosonAccountHandler } from "../../interfaces/IBosonAccountHandler.sol";
+import { IBosonVoucher } from "../../interfaces/IBosonVoucher.sol";
+import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import { ProtocolBase } from "../ProtocolBase.sol";
 
 /**
  * @title ExchangeHandlerFacet
@@ -30,11 +31,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
      * Issues a voucher to the buyer address.
      *
      * Reverts if:
-     * - buyer address is zero
      * - offerId is invalid
      * - offer has been voided
      * - offer has expired
+     * - offer is not yet available for commits
      * - offer's quantity available is zero
+     * - buyer address is zero
+     * - buyer account is inactive
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
@@ -46,22 +49,67 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     external
     override
     {
-        // Get the offer, revert if it doesn't exist
-        (bool exists, Offer storage offer) = fetchOffer(_offerId);
+        // Make sure buyer address is not zero address
+        require(_buyer != address(0), INVALID_ADDRESS);
+
+        // Get the offer
+        bool exists;
+        Offer storage offer;
+        (exists, offer) = fetchOffer(_offerId);
+
+        // Make sure offer exists, is available, and isn't void, expired, or sold out
         require(exists, NO_SUCH_OFFER);
+        require(block.timestamp >= offer.validFromDate, OFFER_NOT_AVAILABLE);
+        require(!offer.voided, OFFER_HAS_BEEN_VOIDED);
+        require(block.timestamp < offer.validUntilDate, OFFER_HAS_EXPIRED);
+        require(offer.quantityAvailable > 0, OFFER_SOLD_OUT);
 
-        // TODO 1) implement further requires (see above), create exchange, issue voucher
+        // Find or create the account associated with the specified buyer address
+        uint256 buyerId;
+        Buyer storage buyer;
+        (exists, buyerId) = getBuyerIdByWallet(_buyer);
+        if (exists) {
 
-        // TODO 2) get buyer struct if it exists or create and store new one
+            // Fetch the existing buyer account
+            (,buyer) = fetchBuyer(buyerId);
 
-        // TODO 3) create and store a new exchange
+            // Make sure buyer account is active
+            require(buyer.active, MUST_BE_ACTIVE);
 
-        // TODO 4) create a new exchange
+        } else {
 
-        // TODO 5) decrement offer's quantity available
+            // get the id that will be assigned
+            buyerId = protocolCounters().nextAccountId;
+
+            // create the buyer (id is ignored)
+            IBosonAccountHandler(address(this)).createBuyer(Buyer(0, _buyer, true));
+
+            // fetch the buyer account
+            (, buyer) = fetchBuyer(buyerId);
+
+        }
+
+        // Create and store a new exchange
+        uint256 exchangeId = protocolCounters().nextExchangeId++;
+        Exchange storage exchange = protocolStorage().exchanges[exchangeId];
+        exchange.id = exchangeId;
+        exchange.offerId = _offerId;
+        exchange.buyerId = buyerId;
+        exchange.state = ExchangeState.Committed;
+        exchange.voucher.committedDate = block.timestamp;
+
+        // Map the offerId to the exchangeId as one-to-many
+        protocolStorage().exchangeIdsByOffer[_offerId].push(exchangeId);
+
+        // Decrement offer's quantity available
+        offer.quantityAvailable--;
+
+        // Issue voucher
+        IBosonVoucher bosonVoucher = IBosonVoucher(protocolStorage().voucherAddress);
+        bosonVoucher.issueVoucher(exchangeId, buyer);
 
         // Notify watchers of state change
-        // emit BuyerCommitted(_offerId, buyer.id, exchange.id, exchange);
+        emit BuyerCommitted(_offerId, buyerId, exchangeId, exchange);
 
     }
 
@@ -75,7 +123,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     function getExchange(uint256 _exchangeId)
     external
     view
-    returns(bool exists, BosonTypes.Exchange memory exchange) {
+    returns(bool exists, Exchange memory exchange) {
         return fetchExchange(_exchangeId);
     }
 

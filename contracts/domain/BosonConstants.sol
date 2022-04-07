@@ -15,7 +15,7 @@ contract BosonConstants {
     bytes32 internal constant RESOLVER = keccak256("RESOLVER"); // Role for resolving the outcome of an escalated dispute
     bytes32 internal constant FEE_COLLECTOR = keccak256("FEE_COLLECTOR"); // Role for collecting fees from the protocol
 
-    //Revert Reasons: General
+    // Revert Reasons: General
     string internal constant INVALID_ADDRESS = "Invalid address";
 
     // Revert Reasons: Facet initializer related
@@ -26,20 +26,23 @@ contract BosonConstants {
     string internal constant NOT_OPERATOR = "Not seller's operator";
     string internal constant NOT_ADMIN = "Not seller's admin";
 
-    //Revert Reasons: Account-related
+    // Revert Reasons: Account-related
     string internal constant NO_SUCH_SELLER = "No such seller";
-    string internal constant MUST_BE_ACTIVE = "Seller must be active";
+    string internal constant MUST_BE_ACTIVE = "Account must be active";
     string internal constant SELLER_ADDRESS_MUST_BE_UNIQUE = "Seller address cannot be assigned to another seller Id";
     string internal constant BUYER_ADDRESS_MUST_BE_UNIQUE = "Buyer address cannot be assigned to another buyer Id";
 
     // Revert Reasons: Offer related
     string internal constant NO_SUCH_OFFER = "No such offer";
-    string internal constant OFFER_ALREADY_VOIDED = "Offer already voided";
     string internal constant OFFER_PERIOD_INVALID = "Offer period invalid";
     string internal constant OFFER_PENALTY_INVALID = "Offer penalty invalid";
     string internal constant OFFER_MUST_BE_ACTIVE = "Offer must be active";
     string internal constant OFFER_NOT_UPDATEABLE = "Offer not updateable";
     string internal constant OFFER_MUST_BE_UNIQUE = "Offer must be unique to a group";
+    string internal constant OFFER_HAS_BEEN_VOIDED = "Offer has been voided";
+    string internal constant OFFER_HAS_EXPIRED = "Offer has expired";
+    string internal constant OFFER_NOT_AVAILABLE = "Offer is not yet available";
+    string internal constant OFFER_SOLD_OUT = "Offer has sold out";
 
     // Revert Reasons: Group related
     string internal constant NO_SUCH_GROUP = "No such offer";
