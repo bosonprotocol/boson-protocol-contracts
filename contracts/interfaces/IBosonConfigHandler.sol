@@ -8,7 +8,7 @@ import "../domain/BosonTypes.sol";
  *
  * @notice Handles management of various protocol-related settings.
  *
- * The ERC-165 identifier for this interface is: 0x1753a1ce
+ * The ERC-165 identifier for this interface is: 0x19037fd6
  */
 interface IBosonConfigHandler {
     /// Events
@@ -17,8 +17,9 @@ interface IBosonConfigHandler {
     event TreasuryAddressChanged(address indexed treasuryAddress, address indexed changedBy);
     event ProtocolFeePercentageChanged(uint16 feePercentage, address indexed changedBy);
     event MaxOffersPerGroupChanged(uint16 maxOffersPerGroup, address indexed changedBy);
+    event MaxOffersPerBatchChanged(uint16 maxTwinsPerBatch, address indexed changedBy);
     event MaxTwinsPerBundleChanged(uint16 maxTwinsPerBundle, address indexed changedBy);
-    event MaxOffersPerBatchChanged(uint16 maxTwinsPerBundle, address indexed changedBy);
+    event MaxOffersPerBundleChanged(uint16 maxOffersPerBundle, address indexed changedBy);
 
     /**
      * @notice Sets the address of the Boson Token (ERC-20) contract.
@@ -80,6 +81,20 @@ interface IBosonConfigHandler {
     function getProtocolFeePercentage() external view returns (uint16);
 
     /**
+     * @notice Sets the maximum number of offers that can be created in a single transaction
+     *
+     * Emits a MaxOffersPerBatchChanged event.
+     *
+     * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Offer[]}
+     */
+    function setMaxOffersPerBatch(uint16 _maxOffersPerBatch) external;
+
+    /**
+     * @notice Get the maximum offers per batch
+     */
+    function getMaxOffersPerBatch() external returns (uint16);
+
+    /**
      * @notice Sets the maximum numbers of offers that can be added to a group in a single transaction
      *
      * Emits a MaxOffersPerGroupChanged event.
@@ -108,16 +123,16 @@ interface IBosonConfigHandler {
     function getMaxTwinsPerBundle() external view returns (uint16);
 
     /**
-     * @notice Sets the maximum number of offers that can be created in a single transaction
+     * @notice Sets the maximum numbers of offer that can be added to a bundle in a single transaction
      *
-     * Emits a MaxOffersPerBatchChanged event.
+     * Emits a MaxOffersPerBundleChanged event.
      *
-     * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Offer[]}
+     * @param _maxOffersPerBundle - the maximum length of {BosonTypes.Bundle.offerIds}
      */
-    function setMaxOffersPerBatch(uint16 _maxOffersPerBatch) external;
+    function setMaxOffersPerBundle(uint16 _maxOffersPerBundle) external;
 
     /**
-     * @notice Get the maximum offers per batch
+     * @notice Get the maximum offers per bundle
      */
-    function getMaxOffersPerBatch() external returns (uint16);
+    function getMaxOffersPerBundle() external view returns (uint16);
 }

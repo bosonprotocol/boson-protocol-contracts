@@ -25,6 +25,8 @@ library ProtocolLib {
         uint16 protocolFeePercentage; // 1.75% = 175, 100% = 10000
         // limit how many offers can be added to the group
         uint16 maxOffersPerGroup;
+        // limit how many offers can be added to the bundle
+        uint16 maxOffersPerBundle;
         // limit how many twins can be added to the bundle
         uint16 maxTwinsPerBundle;
         // limit how many offers can be processed in single batch transaction

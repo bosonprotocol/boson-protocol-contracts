@@ -26,6 +26,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         uint16 _protocolFeePercentage,
         uint16 _maxOffersPerGroup,
         uint16 _maxTwinsPerBundle,
+        uint16 _maxOffersPerBundle,
         uint16 _maxOffersPerBatch
     )
     public
@@ -41,6 +42,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         ps.protocolFeePercentage = _protocolFeePercentage;
         ps.maxOffersPerGroup = _maxOffersPerGroup;
         ps.maxTwinsPerBundle = _maxTwinsPerBundle;
+        ps.maxOffersPerBundle = _maxOffersPerBundle;
         ps.maxOffersPerBatch = _maxOffersPerBatch;
 
         // Initialize protocol counters
@@ -233,18 +235,46 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     }
 
     /**
-     * @notice Sets the maximum number of offers that can be created in a single transaction
+     * @notice Sets the maximum numbers of offers that can be added to a bundle in a single transaction
+     *
+     * Emits a MaxOffersPerBundleChanged event.
+     *
+     * @param _maxOffersPerBundle - the maximum length of {BosonTypes.Bundle.offerIds}
+     */
+    function setMaxOffersPerBundle(uint16 _maxOffersPerBundle)
+    external
+    override
+    onlyRole(ADMIN)
+    {
+        protocolStorage().maxOffersPerBundle = _maxOffersPerBundle;
+        emit MaxOffersPerBundleChanged(_maxOffersPerBundle, msg.sender);
+    }
+
+    /**
+     * @notice Get the maximum offers per bundle
+     */
+    function getMaxOffersPerBundle()
+    external
+    override
+    view
+    returns (uint16)
+    {
+        return protocolStorage().maxOffersPerBundle;
+    }
+
+     /**
+     * @notice Sets the maximum numbers of offers that can be created in a single transaction
      *
      * Emits a MaxOffersPerBatchChanged event.
      *
-     * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Offer[]}
+     * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Bundle.offerIds}
      */
     function setMaxOffersPerBatch(uint16 _maxOffersPerBatch)
     external
     override
     onlyRole(ADMIN)
     {
-        protocolStorage().maxOffersPerGroup = _maxOffersPerBatch;
+        protocolStorage().maxOffersPerBatch = _maxOffersPerBatch;
         emit MaxOffersPerBatchChanged(_maxOffersPerBatch, msg.sender);
     }
 
