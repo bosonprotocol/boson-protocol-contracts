@@ -31,6 +31,7 @@ function getConfig() {
     const feePercentage = "150"; // 1.5%  = 150
     const maxOffersPerGroup = "100";
     const maxTwinsPerBundle = "100";
+    const maxOffersPerBatch = "100";
 
     // Boson Token (ERC-20) contract address
     const TOKEN = {
@@ -51,7 +52,8 @@ function getConfig() {
             multisigAddress: MULTISIG[network],
             feePercentage,
             maxOffersPerGroup,
-            maxTwinsPerBundle
+            maxTwinsPerBundle,
+            maxOffersPerBatch
     };
 }
 
@@ -113,7 +115,8 @@ async function main() {
         config.multisigAddress,
         config.feePercentage,
         config.maxOffersPerGroup,
-        config.maxTwinsPerBundle
+        config.maxTwinsPerBundle,
+        config.maxOffersPerBatch
     ];
     [configHandlerFacet] = await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
     deploymentComplete('ConfigHandlerFacet', configHandlerFacet.address, [], contracts);

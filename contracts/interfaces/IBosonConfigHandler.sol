@@ -18,6 +18,7 @@ interface IBosonConfigHandler {
     event ProtocolFeePercentageChanged(uint16 feePercentage, address indexed changedBy);
     event MaxOffersPerGroupChanged(uint16 maxOffersPerGroup, address indexed changedBy);
     event MaxTwinsPerBundleChanged(uint16 maxTwinsPerBundle, address indexed changedBy);
+    event MaxOffersPerBatchChanged(uint16 maxTwinsPerBundle, address indexed changedBy);
 
     /**
      * @notice Sets the address of the Boson Token (ERC-20) contract.
@@ -105,4 +106,18 @@ interface IBosonConfigHandler {
      * @notice Get the maximum twins per bundle
      */
     function getMaxTwinsPerBundle() external view returns (uint16);
+
+    /**
+     * @notice Sets the maximum number of offers that can be created in a single transaction
+     *
+     * Emits a MaxOffersPerBatchChanged event.
+     *
+     * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Offer[]}
+     */
+    function setMaxOffersPerBatch(uint16 _maxOffersPerBatch) external;
+
+    /**
+     * @notice Get the maximum offers per batch
+     */
+    function getMaxOffersPerBatch() external returns (uint16);
 }
