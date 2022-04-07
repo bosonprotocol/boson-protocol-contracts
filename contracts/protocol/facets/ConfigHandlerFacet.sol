@@ -267,7 +267,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxOffersPerBatchChanged event.
      *
-     * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Bundle.offerIds}
+     * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Offer[]}
      */
     function setMaxOffersPerBatch(uint16 _maxOffersPerBatch)
     external

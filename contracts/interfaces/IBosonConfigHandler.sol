@@ -92,7 +92,7 @@ interface IBosonConfigHandler {
     /**
      * @notice Get the maximum offers per batch
      */
-    function getMaxOffersPerBatch() external returns (uint16);
+    function getMaxOffersPerBatch() external view returns (uint16);
 
     /**
      * @notice Sets the maximum numbers of offers that can be added to a group in a single transaction
