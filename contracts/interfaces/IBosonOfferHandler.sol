@@ -8,7 +8,7 @@ import "../domain/BosonTypes.sol";
  *
  * @notice Manages creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xaf7dd438
+ * The ERC-165 identifier for this interface is: 0x776bd0e6
  */
 interface IBosonOfferHandler {
     /// Events
