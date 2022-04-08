@@ -210,7 +210,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * @param _offerId - the id of the offer to check
      */
     function voidOffer(uint256 _offerId)
-    external
+    public
     override
     {
         // Get offer, make sure the caller is the operator
@@ -221,6 +221,34 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
 
         // Notify listeners of state change
         emit OfferVoided(_offerId, offer.sellerId);
+
+    }
+
+    /**
+     * @notice  Voids a batch of offers.
+     *
+     * Emits an OfferVoided event for every offer if successful.
+     *
+     * Note:
+     * Existing exchanges are not affected.
+     * No further vouchers can be issued against a voided offer.
+     *
+     * Reverts if, for any offer:
+     * - Offer ID is invalid
+     * - Caller is not the operator of the offer
+     * - Offer has already been voided
+     *
+     * @param _offerIds - the id of the offer to check
+     */
+    function voidOfferBatch(uint256[] calldata _offerIds)
+    external
+    override
+    {
+        // limit maximum number of offers to avoid running into block gas limit in a loop
+        require(_offerIds.length <= protocolStorage().maxOffersPerBatch, TOO_MANY_OFFERS);
+        for (uint i = 0; i < _offerIds.length; i++) { 
+            voidOffer(_offerIds[i]);
+        }
 
     }
 

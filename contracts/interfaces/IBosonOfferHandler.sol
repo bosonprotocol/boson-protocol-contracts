@@ -8,7 +8,7 @@ import "../domain/BosonTypes.sol";
  *
  * @notice Manages creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x776bd0e6
+ * The ERC-165 identifier for this interface is: 0x65defc13
  */
 interface IBosonOfferHandler {
     /// Events
@@ -83,6 +83,24 @@ interface IBosonOfferHandler {
      * @param _offerId - the id of the offer to check
      */
     function voidOffer(uint256 _offerId) external;
+
+    /**
+     * @notice  Voids a batch of offers.
+     *
+     * Emits an OfferVoided event for every offer if successful.
+     *
+     * Note:
+     * Existing exchanges are not affected.
+     * No further vouchers can be issued against a voided offer.
+     *
+     * Reverts if, for any offer:
+     * - Offer ID is invalid
+     * - Caller is not the operator of the offer
+     * - Offer has already been voided
+     *
+     * @param _offerIds - the id of the offer to check
+     */
+    function voidOfferBatch(uint256[] calldata _offerIds) external;
 
     /**
      * @notice Sets new valid until date
