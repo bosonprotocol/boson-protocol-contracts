@@ -29,13 +29,14 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
      * Emits a BundleCreated event if successful.
      *
      * Reverts if:
-     *
-     * - seller does not match caller
+     * - Seller does not exist
      * - any of offers belongs to different seller
      * - any of offers does not exist
      * - offer exists in a different bundle
+     * - number of offers exceeds maximum allowed number per bundle
      * - any of twins belongs to different seller
      * - any of twins does not exist
+     * - number of twins exceeds maximum allowed number per bundle
      * - duplicate twins added in same bundle
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
@@ -46,8 +47,10 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
     external
     override
     {
-
-        // TODO: check seller ID matches msg.sender
+        // get seller id, make sure it exists and store it to incoming struct
+        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+        require(exists, NO_SUCH_SELLER);
+        _bundle.sellerId = sellerId;
 
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_bundle.offerIds.length <= protocolStorage().maxOffersPerBundle, TOO_MANY_OFFERS);
@@ -86,9 +89,9 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
         }
 
         // Get storage location for bundle
-        (,Bundle storage bundle) = fetchBundle(bundleId);
+        (, Bundle storage bundle) = fetchBundle(bundleId);
 
-        // Set group props individually since memory structs can't be copied to storage
+        // Set bundle props individually since memory structs can't be copied to storage
         bundle.id = bundleId;
         bundle.sellerId = _bundle.sellerId;
         bundle.offerIds = _bundle.offerIds;
@@ -106,7 +109,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
      *
      * Reverts if:
      * - Twin does not exist
-     * - Caller is not the seller (TODO)
+     * - Caller is not the seller
      *
      *  @param _twinId - the id of the twin to check
      */
@@ -155,7 +158,6 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
      * Emits a BundleUpdated event if successful.
      *
      * Reverts if:
-     *
      * - caller is not the seller
      * - twin ids is an empty list
      * - number of twins exceeds maximum allowed number per bundle
@@ -209,7 +211,6 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
      * Emits a BundleUpdated event if successful.
      *
      * Reverts if:
-     *
      * - caller is not the seller
      * - twin ids is an empty list
      * - number of twins exceeds maximum allowed number per bundle
@@ -270,7 +271,6 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
      * and return seller id and bundle storage pointer for further use.
      *
      * Reverts if:
-     *
      * - caller is not the seller
      * - twin ids is an empty list
      * - number of twins exceeds maximum allowed number per bundle
