@@ -404,16 +404,10 @@ describe("IBosonOfferHandler", function () {
         // call getOffer with offerId to check the seller id in the event
         [, offerStruct] = await offerHandler.getOffer(id);
 
-        expect(offerStruct.voided).is.false;
-
         // Void the offer, testing for the event
         await expect(offerHandler.connect(operator).voidOffer(id))
           .to.emit(offerHandler, "OfferVoided")
           .withArgs(id, offerStruct.sellerId);
-
-        // Voided field should be updated
-        [, offerStruct] = await offerHandler.getOffer(id);
-        expect(offerStruct.voided).is.true;
       });
 
       it("should update state", async function () {
@@ -957,6 +951,109 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
             RevertReasons.OFFER_MUST_BE_ACTIVE
+          );
+        });
+      });
+    });
+
+    context("👉 voidOfferBatch()", async function () {
+      let offersToVoid;
+      beforeEach(async function () {
+        // Create an offer
+        await offerHandler.connect(operator).createOfferBatch(offers);
+
+        // // id of the current offer and increment nextOfferId
+        // id = nextOfferId++;
+
+        offersToVoid = ["1", "3", "5"];
+      });
+
+      it("should emit an OfferVoided event", async function () {
+        // call getOffer with offerId to check the seller id in the event
+        [, offerStruct] = await offerHandler.getOffer(offersToVoid[0]);
+
+        // Void offers, testing for the event
+        await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid))
+          .to.emit(offerHandler, "OfferVoided")
+          .withArgs(offersToVoid[0], offerStruct.sellerId)
+          .withArgs(offersToVoid[1], offerStruct.sellerId)
+          .withArgs(offersToVoid[2], offerStruct.sellerId);
+      });
+
+      it("should update state", async function () {
+        // Voided field should be initially false
+        for (const id of offersToVoid) {
+          [, offerStruct] = await offerHandler.getOffer(id);
+          expect(offerStruct.voided).is.false;
+
+          // Get the voided status
+          [, voided] = await offerHandler.isOfferVoided(id);
+          expect(voided).to.be.false;
+        }
+
+        // Void offers
+        await offerHandler.connect(operator).voidOfferBatch(offersToVoid);
+
+        for (const id of offersToVoid) {
+          // Voided field should be updated
+          [, offerStruct] = await offerHandler.getOffer(id);
+          expect(offerStruct.voided).is.true;
+
+          // Get the voided status
+          [, voided] = await offerHandler.isOfferVoided(id);
+          expect(voided).to.be.true;
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Offer does not exist", async function () {
+          // Set invalid id
+          offersToVoid = ["1", "432", "2"];
+
+          // Attempt to void the offer, expecting revert
+          await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid)).to.revertedWith(
+            RevertReasons.NO_SUCH_OFFER
+          );
+
+          // Set invalid id
+          offersToVoid = ["1", "2", "0"];
+
+          // Attempt to void the offer, expecting revert
+          await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid)).to.revertedWith(
+            RevertReasons.NO_SUCH_OFFER
+          );
+        });
+
+        it("Caller is not seller", async function () {
+          // caller is not the operator of any seller
+          // Attempt to update the offer, expecting revert
+          await expect(offerHandler.connect(rando).voidOfferBatch(offersToVoid)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+
+          // caller is an operator of another seller
+          seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, active);
+          await accountHandler.connect(rando).createSeller(seller);
+
+          // // Attempt to update the offer, expecting revert
+          // await expect(offerHandler.connect(rando).voidOfferBatch(offersToVoid)).to.revertedWith(RevertReasons.NOT_OPERATOR);
+        });
+
+        it("Offer already voided", async function () {
+          // Void the offer first
+          await offerHandler.connect(operator).voidOffer("1");
+
+          // Attempt to void the offer again, expecting revert
+          await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid)).to.revertedWith(
+            RevertReasons.OFFER_HAS_BEEN_VOIDED
+          );
+
+          // try to void the same offer twice
+          offersToVoid = ["1", "4", "1"];
+
+          // Attempt to void the offer again, expecting revert
+          await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid)).to.revertedWith(
+            RevertReasons.OFFER_HAS_BEEN_VOIDED
           );
         });
       });
