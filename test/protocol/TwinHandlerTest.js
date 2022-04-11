@@ -249,7 +249,7 @@ describe("IBosonTwinHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to Create a twin, expecting revert
-          await expect(twinHandler.connect(rando).createTwin(twin)).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
+          await expect(twinHandler.connect(rando).createTwin(twin)).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
         it("should revert if protocol is not approved to transfer the ERC20 token", async function () {

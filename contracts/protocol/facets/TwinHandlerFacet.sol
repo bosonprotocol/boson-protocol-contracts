@@ -44,7 +44,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
     {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
-        require(exists, NO_SUCH_SELLER);
+        require(exists, NOT_OPERATOR);
         _twin.sellerId = sellerId;
 
         // Protocol must be approved to transfer seller’s tokens

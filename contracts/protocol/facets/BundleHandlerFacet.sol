@@ -49,7 +49,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
     {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
-        require(exists, NO_SUCH_SELLER);
+        require(exists, NOT_OPERATOR);
         _bundle.sellerId = sellerId;
 
         // limit maximum number of offers to avoid running into block gas limit in a loop
