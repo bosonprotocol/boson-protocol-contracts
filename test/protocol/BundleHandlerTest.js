@@ -390,11 +390,15 @@ describe("IBosonBundleHandler", function () {
       });
 
       it("Caller is not the seller of all twins", async function () {
-        // create another seller and an twin
+        // create another seller and a twin
+        let expectedNewTwinId = "6";
         seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
         await accountHandler.connect(rando).createSeller(seller);
         await bosonToken.connect(rando).approve(twinHandler.address, 1); // approving the twin handler
-        await twinHandler.connect(rando).createTwin(twin); // creates a twin with id 6
+        const tx = await twinHandler.connect(rando).createTwin(twin); // creates a twin with id 6
+        const txReceipt = await tx.wait();
+        const event = getEvent(txReceipt, twinHandler, "TwinCreated");
+        assert.equal(event.twinId.toString(), expectedNewTwinId, "Twin Id is not 6");
 
         // add twin belonging to another seller
         bundle.twinIds = ["2", "6"];
@@ -692,11 +696,15 @@ describe("IBosonBundleHandler", function () {
         });
 
         it("Caller is not the seller of all twins", async function () {
-          // create another seller and an twin
+          // create another seller and a twin
+          let expectedNewTwinId = "6";
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           await accountHandler.connect(rando).createSeller(seller);
           await bosonToken.connect(rando).approve(twinHandler.address, 1); // approving the twin handler
-          await twinHandler.connect(rando).createTwin(twin); // creates a twin with id 6
+          const tx = await twinHandler.connect(rando).createTwin(twin); // creates a twin with id 6
+          const txReceipt = await tx.wait();
+          const event = getEvent(txReceipt, twinHandler, "TwinCreated");
+          assert.equal(event.twinId.toString(), expectedNewTwinId, "Twin Id is not 6");
 
           // add twin belonging to another seller
           twinIdsToAdd = ["1", "6"];
