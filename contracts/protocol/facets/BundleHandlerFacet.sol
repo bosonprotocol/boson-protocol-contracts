@@ -115,19 +115,17 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
      */
     function getValidTwin(uint256 _twinId) internal view returns (Twin storage twin){
         bool exists;
-        Seller storage seller;
-
         // Get twin
         (exists, twin) = fetchTwin(_twinId);
 
         // Twin must already exist
         require(exists, NO_SUCH_TWIN);
 
-        // Get seller, we assume seller exists if twin exists
-        (,seller) = fetchSeller(twin.sellerId);
+        // Get seller id, we assume seller id exists if twin exists
+        (, uint256 sellerId) = getSellerIdByOperator(msg.sender);
 
-        // Caller must be seller's operator address
-        require(seller.operator == msg.sender, NOT_OPERATOR);
+        // Caller's seller id must match twin seller id
+        require(sellerId == twin.sellerId, NOT_OPERATOR);
     }
 
     /**
