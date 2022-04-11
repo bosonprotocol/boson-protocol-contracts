@@ -4,7 +4,7 @@ on:
     branches: [ main ]
 jobs:
   test_deploy:
-    runs-on: contracts
+    runs-on: contracts-runner
     env:
       DEPLOYER_GAS_LIMIT: ${{ secrets.DEPLOYER_GAS_LIMIT }}
       DEPLOYER_TEST_TXNODE: ${{ secrets.DEPLOYER_TEST_TXNODE }}
