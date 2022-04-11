@@ -43,7 +43,7 @@ describe("IBosonBundleHandler", function () {
   let offerHandler, bundleHandlerFacet_Factory;
   let seller, active;
   let bundleStruct;
-  let twinIdsToAdd, twinIdsToRemove;
+  let twinIdsToAdd, twinIdsToRemove, offerIdsToAdd, offerIdsToRemove;
   let bundle, bundleId, offerIds, twinIds, nextBundleId, invalidBundleId, bundleInstance;
   let offer, oneMonth, oneWeek, exists, expected;
   let offerId,
@@ -365,9 +365,13 @@ describe("IBosonBundleHandler", function () {
 
       it("Caller is not the seller of all offers", async function () {
         // create another seller and an offer
+        let expectedNewOfferId = "6";
         seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
         await accountHandler.connect(rando).createSeller(seller);
-        await offerHandler.connect(rando).createOffer(offer); // creates an offer with id 6
+        const tx = await offerHandler.connect(rando).createOffer(offer); // creates an offer with id 6
+        const txReceipt = await tx.wait();
+        const event = getEvent(txReceipt, offerHandler, "OfferCreated");
+        assert.equal(event.offerId.toString(), expectedNewOfferId, "Offer Id is not 6");
 
         // add offer belonging to another seller
         bundle.offerIds = ["2", "6"];
@@ -1044,9 +1048,13 @@ describe("IBosonBundleHandler", function () {
 
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
+          let expectedNewOfferId = "6";
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           await accountHandler.connect(rando).createSeller(seller);
-          await offerHandler.connect(rando).createOffer(offer); // creates an offer with id 6
+          const tx = await offerHandler.connect(rando).createOffer(offer); // creates an offer with id 6
+          const txReceipt = await tx.wait();
+          const event = getEvent(txReceipt, offerHandler, "OfferCreated");
+          assert.equal(event.offerId.toString(), expectedNewOfferId, "Offer Id is not 6");
 
           // add offer belonging to another seller
           offerIdsToAdd = ["1", "6"];
@@ -1182,9 +1190,9 @@ describe("IBosonBundleHandler", function () {
 
         it("Caller is not seller of a bundle", async function () {
           // Attempt to remove offers from the bundle, expecting revert
-          await expect(bundleHandler.connect(rando).removeOffersFromBundle(bundle.id, offerIdsToRemove)).to.revertedWith(
-            RevertReasons.NOT_OPERATOR
-          );
+          await expect(
+            bundleHandler.connect(rando).removeOffersFromBundle(bundle.id, offerIdsToRemove)
+          ).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
         it("Offer is not a part of the bundle", async function () {
