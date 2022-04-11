@@ -8,7 +8,7 @@ import "../domain/BosonTypes.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x1f317d1c
+ * The ERC-165 identifier for this interface is: 0xf4618e1c
  */
 interface IBosonExchangeHandler {
     /// Events
@@ -44,4 +44,13 @@ interface IBosonExchangeHandler {
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
      */
     function getExchange(uint256 _exchangeId) external view returns (bool exists, BosonTypes.Exchange memory exchange);
+
+    /**
+     * @notice Gets the details about a given exchange.
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return exists - true if the exchange exists
+     * @return state - the exchange state. See {BosonTypes.ExchangeStates}
+     */
+    function getExchangeState(uint256 _exchangeId) external view returns (bool exists, BosonTypes.ExchangeState state);
 }
