@@ -274,7 +274,7 @@ describe("IBosonExchangeHandler", function () {
         expect(exists).to.be.true;
       });
 
-      it("should return true for exists if exchange id is not valid", async function () {
+      it("should return false for exists if exchange id is not valid", async function () {
         // Get the exchange
         [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id + 10);
 
