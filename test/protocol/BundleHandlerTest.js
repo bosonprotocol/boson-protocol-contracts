@@ -1032,7 +1032,7 @@ describe("IBosonBundleHandler", function () {
           // Try to add nothing
           offerIdsToAdd = [];
 
-          // Attempt to add offers from the bundle, expecting revert
+          // Attempt to add offers to the bundle, expecting revert
           await expect(bundleHandler.connect(operator).addOffersToBundle(bundle.id, offerIdsToAdd)).to.revertedWith(
             RevertReasons.NOTHING_UPDATED
           );
