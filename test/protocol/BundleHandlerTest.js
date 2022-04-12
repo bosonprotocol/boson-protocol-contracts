@@ -594,21 +594,43 @@ describe("IBosonBundleHandler", function () {
       });
 
       it("should add twins to correct bundle", async function () {
-        let bundleIdToAddTwin = bundle.id; // Bundle in which we want we want to add new twin Ids.
-        twinIdsToAdd = ["1"]; // The Twin id which we want to add.
+        // Create a new bundle of id 2
+        let expectedNewBundleId = "2";
+        const newBundle = bundle.clone();
+        newBundle.id = expectedNewBundleId;
+        newBundle.twinIds = ["3"];
+        newBundle.offerIds = ["1"];
+        const tx = await bundleHandler.connect(operator).createBundle(newBundle); // creates new bundle of id 2
+        const txReceipt = await tx.wait();
+        const event = getEvent(txReceipt, bundleHandler, "BundleCreated");
+        assert.equal(event.bundleId.toString(), expectedNewBundleId, "Bundle Id is not 2"); // verify that bundle id is 2
 
-        // Get the bundle as a struct, expect that twinId does not exist.
+        // Add a new twin to bundle of id 1.
+        let bundleIdToAddTwin = bundle.id;
+        twinIdsToAdd = ["1"];
+
+        // Bundle with id 1 does not have this twin.
         [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToAddTwin);
         let returnedBundle = Bundle.fromStruct(bundleStruct);
         expect(returnedBundle.twinIds.includes(twinIdsToAdd[0])).is.false;
 
-        // Adding the twins to same bundle.
+        // Bundle with id 2 does not have this twin.
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(newBundle.id);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.twinIds.includes(twinIdsToAdd[0])).is.false;
+
+        // Adding the twins to bundle of id 1.
         await bundleHandler.connect(operator).addTwinsToBundle(bundleIdToAddTwin, twinIdsToAdd);
 
-        // Get the bundle as a struct, expect that twinId now exists.
+        // Bundle with id 1 now has this twin.
         [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToAddTwin);
         returnedBundle = Bundle.fromStruct(bundleStruct);
         expect(returnedBundle.twinIds.includes(twinIdsToAdd[0])).is.true;
+
+        // Bundle with id 2 does not have this twin.
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(newBundle.id);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.twinIds.includes(twinIdsToAdd[0])).is.false;
       });
 
       it("should update state", async function () {
@@ -788,18 +810,18 @@ describe("IBosonBundleHandler", function () {
       });
 
       it("should remove twins from correct bundle", async function () {
-        let bundleIdToRemoveTwin = bundle.id; // Bundle in which we want we want to add new twin Ids.
-        twinIdsToRemove = ["2"]; // The Twin id which we want to add.
+        let bundleIdToRemoveTwin = bundle.id; // Bundle from which we want we want to remove new twin Ids.
+        twinIdsToRemove = ["2"]; // The Twin id which we want to remove.
 
-        // Get the bundle as a struct, expect that twinId does not exist.
+        // Get the bundle as a struct, expect that twinId does exist.
         [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToRemoveTwin);
         let returnedBundle = Bundle.fromStruct(bundleStruct);
         expect(returnedBundle.twinIds.includes(twinIdsToRemove[0])).is.true;
 
-        // Adding the twins to same bundle.
+        // Removing the twins from the same bundle.
         await bundleHandler.connect(operator).removeTwinsFromBundle(bundleIdToRemoveTwin, twinIdsToRemove);
 
-        // Get the bundle as a struct, expect that twinId now exists.
+        // Get the bundle as a struct, expect that twinId now doesn't exist.
         [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToRemoveTwin);
         returnedBundle = Bundle.fromStruct(bundleStruct);
         expect(returnedBundle.twinIds.includes(twinIdsToRemove[0])).is.false;
