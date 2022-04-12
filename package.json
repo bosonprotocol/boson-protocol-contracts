@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "name": "@bosonprotocol/boson-protocol-contracts",
   "version": "2.0.0-rc.1",
   "description": "Boson Protocol core exchange mechanism",
@@ -68,4 +69,73 @@
     "solidity-coverage": "^0.7.18-eip165.0",
     "web3": "^1.7.0"
   }
+=======
+    "name": "@bosonprotocol/boson-protocol-contracts",
+    "version": "0.2.0",
+    "description": "Boson Protocol core exchange mechanism",
+    "author": "Boson Protocol Maintainers",
+    "license": "GPL-3.0-or-later",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/bosonprotocol/boson-protocol-contracts.git"
+    },
+    "bugs": {
+        "url": "https://github.com/bosonprotocol/boson-protocol-contracts/issues"
+    },
+    "homepage": "https://github.com/bosonprotocol/boson-protocol-contracts",
+    "keywords": [
+        "blockchain",
+        "boson",
+        "ethereum",
+        "nft",
+        "solidity",
+        "web3"
+    ],
+    "scripts": {
+        "build": "npx hardhat compile",
+        "test": "npx hardhat test",
+        "check:contracts": "solhint 'contracts/**/*.sol' && prettier --list-different contracts/**/*.sol",
+        "check:scripts": "eslint test/** && prettier --list-different test/** && eslint scripts/** && prettier --list-different scripts/**",
+        "tidy:contracts": "solhint --fix contracts/**/*.sol && prettier --write contracts/**/*.sol",
+        "tidy:scripts": "eslint --fix test/** && prettier --write test/** && eslint --fix scripts/** && prettier --write scripts/**",
+        "docgen": "npx truffle compile && npx solidoc && rm -rf build",
+        "size": "npx hardhat size-contracts",
+        "coverage": "npx hardhat coverage",
+        "deploy-suite:local": "npx hardhat run --network hardhat scripts/deploy-suite.js",
+        "deploy-suite:test": "npx hardhat run --network test scripts/deploy-suite.js  >> logs/test.deploy.contracts.txt",
+        "deploy-suite:ropsten": "npx hardhat run --network ropsten scripts/deploy-suite.js >> logs/ropsten.deploy.contracts.txt",
+        "deploy-suite:mainnet": "npx hardhat run --network mainnet scripts/deploy-suite.js >> logs/mainnet.deploy.contracts.txt",
+        "manage-roles:ropsten": " npx hardhat --network ropsten run scripts/manage-roles.js >> logs/ropsten.manage.roles.txt",
+        "manage-roles:mainnet": " npx hardhat --network mainnet run scripts/manage-roles.js >> logs/mainnet.manage.roles.txt"
+    },
+    "dependencies": {
+        "@openzeppelin/contracts": "^4.4.2",
+        "@openzeppelin/contracts-upgradeable": "^4.4.2",
+        "openzeppelin-solidity": "^4.5.0",
+        "truffle": "^5.5.5"
+    },
+    "devDependencies": {
+        "@nomiclabs/hardhat-ethers": "^2.0.4",
+        "@nomiclabs/hardhat-etherscan": "^3.0.0",
+        "@nomiclabs/hardhat-waffle": "^2.0.2",
+        "@nomiclabs/hardhat-web3": "^2.0.0",
+        "@openzeppelin/test-helpers": "^0.5.15",
+        "@thinkanddev/solidoc": "git+https://github.com/Rhian/solidoc.git#fix/improve-layout",
+        "chai": "^4.3.6",
+        "dotenv": "^16.0.0",
+        "eip55": "^2.1.0",
+        "eslint": "^8.12.0",
+        "eslint-config-prettier": "^8.5.0",
+        "ethereum-waffle": "^3.4.0",
+        "ethers": "^5.5.4",
+        "hardhat": "^2.8.3",
+        "hardhat-contract-sizer": "^2.4.0",
+        "hardhat-gas-reporter": "^1.0.7",
+        "prettier": "^2.6.1",
+        "prettier-plugin-solidity": "^1.0.0-beta.19",
+        "solidity-coverage": "^0.7.18-eip165.0",
+        "solhint": "^3.3.7",
+        "web3": "^1.7.0"
+    }
+>>>>>>> fb3c479 (Add Solidoc contract documentation package and supporting config)
 }
