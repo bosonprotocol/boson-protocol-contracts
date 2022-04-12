@@ -37,12 +37,17 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      */
     function createOffer(
-        Offer calldata _offer
+        Offer memory _offer
     )
     external
     override
-    {        
-        createOfferInternal(_offer);
+    {    
+        // create offer and update structs values to represent true state
+        (uint256 offerId, uint256 sellerId) = createOfferInternal(_offer);
+        _offer.id = offerId;
+        _offer.sellerId = sellerId;
+
+        emit OfferCreated(offerId, sellerId, _offer);
     }
 
     /**
@@ -60,7 +65,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
      */
     function createOfferBatch(
-        Offer[] calldata _offers
+        Offer[] memory _offers
     )
     external
     override
@@ -68,7 +73,14 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offers.length <= protocolStorage().maxOffersPerBatch, TOO_MANY_OFFERS);
         for (uint256 i = 0; i < _offers.length; i++) { 
-            createOfferInternal(_offers[i]);
+            
+            // create offer and update structs values to represent true state
+            Offer memory _offer = _offers[i];
+            (uint256 offerId, uint256 sellerId) = createOfferInternal(_offer);
+            _offer.id = offerId;
+            _offer.sellerId = sellerId;
+
+            emit OfferCreated(offerId, sellerId, _offer);
         }
     }
     

@@ -1,24 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { BosonTypes } from "../domain/BosonTypes.sol";
-import { BosonConstants } from "../domain/BosonConstants.sol";
 import { ProtocolBase } from "./ProtocolBase.sol";
 import { ProtocolLib } from "./ProtocolLib.sol";
-import { IBosonOfferHandler } from "../interfaces/IBosonOfferHandler.sol";
 
 /**
  * @title OfferBase
  *
  * @dev Provides methods for offer creation that can be shared accross facets
  */
-abstract contract OfferBase is ProtocolBase, IBosonOfferHandler {
-    // event OfferCreated(uint256 indexed offerId, uint256 indexed sellerId, BosonTypes.Offer offer);
-
+abstract contract OfferBase is ProtocolBase {
     /**
      * @dev Internal helper to create offer, which can be reused between creatOffer and createBatchOffer
-     *
-     * Emits an OfferCreated event if successful.
      *
      * Reverts if:
      * - seller does not exist
@@ -29,22 +22,18 @@ abstract contract OfferBase is ProtocolBase, IBosonOfferHandler {
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      */
-    function createOfferInternal(BosonTypes.Offer memory _offer) internal returns (uint256 offerId) {
+    function createOfferInternal(Offer memory _offer) internal returns (uint256 offerId, uint256 sellerId) {
         // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+        bool exists;
+        (exists, sellerId) = getSellerIdByOperator(msg.sender);
         require(exists, NO_SUCH_SELLER);
         _offer.sellerId = sellerId;
 
         // Get the next offerId and increment the counter
         offerId = ProtocolLib.protocolCounters().nextOfferId++;
-
-        // modify incoming struct so event value represents true state
         _offer.id = offerId;
 
         storeOffer(_offer);
-
-        // Notify watchers of state change
-        emit OfferCreated(offerId, _offer.sellerId, _offer);
     }
 
     /**
@@ -58,7 +47,7 @@ abstract contract OfferBase is ProtocolBase, IBosonOfferHandler {
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      */
-    function storeOffer(BosonTypes.Offer memory _offer) internal {
+    function storeOffer(Offer memory _offer) internal {
         // validFrom date must be less than validUntil date
         require(_offer.validFromDate < _offer.validUntilDate, OFFER_PERIOD_INVALID);
 
@@ -72,7 +61,7 @@ abstract contract OfferBase is ProtocolBase, IBosonOfferHandler {
         require(!_offer.voided, OFFER_MUST_BE_ACTIVE);
 
         // Get storage location for offer
-        (, BosonTypes.Offer storage offer) = fetchOffer(_offer.id);
+        (, Offer storage offer) = fetchOffer(_offer.id);
 
         // Set offer props individually since memory structs can't be copied to storage
         offer.id = _offer.id;
