@@ -18,7 +18,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 describe("IBosonComboHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury;
+  let accounts, deployer, rando, operator, admin, clerk, treasury, other1, other2;
   let erc165, protocolDiamond, accessController, accountHandler, offerHandler, comboHandler, offerStruct, key, value;
   let offer, nextOfferId, oneMonth, oneWeek, support, exists;
   let nextAccountId;
@@ -53,6 +53,8 @@ describe("IBosonComboHandler", function () {
     clerk = accounts[3];
     treasury = accounts[4];
     rando = accounts[5];
+    other1 = accounts[6];
+    other2 = accounts[7];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -247,9 +249,74 @@ describe("IBosonComboHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("active is false", async function () {
+          seller.active = false;
+
+          // Attempt to Create a seller, expecting revert
+          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+            RevertReasons.MUST_BE_ACTIVE
+          );
+        });
+
+        it("addresses are the zero address", async function () {
+          seller.operator = ethers.constants.AddressZero;
+
+          // Attempt to Create a seller, expecting revert
+          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
+
+          seller.operator = operator.address;
+          seller.clerk = ethers.constants.AddressZero;
+
+          // Attempt to Create a seller, expecting revert
+          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
+
+          seller.clerk = clerk.address;
+          seller.admin = ethers.constants.AddressZero;
+
+          // Attempt to Create a seller, expecting revert
+          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
+        });
+
+        it("addresses are not unique to this seller Id", async function () {
+          // Create a seller
+          await accountHandler.connect(admin).createSeller(seller);
+
+          seller.admin = other1.address;
+          seller.clerk = other2.address;
+
+          // Attempt to Create a seller with non-unique operator, expecting revert
+          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+            RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
+          );
+
+          seller.admin = admin.address;
+          seller.operator = other1.address;
+
+          // Attempt to Create a seller with non-unique admin, expecting revert
+          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+            RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
+          );
+
+          seller.clerk = clerk.address;
+          seller.admin = other2.address;
+
+          // Attempt to Create a seller with non-unique clerk, expecting revert
+          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+            RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
+          );
+        });
+
         it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(rando).createOffer(offer)).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
+          await expect(comboHandler.connect(rando).createSellerAndOffer(seller, offer)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
         });
 
         xit("Caller is not operator the specified in seller", async function () {
@@ -262,7 +329,7 @@ describe("IBosonComboHandler", function () {
           offer.validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
+          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
         });
@@ -272,7 +339,7 @@ describe("IBosonComboHandler", function () {
           offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
+          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
         });
@@ -282,7 +349,7 @@ describe("IBosonComboHandler", function () {
           offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
+          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.OFFER_PENALTY_INVALID
           );
         });
@@ -292,7 +359,7 @@ describe("IBosonComboHandler", function () {
           offer.voided = true;
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
+          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.OFFER_MUST_BE_ACTIVE
           );
         });
