@@ -410,5 +410,46 @@ describe("IBosonTwinHandler", function () {
         expect(nextTwinId.toString() == expected).to.be.true;
       });
     });
+
+    context("👉 removeTwin()", async function () {
+      beforeEach(async function () {
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, 1);
+
+        // Create a twin
+        await twinHandler.connect(operator).createTwin(twin);
+      });
+
+      it("should emit a TwinDeleted event", async function () {
+        let nextTwinId = "1";
+
+        // Approving the twinHandler contract to transfer seller's tokens.
+        await bosonToken.connect(operator).approve(twinHandler.address, 1);
+
+        // Expect twin to be found.
+        [success] = await twinHandler.connect(rando).getTwin(twin.id);
+        expect(success).to.be.true;
+
+        // Create a twin, testing for the event.
+        const tx = await twinHandler.connect(operator).removeTwin(twin.id);
+        const txReceipt = await tx.wait();
+        const event = getEvent(txReceipt, twinHandler, "TwinDeleted");
+
+        assert.equal(event.twinId.toString(), nextTwinId, "Twin Id is incorrect");
+        assert.equal(event.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
+        assert.equal(Twin.fromStruct(event.twin).toString(), twin.toString(), "Twin struct is incorrect");
+
+        // Expect twin to be not found.
+        [success]  = await twinHandler.connect(rando).getTwin(twin.id);
+        expect(success).to.be.false;
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Caller is not the seller", async function () {
+          // Attempt to Create a twin, expecting revert
+          await expect(twinHandler.connect(rando).removeTwin(twin.id)).to.revertedWith(RevertReasons.NOT_OPERATOR);
+        });
+      });
+    });
   });
 });
