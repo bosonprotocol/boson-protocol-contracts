@@ -17,6 +17,11 @@ module.exports = {
       accounts: {mnemonic: environments.hardhat.mnemonic},
       gas: environments.gasLimit
     },
+    test: {
+      url: environments.test.txNode,
+      accounts: environments.test.keys,
+      gas: environments.gasLimit
+    },
     ropsten: {
       url: environments.ropsten.txNode,
       accounts: environments.ropsten.keys,

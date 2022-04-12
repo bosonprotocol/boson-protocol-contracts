@@ -37,21 +37,24 @@ function getConfig() {
     const TOKEN = {
         'mainnet': '0xC477D038d5420C6A9e0b031712f61c5120090de9',
         'ropsten': '0xf47e4fd9d2ebd6182f597ee12e487cca37fc524c',
-        'hardhat': '0x0000000000000000000000000000000000000000'
+        'hardhat': '0x0000000000000000000000000000000000000000',
+        'test': '0x520ce45DF6d14334257BFdD360a5C22B06E309c7'
     }
 
     // Treasury contract address
     const TREASURY = {
         'mainnet': '0x4a25E18076DDcFd646ED14ABC07286c2A4c1256A',
         'ropsten': '0x0000000000000000000000000000000000000000',
-        'hardhat': '0x0000000000000000000000000000000000000000'
+        'hardhat': '0x0000000000000000000000000000000000000000',
+        'test': '0x0000000000000000000000000000000000000000'
     }
 
     // Voucher contract address
     const VOUCHER = {
         'mainnet': '0x0000000000000000000000000000000000000000',
         'ropsten': '0x0000000000000000000000000000000000000000',
-        'hardhat': '0x0000000000000000000000000000000000000000'
+        'hardhat': '0x0000000000000000000000000000000000000000',
+        'test': '0x0000000000000000000000000000000000000000'
     }
 
     return {
@@ -173,7 +176,7 @@ async function main() {
     console.log(`✅ Granted roles to appropriate contract and addresses.`);
 
     // Bail now if deploying locally
-    if (hre.network.name === 'hardhat') process.exit();
+    if (hre.network.name === 'hardhat' || hre.network.name === 'test') process.exit();
 
     // Wait a minute after deployment completes and then verify contracts on etherscan
     console.log('⏲ Pause one minute, allowing deployments to propagate to Etherscan backend...');

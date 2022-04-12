@@ -1,0 +1,35 @@
+name: Deploy to internal test env
+on:
+  push:
+    branches: [ main ]
+jobs:
+  test_deploy:
+    runs-on: contracts
+    env:
+      DEPLOYER_GAS_LIMIT: ${{ secrets.DEPLOYER_GAS_LIMIT }}
+      DEPLOYER_TEST_TXNODE: ${{ secrets.DEPLOYER_TEST_TXNODE }}
+      DEPLOYER_TEST_KEY: ${{ secrets.DEPLOYER_TEST_KEY }}
+    name: test_deploy
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2.4.0
+      - name: Setup node
+        uses: actions/setup-node@v2.5.1
+        with:
+          node-version: '16.14.x'
+          cache: 'npm'
+      - run: npm install
+      - name: Prepare Environment
+        shell: bash
+        run: |
+          cp .env.example .env
+      - name: Create empty logs directory
+        shell: bash
+        run: |
+          mkdir -p logs
+      - run: npm run deploy-suite:test
+      - name: Upload test deploy output
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-deploy-contracts-logs
+          path: logs/test.deploy.contracts.txt
