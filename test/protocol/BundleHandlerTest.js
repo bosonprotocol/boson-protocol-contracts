@@ -810,21 +810,41 @@ describe("IBosonBundleHandler", function () {
       });
 
       it("should remove twins from correct bundle", async function () {
+        // Create a new bundle of id 2
+        let expectedNewBundleId = "2";
+        const newBundle = bundle.clone();
+        newBundle.id = expectedNewBundleId;
+        newBundle.offerIds = ["1"];
+        const tx = await bundleHandler.connect(operator).createBundle(newBundle); // creates new bundle of id 2
+        const txReceipt = await tx.wait();
+        const event = getEvent(txReceipt, bundleHandler, "BundleCreated");
+        assert.equal(event.bundleId.toString(), expectedNewBundleId, "Bundle Id is not 2"); // verify that bundle id is 2
+
         let bundleIdToRemoveTwin = bundle.id; // Bundle from which we want we want to remove new twin Ids.
         twinIdsToRemove = ["2"]; // The Twin id which we want to remove.
 
-        // Get the bundle as a struct, expect that twinId does exist.
+        // Expect that Bundle with id 1 contains twinId
         [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToRemoveTwin);
         let returnedBundle = Bundle.fromStruct(bundleStruct);
         expect(returnedBundle.twinIds.includes(twinIdsToRemove[0])).is.true;
 
-        // Removing the twins from the same bundle.
+        // Expect that Bundle with id 2 contains same twinId
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(newBundle.id);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.twinIds.includes(twinIdsToRemove[0])).is.true;
+
+        // Removing the twins from the bundle of id 1.
         await bundleHandler.connect(operator).removeTwinsFromBundle(bundleIdToRemoveTwin, twinIdsToRemove);
 
-        // Get the bundle as a struct, expect that twinId now doesn't exist.
+        // Expect that Bundle with id 1 doesn't contain twinId
         [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToRemoveTwin);
         returnedBundle = Bundle.fromStruct(bundleStruct);
         expect(returnedBundle.twinIds.includes(twinIdsToRemove[0])).is.false;
+
+        // Expect that Bundle with id 2 still contains twinId
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(newBundle.id);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.twinIds.includes(twinIdsToRemove[0])).is.true;
       });
 
       it("should update state", async function () {
