@@ -4,6 +4,7 @@ const { expect, assert } = require("chai");
 const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
+const Seller = require("../../scripts/domain/Seller");
 const Twin = require("../../scripts/domain/Twin");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -19,11 +20,13 @@ const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 describe("IBosonTwinHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, seller;
+  let accounts, deployer, rando, operator, admin, clerk, treasury;
+  let seller, active;
   let erc165,
     protocolDiamond,
     accessController,
     twinHandler,
+    accountHandler,
     twinStruct,
     bosonToken,
     foreign721,
@@ -52,8 +55,11 @@ describe("IBosonTwinHandler", function () {
     // Make accounts available
     accounts = await ethers.getSigners();
     deployer = accounts[0];
-    seller = accounts[1];
-    rando = accounts[2];
+    operator = accounts[1];
+    admin = accounts[2];
+    clerk = accounts[3];
+    treasury = accounts[4];
+    rando = accounts[5];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -62,6 +68,7 @@ describe("IBosonTwinHandler", function () {
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
     // Cut the protocol handler facets into the Diamond
+    await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet"]);
     await deployProtocolHandlerFacets(protocolDiamond, ["TwinHandlerFacet"]);
 
     // Add config Handler, so twin id starts at 1
@@ -78,6 +85,9 @@ describe("IBosonTwinHandler", function () {
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
+
+    // Cast Diamond to IBosonAccountHandler
+    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
 
     // Cast Diamond to ITwinHandler
     twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
@@ -102,6 +112,17 @@ describe("IBosonTwinHandler", function () {
   // All supported methods
   context("📋 Twin Handler Methods", async function () {
     beforeEach(async function () {
+      // create a seller
+      // Required constructor params
+      id = "1"; // argument sent to contract for createSeller will be ignored
+      active = true;
+
+      // Create a valid seller, then set fields in tests directly
+      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
+      expect(seller.isValid()).is.true;
+
+      await accountHandler.connect(admin).createSeller(seller);
+
       // The first twin id
       nextTwinId = "1";
       invalidTwinId = "222";
@@ -126,10 +147,10 @@ describe("IBosonTwinHandler", function () {
         twin.tokenAddress = bosonToken.address;
 
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(seller).approve(twinHandler.address, 1);
+        await bosonToken.connect(operator).approve(twinHandler.address, 1);
 
         // Create a twin, testing for the event
-        const tx = await twinHandler.connect(seller).createTwin(twin, seller.address);
+        const tx = await twinHandler.connect(operator).createTwin(twin);
         const txReceipt = await tx.wait();
 
         const event = getEvent(txReceipt, twinHandler, "TwinCreated");
@@ -147,10 +168,10 @@ describe("IBosonTwinHandler", function () {
         twin.id = "444";
 
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(seller).approve(twinHandler.address, 1);
+        await bosonToken.connect(operator).approve(twinHandler.address, 1);
 
         // Create a twin, testing for the event
-        const tx = await twinHandler.connect(seller).createTwin(twin, seller.address);
+        const tx = await twinHandler.connect(operator).createTwin(twin);
         const txReceipt = await tx.wait();
 
         const event = getEvent(txReceipt, twinHandler, "TwinCreated");
@@ -185,11 +206,11 @@ describe("IBosonTwinHandler", function () {
         twin.tokenAddress = foreign721.address;
 
         // Mint a token and approve twinHandler contract to transfer it
-        await foreign721.connect(seller).mint(twin.tokenId);
-        await foreign721.connect(seller).setApprovalForAll(twinHandler.address, true);
+        await foreign721.connect(operator).mint(twin.tokenId);
+        await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
 
         // Create a twin, testing for the event
-        const tx = await twinHandler.connect(seller).createTwin(twin, seller.address);
+        const tx = await twinHandler.connect(operator).createTwin(twin);
         const txReceipt = await tx.wait();
 
         const event = getEvent(txReceipt, twinHandler, "TwinCreated");
@@ -207,11 +228,11 @@ describe("IBosonTwinHandler", function () {
         twin.tokenAddress = foreign1155.address;
 
         // Mint a token and approve twinHandler contract to transfer it
-        await foreign1155.connect(seller).mint(twin.tokenId, twin.supplyIds[0]);
-        await foreign1155.connect(seller).setApprovalForAll(twinHandler.address, true);
+        await foreign1155.connect(operator).mint(twin.tokenId, twin.supplyIds[0]);
+        await foreign1155.connect(operator).setApprovalForAll(twinHandler.address, true);
 
         // Create a twin, testing for the event
-        const tx = await twinHandler.connect(seller).createTwin(twin, seller.address);
+        const tx = await twinHandler.connect(operator).createTwin(twin);
         const txReceipt = await tx.wait();
 
         const event = getEvent(txReceipt, twinHandler, "TwinCreated");
@@ -226,11 +247,16 @@ describe("IBosonTwinHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("Caller not operator of any seller", async function () {
+          // Attempt to Create a twin, expecting revert
+          await expect(twinHandler.connect(rando).createTwin(twin)).to.revertedWith(RevertReasons.NOT_OPERATOR);
+        });
+
         it("should revert if protocol is not approved to transfer the ERC20 token", async function () {
           //ERC20 token address
           twin.tokenAddress = bosonToken.address;
 
-          await expect(twinHandler.connect(seller).createTwin(twin, seller.address)).to.revertedWith(
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.revertedWith(
             RevertReasons.NO_TRANSFER_APPROVED
           );
         });
@@ -239,7 +265,7 @@ describe("IBosonTwinHandler", function () {
           //ERC721 token address
           twin.tokenAddress = foreign721.address;
 
-          await expect(twinHandler.connect(seller).createTwin(twin, seller.address)).to.revertedWith(
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.revertedWith(
             RevertReasons.NO_TRANSFER_APPROVED
           );
         });
@@ -248,7 +274,7 @@ describe("IBosonTwinHandler", function () {
           //ERC1155 token address
           twin.tokenAddress = foreign1155.address;
 
-          await expect(twinHandler.connect(seller).createTwin(twin, seller.address)).to.revertedWith(
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.revertedWith(
             RevertReasons.NO_TRANSFER_APPROVED
           );
         });
@@ -257,7 +283,7 @@ describe("IBosonTwinHandler", function () {
           it("Token address is a zero address", async function () {
             twin.tokenAddress = ethers.constants.AddressZero;
 
-            await expect(twinHandler.connect(seller).createTwin(twin, seller.address)).to.be.revertedWith(
+            await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
               RevertReasons.UNSUPPORTED_TOKEN
             );
           });
@@ -265,7 +291,7 @@ describe("IBosonTwinHandler", function () {
           it("Token address is a contract address that does not support the isApprovedForAll", async function () {
             twin.tokenAddress = twinHandler.address;
 
-            await expect(twinHandler.connect(seller).createTwin(twin, seller.address)).to.be.revertedWith(
+            await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
               RevertReasons.UNSUPPORTED_TOKEN
             );
           });
@@ -273,7 +299,7 @@ describe("IBosonTwinHandler", function () {
           it("Token address is a contract that reverts from a fallback method", async function () {
             twin.tokenAddress = fallbackError.address;
 
-            await expect(twinHandler.connect(seller).createTwin(twin, seller.address)).to.be.revertedWith(
+            await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
               RevertReasons.UNSUPPORTED_TOKEN
             );
           });
@@ -284,10 +310,10 @@ describe("IBosonTwinHandler", function () {
     context("👉 getTwin()", async function () {
       beforeEach(async function () {
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(seller).approve(twinHandler.address, 1);
+        await bosonToken.connect(operator).approve(twinHandler.address, 1);
 
         // Create a twin
-        await twinHandler.connect(seller).createTwin(twin, seller.address);
+        await twinHandler.connect(operator).createTwin(twin);
 
         // id of the current twin and increment nextTwinId
         id = nextTwinId++;
@@ -323,11 +349,16 @@ describe("IBosonTwinHandler", function () {
 
     context("👉 getNextTwinId()", async function () {
       beforeEach(async function () {
+        // Create another valid seller.
+        seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+        expect(seller.isValid()).is.true;
+        await accountHandler.connect(rando).createSeller(seller);
+
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(seller).approve(twinHandler.address, 1);
+        await bosonToken.connect(rando).approve(twinHandler.address, 1);
 
         // Create a twin
-        await twinHandler.connect(rando).createTwin(twin, seller.address);
+        await twinHandler.connect(rando).createTwin(twin);
 
         // id of the current twin and increment nextTwinId
         id = nextTwinId++;
@@ -345,8 +376,11 @@ describe("IBosonTwinHandler", function () {
       });
 
       it("should be incremented after a twin is created", async function () {
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, 1);
+
         // Create another twin
-        await twinHandler.connect(seller).createTwin(twin, seller.address);
+        await twinHandler.connect(operator).createTwin(twin);
 
         // What we expect the next twin id to be
         expected = ++nextTwinId;

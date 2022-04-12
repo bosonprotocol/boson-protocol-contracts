@@ -31,21 +31,25 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
      * Emits a TwinCreated event if successful.
      *
      * Reverts if:
+     * - seller does not exist
      * - Not approved to transfer the seller's token
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
-     * @param _sellerOperator - placeholder for seller's operator address. TODO: Remove when Create seller is implemented.
      */
     function createTwin(
-        Twin memory _twin,
-        address _sellerOperator
+        Twin memory _twin
     )
     external
     override
     {
+        // get seller id, make sure it exists and store it to incoming struct
+        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+        require(exists, NOT_OPERATOR);
+        _twin.sellerId = sellerId;
+
         // Protocol must be approved to transfer seller’s tokens
         // Seller storage seller = ProtocolLib.getSeller(_twin.sellerId);
-        require(isProtocolApproved(_twin.tokenAddress, _sellerOperator, address(this)), NO_TRANSFER_APPROVED); // TODO replace _sellerOperator with seller.operator
+        require(isProtocolApproved(_twin.tokenAddress, msg.sender, address(this)), NO_TRANSFER_APPROVED);
 
         // Get the next twinId and increment the counter
         uint256 twinId = protocolCounters().nextTwinId++;

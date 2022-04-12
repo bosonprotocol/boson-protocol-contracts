@@ -36,10 +36,13 @@ exports.RevertReasons = {
   NOT_ADMIN: "Not seller's admin",
 
   // Twin related
+  NO_SUCH_TWIN: "No such twin",
   NO_TRANSFER_APPROVED: "No transfer approved",
   UNSUPPORTED_TOKEN: "Unsupported token",
   TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE: "Twin already exists in the same bundle",
 
   // Bundle related
+  NO_SUCH_BUNDLE: "No such bundle",
+  TWIN_NOT_IN_BUNDLE: "Twin not part of the bundle",
   TOO_MANY_TWINS: "Exceeded maximum twins in a single transaction",
 };
