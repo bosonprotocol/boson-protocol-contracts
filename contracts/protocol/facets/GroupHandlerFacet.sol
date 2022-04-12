@@ -29,7 +29,8 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
      * Emits a GroupCreated event if successful.
      *
      * Reverts if:
-     * 
+     *
+     * - caller is not an operator 
      * - any of offers belongs to different seller
      * - any of offers does not exist
      * - offer exists in a different group
@@ -45,7 +46,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
     {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
-        require(exists, NO_SUCH_SELLER);
+        require(exists, NOT_OPERATOR);
         _group.sellerId = sellerId;
 
         // limit maximum number of offers to avoid running into block gas limit in a loop

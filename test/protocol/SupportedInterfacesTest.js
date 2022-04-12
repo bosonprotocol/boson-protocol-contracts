@@ -79,6 +79,12 @@ describe("SupportedInterfaces", function () {
         const actual = await supportedInterfaces.getIBosonBundleHandler();
         assert.equal(actual, expected);
       });
+
+      it("getIBosonComboHandler() should return expected id", async function () {
+        const expected = InterfaceIds.IBosonComboHandler;
+        const actual = await supportedInterfaces.getIBosonComboHandler();
+        assert.equal(actual, expected);
+      });
     });
 
     context("👉 Protocol Clients", async function () {

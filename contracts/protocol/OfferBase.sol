@@ -14,7 +14,7 @@ abstract contract OfferBase is ProtocolBase {
      * @dev Internal helper to create offer, which can be reused between creatOffer and createBatchOffer
      *
      * Reverts if:
-     * - seller does not exist
+     * - Caller is not an operator
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
      * - Buyer cancel penalty is greater than price
@@ -26,7 +26,7 @@ abstract contract OfferBase is ProtocolBase {
         // get seller id, make sure it exists and store it to incoming struct
         bool exists;
         (exists, sellerId) = getSellerIdByOperator(msg.sender);
-        require(exists, NO_SUCH_SELLER);
+        require(exists, NOT_OPERATOR);
         _offer.sellerId = sellerId;
 
         // Get the next offerId and increment the counter

@@ -22,7 +22,7 @@ interface IBosonOfferHandler {
      * Emits an OfferCreated event if successful.
      *
      * Reverts if:
-     * - seller does not exist
+     * - Caller is not an operator
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
      * - Buyer cancel penalty is greater than price
@@ -38,7 +38,7 @@ interface IBosonOfferHandler {
      * Emits an OfferCreated event for every offer if successful.
      *
      * Reverts if, for any offer:
-     * - seller does not exist
+     * - Caller is not an operator
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
      * - Buyer cancel penalty is greater than price
@@ -56,7 +56,7 @@ interface IBosonOfferHandler {
      * Reverts if:
      * - Offer does not exist
      * - Offer is not updateable, i.e. is voided or some exchanges exist
-     * - Caller is not the seller
+     * - Caller is not the operator of the offer
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
      * - Buyer cancel penalty is greater than price
