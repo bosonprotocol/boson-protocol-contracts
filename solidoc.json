@@ -1,0 +1,7 @@
+{
+  "pathToRoot": "./",
+  "outputPath": "./contract_docs",
+  "noCompilation": true,
+  "compiler": "truffle compile",
+  "ignoreFiles": [ "BosonToken.json", "Foreign721.json", "Foreign1155.json", "Test1Facet.json", "Test2Facet.json", "Test3Facet.json", "TestFacetLib.json", "Test2FacetUpgrade.json" ]
+}
