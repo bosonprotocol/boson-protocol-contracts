@@ -10,6 +10,7 @@ import "./IBosonOfferHandler.sol";
 import "./IBosonTwinHandler.sol";
 import "./IBosonAccountHandler.sol";
 import "./IBosonGroupHandler.sol";
+import "./IBosonComboHandler.sol";
 import "./IBosonVoucher.sol";
 import "./IBosonClient.sol";
 import "./IDiamondCut.sol";
@@ -63,6 +64,10 @@ contract SupportedInterfaces {
 
     function getIBosonAccountHandler() public pure returns (bytes4 id) {
         id = type(IBosonAccountHandler).interfaceId;
+    }
+
+    function getIBosonComboHandler() public pure returns (bytes4 id) {
+        id = type(IBosonComboHandler).interfaceId;
     }
 
     function getIBosonVoucher() public pure returns (bytes4 id) {

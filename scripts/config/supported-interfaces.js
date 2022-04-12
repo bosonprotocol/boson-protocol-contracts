@@ -15,6 +15,7 @@ const interfaces = [
   "IBosonOfferHandler",
   "IBosonTwinHandler",
   "IBosonAccountHandler",
+  "IBosonComboHandler",
   "IBosonClient",
   "IDiamondCut",
   "IDiamondLoupe",
