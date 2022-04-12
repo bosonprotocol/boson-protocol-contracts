@@ -8,7 +8,7 @@ import "../domain/BosonTypes.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xf4618e1c
+ * The ERC-165 identifier for this interface is: 0xb14c537a
  */
 interface IBosonExchangeHandler {
     /// Events
@@ -53,4 +53,13 @@ interface IBosonExchangeHandler {
      * @return state - the exchange state. See {BosonTypes.ExchangeStates}
      */
     function getExchangeState(uint256 _exchangeId) external view returns (bool exists, BosonTypes.ExchangeState state);
+
+    /**
+     * @notice Gets the Id that will be assigned to the next exchange.
+     *
+     *  Does not increment the counter.
+     *
+     * @return nextExchangeId - the next exchange Id
+     */
+    function getNextExchangeId() external view returns (uint256 nextExchangeId);
 }

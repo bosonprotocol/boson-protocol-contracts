@@ -143,4 +143,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         if (exists) state = exchange.state;
     }
 
+    /**
+     * @notice Gets the Id that will be assigned to the next exchange.
+     *
+     *  Does not increment the counter.
+     *
+     * @return nextExchangeId - the next exchange Id
+     */
+    function getNextExchangeId() external view returns (uint256 nextExchangeId) {
+        nextExchangeId = protocolCounters().nextExchangeId;
+    }
+
 }
