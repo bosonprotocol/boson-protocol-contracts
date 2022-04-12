@@ -66,7 +66,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
             getValidOffer(_bundle.offerIds[i]);
 
             (bool bundleByOfferExists, ) = getBundleIdByOffer(_bundle.offerIds[i]);
-            require(!bundleByOfferExists, OFFER_MUST_BE_UNIQUE);
+            require(!bundleByOfferExists, BUNDLE_OFFER_MUST_BE_UNIQUE);
 
             // Add to bundleIdByOffer mapping
             protocolStorage().bundleIdByOffer[_bundle.offerIds[i]] = bundleId;
@@ -339,7 +339,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
 
             // Offer should not belong to another bundle already
             (bool exist, ) = getBundleIdByOffer(offerId);
-            require(!exist, OFFER_MUST_BE_UNIQUE);
+            require(!exist, BUNDLE_OFFER_MUST_BE_UNIQUE);
 
             // add to bundleIdByOffer mapping
             protocolStorage().bundleIdByOffer[offerId] = _bundleId;

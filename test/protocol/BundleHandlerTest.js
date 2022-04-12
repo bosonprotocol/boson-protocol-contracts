@@ -435,7 +435,7 @@ describe("IBosonBundleHandler", function () {
 
         // Attempt to create a bundle, expecting revert
         await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
-          RevertReasons.OFFER_MUST_BE_UNIQUE
+          RevertReasons.BUNDLE_OFFER_MUST_BE_UNIQUE
         );
       });
 
@@ -445,7 +445,7 @@ describe("IBosonBundleHandler", function () {
 
         // Attempt to create a bundle, expecting revert
         await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
-          RevertReasons.OFFER_MUST_BE_UNIQUE
+          RevertReasons.BUNDLE_OFFER_MUST_BE_UNIQUE
         );
       });
 
@@ -967,21 +967,41 @@ describe("IBosonBundleHandler", function () {
       });
 
       it("should add offers to correct bundle", async function () {
+        // Create a new bundle of id 2
+        let expectedNewBundleId = "2";
+        const newBundle = bundle.clone();
+        newBundle.id = expectedNewBundleId;
+        newBundle.offerIds = ["4"];
+        const tx = await bundleHandler.connect(operator).createBundle(newBundle); // creates new bundle of id 2
+        const txReceipt = await tx.wait();
+        const event = getEvent(txReceipt, bundleHandler, "BundleCreated");
+        assert.equal(event.bundleId.toString(), expectedNewBundleId, "Bundle Id is not 2"); // verify that bundle id is 2
+
         let bundleIdToAddOffer = bundle.id; // Bundle in which we want we want to add new offer Ids.
         offerIdsToAdd = ["1"]; // The Offer id which we want to add.
 
-        // Get the bundle as a struct, expect that offerId does not exist.
+        // Bundle with id 1 does not have this offer id.
         [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToAddOffer);
         let returnedBundle = Bundle.fromStruct(bundleStruct);
         expect(returnedBundle.offerIds.includes(offerIdsToAdd[0])).is.false;
 
-        // Adding the offers to same bundle.
+        // Bundle with id 2 does not have this offer id.
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(newBundle.id);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.offerIds.includes(offerIdsToAdd[0])).is.false;
+
+        // Adding the offers to bundle of id 1.
         await bundleHandler.connect(operator).addOffersToBundle(bundleIdToAddOffer, offerIdsToAdd);
 
-        // Get the bundle as a struct, expect that offerId now exists.
+        // Bundle with id 1 now has this offer id.
         [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToAddOffer);
         returnedBundle = Bundle.fromStruct(bundleStruct);
         expect(returnedBundle.offerIds.includes(offerIdsToAdd[0])).is.true;
+
+        // Bundle with id 2 does not have this offer id.
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(newBundle.id);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.offerIds.includes(offerIdsToAdd[0])).is.false;
       });
 
       it("should update state", async function () {
@@ -1072,7 +1092,7 @@ describe("IBosonBundleHandler", function () {
 
           // Attempt to add offers to a bundle, expecting revert
           await expect(bundleHandler.connect(operator).addOffersToBundle(bundle.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.OFFER_MUST_BE_UNIQUE
+            RevertReasons.BUNDLE_OFFER_MUST_BE_UNIQUE
           );
         });
 
@@ -1082,7 +1102,7 @@ describe("IBosonBundleHandler", function () {
 
           // Attempt to add offers to a bundle, expecting revert
           await expect(bundleHandler.connect(operator).addOffersToBundle(bundle.id, offerIdsToAdd)).to.revertedWith(
-            RevertReasons.OFFER_MUST_BE_UNIQUE
+            RevertReasons.BUNDLE_OFFER_MUST_BE_UNIQUE
           );
         });
 
@@ -1108,13 +1128,13 @@ describe("IBosonBundleHandler", function () {
 
     context("👉 removeOffersFromBundle()", async function () {
       beforeEach(async function () {
-        bundle.offerIds = ["1", "2", "3", "4", "5"];
+        bundle.offerIds = ["1", "2", "3", "4"];
         // Create a bundle
         await bundleHandler.connect(operator).createBundle(bundle);
 
         // set the new fields
         offerIdsToRemove = ["1", "4"];
-        bundle.offerIds = ["5", "2", "3"]; // ["1","2","3","4","5"] -> ["5","2","3","4"] -> ["5","2","3"]
+        bundle.offerIds = ["3", "2"]; // ["1","2","3","4"] -> ["4","2","3"] -> ["3","2"]
 
         bundleStruct = bundle.toStruct();
       });
@@ -1136,19 +1156,34 @@ describe("IBosonBundleHandler", function () {
       });
 
       it("should remove offers from correct bundle", async function () {
+        // Create a new bundle of id 2
+        let expectedNewBundleId = "2";
+        const newBundle = bundle.clone();
+        newBundle.id = expectedNewBundleId;
+        newBundle.offerIds = ["5"];
+        const tx = await bundleHandler.connect(operator).createBundle(newBundle); // creates new bundle of id 2
+        const txReceipt = await tx.wait();
+        const event = getEvent(txReceipt, bundleHandler, "BundleCreated");
+        assert.equal(event.bundleId.toString(), expectedNewBundleId, "Bundle Id is not 2"); // verify that bundle id is 2
+
         let bundleIdToRemoveOffer = bundle.id; // Bundle in which we want we want to add new offer Ids.
         offerIdsToRemove = ["2"]; // The Offer id which we want to add.
 
-        // Get the bundle as a struct, expect that offerId does not exist.
+        // Expect that the Bundle with id 1 has this offer.
         [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToRemoveOffer);
         let returnedBundle = Bundle.fromStruct(bundleStruct);
         expect(returnedBundle.offerIds.includes(offerIdsToRemove[0])).is.true;
 
-        // Adding the offers to same bundle.
+        // Expect that the Bundle with id 2 does not have this offer.
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(newBundle.id);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.offerIds.includes(offerIdsToRemove[0])).is.false;
+
+        // Removing the offer from the bundle of id 1.
         await bundleHandler.connect(operator).removeOffersFromBundle(bundleIdToRemoveOffer, offerIdsToRemove);
 
-        // Get the bundle as a struct, expect that offerId now exists.
-        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToRemoveOffer);
+        // Expect that the bundle with id 2 still does not have this offer.
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(newBundle.id);
         returnedBundle = Bundle.fromStruct(bundleStruct);
         expect(returnedBundle.offerIds.includes(offerIdsToRemove[0])).is.false;
       });
