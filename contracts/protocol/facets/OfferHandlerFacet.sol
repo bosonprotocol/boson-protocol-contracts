@@ -52,6 +52,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * Emits an OfferCreated event for every offer if successful.
      *
      * Reverts if, for any offer:
+     * - Number of offers exceeds maximum allowed number per batch
      * - seller does not exist
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
@@ -234,6 +235,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * No further vouchers can be issued against a voided offer.
      *
      * Reverts if, for any offer:
+     * - Number of offers exceeds maximum allowed number per batch
      * - Offer ID is invalid
      * - Caller is not the operator of the offer
      * - Offer has already been voided
