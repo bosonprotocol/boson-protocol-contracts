@@ -8,7 +8,7 @@ import "../domain/BosonTypes.sol";
  *
  * @notice Manages creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xaf7dd438
+ * The ERC-165 identifier for this interface is: 0x65defc13
  */
 interface IBosonOfferHandler {
     /// Events
@@ -31,6 +31,23 @@ interface IBosonOfferHandler {
      * @param _offer - the fully populated struct with offer id set to 0x0
      */
     function createOffer(BosonTypes.Offer memory _offer) external;
+
+    /**
+     * @notice Creates a batch of offers.
+     *
+     * Emits an OfferCreated event for every offer if successful.
+     *
+     * Reverts if, for any offer:
+     * - Number of offers exceeds maximum allowed number per batch
+     * - seller does not exist
+     * - Valid from date is greater than valid until date
+     * - Valid until date is not in the future
+     * - Buyer cancel penalty is greater than price
+     * - Voided is set to true
+     *
+     * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
+     */
+    function createOfferBatch(BosonTypes.Offer[] calldata _offers) external;
 
     /**
      * @notice Updates an existing offer.
@@ -67,6 +84,25 @@ interface IBosonOfferHandler {
      * @param _offerId - the id of the offer to check
      */
     function voidOffer(uint256 _offerId) external;
+
+    /**
+     * @notice  Voids a batch of offers.
+     *
+     * Emits an OfferVoided event for every offer if successful.
+     *
+     * Note:
+     * Existing exchanges are not affected.
+     * No further vouchers can be issued against a voided offer.
+     *
+     * Reverts if, for any offer:
+     * - Number of offers exceeds maximum allowed number per batch
+     * - Offer ID is invalid
+     * - Caller is not the operator of the offer
+     * - Offer has already been voided
+     *
+     * @param _offerIds - the id of the offer to check
+     */
+    function voidOfferBatch(uint256[] calldata _offerIds) external;
 
     /**
      * @notice Sets new valid until date

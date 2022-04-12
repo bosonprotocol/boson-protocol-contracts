@@ -72,6 +72,7 @@ describe("IBosonOfferHandler", function () {
       "100",
       "100",
       "100",
+      "100",
     ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
@@ -98,7 +99,7 @@ describe("IBosonOfferHandler", function () {
     });
   });
 
-  // All supported methods
+  // All supported methods - single offer
   context("📋 Offer Handler Methods", async function () {
     beforeEach(async function () {
       // create a seller
@@ -403,16 +404,10 @@ describe("IBosonOfferHandler", function () {
         // call getOffer with offerId to check the seller id in the event
         [, offerStruct] = await offerHandler.getOffer(id);
 
-        expect(offerStruct.voided).is.false;
-
         // Void the offer, testing for the event
         await expect(offerHandler.connect(operator).voidOffer(id))
           .to.emit(offerHandler, "OfferVoided")
           .withArgs(id, offerStruct.sellerId);
-
-        // Voided field should be updated
-        [, offerStruct] = await offerHandler.getOffer(id);
-        expect(offerStruct.voided).is.true;
       });
 
       it("should update state", async function () {
@@ -763,6 +758,306 @@ describe("IBosonOfferHandler", function () {
         [, updateable] = await offerHandler.connect(rando).isOfferUpdateable(id);
         // Validate
         expect(typeof updateable === "boolean").to.be.true;
+      });
+    });
+  });
+
+  // All supported methods - batch offers
+  context("📋 Offer Handler Methods - BATCH", async function () {
+    let offers = [];
+    let offerStructs = [];
+
+    beforeEach(async function () {
+      // create a seller
+      // Required constructor params
+      id = "1"; // argument sent to contract for createSeller will be ignored
+
+      active = true;
+
+      // Create a valid seller, then set fields in tests directly
+      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
+      expect(seller.isValid()).is.true;
+
+      await accountHandler.connect(admin).createSeller(seller);
+
+      // Some periods in milliseconds
+      oneWeek = 604800 * 1000; //  7 days in milliseconds
+      oneMonth = 2678400 * 1000; // 31 days in milliseconds
+
+      // create 5 offers
+      offers = [];
+      offerStructs = [];
+      for (let i = 0; i < 5; i++) {
+        // Required constructor params
+        id = `${i + 1}`;
+        sellerId = "1"; //
+        price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
+        sellerDeposit = price = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
+        buyerCancelPenalty = price = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
+        quantityAvailable = `${i * 2}`;
+        validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
+        validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
+        redeemableFromDate = ethers.BigNumber.from(validUntilDate + oneWeek).toString();
+        fulfillmentPeriodDuration = oneMonth.toString();
+        voucherValidDuration = oneMonth.toString();
+        exchangeToken = ethers.constants.AddressZero.toString();
+        offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
+        metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
+        voided = false;
+
+        // Create a valid offer, then set fields in tests directly
+        offer = new Offer(
+          id,
+          sellerId,
+          price,
+          sellerDeposit,
+          buyerCancelPenalty,
+          quantityAvailable,
+          validFromDate,
+          validUntilDate,
+          redeemableFromDate,
+          fulfillmentPeriodDuration,
+          voucherValidDuration,
+          exchangeToken,
+          metadataUri,
+          offerChecksum,
+          voided
+        );
+        expect(offer.isValid()).is.true;
+
+        offers.push(offer);
+        offerStructs.push(offer.toStruct());
+      }
+    });
+
+    context("👉 createOfferBatch()", async function () {
+      it("should emit an OfferCreated event for all offers", async function () {
+        // Create an offer, testing for the event
+        await expect(offerHandler.connect(operator).createOfferBatch(offers))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs("1", offer.sellerId, offerStructs[0])
+          .withArgs("2", offer.sellerId, offerStructs[1])
+          .withArgs("3", offer.sellerId, offerStructs[2])
+          .withArgs("4", offer.sellerId, offerStructs[3])
+          .withArgs("5", offer.sellerId, offerStructs[4]);
+      });
+
+      it("should update state", async function () {
+        // Create an offer
+        await offerHandler.connect(operator).createOfferBatch(offers);
+
+        for (let i = 0; i < 5; i++) {
+          // Get the offer as a struct
+          [, offerStruct] = await offerHandler.connect(rando).getOffer(`${i + 1}`);
+
+          // Parse into entity
+          let returnedOffer = Offer.fromStruct(offerStruct);
+
+          // Returned values should match the input in createOffer
+          for ([key, value] of Object.entries(offers[i])) {
+            expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+          }
+        }
+      });
+
+      it("should ignore any provided id and assign the next available", async function () {
+        offers[0].id = "444";
+        offers[1].id = "555";
+        offers[2].id = "666";
+        offers[3].id = "777";
+        offers[4].id = "888";
+
+        // Create an offer, testing for the event
+        await expect(offerHandler.connect(operator).createOfferBatch(offers))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs("1", offer.sellerId, offerStructs[0])
+          .withArgs("2", offer.sellerId, offerStructs[1])
+          .withArgs("3", offer.sellerId, offerStructs[2])
+          .withArgs("4", offer.sellerId, offerStructs[3])
+          .withArgs("5", offer.sellerId, offerStructs[4]);
+
+        for (let i = 0; i < 5; i++) {
+          // wrong offer id should not exist
+          [exists] = await offerHandler.connect(rando).getOffer(offers[i].id);
+          expect(exists).to.be.false;
+
+          // next offer id should exist
+          [exists] = await offerHandler.connect(rando).getOffer(`${i + 1}`);
+          expect(exists).to.be.true;
+        }
+      });
+
+      it("should ignore any provided seller and assign seller id of msg.sender", async function () {
+        // set some other sellerId
+        offers[0].sellerId = "123";
+        offers[1].sellerId = "234";
+        offers[2].sellerId = "345";
+        offers[3].sellerId = "456";
+        offers[4].sellerId = "567";
+
+        // Create an offer, testing for the event
+        await expect(offerHandler.connect(operator).createOfferBatch(offers))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs("1", sellerId, offerStructs[0])
+          .withArgs("2", sellerId, offerStructs[1])
+          .withArgs("3", sellerId, offerStructs[2])
+          .withArgs("4", sellerId, offerStructs[3])
+          .withArgs("5", sellerId, offerStructs[4]);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Caller not operator of any seller", async function () {
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(rando).createOfferBatch(offers)).to.revertedWith(
+            RevertReasons.NO_SUCH_SELLER
+          );
+        });
+
+        it("Valid from date is greater than valid until date in some offer", async function () {
+          // Reverse the from and until dates
+          offers[4].validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
+          offers[4].validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
+            RevertReasons.OFFER_PERIOD_INVALID
+          );
+        });
+
+        it("Valid until date is not in the future in some offer", async function () {
+          // Set until date in the past
+          offers[3].validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
+            RevertReasons.OFFER_PERIOD_INVALID
+          );
+        });
+
+        it("Buyer cancel penalty is less than item price in some offer", async function () {
+          // Set buyer cancel penalty higher than offer price
+          offers[0].buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
+            RevertReasons.OFFER_PENALTY_INVALID
+          );
+        });
+
+        it("No offer cannot be voided at the time of the creation", async function () {
+          // Set voided flag to true
+          offers[1].voided = true;
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
+            RevertReasons.OFFER_MUST_BE_ACTIVE
+          );
+        });
+      });
+    });
+
+    context("👉 voidOfferBatch()", async function () {
+      let offersToVoid;
+      beforeEach(async function () {
+        // Create an offer
+        await offerHandler.connect(operator).createOfferBatch(offers);
+
+        // // id of the current offer and increment nextOfferId
+        // id = nextOfferId++;
+
+        offersToVoid = ["1", "3", "5"];
+      });
+
+      it("should emit an OfferVoided event", async function () {
+        // call getOffer with offerId to check the seller id in the event
+        [, offerStruct] = await offerHandler.getOffer(offersToVoid[0]);
+
+        // Void offers, testing for the event
+        await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid))
+          .to.emit(offerHandler, "OfferVoided")
+          .withArgs(offersToVoid[0], offerStruct.sellerId)
+          .withArgs(offersToVoid[1], offerStruct.sellerId)
+          .withArgs(offersToVoid[2], offerStruct.sellerId);
+      });
+
+      it("should update state", async function () {
+        // Voided field should be initially false
+        for (const id of offersToVoid) {
+          [, offerStruct] = await offerHandler.getOffer(id);
+          expect(offerStruct.voided).is.false;
+
+          // Get the voided status
+          [, voided] = await offerHandler.isOfferVoided(id);
+          expect(voided).to.be.false;
+        }
+
+        // Void offers
+        await offerHandler.connect(operator).voidOfferBatch(offersToVoid);
+
+        for (const id of offersToVoid) {
+          // Voided field should be updated
+          [, offerStruct] = await offerHandler.getOffer(id);
+          expect(offerStruct.voided).is.true;
+
+          // Get the voided status
+          [, voided] = await offerHandler.isOfferVoided(id);
+          expect(voided).to.be.true;
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Offer does not exist", async function () {
+          // Set invalid id
+          offersToVoid = ["1", "432", "2"];
+
+          // Attempt to void the offer, expecting revert
+          await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid)).to.revertedWith(
+            RevertReasons.NO_SUCH_OFFER
+          );
+
+          // Set invalid id
+          offersToVoid = ["1", "2", "0"];
+
+          // Attempt to void the offer, expecting revert
+          await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid)).to.revertedWith(
+            RevertReasons.NO_SUCH_OFFER
+          );
+        });
+
+        it("Caller is not seller", async function () {
+          // caller is not the operator of any seller
+          // Attempt to update the offer, expecting revert
+          await expect(offerHandler.connect(rando).voidOfferBatch(offersToVoid)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+
+          // caller is an operator of another seller
+          seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, active);
+          await accountHandler.connect(rando).createSeller(seller);
+
+          // Attempt to update the offer, expecting revert
+          await expect(offerHandler.connect(rando).voidOfferBatch(offersToVoid)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+        });
+
+        it("Offer already voided", async function () {
+          // Void the offer first
+          await offerHandler.connect(operator).voidOffer("1");
+
+          // Attempt to void the offer again, expecting revert
+          await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid)).to.revertedWith(
+            RevertReasons.OFFER_HAS_BEEN_VOIDED
+          );
+
+          // try to void the same offer twice
+          offersToVoid = ["1", "4", "1"];
+
+          // Attempt to void the offer again, expecting revert
+          await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid)).to.revertedWith(
+            RevertReasons.OFFER_HAS_BEEN_VOIDED
+          );
+        });
       });
     });
   });

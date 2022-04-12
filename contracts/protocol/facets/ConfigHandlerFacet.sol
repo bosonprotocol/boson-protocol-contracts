@@ -29,7 +29,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         uint16 _protocolFeePercentage,
         uint16 _maxOffersPerGroup,
         uint16 _maxTwinsPerBundle,
-        uint16 _maxOffersPerBundle
+        uint16 _maxOffersPerBundle,
+        uint16 _maxOffersPerBatch
     )
     public
     onlyUnInitialized(type(IBosonConfigHandler).interfaceId)
@@ -46,7 +47,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         ps.maxOffersPerGroup = _maxOffersPerGroup;
         ps.maxTwinsPerBundle = _maxTwinsPerBundle;
         ps.maxOffersPerBundle = _maxOffersPerBundle;
-
+        ps.maxOffersPerBatch = _maxOffersPerBatch;
 
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -263,5 +264,33 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     returns (uint16)
     {
         return protocolStorage().maxOffersPerBundle;
+    }
+
+     /**
+     * @notice Sets the maximum numbers of offers that can be created in a single transaction
+     *
+     * Emits a MaxOffersPerBatchChanged event.
+     *
+     * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Offer[]}
+     */
+    function setMaxOffersPerBatch(uint16 _maxOffersPerBatch)
+    external
+    override
+    onlyRole(ADMIN)
+    {
+        protocolStorage().maxOffersPerBatch = _maxOffersPerBatch;
+        emit MaxOffersPerBatchChanged(_maxOffersPerBatch, msg.sender);
+    }
+
+    /**
+     * @notice Get the maximum offers per batch
+     */
+    function getMaxOffersPerBatch()
+    external
+    override
+    view
+    returns (uint16)
+    {
+        return protocolStorage().maxOffersPerBatch;
     }
 }

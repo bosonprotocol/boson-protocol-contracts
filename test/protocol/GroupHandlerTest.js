@@ -83,6 +83,7 @@ describe("IBosonGroupHandler", function () {
       "100",
       "100",
       "100",
+      "100",
     ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 

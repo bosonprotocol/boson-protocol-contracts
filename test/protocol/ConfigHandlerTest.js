@@ -15,7 +15,7 @@ describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
   let accounts, deployer, rando, token, treasury, voucher;
-  let protocolFee, maxOffersPerGroup, maxTwinsPerBundle, maxOffersPerBundle;
+  let protocolFee, maxOffersPerGroup, maxTwinsPerBundle, maxOffersPerBundle, maxOffersPerBatch;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
 
   before(async function () {
@@ -43,6 +43,7 @@ describe("IBosonConfigHandler", function () {
     maxOffersPerGroup = 100;
     maxTwinsPerBundle = 100;
     maxOffersPerBundle = 100;
+    maxOffersPerBatch = 100;
 
     const protocolConfig = [
       token.address,
@@ -52,6 +53,7 @@ describe("IBosonConfigHandler", function () {
       maxOffersPerGroup,
       maxTwinsPerBundle,
       maxOffersPerBundle,
+      maxOffersPerBatch,
     ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
@@ -167,6 +169,37 @@ describe("IBosonConfigHandler", function () {
         });
       });
     });
+
+    context("👉 setMaxOffersPerBatch()", async function () {
+      beforeEach(async function () {
+        // set new value for max offers per buatch
+        maxOffersPerBatch = 135;
+      });
+
+      it("should emit a MaxOffersPerBatchChanged event", async function () {
+        // Set new max offer per batch, testing for the event
+        await expect(configHandler.connect(deployer).setMaxOffersPerBatch(maxOffersPerBatch))
+          .to.emit(configHandler, "MaxOffersPerBatchChanged")
+          .withArgs(maxOffersPerBatch, deployer.address);
+      });
+
+      it("should update state", async function () {
+        // Set new max offer per batch,
+        await configHandler.connect(deployer).setMaxOffersPerBatch(maxOffersPerBatch);
+
+        // Verify that new value is stored
+        expect(await configHandler.connect(rando).getMaxOffersPerBatch()).to.equal(maxOffersPerBatch);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("caller is not the admin", async function () {
+          // Attempt to set new max offer per batch, expecting revert
+          await expect(configHandler.connect(rando).setMaxOffersPerBatch(maxOffersPerBatch)).to.revertedWith(
+            RevertReasons.ACCESS_DENIED
+          );
+        });
+      });
+    });
   });
 
   context("📋 Getters", async function () {
@@ -186,15 +219,19 @@ describe("IBosonConfigHandler", function () {
       );
       expect(await configHandler.connect(rando).getMaxOffersPerGroup()).to.equal(
         maxOffersPerGroup,
-        "Invalid max groups per offer"
+        "Invalid max offers per group"
       );
       expect(await configHandler.connect(rando).getMaxTwinsPerBundle()).to.equal(
         maxTwinsPerBundle,
-        "Invalid max bundles per twin"
+        "Invalid max twins per bundle"
       );
       expect(await configHandler.connect(rando).getMaxOffersPerBundle()).to.equal(
         maxOffersPerBundle,
-        "Invalid max bundles per offer"
+        "Invalid max offers per bundle"
+      );
+      expect(await configHandler.connect(rando).getMaxOffersPerBatch()).to.equal(
+        maxOffersPerBatch,
+        "Invalid max offers per batch"
       );
     });
   });

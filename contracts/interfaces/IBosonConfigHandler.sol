@@ -17,6 +17,7 @@ interface IBosonConfigHandler {
     event TreasuryAddressChanged(address indexed treasuryAddress, address indexed changedBy);
     event ProtocolFeePercentageChanged(uint16 feePercentage, address indexed changedBy);
     event MaxOffersPerGroupChanged(uint16 maxOffersPerGroup, address indexed changedBy);
+    event MaxOffersPerBatchChanged(uint16 maxOffersPerBatch, address indexed changedBy);
     event MaxTwinsPerBundleChanged(uint16 maxTwinsPerBundle, address indexed changedBy);
     event MaxOffersPerBundleChanged(uint16 maxOffersPerBundle, address indexed changedBy);
 
@@ -80,6 +81,20 @@ interface IBosonConfigHandler {
     function getProtocolFeePercentage() external view returns (uint16);
 
     /**
+     * @notice Sets the maximum number of offers that can be created in a single transaction
+     *
+     * Emits a MaxOffersPerBatchChanged event.
+     *
+     * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Offer[]}
+     */
+    function setMaxOffersPerBatch(uint16 _maxOffersPerBatch) external;
+
+    /**
+     * @notice Get the maximum offers per batch
+     */
+    function getMaxOffersPerBatch() external view returns (uint16);
+
+    /**
      * @notice Sets the maximum numbers of offers that can be added to a group in a single transaction
      *
      * Emits a MaxOffersPerGroupChanged event.
@@ -108,11 +123,6 @@ interface IBosonConfigHandler {
     function getMaxTwinsPerBundle() external view returns (uint16);
 
     /**
-     * @notice Get the maximum offers per bundle
-     */
-    function getMaxOffersPerBundle() external view returns (uint16);
-
-    /**
      * @notice Sets the maximum numbers of offer that can be added to a bundle in a single transaction
      *
      * Emits a MaxOffersPerBundleChanged event.
@@ -120,4 +130,9 @@ interface IBosonConfigHandler {
      * @param _maxOffersPerBundle - the maximum length of {BosonTypes.Bundle.offerIds}
      */
     function setMaxOffersPerBundle(uint16 _maxOffersPerBundle) external;
+
+    /**
+     * @notice Get the maximum offers per bundle
+     */
+    function getMaxOffersPerBundle() external view returns (uint16);
 }

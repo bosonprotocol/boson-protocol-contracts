@@ -38,10 +38,61 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      */
     function createOffer(
-        Offer memory _offer
+        Offer calldata _offer
     )
     external
     override
+    {        
+        createOfferInternal(_offer);
+    }
+
+    /**
+     * @notice Creates a batch of offers.
+     *
+     * Emits an OfferCreated event for every offer if successful.
+     *
+     * Reverts if, for any offer:
+     * - Number of offers exceeds maximum allowed number per batch
+     * - seller does not exist
+     * - Valid from date is greater than valid until date
+     * - Valid until date is not in the future
+     * - Buyer cancel penalty is greater than price
+     * - Voided is set to true
+     *
+     * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
+     */
+    function createOfferBatch(
+        Offer[] calldata _offers
+    )
+    external
+    override
+    {
+        // limit maximum number of offers to avoid running into block gas limit in a loop
+        require(_offers.length <= protocolStorage().maxOffersPerBatch, TOO_MANY_OFFERS);
+        for (uint i = 0; i < _offers.length; i++) { 
+            createOfferInternal(_offers[i]);
+        }
+    }
+
+
+    /**
+     * @dev Internal helper to create offer, which can be reused between creatOffer and createBatchOffer
+     *
+     * Emits an OfferCreated event if successful.
+     *
+     * Reverts if:
+     * - seller does not exist
+     * - Valid from date is greater than valid until date
+     * - Valid until date is not in the future
+     * - Buyer cancel penalty is greater than price
+     * - Voided is set to true
+     *
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     */
+    function createOfferInternal(
+        Offer memory _offer
+    )
+    internal
     {        
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
@@ -160,7 +211,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
      * @param _offerId - the id of the offer to check
      */
     function voidOffer(uint256 _offerId)
-    external
+    public
     override
     {
         // Get offer, make sure the caller is the operator
@@ -171,6 +222,35 @@ contract OfferHandlerFacet is IBosonOfferHandler, ProtocolBase {
 
         // Notify listeners of state change
         emit OfferVoided(_offerId, offer.sellerId);
+
+    }
+
+    /**
+     * @notice  Voids a batch of offers.
+     *
+     * Emits an OfferVoided event for every offer if successful.
+     *
+     * Note:
+     * Existing exchanges are not affected.
+     * No further vouchers can be issued against a voided offer.
+     *
+     * Reverts if, for any offer:
+     * - Number of offers exceeds maximum allowed number per batch
+     * - Offer ID is invalid
+     * - Caller is not the operator of the offer
+     * - Offer has already been voided
+     *
+     * @param _offerIds - the id of the offer to check
+     */
+    function voidOfferBatch(uint256[] calldata _offerIds)
+    external
+    override
+    {
+        // limit maximum number of offers to avoid running into block gas limit in a loop
+        require(_offerIds.length <= protocolStorage().maxOffersPerBatch, TOO_MANY_OFFERS);
+        for (uint i = 0; i < _offerIds.length; i++) { 
+            voidOffer(_offerIds[i]);
+        }
 
     }
 
