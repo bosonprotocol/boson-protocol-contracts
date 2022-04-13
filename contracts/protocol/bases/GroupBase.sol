@@ -15,6 +15,7 @@ contract GroupBase is ProtocolBase {
      *
      * Reverts if:
      * 
+     * - Caller is not an operator
      * - any of offers belongs to different seller
      * - any of offers does not exist
      * - offer exists in a different group
@@ -32,7 +33,7 @@ contract GroupBase is ProtocolBase {
         // get seller id, make sure it exists and store it to incoming struct
         bool exists;
         (exists, sellerId) = getSellerIdByOperator(msg.sender);
-        require(exists, NO_SUCH_SELLER);
+        require(exists, NOT_OPERATOR);
         
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_group.offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
