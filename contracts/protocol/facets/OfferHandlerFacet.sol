@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import { IBosonOfferHandler } from "../../interfaces/IBosonOfferHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
-import { OfferBase } from "../OfferBase.sol";
+import { OfferBase } from "../bases/OfferBase.sol";
 
 /**
  * @title OfferHandlerFacet

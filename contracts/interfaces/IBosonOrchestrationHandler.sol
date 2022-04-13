@@ -12,6 +12,7 @@ import "../domain/BosonTypes.sol";
  */
 interface IBosonOrchestrationHandler {
     /// Events
+    event SellerCreated(uint256 indexed sellerId, BosonTypes.Seller seller);
     event OfferCreated(uint256 indexed offerId, uint256 indexed sellerId, BosonTypes.Offer offer);
 
     /**

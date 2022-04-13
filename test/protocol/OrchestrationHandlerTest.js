@@ -19,7 +19,15 @@ describe("IBosonOrchestrationHandler", function () {
   // Common vars
   let InterfaceIds;
   let accounts, deployer, rando, operator, admin, clerk, treasury, other1, other2;
-  let erc165, protocolDiamond, accessController, accountHandler, offerHandler, orchestrationHandler, offerStruct, key, value;
+  let erc165,
+    protocolDiamond,
+    accessController,
+    accountHandler,
+    offerHandler,
+    orchestrationHandler,
+    offerStruct,
+    key,
+    value;
   let offer, nextOfferId, oneMonth, oneWeek, support, exists;
   let nextAccountId;
   let seller, sellerStruct, active;

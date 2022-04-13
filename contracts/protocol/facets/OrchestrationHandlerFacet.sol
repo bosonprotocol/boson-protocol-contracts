@@ -4,14 +4,15 @@ pragma solidity ^0.8.0;
 import { IBosonOrchestrationHandler } from "../../interfaces/IBosonOrchestrationHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/IBosonAccountHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
-import { OfferBase } from "../OfferBase.sol";
+import { AccountBase } from "../bases/AccountBase.sol";
+import { OfferBase } from "../bases/OfferBase.sol";
 
 /**
  * @title OrchestrationHandlerFacet
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  */
-contract OrchestrationHandlerFacet is OfferBase, IBosonOrchestrationHandler {
+contract OrchestrationHandlerFacet is AccountBase, OfferBase, IBosonOrchestrationHandler {
 
     /**
      * @notice Facet Initializer
@@ -38,19 +39,26 @@ contract OrchestrationHandlerFacet is OfferBase, IBosonOrchestrationHandler {
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      */
     function createSellerAndOffer(
-        Seller calldata _seller,
+        Seller memory _seller,
         Offer memory _offer
     )
     external
     
     {   
-        IBosonAccountHandler(address(this)).createSeller(_seller);    
+        // create seller and update structs values to represent true state
+        uint256 sellerId = createSellerInternal(_seller);
+        _seller.id = sellerId;
         
         // create offer and update structs values to represent true state
-        (uint256 offerId, uint256 sellerId) = createOfferInternal(_offer);
+        (uint256 offerId, uint256 offerSellerId) = createOfferInternal(_offer);
         _offer.id = offerId;
         _offer.sellerId = sellerId;
 
+        // Caller should be the operator, specified in seller
+        require(sellerId == offerSellerId, NOT_OPERATOR);
+
+        // Notify watchers of state change
+        emit SellerCreated(sellerId, _seller);
         emit OfferCreated(offerId, sellerId, _offer);
     }  
 }

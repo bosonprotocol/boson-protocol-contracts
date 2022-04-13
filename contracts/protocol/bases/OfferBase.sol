@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { ProtocolBase } from "./ProtocolBase.sol";
-import { ProtocolLib } from "./ProtocolLib.sol";
+import { ProtocolBase } from "./../ProtocolBase.sol";
+import { ProtocolLib } from "./../ProtocolLib.sol";
 
 /**
  * @title OfferBase
