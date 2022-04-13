@@ -13,6 +13,11 @@ import { ProtocolLib } from "../ProtocolLib.sol";
  */
 contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
 
+    enum BundleUpdateAttribute {
+        TWIN,
+        OFFER
+    }
+
     /**
      * @notice Facet Initializer
      */
@@ -275,7 +280,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
      * - bundle does not exist
      *
      * @param _bundleId  - the id of the bundle to be updated
-     * @param _ids - array of twin ids / offer ids to be removed to the bundle
+     * @param _ids - array of twin ids / offer ids to be added to / removed from the bundle.
      * @param _attribute attribute, one of {TWIN, OFFER}
      * @return sellerId  - the seller Id
      * @return bundle - the bundle details

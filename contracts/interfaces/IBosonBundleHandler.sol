@@ -15,11 +15,6 @@ interface IBosonBundleHandler {
     event BundleCreated(uint256 indexed bundleId, uint256 indexed sellerId, BosonTypes.Bundle bundle);
     event BundleUpdated(uint256 indexed bundleId, uint256 indexed sellerId, BosonTypes.Bundle bundle);
 
-    enum BundleUpdateAttribute {
-        TWIN,
-        OFFER
-    }
-
     /**
      * @notice Creates a bundle.
      *
