@@ -331,4 +331,31 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
         // Determine existence
         exists = (exchangeIds.length > 0);
     }
+
+    /**
+     * @notice Checks if exchanges for bundled offers exists.
+     *
+     * Reverts if:
+     * - caller is not the seller.
+     * - exchange Ids for an offer exists.
+     *
+     * @param _bundleId - the bundle Id.
+     */
+    function bundledOffersExchangeCheck(uint256 _bundleId) internal view {
+        // Get storage location for bundle
+        (, Bundle storage bundle) = fetchBundle(_bundleId);
+
+        // Caller's seller id must match bundle seller id
+        (, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+        require(sellerId == bundle.sellerId, NOT_OPERATOR);
+
+        // Get the offer Ids in the bundle
+        uint256[] memory offerIds = bundle.offerIds;
+        uint256 numberOfOfferIds = offerIds.length;
+
+        for (uint i = 0; i < numberOfOfferIds; i++) {
+            (bool exchangeIdsForOfferExists, ) = getExchangeIdsByOffer(offerIds[i]);
+            require(!exchangeIdsForOfferExists, EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS);
+        }
+    }
 }
