@@ -485,7 +485,6 @@ describe("IBosonTwinHandler", function () {
 
         assert.equal(event.twinId.toString(), nextTwinId, "Twin Id is incorrect");
         assert.equal(event.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
-        assert.equal(Twin.fromStruct(event.twin).toString(), twin.toString(), "Twin struct is incorrect");
 
         // Expect twin to be not found.
         [success] = await twinHandler.connect(rando).getTwin(twin.id);
