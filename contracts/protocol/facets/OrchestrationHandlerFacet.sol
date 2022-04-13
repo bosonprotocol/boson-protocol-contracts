@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import { IBosonOrchestrationHandler } from "../../interfaces/IBosonOrchestrationHandler.sol";
-import { IBosonAccountHandler } from "../../interfaces/IBosonAccountHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
@@ -30,11 +29,16 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, IBosonOrchestratio
      * Emits a SellerCreated and an OfferCreated event if successful.
      *
      * Reverts if:
-     * - seller does not exist
-     * - Valid from date is greater than valid until date
-     * - Valid until date is not in the future
-     * - Buyer cancel penalty is greater than price
-     * - Voided is set to true
+     * - caller is not the same as operator address
+     * - in seller struct:
+     *   - Address values are zero address
+     *   - Addresses are not unique to this seller
+     *   - Seller is not active (if active == false)
+     * - in offer struc
+     *   - Valid from date is greater than valid until date
+     *   - Valid until date is not in the future
+     *   - Buyer cancel penalty is greater than price
+     *   - Voided is set to true
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      */
@@ -45,17 +49,17 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, IBosonOrchestratio
     external
     
     {   
+        // Caller should be the operator, specified in seller
+        require(_seller.operator == msg.sender, NOT_OPERATOR);
+
         // create seller and update structs values to represent true state
         uint256 sellerId = createSellerInternal(_seller);
         _seller.id = sellerId;
         
         // create offer and update structs values to represent true state
-        (uint256 offerId, uint256 offerSellerId) = createOfferInternal(_offer);
+        (uint256 offerId, ) = createOfferInternal(_offer);
         _offer.id = offerId;
         _offer.sellerId = sellerId;
-
-        // Caller should be the operator, specified in seller
-        require(sellerId == offerSellerId, NOT_OPERATOR);
 
         // Notify watchers of state change
         emit SellerCreated(sellerId, _seller);

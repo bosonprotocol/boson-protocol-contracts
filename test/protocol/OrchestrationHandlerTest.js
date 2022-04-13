@@ -267,14 +267,6 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("addresses are the zero address", async function () {
-          seller.operator = ethers.constants.AddressZero;
-
-          // Attempt to Create a seller, expecting revert
-          await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
-            RevertReasons.INVALID_ADDRESS
-          );
-
-          seller.operator = operator.address;
           seller.clerk = ethers.constants.AddressZero;
 
           // Attempt to Create a seller, expecting revert
@@ -307,7 +299,7 @@ describe("IBosonOrchestrationHandler", function () {
           seller.operator = other1.address;
 
           // Attempt to Create a seller with non-unique admin, expecting revert
-          await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+          await expect(orchestrationHandler.connect(other1).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
 
@@ -315,7 +307,7 @@ describe("IBosonOrchestrationHandler", function () {
           seller.admin = other2.address;
 
           // Attempt to Create a seller with non-unique clerk, expecting revert
-          await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+          await expect(orchestrationHandler.connect(other1).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
         });

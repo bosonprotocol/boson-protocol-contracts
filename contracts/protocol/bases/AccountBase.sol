@@ -14,8 +14,6 @@ abstract contract AccountBase is ProtocolBase {
     /**
      * @notice Creates a seller
      *
-     * Emits a SellerCreated event if successful.
-     *
      * Reverts if:
      * - Address values are zero address
      * - Addresses are not unique to this seller
@@ -40,7 +38,7 @@ abstract contract AccountBase is ProtocolBase {
         storeSeller(_seller);
     }
 
-       /**
+    /**
      * @notice Validates seller struct and stores it to storage
      *
      * Reverts if:

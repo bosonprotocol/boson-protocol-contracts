@@ -11,7 +11,7 @@ import { ProtocolLib } from "./../ProtocolLib.sol";
  */
 abstract contract OfferBase is ProtocolBase {
     /**
-     * @dev Internal helper to create offer, which can be reused between creatOffer and createBatchOffer
+     * @dev Internal helper to create offer, which can be reused among different facets
      *
      * Reverts if:
      * - Caller is not an operator
