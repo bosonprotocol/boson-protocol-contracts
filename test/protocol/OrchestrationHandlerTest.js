@@ -13,13 +13,13 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 
 /**
- *  Test the Boson Combo Handler interface
+ *  Test the Boson Orchestration Handler interface
  */
-describe("IBosonComboHandler", function () {
+describe("IBosonOrchestrationHandler", function () {
   // Common vars
   let InterfaceIds;
   let accounts, deployer, rando, operator, admin, clerk, treasury, other1, other2;
-  let erc165, protocolDiamond, accessController, accountHandler, offerHandler, comboHandler, offerStruct, key, value;
+  let erc165, protocolDiamond, accessController, accountHandler, offerHandler, orchestrationHandler, offerStruct, key, value;
   let offer, nextOfferId, oneMonth, oneWeek, support, exists;
   let nextAccountId;
   let seller, sellerStruct, active;
@@ -66,7 +66,7 @@ describe("IBosonComboHandler", function () {
     await deployProtocolHandlerFacets(protocolDiamond, [
       "AccountHandlerFacet",
       "OfferHandlerFacet",
-      "ComboHandlerFacet",
+      "OrchestrationHandlerFacet",
     ]);
 
     // Add config Handler, so offer id starts at 1
@@ -91,25 +91,25 @@ describe("IBosonComboHandler", function () {
     // Cast Diamond to IOfferHandler
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
 
-    // Cast Diamond to IComboHandler
-    comboHandler = await ethers.getContractAt("IBosonComboHandler", protocolDiamond.address);
+    // Cast Diamond to IOrchestrationHandler
+    orchestrationHandler = await ethers.getContractAt("IBosonOrchestrationHandler", protocolDiamond.address);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
   context("📋 Interfaces", async function () {
     context("👉 supportsInterface()", async function () {
-      it("should indicate support for IBosonComboHandler interface", async function () {
+      it("should indicate support for IBosonOrchestrationHandler interface", async function () {
         // Current interfaceId for IOfferHandler
-        support = await erc165.supportsInterface(InterfaceIds.IBosonComboHandler);
+        support = await erc165.supportsInterface(InterfaceIds.IBosonOrchestrationHandler);
 
         // Test
-        await expect(support, "IBosonComboHandler interface not supported").is.true;
+        await expect(support, "IBosonOrchestrationHandler interface not supported").is.true;
       });
     });
   });
 
   // All supported methods - single offer
-  context("📋 Combo Handler Methods", async function () {
+  context("📋 Orchestration Handler Methods", async function () {
     beforeEach(async function () {
       // The first seller id
       nextAccountId = "1";
@@ -176,16 +176,16 @@ describe("IBosonComboHandler", function () {
     context("👉 createSellerAndOffer()", async function () {
       it("should emit an SellerCreated and OfferCreated event", async function () {
         // Create an offer, testing for the event
-        await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer))
+        await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer))
           .to.emit(accountHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct)
-          .to.emit(comboHandler, "OfferCreated")
+          .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, offer.sellerId, offerStruct);
       });
 
       it("should update state", async function () {
         // Create an offer
-        await comboHandler.connect(operator).createSellerAndOffer(seller, offer);
+        await orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer);
 
         // Get the seller as a struct
         [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
@@ -215,10 +215,10 @@ describe("IBosonComboHandler", function () {
         offer.id = "555";
 
         // Create an offer, testing for the event
-        await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer))
+        await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer))
           .to.emit(accountHandler, "SellerCreated")
           .withArgs(nextAccountId, sellerStruct)
-          .to.emit(comboHandler, "OfferCreated")
+          .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, offer.sellerId, offerStruct);
 
         // wrong seller id should not exist
@@ -243,7 +243,7 @@ describe("IBosonComboHandler", function () {
         offer.sellerId = "123";
 
         // Create an offer, testing for the event
-        await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer))
+        await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer))
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct);
       });
@@ -253,7 +253,7 @@ describe("IBosonComboHandler", function () {
           seller.active = false;
 
           // Attempt to Create a seller, expecting revert
-          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+          await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.MUST_BE_ACTIVE
           );
         });
@@ -262,7 +262,7 @@ describe("IBosonComboHandler", function () {
           seller.operator = ethers.constants.AddressZero;
 
           // Attempt to Create a seller, expecting revert
-          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+          await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
 
@@ -270,7 +270,7 @@ describe("IBosonComboHandler", function () {
           seller.clerk = ethers.constants.AddressZero;
 
           // Attempt to Create a seller, expecting revert
-          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+          await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
 
@@ -278,7 +278,7 @@ describe("IBosonComboHandler", function () {
           seller.admin = ethers.constants.AddressZero;
 
           // Attempt to Create a seller, expecting revert
-          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+          await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
         });
@@ -291,7 +291,7 @@ describe("IBosonComboHandler", function () {
           seller.clerk = other2.address;
 
           // Attempt to Create a seller with non-unique operator, expecting revert
-          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+          await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
 
@@ -299,7 +299,7 @@ describe("IBosonComboHandler", function () {
           seller.operator = other1.address;
 
           // Attempt to Create a seller with non-unique admin, expecting revert
-          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+          await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
 
@@ -307,14 +307,14 @@ describe("IBosonComboHandler", function () {
           seller.admin = other2.address;
 
           // Attempt to Create a seller with non-unique clerk, expecting revert
-          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+          await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
         });
 
         it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
-          await expect(comboHandler.connect(rando).createSellerAndOffer(seller, offer)).to.revertedWith(
+          await expect(orchestrationHandler.connect(rando).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.NOT_OPERATOR
           );
         });
@@ -329,7 +329,7 @@ describe("IBosonComboHandler", function () {
           offer.validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
 
           // Attempt to Create an offer, expecting revert
-          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+          await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
         });
@@ -339,7 +339,7 @@ describe("IBosonComboHandler", function () {
           offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
 
           // Attempt to Create an offer, expecting revert
-          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+          await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
         });
@@ -349,7 +349,7 @@ describe("IBosonComboHandler", function () {
           offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
 
           // Attempt to Create an offer, expecting revert
-          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+          await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.OFFER_PENALTY_INVALID
           );
         });
@@ -359,7 +359,7 @@ describe("IBosonComboHandler", function () {
           offer.voided = true;
 
           // Attempt to Create an offer, expecting revert
-          await expect(comboHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
+          await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.OFFER_MUST_BE_ACTIVE
           );
         });

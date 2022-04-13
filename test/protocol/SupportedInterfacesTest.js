@@ -80,9 +80,9 @@ describe("SupportedInterfaces", function () {
         assert.equal(actual, expected);
       });
 
-      it("getIBosonComboHandler() should return expected id", async function () {
-        const expected = InterfaceIds.IBosonComboHandler;
-        const actual = await supportedInterfaces.getIBosonComboHandler();
+      it("getIBosonOrchestrationHandler() should return expected id", async function () {
+        const expected = InterfaceIds.IBosonOrchestrationHandler;
+        const actual = await supportedInterfaces.getIBosonOrchestrationHandler();
         assert.equal(actual, expected);
       });
     });

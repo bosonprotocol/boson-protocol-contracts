@@ -1,26 +1,26 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { IBosonComboHandler } from "../../interfaces/IBosonComboHandler.sol";
+import { IBosonOrchestrationHandler } from "../../interfaces/IBosonOrchestrationHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/IBosonAccountHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { OfferBase } from "../OfferBase.sol";
 
 /**
- * @title ComboHandlerFacet
+ * @title OrchestrationHandlerFacet
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  */
-contract ComboHandlerFacet is OfferBase, IBosonComboHandler {
+contract OrchestrationHandlerFacet is OfferBase, IBosonOrchestrationHandler {
 
     /**
      * @notice Facet Initializer
      */
     function initialize()
     public
-    onlyUnInitialized(type(IBosonComboHandler).interfaceId)
+    onlyUnInitialized(type(IBosonOrchestrationHandler).interfaceId)
     {
-        DiamondLib.addSupportedInterface(type(IBosonComboHandler).interfaceId);
+        DiamondLib.addSupportedInterface(type(IBosonOrchestrationHandler).interfaceId);
     }
 
     /**

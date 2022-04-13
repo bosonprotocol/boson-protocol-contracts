@@ -4,13 +4,13 @@ pragma solidity ^0.8.0;
 import "../domain/BosonTypes.sol";
 
 /**
- * @title IBosonConfigHandler
+ * @title IBosonOrchestrationHandler
  *
- * @notice Handles management of various protocol-related settings.
+ * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  *
  * The ERC-165 identifier for this interface is: 0x0000000 // TODO recalc
  */
-interface IBosonComboHandler {
+interface IBosonOrchestrationHandler {
     /// Events
     event OfferCreated(uint256 indexed offerId, uint256 indexed sellerId, BosonTypes.Offer offer);
 
