@@ -275,8 +275,8 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
      *
      * Reverts if:
      * - caller is not the seller
-     * - twin ids is an empty list
-     * - number of twins exceeds maximum allowed number per bundle
+     * - twin ids / offer ids is an empty list.
+     * - number of twins / number of offers exceeds maximum allowed number per bundle
      * - bundle does not exist
      *
      * @param _bundleId  - the id of the bundle to be updated
