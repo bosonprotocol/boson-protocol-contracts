@@ -60,8 +60,6 @@ describe("IBosonTwinHandler", function () {
     sellerDeposit,
     buyerCancelPenalty,
     quantityAvailable,
-    blockNumber,
-    block,
     validFromDate,
     validUntilDate,
     redeemableFromDate,
@@ -70,8 +68,9 @@ describe("IBosonTwinHandler", function () {
     exchangeToken,
     metadataHash,
     metadataUri,
-    voided
+    voided;
   let bundleId, offerIds, twinIds, bundle;
+  let blockNumber, block, clients;
 
   before(async function () {
     // get interface Ids
@@ -104,7 +103,7 @@ describe("IBosonTwinHandler", function () {
       "TwinHandlerFacet",
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
-      "BundleHandlerFacet"
+      "BundleHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -492,7 +491,7 @@ describe("IBosonTwinHandler", function () {
         assert.equal(Twin.fromStruct(event.twin).toString(), twin.toString(), "Twin struct is incorrect");
 
         // Expect twin to be not found.
-        [success]  = await twinHandler.connect(rando).getTwin(twin.id);
+        [success] = await twinHandler.connect(rando).getTwin(twin.id);
         expect(success).to.be.false;
       });
 
@@ -500,7 +499,9 @@ describe("IBosonTwinHandler", function () {
         it("Twin does not exist", async function () {
           let nonExistantTwinId = "999";
           // Attempt to Remove a twin, expecting revert
-          await expect(twinHandler.connect(operator).removeTwin(nonExistantTwinId)).to.revertedWith(RevertReasons.NO_SUCH_TWIN);
+          await expect(twinHandler.connect(operator).removeTwin(nonExistantTwinId)).to.revertedWith(
+            RevertReasons.NO_SUCH_TWIN
+          );
         });
 
         it("Caller is not the seller", async function () {
@@ -508,89 +509,70 @@ describe("IBosonTwinHandler", function () {
           await expect(twinHandler.connect(rando).removeTwin(twin.id)).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
-        context("Exchange exists for bundled offer", async function () {
-          beforeEach(async function () {
-            offerId = "1"; // argument sent to contract for createOffer will be ignored
+        it("Exchange exists for bundled offer", async function () {
+          offerId = "1"; // argument sent to contract for createOffer will be ignored
 
-            // Create an offer to commit to
-            oneWeek = 604800 * 1000; //  7 days in milliseconds
-            oneMonth = 2678400 * 1000; // 31 days in milliseconds
+          // Create an offer to commit to
+          oneWeek = 604800 * 1000; //  7 days in milliseconds
+          oneMonth = 2678400 * 1000; // 31 days in milliseconds
 
-            // Offer: Required constructor params
-            price = ethers.utils.parseUnits("1.5", "ether").toString();
-            sellerDeposit = price = ethers.utils.parseUnits("0.25", "ether").toString();
-            buyerCancelPenalty = price = ethers.utils.parseUnits("0.05", "ether").toString();
-            quantityAvailable = "1";
-            blockNumber = await ethers.provider.getBlockNumber();
-            block = await ethers.provider.getBlock(blockNumber);
-            validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-            validUntilDate = ethers.BigNumber.from(block.timestamp)
-              .add(oneMonth * 6)
-              .toString(); // until 6 months
-            redeemableFromDate = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-            fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
-            voucherValidDuration = oneMonth.toString(); // offers valid for one month
-            exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-            metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-            metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
-            voided = false;
+          // Offer: Required constructor params
+          price = ethers.utils.parseUnits("1.5", "ether").toString();
+          sellerDeposit = price = ethers.utils.parseUnits("0.25", "ether").toString();
+          buyerCancelPenalty = price = ethers.utils.parseUnits("0.05", "ether").toString();
+          quantityAvailable = "1";
+          blockNumber = await ethers.provider.getBlockNumber();
+          block = await ethers.provider.getBlock(blockNumber);
+          validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
+          validUntilDate = ethers.BigNumber.from(block.timestamp)
+            .add(oneMonth * 6)
+            .toString(); // until 6 months
+          redeemableFromDate = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+          fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
+          voucherValidDuration = oneMonth.toString(); // offers valid for one month
+          exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
+          metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+          metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
+          voided = false;
 
-            // Create a valid offer entity
-            offer = new Offer(
-              offerId,
-              sellerId,
-              price,
-              sellerDeposit,
-              buyerCancelPenalty,
-              quantityAvailable,
-              validFromDate,
-              validUntilDate,
-              redeemableFromDate,
-              fulfillmentPeriodDuration,
-              voucherValidDuration,
-              exchangeToken,
-              metadataUri,
-              metadataHash,
-              voided
-            );
+          // Create a valid offer entity
+          offer = new Offer(
+            offerId,
+            sellerId,
+            price,
+            sellerDeposit,
+            buyerCancelPenalty,
+            quantityAvailable,
+            validFromDate,
+            validUntilDate,
+            redeemableFromDate,
+            fulfillmentPeriodDuration,
+            voucherValidDuration,
+            exchangeToken,
+            metadataUri,
+            metadataHash,
+            voided
+          );
 
-            expect(offer.isValid()).is.true;
-            await offerHandler.connect(operator).createOffer(offer);
+          expect(offer.isValid()).is.true;
+          await offerHandler.connect(operator).createOffer(offer);
 
-            // Bundle: Required constructor params
-            bundleId = "1";
-            offerIds = [offer.id];
-            twinIds = [twin.id];
-          });
+          // Bundle: Required constructor params
+          bundleId = "1";
+          offerIds = [offer.id];
+          twinIds = [twin.id];
 
-          it("bundle seller id is same as twin seller id", async function () {
-            let bundleSellerId = twin.sellerId;
-            bundle = new Bundle(bundleId, bundleSellerId, offerIds, twinIds);
-            await bundleHandler.connect(operator).createBundle(bundle);
+          // Create a new bundle
+          bundle = new Bundle(bundleId, sellerId, offerIds, twinIds);
+          await bundleHandler.connect(operator).createBundle(bundle);
 
-            // Commit to an offer
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
+          // Commit to an offer
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
 
-            // Attempt to Remove a twin, expecting revert
-            await expect(twinHandler.connect(operator).removeTwin(twin.id)).to.revertedWith(RevertReasons.EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS);
-          });
-
-          xit("bundle seller id is different than twin seller id", async function () {
-            // Create another valid seller.
-            let sellerId2 = "2";
-            let seller2 = new Seller(sellerId2, rando.address, rando.address, rando.address, rando.address, active);
-            expect(seller2.isValid()).is.true;
-            await accountHandler.connect(rando).createSeller(seller2);
-            let bundleSellerId = seller2.id;
-            bundle = new Bundle(bundleId, bundleSellerId, offerIds, twinIds);
-            await bundleHandler.connect(operator).createBundle(bundle);
-
-            // Commit to an offer
-            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
-
-            // Attempt to Remove a twin, expecting revert
-            await expect(twinHandler.connect(rando).removeTwin(twin.id)).to.revertedWith(RevertReasons.NOT_OPERATOR);
-          });
+          // Attempt to Remove a twin, expecting revert
+          await expect(twinHandler.connect(operator).removeTwin(twin.id)).to.revertedWith(
+            RevertReasons.EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS
+          );
         });
       });
     });
