@@ -188,7 +188,6 @@ describe("IBosonConfigHandler", function () {
         await configHandler.connect(deployer).setMaxOffersPerBatch(maxOffersPerBatch);
 
         // Verify that new value is stored
-        console.log(await configHandler.connect(rando).getMaxOffersPerBatch());
         expect(await configHandler.connect(rando).getMaxOffersPerBatch()).to.equal(maxOffersPerBatch);
       });
 

@@ -164,6 +164,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * No further vouchers can be issued against a voided offer.
      *
      * Reverts if, for any offer:
+     * - Number of offers exceeds maximum allowed number per batch
      * - Offer ID is invalid
      * - Caller is not the operator of the offer
      * - Offer has already been voided

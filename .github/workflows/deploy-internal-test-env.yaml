@@ -1,16 +1,15 @@
-name: Deploy pre-release
+name: Deploy to internal test env
 on:
-  release:
-    types: [prereleased]
+  push:
+    branches: [ main ]
 jobs:
-  ropsten_deploy:
-    runs-on: ubuntu-latest
+  test_deploy:
+    runs-on: contracts
     env:
       DEPLOYER_GAS_LIMIT: ${{ secrets.DEPLOYER_GAS_LIMIT }}
-      DEPLOYER_ROPSTEN_TXNODE: ${{ secrets.DEPLOYER_ROPSTEN_TXNODE }}
-      DEPLOYER_ROPSTEN_KEY: ${{ secrets.DEPLOYER_ROPSTEN_KEY }}
-      DEPLOYER_ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
-    name: ropsten_deploy
+      DEPLOYER_TEST_TXNODE: ${{ secrets.DEPLOYER_TEST_TXNODE }}
+      DEPLOYER_TEST_KEY: ${{ secrets.DEPLOYER_TEST_KEY }}
+    name: test_deploy
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2.4.0
@@ -28,9 +27,9 @@ jobs:
         shell: bash
         run: |
           mkdir -p logs
-      - run: npm run deploy-suite:ropsten
-      - name: Upload Ropsten deploy output
+      - run: npm run deploy-suite:test
+      - name: Upload test deploy output
         uses: actions/upload-artifact@v2
         with:
-          name: ropsten-deploy-contracts-logs
-          path: logs/ropsten.deploy.contracts.txt
+          name: test-deploy-contracts-logs
+          path: logs/test.deploy.contracts.txt

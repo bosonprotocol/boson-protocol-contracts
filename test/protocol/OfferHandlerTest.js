@@ -1035,8 +1035,10 @@ describe("IBosonOfferHandler", function () {
           seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, active);
           await accountHandler.connect(rando).createSeller(seller);
 
-          // // Attempt to update the offer, expecting revert
-          // await expect(offerHandler.connect(rando).voidOfferBatch(offersToVoid)).to.revertedWith(RevertReasons.NOT_OPERATOR);
+          // Attempt to update the offer, expecting revert
+          await expect(offerHandler.connect(rando).voidOfferBatch(offersToVoid)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
         });
 
         it("Offer already voided", async function () {

@@ -43,6 +43,7 @@ describe("IBosonBundleHandler", function () {
   let offerHandler, bundleHandlerFacet_Factory;
   let seller, active;
   let bundleStruct;
+  let twinIdsToAdd, twinIdsToRemove;
   let bundle, bundleId, offerIds, twinIds, nextBundleId, invalidBundleId, bundleInstance;
   let offer, oneMonth, oneWeek, exists, expected;
   let offerId,
@@ -155,10 +156,10 @@ describe("IBosonBundleHandler", function () {
         expect(twin.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(operator).approve(twinHandler.address, 1);
+        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
 
         // Create a twin.
-        await twinHandler.connect(operator).createTwin(twin, operator.address);
+        await twinHandler.connect(operator).createTwin(twin);
       }
 
       // create 5 offers
@@ -336,21 +337,89 @@ describe("IBosonBundleHandler", function () {
         assert.equal(bundleInstance.toString(), expectedBundle.toString(), "Bundle struct is incorrect");
       });
 
-      xit("should ignore any provided seller and assign seller id of msg.sender", async function () {
-        // TODO: add when accounthandler is finished
-
-        bundle.seller = rando;
+      it("should ignore any provided seller and assign seller id of msg.sender", async function () {
+        // set some other sellerId
+        bundle.sellerId = "123";
 
         // Create a bundle, testing for the event
-        await expect(bundleHandler.connect(operator).createBundle(bundle))
-          .to.emit(bundleHandler, "BundleCreated")
-          .withArgs(nextBundleId, bundle.sellerId, bundleStruct);
+        const tx = await bundleHandler.connect(operator).createBundle(bundle);
+        const txReceipt = await tx.wait();
+
+        const event = getEvent(txReceipt, bundleHandlerFacet_Factory, "BundleCreated");
+
+        const bundleInstance = Bundle.fromStruct(event.bundle);
+        // Validate the instance
+        expect(bundleInstance.isValid()).to.be.true;
+
+        assert.equal(event.bundleId.toString(), nextBundleId, "Bundle Id is incorrect");
+        assert.equal(event.sellerId.toString(), sellerId, "Seller Id is incorrect");
+        assert.equal(bundleInstance.toStruct().toString(), bundleStruct.toString(), "Bundle struct is incorrect");
       });
     });
 
     context("💔 Revert Reasons", async function () {
-      xit("Caller is not the seller of all bundles", async function () {
-        // TODO when account handler is implemented
+      it("Caller not operator of any seller", async function () {
+        // Attempt to Create a bundle, expecting revert
+        await expect(bundleHandler.connect(rando).createBundle(bundle)).to.revertedWith(RevertReasons.NOT_OPERATOR);
+      });
+
+      it("Caller is not the seller of all offers", async function () {
+        // create another seller and an offer
+        seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+        await accountHandler.connect(rando).createSeller(seller);
+        await offerHandler.connect(rando).createOffer(offer); // creates an offer with id 6
+
+        // add offer belonging to another seller
+        bundle.offerIds = ["2", "6"];
+
+        // Attempt to create a bundle, expecting revert
+        await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(RevertReasons.NOT_OPERATOR);
+      });
+
+      it("Offer does not exist", async function () {
+        // Invalid offer id
+        bundle.offerIds = ["1", "999"];
+
+        // Attempt to create a bundle, expecting revert
+        await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+
+        // Invalid offer id
+        bundle.offerIds = ["0", "4"];
+
+        // Attempt to create a bundle, expecting revert
+        await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+      });
+
+      it("Caller is not the seller of all twins", async function () {
+        // create another seller and a twin
+        let expectedNewTwinId = "6";
+        seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+        await accountHandler.connect(rando).createSeller(seller);
+        await bosonToken.connect(rando).approve(twinHandler.address, 1); // approving the twin handler
+        const tx = await twinHandler.connect(rando).createTwin(twin); // creates a twin with id 6
+        const txReceipt = await tx.wait();
+        const event = getEvent(txReceipt, twinHandler, "TwinCreated");
+        assert.equal(event.twinId.toString(), expectedNewTwinId, "Twin Id is not 6");
+
+        // add twin belonging to another seller
+        bundle.twinIds = ["2", "6"];
+
+        // Attempt to create a bundle, expecting revert
+        await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(RevertReasons.NOT_OPERATOR);
+      });
+
+      it("Twin does not exist", async function () {
+        // Invalid twin id
+        bundle.twinIds = ["1", "999"];
+
+        // Attempt to create a bundle, expecting revert
+        await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(RevertReasons.NO_SUCH_TWIN);
+
+        // Invalid twin id
+        bundle.twinIds = ["0", "4"];
+
+        // Attempt to create a bundle, expecting revert
+        await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(RevertReasons.NO_SUCH_TWIN);
       });
 
       it("Offer is already part of another bundle", async function () {
@@ -494,6 +563,374 @@ describe("IBosonBundleHandler", function () {
 
         // Verify expectation
         expect(nextBundleId.toString() == expected).to.be.true;
+      });
+    });
+
+    context("👉 addTwinsToBundle()", async function () {
+      beforeEach(async function () {
+        // Create a bundle
+        await bundleHandler.connect(operator).createBundle(bundle);
+
+        // set the new fields
+        twinIdsToAdd = ["1", "4"];
+        bundle.twinIds = [...bundle.twinIds, ...twinIdsToAdd];
+
+        bundleStruct = bundle.toStruct();
+      });
+
+      it("should emit a BundleUpdated event", async function () {
+        // Add twins to a bundle, testing for the event
+        const tx = await bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd);
+        const txReceipt = await tx.wait();
+
+        const event = getEvent(txReceipt, bundleHandlerFacet_Factory, "BundleUpdated");
+
+        const bundleInstance = Bundle.fromStruct(event.bundle);
+        // Validate the instance
+        expect(bundleInstance.isValid()).to.be.true;
+
+        assert.equal(event.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
+        assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+      });
+
+      it("should add twins to correct bundle", async function () {
+        // Create a new bundle of id 2
+        let expectedNewBundleId = "2";
+        const newBundle = bundle.clone();
+        newBundle.id = expectedNewBundleId;
+        newBundle.twinIds = ["3"];
+        newBundle.offerIds = ["1"];
+        const tx = await bundleHandler.connect(operator).createBundle(newBundle); // creates new bundle of id 2
+        const txReceipt = await tx.wait();
+        const event = getEvent(txReceipt, bundleHandler, "BundleCreated");
+        assert.equal(event.bundleId.toString(), expectedNewBundleId, "Bundle Id is not 2"); // verify that bundle id is 2
+
+        // Add a new twin to bundle of id 1.
+        let bundleIdToAddTwin = bundle.id;
+        twinIdsToAdd = ["1"];
+
+        // Bundle with id 1 does not have this twin.
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToAddTwin);
+        let returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.twinIds.includes(twinIdsToAdd[0])).is.false;
+
+        // Bundle with id 2 does not have this twin.
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(newBundle.id);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.twinIds.includes(twinIdsToAdd[0])).is.false;
+
+        // Adding the twins to bundle of id 1.
+        await bundleHandler.connect(operator).addTwinsToBundle(bundleIdToAddTwin, twinIdsToAdd);
+
+        // Bundle with id 1 now has this twin.
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToAddTwin);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.twinIds.includes(twinIdsToAdd[0])).is.true;
+
+        // Bundle with id 2 does not have this twin.
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(newBundle.id);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.twinIds.includes(twinIdsToAdd[0])).is.false;
+      });
+
+      it("should update state", async function () {
+        // Add twins to a bundle,
+        await bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd);
+
+        // Get the bundle as a struct
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundle.id);
+
+        // Parse into entity
+        const returnedBundle = Bundle.fromStruct(bundleStruct);
+
+        // Returned values should reflect the changes done with addTwinsToBundle
+        for ([key, value] of Object.entries(bundle)) {
+          expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("Twin is already part of another bundle", async function () {
+        // Create a new bundle with twinIds.
+        const newBundle = bundle.clone();
+        newBundle.twinIds = ["1"];
+        newBundle.offerIds = ["1"];
+        await bundleHandler.connect(operator).createBundle(newBundle);
+
+        // Add Same twinIds to the first bundle, testing for the event
+        const tx = await bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd);
+        const txReceipt = await tx.wait();
+
+        const event = getEvent(txReceipt, bundleHandlerFacet_Factory, "BundleUpdated");
+
+        const bundleInstance = Bundle.fromStruct(event.bundle);
+        // Validate the instance
+        expect(bundleInstance.isValid()).to.be.true;
+
+        assert.equal(event.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
+        assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Caller is not the seller of the bundle", async function () {
+          // Attempt to add twins to bundle, expecting revert
+          await expect(bundleHandler.connect(rando).addTwinsToBundle(bundle.id, twinIdsToAdd)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+        });
+
+        it("Adding nothing", async function () {
+          // Try to add nothing
+          twinIdsToAdd = [];
+
+          // Attempt to add twins from the bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd)).to.revertedWith(
+            RevertReasons.NOTHING_UPDATED
+          );
+        });
+
+        it("Adding too many twins", async function () {
+          // Try to add the more than 100 twins
+          twinIdsToAdd = [...Array(101).keys()];
+
+          // Attempt to add twins to a bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd)).to.revertedWith(
+            RevertReasons.TOO_MANY_TWINS
+          );
+        });
+
+        it("Bundle does not exist", async function () {
+          // Set invalid id
+          bundle.id = "444";
+
+          // Attempt to add twins to the bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd)).to.revertedWith(
+            RevertReasons.NO_SUCH_BUNDLE
+          );
+
+          // Set invalid id
+          bundle.id = "0";
+
+          // Attempt to add twins to bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd)).to.revertedWith(
+            RevertReasons.NO_SUCH_BUNDLE
+          );
+        });
+
+        it("Caller is not the seller of all twins", async function () {
+          // create another seller and a twin
+          let expectedNewTwinId = "6";
+          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          await accountHandler.connect(rando).createSeller(seller);
+          await bosonToken.connect(rando).approve(twinHandler.address, 1); // approving the twin handler
+          const tx = await twinHandler.connect(rando).createTwin(twin); // creates a twin with id 6
+          const txReceipt = await tx.wait();
+          const event = getEvent(txReceipt, twinHandler, "TwinCreated");
+          assert.equal(event.twinId.toString(), expectedNewTwinId, "Twin Id is not 6");
+
+          // add twin belonging to another seller
+          twinIdsToAdd = ["1", "6"];
+
+          // Attempt to add twins to bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+        });
+
+        it("Twin does not exist", async function () {
+          // Set invalid twin id
+          twinIdsToAdd = ["1", "999"];
+
+          // Attempt to add twins to a bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd)).to.revertedWith(
+            RevertReasons.NO_SUCH_TWIN
+          );
+
+          // Set invalid twin id
+          twinIdsToAdd = ["0", "2"];
+
+          // Attempt to add twins to a bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd)).to.revertedWith(
+            RevertReasons.NO_SUCH_TWIN
+          );
+        });
+
+        it("Twin already exists in the same bundle", async function () {
+          // Try to add the same twin twice
+          twinIdsToAdd = ["1"];
+
+          // Add twin to bundle once
+          await bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd);
+
+          // Attempt to add same twin again into the same bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd)).to.revertedWith(
+            RevertReasons.TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE
+          );
+        });
+
+        it("Twin is duplicated", async function () {
+          // Try to add the same twin twice
+          twinIdsToAdd = ["1", "1", "4"];
+
+          // Attempt to add twins to a bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd)).to.revertedWith(
+            RevertReasons.TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE
+          );
+        });
+      });
+    });
+
+    context("👉 removeTwinsFromBundle()", async function () {
+      beforeEach(async function () {
+        bundle.twinIds = ["1", "2", "3", "4", "5"];
+        // Create a bundle
+        await bundleHandler.connect(operator).createBundle(bundle);
+
+        // set the new fields
+        twinIdsToRemove = ["1", "4"];
+        bundle.twinIds = ["5", "2", "3"]; // ["1","2","3","4","5"] -> ["5","2","3","4"] -> ["5","2","3"]
+
+        bundleStruct = bundle.toStruct();
+      });
+
+      it("should emit a BundleUpdated event", async function () {
+        // Remove twins from a bundle, testing for the event
+        const tx = await bundleHandler.connect(operator).removeTwinsFromBundle(bundle.id, twinIdsToRemove);
+        const txReceipt = await tx.wait();
+
+        const event = getEvent(txReceipt, bundleHandlerFacet_Factory, "BundleUpdated");
+
+        const bundleInstance = Bundle.fromStruct(event.bundle);
+        // Validate the instance
+        expect(bundleInstance.isValid()).to.be.true;
+
+        assert.equal(event.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
+        assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+      });
+
+      it("should remove twins from correct bundle", async function () {
+        // Create a new bundle of id 2
+        let expectedNewBundleId = "2";
+        const newBundle = bundle.clone();
+        newBundle.id = expectedNewBundleId;
+        newBundle.offerIds = ["1"];
+        const tx = await bundleHandler.connect(operator).createBundle(newBundle); // creates new bundle of id 2
+        const txReceipt = await tx.wait();
+        const event = getEvent(txReceipt, bundleHandler, "BundleCreated");
+        assert.equal(event.bundleId.toString(), expectedNewBundleId, "Bundle Id is not 2"); // verify that bundle id is 2
+
+        let bundleIdToRemoveTwin = bundle.id; // Bundle from which we want we want to remove new twin Ids.
+        twinIdsToRemove = ["2"]; // The Twin id which we want to remove.
+
+        // Expect that Bundle with id 1 contains twinId
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToRemoveTwin);
+        let returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.twinIds.includes(twinIdsToRemove[0])).is.true;
+
+        // Expect that Bundle with id 2 contains same twinId
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(newBundle.id);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.twinIds.includes(twinIdsToRemove[0])).is.true;
+
+        // Removing the twins from the bundle of id 1.
+        await bundleHandler.connect(operator).removeTwinsFromBundle(bundleIdToRemoveTwin, twinIdsToRemove);
+
+        // Expect that Bundle with id 1 doesn't contain twinId
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToRemoveTwin);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.twinIds.includes(twinIdsToRemove[0])).is.false;
+
+        // Expect that Bundle with id 2 still contains twinId
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(newBundle.id);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.twinIds.includes(twinIdsToRemove[0])).is.true;
+      });
+
+      it("should update state", async function () {
+        // Remove twin from a bundle,
+        await bundleHandler.connect(operator).removeTwinsFromBundle(bundle.id, twinIdsToRemove);
+
+        // Get the bundle as a struct
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundle.id);
+
+        // Parse into entity
+        const returnedBundle = Bundle.fromStruct(bundleStruct);
+
+        // Returned values should  reflect the changes done with removeTwinsFromBundle
+        for ([key, value] of Object.entries(bundle)) {
+          expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Bundle does not exist", async function () {
+          // Set invalid id
+          bundle.id = "444";
+
+          // Attempt to remove twins from the bundle, expecting revert
+          await expect(
+            bundleHandler.connect(operator).removeTwinsFromBundle(bundle.id, twinIdsToRemove)
+          ).to.revertedWith(RevertReasons.NO_SUCH_BUNDLE);
+
+          // Set invalid id
+          bundle.id = "0";
+
+          // Attempt to remove twins from bundle, expecting revert
+          await expect(
+            bundleHandler.connect(operator).removeTwinsFromBundle(bundle.id, twinIdsToRemove)
+          ).to.revertedWith(RevertReasons.NO_SUCH_BUNDLE);
+        });
+
+        it("Caller is not seller of a bundle", async function () {
+          // Attempt to remove twins from the bundle, expecting revert
+          await expect(bundleHandler.connect(rando).removeTwinsFromBundle(bundle.id, twinIdsToRemove)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+        });
+
+        it("Twin is not a part of the bundle", async function () {
+          // inexisting twin
+          twinIdsToRemove = ["6"];
+
+          // Attempt to remove twins from the bundle, expecting revert
+          await expect(
+            bundleHandler.connect(operator).removeTwinsFromBundle(bundle.id, twinIdsToRemove)
+          ).to.revertedWith(RevertReasons.TWIN_NOT_IN_BUNDLE);
+
+          // create a twin and add it to another bundle
+          await bosonToken.connect(operator).approve(twinHandler.address, 1); //approving the twin handler
+          await twinHandler.connect(operator).createTwin(twin);
+          bundle.twinIds = ["6"];
+          bundle.offerIds = ["1"];
+          await bundleHandler.connect(operator).createBundle(bundle);
+
+          // Attempt to remove twins from a bundle, expecting revert
+          await expect(
+            bundleHandler.connect(operator).removeTwinsFromBundle(bundle.id, twinIdsToRemove)
+          ).to.revertedWith(RevertReasons.TWIN_NOT_IN_BUNDLE);
+        });
+
+        it("Removing too many twins", async function () {
+          // Try to remove the more than 100 twins
+          twinIdsToRemove = [...Array(101).keys()];
+
+          // Attempt to remove twins from the bundle, expecting revert
+          await expect(
+            bundleHandler.connect(operator).removeTwinsFromBundle(bundle.id, twinIdsToRemove)
+          ).to.revertedWith(RevertReasons.TOO_MANY_TWINS);
+        });
+
+        it("Removing nothing", async function () {
+          // Try to remove nothing
+          twinIdsToRemove = [];
+
+          // Attempt to remove twins from the bundle, expecting revert
+          await expect(
+            bundleHandler.connect(operator).removeTwinsFromBundle(bundle.id, twinIdsToRemove)
+          ).to.revertedWith(RevertReasons.NOTHING_UPDATED);
+        });
       });
     });
   });

@@ -8,7 +8,7 @@ import "../domain/BosonTypes.sol";
  *
  * @notice Manages twinning associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x00000000 // TODO: Recalc
+ * The ERC-165 identifier for this interface is: 0x218d6de7
  */
 interface IBosonTwinHandler {
     /// Events
@@ -20,12 +20,12 @@ interface IBosonTwinHandler {
      * Emits a TwinCreated event if successful.
      *
      * Reverts if:
+     * - seller does not exist
      * - Not approved to transfer the seller's token
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
-     * @param _sellerOperator - placeholder for seller's operator address. TODO: Remove when Create seller is implemented.
      */
-    function createTwin(BosonTypes.Twin memory _twin, address _sellerOperator) external;
+    function createTwin(BosonTypes.Twin memory _twin) external;
 
     /**
      * @notice Gets the details about a given twin.

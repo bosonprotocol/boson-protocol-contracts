@@ -28,6 +28,14 @@ module.exports = {
         "mnemonic": process.env.DEPLOYER_HARDHAT_MNEMONIC
     },
 
+    // Internal test env
+    //  - placeholder private key is first address of test HDWallet used in hardhat network config
+    //  - Replace key with pk for deployment
+    "test": {
+        "txNode": process.env.DEPLOYER_TEST_TXNODE,
+        "keys": [process.env.DEPLOYER_TEST_KEY]
+    },
+
     // Ropsten testnet
     //  - placeholder private key is first address of test HDWallet used in hardhat network config
     //  - Replace key with multisig pk for deployment
@@ -43,5 +51,7 @@ module.exports = {
         "txNode": process.env.DEPLOYER_MAINNET_TXNODE,
         "keys": [process.env.DEPLOYER_MAINNET_KEY]
     }
+
+   
 
 };

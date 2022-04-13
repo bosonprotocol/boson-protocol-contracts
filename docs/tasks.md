@@ -22,6 +22,11 @@ This deploys the built contracts to local network (mainly to test deployment scr
 
 ```npm run deploy-suite:local```
 
+### Deploy to internal test node
+This deploys the built contracts to an internal geth node used as a test environment
+
+```npm run deploy-suite:test```
+
 ### Deploy to Ropsten
 This deploys the built contracts to Ropsten
 
