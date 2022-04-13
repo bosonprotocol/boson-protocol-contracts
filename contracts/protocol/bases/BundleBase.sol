@@ -26,7 +26,7 @@ contract BundleBase is ProtocolBase {
      * - duplicate twins added in same bundle
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
-     * @return bundleId id of newly created bundke
+     * @return bundleId id of newly created bundle
      * @return sellerId id of the bundle's seller
      */
     function createBundleInternal(
