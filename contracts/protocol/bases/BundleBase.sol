@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { ProtocolBase } from "./../ProtocolBase.sol";
-import { ProtocolLib } from "./../ProtocolLib.sol";
+import { IBosonBundleEvents } from "../../interfaces/events/IBosonBundleEvents.sol";
+import { ProtocolBase } from "./../bases/ProtocolBase.sol";
+import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 
 /**
  * @title BundleBase
  *
  * @dev Provides methods for bundle creation that can be shared accross facets
  */
-contract BundleBase is ProtocolBase {
+contract BundleBase is ProtocolBase, IBosonBundleEvents {
 
     /**
      * @notice Creates a Bundle.
@@ -80,10 +81,13 @@ contract BundleBase is ProtocolBase {
         (, Bundle storage bundle) = fetchBundle(bundleId);
 
         // Set bundle props individually since memory structs can't be copied to storage
-        bundle.id = bundleId;
-        bundle.sellerId = sellerId;
+        bundle.id = _bundle.id = bundleId;
+        bundle.sellerId = _bundle.sellerId = sellerId;
         bundle.offerIds = _bundle.offerIds;
         bundle.twinIds = _bundle.twinIds;
+
+        // Notify watchers of state change
+        emit BundleCreated(bundleId, sellerId, _bundle);
     }
 
     /**

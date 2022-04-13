@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { IBosonGroupHandler } from "../../interfaces/IBosonGroupHandler.sol";
+import { IBosonGroupHandler } from "../../interfaces/handlers/IBosonGroupHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { GroupBase } from "../bases/GroupBase.sol";
-import { ProtocolLib } from "../ProtocolLib.sol";
+import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
 /**
  * @title GroupHandlerFacet
@@ -43,13 +43,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
     external
     override
     {
-        // create group and update structs values to represent true state
-        (uint256 groupId, uint256 sellerId) = createGroupInternal(_group);
-        _group.id = groupId;
-        _group.sellerId = sellerId;
-      
-        // Notify watchers of state change
-        emit GroupCreated(groupId, sellerId, _group);
+        createGroupInternal(_group);
     }
 
     /**

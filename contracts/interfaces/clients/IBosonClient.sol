@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
-import { IBosonConfigHandler } from "./IBosonConfigHandler.sol";
+import {IBosonClientEvents} from "../events/IBosonClientEvents.sol";
 
 /**
  * @title IBosonClient
@@ -20,13 +20,9 @@ import { IBosonConfigHandler } from "./IBosonConfigHandler.sol";
  * The BosonVoucher NFT contract acts as a client of the ProtocolDiamond when
  * accessing information about offers associated with the vouchers it maintains.
  *
- * The ERC-165 identifier for this interface is: 0x9bc69c79 // TODO: Recalc
+ * The ERC-165 identifier for this interface is: 0xc4c6c36b
  */
-interface IBosonClient {
-    // Events
-    event Upgraded(address indexed implementation);
-    event ProtocolAddressChanged(address indexed protocol);
-    event AccessControllerAddressChanged(address indexed accessController);
+interface IBosonClient is IBosonClientEvents {
 
     /**
      * @dev Set the implementation address

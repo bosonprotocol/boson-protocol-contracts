@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { IBosonConfigHandler } from  "../../interfaces/IBosonConfigHandler.sol";
+import { IBosonConfigHandler } from  "../../interfaces/handlers/IBosonConfigHandler.sol";
 import { DiamondLib } from  "../../diamond/DiamondLib.sol";
-import { ProtocolBase } from  "../ProtocolBase.sol";
-import { ProtocolLib } from  "../ProtocolLib.sol";
+import { ProtocolBase } from  "../bases/ProtocolBase.sol";
+import { ProtocolLib } from  "../libs/ProtocolLib.sol";
 
 /**
  * @title ConfigHandlerFacet

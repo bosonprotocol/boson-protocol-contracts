@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { ProtocolBase } from "./../ProtocolBase.sol";
-import { ProtocolLib } from "./../ProtocolLib.sol";
+import { IBosonGroupEvents } from "../../interfaces/events/IBosonGroupEvents.sol";
+import { ProtocolBase } from "./../bases/ProtocolBase.sol";
+import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 
 /**
  * @title GroupBase
  *
  * @dev Provides methods for group creation that can be shared accross facets
  */
-contract GroupBase is ProtocolBase {
+contract GroupBase is ProtocolBase, IBosonGroupEvents {
     /**
      * @notice Creates a group.
      *
@@ -60,10 +61,14 @@ contract GroupBase is ProtocolBase {
         (, Group storage group) = fetchGroup(groupId);
 
         // Set group props individually since memory structs can't be copied to storage
-        group.id = groupId;
-        group.sellerId = sellerId;
+        group.id = _group.id = groupId;
+        group.sellerId = _group.sellerId = sellerId;
         group.offerIds = _group.offerIds;
         group.condition = _group.condition;
+
+        // Notify watchers of state change
+        emit GroupCreated(groupId, sellerId, _group);
+
     }
 
        /**

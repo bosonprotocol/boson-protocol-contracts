@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { IBosonOfferHandler } from "../../interfaces/IBosonOfferHandler.sol";
+import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
 
@@ -42,12 +42,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     external
     override
     {    
-        // create offer and update structs values to represent true state
-        (uint256 offerId, uint256 sellerId) = createOfferInternal(_offer);
-        _offer.id = offerId;
-        _offer.sellerId = sellerId;
-
-        emit OfferCreated(offerId, sellerId, _offer);
+        createOfferInternal(_offer);
     }
 
     /**
@@ -76,11 +71,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
             
             // create offer and update structs values to represent true state
             Offer memory _offer = _offers[i];
-            (uint256 offerId, uint256 sellerId) = createOfferInternal(_offer);
-            _offer.id = offerId;
-            _offer.sellerId = sellerId;
-
-            emit OfferCreated(offerId, sellerId, _offer);
+            createOfferInternal(_offer);
         }
     }
     
@@ -117,6 +108,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         // Caller's seller id must match offer seller id
         require(sellerId == _offer.sellerId, NOT_OPERATOR);
 
+        // Store the offer
         storeOffer(_offer);
 
         // Notify watchers of state change

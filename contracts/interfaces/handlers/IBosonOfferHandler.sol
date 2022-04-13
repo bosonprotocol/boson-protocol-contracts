@@ -1,20 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "../domain/BosonTypes.sol";
+import {BosonTypes} from "../../domain/BosonTypes.sol";
+import {IBosonOfferEvents} from "../events/IBosonOfferEvents.sol";
 
 /**
  * @title IBosonOfferHandler
  *
- * @notice Manages creation, voiding, and querying of offers within the protocol.
+ * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
  * The ERC-165 identifier for this interface is: 0x65defc13
  */
-interface IBosonOfferHandler {
-    /// Events
-    event OfferCreated(uint256 indexed offerId, uint256 indexed sellerId, BosonTypes.Offer offer);
-    event OfferUpdated(uint256 indexed offerId, uint256 indexed sellerId, BosonTypes.Offer offer);
-    event OfferVoided(uint256 indexed offerId, uint256 indexed sellerId);
+interface IBosonOfferHandler is IBosonOfferEvents {
 
     /**
      * @notice Creates an offer

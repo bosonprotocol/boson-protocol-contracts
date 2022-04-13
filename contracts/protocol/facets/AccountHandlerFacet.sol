@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 
-import { IBosonAccountHandler } from "../../interfaces/IBosonAccountHandler.sol";
+import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
-import { ProtocolLib } from "../ProtocolLib.sol";
+import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
 contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
@@ -36,11 +36,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     override
     {
         // create seller and update structs values to represent true state
-        uint256 sellerId = createSellerInternal(_seller);
-        _seller.id = sellerId;
-
-        // Notify watchers of state change
-        emit SellerCreated(sellerId, _seller);
+        createSellerInternal(_seller);
     }
 
     /**

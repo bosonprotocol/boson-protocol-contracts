@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { ProtocolBase } from "./../ProtocolBase.sol";
-import { ProtocolLib } from "./../ProtocolLib.sol";
+import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
+import { ProtocolBase } from "./../bases/ProtocolBase.sol";
+import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 
 /**
  * @title AccountBase
  *
  * @dev Provides methods for seller creation that can be shared accross facets
  */
-contract AccountBase is ProtocolBase {
+contract AccountBase is ProtocolBase, IBosonAccountEvents {
 
     /**
      * @notice Creates a seller
@@ -37,6 +38,10 @@ contract AccountBase is ProtocolBase {
 
         _seller.id = sellerId;
         storeSeller(_seller);
+
+        // Notify watchers of state change
+        emit SellerCreated(sellerId, _seller);
+
     }
 
     /**

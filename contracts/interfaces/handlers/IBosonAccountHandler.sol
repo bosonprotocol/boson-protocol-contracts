@@ -1,20 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "../domain/BosonTypes.sol";
+import {BosonTypes} from "../../domain/BosonTypes.sol";
+import {IBosonAccountEvents} from "../events/IBosonAccountEvents.sol";
 
 /**
  * @title IBosonAccountHandler
  *
- * @notice Manages creation, update, retrieval of accounts within the protocol.
+ * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xab00c0da
+ * The ERC-165 identifier for this interface is: 0x18d9550a
  */
-interface IBosonAccountHandler {
-    /// Events
-    event SellerCreated(uint256 indexed sellerId, BosonTypes.Seller seller);
-    event SellerUpdated(uint256 indexed sellerId, BosonTypes.Seller seller);
-    event BuyerCreated(uint256 indexed buyerId, BosonTypes.Buyer buyer);
+interface IBosonAccountHandler is IBosonAccountEvents {
 
     /**
      * @notice Creates a seller

@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { ProtocolBase } from "./../ProtocolBase.sol";
-import { ProtocolLib } from "./../ProtocolLib.sol";
+import { IBosonOfferEvents } from "../../interfaces/events/IBosonOfferEvents.sol";
+import { ProtocolBase } from "./../bases/ProtocolBase.sol";
+import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 
 /**
  * @title OfferBase
  *
  * @dev Provides methods for offer creation that can be shared accross facets
  */
-contract OfferBase is ProtocolBase {
+contract OfferBase is ProtocolBase, IBosonOfferEvents {
     /**
      * @dev Internal helper to create offer, which can be reused among different facets
      *
@@ -35,7 +36,12 @@ contract OfferBase is ProtocolBase {
         offerId = ProtocolLib.protocolCounters().nextOfferId++;
         _offer.id = offerId;
 
+        // Store the offer
         storeOffer(_offer);
+
+        // Notify watchers of state change
+        emit OfferCreated(offerId, sellerId, _offer);
+
     }
 
     /**

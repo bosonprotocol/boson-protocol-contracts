@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { ProtocolBase } from "./../ProtocolBase.sol";
-import { ProtocolLib } from "./../ProtocolLib.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { ITwinToken } from "../../interfaces/ITwinToken.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol"; // TODO remove this import!!! add allowance() to ITwinToken
 
+import { IBosonTwinEvents } from "../../interfaces/events/IBosonTwinEvents.sol";
+import { ITwinToken } from "../../interfaces/ITwinToken.sol";
+import { ProtocolBase } from "./../bases/ProtocolBase.sol";
+import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 
 /**
  * @title TwinBase

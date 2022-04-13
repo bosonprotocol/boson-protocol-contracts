@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { IBosonTwinHandler } from "../../interfaces/IBosonTwinHandler.sol";
+import { IBosonTwinHandler } from "../../interfaces/handlers/IBosonTwinHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { TwinBase } from "../bases/TwinBase.sol";
-import { ProtocolLib } from "../ProtocolLib.sol";
 
 /**
  * @title TwinHandlerFacet

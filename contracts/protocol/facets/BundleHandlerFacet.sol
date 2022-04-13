@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { IBosonBundleHandler } from "../../interfaces/IBosonBundleHandler.sol";
+import { IBosonBundleHandler } from "../../interfaces/handlers/IBosonBundleHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BundleBase } from "../bases/BundleBase.sol";
-import { ProtocolLib } from "../ProtocolLib.sol";
+import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
 /**
  * @title BundleHandlerFacet
@@ -52,13 +52,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
     external
     override
     {
-        // create bundle and update structs values to represent true state
-        (uint256 bundleId, uint256 sellerId) = createBundleInternal(_bundle);
-        _bundle.id = bundleId;
-        _bundle.sellerId = sellerId;
-      
-        // Notify watchers of state change
-        emit BundleCreated(bundleId, sellerId, _bundle);
+        createBundleInternal(_bundle);
     }
 
     /**

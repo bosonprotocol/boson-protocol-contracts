@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
-import "../../interfaces/IBosonConfigHandler.sol";
+import {IAccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
+import {IBosonConfigHandler} from "../../interfaces/handlers/IBosonConfigHandler.sol";
 
 /**
  * @title ClientLib
