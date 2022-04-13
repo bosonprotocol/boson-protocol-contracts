@@ -5,9 +5,9 @@ import { ProtocolBase } from "./../ProtocolBase.sol";
 import { ProtocolLib } from "./../ProtocolLib.sol";
 
 /**
- * @title OfferBase
+ * @title AccountBase
  *
- * @dev Provides methods for offer creation that can be shared accross facets
+ * @dev Provides methods for seller creation that can be shared accross facets
  */
 contract AccountBase is ProtocolBase {
 

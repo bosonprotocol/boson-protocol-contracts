@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import { IBosonGroupHandler } from "../../interfaces/IBosonGroupHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
-import { ProtocolBase } from "../ProtocolBase.sol";
+import { GroupBase } from "../bases/GroupBase.sol";
 import { ProtocolLib } from "../ProtocolLib.sol";
 
 /**
@@ -11,7 +11,7 @@ import { ProtocolLib } from "../ProtocolLib.sol";
  *
  * @notice Handles groups within the protocol
  */
-contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
+contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
 
     /**
      * @notice Facet Initializer
@@ -43,46 +43,13 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
     external
     override
     {
-        // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
-        require(exists, NO_SUCH_SELLER);
+        // create offer and update structs values to represent true state
+        (uint256 groupId, uint256 sellerId) = createGroupInternal(_group);
+        _group.id = groupId;
         _group.sellerId = sellerId;
-
-        // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_group.offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
-        
-        // condition must be valid
-        require(validateCondition(_group.condition), INVALID_CONDITION_PARAMETERS);
-
-        // Get the next group and increment the counter
-        uint256 groupId = protocolCounters().nextGroupId++;
-
-        for (uint i = 0; i < _group.offerIds.length; i++) {
-            // make sure offer exists and belongs to the seller
-            getValidOffer(_group.offerIds[i]);
-            
-            // Offer should not belong to another group already
-            (bool exist, ) = getGroupIdByOffer(_group.offerIds[i]);
-            require(!exist, OFFER_MUST_BE_UNIQUE);
-
-            // add to groupIdByOffer mapping
-            protocolStorage().groupIdByOffer[_group.offerIds[i]] = groupId;
-        }
-       
-        // Get storage location for group
-        (, Group storage group) = fetchGroup(groupId);
-
-        // Set group props individually since memory structs can't be copied to storage
-        group.id = groupId;
-        group.sellerId = _group.sellerId;
-        group.offerIds = _group.offerIds;
-        group.condition = _group.condition;
-
-        // modify incoming struct so event value represents true state
-        _group.id = groupId; 
       
         // Notify watchers of state change
-        emit GroupCreated(groupId, _group.sellerId, _group);
+        emit GroupCreated(groupId, sellerId, _group);
     }
 
     /**
@@ -260,31 +227,6 @@ contract GroupHandlerFacet is IBosonGroupHandler, ProtocolBase {
       
         // Notify watchers of state change
         emit GroupUpdated(group.id, sellerId, group);
-    }
-
-
-    /**
-     * @dev this might change, depending on how checks at the time of the commit will be implemented
-     * @notice Validates that condition parameters make sense 
-     *
-     * Reverts if:
-     * 
-     * - evaluation method None has fields different from 0
-     * - evaluation method AboveThreshold contract address is zero address
-     * - evaluation method SpecificToken contract address is zero address
-     *
-     * @param _condition - fully populated condition struct
-     * @return valid - validity of condition
-     * 
-     */
-    function validateCondition(Condition memory _condition) internal pure returns (bool valid) {
-        if (_condition.method == EvaluationMethod.None) {
-            valid  = _condition.tokenAddress == address(0) && _condition.tokenId == 0 && _condition.threshold == 0;
-        } else if (_condition.method ==  EvaluationMethod.AboveThreshold) {
-            valid = _condition.tokenAddress != address(0);
-        } else if (_condition.method ==  EvaluationMethod.SpecificToken){
-            valid = _condition.tokenAddress != address(0);
-        }
     }
 
     /**
