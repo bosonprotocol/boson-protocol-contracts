@@ -54,7 +54,7 @@ contract BundleBase is ProtocolBase {
             getValidOffer(_bundle.offerIds[i]);
 
             (bool bundleByOfferExists, ) = getBundleIdByOffer(_bundle.offerIds[i]);
-            require(!bundleByOfferExists, OFFER_MUST_BE_UNIQUE);
+            require(!bundleByOfferExists, BUNDLE_OFFER_MUST_BE_UNIQUE);
 
             // Add to bundleIdByOffer mapping
             protocolStorage().bundleIdByOffer[_bundle.offerIds[i]] = bundleId;

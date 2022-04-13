@@ -43,7 +43,7 @@ describe("IBosonBundleHandler", function () {
   let offerHandler, bundleHandlerFacet_Factory;
   let seller, active;
   let bundleStruct;
-  let twinIdsToAdd, twinIdsToRemove;
+  let twinIdsToAdd, twinIdsToRemove, offerIdsToAdd, offerIdsToRemove;
   let bundle, bundleId, offerIds, twinIds, nextBundleId, invalidBundleId, bundleInstance;
   let offer, oneMonth, oneWeek, exists, expected;
   let offerId,
@@ -365,9 +365,13 @@ describe("IBosonBundleHandler", function () {
 
       it("Caller is not the seller of all offers", async function () {
         // create another seller and an offer
+        let expectedNewOfferId = "6";
         seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
         await accountHandler.connect(rando).createSeller(seller);
-        await offerHandler.connect(rando).createOffer(offer); // creates an offer with id 6
+        const tx = await offerHandler.connect(rando).createOffer(offer); // creates an offer with id 6
+        const txReceipt = await tx.wait();
+        const event = getEvent(txReceipt, offerHandler, "OfferCreated");
+        assert.equal(event.offerId.toString(), expectedNewOfferId, "Offer Id is not 6");
 
         // add offer belonging to another seller
         bundle.offerIds = ["2", "6"];
@@ -431,7 +435,7 @@ describe("IBosonBundleHandler", function () {
 
         // Attempt to create a bundle, expecting revert
         await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
-          RevertReasons.OFFER_MUST_BE_UNIQUE
+          RevertReasons.BUNDLE_OFFER_MUST_BE_UNIQUE
         );
       });
 
@@ -441,7 +445,7 @@ describe("IBosonBundleHandler", function () {
 
         // Attempt to create a bundle, expecting revert
         await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
-          RevertReasons.OFFER_MUST_BE_UNIQUE
+          RevertReasons.BUNDLE_OFFER_MUST_BE_UNIQUE
         );
       });
 
@@ -929,6 +933,340 @@ describe("IBosonBundleHandler", function () {
           // Attempt to remove twins from the bundle, expecting revert
           await expect(
             bundleHandler.connect(operator).removeTwinsFromBundle(bundle.id, twinIdsToRemove)
+          ).to.revertedWith(RevertReasons.NOTHING_UPDATED);
+        });
+      });
+    });
+
+    context("👉 addOffersToBundle()", async function () {
+      beforeEach(async function () {
+        // Create a bundle
+        await bundleHandler.connect(operator).createBundle(bundle);
+
+        // set the new fields
+        offerIdsToAdd = ["1", "4"];
+        bundle.offerIds = [...bundle.offerIds, ...offerIdsToAdd];
+
+        bundleStruct = bundle.toStruct();
+      });
+
+      it("should emit a BundleUpdated event", async function () {
+        // Add offers to a bundle, testing for the event
+        const tx = await bundleHandler.connect(operator).addOffersToBundle(bundle.id, offerIdsToAdd);
+        const txReceipt = await tx.wait();
+
+        const event = getEvent(txReceipt, bundleHandlerFacet_Factory, "BundleUpdated");
+
+        const bundleInstance = Bundle.fromStruct(event.bundle);
+        // Validate the instance
+        expect(bundleInstance.isValid()).to.be.true;
+
+        assert.equal(event.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
+        assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+      });
+
+      it("should add offers to correct bundle", async function () {
+        // Create a new bundle of id 2
+        let expectedNewBundleId = "2";
+        const newBundle = bundle.clone();
+        newBundle.id = expectedNewBundleId;
+        newBundle.offerIds = ["4"];
+        const tx = await bundleHandler.connect(operator).createBundle(newBundle); // creates new bundle of id 2
+        const txReceipt = await tx.wait();
+        const event = getEvent(txReceipt, bundleHandler, "BundleCreated");
+        assert.equal(event.bundleId.toString(), expectedNewBundleId, "Bundle Id is not 2"); // verify that bundle id is 2
+
+        let bundleIdToAddOffer = bundle.id; // Bundle in which we want we want to add new offer Ids.
+        offerIdsToAdd = ["1"]; // The Offer id which we want to add.
+
+        // Bundle with id 1 does not have this offer id.
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToAddOffer);
+        let returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.offerIds.includes(offerIdsToAdd[0])).is.false;
+
+        // Bundle with id 2 does not have this offer id.
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(newBundle.id);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.offerIds.includes(offerIdsToAdd[0])).is.false;
+
+        // Adding the offers to bundle of id 1.
+        await bundleHandler.connect(operator).addOffersToBundle(bundleIdToAddOffer, offerIdsToAdd);
+
+        // Bundle with id 1 now has this offer id.
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToAddOffer);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.offerIds.includes(offerIdsToAdd[0])).is.true;
+
+        // Bundle with id 2 does not have this offer id.
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(newBundle.id);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.offerIds.includes(offerIdsToAdd[0])).is.false;
+      });
+
+      it("should update state", async function () {
+        // Add offers to a bundle,
+        await bundleHandler.connect(operator).addOffersToBundle(bundle.id, offerIdsToAdd);
+
+        // Get the bundle as a struct
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundle.id);
+
+        // Parse into entity
+        const returnedBundle = Bundle.fromStruct(bundleStruct);
+
+        // Returned values should reflect the changes done with addOffersToBundle
+        for ([key, value] of Object.entries(bundle)) {
+          expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Caller is not the seller of a bundle", async function () {
+          // Attempt to add offers to bundle, expecting revert
+          await expect(bundleHandler.connect(rando).addOffersToBundle(bundle.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+        });
+
+        it("Adding nothing", async function () {
+          // Try to add nothing
+          offerIdsToAdd = [];
+
+          // Attempt to add offers to the bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addOffersToBundle(bundle.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.NOTHING_UPDATED
+          );
+        });
+
+        it("Adding too many offers", async function () {
+          // Try to add the more than 100 offers
+          offerIdsToAdd = [...Array(101).keys()];
+
+          // Attempt to add offers to a bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addOffersToBundle(bundle.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.TOO_MANY_OFFERS
+          );
+        });
+
+        it("Bundle does not exist", async function () {
+          // Set invalid id
+          bundle.id = "444";
+
+          // Attempt to add offers to the bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addOffersToBundle(bundle.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.NO_SUCH_BUNDLE
+          );
+
+          // Set invalid id
+          bundle.id = "0";
+
+          // Attempt to add offers to bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addOffersToBundle(bundle.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.NO_SUCH_BUNDLE
+          );
+        });
+
+        it("Caller is not the seller of all offers", async function () {
+          // create another seller and an offer
+          let expectedNewOfferId = "6";
+          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          await accountHandler.connect(rando).createSeller(seller);
+          const tx = await offerHandler.connect(rando).createOffer(offer); // creates an offer with id 6
+          const txReceipt = await tx.wait();
+          const event = getEvent(txReceipt, offerHandler, "OfferCreated");
+          assert.equal(event.offerId.toString(), expectedNewOfferId, "Offer Id is not 6");
+
+          // add offer belonging to another seller
+          offerIdsToAdd = ["1", "6"];
+
+          // Attempt to add offers to bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addOffersToBundle(bundle.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+        });
+
+        it("Offer is already part of another bundle", async function () {
+          // create another bundle
+          bundle.offerIds = ["1"];
+          await bundleHandler.connect(operator).createBundle(bundle);
+
+          // Attempt to add offers to a bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addOffersToBundle(bundle.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.BUNDLE_OFFER_MUST_BE_UNIQUE
+          );
+        });
+
+        it("Offer is duplicated", async function () {
+          // Try to add the same offer twice
+          offerIdsToAdd = ["1", "1", "4"];
+
+          // Attempt to add offers to a bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addOffersToBundle(bundle.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.BUNDLE_OFFER_MUST_BE_UNIQUE
+          );
+        });
+
+        it("Offer does not exist", async function () {
+          // Set invalid offer id
+          offerIdsToAdd = ["1", "999"];
+
+          // Attempt to add offers to a bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addOffersToBundle(bundle.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.NO_SUCH_OFFER
+          );
+
+          // Set invalid offer id
+          offerIdsToAdd = ["0", "2"];
+
+          // Attempt to add offers to a bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addOffersToBundle(bundle.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.NO_SUCH_OFFER
+          );
+        });
+      });
+    });
+
+    context("👉 removeOffersFromBundle()", async function () {
+      beforeEach(async function () {
+        bundle.offerIds = ["1", "2", "3", "4"];
+        // Create a bundle
+        await bundleHandler.connect(operator).createBundle(bundle);
+
+        // set the new fields
+        offerIdsToRemove = ["1", "4"];
+        bundle.offerIds = ["3", "2"]; // ["1","2","3","4"] -> ["4","2","3"] -> ["3","2"]
+
+        bundleStruct = bundle.toStruct();
+      });
+
+      it("should emit a BundleUpdated event", async function () {
+        // Remove offers from a bundle, testing for the event
+        const tx = await bundleHandler.connect(operator).removeOffersFromBundle(bundle.id, offerIdsToRemove);
+        const txReceipt = await tx.wait();
+
+        const event = getEvent(txReceipt, bundleHandlerFacet_Factory, "BundleUpdated");
+
+        const bundleInstance = Bundle.fromStruct(event.bundle);
+        // Validate the instance
+        expect(bundleInstance.isValid()).to.be.true;
+
+        assert.equal(event.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
+        assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+      });
+
+      it("should remove offers from correct bundle", async function () {
+        // Create a new bundle of id 2
+        let expectedNewBundleId = "2";
+        const newBundle = bundle.clone();
+        newBundle.id = expectedNewBundleId;
+        newBundle.offerIds = ["5"];
+        const tx = await bundleHandler.connect(operator).createBundle(newBundle); // creates new bundle of id 2
+        const txReceipt = await tx.wait();
+        const event = getEvent(txReceipt, bundleHandler, "BundleCreated");
+        assert.equal(event.bundleId.toString(), expectedNewBundleId, "Bundle Id is not 2"); // verify that bundle id is 2
+
+        let bundleIdToRemoveOffer = bundle.id; // Bundle in which we want we want to add new offer Ids.
+        offerIdsToRemove = ["2"]; // The Offer id which we want to add.
+
+        // Expect that the Bundle with id 1 has this offer.
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToRemoveOffer);
+        let returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.offerIds.includes(offerIdsToRemove[0])).is.true;
+
+        // Expect that the Bundle with id 2 does not have this offer.
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(newBundle.id);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.offerIds.includes(offerIdsToRemove[0])).is.false;
+
+        // Removing the offer from the bundle of id 1.
+        await bundleHandler.connect(operator).removeOffersFromBundle(bundleIdToRemoveOffer, offerIdsToRemove);
+
+        // Expect that the bundle with id 2 still does not have this offer.
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(newBundle.id);
+        returnedBundle = Bundle.fromStruct(bundleStruct);
+        expect(returnedBundle.offerIds.includes(offerIdsToRemove[0])).is.false;
+      });
+
+      it("should update state", async function () {
+        // Remove offer from a bundle,
+        await bundleHandler.connect(operator).removeOffersFromBundle(bundle.id, offerIdsToRemove);
+
+        // Get the bundle as a struct
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundle.id);
+
+        // Parse into entity
+        const returnedBundle = Bundle.fromStruct(bundleStruct);
+
+        // Returned values should  reflect the changes done with removeOffersFromBundle
+        for ([key, value] of Object.entries(bundle)) {
+          expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Bundle does not exist", async function () {
+          // Set invalid id
+          bundle.id = "444";
+
+          // Attempt to remove offers from the bundle, expecting revert
+          await expect(
+            bundleHandler.connect(operator).removeOffersFromBundle(bundle.id, offerIdsToRemove)
+          ).to.revertedWith(RevertReasons.NO_SUCH_BUNDLE);
+
+          // Set invalid id
+          bundle.id = "0";
+
+          // Attempt to remove offers from bundle, expecting revert
+          await expect(
+            bundleHandler.connect(operator).removeOffersFromBundle(bundle.id, offerIdsToRemove)
+          ).to.revertedWith(RevertReasons.NO_SUCH_BUNDLE);
+        });
+
+        it("Caller is not seller of a bundle", async function () {
+          // Attempt to remove offers from the bundle, expecting revert
+          await expect(
+            bundleHandler.connect(rando).removeOffersFromBundle(bundle.id, offerIdsToRemove)
+          ).to.revertedWith(RevertReasons.NOT_OPERATOR);
+        });
+
+        it("Offer is not a part of the bundle", async function () {
+          // inexisting offer
+          offerIdsToRemove = ["6"];
+
+          // Attempt to remove offers from the bundle, expecting revert
+          await expect(
+            bundleHandler.connect(operator).removeOffersFromBundle(bundle.id, offerIdsToRemove)
+          ).to.revertedWith(RevertReasons.OFFER_NOT_IN_BUNDLE);
+
+          // create an offer and add it to another bundle
+          await offerHandler.connect(operator).createOffer(offer);
+          bundle.offerIds = ["6"];
+          await bundleHandler.connect(operator).createBundle(bundle);
+
+          // Attempt to remove offers from a bundle, expecting revert
+          await expect(
+            bundleHandler.connect(operator).removeOffersFromBundle(bundle.id, offerIdsToRemove)
+          ).to.revertedWith(RevertReasons.OFFER_NOT_IN_BUNDLE);
+        });
+
+        it("Removing too many offers", async function () {
+          // Try to remove the more than 100 offers
+          offerIdsToRemove = [...Array(101).keys()];
+
+          // Attempt to remove offers from the bundle, expecting revert
+          await expect(
+            bundleHandler.connect(operator).removeOffersFromBundle(bundle.id, offerIdsToRemove)
+          ).to.revertedWith(RevertReasons.TOO_MANY_OFFERS);
+        });
+
+        it("Removing nothing", async function () {
+          // Try to remove nothing
+          offerIdsToRemove = [];
+
+          // Attempt to remove offers from the bundle, expecting revert
+          await expect(
+            bundleHandler.connect(operator).removeOffersFromBundle(bundle.id, offerIdsToRemove)
           ).to.revertedWith(RevertReasons.NOTHING_UPDATED);
         });
       });

@@ -62,6 +62,8 @@ contract BosonConstants {
     // Revert Reasons: Bundle related
     string internal constant NO_SUCH_BUNDLE = "No such bundle";
     string internal constant TWIN_NOT_IN_BUNDLE = "Twin not part of the bundle";
+    string internal constant OFFER_NOT_IN_BUNDLE = "Offer not part of the bundle";
     string internal constant TOO_MANY_TWINS = "Exceeded maximum twins in a single transaction";
     string internal constant TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE = "Twin already exists in the same bundle";
+    string internal constant BUNDLE_OFFER_MUST_BE_UNIQUE = "Offer must be unique to a bundle";
 }
