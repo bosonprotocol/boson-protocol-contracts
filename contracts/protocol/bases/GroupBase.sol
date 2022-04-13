@@ -60,7 +60,7 @@ contract GroupBase is ProtocolBase {
 
         // Set group props individually since memory structs can't be copied to storage
         group.id = groupId;
-        group.sellerId = _group.sellerId;
+        group.sellerId = sellerId;
         group.offerIds = _group.offerIds;
         group.condition = _group.condition;
     }

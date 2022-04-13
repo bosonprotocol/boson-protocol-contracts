@@ -81,7 +81,7 @@ contract BundleBase is ProtocolBase {
 
         // Set bundle props individually since memory structs can't be copied to storage
         bundle.id = bundleId;
-        bundle.sellerId = _bundle.sellerId;
+        bundle.sellerId = sellerId;
         bundle.offerIds = _bundle.offerIds;
         bundle.twinIds = _bundle.twinIds;
     }

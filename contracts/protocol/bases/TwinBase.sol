@@ -47,7 +47,7 @@ contract TwinBase is ProtocolBase {
 
         // Set twin props individually since memory structs can't be copied to storage
         twin.id = twinId;
-        twin.sellerId = _twin.sellerId;
+        twin.sellerId = sellerId;
         twin.supplyAvailable = _twin.supplyAvailable;
         twin.supplyIds = _twin.supplyIds;
         twin.tokenId = _twin.tokenId;
