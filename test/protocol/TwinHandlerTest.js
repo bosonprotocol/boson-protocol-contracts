@@ -474,14 +474,11 @@ describe("IBosonTwinHandler", function () {
       it("should emit a TwinDeleted event", async function () {
         let nextTwinId = "1";
 
-        // Approving the twinHandler contract to transfer seller's tokens.
-        await bosonToken.connect(operator).approve(twinHandler.address, 1);
-
         // Expect twin to be found.
         [success] = await twinHandler.connect(rando).getTwin(twin.id);
         expect(success).to.be.true;
 
-        // Create a twin, testing for the event.
+        // Remove the twin, testing for the event.
         const tx = await twinHandler.connect(operator).removeTwin(twin.id);
         const txReceipt = await tx.wait();
         const event = getEvent(txReceipt, twinHandler, "TwinDeleted");
@@ -498,6 +495,7 @@ describe("IBosonTwinHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("Twin does not exist", async function () {
           let nonExistantTwinId = "999";
+
           // Attempt to Remove a twin, expecting revert
           await expect(twinHandler.connect(operator).removeTwin(nonExistantTwinId)).to.revertedWith(
             RevertReasons.NO_SUCH_TWIN
@@ -554,7 +552,9 @@ describe("IBosonTwinHandler", function () {
             voided
           );
 
+          // Expect offer to be valid
           expect(offer.isValid()).is.true;
+
           await offerHandler.connect(operator).createOffer(offer);
 
           // Bundle: Required constructor params
