@@ -9,7 +9,7 @@ import { ProtocolLib } from "./../ProtocolLib.sol";
  *
  * @dev Provides methods for offer creation that can be shared accross facets
  */
-abstract contract OfferBase is ProtocolBase {
+contract OfferBase is ProtocolBase {
     /**
      * @dev Internal helper to create offer, which can be reused among different facets
      *
