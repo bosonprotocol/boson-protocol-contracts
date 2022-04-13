@@ -21,11 +21,13 @@ contract GroupBase is ProtocolBase {
      * - number of offers exceeds maximum allowed number per group
      *
      * @param _group - the fully populated struct with group id set to 0x0
+     * @return groupId id of newly created group
+     * @return sellerId id of the group's seller
      */
     function createGroupInternal(
         Group memory _group
     )
-    internal returns (uint256 sellerId, uint256 groupId)
+    internal returns (uint256 groupId, uint256 sellerId)
     {
         // get seller id, make sure it exists and store it to incoming struct
         bool exists;

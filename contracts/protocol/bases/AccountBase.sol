@@ -20,6 +20,7 @@ contract AccountBase is ProtocolBase {
      * - Seller is not active (if active == false)
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
+     * @return sellerId id of newly created seller
      */
     function createSellerInternal(Seller memory _seller) internal returns (uint256 sellerId) {
         //Check active is not set to false
