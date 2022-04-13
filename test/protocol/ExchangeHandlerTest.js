@@ -22,7 +22,7 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, operator, admin, clerk, treasury;
+  let accounts, deployer, operator, admin, clerk, treasury, rando;
   let erc165, protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, bosonVoucher, gasLimit;
   let id, buyer, buyerId, offer, offerId, seller, sellerId;
   let block, blockNumber, tx, txReceipt, event, clients;
@@ -40,7 +40,7 @@ describe("IBosonExchangeHandler", function () {
     metadataHash,
     voided;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
-  let exchange, finalizedDate, disputed, state, exchangeStruct;
+  let exchange, finalizedDate, disputed, state, exchangeStruct, response, exists;
 
   before(async function () {
     // get interface Ids
@@ -60,6 +60,7 @@ describe("IBosonExchangeHandler", function () {
     clerk = accounts[3];
     treasury = accounts[4];
     buyer = accounts[5];
+    rando = accounts[6];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -248,6 +249,46 @@ describe("IBosonExchangeHandler", function () {
             RevertReasons.NO_SUCH_OFFER
           );
         });
+      });
+    });
+
+    context("👉 getExchange()", async function () {
+      beforeEach(async function () {
+        // Commit to offer, getting the exchange struct from the event
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+        txReceipt = await tx.wait();
+        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange with the block timestamp of the tx
+        exchange.voucher.committedDate = block.timestamp.toString();
+      });
+
+      it("should return true for exists if exchange id is valid", async function () {
+        // Get the exchange
+        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+
+        // Test existence flag
+        expect(exists).to.be.true;
+      });
+
+      it("should return false for exists if exchange id is not valid", async function () {
+        // Get the exchange
+        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id + 10);
+
+        // Test existence flag
+        expect(exists).to.be.false;
+      });
+
+      it("should return the expected exchange if exchange id is valid", async function () {
+        // Get the exchange
+        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+
+        // It should match the expected exchange struct
+        assert.equal(exchange.toString(), Exchange.fromStruct(response).toString(), "Exchange struct is incorrect");
       });
     });
   });
