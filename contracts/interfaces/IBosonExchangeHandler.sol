@@ -46,7 +46,7 @@ interface IBosonExchangeHandler {
     function getExchange(uint256 _exchangeId) external view returns (bool exists, BosonTypes.Exchange memory exchange);
 
     /**
-     * @notice Gets the details about a given exchange.
+     * @notice Gets the state of a given exchange.
      *
      * @param _exchangeId - the id of the exchange to check
      * @return exists - true if the exchange exists
