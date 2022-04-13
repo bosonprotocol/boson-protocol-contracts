@@ -22,7 +22,7 @@ contract OfferBase is ProtocolBase {
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @return offerId id of newly created offer
-     * @return sellerId id of the group's seller
+     * @return sellerId id of the offers's seller
      */
     function createOfferInternal(Offer memory _offer) internal returns (uint256 offerId, uint256 sellerId) {
         // get seller id, make sure it exists and store it to incoming struct

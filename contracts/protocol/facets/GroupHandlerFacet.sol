@@ -43,7 +43,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
     external
     override
     {
-        // create offer and update structs values to represent true state
+        // create group and update structs values to represent true state
         (uint256 groupId, uint256 sellerId) = createGroupInternal(_group);
         _group.id = groupId;
         _group.sellerId = sellerId;
