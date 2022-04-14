@@ -185,7 +185,7 @@ describe("IBosonOrchestrationHandler", function () {
       it("should emit an SellerCreated and OfferCreated event", async function () {
         // Create an offer, testing for the event
         await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer))
-          .to.emit(accountHandler, "SellerCreated")
+          .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, offer.sellerId, offerStruct);
@@ -224,7 +224,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, testing for the event
         await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer))
-          .to.emit(accountHandler, "SellerCreated")
+          .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(nextAccountId, sellerStruct)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, offer.sellerId, offerStruct);

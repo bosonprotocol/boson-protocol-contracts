@@ -34,7 +34,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, IBosonOrchestratio
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
-     * - in offer struc
+     * - in offer struct:
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Buyer cancel penalty is greater than price
