@@ -117,7 +117,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
      * @notice Gets the details about a given exchange.
      *
      * @param _exchangeId - the id of the exchange to check
-     * @return exists - the exchange exists
+     * @return exists - true if the exchange exists
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
      */
     function getExchange(uint256 _exchangeId)
@@ -125,6 +125,33 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     view
     returns(bool exists, Exchange memory exchange) {
         return fetchExchange(_exchangeId);
+    }
+
+    /**
+     * @notice Gets the state of a given exchange.
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return exists - true if the exchange exists
+     * @return state - the exchange state. See {BosonTypes.ExchangeStates}
+     */
+    function getExchangeState(uint256 _exchangeId)
+    external
+    view
+    returns(bool exists, ExchangeState state) {
+        Exchange memory exchange;
+        (exists, exchange) = fetchExchange(_exchangeId);
+        if (exists) state = exchange.state;
+    }
+
+    /**
+     * @notice Gets the Id that will be assigned to the next exchange.
+     *
+     *  Does not increment the counter.
+     *
+     * @return nextExchangeId - the next exchange Id
+     */
+    function getNextExchangeId() external view returns (uint256 nextExchangeId) {
+        nextExchangeId = protocolCounters().nextExchangeId;
     }
 
 }
