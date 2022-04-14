@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { IBosonOrchestrationHandler } from "../../interfaces/IBosonOrchestrationHandler.sol";
+import { IBosonOrchestrationHandler } from "../../interfaces/handlers/IBosonOrchestrationHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
@@ -53,16 +53,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, IBosonOrchestratio
         require(_seller.operator == msg.sender, NOT_OPERATOR);
 
         // create seller and update structs values to represent true state
-        uint256 sellerId = createSellerInternal(_seller);
-        _seller.id = sellerId;
-        
-        // create offer and update structs values to represent true state
-        (uint256 offerId, ) = createOfferInternal(_offer);
-        _offer.id = offerId;
-        _offer.sellerId = sellerId;
-
-        // Notify watchers of state change
-        emit SellerCreated(sellerId, _seller);
-        emit OfferCreated(offerId, sellerId, _offer);
+        createSellerInternal(_seller);
+        createOfferInternal(_offer);
     }  
 }

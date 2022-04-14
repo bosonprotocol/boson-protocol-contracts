@@ -16,8 +16,6 @@ import "./clients/IBosonClient.sol";
 import "./diamond/IDiamondCut.sol";
 import "./diamond/IDiamondLoupe.sol";
 
-
-
 /**
  * @title SupportedInterfaces
  *

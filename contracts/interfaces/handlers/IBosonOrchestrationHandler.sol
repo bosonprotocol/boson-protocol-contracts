@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "../domain/BosonTypes.sol";
+import {BosonTypes} from "../../domain/BosonTypes.sol";
+import {IBosonAccountEvents} from "../events/IBosonAccountEvents.sol";
+import {IBosonOfferEvents} from "../events/IBosonOfferEvents.sol";
 
 /**
  * @title IBosonOrchestrationHandler
@@ -10,11 +12,7 @@ import "../domain/BosonTypes.sol";
  *
  * The ERC-165 identifier for this interface is: 0x8db6d85b
  */
-interface IBosonOrchestrationHandler {
-    /// Events
-    event SellerCreated(uint256 indexed sellerId, BosonTypes.Seller seller);
-    event OfferCreated(uint256 indexed offerId, uint256 indexed sellerId, BosonTypes.Offer offer);
-
+interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonOfferEvents{
     /**
      * @notice Creates a seller and an offer in a single transaction.
      *
