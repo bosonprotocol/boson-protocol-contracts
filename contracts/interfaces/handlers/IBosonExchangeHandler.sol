@@ -38,4 +38,22 @@ interface IBosonExchangeHandler is IBosonExchangeEvents {
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
      */
     function getExchange(uint256 _exchangeId) external view returns (bool exists, BosonTypes.Exchange memory exchange);
+
+    /**
+     * @notice Gets the state of a given exchange.
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return exists - true if the exchange exists
+     * @return state - the exchange state. See {BosonTypes.ExchangeStates}
+     */
+    function getExchangeState(uint256 _exchangeId) external view returns (bool exists, BosonTypes.ExchangeState state);
+
+    /**
+     * @notice Gets the Id that will be assigned to the next exchange.
+     *
+     *  Does not increment the counter.
+     *
+     * @return nextExchangeId - the next exchange Id
+     */
+    function getNextExchangeId() external view returns (uint256 nextExchangeId);
 }
