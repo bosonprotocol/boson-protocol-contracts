@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { IBosonOrchestrationHandler } from "../../interfaces/handlers/IBosonOrchestrationHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
+import { GroupBase } from "../bases/GroupBase.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
 
 /**
@@ -11,7 +12,7 @@ import { OfferBase } from "../bases/OfferBase.sol";
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  */
-contract OrchestrationHandlerFacet is AccountBase, OfferBase, IBosonOrchestrationHandler {
+contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, IBosonOrchestrationHandler {
 
     /**
      * @notice Facet Initializer
@@ -34,7 +35,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, IBosonOrchestratio
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
-     * - in offer struc
+     * - in offer struct:
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
      *   - Buyer cancel penalty is greater than price
@@ -55,5 +56,46 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, IBosonOrchestratio
         // create seller and update structs values to represent true state
         createSellerInternal(_seller);
         createOfferInternal(_offer);
-    }  
+    }
+
+    /**
+     * @notice Takes an offer and a condition, creates an offer, then a group with that offer and the given condition.
+     *
+     * Emits a SellerCreated and an OfferCreated event if successful.
+     *
+     * Reverts if:
+     * - in offer struct:
+     *   - Caller is not an operator
+     *   - Valid from date is greater than valid until date
+     *   - Valid until date is not in the future
+     *   - Buyer cancel penalty is greater than price
+     *   - Voided is set to true
+     * - in group struct:
+     *   - Caller is not an operator
+     *   - any of offers belongs to different seller
+     *   - any of offers does not exist
+     *   - offer exists in a different group
+     *   - number of offers exceeds maximum allowed number per group
+     *
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     */
+    function createOfferWithCondition(
+        Offer memory _offer,
+        Group memory _group
+    )
+    external
+    
+    {   
+        // create seller and update structs values to represent true state
+        createOfferInternal(_offer);
+
+        // add newly created offer to list of offertids
+        uint256[] memory temp = _group.offerIds;
+        _group.offerIds = new uint256[](_group.offerIds.length + 1);
+        _group.offerIds = temp;
+        _group.offerIds[_group.offerIds.length - 1] = _offer.id; // note that _offer.id is changed in createOfferInternal
+        
+        // create group and update structs values to represent true state
+        createGroupInternal(_group);
+    } 
 }
