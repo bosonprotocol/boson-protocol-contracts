@@ -15,6 +15,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { getEvent } = require("../../scripts/util/test-events.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
+const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 
 /**
  *  Test the Boson Bundle Handler interface
@@ -22,13 +23,15 @@ const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 describe("IBosonBundleHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury;
+  let accounts, deployer, rando, operator, admin, clerk, treasury, buyer;
   let erc165,
     protocolDiamond,
     accessController,
     twinHandler,
     accountHandler,
     bundleHandler,
+    exchangeHandler,
+    bosonVoucher,
     bosonToken,
     twin,
     support,
@@ -39,13 +42,14 @@ describe("IBosonBundleHandler", function () {
     tokenId,
     tokenAddress,
     key,
-    value;
+    value,
+    clients;
   let offerHandler, bundleHandlerFacet_Factory;
   let seller, active;
   let bundleStruct;
   let twinIdsToAdd, twinIdsToRemove, offerIdsToAdd, offerIdsToRemove;
   let bundle, bundleId, offerIds, twinIds, nextBundleId, invalidBundleId, bundleInstance;
-  let offer, oneMonth, oneWeek, exists, expected;
+  let offer, oneMonth, oneWeek, exists, expected, blockNumber, block;
   let offerId,
     price,
     sellerDeposit,
@@ -75,6 +79,7 @@ describe("IBosonBundleHandler", function () {
     clerk = accounts[3];
     treasury = accounts[4];
     rando = accounts[5];
+    buyer = accounts[6];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -82,23 +87,36 @@ describe("IBosonBundleHandler", function () {
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
+    // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
+    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet"]);
-    await deployProtocolHandlerFacets(protocolDiamond, ["TwinHandlerFacet"]);
-    await deployProtocolHandlerFacets(protocolDiamond, ["OfferHandlerFacet"]);
-    await deployProtocolHandlerFacets(protocolDiamond, ["BundleHandlerFacet"]);
+    await deployProtocolHandlerFacets(protocolDiamond, [
+      "AccountHandlerFacet",
+      "TwinHandlerFacet",
+      "OfferHandlerFacet",
+      "BundleHandlerFacet",
+      "ExchangeHandlerFacet",
+    ]);
+
+    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
+    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    [bosonVoucher] = clients;
 
     // Add config Handler, so twin id starts at 1
     const protocolConfig = [
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
-      "0x0000000000000000000000000000000000000000",
+      bosonVoucher.address,
       "0",
       "100",
       "100",
       "100",
       "100",
     ];
+
+    // Deploy the Config facet, initializing the protocol config
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
     // Cast Diamond to IERC165
@@ -111,6 +129,8 @@ describe("IBosonBundleHandler", function () {
     bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
     // Cast Diamond to IOfferHandler
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
+    // Cast Diamond to IBosonExchangeHandler
+    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
 
     // Deploy the mock tokens
     [bosonToken] = await deployMockTokens(gasLimit);
@@ -174,9 +194,13 @@ describe("IBosonBundleHandler", function () {
         sellerDeposit = price = ethers.utils.parseUnits("0.25", "ether").toString();
         buyerCancelPenalty = price = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
-        validFromDate = ethers.BigNumber.from(Date.now()).toString(); // valid from now
-        validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // until 6 months
-        redeemableFromDate = ethers.BigNumber.from(Date.now() + oneWeek).toString(); // redeemable in 1 week
+        blockNumber = await ethers.provider.getBlockNumber();
+        block = await ethers.provider.getBlock(blockNumber);
+        validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
+        validUntilDate = ethers.BigNumber.from(block.timestamp)
+          .add(oneMonth * 6)
+          .toString(); // until 6 months
+        redeemableFromDate = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
         fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
         voucherValidDuration = oneMonth.toString(); // offers valid for one month
         exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
@@ -1268,6 +1292,62 @@ describe("IBosonBundleHandler", function () {
           await expect(
             bundleHandler.connect(operator).removeOffersFromBundle(bundle.id, offerIdsToRemove)
           ).to.revertedWith(RevertReasons.NOTHING_UPDATED);
+        });
+      });
+    });
+
+    context("👉 removeBundle()", async function () {
+      beforeEach(async function () {
+        // Create a bundle
+        await bundleHandler.connect(operator).createBundle(bundle);
+      });
+
+      it("should emit a BundleDeleted event", async function () {
+        let nextBundleId = "1";
+
+        // Expect bundle to be found.
+        [exists] = await bundleHandler.connect(rando).getBundle(bundle.id);
+        expect(exists).to.be.true;
+
+        // Remove the bundle, testing for the event.
+        const tx = await bundleHandler.connect(operator).removeBundle(bundle.id);
+        const txReceipt = await tx.wait();
+        const event = getEvent(txReceipt, bundleHandler, "BundleDeleted");
+
+        assert.equal(event.bundleId.toString(), nextBundleId, "Bundle Id is incorrect");
+        assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+
+        // Expect bundle to be not found.
+        [exists] = await bundleHandler.connect(rando).getBundle(bundle.id);
+        expect(exists).to.be.false;
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Bundle does not exist", async function () {
+          let nonExistantBundleId = "999";
+
+          // Attempt to Remove a bundle, expecting revert
+          await expect(bundleHandler.connect(operator).removeBundle(nonExistantBundleId)).to.revertedWith(
+            RevertReasons.NO_SUCH_BUNDLE
+          );
+        });
+
+        it("Caller is not the seller", async function () {
+          // Attempt to Remove a bundle, expecting revert
+          await expect(bundleHandler.connect(rando).removeBundle(bundle.id)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+        });
+
+        it("Exchange exists for bundled offer", async function () {
+          // Commit to an offer
+          let offerIdToCommit = bundle.offerIds[0];
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerIdToCommit);
+
+          // Attempt to Remove a bundle, expecting revert
+          await expect(bundleHandler.connect(operator).removeBundle(bundle.id)).to.revertedWith(
+            RevertReasons.EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS
+          );
         });
       });
     });
