@@ -360,4 +360,25 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
 
         emit BundleDeleted(_bundleId, bundle.sellerId);
     }
+
+    /**
+     * @notice Checks if exchanges for bundled offers exists.
+     *
+     * Reverts if:
+     * - exchange Ids for an offer exists.
+     *
+     * @param _bundleId - the bundle Id.
+     */
+    function bundledOffersExchangeCheck(uint256 _bundleId) internal view {
+        // Get storage location for bundle
+        (, Bundle storage bundle) = fetchBundle(_bundleId);
+
+        // Get the offer Ids in the bundle
+        uint256[] memory offerIds = bundle.offerIds;
+
+        for (uint256 i = 0; i < offerIds.length; i++) {
+            (bool exchangeIdsForOfferExists, ) = getExchangeIdsByOffer(offerIds[i]);
+            require(!exchangeIdsForOfferExists, EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS);
+        }
+    }
 }
