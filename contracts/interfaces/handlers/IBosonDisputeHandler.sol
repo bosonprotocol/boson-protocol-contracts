@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "../domain/BosonTypes.sol";
+import {BosonTypes} from "../../domain/BosonTypes.sol";
+import {IBosonDisputeEvents} from "../events/IBosonDisputeEvents.sol";
 
 /**
  * @title IBosonDisputeHandler
@@ -10,14 +11,7 @@ import "../domain/BosonTypes.sol";
  *
  * The ERC-165 identifier for this interface is: 0x5aef573c
  */
-interface IBosonDisputeHandler {
-    /// Events
-    event DisputeRaised(
-        uint256 indexed exchangeId,
-        uint256 indexed buyerId,
-        uint256 indexed sellerId,
-        string complaint
-    );
+interface IBosonDisputeHandler is IBosonDisputeEvents {
 
     /**
      * @notice Raise a dispute

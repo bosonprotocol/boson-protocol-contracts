@@ -1,17 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { IBosonBundleHandler } from "../../interfaces/IBosonBundleHandler.sol";
+import { IBosonBundleHandler } from "../../interfaces/handlers/IBosonBundleHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
-import { ProtocolBase } from "../ProtocolBase.sol";
-import { ProtocolLib } from "../ProtocolLib.sol";
+import { BundleBase } from "../bases/BundleBase.sol";
+import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
 /**
  * @title BundleHandlerFacet
  *
  * @notice Manages bundling associated with offers and twins within the protocol
  */
-contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
+contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
+
+    enum BundleUpdateAttribute {
+        TWIN,
+        OFFER
+    }
 
     /**
      * @notice Facet Initializer
@@ -47,85 +52,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
     external
     override
     {
-        // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
-        require(exists, NOT_OPERATOR);
-        _bundle.sellerId = sellerId;
-
-        // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_bundle.offerIds.length <= protocolStorage().maxOffersPerBundle, TOO_MANY_OFFERS);
-
-        // limit maximum number of twins to avoid running into block gas limit in a loop
-        require(_bundle.twinIds.length <= protocolStorage().maxTwinsPerBundle, TOO_MANY_TWINS);
-
-        // Get the next bundle and increment the counter
-        uint256 bundleId = protocolCounters().nextBundleId++;
-
-        for (uint i = 0; i < _bundle.offerIds.length; i++) {
-            // make sure all offers exist and belong to the seller
-            getValidOffer(_bundle.offerIds[i]);
-
-            (bool bundleByOfferExists, ) = getBundleIdByOffer(_bundle.offerIds[i]);
-            require(!bundleByOfferExists, OFFER_MUST_BE_UNIQUE);
-
-            // Add to bundleIdByOffer mapping
-            protocolStorage().bundleIdByOffer[_bundle.offerIds[i]] = bundleId;
-        }
-
-        for (uint i = 0; i < _bundle.twinIds.length; i++) {
-            // make sure all twins exist and belong to the seller
-            getValidTwin(_bundle.twinIds[i]);
-
-            // A twin can belong to multiple bundles
-            (bool bundlesForTwinExist, uint256[] memory bundleIds) = getBundleIdsByTwin(_bundle.twinIds[i]);
-            if (bundlesForTwinExist) {
-                for (uint j = 0; j < bundleIds.length; j++) {
-                    require((bundleIds[j] != bundleId), TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE);
-                }
-            }
-
-            // Push to bundleIdsByTwin mapping
-            protocolStorage().bundleIdsByTwin[_bundle.twinIds[i]].push(bundleId);
-        }
-
-        // Get storage location for bundle
-        (, Bundle storage bundle) = fetchBundle(bundleId);
-
-        // Set bundle props individually since memory structs can't be copied to storage
-        bundle.id = bundleId;
-        bundle.sellerId = _bundle.sellerId;
-        bundle.offerIds = _bundle.offerIds;
-        bundle.twinIds = _bundle.twinIds;
-
-        // modify incoming struct so event value represents true state
-        _bundle.id = bundleId;
-
-        // Notify watchers of state change
-        emit BundleCreated(bundleId, _bundle.sellerId, _bundle);
-    }
-
-    /**
-     * @notice Gets twin from protocol storage, makes sure it exist.
-     *
-     * Reverts if:
-     * - Twin does not exist
-     * - Caller is not the seller
-     *
-     *  @param _twinId - the id of the twin to check
-     */
-    function getValidTwin(uint256 _twinId) internal view returns (Twin storage twin){
-        bool exists;
-        // Get twin
-        (exists, twin) = fetchTwin(_twinId);
-
-        // Twin must already exist
-        require(exists, NO_SUCH_TWIN);
-
-        // Get seller id, we assume seller id exists if twin exists
-        (, uint256 sellerId) = getSellerIdByOperator(msg.sender);
-
-        // Caller's seller id must match twin seller id
-        require(sellerId == twin.sellerId, NOT_OPERATOR);
+        createBundleInternal(_bundle);
     }
 
     /**
@@ -176,7 +103,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
     override
     {
         // check if bundle can be updated
-        (uint256 sellerId, Bundle storage bundle) = preBundleUpdateChecks(_bundleId, _twinIds);
+        (uint256 sellerId, Bundle storage bundle) = preBundleUpdateChecks(_bundleId, _twinIds, BundleUpdateAttribute.TWIN);
 
         for (uint i = 0; i < _twinIds.length; i++) {
             uint twinId = _twinIds[i];
@@ -226,7 +153,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
     override
     {
         // check if bundle can be updated
-        (uint256 sellerId, Bundle storage bundle) = preBundleUpdateChecks(_bundleId, _twinIds);
+        (uint256 sellerId, Bundle storage bundle) = preBundleUpdateChecks(_bundleId, _twinIds, BundleUpdateAttribute.TWIN);
 
         for (uint i = 0; i < _twinIds.length; i++) {
             uint twinId = _twinIds[i];
@@ -270,21 +197,27 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
      *
      * Reverts if:
      * - caller is not the seller
-     * - twin ids is an empty list
-     * - number of twins exceeds maximum allowed number per bundle
+     * - twin ids / offer ids is an empty list.
+     * - number of twins / number of offers exceeds maximum allowed number per bundle
      * - bundle does not exist
      *
      * @param _bundleId  - the id of the bundle to be updated
-     * @param _twinIds - array of twin ids to be removed to the bundle
+     * @param _ids - array of twin ids / offer ids to be added to / removed from the bundle.
+     * @param _attribute attribute, one of {TWIN, OFFER}
      * @return sellerId  - the seller Id
      * @return bundle - the bundle details
      */
-    function preBundleUpdateChecks(uint256 _bundleId, uint256[] calldata _twinIds) internal view returns (uint256 sellerId, Bundle storage bundle) {
+    function preBundleUpdateChecks(uint256 _bundleId, uint256[] calldata _ids, BundleUpdateAttribute _attribute) internal view returns (uint256 sellerId, Bundle storage bundle) {
         // make sure that at least something will be updated
-        require(_twinIds.length != 0, NOTHING_UPDATED);
+        require(_ids.length != 0, NOTHING_UPDATED);
 
-        // limit maximum number of twins to avoid running into block gas limit in a loop
-        require(_twinIds.length <= protocolStorage().maxTwinsPerBundle, TOO_MANY_TWINS);
+        if (_attribute == BundleUpdateAttribute.TWIN) {
+            // limit maximum number of twins to avoid running into block gas limit in a loop
+            require(_ids.length <= protocolStorage().maxTwinsPerBundle, TOO_MANY_TWINS);
+        } else if (_attribute == BundleUpdateAttribute.OFFER) {
+            // limit maximum number of offers to avoid running into block gas limit in a loop
+            require(_ids.length <= protocolStorage().maxOffersPerBundle, TOO_MANY_OFFERS);
+        }
 
         // Get storage location for bundle
         bool exists;
@@ -296,5 +229,104 @@ contract BundleHandlerFacet is IBosonBundleHandler, ProtocolBase {
 
         // Caller's seller id must match bundle seller id
         require(sellerId == bundle.sellerId, NOT_OPERATOR);
+    }
+
+    /**
+     * @notice Adds offers to an existing bundle
+     *
+     * Emits a BundleUpdated event if successful.
+     *
+     * Reverts if:
+     * - caller is not the seller
+     * - offer ids is an empty list
+     * - number of offers exceeds maximum allowed number per bundle
+     * - bundle does not exist
+     * - any of offers belongs to different seller
+     * - any of offers does not exist
+     * - offer exists in a different bundle
+     * - offer ids contains duplicated offers
+     *
+     * @param _bundleId  - the id of the bundle to be updated
+     * @param _offerIds - array of offer ids to be added to the bundle
+     */
+    function addOffersToBundle(
+        uint256 _bundleId,
+        uint256[] calldata _offerIds
+    )
+    external
+    override
+    {
+        // check if bundle can be updated
+        (uint256 sellerId, Bundle storage bundle) = preBundleUpdateChecks(_bundleId, _offerIds, BundleUpdateAttribute.OFFER);
+
+        for (uint i = 0; i < _offerIds.length; i++) {
+            uint offerId = _offerIds[i];
+            // make sure offer exist and belong to the seller
+            getValidOffer(offerId);
+
+            // Offer should not belong to another bundle already
+            (bool exists, ) = getBundleIdByOffer(offerId);
+            require(!exists, BUNDLE_OFFER_MUST_BE_UNIQUE);
+
+            // add to bundleIdByOffer mapping
+            protocolStorage().bundleIdByOffer[offerId] = _bundleId;
+
+            // add to bundle struct
+            bundle.offerIds.push(offerId);
+        }
+
+        // Notify watchers of state change
+        emit BundleUpdated(_bundleId, sellerId, bundle);
+    }
+
+    /**
+     * @notice Removes offers from an existing bundle
+     *
+     * Emits a BundleUpdated event if successful.
+     *
+     * Reverts if:
+     * - caller is not the seller
+     * - offer ids is an empty list
+     * - number of offers exceeds maximum allowed number per bundle
+     * - bundle does not exist
+     * - any offer is not part of the bundle
+     *
+     * @param _bundleId  - the id of the bundle to be updated
+     * @param _offerIds - array of offer ids to be removed to the bundle
+     */
+    function removeOffersFromBundle(
+        uint256 _bundleId,
+        uint256[] calldata _offerIds
+    )
+    external
+    override
+    {
+        // check if bundle can be updated
+        (uint256 sellerId, Bundle storage bundle) = preBundleUpdateChecks(_bundleId, _offerIds, BundleUpdateAttribute.OFFER);
+
+        for (uint i = 0; i < _offerIds.length; i++) {
+            uint offerId = _offerIds[i];
+
+            // Offer should belong to the bundle
+            (, uint256 bundleId) = getBundleIdByOffer(offerId);
+            require(_bundleId == bundleId, OFFER_NOT_IN_BUNDLE);
+
+            // remove bundleIdByOffer mapping
+            delete protocolStorage().bundleIdByOffer[offerId];
+
+            // remove from the bundle struct
+            uint256 offerIdsLength = bundle.offerIds.length;
+
+            for (uint j = 0; j < offerIdsLength; j++) {
+                if (bundle.offerIds[j] == offerId) {
+                    bundle.offerIds[j] = bundle.offerIds[offerIdsLength - 1];
+                    bundle.offerIds.pop();
+                    break;
+                }
+            }
+        }
+
+        // Notify watchers of state change
+        emit BundleUpdated(_bundleId, sellerId, bundle);
     }
 }

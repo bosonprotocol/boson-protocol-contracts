@@ -44,5 +44,7 @@ exports.RevertReasons = {
   // Bundle related
   NO_SUCH_BUNDLE: "No such bundle",
   TWIN_NOT_IN_BUNDLE: "Twin not part of the bundle",
+  OFFER_NOT_IN_BUNDLE: "Offer not part of the bundle",
   TOO_MANY_TWINS: "Exceeded maximum twins in a single transaction",
+  BUNDLE_OFFER_MUST_BE_UNIQUE: "Offer must be unique to a bundle",
 };

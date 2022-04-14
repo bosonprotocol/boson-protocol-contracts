@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { IBosonTwinHandler } from "../../interfaces/IBosonTwinHandler.sol";
+import { IBosonTwinHandler } from "../../interfaces/handlers/IBosonTwinHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
-import { ProtocolBase } from "../ProtocolBase.sol";
-import { ProtocolLib } from "../ProtocolLib.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../../interfaces/ITwinToken.sol";
+import { ProtocolLib } from "../libs/ProtocolLib.sol";
+import { TwinBase } from "../bases/TwinBase.sol";
 
 /**
  * @title TwinHandlerFacet
  *
  * @notice Manages digital twinning associated with exchanges within the protocol
  */
-contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
+contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
 
     /**
      * @notice Facet Initializer
@@ -42,63 +40,13 @@ contract TwinHandlerFacet is IBosonTwinHandler, ProtocolBase {
     external
     override
     {
-        // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
-        require(exists, NOT_OPERATOR);
-        _twin.sellerId = sellerId;
-
-        // Protocol must be approved to transfer seller’s tokens
-        // Seller storage seller = ProtocolLib.getSeller(_twin.sellerId);
-        require(isProtocolApproved(_twin.tokenAddress, msg.sender, address(this)), NO_TRANSFER_APPROVED);
-
-        // Get the next twinId and increment the counter
-        uint256 twinId = protocolCounters().nextTwinId++;
-
-        // modify incoming struct so event value represents true state
+        // create group and update structs values to represent true state
+        (uint256 twinId, uint256 sellerId) = createTwinInternal(_twin);
         _twin.id = twinId;
-
-        // Get storage location for twin
-        (,Twin storage twin) = fetchTwin(_twin.id);
-
-        // Set twin props individually since memory structs can't be copied to storage
-        twin.id = twinId;
-        twin.sellerId = _twin.sellerId;
-        twin.supplyAvailable = _twin.supplyAvailable;
-        twin.supplyIds = _twin.supplyIds;
-        twin.tokenId = _twin.tokenId;
-        twin.tokenAddress = _twin.tokenAddress;
-
+        _twin.sellerId = sellerId;
+      
         // Notify watchers of state change
-        emit TwinCreated(twinId, _twin.sellerId, _twin);
-    }
-
-    /**
-     * @notice Check if protocol is approved to transfer the tokens.
-     *
-     * @param _tokenAddress - the address of the seller's twin token contract.
-     * @param _operator - the seller's operator address.
-     * @param _protocol - the protocol address.
-     * @return _approved - the approve status.
-     */
-    function isProtocolApproved(
-        address _tokenAddress,
-        address _operator,
-        address _protocol
-    ) internal view returns (bool _approved){
-        require(_tokenAddress != address(0), UNSUPPORTED_TOKEN);
-
-        try IERC20(_tokenAddress).allowance(
-            _operator,
-            _protocol
-        ) returns(uint256 _allowance) {
-            if (_allowance > 0) {_approved = true; }
-        } catch {
-            try ITwinToken(_tokenAddress).isApprovedForAll(_operator, _protocol) returns (bool _isApproved) {
-                _approved = _isApproved;
-            } catch {
-                revert(UNSUPPORTED_TOKEN);
-            }
-        }
+        emit TwinCreated(twinId, sellerId, _twin);
     }
 
     /**

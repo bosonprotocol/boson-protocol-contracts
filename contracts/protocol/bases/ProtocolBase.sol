@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "./ProtocolLib.sol";
-import "../diamond/DiamondLib.sol";
-import "../domain/BosonTypes.sol";
-import "../domain/BosonConstants.sol";
+import {ProtocolLib} from "../libs/ProtocolLib.sol";
+import {DiamondLib} from "../../diamond/DiamondLib.sol";
+import {BosonTypes} from "../../domain/BosonTypes.sol";
+import {BosonConstants} from "../../domain/BosonConstants.sol";
 
 /**
  * @title ProtocolBase
@@ -295,7 +295,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return bundleId  - the bundle Id.
      */
     function getBundleIdByOffer(uint256 _offerId) internal view returns (bool exists, uint256 bundleId) {
-        // Get the buyer Id
+        // Get the bundle Id
         bundleId = protocolStorage().bundleIdByOffer[_offerId];
 
         // Determine existence
@@ -310,10 +310,25 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return bundleIds  - the bundle Ids.
      */
     function getBundleIdsByTwin(uint256 _twinId) internal view returns (bool exists, uint256[] memory bundleIds) {
-        // Get the buyer Id
+        // Get the bundle Ids
         bundleIds = protocolStorage().bundleIdsByTwin[_twinId];
 
         // Determine existence
         exists = (bundleIds.length > 0);
+    }
+
+    /**
+     * @notice Gets the exchange ids for a given offer id.
+     *
+     * @param _offerId - the offer Id.
+     * @return exists - whether the exchange Ids exist
+     * @return exchangeIds  - the exchange Ids.
+     */
+    function getExchangeIdsByOffer(uint256 _offerId) internal view returns (bool exists, uint256[] memory exchangeIds) {
+        // Get the exchange Ids
+        exchangeIds = protocolStorage().exchangeIdsByOffer[_offerId];
+
+        // Determine existence
+        exists = (exchangeIds.length > 0);
     }
 }

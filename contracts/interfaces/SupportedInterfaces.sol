@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "./IBosonBundleHandler.sol";
-import "./IBosonFundsHandler.sol";
-import "./IBosonConfigHandler.sol";
-import "./IBosonDisputeHandler.sol";
-import "./IBosonExchangeHandler.sol";
-import "./IBosonOfferHandler.sol";
-import "./IBosonTwinHandler.sol";
-import "./IBosonAccountHandler.sol";
-import "./IBosonGroupHandler.sol";
-import "./IBosonOrchestrationHandler.sol";
-import "./IBosonVoucher.sol";
-import "./IBosonClient.sol";
-import "./IDiamondCut.sol";
-import "./IDiamondLoupe.sol";
+import "./handlers/IBosonAccountHandler.sol";
+import "./handlers/IBosonBundleHandler.sol";
+import "./handlers/IBosonFundsHandler.sol";
+import "./handlers/IBosonConfigHandler.sol";
+import "./handlers/IBosonDisputeHandler.sol";
+import "./handlers/IBosonExchangeHandler.sol";
+import "./handlers/IBosonGroupHandler.sol";
+import "./handlers/IBosonOfferHandler.sol";
+import "./handlers/IBosonOrchestrationHandler.sol";
+import "./handlers/IBosonTwinHandler.sol";
+import "./clients/IBosonVoucher.sol";
+import "./clients/IBosonClient.sol";
+import "./diamond/IDiamondCut.sol";
+import "./diamond/IDiamondLoupe.sol";
+
+
 
 /**
  * @title SupportedInterfaces
@@ -30,6 +32,10 @@ import "./IDiamondLoupe.sol";
  * id in the constants file.
  */
 contract SupportedInterfaces {
+    function getIBosonAccountHandler() public pure returns (bytes4 id) {
+        id = type(IBosonAccountHandler).interfaceId;
+    }
+
     function getIBosonBundleHandler() public pure returns (bytes4 id) {
         id = type(IBosonBundleHandler).interfaceId;
     }
@@ -50,24 +56,20 @@ contract SupportedInterfaces {
         id = type(IBosonFundsHandler).interfaceId;
     }
 
-    function getIBosonOfferHandler() public pure returns (bytes4 id) {
-        id = type(IBosonOfferHandler).interfaceId;
-    }
-
-    function getIBosonTwinHandler() public pure returns (bytes4 id) {
-        id = type(IBosonTwinHandler).interfaceId;
-    }
-
     function getIBosonGroupHandler() public pure returns (bytes4 id) {
         id = type(IBosonGroupHandler).interfaceId;
     }
 
-    function getIBosonAccountHandler() public pure returns (bytes4 id) {
-        id = type(IBosonAccountHandler).interfaceId;
+    function getIBosonOfferHandler() public pure returns (bytes4 id) {
+        id = type(IBosonOfferHandler).interfaceId;
     }
 
     function getIBosonOrchestrationHandler() public pure returns (bytes4 id) {
         id = type(IBosonOrchestrationHandler).interfaceId;
+    }
+
+    function getIBosonTwinHandler() public pure returns (bytes4 id) {
+        id = type(IBosonTwinHandler).interfaceId;
     }
 
     function getIBosonVoucher() public pure returns (bytes4 id) {

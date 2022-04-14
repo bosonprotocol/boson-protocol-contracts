@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "../../interfaces/IBosonDisputeHandler.sol";
-import "../../diamond/DiamondLib.sol";
-import "../ProtocolBase.sol";
-import "../ProtocolLib.sol";
+import {IBosonDisputeHandler} from "../../interfaces/handlers/IBosonDisputeHandler.sol";
+import {DiamondLib} from "../../diamond/DiamondLib.sol";
+import {ProtocolBase} from "../bases/ProtocolBase.sol";
+import {ProtocolLib} from "../libs/ProtocolLib.sol";
 
 /**
  * @title DisputeHandlerFacet
@@ -50,7 +50,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // Get the exchange, revert if it doesn't exist
         (exists, exchange) = fetchExchange(_exchangeId);
-        require(exists, BosonConstants.NO_SUCH_EXCHANGE);
+        require(exists, NO_SUCH_EXCHANGE);
 
         // Get the offer, which will exist if the exchange does
         (, offer) = fetchOffer(exchange.offerId);
