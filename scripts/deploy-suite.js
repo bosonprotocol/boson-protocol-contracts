@@ -80,8 +80,10 @@ function getNoArgFacetNames(){
         "ExchangeHandlerFacet",
 //        "FundsHandlerFacet", // No functions yet
         "OfferHandlerFacet",
-//        "TwinHandlerFacet"   // No functions yet
-//        "BundleHandlerFacet"
+        "TwinHandlerFacet",
+        "BundleHandlerFacet",
+        "AccountHandlerFacet",
+        "GroupHandlerFacet"
     ];
 
 }
