@@ -478,7 +478,7 @@ describe("IBosonTwinHandler", function () {
 
           // Attempt to Remove a twin, expecting revert
           await expect(twinHandler.connect(operator).removeTwin(twin.id)).to.revertedWith(
-            RevertReasons.BUNDLES_FOR_TWIN_EXISTS
+            RevertReasons.TWIN_HAS_BUNDLES
           );
         });
       });
