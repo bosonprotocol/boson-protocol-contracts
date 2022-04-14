@@ -47,5 +47,5 @@ exports.RevertReasons = {
   OFFER_NOT_IN_BUNDLE: "Offer not part of the bundle",
   TOO_MANY_TWINS: "Exceeded maximum twins in a single transaction",
   BUNDLE_OFFER_MUST_BE_UNIQUE: "Offer must be unique to a bundle",
-  EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS: "Exchange for the bundled offers exists",
+  BUNDLES_FOR_TWIN_EXISTS: "Bundles for the twin exists",
 };

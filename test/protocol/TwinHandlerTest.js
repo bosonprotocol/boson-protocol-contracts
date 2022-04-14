@@ -6,7 +6,6 @@ const { gasLimit } = require("../../environments");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const Twin = require("../../scripts/domain/Twin");
-const Offer = require("../../scripts/domain/Offer");
 const Bundle = require("../../scripts/domain/Bundle");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -15,7 +14,6 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { getEvent } = require("../../scripts/util/test-events.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 
 /**
  *  Test the Boson Twin Handler interface
@@ -23,17 +21,14 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 describe("IBosonTwinHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury, buyer;
+  let accounts, deployer, rando, operator, admin, clerk, treasury;
   let seller, active;
   let erc165,
     protocolDiamond,
     accessController,
     twinHandler,
     accountHandler,
-    exchangeHandler,
-    offerHandler,
     bundleHandler,
-    bosonVoucher,
     twinStruct,
     bosonToken,
     foreign721,
@@ -52,25 +47,7 @@ describe("IBosonTwinHandler", function () {
     supplyIds,
     tokenId,
     tokenAddress;
-  let offer,
-    offerId,
-    oneWeek,
-    oneMonth,
-    price,
-    sellerDeposit,
-    buyerCancelPenalty,
-    quantityAvailable,
-    validFromDate,
-    validUntilDate,
-    redeemableFromDate,
-    fulfillmentPeriodDuration,
-    voucherValidDuration,
-    exchangeToken,
-    metadataHash,
-    metadataUri,
-    voided;
   let bundleId, offerIds, twinIds, bundle;
-  let blockNumber, block, clients;
 
   before(async function () {
     // get interface Ids
@@ -86,7 +63,6 @@ describe("IBosonTwinHandler", function () {
     clerk = accounts[3];
     treasury = accounts[4];
     rando = accounts[5];
-    buyer = accounts[6];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -94,28 +70,18 @@ describe("IBosonTwinHandler", function () {
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
-    // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
-    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
       "AccountHandlerFacet",
       "TwinHandlerFacet",
-      "ExchangeHandlerFacet",
-      "OfferHandlerFacet",
       "BundleHandlerFacet",
     ]);
-
-    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [accessController.address, protocolDiamond.address];
-    [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
-    [bosonVoucher] = clients;
 
     // Add config Handler, so twin id starts at 1
     const protocolConfig = [
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
-      bosonVoucher.address,
+      "0x0000000000000000000000000000000000000000",
       "0",
       "100",
       "100",
@@ -134,12 +100,6 @@ describe("IBosonTwinHandler", function () {
 
     // Cast Diamond to ITwinHandler
     twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
-
-    // Cast Diamond to IBosonExchangeHandler
-    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
-
-    // Cast Diamond to IOfferHandler
-    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
 
     // Cast Diamond to IBundleHandler
     bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
@@ -506,71 +466,19 @@ describe("IBosonTwinHandler", function () {
           await expect(twinHandler.connect(rando).removeTwin(twin.id)).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
-        it("Exchange exists for bundled offer", async function () {
-          offerId = "1"; // argument sent to contract for createOffer will be ignored
-
-          // Create an offer to commit to
-          oneWeek = 604800 * 1000; //  7 days in milliseconds
-          oneMonth = 2678400 * 1000; // 31 days in milliseconds
-
-          // Offer: Required constructor params
-          price = ethers.utils.parseUnits("1.5", "ether").toString();
-          sellerDeposit = price = ethers.utils.parseUnits("0.25", "ether").toString();
-          buyerCancelPenalty = price = ethers.utils.parseUnits("0.05", "ether").toString();
-          quantityAvailable = "1";
-          blockNumber = await ethers.provider.getBlockNumber();
-          block = await ethers.provider.getBlock(blockNumber);
-          validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-          validUntilDate = ethers.BigNumber.from(block.timestamp)
-            .add(oneMonth * 6)
-            .toString(); // until 6 months
-          redeemableFromDate = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-          fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
-          voucherValidDuration = oneMonth.toString(); // offers valid for one month
-          exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-          metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-          metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
-          voided = false;
-
-          // Create a valid offer entity
-          offer = new Offer(
-            offerId,
-            sellerId,
-            price,
-            sellerDeposit,
-            buyerCancelPenalty,
-            quantityAvailable,
-            validFromDate,
-            validUntilDate,
-            redeemableFromDate,
-            fulfillmentPeriodDuration,
-            voucherValidDuration,
-            exchangeToken,
-            metadataUri,
-            metadataHash,
-            voided
-          );
-
-          // Expect offer to be valid
-          expect(offer.isValid()).is.true;
-
-          await offerHandler.connect(operator).createOffer(offer);
-
+        it("Twin has bundles", async function () {
           // Bundle: Required constructor params
           bundleId = "1";
-          offerIds = [offer.id];
+          offerIds = [];
           twinIds = [twin.id];
 
           // Create a new bundle
           bundle = new Bundle(bundleId, sellerId, offerIds, twinIds);
           await bundleHandler.connect(operator).createBundle(bundle);
 
-          // Commit to an offer
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
-
           // Attempt to Remove a twin, expecting revert
           await expect(twinHandler.connect(operator).removeTwin(twin.id)).to.revertedWith(
-            RevertReasons.EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS
+            RevertReasons.BUNDLES_FOR_TWIN_EXISTS
           );
         });
       });
