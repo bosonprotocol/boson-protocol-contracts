@@ -329,4 +329,35 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         // Notify watchers of state change
         emit BundleUpdated(_bundleId, sellerId, bundle);
     }
+
+    /**
+     * @notice Removes the bundle.
+     *
+     * Emits a BundleDeleted event if successful.
+     *
+     * Reverts if:
+     * - caller is not the seller.
+     * - Bundle does not exist.
+     * - exchanges exists for bundled offers.
+     *
+     * @param _bundleId - the id of the bundle to check.
+     */
+    function removeBundle(uint256 _bundleId) external {
+        // Get storage location for bundle
+        (bool exists, Bundle memory bundle) = fetchBundle(_bundleId);
+        require(exists, NO_SUCH_BUNDLE);
+
+        // Get seller id
+        (, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+        // Caller's seller id must match bundle seller id
+        require(sellerId == bundle.sellerId, NOT_OPERATOR);
+
+        // Check if offers from the bundle have any exchanges
+        bundledOffersExchangeCheck(_bundleId);
+
+        // delete struct
+        delete protocolStorage().bundles[_bundleId];
+
+        emit BundleDeleted(_bundleId, bundle.sellerId);
+    }
 }

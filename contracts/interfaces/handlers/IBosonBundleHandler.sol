@@ -124,4 +124,18 @@ interface IBosonBundleHandler is IBosonBundleEvents {
      * @param _offerIds - array of offer ids to be removed to the bundle
      */
     function removeOffersFromBundle(uint256 _bundleId, uint256[] calldata _offerIds) external;
+
+    /**
+     * @notice Removes the bundle.
+     *
+     * Emits a BundleDeleted event if successful.
+     *
+     * Reverts if:
+     * - caller is not the seller.
+     * - Bundle does not exist.
+     * - exchanges exists for bundled offers.
+     *
+     * @param _bundleId - the id of the bundle to check.
+     */
+    function removeBundle(uint256 _bundleId) external;
 }
