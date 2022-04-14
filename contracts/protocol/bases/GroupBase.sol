@@ -14,6 +14,8 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
     /**
      * @notice Creates a group.
      *
+     * Emits a GroupCreated event if successful.
+     *
      * Reverts if:
      * 
      * - Caller is not an operator
@@ -23,17 +25,14 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * - number of offers exceeds maximum allowed number per group
      *
      * @param _group - the fully populated struct with group id set to 0x0
-     * @return groupId id of newly created group
-     * @return sellerId id of the group's seller
      */
     function createGroupInternal(
         Group memory _group
     )
-    internal returns (uint256 groupId, uint256 sellerId)
+    internal
     {
         // get seller id, make sure it exists and store it to incoming struct
-        bool exists;
-        (exists, sellerId) = getSellerIdByOperator(msg.sender);
+        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
         require(exists, NOT_OPERATOR);
         
         // limit maximum number of offers to avoid running into block gas limit in a loop
@@ -43,7 +42,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         require(validateCondition(_group.condition), INVALID_CONDITION_PARAMETERS);
 
         // Get the next group and increment the counter
-        groupId = protocolCounters().nextGroupId++;
+        uint256 groupId = protocolCounters().nextGroupId++;
 
         for (uint i = 0; i < _group.offerIds.length; i++) {
             // make sure offer exists and belongs to the seller

@@ -13,46 +13,47 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
  *
  * @dev Provides methods for twin creation that can be shared accross facets
  */
-contract TwinBase is ProtocolBase {
+contract TwinBase is ProtocolBase, IBosonTwinEvents {
 
     /**
      * @notice Creates a Twin.
+     *
+     * Emits a TwinCreated event if successful.
      *
      * Reverts if:
      * - seller does not exist
      * - Not approved to transfer the seller's token
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
-     * @return twinId id of newly created twin
-     * @return sellerId id of the twins's seller
      */
     function createTwinInternal(
         Twin memory _twin
     )
     internal
-    returns (uint256 twinId, uint256 sellerId)
     {
         // get seller id, make sure it exists and store it to incoming struct
-        bool exists;
-        (exists, sellerId) = getSellerIdByOperator(msg.sender);
+        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
         require(exists, NOT_OPERATOR);
 
         // Protocol must be approved to transfer seller’s tokens
         require(isProtocolApproved(_twin.tokenAddress, msg.sender, address(this)), NO_TRANSFER_APPROVED);
 
         // Get the next twinId and increment the counter
-        twinId = protocolCounters().nextTwinId++;
+        uint256 twinId = protocolCounters().nextTwinId++;
 
         // Get storage location for twin
         (, Twin storage twin) = fetchTwin(twinId);
 
         // Set twin props individually since memory structs can't be copied to storage
-        twin.id = twinId;
-        twin.sellerId = sellerId;
+        twin.id = _twin.id = twinId;
+        twin.sellerId = _twin.sellerId = sellerId;
         twin.supplyAvailable = _twin.supplyAvailable;
         twin.supplyIds = _twin.supplyIds;
         twin.tokenId = _twin.tokenId;
         twin.tokenAddress = _twin.tokenAddress;
+
+        // Notify watchers of state change
+        emit TwinCreated(twinId, sellerId, _twin);
     }
 
     /**

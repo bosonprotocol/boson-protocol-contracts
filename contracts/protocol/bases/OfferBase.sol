@@ -14,6 +14,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
     /**
      * @dev Internal helper to create offer, which can be reused among different facets
      *
+     * Emits an OfferCreated event if successful.
+     *
      * Reverts if:
      * - Caller is not an operator
      * - Valid from date is greater than valid until date
@@ -22,18 +24,15 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Voided is set to true
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @return offerId id of newly created offer
-     * @return sellerId id of the offers's seller
      */
-    function createOfferInternal(Offer memory _offer) internal returns (uint256 offerId, uint256 sellerId) {
+    function createOfferInternal(Offer memory _offer) internal {
         // get seller id, make sure it exists and store it to incoming struct
-        bool exists;
-        (exists, sellerId) = getSellerIdByOperator(msg.sender);
+        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
         require(exists, NOT_OPERATOR);
         _offer.sellerId = sellerId;
 
         // Get the next offerId and increment the counter
-        offerId = ProtocolLib.protocolCounters().nextOfferId++;
+        uint256 offerId = ProtocolLib.protocolCounters().nextOfferId++;
         _offer.id = offerId;
 
         // Store the offer
@@ -41,7 +40,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
         // Notify watchers of state change
         emit OfferCreated(offerId, sellerId, _offer);
-
     }
 
     /**
