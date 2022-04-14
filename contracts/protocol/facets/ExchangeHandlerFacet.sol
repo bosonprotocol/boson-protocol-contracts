@@ -128,7 +128,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     }
 
     /**
-     * @notice Gets the details about a given exchange.
+     * @notice Gets the state of a given exchange.
      *
      * @param _exchangeId - the id of the exchange to check
      * @return exists - true if the exchange exists
@@ -141,6 +141,17 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         Exchange memory exchange;
         (exists, exchange) = fetchExchange(_exchangeId);
         if (exists) state = exchange.state;
+    }
+
+    /**
+     * @notice Gets the Id that will be assigned to the next exchange.
+     *
+     *  Does not increment the counter.
+     *
+     * @return nextExchangeId - the next exchange Id
+     */
+    function getNextExchangeId() external view returns (uint256 nextExchangeId) {
+        nextExchangeId = protocolCounters().nextExchangeId;
     }
 
 }

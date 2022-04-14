@@ -24,7 +24,7 @@ describe("IBosonExchangeHandler", function () {
   let InterfaceIds;
   let accounts, deployer, operator, admin, clerk, treasury, rando;
   let erc165, protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, bosonVoucher, gasLimit;
-  let id, buyer, buyerId, offer, offerId, seller, sellerId;
+  let id, buyer, buyerId, offer, offerId, seller, sellerId, nextExchangeId;
   let block, blockNumber, tx, txReceipt, event, clients;
   let support, oneMonth, oneWeek;
   let price,
@@ -221,6 +221,15 @@ describe("IBosonExchangeHandler", function () {
         );
       });
 
+      it("should increment the next exchange id counter", async function () {
+        // Commit to offer, creating a new exchange
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+
+        // Get the next exchange id and ensure it was incremented by the creation of the offer
+        nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
+        expect(nextExchangeId).to.equal(++id);
+      });
+
       context("💔 Revert Reasons", async function () {
         /*
          * Reverts if:
@@ -249,6 +258,31 @@ describe("IBosonExchangeHandler", function () {
             RevertReasons.NO_SUCH_OFFER
           );
         });
+      });
+    });
+
+    context("👉 getNextExchangeId()", async function () {
+      it("should return the next exchange id", async function () {
+        // Get the next exchange id and compare it to the initial expected id
+        nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
+        expect(nextExchangeId).to.equal(id);
+
+        // Commit to offer, creating a new exchange
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+
+        // Get the next exchange id and ensure it was incremented by the creation of the offer
+        nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
+        expect(nextExchangeId).to.equal(++id);
+      });
+
+      it("should not increment the counter", async function () {
+        // Get the next exchange id
+        nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
+        expect(nextExchangeId).to.equal(id);
+
+        // Get the next exchange id and ensure it was not incremented by the previous call
+        nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
+        expect(nextExchangeId).to.equal(id);
       });
     });
 
@@ -315,7 +349,7 @@ describe("IBosonExchangeHandler", function () {
         expect(exists).to.be.true;
       });
 
-      it("should return true for exists if exchange id is not valid", async function () {
+      it("should return false for exists if exchange id is not valid", async function () {
         // Attempt to get the exchange state for invalid exchange
         [exists, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id + 10);
 
