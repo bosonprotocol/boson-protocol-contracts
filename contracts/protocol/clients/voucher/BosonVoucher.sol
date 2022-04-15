@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import "../../../interfaces/IBosonVoucher.sol";
-import "../../../interfaces/IBosonClient.sol";
-import "../../../interfaces/IBosonOfferHandler.sol";
-import "../ClientBase.sol";
+import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import {IERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
+
+import {IBosonVoucher} from "../../../interfaces/clients/IBosonVoucher.sol";
+import {IBosonClient} from "../../../interfaces/clients/IBosonClient.sol";
+import {ClientBase} from "../../bases/ClientBase.sol";
 
 /**
  * @title BosonVoucher

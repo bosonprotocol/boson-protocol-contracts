@@ -2,8 +2,8 @@
 pragma solidity ^0.8.0;
 
 import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
-import { IDiamondLoupe } from "../interfaces/IDiamondLoupe.sol";
-import { IDiamondCut } from "../interfaces/IDiamondCut.sol";
+import { IDiamondLoupe } from "../interfaces/diamond/IDiamondLoupe.sol";
+import { IDiamondCut } from "../interfaces/diamond/IDiamondCut.sol";
 import { DiamondLib } from "./DiamondLib.sol";
 import { JewelerLib } from "./JewelerLib.sol";
 

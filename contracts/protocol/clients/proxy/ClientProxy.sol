@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
-import { IBosonClient } from "../../interfaces/IBosonClient.sol";
-import { IBosonConfigHandler } from "../../interfaces/IBosonConfigHandler.sol";
-import { BosonConstants } from "../../domain/BosonConstants.sol";
-import { ClientLib } from "./ClientLib.sol";
+import { IBosonClient } from "../../../interfaces/clients/IBosonClient.sol";
+import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
+import { BosonConstants } from "../../../domain/BosonConstants.sol";
+import { ClientLib } from "../../libs/ClientLib.sol";
 import { Proxy } from "./Proxy.sol";
 
 /**

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "./ProtocolLib.sol";
-import "../diamond/DiamondLib.sol";
-import "../domain/BosonTypes.sol";
-import "../domain/BosonConstants.sol";
+import {ProtocolLib} from "../libs/ProtocolLib.sol";
+import {DiamondLib} from "../../diamond/DiamondLib.sol";
+import {BosonTypes} from "../../domain/BosonTypes.sol";
+import {BosonConstants} from "../../domain/BosonConstants.sol";
 
 /**
  * @title ProtocolBase

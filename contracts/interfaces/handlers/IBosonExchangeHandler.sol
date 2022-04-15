@@ -1,23 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "../domain/BosonTypes.sol";
+import {BosonTypes} from "../../domain/BosonTypes.sol";
+import {IBosonExchangeEvents} from "../events/IBosonExchangeEvents.sol";
 
 /**
  * @title IBosonExchangeHandler
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xb14c537a
+ * The ERC-165 identifier for this interface is: 0x14ac255b
  */
-interface IBosonExchangeHandler {
-    /// Events
-    event BuyerCommitted(
-        uint256 indexed offerId,
-        uint256 indexed buyerId,
-        uint256 indexed exchangeId,
-        BosonTypes.Exchange exchange
-    );
+interface IBosonExchangeHandler is IBosonExchangeEvents {
 
     /**
      * @notice Commit to an offer (first step of an exchange)
