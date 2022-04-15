@@ -1442,10 +1442,10 @@ describe("IBosonBundleHandler", function () {
 
       context("💔 Revert Reasons", async function () {
         it("Bundle does not exist", async function () {
-          let nonExistantBundleId = "999";
+          let nonExistentBundleId = "999";
 
           // Attempt to Remove a bundle, expecting revert
-          await expect(bundleHandler.connect(operator).removeBundle(nonExistantBundleId)).to.revertedWith(
+          await expect(bundleHandler.connect(operator).removeBundle(nonExistentBundleId)).to.revertedWith(
             RevertReasons.NO_SUCH_BUNDLE
           );
         });
