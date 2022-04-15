@@ -292,7 +292,7 @@ describe("IBosonGroupHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to Create a group, expecting revert
-          await expect(groupHandler.connect(rando).createGroup(group)).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
+          await expect(groupHandler.connect(rando).createGroup(group)).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
         it("Caller is not the seller of all offers", async function () {

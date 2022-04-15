@@ -1,20 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "../domain/BosonTypes.sol";
+import {BosonTypes} from "../../domain/BosonTypes.sol";
+import {IBosonOfferEvents} from "../events/IBosonOfferEvents.sol";
 
 /**
  * @title IBosonOfferHandler
  *
- * @notice Manages creation, voiding, and querying of offers within the protocol.
+ * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
  * The ERC-165 identifier for this interface is: 0x65defc13
  */
-interface IBosonOfferHandler {
-    /// Events
-    event OfferCreated(uint256 indexed offerId, uint256 indexed sellerId, BosonTypes.Offer offer);
-    event OfferUpdated(uint256 indexed offerId, uint256 indexed sellerId, BosonTypes.Offer offer);
-    event OfferVoided(uint256 indexed offerId, uint256 indexed sellerId);
+interface IBosonOfferHandler is IBosonOfferEvents {
 
     /**
      * @notice Creates an offer
@@ -22,7 +19,7 @@ interface IBosonOfferHandler {
      * Emits an OfferCreated event if successful.
      *
      * Reverts if:
-     * - seller does not exist
+     * - Caller is not an operator
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
      * - Buyer cancel penalty is greater than price
@@ -38,8 +35,8 @@ interface IBosonOfferHandler {
      * Emits an OfferCreated event for every offer if successful.
      *
      * Reverts if, for any offer:
+     * - Caller is not an operator
      * - Number of offers exceeds maximum allowed number per batch
-     * - seller does not exist
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
      * - Buyer cancel penalty is greater than price
@@ -57,7 +54,7 @@ interface IBosonOfferHandler {
      * Reverts if:
      * - Offer does not exist
      * - Offer is not updateable, i.e. is voided or some exchanges exist
-     * - Caller is not the seller
+     * - Caller is not the operator of the offer
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
      * - Buyer cancel penalty is greater than price

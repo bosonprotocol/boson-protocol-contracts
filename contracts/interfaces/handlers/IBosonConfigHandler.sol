@@ -1,25 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "../domain/BosonTypes.sol";
+import {BosonTypes} from "../../domain/BosonTypes.sol";
+import {IBosonConfigEvents} from "../events/IBosonConfigEvents.sol";
 
 /**
  * @title IBosonConfigHandler
  *
- * @notice Handles management of various protocol-related settings.
+ * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x19037fd6
+ * The ERC-165 identifier for this interface is: 0x18b6a3d5
  */
-interface IBosonConfigHandler {
-    /// Events
-    event VoucherAddressChanged(address indexed voucher, address indexed changedBy);
-    event TokenAddressChanged(address indexed tokenAddress, address indexed changedBy);
-    event TreasuryAddressChanged(address indexed treasuryAddress, address indexed changedBy);
-    event ProtocolFeePercentageChanged(uint16 feePercentage, address indexed changedBy);
-    event MaxOffersPerGroupChanged(uint16 maxOffersPerGroup, address indexed changedBy);
-    event MaxOffersPerBatchChanged(uint16 maxOffersPerBatch, address indexed changedBy);
-    event MaxTwinsPerBundleChanged(uint16 maxTwinsPerBundle, address indexed changedBy);
-    event MaxOffersPerBundleChanged(uint16 maxOffersPerBundle, address indexed changedBy);
+interface IBosonConfigHandler is IBosonConfigEvents {
 
     /**
      * @notice Sets the address of the Boson Token (ERC-20) contract.

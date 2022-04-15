@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { IBosonExchangeHandler } from "../../interfaces/IBosonExchangeHandler.sol";
-import { IBosonAccountHandler } from "../../interfaces/IBosonAccountHandler.sol";
-import { IBosonVoucher } from "../../interfaces/IBosonVoucher.sol";
+import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
+import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
+import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
-import { ProtocolBase } from "../ProtocolBase.sol";
+import { ProtocolBase } from "../bases/ProtocolBase.sol";
 
 /**
  * @title ExchangeHandlerFacet

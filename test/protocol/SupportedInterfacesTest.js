@@ -26,6 +26,18 @@ describe("SupportedInterfaces", function () {
 
   context("📋 Interface Ids", async function () {
     context("👉 Protocol Handlers", async function () {
+      it("getIBosonAccountHandler() should return expected id", async function () {
+        const expected = InterfaceIds.IBosonAccountHandler;
+        const actual = await supportedInterfaces.getIBosonAccountHandler();
+        assert.equal(actual, expected);
+      });
+
+      it("getIBosonBundleHandler() should return expected id", async function () {
+        const expected = InterfaceIds.IBosonBundleHandler;
+        const actual = await supportedInterfaces.getIBosonBundleHandler();
+        assert.equal(actual, expected);
+      });
+
       it("getIBosonConfigHandler() should return expected id", async function () {
         const expected = InterfaceIds.IBosonConfigHandler;
         const actual = await supportedInterfaces.getIBosonConfigHandler();
@@ -50,6 +62,18 @@ describe("SupportedInterfaces", function () {
         assert.equal(actual, expected);
       });
 
+      it("getIBosonGroupHandler() should return expected id", async function () {
+        const expected = InterfaceIds.IBosonGroupHandler;
+        const actual = await supportedInterfaces.getIBosonGroupHandler();
+        assert.equal(actual, expected);
+      });
+
+      it("getIBosonGroupHandler() should return expected id", async function () {
+        const expected = InterfaceIds.IBosonGroupHandler;
+        const actual = await supportedInterfaces.getIBosonGroupHandler();
+        assert.equal(actual, expected);
+      });
+
       it("getIBosonOfferHandler() should return expected id", async function () {
         const expected = InterfaceIds.IBosonOfferHandler;
         const actual = await supportedInterfaces.getIBosonOfferHandler();
@@ -62,21 +86,9 @@ describe("SupportedInterfaces", function () {
         assert.equal(actual, expected);
       });
 
-      it("getIBosonAccountHandler() should return expected id", async function () {
-        const expected = InterfaceIds.IBosonAccountHandler;
-        const actual = await supportedInterfaces.getIBosonAccountHandler();
-        assert.equal(actual, expected);
-      });
-
-      it("getIBosonGroupHandler() should return expected id", async function () {
-        const expected = InterfaceIds.IBosonGroupHandler;
-        const actual = await supportedInterfaces.getIBosonGroupHandler();
-        assert.equal(actual, expected);
-      });
-
-      it("getIBosonBundleHandler() should return expected id", async function () {
-        const expected = InterfaceIds.IBosonBundleHandler;
-        const actual = await supportedInterfaces.getIBosonBundleHandler();
+      it("getIBosonOrchestrationHandler() should return expected id", async function () {
+        const expected = InterfaceIds.IBosonOrchestrationHandler;
+        const actual = await supportedInterfaces.getIBosonOrchestrationHandler();
         assert.equal(actual, expected);
       });
     });

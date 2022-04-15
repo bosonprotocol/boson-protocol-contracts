@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "../../interfaces/IBosonOfferHandler.sol";
-import "../../interfaces/IBosonExchangeHandler.sol";
-import "../../domain/BosonConstants.sol";
-import "../../domain/BosonTypes.sol";
-import "./ClientLib.sol";
+import {IBosonOfferHandler} from "../../interfaces/handlers/IBosonOfferHandler.sol";
+import {IBosonExchangeHandler} from "../../interfaces/handlers/IBosonExchangeHandler.sol";
+import {BosonConstants} from "../../domain/BosonConstants.sol";
+import {BosonTypes} from "../../domain/BosonTypes.sol";
+import {ClientLib} from "../libs/ClientLib.sol";
 
 
 /**

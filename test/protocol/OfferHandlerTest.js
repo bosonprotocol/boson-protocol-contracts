@@ -216,7 +216,7 @@ describe("IBosonOfferHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(rando).createOffer(offer)).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
+          await expect(offerHandler.connect(rando).createOffer(offer)).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
         it("Valid from date is greater than valid until date", async function () {
@@ -909,7 +909,7 @@ describe("IBosonOfferHandler", function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(rando).createOfferBatch(offers)).to.revertedWith(
-            RevertReasons.NO_SUCH_SELLER
+            RevertReasons.NOT_OPERATOR
           );
         });
 

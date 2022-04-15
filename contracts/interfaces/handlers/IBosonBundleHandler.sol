@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "../domain/BosonTypes.sol";
+import {BosonTypes} from "../../domain/BosonTypes.sol";
+import {IBosonBundleEvents} from "../events/IBosonBundleEvents.sol";
 
 /**
  * @title IBosonBundleHandler
  *
- * @notice Manages bundling associated with offers and twins within the protocol
+ * @notice Handles bundling of offers and twins within the protocol
  *
  * The ERC-165 identifier for this interface is: 0x3c91ae92
  */
-interface IBosonBundleHandler {
-    /// Events
-    event BundleCreated(uint256 indexed bundleId, uint256 indexed sellerId, BosonTypes.Bundle bundle);
-    event BundleUpdated(uint256 indexed bundleId, uint256 indexed sellerId, BosonTypes.Bundle bundle);
+interface IBosonBundleHandler is IBosonBundleEvents {
 
     /**
      * @notice Creates a bundle.
