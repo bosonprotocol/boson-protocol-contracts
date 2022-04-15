@@ -9,7 +9,7 @@ const { deployProtocolDiamond } = require('./util/deploy-protocol-diamond.js');
 const { deployProtocolClients } = require('./util/deploy-protocol-clients.js');
 const { deployProtocolConfigFacet } = require('./util/deploy-protocol-config-facet.js');
 const { deployProtocolHandlerFacets } = require('./util/deploy-protocol-handler-facets.js');
-const { delay, deploymentComplete, verifyOnEtherscan } = require("./util/report-verify-deployments");
+const { delay, deploymentComplete, verifyOnEtherscan, writeContracts } = require("./util/report-verify-deployments");
 
 /**
  * Deploy Boson Protocol V2 contract suite
@@ -180,6 +180,8 @@ async function main() {
     await accessController.grantRole(Role.CLIENT, bosonVoucher.address);
 
     console.log(`✅ Granted roles to appropriate contract and addresses.`);
+
+    await writeContracts(contracts);
 
     // Bail now if deploying locally
     if (hre.network.name === 'hardhat' || hre.network.name === 'test') process.exit();

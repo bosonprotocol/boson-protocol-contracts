@@ -1,4 +1,6 @@
 const hre = require("hardhat");
+const fs = require('fs');
+const packageFile = require('../../package.json') ;
 
 /**
  * Utilities for reporting deployments and verifying with
@@ -28,6 +30,45 @@ async function verifyOnEtherscan(contract) {
   }
 }
 
+const addressesDirPath = __dirname + `/../../addresses`;
+
+function getAddressesFilePath(
+  chainId,
+  env,
+  suffix
+) {
+  return `${addressesDirPath}/${chainId}${env ? `-${env.toLowerCase()}` : ''}${
+    suffix ? `-${suffix}` : ''
+  }.json`;
+}
+
+async function writeContracts(contracts) {
+  if (!fs.existsSync(addressesDirPath)) {
+    fs.mkdirSync(addressesDirPath);
+  }
+
+  
+  const chainId = (await hre.ethers.provider.getNetwork()).chainId;
+  const env = hre.network.name;
+  fs.writeFileSync(
+    getAddressesFilePath(chainId, env),
+    JSON.stringify(
+      {
+        chainId: chainId,
+        env: env || '',
+        protocolVersion: packageFile.version,
+        contracts
+      },
+      null,
+      2
+    ),
+    'utf-8'
+  );
+
+}
+
 exports.delay = delay;
 exports.deploymentComplete = deploymentComplete;
 exports.verifyOnEtherscan = verifyOnEtherscan;
+exports.writeContracts = writeContracts;
+
