@@ -61,7 +61,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, IBosonO
     /**
      * @notice Takes an offer and a condition, creates an offer, then a group with that offer and the given condition.
      *
-     * Emits a SellerCreated and an OfferCreated event if successful.
+     * Emits a OfferCreated and an GroupCreated event if successful.
      *
      * Reverts if:
      * - in offer struct:
@@ -70,31 +70,26 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, IBosonO
      *   - Valid until date is not in the future
      *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
-     * - in group struct:
-     *   - Caller is not an operator
-     *   - any of offers belongs to different seller
-     *   - any of offers does not exist
-     *   - offer exists in a different group
-     *   - number of offers exceeds maximum allowed number per group
+     * - condition includes invalid combination
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _condition - the fully populated condition struct
      */
     function createOfferWithCondition(
         Offer memory _offer,
-        Group memory _group
+        Condition memory _condition
     )
-    external
-    
+    external    
     {   
         // create seller and update structs values to represent true state
         createOfferInternal(_offer);
 
-        // add newly created offer to list of offertids
-        uint256[] memory temp = _group.offerIds;
-        _group.offerIds = new uint256[](_group.offerIds.length + 1);
-        _group.offerIds = temp;
-        _group.offerIds[_group.offerIds.length - 1] = _offer.id; // note that _offer.id is changed in createOfferInternal
-        
+        // construct new group
+        // - groupid is 0, and it is ignored
+        // - note that _offer fields are updated during createOfferInternal, so they represent correct values
+        Group memory _group = Group(0, _offer.sellerId, new uint256[](1), _condition);
+        _group.offerIds[0] = _offer.id;
+
         // create group and update structs values to represent true state
         createGroupInternal(_group);
     } 

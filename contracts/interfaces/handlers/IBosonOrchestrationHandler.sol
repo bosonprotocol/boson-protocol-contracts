@@ -33,4 +33,27 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonOfferEvents{
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      */
     function createSellerAndOffer(BosonTypes.Seller calldata _seller, BosonTypes.Offer memory _offer) external;
+
+    /**
+     * @notice Takes an offer and a condition, creates an offer, then a group with that offer and the given condition.
+     *
+     * Emits a OfferCreated and an GroupCreated event if successful.
+     *
+     * Reverts if:
+     * - in offer struct:
+     *   - Caller is not an operator
+     *   - Valid from date is greater than valid until date
+     *   - Valid until date is not in the future
+     *   - Buyer cancel penalty is greater than price
+     *   - Voided is set to true
+     * - condition includes invalid combination
+     *
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _condition - the fully populated condition struct
+     */
+    function createOfferWithCondition(
+        BosonTypes.Offer memory _offer,
+        BosonTypes.Condition memory _condition
+    )
+    external;
 }
