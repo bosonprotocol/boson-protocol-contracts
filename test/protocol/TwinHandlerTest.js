@@ -432,19 +432,14 @@ describe("IBosonTwinHandler", function () {
       });
 
       it("should emit a TwinDeleted event", async function () {
-        let nextTwinId = "1";
-
         // Expect twin to be found.
         [success] = await twinHandler.connect(rando).getTwin(twin.id);
         expect(success).to.be.true;
 
         // Remove the twin, testing for the event.
-        const tx = await twinHandler.connect(operator).removeTwin(twin.id);
-        const txReceipt = await tx.wait();
-        const event = getEvent(txReceipt, twinHandler, "TwinDeleted");
-
-        assert.equal(event.twinId.toString(), nextTwinId, "Twin Id is incorrect");
-        assert.equal(event.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
+        await expect(twinHandler.connect(operator).removeTwin(twin.id))
+          .to.emit(twinHandler, "TwinDeleted")
+          .withArgs(twin.id, twin.sellerId);
 
         // Expect twin to be not found.
         [success] = await twinHandler.connect(rando).getTwin(twin.id);
