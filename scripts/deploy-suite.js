@@ -78,12 +78,13 @@ function getNoArgFacetNames(){
     return [
         "DisputeHandlerFacet",
         "ExchangeHandlerFacet",
-//        "FundsHandlerFacet", // No functions yet
+//      "FundsHandlerFacet", // No functions yet
         "OfferHandlerFacet",
         "TwinHandlerFacet",
         "BundleHandlerFacet",
         "AccountHandlerFacet",
-        "GroupHandlerFacet"
+        "GroupHandlerFacet",
+        "OrchestrationHandlerFacet"
     ];
 
 }
