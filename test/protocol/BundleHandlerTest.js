@@ -1349,7 +1349,7 @@ describe("IBosonBundleHandler", function () {
 
       it("should return true for exists if bundle id is found", async function () {
         // Get the exists flag
-        [exists] = await bundleHandler.connect(rando).getBundleIdsByTwin(bundle.offerIds[0]);
+        [exists] = await bundleHandler.connect(rando).getBundleIdsByTwin(bundle.twinIds[0]);
 
         // Validate
         expect(exists).to.be.true;
@@ -1406,6 +1406,37 @@ describe("IBosonBundleHandler", function () {
 
         // Expect bundle to be not found.
         [exists] = await bundleHandler.connect(rando).getBundle(bundle.id);
+        expect(exists).to.be.false;
+      });
+
+      it("should remove all mappings for the removed bundle", async function () {
+        // Expect bundle to be found.
+        [exists] = await bundleHandler.connect(rando).getBundle(bundle.id);
+        expect(exists).to.be.true;
+
+        // Expect bundleIdByOffer mapping to be found.
+        [exists] = await bundleHandler.connect(rando).getBundleIdByOffer(bundle.offerIds[0]);
+        expect(exists).to.be.true;
+
+        // Expect the bundleIdsByTwin mapping to be found.
+        [exists] = await bundleHandler.connect(rando).getBundleIdsByTwin(bundle.twinIds[0]);
+        expect(exists).to.be.true;
+
+        // Remove the bundle, testing for the event.
+        await expect(bundleHandler.connect(operator).removeBundle(bundle.id))
+          .to.emit(bundleHandler, "BundleDeleted")
+          .withArgs(bundle.id, bundle.sellerId);
+
+        // Expect bundle to be not found.
+        [exists] = await bundleHandler.connect(rando).getBundle(bundle.id);
+        expect(exists).to.be.false;
+
+        // Expect bundleIdByOffer mapping to be not found.
+        [exists] = await bundleHandler.connect(rando).getBundleIdByOffer(bundle.offerIds[0]);
+        expect(exists).to.be.false;
+
+        // Expect the bundleIdsByTwin mapping to be not found.
+        [exists] = await bundleHandler.connect(rando).getBundleIdsByTwin(bundle.twinIds[0]);
         expect(exists).to.be.false;
       });
 
