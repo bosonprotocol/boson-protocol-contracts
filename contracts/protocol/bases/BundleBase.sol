@@ -52,7 +52,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             // make sure all offers exist and belong to the seller
             getValidOffer(_bundle.offerIds[i]);
 
-            (bool bundleByOfferExists, ) = getBundleIdByOffer(_bundle.offerIds[i]);
+            (bool bundleByOfferExists, ) = fetchBundleIdByOffer(_bundle.offerIds[i]);
             require(!bundleByOfferExists, BUNDLE_OFFER_MUST_BE_UNIQUE);
 
             // Add to bundleIdByOffer mapping
@@ -64,7 +64,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             getValidTwin(_bundle.twinIds[i]);
 
             // A twin can belong to multiple bundles
-            (bool bundlesForTwinExist, uint256[] memory bundleIds) = getBundleIdsByTwin(_bundle.twinIds[i]);
+            (bool bundlesForTwinExist, uint256[] memory bundleIds) = fetchBundleIdsByTwin(_bundle.twinIds[i]);
             if (bundlesForTwinExist) {
                 for (uint j = 0; j < bundleIds.length; j++) {
                     require((bundleIds[j] != bundleId), TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE);

@@ -363,6 +363,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
 
         // delete from bundleIdsByTwin mapping
         uint256[] memory twinIds = bundle.twinIds;
+        // loop over all the twins in the bundle
         for (uint256 j = 0; j < twinIds.length; j++) {
 
             uint256 twinId = twinIds[j];
@@ -371,8 +372,10 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             if (bundlesForTwinExist) {
 
                 uint256 bundleIdsLength = bundleIds.length;
+                // loop over all the bundleIds associated with a twin
                 for (uint k = 0; k < bundleIdsLength; k++) {
 
+                    // If bundleId is found in the array, then pop it.
                     if (protocolStorage().bundleIdsByTwin[twinId][k] == _bundleId) {
                         protocolStorage().bundleIdsByTwin[twinId][k] = protocolStorage().bundleIdsByTwin[twinId][bundleIdsLength - 1];
                         protocolStorage().bundleIdsByTwin[twinId].pop();
