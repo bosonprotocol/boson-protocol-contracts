@@ -40,13 +40,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
     external
     override
     {
-        // create group and update structs values to represent true state
-        (uint256 twinId, uint256 sellerId) = createTwinInternal(_twin);
-        _twin.id = twinId;
-        _twin.sellerId = sellerId;
-      
-        // Notify watchers of state change
-        emit TwinCreated(twinId, sellerId, _twin);
+        createTwinInternal(_twin);
     }
 
     /**

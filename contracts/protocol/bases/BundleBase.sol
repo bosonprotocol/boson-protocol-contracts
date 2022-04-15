@@ -15,6 +15,8 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
     /**
      * @notice Creates a Bundle.
      *
+     * Emits a BundleCreated event if successful.
+     *
      * Reverts if:
      * - Seller does not exist
      * - any of offers belongs to different seller
@@ -27,18 +29,14 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
      * - duplicate twins added in same bundle
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
-     * @return bundleId id of newly created bundle
-     * @return sellerId id of the bundle's seller
      */
     function createBundleInternal(
         Bundle memory _bundle
     )
     internal
-    returns (uint256 bundleId, uint256 sellerId)
     {
         // get seller id, make sure it exists and store it to incoming struct
-        bool exists;
-        (exists, sellerId) = getSellerIdByOperator(msg.sender);
+        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
         require(exists, NOT_OPERATOR);
 
         // limit maximum number of offers to avoid running into block gas limit in a loop
@@ -48,7 +46,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         require(_bundle.twinIds.length <= protocolStorage().maxTwinsPerBundle, TOO_MANY_TWINS);
 
         // Get the next bundle and increment the counter
-        bundleId = protocolCounters().nextBundleId++;
+        uint256 bundleId = protocolCounters().nextBundleId++;
 
         for (uint i = 0; i < _bundle.offerIds.length; i++) {
             // make sure all offers exist and belong to the seller

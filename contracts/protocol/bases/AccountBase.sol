@@ -15,20 +15,21 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
     /**
      * @notice Creates a seller
      *
+     * Emits a SellerCreated event if successful.
+     *
      * Reverts if:
      * - Address values are zero address
      * - Addresses are not unique to this seller
      * - Seller is not active (if active == false)
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
-     * @return sellerId id of newly created seller
      */
-    function createSellerInternal(Seller memory _seller) internal returns (uint256 sellerId) {
+    function createSellerInternal(Seller memory _seller) internal {
         //Check active is not set to false
         require(_seller.active, MUST_BE_ACTIVE);
 
         // Get the next account Id and increment the counter
-        sellerId = protocolCounters().nextAccountId++;
+        uint256 sellerId = protocolCounters().nextAccountId++;
 
         //check that the addresses are unique to one seller Id
         require(protocolStorage().sellerIdByOperator[_seller.operator] == 0 && 
