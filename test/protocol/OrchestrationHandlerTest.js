@@ -107,7 +107,7 @@ describe("IBosonOrchestrationHandler", function () {
   context("📋 Interfaces", async function () {
     context("👉 supportsInterface()", async function () {
       it("should indicate support for IBosonOrchestrationHandler interface", async function () {
-        // Current interfaceId for IOfferHandler
+        // Current interfaceId for IBosonOrchestrationHandler
         support = await erc165.supportsInterface(InterfaceIds.IBosonOrchestrationHandler);
 
         // Test
@@ -182,7 +182,7 @@ describe("IBosonOrchestrationHandler", function () {
     });
 
     context("👉 createSellerAndOffer()", async function () {
-      it("should emit an SellerCreated and OfferCreated event", async function () {
+      it("should emit a SellerCreated and OfferCreated event", async function () {
         // Create an offer, testing for the event
         await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer))
           .to.emit(orchestrationHandler, "SellerCreated")
@@ -312,15 +312,11 @@ describe("IBosonOrchestrationHandler", function () {
           );
         });
 
-        it("Caller not operator of any seller", async function () {
+        it("Caller is not operator the specified in seller", async function () {
           // Attempt to Create an offer, expecting revert
           await expect(orchestrationHandler.connect(rando).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.NOT_OPERATOR
           );
-        });
-
-        xit("Caller is not operator the specified in seller", async function () {
-          // Attempt to Create an offer, expecting revert
         });
 
         it("Valid from date is greater than valid until date", async function () {
