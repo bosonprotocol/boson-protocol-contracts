@@ -29,7 +29,6 @@ describe("SupportedInterfaces", function () {
       it("getIBosonAccountHandler() should return expected id", async function () {
         const expected = InterfaceIds.IBosonAccountHandler;
         const actual = await supportedInterfaces.getIBosonAccountHandler();
-        //console.log(actual, expected);
         assert.equal(actual, expected);
       });
 
@@ -69,6 +68,12 @@ describe("SupportedInterfaces", function () {
         assert.equal(actual, expected);
       });
 
+      it("getIBosonGroupHandler() should return expected id", async function () {
+        const expected = InterfaceIds.IBosonGroupHandler;
+        const actual = await supportedInterfaces.getIBosonGroupHandler();
+        assert.equal(actual, expected);
+      });
+
       it("getIBosonOfferHandler() should return expected id", async function () {
         const expected = InterfaceIds.IBosonOfferHandler;
         const actual = await supportedInterfaces.getIBosonOfferHandler();
@@ -78,6 +83,12 @@ describe("SupportedInterfaces", function () {
       it("getIBosonTwinHandler() should return expected id", async function () {
         const expected = InterfaceIds.IBosonTwinHandler;
         const actual = await supportedInterfaces.getIBosonTwinHandler();
+        assert.equal(actual, expected);
+      });
+
+      it("getIBosonOrchestrationHandler() should return expected id", async function () {
+        const expected = InterfaceIds.IBosonOrchestrationHandler;
+        const actual = await supportedInterfaces.getIBosonOrchestrationHandler();
         assert.equal(actual, expected);
       });
     });

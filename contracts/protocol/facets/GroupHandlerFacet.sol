@@ -29,7 +29,8 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * Emits a GroupCreated event if successful.
      *
      * Reverts if:
-     * 
+     *
+     * - caller is not an operator 
      * - any of offers belongs to different seller
      * - any of offers does not exist
      * - offer exists in a different group
