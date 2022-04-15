@@ -43,12 +43,13 @@ describe("IBosonBundleHandler", function () {
     tokenAddress,
     key,
     value,
-    clients;
+    clients,
+    invalidTwinId;
   let offerHandler, bundleHandlerFacet_Factory;
   let seller, active;
   let bundleStruct;
   let twinIdsToAdd, twinIdsToRemove, offerIdsToAdd, offerIdsToRemove;
-  let bundle, bundleId, offerIds, twinIds, nextBundleId, invalidBundleId, bundleInstance;
+  let bundle, bundleId, bundleIds, offerIds, twinId, twinIds, nextBundleId, invalidBundleId, bundleInstance;
   let offer, oneMonth, oneWeek, exists, expected, blockNumber, block;
   let offerId,
     price,
@@ -63,7 +64,8 @@ describe("IBosonBundleHandler", function () {
     exchangeToken,
     metadataUri,
     offerChecksum,
-    voided;
+    voided,
+    invalidOfferId;
 
   before(async function () {
     // get interface Ids
@@ -1296,6 +1298,96 @@ describe("IBosonBundleHandler", function () {
       });
     });
 
+    context("👉 getBundleIdByOffer()", async function () {
+      beforeEach(async function () {
+        // Create a bundle
+        await bundleHandler.connect(operator).createBundle(bundle);
+
+        // Offer id that we want to test
+        offerId = bundle.offerIds[0];
+      });
+
+      it("should return true for exists if bundle id is found", async function () {
+        // Get the exists flag
+        [exists] = await bundleHandler.connect(rando).getBundleIdByOffer(offerId);
+
+        // Validate
+        expect(exists).to.be.true;
+      });
+
+      it("should return false for exists if bundle id is not found", async function () {
+        invalidOfferId = "666";
+
+        // Get the exists flag
+        [exists] = await bundleHandler.connect(rando).getBundleIdByOffer(invalidOfferId);
+
+        // Validate
+        expect(exists).to.be.false;
+      });
+
+      it("should return the bundle id if found", async function () {
+        // Get the bundle id
+        [, bundleId] = await bundleHandler.connect(rando).getBundleIdByOffer(offerId);
+
+        // Validate
+        assert.equal(bundleId.toString(), bundle.id, "Bundle Id is incorrect");
+      });
+    });
+
+    context("👉 getBundleIdsByTwin()", async function () {
+      beforeEach(async function () {
+        // Create a twin with id 6
+        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+        await twinHandler.connect(operator).createTwin(twin);
+
+        // Create a bundle
+        await bundleHandler.connect(operator).createBundle(bundle);
+
+        // Twin id that we want to test
+        twinId = "6";
+      });
+
+      it("should return true for exists if bundle id is found", async function () {
+        // Get the exists flag
+        [exists] = await bundleHandler.connect(rando).getBundleIdsByTwin(bundle.offerIds[0]);
+
+        // Validate
+        expect(exists).to.be.true;
+      });
+
+      it("should return false for exists if bundle id is not found", async function () {
+        invalidTwinId = "666";
+
+        // Get the exists flag
+        [exists] = await bundleHandler.connect(rando).getBundleIdsByTwin(invalidTwinId);
+
+        // Validate
+        expect(exists).to.be.false;
+      });
+
+      it("should return the bundle ids if found", async function () {
+        // Create new bundle of id 2
+        let expectedNewBundleId = "2";
+        const newBundle = bundle.clone();
+        newBundle.id = expectedNewBundleId;
+        newBundle.twinIds = [twinId];
+        newBundle.offerIds = ["1"];
+        await bundleHandler.connect(operator).createBundle(newBundle); // creates new bundle of id 2
+
+        // Add the same Twin id to another bundle
+        twinIdsToAdd = [twinId];
+        await bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd);
+
+        const expectedBundleIds = [newBundle.id, bundle.id];
+
+        // Get the bundle id
+        [, bundleIds] = await bundleHandler.connect(rando).getBundleIdsByTwin(twinId);
+
+        // Validate
+        assert.equal(bundleIds.toString(), expectedBundleIds.toString(), "Bundle Ids are incorrect");
+      });
+    });
+
     context("👉 removeBundle()", async function () {
       beforeEach(async function () {
         // Create a bundle
@@ -1303,19 +1395,14 @@ describe("IBosonBundleHandler", function () {
       });
 
       it("should emit a BundleDeleted event", async function () {
-        let nextBundleId = "1";
-
         // Expect bundle to be found.
         [exists] = await bundleHandler.connect(rando).getBundle(bundle.id);
         expect(exists).to.be.true;
 
         // Remove the bundle, testing for the event.
-        const tx = await bundleHandler.connect(operator).removeBundle(bundle.id);
-        const txReceipt = await tx.wait();
-        const event = getEvent(txReceipt, bundleHandler, "BundleDeleted");
-
-        assert.equal(event.bundleId.toString(), nextBundleId, "Bundle Id is incorrect");
-        assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        await expect(bundleHandler.connect(operator).removeBundle(bundle.id))
+          .to.emit(bundleHandler, "BundleDeleted")
+          .withArgs(bundle.id, bundle.sellerId);
 
         // Expect bundle to be not found.
         [exists] = await bundleHandler.connect(rando).getBundle(bundle.id);
