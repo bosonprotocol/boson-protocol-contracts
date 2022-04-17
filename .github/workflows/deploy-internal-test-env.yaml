@@ -30,7 +30,7 @@ jobs:
       - name: Create empty addresses directory
         shell: bash
         run: |
-        mkdir -p addresses
+          mkdir -p addresses
       - run: npm run deploy-suite:test
       - name: Upload test deploy output
         uses: actions/upload-artifact@v2
