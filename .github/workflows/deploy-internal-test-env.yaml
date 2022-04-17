@@ -28,8 +28,8 @@ jobs:
         run: |
           mkdir -p logs
       - name: Create empty addresses directory
-      shell: bash
-      run: |
+        shell: bash
+        run: |
         mkdir -p addresses
       - run: npm run deploy-suite:test
       - name: Upload test deploy output

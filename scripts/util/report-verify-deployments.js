@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 //const ethers = hre.ethers;
-const fs = require('fs');
-const packageFile = require('../../package.json') ;
+const fs = require("fs");
+const packageFile = require("../../package.json");
 
 /**
  * Utilities for reporting deployments and verifying with
@@ -33,14 +33,8 @@ async function verifyOnEtherscan(contract) {
 
 const addressesDirPath = __dirname + `/../../addresses`;
 
-function getAddressesFilePath(
-  chainId,
-  env,
-  suffix
-) {
-  return `${addressesDirPath}/${chainId}${env ? `-${env.toLowerCase()}` : ''}${
-    suffix ? `-${suffix}` : ''
-  }.json`;
+function getAddressesFilePath(chainId, env, suffix) {
+  return `${addressesDirPath}/${chainId}${env ? `-${env.toLowerCase()}` : ""}${suffix ? `-${suffix}` : ""}.json`;
 }
 
 async function writeContracts(contracts) {
@@ -55,16 +49,15 @@ async function writeContracts(contracts) {
     JSON.stringify(
       {
         chainId: chainId,
-        env: env || '',
+        env: env || "",
         protocolVersion: packageFile.version,
-        contracts
+        contracts,
       },
       null,
       2
     ),
-    'utf-8'
+    "utf-8"
   );
-
 }
 
 async function verifyOnTestEnv(contracts) {
@@ -75,7 +68,6 @@ async function verifyOnTestEnv(contracts) {
       if (code === "0x0" || code === "0x") {
         console.log(`❌ Failed to verify ${contract.name} on test env.`);
       }
-     
     } catch (e) {
       console.log(`❌ Failed to verify ${contract.name} on etherscan. ${e.message}`);
     }
