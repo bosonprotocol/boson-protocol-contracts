@@ -9,7 +9,7 @@ const { deployProtocolDiamond } = require('./util/deploy-protocol-diamond.js');
 const { deployProtocolClients } = require('./util/deploy-protocol-clients.js');
 const { deployProtocolConfigFacet } = require('./util/deploy-protocol-config-facet.js');
 const { deployProtocolHandlerFacets } = require('./util/deploy-protocol-handler-facets.js');
-const { delay, deploymentComplete, verifyOnEtherscan, writeContracts } = require("./util/report-verify-deployments");
+const { delay, deploymentComplete, verifyOnEtherscan, verifyOnTestEnv, writeContracts } = require("./util/report-verify-deployments");
 
 /**
  * Deploy Boson Protocol V2 contract suite
@@ -183,9 +183,14 @@ async function main() {
 
     await writeContracts(contracts);
 
+    //Verify on test node if test env 
+    if (hre.network.name === 'test') {
+        await verifyOnTestEnv(contracts);
+    }
+  
     // Bail now if deploying locally
     if (hre.network.name === 'hardhat' || hre.network.name === 'test') process.exit();
-
+    
     // Wait a minute after deployment completes and then verify contracts on etherscan
     console.log('⏲ Pause one minute, allowing deployments to propagate to Etherscan backend...');
     await delay(60000).then(
