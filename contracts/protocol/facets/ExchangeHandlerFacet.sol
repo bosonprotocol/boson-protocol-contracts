@@ -114,6 +114,51 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     }
 
     /**
+     * @notice Is the given exchange in a finalized state?
+     *
+     * Returns true if
+     * - Exchange state is Revoked, Canceled, or Completed
+     * - Exchange is disputed and dispute state is Retracted, Resolved, or Decided
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return exists - true if the exchange exists
+     * @return isFinalized - true if the exchange is finalized
+     */
+    function isExchangeFinalized(uint256 _exchangeId)
+    external
+    view
+    returns(bool exists, bool isFinalized) {
+        Exchange storage exchange;
+
+        // Get the exchange
+        (exists, exchange) = fetchExchange(_exchangeId);
+
+        // Bail if no such exchange
+        if (!exists) return (false, false);
+
+        // Derive isFinalized from exchage state or dispute state
+        if (exchange.disputed) {
+            // Get the dispute
+            Dispute storage dispute;
+            (, dispute) = fetchDispute(_exchangeId);
+
+            // Check for finalized dispute state
+            isFinalized = (
+                dispute.state == DisputeState.Retracted ||
+                dispute.state == DisputeState.Resolved ||
+                dispute.state == DisputeState.Decided
+            );
+        } else {
+            // Check for finalized exchange state
+            isFinalized = (
+                exchange.state == ExchangeState.Revoked ||
+                exchange.state == ExchangeState.Canceled ||
+                exchange.state == ExchangeState.Completed
+            );
+        }
+    }
+
+    /**
      * @notice Gets the details about a given exchange.
      *
      * @param _exchangeId - the id of the exchange to check

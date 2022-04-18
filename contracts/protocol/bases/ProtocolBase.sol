@@ -228,6 +228,25 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
+     * @notice Fetches a given dispute from storage by exchange id
+     *
+     * @param _exchangeId - the id of the exchange associated with the dispute
+     * @return exists - whether the dispute exists
+     * @return dispute - the dispute details. See {BosonTypes.Dispute}
+     */
+    function fetchDispute(uint256 _exchangeId)
+    internal
+    view
+    returns (bool exists, BosonTypes.Dispute storage dispute)
+    {
+        // Get the dispute's slot
+        dispute = protocolStorage().disputes[_exchangeId];
+
+        // Determine existence
+        exists = (_exchangeId > 0 && dispute.exchangeId == _exchangeId);
+    }
+
+    /**
      * @notice Fetches a given twin from storage by id
      *
      * @param _twinId - the id of the twin
