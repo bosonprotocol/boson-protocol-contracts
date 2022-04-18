@@ -58,6 +58,7 @@ contract BosonConstants {
     string internal constant NO_SUCH_TWIN = "No such twin";
     string internal constant NO_TRANSFER_APPROVED = "No transfer approved";
     string internal constant UNSUPPORTED_TOKEN = "Unsupported token";
+    string internal constant TWIN_HAS_BUNDLES = "Twin has bundles";
 
     // Revert Reasons: Bundle related
     string internal constant NO_SUCH_BUNDLE = "No such bundle";
