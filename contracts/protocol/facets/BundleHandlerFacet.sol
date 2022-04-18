@@ -264,6 +264,10 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             // make sure offer exist and belong to the seller
             getValidOffer(offerId);
 
+            // make sure exchange does not already exists for this offer id.
+            (bool exchangeIdsForOfferExists, ) = getExchangeIdsByOffer(offerId);
+            require(!exchangeIdsForOfferExists, EXCHANGE_FOR_OFFER_EXISTS);
+
             // Offer should not belong to another bundle already
             (bool exists, ) = fetchBundleIdByOffer(offerId);
             require(!exists, BUNDLE_OFFER_MUST_BE_UNIQUE);
