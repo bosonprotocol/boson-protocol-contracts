@@ -96,7 +96,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         require(sellerId == twin.sellerId, NOT_OPERATOR);
 
         // Check if there are bundles for this twin
-        (bool bundlesForTwinExist, ) = getBundleIdsByTwin(_twinId);
+        (bool bundlesForTwinExist, ) = fetchBundleIdsByTwin(_twinId);
         require(!bundlesForTwinExist, TWIN_HAS_BUNDLES);
 
         // delete struct
