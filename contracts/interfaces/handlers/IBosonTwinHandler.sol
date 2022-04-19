@@ -9,7 +9,7 @@ import {IBosonTwinEvents} from "../events/IBosonTwinEvents.sol";
  *
  * @notice Handles creation, removal, and querying of twins within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x218d6de7
+ * The ERC-165 identifier for this interface is: 0x44f98e5d
  */
 interface IBosonTwinHandler is IBosonTwinEvents {
 
@@ -43,4 +43,19 @@ interface IBosonTwinHandler is IBosonTwinEvents {
      * @return nextTwinId - the next twin id
      */
     function getNextTwinId() external view returns (uint256 nextTwinId);
+
+
+    /**
+     * @notice Removes the twin.
+     *
+     * Emits a TwinDeleted event if successful.
+     *
+     * Reverts if:
+     * - caller is not the seller.
+     * - Twin does not exist.
+     * - Twin has bundles.
+     *
+     * @param _twinId - the id of the twin to check.
+     */
+    function removeTwin(uint256 _twinId) external;
 }

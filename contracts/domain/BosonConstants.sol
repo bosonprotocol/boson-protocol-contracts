@@ -58,6 +58,7 @@ contract BosonConstants {
     string internal constant NO_SUCH_TWIN = "No such twin";
     string internal constant NO_TRANSFER_APPROVED = "No transfer approved";
     string internal constant UNSUPPORTED_TOKEN = "Unsupported token";
+    string internal constant TWIN_HAS_BUNDLES = "Twin has bundles";
 
     // Revert Reasons: Bundle related
     string internal constant NO_SUCH_BUNDLE = "No such bundle";
@@ -66,4 +67,5 @@ contract BosonConstants {
     string internal constant TOO_MANY_TWINS = "Exceeded maximum twins in a single transaction";
     string internal constant TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE = "Twin already exists in the same bundle";
     string internal constant BUNDLE_OFFER_MUST_BE_UNIQUE = "Offer must be unique to a bundle";
+    string internal constant EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS = "Exchange for the bundled offers exists";
 }

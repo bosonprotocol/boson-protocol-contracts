@@ -10,4 +10,5 @@ import {BosonTypes} from "../../domain/BosonTypes.sol";
  */
 interface IBosonTwinEvents {
     event TwinCreated(uint256 indexed twinId, uint256 indexed sellerId, BosonTypes.Twin twin);
+    event TwinDeleted(uint256 indexed twinId, uint256 indexed sellerId);
 }

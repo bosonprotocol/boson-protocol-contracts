@@ -9,7 +9,7 @@ import {IBosonBundleEvents} from "../events/IBosonBundleEvents.sol";
  *
  * @notice Handles bundling of offers and twins within the protocol
  *
- * The ERC-165 identifier for this interface is: 0x3c91ae92
+ * The ERC-165 identifier for this interface is: 0xa13dc8bd
  */
 interface IBosonBundleHandler is IBosonBundleEvents {
 
@@ -124,4 +124,36 @@ interface IBosonBundleHandler is IBosonBundleEvents {
      * @param _offerIds - array of offer ids to be removed to the bundle
      */
     function removeOffersFromBundle(uint256 _bundleId, uint256[] calldata _offerIds) external;
+
+    /**
+     * @notice Removes the bundle.
+     *
+     * Emits a BundleDeleted event if successful.
+     *
+     * Reverts if:
+     * - caller is not the seller.
+     * - Bundle does not exist.
+     * - exchanges exists for bundled offers.
+     *
+     * @param _bundleId - the id of the bundle to check.
+     */
+    function removeBundle(uint256 _bundleId) external;
+
+    /**
+     * @notice Gets the bundle id for a given offer id.
+     *
+     * @param _offerId - the offer Id.
+     * @return exists - whether the bundle Id exists
+     * @return bundleId  - the bundle Id.
+     */
+    function getBundleIdByOffer(uint256 _offerId) external view returns (bool exists, uint256 bundleId);
+
+    /**
+     * @notice Gets the bundle ids for a given twin id.
+     *
+     * @param _twinId - the twin Id.
+     * @return exists - whether the bundle Ids exist
+     * @return bundleIds  - the bundle Ids.
+     */
+    function getBundleIdsByTwin(uint256 _twinId) external view returns (bool exists, uint256[] memory bundleIds);
 }

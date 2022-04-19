@@ -11,4 +11,5 @@ import {BosonTypes} from "../../domain/BosonTypes.sol";
 interface IBosonBundleEvents {
     event BundleCreated(uint256 indexed bundleId, uint256 indexed sellerId, BosonTypes.Bundle bundle);
     event BundleUpdated(uint256 indexed bundleId, uint256 indexed sellerId, BosonTypes.Bundle bundle);
+    event BundleDeleted(uint256 indexed bundleId, uint256 indexed sellerId);
 }

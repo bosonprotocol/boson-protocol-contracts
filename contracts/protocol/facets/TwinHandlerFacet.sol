@@ -72,4 +72,36 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         nextTwinId = protocolCounters().nextTwinId;
 
     }
+
+    /**
+     * @notice Removes the twin.
+     *
+     * Emits a TwinDeleted event if successful.
+     *
+     * Reverts if:
+     * - caller is not the seller.
+     * - Twin does not exist.
+     * - Twin has bundles.
+     *
+     * @param _twinId - the id of the twin to check.
+     */
+    function removeTwin(uint256 _twinId) external {
+        // Get storage location for twin
+        (bool exists, Twin memory twin) = fetchTwin(_twinId);
+        require(exists, NO_SUCH_TWIN);
+
+        // Get seller id
+        (, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+        // Caller's seller id must match twin seller id
+        require(sellerId == twin.sellerId, NOT_OPERATOR);
+
+        // Check if there are bundles for this twin
+        (bool bundlesForTwinExist, ) = fetchBundleIdsByTwin(_twinId);
+        require(!bundlesForTwinExist, TWIN_HAS_BUNDLES);
+
+        // delete struct
+        delete protocolStorage().twins[_twinId];
+
+        emit TwinDeleted(_twinId, twin.sellerId);
+    }
 }
