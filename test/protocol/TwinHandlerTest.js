@@ -6,6 +6,7 @@ const { gasLimit } = require("../../environments");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const Twin = require("../../scripts/domain/Twin");
+const Bundle = require("../../scripts/domain/Bundle");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -27,6 +28,7 @@ describe("IBosonTwinHandler", function () {
     accessController,
     twinHandler,
     accountHandler,
+    bundleHandler,
     twinStruct,
     bosonToken,
     foreign721,
@@ -45,6 +47,7 @@ describe("IBosonTwinHandler", function () {
     supplyIds,
     tokenId,
     tokenAddress;
+  let bundleId, offerIds, twinIds, bundle;
 
   before(async function () {
     // get interface Ids
@@ -68,8 +71,11 @@ describe("IBosonTwinHandler", function () {
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet"]);
-    await deployProtocolHandlerFacets(protocolDiamond, ["TwinHandlerFacet"]);
+    await deployProtocolHandlerFacets(protocolDiamond, [
+      "AccountHandlerFacet",
+      "TwinHandlerFacet",
+      "BundleHandlerFacet",
+    ]);
 
     // Add config Handler, so twin id starts at 1
     const protocolConfig = [
@@ -82,6 +88,8 @@ describe("IBosonTwinHandler", function () {
       "100",
       "100",
     ];
+
+    // Deploy the Config facet, initializing the protocol config
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
     // Cast Diamond to IERC165
@@ -92,6 +100,9 @@ describe("IBosonTwinHandler", function () {
 
     // Cast Diamond to ITwinHandler
     twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBundleHandler
+    bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
 
     // Deploy the mock tokens
     [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens(gasLimit);
@@ -408,6 +419,63 @@ describe("IBosonTwinHandler", function () {
 
         // Verify expectation
         expect(nextTwinId.toString() == expected).to.be.true;
+      });
+    });
+
+    context("👉 removeTwin()", async function () {
+      beforeEach(async function () {
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, 1);
+
+        // Create a twin
+        await twinHandler.connect(operator).createTwin(twin);
+      });
+
+      it("should emit a TwinDeleted event", async function () {
+        // Expect twin to be found.
+        [success] = await twinHandler.connect(rando).getTwin(twin.id);
+        expect(success).to.be.true;
+
+        // Remove the twin, testing for the event.
+        await expect(twinHandler.connect(operator).removeTwin(twin.id))
+          .to.emit(twinHandler, "TwinDeleted")
+          .withArgs(twin.id, twin.sellerId);
+
+        // Expect twin to be not found.
+        [success] = await twinHandler.connect(rando).getTwin(twin.id);
+        expect(success).to.be.false;
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Twin does not exist", async function () {
+          let nonExistantTwinId = "999";
+
+          // Attempt to Remove a twin, expecting revert
+          await expect(twinHandler.connect(operator).removeTwin(nonExistantTwinId)).to.revertedWith(
+            RevertReasons.NO_SUCH_TWIN
+          );
+        });
+
+        it("Caller is not the seller", async function () {
+          // Attempt to Remove a twin, expecting revert
+          await expect(twinHandler.connect(rando).removeTwin(twin.id)).to.revertedWith(RevertReasons.NOT_OPERATOR);
+        });
+
+        it("Twin has bundles", async function () {
+          // Bundle: Required constructor params
+          bundleId = "1";
+          offerIds = [];
+          twinIds = [twin.id];
+
+          // Create a new bundle
+          bundle = new Bundle(bundleId, sellerId, offerIds, twinIds);
+          await bundleHandler.connect(operator).createBundle(bundle);
+
+          // Attempt to Remove a twin, expecting revert
+          await expect(twinHandler.connect(operator).removeTwin(twin.id)).to.revertedWith(
+            RevertReasons.TWIN_HAS_BUNDLES
+          );
+        });
       });
     });
   });

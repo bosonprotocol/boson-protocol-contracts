@@ -294,7 +294,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the bundle Id exists
      * @return bundleId  - the bundle Id.
      */
-    function getBundleIdByOffer(uint256 _offerId) internal view returns (bool exists, uint256 bundleId) {
+    function fetchBundleIdByOffer(uint256 _offerId) internal view returns (bool exists, uint256 bundleId) {
         // Get the bundle Id
         bundleId = protocolStorage().bundleIdByOffer[_offerId];
 
@@ -309,7 +309,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the bundle Ids exist
      * @return bundleIds  - the bundle Ids.
      */
-    function getBundleIdsByTwin(uint256 _twinId) internal view returns (bool exists, uint256[] memory bundleIds) {
+    function fetchBundleIdsByTwin(uint256 _twinId) internal view returns (bool exists, uint256[] memory bundleIds) {
         // Get the bundle Ids
         bundleIds = protocolStorage().bundleIdsByTwin[_twinId];
 

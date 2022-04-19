@@ -39,12 +39,14 @@ exports.RevertReasons = {
   NO_SUCH_TWIN: "No such twin",
   NO_TRANSFER_APPROVED: "No transfer approved",
   UNSUPPORTED_TOKEN: "Unsupported token",
-  TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE: "Twin already exists in the same bundle",
+  TWIN_HAS_BUNDLES: "Twin has bundles",
 
   // Bundle related
   NO_SUCH_BUNDLE: "No such bundle",
   TWIN_NOT_IN_BUNDLE: "Twin not part of the bundle",
   OFFER_NOT_IN_BUNDLE: "Offer not part of the bundle",
   TOO_MANY_TWINS: "Exceeded maximum twins in a single transaction",
+  TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE: "Twin already exists in the same bundle",
   BUNDLE_OFFER_MUST_BE_UNIQUE: "Offer must be unique to a bundle",
+  EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS: "Exchange for the bundled offers exists",
 };
