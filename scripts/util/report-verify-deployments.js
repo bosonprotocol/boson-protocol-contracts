@@ -69,7 +69,7 @@ async function verifyOnTestEnv(contracts) {
         console.log(`❌ Failed to verify ${contract.name} on test env.`);
       }
     } catch (e) {
-      console.log(`❌ Failed to verify ${contract.name} on etherscan. ${e.message}`);
+      console.log(`❌ Failed to verify ${contract.name} on test env. ${e.message}`);
     }
   }
 }
