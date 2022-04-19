@@ -61,7 +61,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, IBosonO
     /**
      * @notice Takes an offer and a condition, creates an offer, then a group with that offer and the given condition.
      *
-     * Emits a OfferCreated and an GroupCreated event if successful.
+     * Emits an OfferCreated and a GroupCreated event if successful.
      *
      * Reverts if:
      * - in offer struct:

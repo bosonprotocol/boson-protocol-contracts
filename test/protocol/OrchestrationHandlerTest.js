@@ -54,7 +54,6 @@ describe("IBosonOrchestrationHandler", function () {
   let group, groupStruct, nextGroupId;
   let method, tokenAddress, tokenId, threshold;
   let offerIds, condition;
-  let orchestrationHandlerFacet_Factory;
 
   before(async function () {
     // get interface Ids
@@ -376,11 +375,6 @@ describe("IBosonOrchestrationHandler", function () {
     });
 
     context("👉 createOfferWithCondition()", async function () {
-      before(async function () {
-        // initialize orchestrationHandler
-        orchestrationHandlerFacet_Factory = await ethers.getContractFactory("OrchestrationHandlerFacet");
-      });
-
       beforeEach(async function () {
         // prepare a group struct. We are not passing it as an argument, but just need to validate.
 
@@ -418,7 +412,7 @@ describe("IBosonOrchestrationHandler", function () {
         const txReceipt = await tx.wait();
 
         // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandlerFacet_Factory, "OfferCreated");
+        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
         const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
         // Validate the instance
         expect(offerInstance.isValid()).to.be.true;
@@ -428,7 +422,7 @@ describe("IBosonOrchestrationHandler", function () {
         assert.equal(offerInstance.toString(), offer.toString(), "Offer struct is incorrect");
 
         // GroupCreated event
-        const eventGroupCreated = getEvent(txReceipt, orchestrationHandlerFacet_Factory, "GroupCreated");
+        const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
         const groupInstance = Group.fromStruct(eventGroupCreated.group);
         // Validate the instance
         expect(groupInstance.isValid()).to.be.true;
@@ -473,7 +467,7 @@ describe("IBosonOrchestrationHandler", function () {
         const txReceipt = await tx.wait();
 
         // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandlerFacet_Factory, "OfferCreated");
+        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
         const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
         // Validate the instance
         expect(offerInstance.isValid()).to.be.true;
@@ -483,7 +477,7 @@ describe("IBosonOrchestrationHandler", function () {
         assert.equal(offerInstance.toString(), Offer.fromStruct(offerStruct).toString(), "Offer struct is incorrect");
 
         // GroupCreated event
-        const eventGroupCreated = getEvent(txReceipt, orchestrationHandlerFacet_Factory, "GroupCreated");
+        const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
         const groupInstance = Group.fromStruct(eventGroupCreated.group);
         // Validate the instance
         expect(groupInstance.isValid()).to.be.true;
@@ -502,7 +496,7 @@ describe("IBosonOrchestrationHandler", function () {
         const txReceipt = await tx.wait();
 
         // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandlerFacet_Factory, "OfferCreated");
+        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
         const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
         // Validate the instance
         expect(offerInstance.isValid()).to.be.true;
@@ -512,7 +506,7 @@ describe("IBosonOrchestrationHandler", function () {
         assert.equal(offerInstance.toString(), Offer.fromStruct(offerStruct).toString(), "Offer struct is incorrect");
 
         // GroupCreated event
-        const eventGroupCreated = getEvent(txReceipt, orchestrationHandlerFacet_Factory, "GroupCreated");
+        const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
         const groupInstance = Group.fromStruct(eventGroupCreated.group);
         // Validate the instance
         expect(groupInstance.isValid()).to.be.true;
