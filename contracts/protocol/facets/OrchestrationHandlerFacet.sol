@@ -70,7 +70,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, IBosonO
      *   - Valid until date is not in the future
      *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
-     * - condition includes invalid combination
+     * - Condition includes invalid combination of parameters
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _condition - the fully populated condition struct
