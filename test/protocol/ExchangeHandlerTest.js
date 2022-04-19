@@ -292,8 +292,8 @@ describe("IBosonExchangeHandler", function () {
 
         // TODO Include this test when ExchangeHandlerFacet.completeExchange works
         it.skip("should return true if exchange is in Completed state", async function () {
-          // Revoke voucher
-          [exists, response] = await bosonVoucher.connect(operator).revokeVoucher(exchange.id);
+          // Complete exchange
+          [exists, response] = await exchangeHandler.connect(operator).completeExchange(exchange.id);
 
           // Now in Revoked state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
@@ -316,7 +316,7 @@ describe("IBosonExchangeHandler", function () {
 
         // TODO Include this test when ExchangeHandlerFacet.cancelVoucher works
         it.skip("should return true if exchange is in Canceled state", async function () {
-          // Revoke voucher
+          // Cancel voucher
           [exists, response] = await bosonVoucher.connect(buyer).cancelVoucher(exchange.id);
 
           // Now in Canceled state, ask if exchange is finalized
@@ -340,7 +340,7 @@ describe("IBosonExchangeHandler", function () {
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
 
           // It should be finalized
-          assert.equal(response, true, "Incorrectly reports unfinalized state");
+          assert.equal(response, false, "Incorrectly reports unfinalized state");
         });
 
         // TODO Include this test when DisputeHandlerFacet.retractDispute works
