@@ -5,6 +5,8 @@ import {BosonTypes} from "../../domain/BosonTypes.sol";
 import {IBosonAccountEvents} from "../events/IBosonAccountEvents.sol";
 import {IBosonGroupEvents} from "../events/IBosonGroupEvents.sol";
 import {IBosonOfferEvents} from "../events/IBosonOfferEvents.sol";
+import {IBosonTwinEvents} from "../events/IBosonTwinEvents.sol";
+import {IBosonBundleEvents} from "../events/IBosonBundleEvents.sol";
 
 /**
  * @title IBosonOrchestrationHandler
@@ -13,7 +15,7 @@ import {IBosonOfferEvents} from "../events/IBosonOfferEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0x8db6d85b
  */
-interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, IBosonOfferEvents{
+interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, IBosonOfferEvents, IBosonTwinEvents, IBosonBundleEvents {
     /**
      * @notice Creates a seller and an offer in a single transaction.
      *
