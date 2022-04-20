@@ -504,6 +504,17 @@ describe("IBosonBundleHandler", function () {
           RevertReasons.TOO_MANY_TWINS
         );
       });
+
+      it("Exchange already exists for the offerId in bundle", async function () {
+        // Commit to an offer
+        let offerIdToCommit = bundle.offerIds[0];
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerIdToCommit);
+
+        // Attempt to Create a bundle, expecting revert
+        await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
+          RevertReasons.EXCHANGE_FOR_OFFER_EXISTS
+        );
+      });
     });
 
     context("👉 getBundle()", async function () {
@@ -1149,6 +1160,17 @@ describe("IBosonBundleHandler", function () {
             RevertReasons.NO_SUCH_OFFER
           );
         });
+
+        it("Exchange already exists for the offerId in bundle", async function () {
+          // Commit to an offer
+          let offerIdToCommit = offerIdsToAdd[0];
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerIdToCommit);
+
+          // Attempt to add offers to a bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addOffersToBundle(bundle.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.EXCHANGE_FOR_OFFER_EXISTS
+          );
+        });
       });
     });
 
@@ -1294,6 +1316,17 @@ describe("IBosonBundleHandler", function () {
           await expect(
             bundleHandler.connect(operator).removeOffersFromBundle(bundle.id, offerIdsToRemove)
           ).to.revertedWith(RevertReasons.NOTHING_UPDATED);
+        });
+
+        it("Exchange already exists for the offerId in bundle", async function () {
+          // Commit to an offer
+          let offerIdToCommit = offerIdsToRemove[0];
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerIdToCommit);
+
+          // Attempt to remove offers from the bundle, expecting revert
+          await expect(
+            bundleHandler.connect(operator).removeOffersFromBundle(bundle.id, offerIdsToRemove)
+          ).to.revertedWith(RevertReasons.EXCHANGE_FOR_OFFER_EXISTS);
         });
       });
     });
