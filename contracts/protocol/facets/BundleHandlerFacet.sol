@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import { IBosonBundleHandler } from "../../interfaces/handlers/IBosonBundleHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BundleBase } from "../bases/BundleBase.sol";
-import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
 /**
  * @title BundleHandlerFacet
@@ -43,6 +42,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * - any of twins does not exist
      * - number of twins exceeds maximum allowed number per bundle
      * - duplicate twins added in same bundle
+     * - exchange already exists for the offer id in bundle
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
@@ -245,6 +245,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * - any of offers does not exist
      * - offer exists in a different bundle
      * - offer ids contains duplicated offers
+     * - exchange already exists for the offer id in bundle
      *
      * @param _bundleId  - the id of the bundle to be updated
      * @param _offerIds - array of offer ids to be added to the bundle
@@ -264,7 +265,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             // make sure offer exist and belong to the seller
             getValidOffer(offerId);
 
-            // make sure exchange does not already exists for this offer id.
+            // make sure exchange does not already exist for this offer id.
             (bool exchangeIdsForOfferExists, ) = getExchangeIdsByOffer(offerId);
             require(!exchangeIdsForOfferExists, EXCHANGE_FOR_OFFER_EXISTS);
 

@@ -55,7 +55,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             (bool bundleByOfferExists, ) = fetchBundleIdByOffer(_bundle.offerIds[i]);
             require(!bundleByOfferExists, BUNDLE_OFFER_MUST_BE_UNIQUE);
 
-            // make sure exchange does not already exists for this offer id.
+            // make sure exchange does not already exist for this offer id.
             (bool exchangeIdsForOfferExists, ) = getExchangeIdsByOffer(_bundle.offerIds[i]);
             require(!exchangeIdsForOfferExists, EXCHANGE_FOR_OFFER_EXISTS);
 

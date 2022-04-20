@@ -28,6 +28,7 @@ interface IBosonBundleHandler is IBosonBundleEvents {
      * - any of twins does not exist
      * - number of twins exceeds maximum allowed number per bundle
      * - duplicate twins added in same bundle
+     * - exchange already exists for the offer id in bundle
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
@@ -102,6 +103,7 @@ interface IBosonBundleHandler is IBosonBundleEvents {
      * - any of offers does not exist
      * - offer exists in a different bundle
      * - offer ids contains duplicated offers
+     * - exchange already exists for the offer id in bundle
      *
      * @param _bundleId  - the id of the bundle to be updated
      * @param _offerIds - array of offer ids to be added to the bundle

@@ -505,7 +505,7 @@ describe("IBosonBundleHandler", function () {
         );
       });
 
-      it("Exchange already exists for offerId in bundle", async function () {
+      it("Exchange already exists for the offerId in bundle", async function () {
         // Commit to an offer
         let offerIdToCommit = bundle.offerIds[0];
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerIdToCommit);
@@ -1161,7 +1161,7 @@ describe("IBosonBundleHandler", function () {
           );
         });
 
-        it("Exchange already exists for the offer", async function () {
+        it("Exchange already exists for the offerId in bundle", async function () {
           // Commit to an offer
           let offerIdToCommit = offerIdsToAdd[0];
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerIdToCommit);
