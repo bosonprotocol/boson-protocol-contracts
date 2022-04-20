@@ -9,7 +9,7 @@ import {IBosonBundleEvents} from "../events/IBosonBundleEvents.sol";
  *
  * @notice Handles bundling of offers and twins within the protocol
  *
- * The ERC-165 identifier for this interface is: 0xf18de26c
+ * The ERC-165 identifier for this interface is: 0xa13dc8bd
  */
 interface IBosonBundleHandler is IBosonBundleEvents {
 
