@@ -114,6 +114,71 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     }
 
     /**
+     * @notice Complete an exchange.
+     *
+     * Reverts if
+     * - Exchange does not exist
+     * - Exchange is not in redeemed state
+     * - Caller is not buyer or seller's operator
+     * - Caller is seller's operator and offer fulfillment period has not elapsed
+     *
+     * Emits
+     * - ExchangeCompleted
+     *
+     * @param _exchangeId - the id of the exchange to complete
+     */
+    function completeExchange(uint256 _exchangeId) external {
+
+        // Get the exchange
+        bool exchangeExists;
+        Exchange storage exchange;
+        (exchangeExists, exchange) = fetchExchange(_exchangeId);
+
+        // Make sure the exchange exists, is in redeemed state
+        require(exchangeExists, NO_SUCH_EXCHANGE);
+        // TODO: Uncomment check for redeemed state once redeemVoucher is working
+        //require(exchange.state == ExchangeState.Redeemed, INVALID_STATE_TRANSITION);
+
+        // Get the offer, which will definitely exist
+        Offer storage offer;
+        (,offer) = fetchOffer(exchange.offerId);
+
+        // Get seller id associated with caller
+        bool sellerExists;
+        uint256 sellerId;
+        (sellerExists, sellerId) = getSellerIdByOperator(msg.sender);
+
+        // Seller may only call after fulfillment period elapses, buyer may call any time
+        if (sellerExists) {
+            // Make sure caller is seller's operator
+            require(offer.sellerId == sellerId, NOT_OPERATOR);
+
+            // Make sure the fulfillment period has elapsed
+            uint256 elapsed = block.timestamp - exchange.voucher.redeemedDate;
+            require(elapsed >= offer.fulfillmentPeriodDuration, FULFILLMENT_PERIOD_NOT_ELAPSED);
+        } else {
+            // Is this the buyer?
+            bool buyerExists;
+            uint256 buyerId;
+            (buyerExists, buyerId) = getBuyerIdByWallet(msg.sender);
+            require(buyerExists && buyerId == exchange.buyerId, NOT_BUYER_OR_SELLER);
+        }
+
+        // Set the exchange state to completed
+        exchange.state = ExchangeState.Completed;
+
+        // Store the time the exchange was finalized
+        exchange.finalizedDate = block.timestamp;
+
+        // TODO Notify the funds handler of an exchange finalization.
+        // Probably this amounts to calling an internal method in FundsBase.sol
+
+        // Notify watchers of state change
+        emit ExchangeCompleted(exchange.offerId, exchange.buyerId, exchange.id);
+
+    }
+
+    /**
      * @notice Is the given exchange in a finalized state?
      *
      * Returns true if

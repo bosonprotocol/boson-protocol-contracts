@@ -9,7 +9,7 @@ import {IBosonExchangeEvents} from "../events/IBosonExchangeEvents.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x14ac255b
+ * The ERC-165 identifier for this interface is: 0xd99099a0
  */
 interface IBosonExchangeHandler is IBosonExchangeEvents {
 
@@ -29,6 +29,22 @@ interface IBosonExchangeHandler is IBosonExchangeEvents {
      * @param _offerId - the id of the offer to commit to
      */
     function commitToOffer(address payable _buyer, uint256 _offerId) external;
+
+    /**
+     * @notice Complete an exchange.
+     *
+     * Reverts if
+     * - Exchange does not exist
+     * - Exchange is not in redeemed state
+     * - Caller is not buyer or seller's operator
+     * - Caller is seller's operator and offer fulfillment period has not elapsed
+     *
+     * Emits
+     * - ExchangeCompleted
+     *
+     * @param _exchangeId - the id of the exchange to complete
+     */
+    function completeExchange(uint256 _exchangeId) external;
 
     /**
      * @notice Is the given exchange in a finalized state?

@@ -4,9 +4,11 @@
 exports.RevertReasons = {
   // Access related
   ACCESS_DENIED: "Access denied, caller doesn't have role",
+  NOT_BUYER_OR_SELLER: "Not buyer or seller",
 
   // General
   INVALID_ADDRESS: "Invalid address",
+  INVALID_STATE_TRANSITION: "Invalid state transition",
 
   // Facet initializer related
   ALREADY_INITIALIZED: "Already initialized",
@@ -48,4 +50,8 @@ exports.RevertReasons = {
   TOO_MANY_TWINS: "Exceeded maximum twins in a single transaction",
   TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE: "Twin already exists in the same bundle",
   BUNDLE_OFFER_MUST_BE_UNIQUE: "Offer must be unique to a bundle",
+
+  // Exchange related
+  NO_SUCH_EXCHANGE: "No such exchange",
+  FULFILLMENT_PERIOD_NOT_ELAPSED: "Fulfillment period has not yet elapsed",
 };
