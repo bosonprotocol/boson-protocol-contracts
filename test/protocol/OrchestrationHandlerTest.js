@@ -62,6 +62,7 @@ describe("IBosonOrchestrationHandler", function () {
   let twin, twinStruct, twinIds, nextTwinId;
   let bundle, bundleStruct, bundleId, nextBundleId;
   let bosonToken, supplyAvailable, supplyIds;
+  let foreign721, foreign1155, fallbackError;
 
   before(async function () {
     // get interface Ids
@@ -131,7 +132,7 @@ describe("IBosonOrchestrationHandler", function () {
     orchestrationHandler = await ethers.getContractAt("IBosonOrchestrationHandler", protocolDiamond.address);
 
     // Deploy the mock tokens
-    [bosonToken] = await deployMockTokens(gasLimit);
+    [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens(gasLimit);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -654,12 +655,12 @@ describe("IBosonOrchestrationHandler", function () {
 
         // create a seller
         await accountHandler.connect(admin).createSeller(seller);
-
-        // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
       });
 
       it("should emit an OfferCreated, a TwinCreated and a GroupCreated event", async function () {
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
         // Create an offer with condition, testing for the events
         const tx = await orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin);
         const txReceipt = await tx.wait();
@@ -696,6 +697,9 @@ describe("IBosonOrchestrationHandler", function () {
       });
 
       it("should update state", async function () {
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
         // Create an offer with condition
         await orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin);
 
@@ -733,7 +737,10 @@ describe("IBosonOrchestrationHandler", function () {
         }
       });
 
-      it.only("should ignore any provided offer id and assign the next available", async function () {
+      it("should ignore any provided offer id and assign the next available", async function () {
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
         offer.id = "555";
         twin.id = "777";
 
@@ -777,6 +784,9 @@ describe("IBosonOrchestrationHandler", function () {
       });
 
       it("should ignore any provided seller and assign seller id of msg.sender", async function () {
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
         // set some other sellerId
         offer.sellerId = "123";
         twin.sellerId = "456";
@@ -822,8 +832,8 @@ describe("IBosonOrchestrationHandler", function () {
 
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
-          // Attempt to Create an offer, expecting revert
-          await expect(orchestrationHandler.connect(rando).createOfferWithCondition(offer, condition)).to.revertedWith(
+          // Attempt to Create an offer, twin and bundle, expecting revert
+          await expect(orchestrationHandler.connect(rando).createOfferAndTwinWithBundle(offer, twin)).to.revertedWith(
             RevertReasons.NOT_OPERATOR
           );
         });
@@ -833,9 +843,9 @@ describe("IBosonOrchestrationHandler", function () {
           offer.validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
           offer.validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
 
-          // Attempt to Create an offer, expecting revert
+          // Attempt to Create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -843,9 +853,9 @@ describe("IBosonOrchestrationHandler", function () {
           // Set until date in the past
           offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
 
-          // Attempt to Create an offer, expecting revert
+          // Attempt to Create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -853,9 +863,9 @@ describe("IBosonOrchestrationHandler", function () {
           // Set buyer cancel penalty higher than offer price
           offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
 
-          // Attempt to Create an offer, expecting revert
+          // Attempt to Create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin)
           ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
         });
 
@@ -863,45 +873,63 @@ describe("IBosonOrchestrationHandler", function () {
           // Set voided flag to true
           offer.voided = true;
 
-          // Attempt to Create an offer, expecting revert
+          // Attempt to Create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
-        it("Condition 'None' has some values in other fields", async function () {
-          method = EvaluationMethod.None;
-          condition = new Condition(method, tokenAddress, tokenId, threshold);
-          group.condition = condition;
+        it("should revert if protocol is not approved to transfer the ERC20 token", async function () {
+          //ERC20 token address
+          twin.tokenAddress = bosonToken.address;
 
-          // Attempt to create the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
-          ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin)
+          ).to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
         });
 
-        it("Condition 'AboveThreshold' has zero token contract address", async function () {
-          method = EvaluationMethod.AboveThreshold;
-          tokenAddress = ethers.constants.AddressZero;
-          condition = new Condition(method, tokenAddress, tokenId, threshold);
-          group.condition = condition;
+        it("should revert if protocol is not approved to transfer the ERC721 token", async function () {
+          //ERC721 token address
+          twin.tokenAddress = foreign721.address;
 
-          // Attempt to create the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
-          ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin)
+          ).to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
         });
 
-        it("Condition 'SpecificToken' has has zero token contract address", async function () {
-          method = EvaluationMethod.SpecificToken;
-          tokenAddress = ethers.constants.AddressZero;
-          condition = new Condition(method, tokenAddress, tokenId, threshold);
-          group.condition = condition;
+        it("should revert if protocol is not approved to transfer the ERC1155 token", async function () {
+          //ERC1155 token address
+          twin.tokenAddress = foreign1155.address;
 
-          // Attempt to create the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
-          ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin)
+          ).to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
+        });
+
+        context("Token address is unsupported", async function () {
+          it("Token address is a zero address", async function () {
+            twin.tokenAddress = ethers.constants.AddressZero;
+
+            await expect(
+              orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin)
+            ).to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
+          });
+
+          it("Token address is a contract address that does not support the isApprovedForAll", async function () {
+            twin.tokenAddress = twinHandler.address;
+
+            await expect(
+              orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin)
+            ).to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
+          });
+
+          it("Token address is a contract that reverts from a fallback method", async function () {
+            twin.tokenAddress = fallbackError.address;
+
+            await expect(
+              orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin)
+            ).to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
+          });
         });
       });
     });
