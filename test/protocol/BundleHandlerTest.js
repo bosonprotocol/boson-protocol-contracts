@@ -1317,6 +1317,17 @@ describe("IBosonBundleHandler", function () {
             bundleHandler.connect(operator).removeOffersFromBundle(bundle.id, offerIdsToRemove)
           ).to.revertedWith(RevertReasons.NOTHING_UPDATED);
         });
+
+        it("Exchange already exists for the offerId in bundle", async function () {
+          // Commit to an offer
+          let offerIdToCommit = offerIdsToRemove[0];
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerIdToCommit);
+
+          // Attempt to remove offers from the bundle, expecting revert
+          await expect(
+            bundleHandler.connect(operator).removeOffersFromBundle(bundle.id, offerIdsToRemove)
+          ).to.revertedWith(RevertReasons.EXCHANGE_FOR_OFFER_EXISTS);
+        });
       });
     });
 

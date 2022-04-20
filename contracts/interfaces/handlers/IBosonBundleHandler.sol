@@ -121,6 +121,7 @@ interface IBosonBundleHandler is IBosonBundleEvents {
      * - number of offers exceeds maximum allowed number per bundle
      * - bundle does not exist
      * - any offer is not part of the bundle
+     * - exchange already exists for the offer id in bundle
      *
      * @param _bundleId  - the id of the bundle to be updated
      * @param _offerIds - array of offer ids to be removed to the bundle

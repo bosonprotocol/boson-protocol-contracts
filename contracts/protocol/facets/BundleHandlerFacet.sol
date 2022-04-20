@@ -295,6 +295,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * - number of offers exceeds maximum allowed number per bundle
      * - bundle does not exist
      * - any offer is not part of the bundle
+     * - exchange already exists for the offer id in bundle
      *
      * @param _bundleId  - the id of the bundle to be updated
      * @param _offerIds - array of offer ids to be removed to the bundle
@@ -315,6 +316,10 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             // Offer should belong to the bundle
             (, uint256 bundleId) = fetchBundleIdByOffer(offerId);
             require(_bundleId == bundleId, OFFER_NOT_IN_BUNDLE);
+
+            // make sure exchange does not already exist for this offer id.
+            (bool exchangeIdsForOfferExists, ) = getExchangeIdsByOffer(offerId);
+            require(!exchangeIdsForOfferExists, EXCHANGE_FOR_OFFER_EXISTS);
 
             // remove bundleIdByOffer mapping
             delete protocolStorage().bundleIdByOffer[offerId];
