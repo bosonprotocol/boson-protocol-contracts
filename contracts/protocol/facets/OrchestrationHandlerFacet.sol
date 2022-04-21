@@ -210,9 +210,9 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      * @param _condition - the fully populated condition struct
      */
     function createSellerAndOfferWithCondition(
-    Seller memory _seller,
-    Offer memory _offer,
-    Condition memory _condition
+        Seller memory _seller,
+        Offer memory _offer,
+        Condition memory _condition
     )
     external 
     override {
