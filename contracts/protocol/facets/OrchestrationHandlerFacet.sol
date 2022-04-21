@@ -99,7 +99,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
 
 
     /**
-     * @notice Takes an offer and a twin, creates an offer, then a bundle with that offer and the given twin
+     * @notice Takes an offer and a twin, creates an offer, creates a twin, then a bundle with that offer and the given twin
      *
      * Emits an OfferCreated, a TwinCreated and a BundleCreated event if successful.
      *
@@ -110,7 +110,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Valid until date is not in the future
      *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
-     * - when createin twin if
+     * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
