@@ -4,8 +4,8 @@ on:
     branches: [ main ]
   workflow_run:
     workflows: [Contracts CI]
-    types:
-      - completed
+    types: [completed]
+    branches: [main]
 jobs:
   test_deploy:
     runs-on: contracts
