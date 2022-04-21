@@ -288,6 +288,21 @@ describe("IBosonExchangeHandler", function () {
           .withArgs(offerId, buyerId, exchange.id);
       });
 
+      it("should update state", async function () {
+        // TODO: redeemVoucher when that method becomes available
+        // await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+        await expect(exchangeHandler.connect(buyer).completeExchange(exchange.id))
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchange.id);
+
+        // Get the exchange state
+        [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+        // It should match ExchangeState.Completed
+        assert.equal(response, ExchangeState.Completed, "Exchange state is incorrect");
+      });
+
       it("should emit an ExchangeCompleted event if operator calls after fulfillment period", async function () {
         // TODO: redeemVoucher when that method becomes available
         // await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);

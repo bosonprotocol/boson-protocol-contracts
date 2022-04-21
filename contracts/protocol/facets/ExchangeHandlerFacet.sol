@@ -149,10 +149,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         (sellerExists, sellerId) = getSellerIdByOperator(msg.sender);
 
         // Seller may only call after fulfillment period elapses, buyer may call any time
-        if (sellerExists) {
-            // Make sure caller is seller's operator
-            require(offer.sellerId == sellerId, NOT_OPERATOR);
-
+        if (sellerExists && offer.sellerId == sellerId) {
             // Make sure the fulfillment period has elapsed
             uint256 elapsed = block.timestamp - exchange.voucher.redeemedDate;
             require(elapsed >= offer.fulfillmentPeriodDuration, FULFILLMENT_PERIOD_NOT_ELAPSED);
