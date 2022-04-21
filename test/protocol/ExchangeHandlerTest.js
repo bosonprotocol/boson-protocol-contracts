@@ -22,8 +22,9 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, operator, admin, clerk, treasury, rando;
-  let erc165, protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, bosonVoucher, gasLimit;
+  let accounts, deployer, operator, admin, clerk, treasury, rando, game;
+  let erc165, protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, disputeHandler;
+  let bosonVoucher, gasLimit;
   let id, buyer, buyerId, offer, offerId, seller, sellerId, nextExchangeId;
   let block, blockNumber, tx, txReceipt, event, clients;
   let support, oneMonth, oneWeek;
@@ -61,6 +62,7 @@ describe("IBosonExchangeHandler", function () {
     treasury = accounts[4];
     buyer = accounts[5];
     rando = accounts[6];
+    game = accounts[7]; // the MR Game that is allowed to push the Dispute into final states
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -257,6 +259,124 @@ describe("IBosonExchangeHandler", function () {
           await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId)).to.revertedWith(
             RevertReasons.NO_SUCH_OFFER
           );
+        });
+      });
+    });
+
+    context("👉 isExchangeFinalized()", async function () {
+      beforeEach(async function () {
+        // Commit to offer, creating a new exchange
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+      });
+
+      context("👍 undisputed exchange", async function () {
+        it("should return false if exchange is in Committed state", async function () {
+          // In Committed state, ask if exchange is finalized
+          [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
+
+          // It should not be finalized
+          assert.equal(response, false, "Incorrectly reports finalized state");
+        });
+
+        // TODO Include this test when BosonVoucher.redeemVoucher works
+        it.skip("should return false if exchange is in Redeemed state", async function () {
+          // Redeem voucher
+          [exists, response] = await bosonVoucher.connect(buyer).redeemVoucher(exchange.id, buyer.address);
+
+          // Now in Redeemed state, ask if exchange is finalized
+          [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
+
+          // It should not be finalized
+          assert.equal(response, false, "Incorrectly reports finalized state");
+        });
+
+        // TODO Include this test when ExchangeHandlerFacet.completeExchange works
+        it.skip("should return true if exchange is in Completed state", async function () {
+          // Complete exchange
+          [exists, response] = await exchangeHandler.connect(operator).completeExchange(exchange.id);
+
+          // Now in Revoked state, ask if exchange is finalized
+          [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
+
+          // It should be finalized
+          assert.equal(response, true, "Incorrectly reports unfinalized state");
+        });
+
+        // TODO Include this test when ExchangeHandlerFacet.revokeVoucher works
+        it.skip("should return true if exchange is in Revoked state", async function () {
+          // Revoke voucher
+          [exists, response] = await bosonVoucher.connect(operator).revokeVoucher(exchange.id);
+
+          // Now in Revoked state, ask if exchange is finalized
+          [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
+
+          // It should be finalized
+          assert.equal(response, true, "Incorrectly reports unfinalized state");
+        });
+
+        // TODO Include this test when ExchangeHandlerFacet.cancelVoucher works
+        it.skip("should return true if exchange is in Canceled state", async function () {
+          // Cancel voucher
+          [exists, response] = await bosonVoucher.connect(buyer).cancelVoucher(exchange.id);
+
+          // Now in Canceled state, ask if exchange is finalized
+          [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
+
+          // It should be finalized
+          assert.equal(response, true, "Incorrectly reports unfinalized state");
+        });
+      });
+
+      // TODO Include this context when DisputeHandlerFacet.raiseDispute works
+      context.skip("👎 disputed exchange", async function () {
+        beforeEach(async function () {
+          // Raise a dispute on the exchange
+          // await disputeHandler.connect(buyer).raiseDispute(exchange.id, "Tastes wierd");
+        });
+
+        // TODO Include this test when DisputeHandlerFacet.raiseDispute works
+        it.skip("should return false if exchange has a dispute in Disputed state", async function () {
+          // In Disputed state, ask if exchange is finalized
+          [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
+
+          // It should be finalized
+          assert.equal(response, false, "Incorrectly reports unfinalized state");
+        });
+
+        // TODO Include this test when DisputeHandlerFacet.retractDispute works
+        it.skip("should return true if exchange has a dispute in Retracted state", async function () {
+          // Retract Dispute
+          [exists, response] = await disputeHandler.connect(buyer).retractDispute(exchange.id);
+
+          // Now in Retracted state, ask if exchange is finalized
+          [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
+
+          // It should be finalized
+          assert.equal(response, true, "Incorrectly reports unfinalized state");
+        });
+
+        // TODO Include this test when DisputeHandlerFacet.resolveDispute works
+        it.skip("should return true if exchange has a dispute in Resolved state", async function () {
+          // Resolve Dispute
+          [exists, response] = await disputeHandler.connect(game).resolveDispute(exchange.id);
+
+          // Now in Resolved state, ask if exchange is finalized
+          [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
+
+          // It should be finalized
+          assert.equal(response, true, "Incorrectly reports unfinalized state");
+        });
+
+        // TODO Include this test when DisputeHandlerFacet.decideDispute works
+        it.skip("should return true if exchange has a dispute in Decided state", async function () {
+          // Decide Dispute
+          [exists, response] = await disputeHandler.connect(game).decideDispute(exchange.id);
+
+          // Now in Decided state, ask if exchange is finalized
+          [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
+
+          // It should be finalized
+          assert.equal(response, true, "Incorrectly reports unfinalized state");
         });
       });
     });

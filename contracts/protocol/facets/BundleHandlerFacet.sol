@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import { IBosonBundleHandler } from "../../interfaces/handlers/IBosonBundleHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BundleBase } from "../bases/BundleBase.sol";
-import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
 /**
  * @title BundleHandlerFacet
@@ -43,6 +42,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * - any of twins does not exist
      * - number of twins exceeds maximum allowed number per bundle
      * - duplicate twins added in same bundle
+     * - exchange already exists for the offer id in bundle
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
@@ -245,6 +245,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * - any of offers does not exist
      * - offer exists in a different bundle
      * - offer ids contains duplicated offers
+     * - exchange already exists for the offer id in bundle
      *
      * @param _bundleId  - the id of the bundle to be updated
      * @param _offerIds - array of offer ids to be added to the bundle
@@ -263,6 +264,10 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             uint offerId = _offerIds[i];
             // make sure offer exist and belong to the seller
             getValidOffer(offerId);
+
+            // make sure exchange does not already exist for this offer id.
+            (bool exchangeIdsForOfferExists, ) = getExchangeIdsByOffer(offerId);
+            require(!exchangeIdsForOfferExists, EXCHANGE_FOR_OFFER_EXISTS);
 
             // Offer should not belong to another bundle already
             (bool exists, ) = fetchBundleIdByOffer(offerId);
@@ -290,6 +295,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * - number of offers exceeds maximum allowed number per bundle
      * - bundle does not exist
      * - any offer is not part of the bundle
+     * - exchange already exists for the offer id in bundle
      *
      * @param _bundleId  - the id of the bundle to be updated
      * @param _offerIds - array of offer ids to be removed to the bundle
@@ -310,6 +316,10 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             // Offer should belong to the bundle
             (, uint256 bundleId) = fetchBundleIdByOffer(offerId);
             require(_bundleId == bundleId, OFFER_NOT_IN_BUNDLE);
+
+            // make sure exchange does not already exist for this offer id.
+            (bool exchangeIdsForOfferExists, ) = getExchangeIdsByOffer(offerId);
+            require(!exchangeIdsForOfferExists, EXCHANGE_FOR_OFFER_EXISTS);
 
             // remove bundleIdByOffer mapping
             delete protocolStorage().bundleIdByOffer[offerId];
