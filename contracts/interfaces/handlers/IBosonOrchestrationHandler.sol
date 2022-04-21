@@ -5,6 +5,8 @@ import {BosonTypes} from "../../domain/BosonTypes.sol";
 import {IBosonAccountEvents} from "../events/IBosonAccountEvents.sol";
 import {IBosonGroupEvents} from "../events/IBosonGroupEvents.sol";
 import {IBosonOfferEvents} from "../events/IBosonOfferEvents.sol";
+import {IBosonTwinEvents} from "../events/IBosonTwinEvents.sol";
+import {IBosonBundleEvents} from "../events/IBosonBundleEvents.sol";
 
 /**
  * @title IBosonOrchestrationHandler
@@ -13,7 +15,7 @@ import {IBosonOfferEvents} from "../events/IBosonOfferEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0x8db6d85b
  */
-interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, IBosonOfferEvents{
+interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, IBosonOfferEvents, IBosonTwinEvents, IBosonBundleEvents {
     /**
      * @notice Creates a seller and an offer in a single transaction.
      *
@@ -55,6 +57,30 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
     function createOfferWithCondition(
         BosonTypes.Offer memory _offer,
         BosonTypes.Condition memory _condition
+    )
+    external;
+
+    /**
+     * @notice Takes an offer and a twin, creates an offer, creates a twin, then a bundle with that offer and the given twin
+     *
+     * Emits an OfferCreated, a TwinCreated and a BundleCreated event if successful.
+     *
+     * Reverts if:
+     * - in offer struct:
+     *   - Caller is not an operator
+     *   - Valid from date is greater than valid until date
+     *   - Valid until date is not in the future
+     *   - Buyer cancel penalty is greater than price
+     *   - Voided is set to true
+     * - when creating twin if
+     *   - Not approved to transfer the seller's token
+     *
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _twin - the fully populated twin struct
+     */
+    function createOfferAndTwinWithBundle(
+        BosonTypes.Offer memory _offer,
+        BosonTypes.Twin memory _twin
     )
     external;
 }
