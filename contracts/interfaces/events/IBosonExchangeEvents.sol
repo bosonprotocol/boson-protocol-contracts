@@ -10,4 +10,5 @@ import {BosonTypes} from "../../domain/BosonTypes.sol";
  */
 interface IBosonExchangeEvents {
     event BuyerCommitted(uint256 indexed offerId, uint256 indexed buyerId, uint256 indexed exchangeId, BosonTypes.Exchange exchange);
+    event ExchangeCompleted(uint256 indexed offerId, uint256 indexed buyerId, uint256 indexed exchangeId);
 }

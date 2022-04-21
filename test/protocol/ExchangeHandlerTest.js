@@ -8,7 +8,7 @@ const Voucher = require("../../scripts/domain/Voucher");
 const Offer = require("../../scripts/domain/Offer");
 const Seller = require("../../scripts/domain/Seller");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
-const { getEvent } = require("../../scripts/util/test-events.js");
+const { getEvent, setNextBlockTimestamp } = require("../../scripts/util/test-utils.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -27,7 +27,7 @@ describe("IBosonExchangeHandler", function () {
   let bosonVoucher, gasLimit;
   let id, buyer, buyerId, offer, offerId, seller, sellerId, nextExchangeId;
   let block, blockNumber, tx, txReceipt, event, clients;
-  let support, oneMonth, oneWeek;
+  let support, oneMonth, oneWeek, newTime;
   let price,
     sellerDeposit,
     buyerCancelPenalty,
@@ -49,10 +49,6 @@ describe("IBosonExchangeHandler", function () {
   });
 
   beforeEach(async function () {
-    // Get the current block info
-    blockNumber = await ethers.provider.getBlockNumber();
-    block = await ethers.provider.getBlock(blockNumber);
-
     // Make accounts available
     accounts = await ethers.getSigners();
     deployer = accounts[0];
@@ -136,6 +132,10 @@ describe("IBosonExchangeHandler", function () {
       // Create an offer to commit to
       oneWeek = 604800 * 1000; //  7 days in milliseconds
       oneMonth = 2678400 * 1000; // 31 days in milliseconds
+
+      // Get the current block info
+      blockNumber = await ethers.provider.getBlockNumber();
+      block = await ethers.provider.getBlock(blockNumber);
 
       // Required constructor params
       price = ethers.utils.parseUnits("1.5", "ether").toString();
@@ -258,6 +258,113 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to commit, expecting revert
           await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId)).to.revertedWith(
             RevertReasons.NO_SUCH_OFFER
+          );
+        });
+      });
+    });
+
+    context("👉 completeExchange()", async function () {
+      beforeEach(async function () {
+        // Commit to offer, retrieving the event
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+        txReceipt = await tx.wait();
+        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        exchange.voucher.committedDate = block.timestamp.toString();
+        exchangeStruct = exchange.toStruct();
+      });
+
+      it("should emit an ExchangeCompleted event when buyer calls", async function () {
+        // TODO: redeemVoucher when that method becomes available
+        // await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+        await expect(exchangeHandler.connect(buyer).completeExchange(exchange.id))
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchange.id);
+      });
+
+      it("should update state", async function () {
+        // TODO: redeemVoucher when that method becomes available
+        // await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+        await expect(exchangeHandler.connect(buyer).completeExchange(exchange.id))
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchange.id);
+
+        // Get the exchange state
+        [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+        // It should match ExchangeState.Completed
+        assert.equal(response, ExchangeState.Completed, "Exchange state is incorrect");
+      });
+
+      it("should emit an ExchangeCompleted event if operator calls after fulfillment period", async function () {
+        // TODO: redeemVoucher when that method becomes available
+        // await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+        // Set time forward to run out the fulfillment period
+        newTime = Number((block.timestamp + Number(fulfillmentPeriodDuration) + 1).toString().substring(0, 10));
+        await setNextBlockTimestamp(newTime);
+
+        // Complete exchange
+        await expect(exchangeHandler.connect(operator).completeExchange(exchange.id))
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchange.id);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        /*
+         * Reverts if:
+         * - Exchange does not exist
+         * - Exchange is not in redeemed state
+         * - Caller is not buyer or seller's operator
+         * - Caller is seller's operator and offer fulfillment period has not elapsed
+         */
+
+        it("exchange id is invalid", async function () {
+          // An invalid exchange id
+          id = "666";
+
+          // Attempt to complete the exchange, expecting revert
+          await expect(exchangeHandler.connect(operator).completeExchange(id)).to.revertedWith(
+            RevertReasons.NO_SUCH_EXCHANGE
+          );
+        });
+
+        // TODO: include when redeemVoucher method becomes available
+        it.skip("exchange is not in redeemed state", async function () {
+          // Cancel voucher
+          // TODO cancel the voucher when
+
+          // Attempt to complete the exchange, expecting revert
+          await expect(exchangeHandler.connect(operator).completeExchange(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE_TRANSITION
+          );
+        });
+
+        it("caller is not buyer or seller's operator", async function () {
+          // TODO: redeemVoucher when that method becomes available
+          // await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Attempt to complete the exchange, expecting revert
+          await expect(exchangeHandler.connect(rando).completeExchange(exchange.id)).to.revertedWith(
+            RevertReasons.NOT_BUYER_OR_SELLER
+          );
+        });
+
+        // TODO: include when redeemVoucher method becomes available (redeemedDate isn't set so calculation is off)
+        it.skip("caller is seller's operator and offer fulfillment period has not elapsed", async function () {
+          // TODO: redeemVoucher when that method becomes available
+          // await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Attempt to complete the exchange, expecting revert
+          await expect(exchangeHandler.connect(operator).completeExchange(exchange.id)).to.revertedWith(
+            RevertReasons.FULFILLMENT_PERIOD_NOT_ELAPSED
           );
         });
       });

@@ -35,4 +35,10 @@ function getEvent(receipt, factory, eventName) {
   }
 }
 
+async function setNextBlockTimestamp(timestamp) {
+  await ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
+  await ethers.provider.send("evm_mine", []);
+}
+
+exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;

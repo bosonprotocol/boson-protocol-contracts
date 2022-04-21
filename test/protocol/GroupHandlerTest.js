@@ -14,7 +14,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
-const { getEvent } = require("../../scripts/util/test-events.js");
+const { getEvent } = require("../../scripts/util/test-utils.js");
 
 /**
  *  Test the Boson Group Handler interface
