@@ -80,7 +80,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
     public
     override
     {   
-        // create seller and update structs values to represent true state
+        // create offer and update structs values to represent true state
         createOfferInternal(_offer);
 
         // construct new group
@@ -121,19 +121,69 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
         // create seller and update structs values to represent true state
         createOfferInternal(_offer);
 
+        // create twin and pack everything into a bundle
+        createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
+    }
+
+    /**
+     * @notice Takes an offer, a condition and a twin, creates and offer, then a group with that offer and the given condition, then creates a twin, then a bundle with that offer and the given twin
+     *
+     * Emits an OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event if successful.
+     *
+     * Reverts if:
+     * - in offer struct:
+     *   - Caller is not an operator
+     *   - Valid from date is greater than valid until date
+     *   - Valid until date is not in the future
+     *   - Buyer cancel penalty is greater than price
+     *   - Voided is set to true
+     * - Condition includes invalid combination of parameters
+     * - when creating twin if
+     *   - Not approved to transfer the seller's token
+     *
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _condition - the fully populated condition struct
+     * @param _twin - the fully populated twin struct
+     */
+    function createOfferWithConditionAndTwinAndBundle(
+        Offer memory _offer,
+        Condition memory _condition,
+        Twin memory _twin
+    )
+    external {
+        // create offer with condition first
+        createOfferWithCondition(_offer, _condition);
+        // create twin and pack everything into a bundle
+        createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
+    }
+
+    /**
+     * @notice Takes a twin, an offerId and a sellerId, creates a twin, then a bundle with that offer and the given twin
+     *
+     * Emits a TwinCreated and a BundleCreated event if successful.
+     *
+     * Reverts if:
+     * - Condition includes invalid combination of parameters
+     * - when creating twin if
+     *   - Not approved to transfer the seller's token
+     *
+     * @param _twin - the fully populated twin struct
+     * @param _offerId - offerid, obtained in previous steps
+     * @param _sellerId - sellerId, obtained in previous steps
+     */
+    function createTwinAndBundleAfterOffer(Twin memory _twin, uint256 _offerId, uint256 _sellerId) internal {
         // create twin and update structs values to represent true state
         createTwinInternal(_twin);
 
         // construct new bundle
         // - bundleId is 0, and it is ignored
         // - note that _offer fields are updated during createOfferInternal, so they represent correct values
-        Bundle memory _bundle = Bundle(0, _offer.sellerId, new uint256[](1), new uint256[](1));
-        _bundle.offerIds[0] = _offer.id;
+        Bundle memory _bundle = Bundle(0, _sellerId, new uint256[](1), new uint256[](1));
+        _bundle.offerIds[0] = _offerId;
         _bundle.twinIds[0] = _twin.id;
 
         // create bundle and update structs values to represent true state
-        createBundleInternal(_bundle);
-
+        createBundleInternal(_bundle);        
     }
 
     /**
