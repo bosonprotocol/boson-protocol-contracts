@@ -9,7 +9,7 @@ import {IBosonBundleEvents} from "../events/IBosonBundleEvents.sol";
  *
  * @notice Handles bundling of offers and twins within the protocol
  *
- * The ERC-165 identifier for this interface is: 0x3c91ae92
+ * The ERC-165 identifier for this interface is: 0xa13dc8bd
  */
 interface IBosonBundleHandler is IBosonBundleEvents {
 
@@ -28,6 +28,7 @@ interface IBosonBundleHandler is IBosonBundleEvents {
      * - any of twins does not exist
      * - number of twins exceeds maximum allowed number per bundle
      * - duplicate twins added in same bundle
+     * - exchange already exists for the offer id in bundle
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
@@ -102,6 +103,7 @@ interface IBosonBundleHandler is IBosonBundleEvents {
      * - any of offers does not exist
      * - offer exists in a different bundle
      * - offer ids contains duplicated offers
+     * - exchange already exists for the offer id in bundle
      *
      * @param _bundleId  - the id of the bundle to be updated
      * @param _offerIds - array of offer ids to be added to the bundle
@@ -119,9 +121,42 @@ interface IBosonBundleHandler is IBosonBundleEvents {
      * - number of offers exceeds maximum allowed number per bundle
      * - bundle does not exist
      * - any offer is not part of the bundle
+     * - exchange already exists for the offer id in bundle
      *
      * @param _bundleId  - the id of the bundle to be updated
      * @param _offerIds - array of offer ids to be removed to the bundle
      */
     function removeOffersFromBundle(uint256 _bundleId, uint256[] calldata _offerIds) external;
+
+    /**
+     * @notice Removes the bundle.
+     *
+     * Emits a BundleDeleted event if successful.
+     *
+     * Reverts if:
+     * - caller is not the seller.
+     * - Bundle does not exist.
+     * - exchanges exists for bundled offers.
+     *
+     * @param _bundleId - the id of the bundle to check.
+     */
+    function removeBundle(uint256 _bundleId) external;
+
+    /**
+     * @notice Gets the bundle id for a given offer id.
+     *
+     * @param _offerId - the offer Id.
+     * @return exists - whether the bundle Id exists
+     * @return bundleId  - the bundle Id.
+     */
+    function getBundleIdByOffer(uint256 _offerId) external view returns (bool exists, uint256 bundleId);
+
+    /**
+     * @notice Gets the bundle ids for a given twin id.
+     *
+     * @param _twinId - the twin Id.
+     * @return exists - whether the bundle Ids exist
+     * @return bundleIds  - the bundle Ids.
+     */
+    function getBundleIdsByTwin(uint256 _twinId) external view returns (bool exists, uint256[] memory bundleIds);
 }

@@ -45,6 +45,7 @@ contract BosonConstants {
     string internal constant OFFER_HAS_EXPIRED = "Offer has expired";
     string internal constant OFFER_NOT_AVAILABLE = "Offer is not yet available";
     string internal constant OFFER_SOLD_OUT = "Offer has sold out";
+    string internal constant EXCHANGE_FOR_OFFER_EXISTS = "Exchange for offer exists";
 
     // Revert Reasons: Group related
     string internal constant NO_SUCH_GROUP = "No such offer";
@@ -70,4 +71,5 @@ contract BosonConstants {
     string internal constant TOO_MANY_TWINS = "Exceeded maximum twins in a single transaction";
     string internal constant TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE = "Twin already exists in the same bundle";
     string internal constant BUNDLE_OFFER_MUST_BE_UNIQUE = "Offer must be unique to a bundle";
+    string internal constant EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS = "Exchange for the bundled offers exists";
 }

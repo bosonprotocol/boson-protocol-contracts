@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import { IBosonBundleHandler } from "../../interfaces/handlers/IBosonBundleHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BundleBase } from "../bases/BundleBase.sol";
-import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
 /**
  * @title BundleHandlerFacet
@@ -43,6 +42,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * - any of twins does not exist
      * - number of twins exceeds maximum allowed number per bundle
      * - duplicate twins added in same bundle
+     * - exchange already exists for the offer id in bundle
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
@@ -111,7 +111,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             getValidTwin(twinId);
 
             // Twin can already be associated with a different bundle, but it cannot be added to the same bundle twice.
-            (bool bundlesForTwinExist, uint256[] memory bundleIds) = getBundleIdsByTwin(twinId);
+            (bool bundlesForTwinExist, uint256[] memory bundleIds) = fetchBundleIdsByTwin(twinId);
             if (bundlesForTwinExist) {
                 for (uint j = 0; j < bundleIds.length; j++) {
                     // Revert if bundleId already exists in the bundleIdsByTwin mapping
@@ -159,7 +159,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             uint twinId = _twinIds[i];
 
             // Get all bundleIds that are associated to this Twin.
-            (bool bundlesForTwinExist, uint256[] memory bundleIds) = getBundleIdsByTwin(twinId);
+            (bool bundlesForTwinExist, uint256[] memory bundleIds) = fetchBundleIdsByTwin(twinId);
 
             // Revert here if no bundles found
             require(bundlesForTwinExist, TWIN_NOT_IN_BUNDLE);
@@ -245,6 +245,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * - any of offers does not exist
      * - offer exists in a different bundle
      * - offer ids contains duplicated offers
+     * - exchange already exists for the offer id in bundle
      *
      * @param _bundleId  - the id of the bundle to be updated
      * @param _offerIds - array of offer ids to be added to the bundle
@@ -264,8 +265,12 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             // make sure offer exist and belong to the seller
             getValidOffer(offerId);
 
+            // make sure exchange does not already exist for this offer id.
+            (bool exchangeIdsForOfferExists, ) = getExchangeIdsByOffer(offerId);
+            require(!exchangeIdsForOfferExists, EXCHANGE_FOR_OFFER_EXISTS);
+
             // Offer should not belong to another bundle already
-            (bool exists, ) = getBundleIdByOffer(offerId);
+            (bool exists, ) = fetchBundleIdByOffer(offerId);
             require(!exists, BUNDLE_OFFER_MUST_BE_UNIQUE);
 
             // add to bundleIdByOffer mapping
@@ -290,6 +295,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * - number of offers exceeds maximum allowed number per bundle
      * - bundle does not exist
      * - any offer is not part of the bundle
+     * - exchange already exists for the offer id in bundle
      *
      * @param _bundleId  - the id of the bundle to be updated
      * @param _offerIds - array of offer ids to be removed to the bundle
@@ -308,8 +314,12 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             uint offerId = _offerIds[i];
 
             // Offer should belong to the bundle
-            (, uint256 bundleId) = getBundleIdByOffer(offerId);
+            (, uint256 bundleId) = fetchBundleIdByOffer(offerId);
             require(_bundleId == bundleId, OFFER_NOT_IN_BUNDLE);
+
+            // make sure exchange does not already exist for this offer id.
+            (bool exchangeIdsForOfferExists, ) = getExchangeIdsByOffer(offerId);
+            require(!exchangeIdsForOfferExists, EXCHANGE_FOR_OFFER_EXISTS);
 
             // remove bundleIdByOffer mapping
             delete protocolStorage().bundleIdByOffer[offerId];
@@ -328,5 +338,109 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
 
         // Notify watchers of state change
         emit BundleUpdated(_bundleId, sellerId, bundle);
+    }
+
+    /**
+     * @notice Removes the bundle.
+     *
+     * Emits a BundleDeleted event if successful.
+     *
+     * Reverts if:
+     * - caller is not the seller.
+     * - Bundle does not exist.
+     * - exchanges exists for bundled offers.
+     *
+     * @param _bundleId - the id of the bundle to check.
+     */
+    function removeBundle(uint256 _bundleId) external {
+        // Get storage location for bundle
+        (bool exists, Bundle memory bundle) = fetchBundle(_bundleId);
+        require(exists, NO_SUCH_BUNDLE);
+
+        // Get seller id
+        (, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+        // Caller's seller id must match bundle seller id
+        require(sellerId == bundle.sellerId, NOT_OPERATOR);
+
+        // Check if offers from the bundle have any exchanges
+        bundledOffersExchangeCheck(_bundleId);
+
+        // delete from bundleIdByOffer mapping
+        uint256[] memory offerIds = bundle.offerIds;
+        for (uint256 i = 0; i < offerIds.length; i++) {
+            delete protocolStorage().bundleIdByOffer[offerIds[i]];
+        }
+
+        // delete from bundleIdsByTwin mapping
+        uint256[] memory twinIds = bundle.twinIds;
+        // loop over all the twins in the bundle
+        for (uint256 j = 0; j < twinIds.length; j++) {
+
+            uint256 twinId = twinIds[j];
+            (bool bundlesForTwinExist, uint256[] memory bundleIds) = fetchBundleIdsByTwin(twinId);
+
+            if (bundlesForTwinExist) {
+
+                uint256 bundleIdsLength = bundleIds.length;
+                // loop over all the bundleIds associated with a twin
+                for (uint k = 0; k < bundleIdsLength; k++) {
+
+                    // If bundleId is found in the array, then pop it.
+                    if (protocolStorage().bundleIdsByTwin[twinId][k] == _bundleId) {
+                        protocolStorage().bundleIdsByTwin[twinId][k] = protocolStorage().bundleIdsByTwin[twinId][bundleIdsLength - 1];
+                        protocolStorage().bundleIdsByTwin[twinId].pop();
+                        break;
+                    }
+                }
+            }
+        }
+
+        // delete from bundles mapping
+        delete protocolStorage().bundles[_bundleId];
+
+        emit BundleDeleted(_bundleId, bundle.sellerId);
+    }
+
+    /**
+     * @notice Checks if exchanges for bundled offers exists.
+     *
+     * Reverts if:
+     * - exchange Ids for an offer exists.
+     *
+     * @param _bundleId - the bundle Id.
+     */
+    function bundledOffersExchangeCheck(uint256 _bundleId) internal view {
+        // Get storage location for bundle
+        (, Bundle storage bundle) = fetchBundle(_bundleId);
+
+        // Get the offer Ids in the bundle
+        uint256[] memory offerIds = bundle.offerIds;
+
+        for (uint256 i = 0; i < offerIds.length; i++) {
+            (bool exchangeIdsForOfferExists, ) = getExchangeIdsByOffer(offerIds[i]);
+            require(!exchangeIdsForOfferExists, EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS);
+        }
+    }
+
+    /**
+     * @notice Gets the bundle id for a given offer id.
+     *
+     * @param _offerId - the offer Id.
+     * @return exists - whether the bundle Id exists
+     * @return bundleId  - the bundle Id.
+     */
+    function getBundleIdByOffer(uint256 _offerId) external view returns(bool exists, uint256 bundleId) {
+        return fetchBundleIdByOffer(_offerId);
+    }
+
+    /**
+     * @notice Gets the bundle ids for a given twin id.
+     *
+     * @param _twinId - the twin Id.
+     * @return exists - whether the bundle Ids exist
+     * @return bundleIds  - the bundle Ids.
+     */
+    function getBundleIdsByTwin(uint256 _twinId) external view returns(bool exists, uint256[] memory bundleIds) {
+        return fetchBundleIdsByTwin(_twinId);
     }
 }

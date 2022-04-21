@@ -22,6 +22,7 @@ exports.RevertReasons = {
   OFFER_MUST_BE_ACTIVE: "Offer must be active",
   OFFER_NOT_UPDATEABLE: "Offer not updateable",
   OFFER_MUST_BE_UNIQUE: "Offer must be unique to a group",
+  EXCHANGE_FOR_OFFER_EXISTS: "Exchange for offer exists",
 
   // Group related
   NO_SUCH_GROUP: "No such offer",
@@ -54,4 +55,5 @@ exports.RevertReasons = {
   // Exchange related
   NO_SUCH_EXCHANGE: "No such exchange",
   FULFILLMENT_PERIOD_NOT_ELAPSED: "Fulfillment period has not yet elapsed",
+  EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS: "Exchange for the bundled offers exists",
 };
