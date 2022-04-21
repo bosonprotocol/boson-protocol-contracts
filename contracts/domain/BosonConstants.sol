@@ -17,6 +17,7 @@ contract BosonConstants {
 
     // Revert Reasons: General
     string internal constant INVALID_ADDRESS = "Invalid address";
+    string internal constant INVALID_STATE_TRANSITION = "Invalid state transition";
 
     // Revert Reasons: Facet initializer related
     string internal constant ALREADY_INITIALIZED = "Already initialized";
@@ -25,6 +26,7 @@ contract BosonConstants {
     string internal constant ACCESS_DENIED = "Access denied, caller doesn't have role";
     string internal constant NOT_OPERATOR = "Not seller's operator";
     string internal constant NOT_ADMIN = "Not seller's admin";
+    string internal constant NOT_BUYER_OR_SELLER = "Not buyer or seller";
 
     // Revert Reasons: Account-related
     string internal constant NO_SUCH_SELLER = "No such seller";
@@ -54,6 +56,7 @@ contract BosonConstants {
 
     // Revert Reasons: Exchange related
     string internal constant NO_SUCH_EXCHANGE = "No such exchange";
+    string internal constant FULFILLMENT_PERIOD_NOT_ELAPSED = "Fulfillment period has not yet elapsed";
 
     // Revert Reasons: Twin related
     string internal constant NO_SUCH_TWIN = "No such twin";
