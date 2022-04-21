@@ -31,6 +31,22 @@ interface IBosonExchangeHandler is IBosonExchangeEvents {
     function commitToOffer(address payable _buyer, uint256 _offerId) external;
 
     /**
+     * @notice Is the given exchange in a finalized state?
+     *
+     * Returns true if
+     * - Exchange state is Revoked, Canceled, or Completed
+     * - Exchange is disputed and dispute state is Retracted, Resolved, or Decided
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return exists - true if the exchange exists
+     * @return isFinalized - true if the exchange is finalized
+     */
+    function isExchangeFinalized(uint256 _exchangeId)
+    external
+    view
+    returns(bool exists, bool isFinalized);
+
+    /**
      * @notice Gets the details about a given exchange.
      *
      * @param _exchangeId - the id of the exchange to check

@@ -60,7 +60,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
     )
     external;
 
-     /**
+    /**
      * @notice Takes an offer and a twin, creates an offer, creates a twin, then a bundle with that offer and the given twin
      *
      * Emits an OfferCreated, a TwinCreated and a BundleCreated event if successful.
