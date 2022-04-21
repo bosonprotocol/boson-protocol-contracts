@@ -502,7 +502,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Validate the instance
         expect(groupInstance.isValid()).to.be.true;
 
-        assert.equal(eventGroupCreated.groupId.toString(), nextOfferId, "Group Id is incorrect");
+        assert.equal(eventGroupCreated.groupId.toString(), nextGroupId, "Group Id is incorrect");
         assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
       });
@@ -531,7 +531,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Validate the instance
         expect(groupInstance.isValid()).to.be.true;
 
-        assert.equal(eventGroupCreated.groupId.toString(), nextOfferId, "Group Id is incorrect");
+        assert.equal(eventGroupCreated.groupId.toString(), nextGroupId, "Group Id is incorrect");
         assert.equal(eventGroupCreated.sellerId.toString(), sellerId, "Seller Id is incorrect");
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
       });
@@ -931,6 +931,286 @@ describe("IBosonOrchestrationHandler", function () {
             ).to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
           });
         });
+      });
+    });
+
+    context("👉 createOfferWithConditionAndTwinAndBundle()", async function () {
+      beforeEach(async function () {
+        // prepare a group struct. We are not passing it as an argument, but just need to validate.
+        // The first group id
+        nextGroupId = "1";
+
+        // Required constructor params for Condition
+        method = EvaluationMethod.AboveThreshold;
+        tokenAddress = accounts[0].address; // just need an address
+        tokenId = "5150";
+        threshold = "1";
+
+        // Required constructor params for Group
+        id = nextGroupId;
+        sellerId = "1";
+        offerIds = ["1"];
+
+        condition = new Condition(method, tokenAddress, tokenId, threshold);
+        expect(condition.isValid()).to.be.true;
+
+        group = new Group(nextGroupId, sellerId, offerIds, condition);
+
+        expect(group.isValid()).is.true;
+
+        // How that group looks as a returned struct
+        groupStruct = group.toStruct();
+
+        // prepare a bundle struct. We are not passing it as an argument, but just need to validate.
+        // The first bundle id
+        bundleId = nextBundleId = "1";
+
+        // Required constructor params for Bundle
+        offerIds = ["1"];
+        twinIds = ["1"];
+
+        bundle = new Bundle(bundleId, sellerId, offerIds, twinIds);
+
+        expect(bundle.isValid()).is.true;
+
+        // How that bundle looks as a returned struct
+        bundleStruct = bundle.toStruct();
+
+        // Required constructor params for Twin
+        id = nextTwinId = "1";
+        supplyAvailable = "1000";
+        tokenId = "2048";
+        supplyIds = ["3", "4"];
+        tokenAddress = bosonToken.address;
+
+        // Create a valid twin.
+        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+
+        // How that twin looks as a returned struct
+        twinStruct = twin.toStruct();
+
+        // create a seller
+        await accountHandler.connect(admin).createSeller(seller);
+      });
+
+      it("should emit an OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event", async function () {
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
+        // Create an offer with condition, twin and bundle
+        const tx = await orchestrationHandler
+          .connect(operator)
+          .createOfferWithConditionAndTwinAndBundle(offer, condition, twin);
+        const txReceipt = await tx.wait();
+
+        // OfferCreated event
+        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
+        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
+        // Validate the instance
+        expect(offerInstance.isValid()).to.be.true;
+
+        assert.equal(eventOfferCreated.offerId.toString(), offer.id, "Offer Id is incorrect");
+        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
+        assert.equal(offerInstance.toString(), offer.toString(), "Offer struct is incorrect");
+
+        // GroupCreated event
+        const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
+        const groupInstance = Group.fromStruct(eventGroupCreated.group);
+        // Validate the instance
+        expect(groupInstance.isValid()).to.be.true;
+
+        assert.equal(eventGroupCreated.groupId.toString(), group.id, "Group Id is incorrect");
+        assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+        assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+
+        // TwinCreated event
+        const eventTwinCreated = getEvent(txReceipt, orchestrationHandler, "TwinCreated");
+        const twinInstance = Twin.fromStruct(eventTwinCreated.twin);
+        // Validate the instance
+        expect(twinInstance.isValid()).to.be.true;
+
+        assert.equal(eventTwinCreated.twinId.toString(), twin.id, "Twin Id is incorrect");
+        assert.equal(eventTwinCreated.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
+        assert.equal(twinInstance.toString(), twin.toString(), "Twin struct is incorrect");
+
+        // BundleCreated event
+        const eventBundleCreated = getEvent(txReceipt, orchestrationHandler, "BundleCreated");
+        const bundleInstance = Bundle.fromStruct(eventBundleCreated.bundle);
+        // Validate the instance
+        expect(bundleInstance.isValid()).to.be.true;
+
+        assert.equal(eventBundleCreated.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
+        assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+      });
+
+      it("should update state", async function () {
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
+        // Create an offer with condition, twin and bundle
+        await orchestrationHandler.connect(operator).createOfferWithConditionAndTwinAndBundle(offer, condition, twin);
+
+        // Get the offer as a struct
+        [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+
+        // Parse into entity
+        let returnedOffer = Offer.fromStruct(offerStruct);
+
+        // Returned values should match the input in createOffer
+        for ([key, value] of Object.entries(offer)) {
+          expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Get the group as a struct
+        [, groupStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
+
+        // Parse into entity
+        const returnedGroup = Group.fromStruct(groupStruct);
+
+        // Returned values should match the input in createGroup
+        for ([key, value] of Object.entries(group)) {
+          expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Get the twin as a struct
+        [, twinStruct] = await twinHandler.connect(rando).getTwin(nextTwinId);
+
+        // Parse into entity
+        const returnedTwin = Twin.fromStruct(twinStruct);
+
+        // Returned values should match the input in createGroup
+        for ([key, value] of Object.entries(twin)) {
+          expect(JSON.stringify(returnedTwin[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Get the bundle as a struct
+        [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleId);
+
+        // Parse into entity
+        let returnedBundle = Bundle.fromStruct(bundleStruct);
+
+        // Returned values should match the input in createBundle
+        for ([key, value] of Object.entries(bundle)) {
+          expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should ignore any provided offer id and assign the next available", async function () {
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
+        offer.id = "555";
+        twin.id = "777";
+
+        // Create an offer with condition, twin and bundle
+        const tx = await orchestrationHandler
+          .connect(operator)
+          .createOfferWithConditionAndTwinAndBundle(offer, condition, twin);
+        const txReceipt = await tx.wait();
+
+        // OfferCreated event
+        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
+        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
+        // Validate the instance
+        expect(offerInstance.isValid()).to.be.true;
+
+        assert.equal(eventOfferCreated.offerId.toString(), nextOfferId, "Offer Id is incorrect");
+        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
+        assert.equal(offerInstance.toString(), Offer.fromStruct(offerStruct).toString(), "Offer struct is incorrect");
+
+        // GroupCreated event
+        const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
+        const groupInstance = Group.fromStruct(eventGroupCreated.group);
+        // Validate the instance
+        expect(groupInstance.isValid()).to.be.true;
+
+        assert.equal(eventGroupCreated.groupId.toString(), nextGroupId, "Group Id is incorrect");
+        assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+        assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+
+        // TwinCreated event
+        const eventTwinCreated = getEvent(txReceipt, orchestrationHandler, "TwinCreated");
+        const twinInstance = Twin.fromStruct(eventTwinCreated.twin);
+        // Validate the instance
+        expect(twinInstance.isValid()).to.be.true;
+
+        assert.equal(eventTwinCreated.twinId.toString(), nextTwinId, "Twin Id is incorrect");
+        assert.equal(eventTwinCreated.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
+        assert.equal(twinInstance.toString(), Twin.fromStruct(twinStruct).toString(), "Twin struct is incorrect");
+
+        // BundleCreated event
+        const eventBundleCreated = getEvent(txReceipt, orchestrationHandler, "BundleCreated");
+        const bundleInstance = Bundle.fromStruct(eventBundleCreated.bundle);
+        // Validate the instance
+        expect(bundleInstance.isValid()).to.be.true;
+
+        assert.equal(eventBundleCreated.bundleId.toString(), nextBundleId, "Bundle Id is incorrect");
+        assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(
+          bundleInstance.toString(),
+          Bundle.fromStruct(bundleStruct).toString(),
+          "Bundle struct is incorrect"
+        );
+      });
+
+      it("should ignore any provided seller and assign seller id of msg.sender", async function () {
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
+        // set some other sellerId
+        offer.sellerId = "123";
+        twin.sellerId = "456";
+
+        // Create an offer with condition, twin and bundle
+        const tx = await orchestrationHandler
+          .connect(operator)
+          .createOfferWithConditionAndTwinAndBundle(offer, condition, twin);
+        const txReceipt = await tx.wait();
+
+        // OfferCreated event
+        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
+        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
+        // Validate the instance
+        expect(offerInstance.isValid()).to.be.true;
+
+        assert.equal(eventOfferCreated.offerId.toString(), nextOfferId, "Offer Id is incorrect");
+        assert.equal(eventOfferCreated.sellerId.toString(), sellerId, "Seller Id is incorrect");
+        assert.equal(offerInstance.toString(), Offer.fromStruct(offerStruct).toString(), "Offer struct is incorrect");
+
+        // GroupCreated event
+        const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
+        const groupInstance = Group.fromStruct(eventGroupCreated.group);
+        // Validate the instance
+        expect(groupInstance.isValid()).to.be.true;
+
+        assert.equal(eventGroupCreated.groupId.toString(), nextGroupId, "Group Id is incorrect");
+        assert.equal(eventGroupCreated.sellerId.toString(), sellerId, "Seller Id is incorrect");
+        assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+
+        // TwinCreated event
+        const eventTwinCreated = getEvent(txReceipt, orchestrationHandler, "TwinCreated");
+        const twinInstance = Twin.fromStruct(eventTwinCreated.twin);
+        // Validate the instance
+        expect(twinInstance.isValid()).to.be.true;
+
+        assert.equal(eventTwinCreated.twinId.toString(), nextTwinId, "Twin Id is incorrect");
+        assert.equal(eventTwinCreated.sellerId.toString(), sellerId, "Seller Id is incorrect");
+        assert.equal(twinInstance.toString(), Twin.fromStruct(twinStruct).toString(), "Twin struct is incorrect");
+
+        // BundleCreated event
+        const eventBundleCreated = getEvent(txReceipt, orchestrationHandler, "BundleCreated");
+        const bundleInstance = Bundle.fromStruct(eventBundleCreated.bundle);
+        // Validate the instance
+        expect(bundleInstance.isValid()).to.be.true;
+
+        assert.equal(eventBundleCreated.bundleId.toString(), nextBundleId, "Bundle Id is incorrect");
+        assert.equal(eventBundleCreated.sellerId.toString(), sellerId, "Seller Id is incorrect");
+        assert.equal(
+          bundleInstance.toString(),
+          Bundle.fromStruct(bundleStruct).toString(),
+          "Bundle struct is incorrect"
+        );
       });
     });
 
