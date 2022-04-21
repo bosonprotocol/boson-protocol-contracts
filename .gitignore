@@ -6,6 +6,7 @@ node_modules
 /cache
 /abi
 
+
 # Secrets
 .env
 
@@ -26,3 +27,4 @@ coverage*
 
 # Logs
 logs
+/addresses
