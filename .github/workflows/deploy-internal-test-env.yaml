@@ -1,7 +1,5 @@
 name: Deploy to internal test env
 on:
-  push:
-    branches: [ main ]
   workflow_run:
     workflows: [Contracts CI]
     types: [completed]
