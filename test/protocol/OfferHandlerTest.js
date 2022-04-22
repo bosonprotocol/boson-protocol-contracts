@@ -48,6 +48,7 @@ describe("IBosonOfferHandler", function () {
     metadataUri,
     offerChecksum,
     voided;
+  let block, blockNumber;
 
   before(async function () {
     // get interface Ids
@@ -147,19 +148,21 @@ describe("IBosonOfferHandler", function () {
       nextOfferId = "1";
       invalidOfferId = "666";
 
+      // Get the current block info
+      blockNumber = await ethers.provider.getBlockNumber();
+      block = await ethers.provider.getBlock(blockNumber);
+
       // Required constructor params
       id = sellerId = "1"; // argument sent to contract for createOffer will be ignored
       price = ethers.utils.parseUnits("1.5", "ether").toString();
       sellerDeposit = price = ethers.utils.parseUnits("0.25", "ether").toString();
       buyerCancelPenalty = price = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
-      validFromDate = ethers.BigNumber.from(Date.now()).div(1000).toString(); // valid from now
-      validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6)
-        .div(1000)
+      validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
+      validUntilDate = ethers.BigNumber.from(block.timestamp)
+        .add(oneMonth * 6)
         .toString(); // until 6 months
-      redeemableFromDate = ethers.BigNumber.from(Date.now() + oneWeek)
-        .div(1000)
-        .toString(); // redeemable in 1 week
+      redeemableFromDate = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
       fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
       voucherValidDuration = oneMonth.toString(); // offers valid for one month
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
@@ -261,9 +264,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Valid until date is not in the future", async function () {
           // Set until date in the past
-          offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6)
-            .div(1000)
-            .toString(); // 6 months ago
+          offer.validUntilDate = ethers.BigNumber.from(offer.validFromDate - (oneMonth / 1000) * 6).toString(); // 6 months ago
 
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
@@ -398,9 +399,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Valid until date is not in the future", async function () {
           // Set until date in the past
-          offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6)
-            .div(1000)
-            .toString(); // 6 months ago
+          offer.validUntilDate = ethers.BigNumber.from(offer.validFromDate - (oneMonth / 1000) * 6).toString(); // 6 months ago
 
           // Attempt to update an offer, expecting revert
           await expect(offerHandler.connect(operator).updateOffer(offer)).to.revertedWith(
@@ -616,9 +615,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Valid until date is not in the future", async function () {
           // Set until date in the past
-          offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6)
-            .div(1000)
-            .toString(); // 6 months ago
+          offer.validUntilDate = ethers.BigNumber.from(offer.validFromDate - (oneMonth / 1000) * 6).toString(); // 6 months ago
 
           // Attempt to update an offer, expecting revert
           await expect(offerHandler.connect(operator).updateOffer(offer)).to.revertedWith(
@@ -967,9 +964,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Valid until date is not in the future in some offer", async function () {
           // Set until date in the past
-          offers[3].validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6)
-            .div(1000)
-            .toString(); // 6 months ago
+          offer.validUntilDate = ethers.BigNumber.from(offer.validFromDate - (oneMonth / 1000) * 6).toString(); // 6 months ago
 
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
