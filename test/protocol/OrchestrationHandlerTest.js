@@ -292,7 +292,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("active is false", async function () {
           seller.active = false;
 
-          // Attempt to Create a seller and an offer, expecting revert
+          // Attempt to create a seller and an offer, expecting revert
           await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.MUST_BE_ACTIVE
           );
@@ -301,7 +301,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("addresses are the zero address", async function () {
           seller.clerk = ethers.constants.AddressZero;
 
-          // Attempt to Create a seller and an offer, expecting revert
+          // Attempt to create a seller and an offer, expecting revert
           await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
@@ -309,7 +309,7 @@ describe("IBosonOrchestrationHandler", function () {
           seller.clerk = clerk.address;
           seller.admin = ethers.constants.AddressZero;
 
-          // Attempt to Create a seller and an offer, expecting revert
+          // Attempt to create a seller and an offer, expecting revert
           await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
@@ -322,7 +322,7 @@ describe("IBosonOrchestrationHandler", function () {
           seller.admin = other1.address;
           seller.clerk = other2.address;
 
-          // Attempt to Create a seller with non-unique operator, expecting revert
+          // Attempt to create a seller with non-unique operator, expecting revert
           await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
@@ -330,7 +330,7 @@ describe("IBosonOrchestrationHandler", function () {
           seller.admin = admin.address;
           seller.operator = other1.address;
 
-          // Attempt to Create a seller with non-unique admin, expecting revert
+          // Attempt to create a seller with non-unique admin, expecting revert
           await expect(orchestrationHandler.connect(other1).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
@@ -338,14 +338,14 @@ describe("IBosonOrchestrationHandler", function () {
           seller.clerk = clerk.address;
           seller.admin = other2.address;
 
-          // Attempt to Create a seller with non-unique clerk, expecting revert
+          // Attempt to create a seller with non-unique clerk, expecting revert
           await expect(orchestrationHandler.connect(other1).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
         });
 
         it("Caller is not operator the specified in seller", async function () {
-          // Attempt to Create a seller and an offer, expecting revert
+          // Attempt to create a seller and an offer, expecting revert
           await expect(orchestrationHandler.connect(rando).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.NOT_OPERATOR
           );
@@ -356,7 +356,7 @@ describe("IBosonOrchestrationHandler", function () {
           offer.validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
           offer.validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
 
-          // Attempt to Create a seller and an offer, expecting revert
+          // Attempt to create a seller and an offer, expecting revert
           await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
@@ -366,7 +366,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Set until date in the past
           offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
 
-          // Attempt to Create a seller and an offer, expecting revert
+          // Attempt to create a seller and an offer, expecting revert
           await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
@@ -376,7 +376,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Set buyer cancel penalty higher than offer price
           offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
 
-          // Attempt to Create a seller and an offer, expecting revert
+          // Attempt to create a seller and an offer, expecting revert
           await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.OFFER_PENALTY_INVALID
           );
@@ -386,7 +386,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Set voided flag to true
           offer.voided = true;
 
-          // Attempt to Create a seller and an offer, expecting revert
+          // Attempt to create a seller and an offer, expecting revert
           await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.OFFER_MUST_BE_ACTIVE
           );
@@ -538,7 +538,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
-          // Attempt to Create an offer with condition, expecting revert
+          // Attempt to create an offer with condition, expecting revert
           await expect(orchestrationHandler.connect(rando).createOfferWithCondition(offer, condition)).to.revertedWith(
             RevertReasons.NOT_OPERATOR
           );
@@ -549,7 +549,7 @@ describe("IBosonOrchestrationHandler", function () {
           offer.validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
           offer.validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
 
-          // Attempt to Create an offer with condition, expecting revert
+          // Attempt to create an offer with condition, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
@@ -559,7 +559,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Set until date in the past
           offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
 
-          // Attempt to Create an offer with condition, expecting revert
+          // Attempt to create an offer with condition, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
@@ -569,7 +569,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Set buyer cancel penalty higher than offer price
           offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
 
-          // Attempt to Create an offer with condition, expecting revert
+          // Attempt to create an offer with condition, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
           ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
@@ -579,7 +579,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Set voided flag to true
           offer.voided = true;
 
-          // Attempt to Create an offer with condition, expecting revert
+          // Attempt to create an offer with condition, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
@@ -832,7 +832,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
-          // Attempt to Create an offer, twin and bundle, expecting revert
+          // Attempt to create an offer, twin and bundle, expecting revert
           await expect(orchestrationHandler.connect(rando).createOfferAndTwinWithBundle(offer, twin)).to.revertedWith(
             RevertReasons.NOT_OPERATOR
           );
@@ -843,7 +843,7 @@ describe("IBosonOrchestrationHandler", function () {
           offer.validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
           offer.validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
 
-          // Attempt to Create an offer, twin and bundle, expecting revert
+          // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
@@ -853,7 +853,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Set until date in the past
           offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
 
-          // Attempt to Create an offer, twin and bundle, expecting revert
+          // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
@@ -863,7 +863,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Set buyer cancel penalty higher than offer price
           offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
 
-          // Attempt to Create an offer, twin and bundle, expecting revert
+          // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin)
           ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
@@ -873,7 +873,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Set voided flag to true
           offer.voided = true;
 
-          // Attempt to Create an offer, twin and bundle, expecting revert
+          // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
