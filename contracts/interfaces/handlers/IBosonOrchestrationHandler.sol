@@ -85,7 +85,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
     external;
 
     /**
-     * @notice Takes an offer, a condition and a twin, creates and offer, then a group with that offer and the given condition, then creates a twin, then a bundle with that offer and the given twin
+     * @notice Takes an offer, a condition and a twin, creates an offer, then a group with that offer and the given condition, then creates a twin, then a bundle with that offer and the given twin
      *
      * Emits an OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event if successful.
      *

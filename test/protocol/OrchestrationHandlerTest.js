@@ -215,7 +215,7 @@ describe("IBosonOrchestrationHandler", function () {
 
     context("👉 createSellerAndOffer()", async function () {
       it("should emit a SellerCreated and OfferCreated event", async function () {
-        // Create an offer, testing for the event
+        // Create a seller and an offer, testing for the event
         await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer))
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct)
@@ -224,7 +224,7 @@ describe("IBosonOrchestrationHandler", function () {
       });
 
       it("should update state", async function () {
-        // Create an offer
+        // Create a seller and an offer
         await orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer);
 
         // Get the seller as a struct
@@ -233,7 +233,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         let returnedSeller = Seller.fromStruct(sellerStruct);
 
-        // Returned values should match the input in createSeller
+        // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(seller)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
         }
@@ -244,7 +244,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         let returnedOffer = Offer.fromStruct(offerStruct);
 
-        // Returned values should match the input in createOffer
+        // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(offer)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
@@ -254,7 +254,7 @@ describe("IBosonOrchestrationHandler", function () {
         seller.id = "444";
         offer.id = "555";
 
-        // Create an offer, testing for the event
+        // Create a seller and an offer, testing for the event
         await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer))
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(nextAccountId, sellerStruct)
@@ -282,7 +282,7 @@ describe("IBosonOrchestrationHandler", function () {
         // set some other sellerId
         offer.sellerId = "123";
 
-        // Create an offer, testing for the event
+        // Create a seller and an offer, testing for the event
         await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer))
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct);
@@ -292,7 +292,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("active is false", async function () {
           seller.active = false;
 
-          // Attempt to Create a seller, expecting revert
+          // Attempt to Create a seller and an offer, expecting revert
           await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.MUST_BE_ACTIVE
           );
@@ -301,7 +301,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("addresses are the zero address", async function () {
           seller.clerk = ethers.constants.AddressZero;
 
-          // Attempt to Create a seller, expecting revert
+          // Attempt to Create a seller and an offer, expecting revert
           await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
@@ -309,7 +309,7 @@ describe("IBosonOrchestrationHandler", function () {
           seller.clerk = clerk.address;
           seller.admin = ethers.constants.AddressZero;
 
-          // Attempt to Create a seller, expecting revert
+          // Attempt to Create a seller and an offer, expecting revert
           await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
@@ -345,7 +345,7 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Caller is not operator the specified in seller", async function () {
-          // Attempt to Create an offer, expecting revert
+          // Attempt to Create a seller and an offer, expecting revert
           await expect(orchestrationHandler.connect(rando).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.NOT_OPERATOR
           );
@@ -356,7 +356,7 @@ describe("IBosonOrchestrationHandler", function () {
           offer.validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
           offer.validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
 
-          // Attempt to Create an offer, expecting revert
+          // Attempt to Create a seller and an offer, expecting revert
           await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
@@ -366,7 +366,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Set until date in the past
           offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
 
-          // Attempt to Create an offer, expecting revert
+          // Attempt to Create a seller and an offer, expecting revert
           await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
@@ -376,7 +376,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Set buyer cancel penalty higher than offer price
           offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
 
-          // Attempt to Create an offer, expecting revert
+          // Attempt to Create a seller and an offer, expecting revert
           await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.OFFER_PENALTY_INVALID
           );
@@ -386,7 +386,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Set voided flag to true
           offer.voided = true;
 
-          // Attempt to Create an offer, expecting revert
+          // Attempt to Create a seller and an offer, expecting revert
           await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer)).to.revertedWith(
             RevertReasons.OFFER_MUST_BE_ACTIVE
           );
@@ -462,7 +462,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         let returnedOffer = Offer.fromStruct(offerStruct);
 
-        // Returned values should match the input in createOffer
+        // Returned values should match the input in createOfferWithCondition
         for ([key, value] of Object.entries(offer)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
@@ -473,7 +473,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         const returnedGroup = Group.fromStruct(groupStruct);
 
-        // Returned values should match the input in createGroup
+        // Returned values should match what is expected for the silently created group
         for ([key, value] of Object.entries(group)) {
           expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
         }
@@ -538,7 +538,7 @@ describe("IBosonOrchestrationHandler", function () {
 
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
-          // Attempt to Create an offer, expecting revert
+          // Attempt to Create an offer with condition, expecting revert
           await expect(orchestrationHandler.connect(rando).createOfferWithCondition(offer, condition)).to.revertedWith(
             RevertReasons.NOT_OPERATOR
           );
@@ -549,7 +549,7 @@ describe("IBosonOrchestrationHandler", function () {
           offer.validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
           offer.validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
 
-          // Attempt to Create an offer, expecting revert
+          // Attempt to Create an offer with condition, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
@@ -559,7 +559,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Set until date in the past
           offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
 
-          // Attempt to Create an offer, expecting revert
+          // Attempt to Create an offer with condition, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
@@ -569,7 +569,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Set buyer cancel penalty higher than offer price
           offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
 
-          // Attempt to Create an offer, expecting revert
+          // Attempt to Create an offer with condition, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
           ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
@@ -579,7 +579,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Set voided flag to true
           offer.voided = true;
 
-          // Attempt to Create an offer, expecting revert
+          // Attempt to Create an offer with condition, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
@@ -590,7 +590,7 @@ describe("IBosonOrchestrationHandler", function () {
           condition = new Condition(method, tokenAddress, tokenId, threshold);
           group.condition = condition;
 
-          // Attempt to create the group, expecting revert
+          // Attempt to create an offer with condition, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
@@ -602,7 +602,7 @@ describe("IBosonOrchestrationHandler", function () {
           condition = new Condition(method, tokenAddress, tokenId, threshold);
           group.condition = condition;
 
-          // Attempt to create the group, expecting revert
+          // Attempt to create an offer with condition, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
@@ -614,7 +614,7 @@ describe("IBosonOrchestrationHandler", function () {
           condition = new Condition(method, tokenAddress, tokenId, threshold);
           group.condition = condition;
 
-          // Attempt to create the group, expecting revert
+          // Attempt to create an offer with condition, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferWithCondition(offer, condition)
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
@@ -661,7 +661,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
 
-        // Create an offer with condition, testing for the events
+        // Create an offer, a twin and a bundle, testing for the events
         const tx = await orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin);
         const txReceipt = await tx.wait();
 
@@ -700,7 +700,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
 
-        // Create an offer with condition
+        // Create an offer, a twin and a bundle
         await orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin);
 
         // Get the offer as a struct
@@ -709,7 +709,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         let returnedOffer = Offer.fromStruct(offerStruct);
 
-        // Returned values should match the input in createOffer
+        // Returned values should match the input in createOfferAndTwinWithBundle
         for ([key, value] of Object.entries(offer)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
@@ -720,7 +720,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         const returnedTwin = Twin.fromStruct(twinStruct);
 
-        // Returned values should match the input in createGroup
+        // Returned values should match the input in createOfferAndTwinWithBundle
         for ([key, value] of Object.entries(twin)) {
           expect(JSON.stringify(returnedTwin[key]) === JSON.stringify(value)).is.true;
         }
@@ -731,20 +731,20 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         let returnedBundle = Bundle.fromStruct(bundleStruct);
 
-        // Returned values should match the input in createBundle
+        // Returned values should match what is expected for the silently created bundle
         for ([key, value] of Object.entries(bundle)) {
           expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
         }
       });
 
-      it("should ignore any provided offer id and assign the next available", async function () {
+      it("should ignore any provided ids and assign the next available", async function () {
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
 
         offer.id = "555";
         twin.id = "777";
 
-        // Create an offer with condition, testing for the events
+        // Create an offer, a twin and a bundle, testing for the events
         const tx = await orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin);
         const txReceipt = await tx.wait();
 
@@ -791,7 +791,7 @@ describe("IBosonOrchestrationHandler", function () {
         offer.sellerId = "123";
         twin.sellerId = "456";
 
-        // Create an offer with condition, testing for the events
+        // Create an offer, a twin and a bundle, testing for the events
         const tx = await orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin);
         const txReceipt = await tx.wait();
 
@@ -1057,7 +1057,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         let returnedOffer = Offer.fromStruct(offerStruct);
 
-        // Returned values should match the input in createOffer
+        // Returned values should match the input in createOfferWithConditionAndTwinAndBundle
         for ([key, value] of Object.entries(offer)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
@@ -1068,7 +1068,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         const returnedGroup = Group.fromStruct(groupStruct);
 
-        // Returned values should match the input in createGroup
+        // Returned values should match should match what is expected for the silently created group
         for ([key, value] of Object.entries(group)) {
           expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
         }
@@ -1079,7 +1079,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         const returnedTwin = Twin.fromStruct(twinStruct);
 
-        // Returned values should match the input in createGroup
+        // Returned values should match the input in createOfferWithConditionAndTwinAndBundle
         for ([key, value] of Object.entries(twin)) {
           expect(JSON.stringify(returnedTwin[key]) === JSON.stringify(value)).is.true;
         }
@@ -1090,13 +1090,13 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         let returnedBundle = Bundle.fromStruct(bundleStruct);
 
-        // Returned values should match the input in createBundle
+        // Returned values should match what is expected for the silently created bundle
         for ([key, value] of Object.entries(bundle)) {
           expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
         }
       });
 
-      it("should ignore any provided offer id and assign the next available", async function () {
+      it("should ignore any provided ids and assign the next available", async function () {
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
 
@@ -1244,7 +1244,7 @@ describe("IBosonOrchestrationHandler", function () {
       });
 
       it("should emit a SellerCreated, an OfferCreated and a GroupCreated event", async function () {
-        // Create an offer with condition, testing for the events
+        // Create a seller and an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
           .createSellerAndOfferWithCondition(seller, offer, condition);
@@ -1281,7 +1281,7 @@ describe("IBosonOrchestrationHandler", function () {
       });
 
       it("should update state", async function () {
-        // Create an offer with condition
+        // Create a seller and an offer with condition
         await orchestrationHandler.connect(operator).createSellerAndOfferWithCondition(seller, offer, condition);
 
         // Get the seller as a struct
@@ -1290,7 +1290,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         let returnedSeller = Seller.fromStruct(sellerStruct);
 
-        // Returned values should match the input in createSeller
+        // Returned values should match the input in createSellerAndOfferWithCondition
         for ([key, value] of Object.entries(seller)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
         }
@@ -1301,7 +1301,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         let returnedOffer = Offer.fromStruct(offerStruct);
 
-        // Returned values should match the input in createOffer
+        // Returned values should match the input in createSellerAndOfferWithCondition
         for ([key, value] of Object.entries(offer)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
@@ -1312,17 +1312,17 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         const returnedGroup = Group.fromStruct(groupStruct);
 
-        // Returned values should match the input in createGroup
+        // Returned values should match what is expected for the silently created group
         for ([key, value] of Object.entries(group)) {
           expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
         }
       });
 
-      it("should ignore any provided offer id and assign the next available", async function () {
+      it("should ignore any provided ids and assign the next available", async function () {
         offer.id = "555";
         seller.id = "444";
 
-        // Create an offer with condition, testing for the events
+        // Create a seller and an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
           .createSellerAndOfferWithCondition(seller, offer, condition);
@@ -1399,7 +1399,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
 
-        // Create an offer with condition, testing for the events
+        // Create a seller, an offer with condition and a twin with bundle, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
           .createSellerAndOfferAndTwinWithBundle(seller, offer, twin);
@@ -1449,7 +1449,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
 
-        // Create an offer with condition
+        // Create a seller, an offer with condition and a twin with bundle, testing for the events
         await orchestrationHandler.connect(operator).createSellerAndOfferAndTwinWithBundle(seller, offer, twin);
 
         // Get the seller as a struct
@@ -1458,7 +1458,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         let returnedSeller = Seller.fromStruct(sellerStruct);
 
-        // Returned values should match the input in createSeller
+        // Returned values should match the input in createSellerAndOfferAndTwinWithBundle
         for ([key, value] of Object.entries(seller)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
         }
@@ -1469,7 +1469,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         let returnedOffer = Offer.fromStruct(offerStruct);
 
-        // Returned values should match the input in createOffer
+        // Returned values should match the input in createSellerAndOfferAndTwinWithBundle
         for ([key, value] of Object.entries(offer)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
@@ -1480,7 +1480,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         const returnedTwin = Twin.fromStruct(twinStruct);
 
-        // Returned values should match the input in createGroup
+        // Returned values should match the input in createSellerAndOfferAndTwinWithBundle
         for ([key, value] of Object.entries(twin)) {
           expect(JSON.stringify(returnedTwin[key]) === JSON.stringify(value)).is.true;
         }
@@ -1491,13 +1491,13 @@ describe("IBosonOrchestrationHandler", function () {
         // Parse into entity
         let returnedBundle = Bundle.fromStruct(bundleStruct);
 
-        // Returned values should match the input in createBundle
+        // Returned values should match what is expected for the silently created bundle
         for ([key, value] of Object.entries(bundle)) {
           expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
         }
       });
 
-      it("should ignore any provided offer id and assign the next available", async function () {
+      it("should ignore any provided ids and assign the next available", async function () {
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
 
@@ -1505,7 +1505,7 @@ describe("IBosonOrchestrationHandler", function () {
         offer.id = "555";
         twin.id = "777";
 
-        // Create an offer with condition, testing for the events
+        // Create a seller, an offer with condition and a twin with bundle, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
           .createSellerAndOfferAndTwinWithBundle(seller, offer, twin);
