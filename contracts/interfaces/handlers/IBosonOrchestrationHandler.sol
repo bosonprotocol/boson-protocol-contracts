@@ -13,7 +13,7 @@ import {IBosonBundleEvents} from "../events/IBosonBundleEvents.sol";
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  *
- * The ERC-165 identifier for this interface is: 0xd59e78b6
+ * The ERC-165 identifier for this interface is: 0x6f425857
  */
 interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, IBosonOfferEvents, IBosonTwinEvents, IBosonBundleEvents {
     /**
@@ -57,6 +57,31 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
     function createOfferWithCondition(
         BosonTypes.Offer memory _offer,
         BosonTypes.Condition memory _condition
+    )
+    external;
+
+     /**
+     * @notice Takes an offer and group ID, creates an offer and adds it to the existing group with given id
+     *
+     * Emits an OfferCreated and a GroupUpdated event if successful.
+     *
+     * Reverts if:
+     * - in offer struct:
+     *   - Caller is not an operator
+     *   - Valid from date is greater than valid until date
+     *   - Valid until date is not in the future
+     *   - Buyer cancel penalty is greater than price
+     *   - Voided is set to true
+     * - when adding to the group if:
+     *   - Group does not exists
+     *   - Caller is not the operator of the group
+     *
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _groupId - id of the group, where offer will be added
+     */
+    function createOfferAddToGroup(
+        BosonTypes.Offer memory _offer,
+        uint256 _groupId
     )
     external;
 

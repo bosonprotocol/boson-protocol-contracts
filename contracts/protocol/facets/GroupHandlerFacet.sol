@@ -73,27 +73,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
     external
     override
     {
-        // check if group can be updated
-        (uint256 sellerId, Group storage group) = preUpdateChecks(_groupId, _offerIds);
-
-        for (uint i = 0; i < _offerIds.length; i++) {
-            uint offerId = _offerIds[i];
-            // make sure offer exist and belong to the seller
-            getValidOffer(offerId);
-            
-            // Offer should not belong to another group already
-            (bool exist, ) = getGroupIdByOffer(offerId);
-            require(!exist, OFFER_MUST_BE_UNIQUE);
-
-            // add to groupIdByOffer mapping
-            protocolStorage().groupIdByOffer[offerId] = _groupId;
-
-            // add to group struct
-            group.offerIds.push(offerId);
-        }
-             
-        // Notify watchers of state change
-        emit GroupUpdated(_groupId, sellerId, group);
+        addOffersToGroupInternal(_groupId, _offerIds);
     }
 
     /**
@@ -146,42 +126,6 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
              
         // Notify watchers of state change
         emit GroupUpdated(_groupId, sellerId, group);
-    }
-
-    /**
-     * @dev Before performing an update, make sure update can be done 
-     * and return seller id and group storage pointer for further use 
-     *
-     * Reverts if:
-     * 
-     * - caller is not the seller
-     * - offer ids is an empty list
-     * - number of offers exceeds maximum allowed number per group
-     * - group does not exist
-     *
-     * @param _groupId  - the id of the group to be updated
-     * @param _offerIds - array of offer ids to be removed to the group
-     * @return sellerId  - the seller Id
-     * @return group - the group details
-     */
-    function preUpdateChecks(uint256 _groupId, uint256[] calldata _offerIds) internal view returns (uint256 sellerId, Group storage group) {
-        // make sure that at least something will be updated
-        require(_offerIds.length != 0, NOTHING_UPDATED);
-
-        // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
-
-        // Get storage location for group
-        bool exists;
-        (exists, group) = fetchGroup(_groupId);
-
-        require(exists, NO_SUCH_GROUP);
-
-        // Get seller id, we assume seller id exists if group exists
-        (, sellerId) = getSellerIdByOperator(msg.sender);
-
-        // Caller's seller id must match group seller id
-        require(sellerId == group.sellerId, NOT_OPERATOR);
     }
 
       /**

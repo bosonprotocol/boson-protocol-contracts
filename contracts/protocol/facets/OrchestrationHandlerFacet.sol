@@ -93,6 +93,38 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
         createGroupInternal(_group);
     } 
 
+    /**
+    * @notice Takes an offer and group ID, creates an offer and adds it to the existing group with given id
+    *
+    * Emits an OfferCreated and a GroupUpdated event if successful.
+    *
+    * Reverts if:
+    * - in offer struct:
+    *   - Caller is not an operator
+    *   - Valid from date is greater than valid until date
+    *   - Valid until date is not in the future
+    *   - Buyer cancel penalty is greater than price
+    *   - Voided is set to true
+    * - when adding to the group if:
+    *   - Group does not exists
+    *   - Caller is not the operator of the group
+    *
+    * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+    * @param _groupId - id of the group, where offer will be added
+    */
+    function createOfferAddToGroup(
+        Offer memory _offer,
+        uint256 _groupId
+    )
+    external {
+        // create offer and update structs values to represent true state
+        createOfferInternal(_offer);
+
+        // create an array with offer ids and add it to the group
+        uint256[] memory _offerIds = new uint256[](1);
+        _offerIds[0] = _offer.id;
+        addOffersToGroupInternal(_groupId, _offerIds);
+    }
 
     /**
      * @notice Takes an offer and a twin, creates an offer, creates a twin, then a bundle with that offer and the given twin
