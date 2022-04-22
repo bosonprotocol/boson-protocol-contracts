@@ -11,6 +11,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 
 /**
  *  Test the Boson Offer Handler interface
@@ -19,9 +20,19 @@ describe("IBosonOfferHandler", function () {
   // Common vars
   let InterfaceIds;
   let accounts, deployer, rando, operator, admin, clerk, treasury;
-  let erc165, protocolDiamond, accessController, accountHandler, offerHandler, offerStruct, key, value, updateable;
+  let erc165,
+    protocolDiamond,
+    accessController,
+    accountHandler,
+    offerHandler,
+    exchangeHandler,
+    bosonVoucher,
+    offerStruct,
+    key,
+    value,
+    updateable;
   let offer, nextOfferId, invalidOfferId, oneMonth, oneWeek, support, expected, exists;
-  let seller, active;
+  let buyer, seller, active;
   let id,
     sellerId,
     price,
@@ -52,6 +63,7 @@ describe("IBosonOfferHandler", function () {
     clerk = accounts[3];
     treasury = accounts[4];
     rando = accounts[5];
+    buyer = accounts[6];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -59,15 +71,25 @@ describe("IBosonOfferHandler", function () {
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
+    // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
+    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet"]);
-    await deployProtocolHandlerFacets(protocolDiamond, ["OfferHandlerFacet"]);
+    await deployProtocolHandlerFacets(protocolDiamond, [
+      "AccountHandlerFacet",
+      "OfferHandlerFacet",
+      "ExchangeHandlerFacet",
+    ]);
+
+    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
+    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    [, , [bosonVoucher]] = await deployProtocolClients(protocolClientArgs, gasLimit);
 
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
-      "0x0000000000000000000000000000000000000000",
+      bosonVoucher.address,
       "0",
       "100",
       "100",
@@ -82,8 +104,11 @@ describe("IBosonOfferHandler", function () {
     // Cast Diamond to IBosonAccountHandler
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
 
-    // Cast Diamond to IOfferHandler
+    // Cast Diamond to IBosonOfferHandler
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonExchangeHandler
+    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -128,9 +153,13 @@ describe("IBosonOfferHandler", function () {
       sellerDeposit = price = ethers.utils.parseUnits("0.25", "ether").toString();
       buyerCancelPenalty = price = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
-      validFromDate = ethers.BigNumber.from(Date.now()).toString(); // valid from now
-      validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // until 6 months
-      redeemableFromDate = ethers.BigNumber.from(Date.now() + oneWeek).toString(); // redeemable in 1 week
+      validFromDate = ethers.BigNumber.from(Date.now()).div(1000).toString(); // valid from now
+      validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6)
+        .div(1000)
+        .toString(); // until 6 months
+      redeemableFromDate = ethers.BigNumber.from(Date.now() + oneWeek)
+        .div(1000)
+        .toString(); // redeemable in 1 week
       fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
       voucherValidDuration = oneMonth.toString(); // offers valid for one month
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
@@ -232,7 +261,9 @@ describe("IBosonOfferHandler", function () {
 
         it("Valid until date is not in the future", async function () {
           // Set until date in the past
-          offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
+          offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6)
+            .div(1000)
+            .toString(); // 6 months ago
 
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
@@ -344,8 +375,14 @@ describe("IBosonOfferHandler", function () {
           );
         });
 
-        xit("Offer is not updateable, since some exchanges exist", async function () {
-          // TODO: add when exchangeHandlerFacet.commitToOffer is implemented
+        it("Offer is not updateable, since some exchanges exist", async function () {
+          // Commit to an offer
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, id);
+
+          // Attempt to update an offer, expecting revert
+          await expect(offerHandler.connect(operator).updateOffer(offer)).to.revertedWith(
+            RevertReasons.OFFER_NOT_UPDATEABLE
+          );
         });
 
         it("Valid from date is greater than valid until date", async function () {
@@ -361,7 +398,9 @@ describe("IBosonOfferHandler", function () {
 
         it("Valid until date is not in the future", async function () {
           // Set until date in the past
-          offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
+          offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6)
+            .div(1000)
+            .toString(); // 6 months ago
 
           // Attempt to update an offer, expecting revert
           await expect(offerHandler.connect(operator).updateOffer(offer)).to.revertedWith(
@@ -489,7 +528,7 @@ describe("IBosonOfferHandler", function () {
         offer.validUntilDate = ethers.BigNumber.from(offer.validUntilDate).add("10000").toString();
         offerStruct = offer.toStruct();
 
-        // Extend the valid until dater, testing for the event
+        // Extend the valid until date, testing for the event
         await expect(offerHandler.connect(operator).extendOffer(offer.id, offer.validUntilDate))
           .to.emit(offerHandler, "OfferUpdated")
           .withArgs(id, offer.sellerId, offerStruct);
@@ -577,7 +616,9 @@ describe("IBosonOfferHandler", function () {
 
         it("Valid until date is not in the future", async function () {
           // Set until date in the past
-          offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
+          offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6)
+            .div(1000)
+            .toString(); // 6 months ago
 
           // Attempt to update an offer, expecting revert
           await expect(offerHandler.connect(operator).updateOffer(offer)).to.revertedWith(
@@ -926,7 +967,9 @@ describe("IBosonOfferHandler", function () {
 
         it("Valid until date is not in the future in some offer", async function () {
           // Set until date in the past
-          offers[3].validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
+          offers[3].validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6)
+            .div(1000)
+            .toString(); // 6 months ago
 
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
