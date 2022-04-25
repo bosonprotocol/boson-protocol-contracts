@@ -9,7 +9,7 @@ import {IBosonOfferEvents} from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x65defc13
+ * The ERC-165 identifier for this interface is: 0xbea4053c
  */
 interface IBosonOfferHandler is IBosonOfferEvents {
 
@@ -78,7 +78,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Caller is not the operator of the offer
      * - Offer has already been voided
      *
-     * @param _offerId - the id of the offer to check
+     * @param _offerId - the id of the offer to void
      */
     function voidOffer(uint256 _offerId) external;
 
@@ -97,7 +97,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Caller is not the operator of the offer
      * - Offer has already been voided
      *
-     * @param _offerIds - the id of the offer to check
+     * @param _offerIds - list of offer ids of the void
      */
     function voidOfferBatch(uint256[] calldata _offerIds) external;
 
@@ -111,10 +111,27 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Caller is not the operator of the offer
      * - New valid until date is before existing valid until dates
      *
-     *  @param _offerId - the id of the offer to check
+     *  @param _offerId - the id of the offer to extend
      *  @param _validUntilDate - new valid until date
      */
     function extendOffer(uint256 _offerId, uint256 _validUntilDate) external;
+
+    /**
+     * @notice Sets new valid until date
+     *
+     * Emits an OfferUpdated event if successful.
+     *
+     * Reverts if:
+     * - Number of offers exceeds maximum allowed number per batch
+     * - For any of the offers:
+     *   - Offer does not exist
+     *   - Caller is not the operator of the offer
+     *   - New valid until date is before existing valid until dates
+     *
+     *  @param _offerIds - list of ids of the offers to extemd
+     *  @param _validUntilDate - new valid until date
+     */
+    function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external;
 
     /**
      * @notice Gets the details about a given offer.

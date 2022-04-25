@@ -1228,7 +1228,6 @@ describe("IBosonOrchestrationHandler", function () {
 
         // How that group looks as a returned struct
         groupStruct = group.toStruct();
-
         // prepare a bundle struct. We are not passing it as an argument, but just need to validate.
         // The first bundle id
         bundleId = nextBundleId = "1";
@@ -2078,5 +2077,6 @@ describe("IBosonOrchestrationHandler", function () {
         );
       });
     });
+
   });
 });

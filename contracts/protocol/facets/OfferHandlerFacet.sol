@@ -172,7 +172,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         for (uint i = 0; i < _offerIds.length; i++) { 
             voidOffer(_offerIds[i]);
         }
-
     }
 
     /**
@@ -191,7 +190,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     function extendOffer(
         uint256 _offerId, uint _validUntilDate
     )
-    external
+    public
     override
     {
         // Get offer, make sure the caller is the operator
@@ -205,6 +204,29 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
 
         // Notify watchers of state change
         emit OfferUpdated(_offerId, offer.sellerId, offer);
+    }
+
+    /**
+     * @notice Sets new valid until date
+     *
+     * Emits an OfferUpdated event if successful.
+     *
+     * Reverts if:
+     * - Number of offers exceeds maximum allowed number per batch
+     * - For any of the offers:
+     *   - Offer does not exist
+     *   - Caller is not the operator of the offer
+     *   - New valid until date is before existing valid until dates
+     *
+     *  @param _offerIds - list of ids of the offers to extemd
+     *  @param _validUntilDate - new valid until date
+     */
+    function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external {
+        // limit maximum number of offers to avoid running into block gas limit in a loop
+        require(_offerIds.length <= protocolStorage().maxOffersPerBatch, TOO_MANY_OFFERS);
+        for (uint i = 0; i < _offerIds.length; i++) { 
+            extendOffer(_offerIds[i], _validUntilDate);
+        }
     }
 
     /**
