@@ -524,9 +524,6 @@ describe("IBosonOfferHandler", function () {
       });
 
       it("should emit an OfferUpdated event", async function () {
-        offer.validUntilDate = ethers.BigNumber.from(offer.validUntilDate).add("10000").toString();
-        offerStruct = offer.toStruct();
-
         // Extend the valid until date, testing for the event
         await expect(offerHandler.connect(operator).extendOffer(offer.id, offer.validUntilDate))
           .to.emit(offerHandler, "OfferUpdated")
@@ -586,7 +583,7 @@ describe("IBosonOfferHandler", function () {
           );
         });
 
-        it("Offer is not extendable, since its voided", async function () {
+        it("Offer is not extendable, since it's voided", async function () {
           // Void an offer
           await offerHandler.connect(operator).voidOffer(id);
 
@@ -618,7 +615,7 @@ describe("IBosonOfferHandler", function () {
           offer.validUntilDate = ethers.BigNumber.from(offer.validFromDate - (oneMonth / 1000) * 6).toString(); // 6 months ago
 
           // Attempt to update an offer, expecting revert
-          await expect(offerHandler.connect(operator).updateOffer(offer)).to.revertedWith(
+          await expect(offerHandler.connect(operator).extendOffer(offer.id, offer.validUntilDate)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
         });
@@ -1000,13 +997,10 @@ describe("IBosonOfferHandler", function () {
         // Create an offer
         await offerHandler.connect(operator).createOfferBatch(offers);
 
-        // // id of the current offer and increment nextOfferId
-        // id = nextOfferId++;
-
         offersToVoid = ["1", "3", "5"];
       });
 
-      it("should emit an OfferVoided event", async function () {
+      it("should emit OfferVoided events", async function () {
         // call getOffer with offerId to check the seller id in the event
         [, offerStruct] = await offerHandler.getOffer(offersToVoid[0]);
 
@@ -1095,6 +1089,123 @@ describe("IBosonOfferHandler", function () {
           await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid)).to.revertedWith(
             RevertReasons.OFFER_HAS_BEEN_VOIDED
           );
+        });
+      });
+    });
+
+    context("👉 extendOfferBatch()", async function () {
+      let offersToExtend, newValidUntilDate;
+      beforeEach(async function () {
+        // Create an offer
+        await offerHandler.connect(operator).createOfferBatch(offers);
+
+        offersToExtend = ["1", "3", "5"];
+        newValidUntilDate = ethers.BigNumber.from(offers[4].validUntilDate).add("10000").toString(); // offer "5" has the highest validUntilDate so we need to set something greater
+
+        for (const offerToExtend of offersToExtend) {
+          let i = offerToExtend - 1;
+          offers[i].validUntilDate = newValidUntilDate;
+          offerStructs[i] = offers[i].toStruct();
+        }
+      });
+
+      it("should emit OfferUpdated events", async function () {
+        // Extend the valid until date, testing for the event
+        await expect(offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate))
+          .to.emit(offerHandler, "OfferUpdated")
+          .withArgs(offersToExtend[0], offer.sellerId, offerStructs[offersToExtend[0] - 1])
+          .withArgs(offersToExtend[1], offer.sellerId, offerStructs[offersToExtend[1] - 1])
+          .withArgs(offersToExtend[2], offer.sellerId, offerStructs[offersToExtend[2] - 1]);
+      });
+
+      it("should update state", async function () {
+        // Make sure that state is different from new validUntilDate
+        for (const id of offersToExtend) {
+          [, offerStruct] = await offerHandler.getOffer(id);
+          expect(offerStruct.validUntilDate).is.not.equal(newValidUntilDate);
+        }
+
+        // Void offers
+        await offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate);
+
+        for (const id of offersToExtend) {
+          // validUntilDate field should be updated
+          [, offerStruct] = await offerHandler.getOffer(id);
+          expect(offerStruct.validUntilDate).is.equal(newValidUntilDate);
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Offer does not exist", async function () {
+          // Set invalid id
+          offersToExtend = ["1", "432", "2"];
+
+          // Attempt to extend the offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
+          ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+
+          // Set invalid id
+          offersToExtend = ["1", "2", "0"];
+
+          // Attempt to extend the offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
+          ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+        });
+
+        it("Caller is not seller", async function () {
+          // caller is not the operator of any seller
+          // Attempt to extend the offer, expecting revert
+          await expect(offerHandler.connect(rando).extendOfferBatch(offersToExtend, newValidUntilDate)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+
+          // caller is an operator of another seller
+          seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, active);
+          await accountHandler.connect(rando).createSeller(seller);
+
+          // Attempt to extend the offer, expecting revert
+          await expect(offerHandler.connect(rando).extendOfferBatch(offersToExtend, newValidUntilDate)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+        });
+
+        it("Offers are not extendable, since one of them it's voided", async function () {
+          // Void the offer first
+          await offerHandler.connect(operator).voidOffer("3");
+
+          // Attempt to extend the offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
+          ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
+        });
+
+        it("New valid until date is lower than the existing valid until date", async function () {
+          // Make the valid until date the same as the existing offer
+          newValidUntilDate = ethers.BigNumber.from(offers[4].validUntilDate).sub("10000").toString(); // same as that validUntilDate of offer 5
+
+          await expect(
+            offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
+          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+
+          // Make new the valid until date less than existing one
+          newValidUntilDate = ethers.BigNumber.from(newValidUntilDate).sub("1").toString(); // less that validUntilDate of offer 5
+
+          // Attempt to extend the offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
+          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+        });
+
+        it("Valid until date is not in the future", async function () {
+          // Set until date in the past
+          newValidUntilDate = ethers.BigNumber.from(offers[0].validFromDate - (oneMonth / 1000) * 6).toString(); // 6 months ago
+
+          // Attempt to extend the offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
+          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
       });
     });
