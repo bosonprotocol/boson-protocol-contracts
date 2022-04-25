@@ -150,7 +150,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
         Condition memory _condition,
         Twin memory _twin
     )
-    external {
+    public {
         // create offer with condition first
         createOfferWithCondition(_offer, _condition);
         // create twin and pack everything into a bundle
@@ -256,6 +256,43 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
     }
 
     /**
+     * @notice Takes a seller, an offer, a condition and a twin, creates a sellerm an offer, then a group with that offer and the given condition, then creates a twin, then a bundle with that offer and the given twin
+     *
+     * Emits an SellerCreated, OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event if successful.
+     *
+     * Reverts if:
+     * - caller is not the same as operator address
+     * - in seller struct:
+     *   - Address values are zero address
+     *   - Addresses are not unique to this seller
+     *   - Seller is not active (if active == false)
+     * - in offer struct:
+     *   - Caller is not an operator
+     *   - Valid from date is greater than valid until date
+     *   - Valid until date is not in the future
+     *   - Buyer cancel penalty is greater than price
+     *   - Voided is set to true
+     * - Condition includes invalid combination of parameters
+     * - when creating twin if
+     *   - Not approved to transfer the seller's token
+     *
+     * @param _seller - the fully populated seller struct
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _condition - the fully populated condition struct
+     * @param _twin - the fully populated twin struct
+     */
+    function createSellerAndOfferWithConditionAndTwinAndBundle(
+        Seller memory _seller,
+        Offer memory _offer,
+        Condition memory _condition,
+        Twin memory _twin
+    )
+    external override {
+        checkAndCreateSeller(_seller);
+        createOfferWithConditionAndTwinAndBundle(_offer, _condition, _twin);
+    }
+
+    /**
      * @notice Make sure that call is tha same as operator address and creates a seller
      *
      * Emits a SellerCreated.
@@ -276,5 +313,4 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
         // create seller and update structs values to represent true state
         createSellerInternal(_seller);
     }
-
 }
