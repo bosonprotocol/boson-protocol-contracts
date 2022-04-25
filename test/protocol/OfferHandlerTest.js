@@ -988,6 +988,16 @@ describe("IBosonOfferHandler", function () {
             RevertReasons.OFFER_MUST_BE_ACTIVE
           );
         });
+
+        it("Creating too many offers", async function () {
+          // Try to create the more than 100 offers
+          offers = new Array(101).fill(offer);
+
+          // Attempt to create the offers, expecting revert
+          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
+            RevertReasons.TOO_MANY_OFFERS
+          );
+        });
       });
     });
 
@@ -1088,6 +1098,16 @@ describe("IBosonOfferHandler", function () {
           // Attempt to void the offer again, expecting revert
           await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid)).to.revertedWith(
             RevertReasons.OFFER_HAS_BEEN_VOIDED
+          );
+        });
+
+        it("Voiding too many offers", async function () {
+          // Try to void the more than 100 offers
+          offersToVoid = [...Array(101).keys()];
+
+          // Attempt to void the offers, expecting revert
+          await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid)).to.revertedWith(
+            RevertReasons.TOO_MANY_OFFERS
           );
         });
       });
@@ -1206,6 +1226,16 @@ describe("IBosonOfferHandler", function () {
           await expect(
             offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+        });
+
+        it("Extending too many offers", async function () {
+          // Try to extend the more than 100 offers
+          offersToExtend = [...Array(101).keys()];
+
+          // Attempt to extend the offers, expecting revert
+          await expect(
+            offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
+          ).to.revertedWith(RevertReasons.TOO_MANY_OFFERS);
         });
       });
     });
