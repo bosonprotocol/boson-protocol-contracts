@@ -622,6 +622,274 @@ describe("IBosonOrchestrationHandler", function () {
       });
     });
 
+    context("👉 createOfferAddToGroup()", async function () {
+      beforeEach(async function () {
+        // create a seller
+        await accountHandler.connect(admin).createSeller(seller);
+
+        // The first group id
+        nextGroupId = "1";
+
+        // create 3 offers
+        for (let i = 0; i < 3; i++) {
+          // Required constructor params
+          id = `${i + 1}`; // argument sent to contract for createGroup will be ignored
+          sellerId = "1";
+          price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
+          sellerDeposit = price = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
+          buyerCancelPenalty = price = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
+          quantityAvailable = `${i * 2}`;
+          validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
+          validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
+          redeemableFromDate = ethers.BigNumber.from(validUntilDate + oneWeek).toString();
+          fulfillmentPeriodDuration = oneMonth.toString();
+          voucherValidDuration = oneMonth.toString();
+          exchangeToken = ethers.constants.AddressZero.toString();
+          offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
+          metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
+          voided = false;
+
+          // Create a valid offer, then set fields in tests directly
+          offer = new Offer(
+            id,
+            sellerId,
+            price,
+            sellerDeposit,
+            buyerCancelPenalty,
+            quantityAvailable,
+            validFromDate,
+            validUntilDate,
+            redeemableFromDate,
+            fulfillmentPeriodDuration,
+            voucherValidDuration,
+            exchangeToken,
+            metadataUri,
+            offerChecksum,
+            voided
+          );
+          expect(offer.isValid()).is.true;
+
+          await offerHandler.connect(operator).createOffer(offer);
+
+          nextOfferId++;
+        }
+
+        // Required constructor params for Condition
+        method = EvaluationMethod.AboveThreshold;
+        tokenAddress = accounts[0].address; // just need an address
+        tokenId = "5150";
+        threshold = "1";
+
+        // Required constructor params for Group
+        id = nextGroupId;
+        sellerId = "1";
+        offerIds = ["1", "3"];
+
+        condition = new Condition(method, tokenAddress, tokenId, threshold);
+        expect(condition.isValid()).to.be.true;
+
+        group = new Group(nextGroupId, sellerId, offerIds, condition);
+
+        expect(group.isValid()).is.true;
+
+        // Create a group
+        await groupHandler.connect(operator).createGroup(group);
+
+        // after another offer is added
+        offer.id = nextOfferId.toString(); // not necessary as input parameter
+        group.offerIds = ["1", "3", "4"];
+
+        // How that group and offer look as a returned struct
+        groupStruct = group.toStruct();
+        offerStruct = offer.toStruct();
+      });
+
+      it("should emit an OfferCreated and GroupUpdated event", async function () {
+        // Create an offer, add it to the group, testing for the events
+        const tx = await orchestrationHandler.connect(operator).createOfferAddToGroup(offer, nextGroupId);
+        const txReceipt = await tx.wait();
+
+        // OfferCreated event
+        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
+        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
+        // Validate the instance
+        expect(offerInstance.isValid()).to.be.true;
+
+        assert.equal(eventOfferCreated.offerId.toString(), offer.id, "Offer Id is incorrect");
+        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
+        assert.equal(offerInstance.toString(), offer.toString(), "Offer struct is incorrect");
+
+        // GroupUpdated event
+        const eventGroupUpdated = getEvent(txReceipt, orchestrationHandler, "GroupUpdated");
+        const groupInstance = Group.fromStruct(eventGroupUpdated.group);
+        // Validate the instance
+        expect(groupInstance.isValid()).to.be.true;
+
+        assert.equal(eventGroupUpdated.groupId.toString(), group.id, "Group Id is incorrect");
+        assert.equal(eventGroupUpdated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+        assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+      });
+
+      it("should update state", async function () {
+        // Create an offer, add it to the group
+        await orchestrationHandler.connect(operator).createOfferAddToGroup(offer, nextGroupId);
+
+        // Get the offer as a struct
+        [, offerStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+
+        // Parse into entity
+        let returnedOffer = Offer.fromStruct(offerStruct);
+
+        // Returned values should match the input in createOfferAddToGroup
+        for ([key, value] of Object.entries(offer)) {
+          expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Get the group as a struct
+        [, groupStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
+
+        // Parse into entity
+        const returnedGroup = Group.fromStruct(groupStruct);
+
+        // Returned values should match what is expected for the update group
+        for ([key, value] of Object.entries(group)) {
+          expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should ignore any provided offer id and assign the next available", async function () {
+        offer.id = "555";
+
+        // Create an offer, add it to the group, testing for the events
+        const tx = await orchestrationHandler.connect(operator).createOfferAddToGroup(offer, nextGroupId);
+        const txReceipt = await tx.wait();
+
+        // OfferCreated event
+        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
+        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
+        // Validate the instance
+        expect(offerInstance.isValid()).to.be.true;
+
+        assert.equal(eventOfferCreated.offerId.toString(), nextOfferId, "Offer Id is incorrect");
+        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
+        assert.equal(offerInstance.toString(), Offer.fromStruct(offerStruct).toString(), "Offer struct is incorrect");
+
+        // GroupUpdated event
+        const eventGroupUpdated = getEvent(txReceipt, orchestrationHandler, "GroupUpdated");
+        const groupInstance = Group.fromStruct(eventGroupUpdated.group);
+        // Validate the instance
+        expect(groupInstance.isValid()).to.be.true;
+
+        assert.equal(eventGroupUpdated.groupId.toString(), nextGroupId, "Group Id is incorrect");
+        assert.equal(eventGroupUpdated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+        assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+      });
+
+      it("should ignore any provided seller and assign seller id of msg.sender", async function () {
+        // set some other sellerId
+        offer.sellerId = "123";
+
+        // Create an offer, add it to the group, testing for the events
+        const tx = await orchestrationHandler.connect(operator).createOfferAddToGroup(offer, nextGroupId);
+        const txReceipt = await tx.wait();
+
+        // OfferCreated event
+        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
+        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
+        // Validate the instance
+        expect(offerInstance.isValid()).to.be.true;
+
+        assert.equal(eventOfferCreated.offerId.toString(), nextOfferId, "Offer Id is incorrect");
+        assert.equal(eventOfferCreated.sellerId.toString(), sellerId, "Seller Id is incorrect");
+        assert.equal(offerInstance.toString(), Offer.fromStruct(offerStruct).toString(), "Offer struct is incorrect");
+
+        // GroupUpdated event
+        const eventGroupUpdated = getEvent(txReceipt, orchestrationHandler, "GroupUpdated");
+        const groupInstance = Group.fromStruct(eventGroupUpdated.group);
+        // Validate the instance
+        expect(groupInstance.isValid()).to.be.true;
+
+        assert.equal(eventGroupUpdated.groupId.toString(), nextGroupId, "Group Id is incorrect");
+        assert.equal(eventGroupUpdated.sellerId.toString(), sellerId, "Seller Id is incorrect");
+        assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Caller not operator of any seller", async function () {
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(orchestrationHandler.connect(rando).createOfferAddToGroup(offer, nextGroupId)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+        });
+
+        it("Valid from date is greater than valid until date", async function () {
+          // Reverse the from and until dates
+          offer.validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
+          offer.validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
+
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(
+            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, nextGroupId)
+          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+        });
+
+        it("Valid until date is not in the future", async function () {
+          // Set until date in the past
+          offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
+
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(
+            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, nextGroupId)
+          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+        });
+
+        it("Buyer cancel penalty is less than item price", async function () {
+          // Set buyer cancel penalty higher than offer price
+          offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
+
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(
+            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, nextGroupId)
+          ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
+        });
+
+        it("Offer cannot be voided at the time of the creation", async function () {
+          // Set voided flag to true
+          offer.voided = true;
+
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(
+            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, nextGroupId)
+          ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
+        });
+
+        it("Group does not exist", async function () {
+          // Set invalid id
+          let invalidGroupId = "444";
+
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(
+            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, invalidGroupId)
+          ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
+
+          // Set invalid id
+          invalidGroupId = "0";
+
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(
+            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, invalidGroupId)
+          ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
+        });
+
+        it("Caller is not the seller of the group", async function () {
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(orchestrationHandler.connect(rando).createOfferAddToGroup(offer, nextGroupId)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+        });
+      });
+    });
+
     context("👉 createOfferAndTwinWithBundle()", async function () {
       beforeEach(async function () {
         // prepare a bundle struct. We are not passing it as an argument, but just need to validate.
