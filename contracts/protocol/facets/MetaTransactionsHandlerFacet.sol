@@ -134,6 +134,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsEvents, ProtocolB
         MetaTransaction memory metaTx = MetaTransaction({nonce: nonce, from: _userAddress, functionSignature: _functionSignature});
         require(verify(_userAddress, metaTx, _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
 
+        // Increment the nonce.
         protocolStorage().metaNonces[_userAddress] = nonce + 1;
 
         // Set the current transaction signer and transaction type.

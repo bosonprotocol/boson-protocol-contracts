@@ -49,7 +49,7 @@ library MetaLib {
     function getCaller() internal view returns (address sender) {
         bool isItAMetaTransaction = ProtocolLib.protocolStorage().isMetaTransaction;
 
-        // Check into the storage if this is a meta transaction
+        // Get sender from the storage if this is a meta transaction
         if (isItAMetaTransaction) {
             sender = getCurrentSenderAddress();
         } else {
