@@ -80,7 +80,8 @@ contract BosonConstants {
 
     // Revert Reasons: Meta-Transactions related
     string internal constant FUNCTION_CALL_NOT_SUCCESSFUL = "Function call not successful";
-    string internal constant INVALID_FUNCTION_SIGNATURE = "functionSignature can not be of executeMetaTransaction method";
+    string internal constant INVALID_FUNCTION_SIGNATURE =
+        "functionSignature can not be of executeMetaTransaction method";
     string internal constant INVALID_SIGNATURE = "Invalid signature";
     string internal constant SIGNER_AND_SIGNATURE_DO_NOT_MATCH = "Signer and signature do not match";
 }
