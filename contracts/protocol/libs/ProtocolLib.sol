@@ -21,6 +21,10 @@ library ProtocolLib {
         address payable tokenAddress;
         // Address of the Boson Protocol Voucher proxy
         address voucherAddress;
+        // The current sender address associated with the transaction
+        address currentSenderAddress;
+        // A flag that tells us whether the current transaction is a meta-transaction or a regular transaction.
+        bool isMetaTransaction;
         // Percentage that will be taken as a fee from the net of a Boson Protocol exchange
         uint16 protocolFeePercentage; // 1.75% = 175, 100% = 10000
         // limit how many offers can be added to the group
@@ -31,6 +35,10 @@ library ProtocolLib {
         uint16 maxTwinsPerBundle;
         // limit how many offers can be processed in single batch transaction
         uint16 maxOffersPerBatch;
+        // The domain Separator of the protocol
+        bytes32 domainSeparator;
+        // transaction sender address => nonce
+        mapping(address => uint256) metaNonces;
         // offer id => offer
         mapping(uint256 => BosonTypes.Offer) offers;
         // exchange id => exchange

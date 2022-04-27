@@ -131,4 +131,10 @@ contract BosonTypes {
         uint256[] offerIds;
         uint256[] twinIds;
     }
+
+    struct MetaTransaction {
+        uint256 nonce;
+        address from;
+        bytes functionSignature;
+    }
 }

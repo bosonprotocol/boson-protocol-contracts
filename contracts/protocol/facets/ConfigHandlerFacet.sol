@@ -5,6 +5,7 @@ import { IBosonConfigHandler } from  "../../interfaces/handlers/IBosonConfigHand
 import { DiamondLib } from  "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from  "../bases/ProtocolBase.sol";
 import { ProtocolLib } from  "../libs/ProtocolLib.sol";
+import { MetaLib } from "../libs/MetaLib.sol";
 
 /**
  * @title ConfigHandlerFacet
@@ -48,6 +49,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         ps.maxTwinsPerBundle = _maxTwinsPerBundle;
         ps.maxOffersPerBundle = _maxOffersPerBundle;
         ps.maxOffersPerBatch = _maxOffersPerBatch;
+        ps.domainSeparator = MetaLib.domainSeparator("BosonProtocolDiamond", "V2");
 
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
