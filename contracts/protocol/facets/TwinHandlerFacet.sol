@@ -5,6 +5,7 @@ import { IBosonTwinHandler } from "../../interfaces/handlers/IBosonTwinHandler.s
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { TwinBase } from "../bases/TwinBase.sol";
+import { MetaLib } from "../libs/MetaLib.sol";
 
 /**
  * @title TwinHandlerFacet
@@ -90,8 +91,10 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         (bool exists, Twin memory twin) = fetchTwin(_twinId);
         require(exists, NO_SUCH_TWIN);
 
+        // Get sender of the transaction
+        address msgSender = MetaLib.getCaller();
         // Get seller id
-        (, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+        (, uint256 sellerId) = getSellerIdByOperator(msgSender);
         // Caller's seller id must match twin seller id
         require(sellerId == twin.sellerId, NOT_OPERATOR);
 
