@@ -33,7 +33,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsEvents, ProtocolB
      * @notice Get the domain separator.
      */
     function getDomainSeparator() private view returns (bytes32) {
-        return protocolStorage().domainSeparator;
+        return protocolMetaTransactionsStorage().domainSeparator;
     }
 
     /**
@@ -67,7 +67,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsEvents, ProtocolB
      * @return nonce -  The latest nonce for the address.
      */
     function getNonce(address _user) external view returns (uint256 nonce) {
-        nonce = protocolStorage().metaNonces[_user];
+        nonce = protocolMetaTransactionsStorage().metaNonces[_user];
     }
 
     /**
@@ -104,7 +104,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsEvents, ProtocolB
     function setCurrentSenderAddress(address _signerAddress)
         internal
     {
-        protocolStorage().currentSenderAddress = _signerAddress;
+        protocolMetaTransactionsStorage().currentSenderAddress = _signerAddress;
         emit CurrentSenderAddressChanged(_signerAddress, msg.sender);
     }
 
@@ -130,16 +130,16 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsEvents, ProtocolB
         bytes4 destinationFunctionSig = convertBytesToBytes4(_functionSignature);
         require(destinationFunctionSig != msg.sig, INVALID_FUNCTION_SIGNATURE);
 
-        uint256 nonce = protocolStorage().metaNonces[_userAddress];
+        uint256 nonce = protocolMetaTransactionsStorage().metaNonces[_userAddress];
         MetaTransaction memory metaTx = MetaTransaction({nonce: nonce, from: _userAddress, functionSignature: _functionSignature});
         require(verify(_userAddress, metaTx, _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
 
         // Increment the nonce.
-        protocolStorage().metaNonces[_userAddress] = nonce + 1;
+        protocolMetaTransactionsStorage().metaNonces[_userAddress] = nonce + 1;
 
         // Set the current transaction signer and transaction type.
         setCurrentSenderAddress(_userAddress);
-        protocolStorage().isMetaTransaction = true;
+        protocolMetaTransactionsStorage().isMetaTransaction = true;
 
         // invoke local function with an external call
         (bool success, bytes memory returnData) = address(this).call(_functionSignature);
@@ -147,7 +147,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsEvents, ProtocolB
 
         // Reset current transaction signer and transaction type.
         setCurrentSenderAddress(address(0));
-        protocolStorage().isMetaTransaction = false;
+        protocolMetaTransactionsStorage().isMetaTransaction = false;
 
         emit MetaTransactionExecuted(_userAddress, payable(msg.sender), _functionSignature);
         return returnData;

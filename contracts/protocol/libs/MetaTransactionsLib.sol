@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {ProtocolLib} from "../libs/ProtocolLib.sol";
+import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
 /**
- * @title MetaLib
+ * @title MetaTransactionsLib
  *
  * @dev Provides domain seperator and current sender of the transaction.
  */
-library MetaLib {
+library MetaTransactionsLib {
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH = keccak256(bytes("EIP712Domain(string name,string version,uint256 salt,address verifyingContract)"));
 
     /**
@@ -38,7 +38,7 @@ library MetaLib {
      * @notice Get the current sender address from storage.
      */
     function getCurrentSenderAddress() internal view returns (address) {
-        return ProtocolLib.protocolStorage().currentSenderAddress;
+        return ProtocolLib.protocolMetaTransactionsStorage().currentSenderAddress;
     }
 
     /**
@@ -47,7 +47,7 @@ library MetaLib {
      * @return sender - The message sender of the transaction.
      */
     function getCaller() internal view returns (address sender) {
-        bool isItAMetaTransaction = ProtocolLib.protocolStorage().isMetaTransaction;
+        bool isItAMetaTransaction = ProtocolLib.protocolMetaTransactionsStorage().isMetaTransaction;
 
         // Get sender from the storage if this is a meta transaction
         if (isItAMetaTransaction) {
