@@ -42,9 +42,7 @@ async function setNextBlockTimestamp(timestamp) {
 
 function getSignatureParameters(signature) {
   if (!ethers.utils.isHexString(signature)) {
-    throw new Error(
-      'Given value "'.concat(signature, '" is not a valid hex string.')
-    );
+    throw new Error('Given value "'.concat(signature, '" is not a valid hex string.'));
   }
 
   signature = signature.substring(2);
@@ -55,9 +53,9 @@ function getSignatureParameters(signature) {
   return {
     r: r,
     s: s,
-    v: v
+    v: v,
   };
-};
+}
 
 async function prepareDataSignatureParameters(user, nonce, functionSignature, metaTransactionsHandlerAddress) {
   // Initialize data
@@ -71,7 +69,7 @@ async function prepareDataSignatureParameters(user, nonce, functionSignature, me
   const metaTransactionType = [
     { name: "nonce", type: "uint256" },
     { name: "from", type: "address" },
-    { name: "functionSignature", type: "bytes" }
+    { name: "functionSignature", type: "bytes" },
   ];
 
   const domainData = {
@@ -91,18 +89,15 @@ async function prepareDataSignatureParameters(user, nonce, functionSignature, me
   let dataToSign = JSON.stringify({
     types: {
       EIP712Domain: domainType,
-      MetaTransaction: metaTransactionType
+      MetaTransaction: metaTransactionType,
     },
     domain: domainData,
     primaryType: "MetaTransaction",
-    message: message
+    message: message,
   });
 
   // Sign the data
-  const signature = await ethers.provider.send(
-    "eth_signTypedData_v4",
-    [user.address, dataToSign]
-  );
+  const signature = await ethers.provider.send("eth_signTypedData_v4", [user.address, dataToSign]);
 
   // Collect the Signature components
   const { r, s, v } = getSignatureParameters(signature);
@@ -110,9 +105,9 @@ async function prepareDataSignatureParameters(user, nonce, functionSignature, me
   return {
     r: r,
     s: s,
-    v: v
+    v: v,
   };
-};
+}
 
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;

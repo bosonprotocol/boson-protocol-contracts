@@ -460,9 +460,7 @@ describe("IBosonTwinHandler", function () {
         expect(success).to.be.true;
 
         // Prepare the function signature
-        functionSignature = twinHandler.interface.encodeFunctionData('removeTwin', [
-          twin.id
-        ]);
+        functionSignature = twinHandler.interface.encodeFunctionData("removeTwin", [twin.id]);
         // Collect the signature components
         let { r, s, v } = await prepareDataSignatureParameters(
           operator,
@@ -470,14 +468,8 @@ describe("IBosonTwinHandler", function () {
           functionSignature,
           metaTransactionsHandler.address
         );
-        // Remove the twin, Send as meta transaction
-        await metaTransactionsHandler.executeMetaTransaction(
-          operator.address,
-          functionSignature,
-          r,
-          s,
-          v
-        );
+        // Remove the twin. Send as meta transaction.
+        await metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v);
 
         // Expect twin to be not found.
         [success] = await twinHandler.connect(rando).getTwin(twin.id);
@@ -498,9 +490,7 @@ describe("IBosonTwinHandler", function () {
           let nonExistantTwinId = "999";
 
           // Prepare the function signature
-          functionSignature = twinHandler.interface.encodeFunctionData('removeTwin', [
-            nonExistantTwinId
-          ]);
+          functionSignature = twinHandler.interface.encodeFunctionData("removeTwin", [nonExistantTwinId]);
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             operator,
@@ -508,14 +498,10 @@ describe("IBosonTwinHandler", function () {
             functionSignature,
             metaTransactionsHandler.address
           );
-          // Attempt to Remove a twin, expecting revert. Send as meta transaction
-          await expect(metaTransactionsHandler.executeMetaTransaction(
-            operator.address,
-            functionSignature,
-            r,
-            s,
-            v
-          )).to.revertedWith(RevertReasons.FUNCTION_CALL_NOT_SUCCESSFUL);
+          // Attempt to Remove a twin, expecting revert. Send as meta transaction.
+          await expect(
+            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v)
+          ).to.revertedWith(RevertReasons.FUNCTION_CALL_NOT_SUCCESSFUL);
         });
 
         it("Caller is not the seller", async function () {
@@ -550,9 +536,7 @@ describe("IBosonTwinHandler", function () {
           await bundleHandler.connect(operator).createBundle(bundle);
 
           // Prepare the function signature
-          functionSignature = twinHandler.interface.encodeFunctionData('removeTwin', [
-            twin.id
-          ]);
+          functionSignature = twinHandler.interface.encodeFunctionData("removeTwin", [twin.id]);
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             operator,
@@ -560,14 +544,10 @@ describe("IBosonTwinHandler", function () {
             functionSignature,
             metaTransactionsHandler.address
           );
-          // Attempt to Remove a twin, expecting revert. Send as meta transaction
-          await expect(metaTransactionsHandler.executeMetaTransaction(
-            operator.address,
-            functionSignature,
-            r,
-            s,
-            v
-          )).to.revertedWith(RevertReasons.FUNCTION_CALL_NOT_SUCCESSFUL);
+          // Attempt to Remove a twin, expecting revert. Send as meta transaction.
+          await expect(
+            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v)
+          ).to.revertedWith(RevertReasons.FUNCTION_CALL_NOT_SUCCESSFUL);
         });
       });
     });
