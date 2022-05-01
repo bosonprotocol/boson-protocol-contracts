@@ -65,4 +65,7 @@ exports.RevertReasons = {
   // Outside the protocol revert reasons
   ERC20_EXCEEDS_BALANCE: "ERC20: transfer amount exceeds balance",
   ERC20_INSUFFICIENT_ALLOWANCE: "ERC20: insufficient allowance",
+
+  // Meta-Transactions related
+  FUNCTION_CALL_NOT_SUCCESSFUL: "Function call not successful",
 };

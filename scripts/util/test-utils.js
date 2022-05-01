@@ -40,5 +40,80 @@ async function setNextBlockTimestamp(timestamp) {
   await ethers.provider.send("evm_mine", []);
 }
 
+function getSignatureParameters(signature) {
+  if (!ethers.utils.isHexString(signature)) {
+    throw new Error(
+      'Given value "'.concat(signature, '" is not a valid hex string.')
+    );
+  }
+
+  signature = signature.substring(2);
+  const r = "0x" + signature.substring(0, 64);
+  const s = "0x" + signature.substring(64, 128);
+  const v = parseInt(signature.substring(128, 130), 16);
+
+  return {
+    r: r,
+    s: s,
+    v: v
+  };
+};
+
+async function prepareDataSignatureParameters(user, nonce, functionSignature, metaTransactionsHandlerAddress) {
+  // Initialize data
+  const domainType = [
+    { name: "name", type: "string" },
+    { name: "version", type: "string" },
+    { name: "chainId", type: "uint256" },
+    { name: "verifyingContract", type: "address" },
+  ];
+
+  const metaTransactionType = [
+    { name: "nonce", type: "uint256" },
+    { name: "from", type: "address" },
+    { name: "functionSignature", type: "bytes" }
+  ];
+
+  const domainData = {
+    name: "BosonProtocolDiamond",
+    version: "V1",
+    chainId: 31337, // hardhat default chain id
+    verifyingContract: metaTransactionsHandlerAddress,
+  };
+
+  // Prepare the message
+  let message = {};
+  message.nonce = parseInt(nonce);
+  message.from = user.address;
+  message.functionSignature = functionSignature;
+
+  // Prepare the data to sign
+  let dataToSign = JSON.stringify({
+    types: {
+      EIP712Domain: domainType,
+      MetaTransaction: metaTransactionType
+    },
+    domain: domainData,
+    primaryType: "MetaTransaction",
+    message: message
+  });
+
+  // Sign the data
+  const signature = await ethers.provider.send(
+    "eth_signTypedData_v4",
+    [user.address, dataToSign]
+  );
+
+  // Collect the Signature components
+  const { r, s, v } = getSignatureParameters(signature);
+
+  return {
+    r: r,
+    s: s,
+    v: v
+  };
+};
+
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
+exports.prepareDataSignatureParameters = prepareDataSignatureParameters;
