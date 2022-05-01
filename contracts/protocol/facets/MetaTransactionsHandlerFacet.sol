@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { IBosonMetaTransactionsEvents } from "../../interfaces/events/IBosonMetaTransactionsEvents.sol";
+import { IBosonMetaTransactionsHandler } from "../../interfaces/handlers/IBosonMetaTransactionsHandler.sol";
+import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 
 /**
@@ -9,9 +10,19 @@ import { ProtocolBase } from "../bases/ProtocolBase.sol";
  *
  * @notice Manages incoming meta-transactions in the protocol.
  */
-contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsEvents, ProtocolBase {
+contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, ProtocolBase {
 
     bytes32 private constant META_TRANSACTION_TYPEHASH = keccak256(bytes("MetaTransaction(uint256 nonce,address from,bytes functionSignature)"));
+
+    /**
+     * @notice Facet Initializer
+     */
+    function initialize()
+    public
+    onlyUnInitialized(type(IBosonMetaTransactionsHandler).interfaceId)
+    {
+        DiamondLib.addSupportedInterface(type(IBosonMetaTransactionsHandler).interfaceId);
+    }
 
     /**
      * @notice Converts the given bytes to bytes4.
@@ -126,7 +137,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsEvents, ProtocolB
         bytes32 _sigR,
         bytes32 _sigS,
         uint8 _sigV
-    ) public payable returns (bytes memory) {
+    ) public override payable returns (bytes memory) {
         bytes4 destinationFunctionSig = convertBytesToBytes4(_functionSignature);
         require(destinationFunctionSig != msg.sig, INVALID_FUNCTION_SIGNATURE);
 
