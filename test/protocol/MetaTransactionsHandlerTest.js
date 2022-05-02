@@ -164,7 +164,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Function signature for executeMetaTransaction function.
           functionSignature = metaTransactionsHandler.interface.encodeFunctionData("executeMetaTransaction", [
             operator.address,
-            "0x" + Buffer.from(ethers.utils.randomBytes(8)).toString("hex"), // random bytes
+            ethers.constants.HashZero, // hash of zero
             ethers.utils.randomBytes(32), // random bytes32
             ethers.utils.randomBytes(32), // random bytes32
             parseInt(ethers.utils.randomBytes(8)), // random uint8

@@ -31,10 +31,6 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @return _outBytes4 -  The outgoing bytes4
      */
     function convertBytesToBytes4(bytes memory _inBytes) internal pure returns (bytes4 _outBytes4) {
-        if (_inBytes.length == 0) {
-            return 0x0;
-        }
-
         assembly {
             _outBytes4 := mload(add(_inBytes, 32))
         }
@@ -82,10 +78,10 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     }
 
     /**
-     * @notice Verifies the Signer and the Signature.
+     * @notice Recovers the Signer from the Signature components.
      *
      * Reverts if:
-     * - sender does not match the recovered signer.
+     * - signer is a zero address
      *
      * @param _user  - the sender of the transaction.
      * @param _metaTx - the meta-transaction struct.
