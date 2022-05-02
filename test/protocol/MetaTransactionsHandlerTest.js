@@ -5,6 +5,7 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
+const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
@@ -13,7 +14,7 @@ const { prepareDataSignatureParameters } = require("../../scripts/util/test-util
 /**
  *  Test the Boson Meta transactions Handler interface
  */
-describe.only("IBosonMetaTransactionsHandler", function () {
+describe("IBosonMetaTransactionsHandler", function () {
   // Common vars
   let InterfaceIds;
   let accounts, deployer, rando, operator;
@@ -99,7 +100,7 @@ describe.only("IBosonMetaTransactionsHandler", function () {
         nonce = await metaTransactionsHandler.connect(operator).getNonce(operator.address);
         assert.equal(nonce.toString(), expectedNonce, "Nonce is incorrect");
 
-        // Prepare the function signature for any facet function.
+        // Prepare the function signature for a facet function.
         functionSignature = twinHandler.interface.encodeFunctionData("getNextTwinId");
         // Collect the signature components
         let { r, s, v } = await prepareDataSignatureParameters(
@@ -120,6 +121,105 @@ describe.only("IBosonMetaTransactionsHandler", function () {
         expectedNonce = "0";
         nonce = await metaTransactionsHandler.connect(rando).getNonce(rando.address);
         assert.equal(nonce.toString(), expectedNonce, "Nonce is incorrect");
+      });
+    });
+
+    context("👉 executeMetaTransaction()", async function () {
+      it("Should emit a MetaTransactionExecuted event", async () => {
+        // Get the nonce value
+        let expectedNonce = "0";
+        nonce = await metaTransactionsHandler.connect(operator).getNonce(operator.address);
+        assert.equal(nonce.toString(), expectedNonce, "Nonce is incorrect");
+
+        // Prepare the function signature for a facet function.
+        functionSignature = twinHandler.interface.encodeFunctionData("getNextTwinId");
+        // Collect the signature components
+        let { r, s, v } = await prepareDataSignatureParameters(
+          operator,
+          nonce,
+          functionSignature,
+          metaTransactionsHandler.address
+        );
+
+        // send a meta transaction, check for event
+        await expect(
+          metaTransactionsHandler.connect(deployer).executeMetaTransaction(operator.address, functionSignature, r, s, v)
+        )
+          .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+          .withArgs(operator.address, deployer.address, functionSignature);
+
+        // Verify that nonce value is incremented by 1.
+        expectedNonce = "1";
+        nonce = await metaTransactionsHandler.connect(operator).getNonce(operator.address);
+        assert.equal(nonce.toString(), expectedNonce, "Nonce is incorrect");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        beforeEach(async function () {
+          // Get meta transaction nonce
+          nonce = await metaTransactionsHandler.connect(operator).getNonce(operator.address);
+        });
+
+        it("Should fail when try to call executeMetaTransaction method itself", async function () {
+          // Function signature for executeMetaTransaction function.
+          functionSignature = metaTransactionsHandler.interface.encodeFunctionData("executeMetaTransaction", [
+            operator.address,
+            "0x" + Buffer.from(ethers.utils.randomBytes(8)).toString("hex"), // random bytes
+            ethers.utils.randomBytes(32), // random bytes32
+            ethers.utils.randomBytes(32), // random bytes32
+            parseInt(ethers.utils.randomBytes(8)), // random uint8
+          ]);
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            operator,
+            nonce,
+            functionSignature,
+            metaTransactionsHandler.address
+          );
+
+          // send a meta transaction, expecting revert
+          await expect(
+            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v)
+          ).to.revertedWith(RevertReasons.INVALID_FUNCTION_SIGNATURE);
+        });
+
+        it("Should fail when replay transaction", async function () {
+          // Prepare the function signature for a facet function.
+          functionSignature = twinHandler.interface.encodeFunctionData("getNextTwinId");
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            operator,
+            nonce,
+            functionSignature,
+            metaTransactionsHandler.address
+          );
+
+          // Execute the meta transaction.
+          await metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v);
+
+          // Execute meta transaction again with the same nonce, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v)
+          ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+        });
+
+        it("Should fail when Signer and Signature do not match", async function () {
+          // Prepare the function signature for a facet function.
+          functionSignature = twinHandler.interface.encodeFunctionData("getNextTwinId");
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            rando, // Different user, not operator.
+            nonce,
+            functionSignature,
+            metaTransactionsHandler.address
+          );
+
+          // Execute meta transaction, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v)
+          ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+        });
       });
     });
   });
