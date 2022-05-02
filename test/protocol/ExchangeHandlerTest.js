@@ -194,7 +194,7 @@ describe("IBosonExchangeHandler", function () {
       finalizedDate = "0";
       disputed = false;
       state = ExchangeState.Committed;
-      exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, disputed, state);
+      exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
       exchangeStruct = [id, offerId, buyerId, finalizedDate, voucherStruct, disputed, state];
     });
 

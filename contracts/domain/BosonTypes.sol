@@ -18,11 +18,12 @@ contract BosonTypes {
         Revoked,
         Canceled,
         Redeemed,
-        Completed
+        Completed,
+        Disputed
     }
 
     enum DisputeState {
-        Disputed,
+        Resolving,
         Retracted,
         Resolved,
         Escalated,
@@ -88,7 +89,6 @@ contract BosonTypes {
         uint256 buyerId;
         uint256 finalizedDate;
         Voucher voucher;
-        bool disputed;
         ExchangeState state;
     }
 

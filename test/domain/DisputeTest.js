@@ -14,7 +14,7 @@ describe("Dispute", function () {
     // Required constructor params
     exchangeId = "2112";
     complaint = "complain text";
-    state = DisputeState.Disputed;
+    state = DisputeState.Resolving;
   });
 
   context("📋 Constructor", async function () {
@@ -98,7 +98,7 @@ describe("Dispute", function () {
       expect(dispute.isValid()).is.false;
 
       // Valid field value
-      dispute.state = DisputeState.Disputed;
+      dispute.state = DisputeState.Resolving;
       expect(dispute.stateIsValid()).is.true;
       expect(dispute.isValid()).is.true;
     });

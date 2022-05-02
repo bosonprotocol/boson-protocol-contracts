@@ -15,18 +15,16 @@ class Exchange {
             uint256 buyerId;
             uint256 finalizedDate;
             Voucher voucher;
-            bool disputed;
             ExchangeState state;
       }
    */
 
-  constructor(id, offerId, buyerId, finalizedDate, voucher, disputed, state) {
+  constructor(id, offerId, buyerId, finalizedDate, voucher, state) {
     this.id = id;
     this.offerId = offerId;
     this.buyerId = buyerId;
     this.finalizedDate = finalizedDate;
     this.voucher = voucher;
-    this.disputed = disputed;
     this.state = state;
   }
 
@@ -36,9 +34,9 @@ class Exchange {
    * @returns {Exchange}
    */
   static fromObject(o) {
-    const { id, offerId, buyerId, finalizedDate, disputed, state } = o;
+    const { id, offerId, buyerId, finalizedDate, state } = o;
     const voucher = Voucher.fromObject(o.voucher);
-    return new Exchange(id, offerId, buyerId, finalizedDate, voucher, disputed, state);
+    return new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
   }
 
   /**
@@ -47,10 +45,10 @@ class Exchange {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let id, offerId, buyerId, finalizedDate, disputed, voucher, state;
+    let id, offerId, buyerId, finalizedDate, voucher, state;
 
     // destructure struct
-    [id, offerId, buyerId, finalizedDate, voucher, disputed, state] = struct;
+    [id, offerId, buyerId, finalizedDate, voucher, state] = struct;
 
     return Exchange.fromObject({
       id: id.toString(),
@@ -58,7 +56,6 @@ class Exchange {
       buyerId: buyerId.toString(),
       finalizedDate: finalizedDate.toString(),
       voucher: Voucher.fromStruct(voucher),
-      disputed,
       state,
     });
   }
@@ -84,15 +81,7 @@ class Exchange {
    * @returns {string}
    */
   toStruct() {
-    return [
-      this.id,
-      this.offerId,
-      this.buyerId,
-      this.finalizedDate,
-      this.voucher.toStruct(),
-      this.disputed,
-      this.state,
-    ];
+    return [this.id, this.offerId, this.buyerId, this.finalizedDate, this.voucher.toStruct(), this.state];
   }
 
   /**
@@ -163,19 +152,6 @@ class Exchange {
   }
 
   /**
-   * Is this Exchange instance's disputed field valid?
-   * @returns {boolean}
-   */
-  disputedIsValid() {
-    let valid = false;
-    let { disputed } = this;
-    try {
-      valid = typeof disputed === "boolean";
-    } catch (e) {}
-    return valid;
-  }
-
-  /**
    * Is this Exchange instance's voucher field valid?
    * If present, must be a valid Voucher instance
    * @returns {boolean}
@@ -213,7 +189,6 @@ class Exchange {
       this.buyerIdIsValid() &&
       this.finalizedDateIsValid() &&
       this.voucherIsValid() &&
-      this.disputedIsValid() &&
       this.stateIsValid()
     );
   }
