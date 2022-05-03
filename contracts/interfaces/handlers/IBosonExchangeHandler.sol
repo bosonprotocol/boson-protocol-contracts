@@ -52,8 +52,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents {
      * Reverts if
      * - Exchange does not exist
      * - Exchange is not in committed state
-     * - Caller is seller's operator
-     * - Caller is seller's operator and offer fulfillment period ha elapsed
+     * - Caller is not seller's operator
      *
      * Emits
      * - VoucherRevoked

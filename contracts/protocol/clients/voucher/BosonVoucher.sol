@@ -59,7 +59,6 @@ contract BosonVoucher is IBosonVoucher, ClientBase, ERC721Upgradeable {
     override
     onlyRole(PROTOCOL)
     {
-        // Mint the voucher, sending it to the buyer
         _burn(_exchangeId);
     }
 

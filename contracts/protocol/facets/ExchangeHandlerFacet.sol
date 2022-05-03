@@ -167,9 +167,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         // Store the time the exchange was finalized
         exchange.finalizedDate = block.timestamp;
 
-        // TODO Notify the funds handler of an exchange finalization.
-        // Probably this amounts to calling an internal method in FundsBase.sol
-
         // Notify watchers of state change
         emit ExchangeCompleted(exchange.offerId, exchange.buyerId, exchange.id);
 
@@ -215,9 +212,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
 
         // Store the time the exchange was finalized
         exchange.finalizedDate = block.timestamp;
-
-        // TODO Notify the funds handler of an exchange finalization.
-        // Probably this amounts to calling an internal method in FundsBase.sol
 
         // Burn voucher
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolStorage().voucherAddress);
