@@ -45,7 +45,21 @@ contract BosonVoucher is IBosonVoucher, ClientBase, ERC721Upgradeable {
     {
         // Mint the voucher, sending it to the buyer
         _mint(_buyer.wallet, _exchangeId);
+    }
 
+    /**
+     * @notice Burn a voucher
+     *
+     * Caller must have PROTOCOL role.
+     *
+     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
+     */
+    function burnVoucher(uint256 _exchangeId)
+    external
+    override
+    onlyRole(PROTOCOL)
+    {
+        _burn(_exchangeId);
     }
 
     /**

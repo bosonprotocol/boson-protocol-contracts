@@ -127,15 +127,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
      *
      * @param _exchangeId - the id of the exchange to complete
      */
-    function completeExchange(uint256 _exchangeId) external {
+    function completeExchange(uint256 _exchangeId)
+    external
+    override
+    {
 
         // Get the exchange
-        bool exchangeExists;
-        Exchange storage exchange;
-        (exchangeExists, exchange) = fetchExchange(_exchangeId);
+        Exchange storage exchange = getValidExchange(_exchangeId);
 
-        // Make sure the exchange exists, is in redeemed state
-        require(exchangeExists, NO_SUCH_EXCHANGE);
+        // Make sure the exchange is in redeemed state
         // TODO: Uncomment check for redeemed state once redeemVoucher is working
         //require(exchange.state == ExchangeState.Redeemed, INVALID_STATE_TRANSITION);
 
@@ -167,11 +167,58 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         // Store the time the exchange was finalized
         exchange.finalizedDate = block.timestamp;
 
-        // TODO Notify the funds handler of an exchange finalization.
-        // Probably this amounts to calling an internal method in FundsBase.sol
-
         // Notify watchers of state change
         emit ExchangeCompleted(exchange.offerId, exchange.buyerId, exchange.id);
+
+    }
+
+    /**
+     * @notice Revoke a voucher.
+     *
+     * Reverts if
+     * - Exchange does not exist
+     * - Exchange is not in committed state
+     * - Caller is not seller's operator
+     *
+     * Emits
+     * - VoucherRevoked
+     *
+     * @param _exchangeId - the id of the exchange to complete
+     */
+    function revokeVoucher(uint256 _exchangeId)
+    external
+    override
+    {
+        // Get the exchange
+        Exchange storage exchange = getValidExchange(_exchangeId);
+
+        // Make sure the exchange exists, is in committed state
+        require(exchange.state == ExchangeState.Committed, INVALID_STATE_TRANSITION);
+
+        // Get the offer, which will definitely exist
+        Offer storage offer;
+        (,offer) = fetchOffer(exchange.offerId);
+
+        // Get seller id associated with caller
+        bool sellerExists;
+        uint256 sellerId;
+        (sellerExists, sellerId) = getSellerIdByOperator(msg.sender);
+
+        // Only seller's operator may call
+        require(sellerExists && offer.sellerId == sellerId, NOT_OPERATOR);
+
+        // Set the exchange state to Revoked
+        exchange.state = ExchangeState.Revoked;
+
+        // Store the time the exchange was finalized
+        exchange.finalizedDate = block.timestamp;
+
+        // Burn voucher
+        IBosonVoucher bosonVoucher = IBosonVoucher(protocolStorage().voucherAddress);
+        bosonVoucher.burnVoucher(_exchangeId);
+
+        // Notify watchers of state change
+        emit VoucherRevoked(offer.id, _exchangeId, msg.sender);
 
     }
 
@@ -261,4 +308,26 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         nextExchangeId = protocolCounters().nextExchangeId;
     }
 
+    /**
+     * @notice Get a valid exchange
+     *
+     * Reverts if
+     * - Exchange does not exist
+     *
+     * @param _exchangeId - the id of the exchange to complete
+     * @return exchange - the exchange
+     */
+    function getValidExchange(uint256 _exchangeId)
+    internal
+    view
+    returns(Exchange storage exchange)
+    {
+        // Get the exchange
+        bool exchangeExists;
+        (exchangeExists, exchange) = fetchExchange(_exchangeId);
+
+        // Make sure the exchange exists
+        require(exchangeExists, NO_SUCH_EXCHANGE);
+
+    }
 }

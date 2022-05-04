@@ -24,7 +24,7 @@ const interfaces = [
 
 // manually add the interfaces that currently cannot be calculated
 const otherInterfaces = {
-  IBosonVoucher: "0x8a75c03e",
+  IBosonVoucher: "0x24097336",
   IERC1155: "0xd9b67a26",
   IERC721: "0x80ac58cd",
 };

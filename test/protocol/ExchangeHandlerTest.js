@@ -369,6 +369,80 @@ describe("IBosonExchangeHandler", function () {
       });
     });
 
+    context("👉 revokeVoucher()", async function () {
+      beforeEach(async function () {
+        // Commit to offer, retrieving the event
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+        txReceipt = await tx.wait();
+        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        exchange.voucher.committedDate = block.timestamp.toString();
+        exchangeStruct = exchange.toStruct();
+      });
+
+      it("should emit an VoucherRevoked event when seller's operator calls", async function () {
+        // Revoke the voucher, expecting event
+        await expect(exchangeHandler.connect(operator).revokeVoucher(exchange.id))
+          .to.emit(exchangeHandler, "VoucherRevoked")
+          .withArgs(offerId, exchange.id, operator.address);
+      });
+
+      it("should update state", async function () {
+        // Revoke the voucher
+        await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
+
+        // Get the exchange state
+        [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+        // It should match ExchangeState.Revoked
+        assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        /*
+         * Reverts if
+         * - Exchange does not exist
+         * - Exchange is not in committed state
+         * - Caller is not seller's operator
+         */
+
+        it("exchange id is invalid", async function () {
+          // An invalid exchange id
+          id = "666";
+
+          // Attempt to complete the exchange, expecting revert
+          await expect(exchangeHandler.connect(operator).completeExchange(id)).to.revertedWith(
+            RevertReasons.NO_SUCH_EXCHANGE
+          );
+        });
+
+        it.skip("exchange is not in committed state", async function () {
+          // TODO: redeemVoucher when that method becomes available
+          // await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Attempt to revoke the voucher, expecting revert
+          await expect(exchangeHandler.connect(operator).revokeVoucher(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE_TRANSITION
+          );
+        });
+
+        it("caller is not seller's operator", async function () {
+          // TODO: redeemVoucher when that method becomes available
+          // await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Attempt to complete the exchange, expecting revert
+          await expect(exchangeHandler.connect(rando).revokeVoucher(exchange.id)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+        });
+      });
+    });
+
     context("👉 isExchangeFinalized()", async function () {
       beforeEach(async function () {
         // Commit to offer, creating a new exchange

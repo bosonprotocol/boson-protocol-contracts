@@ -9,10 +9,38 @@ import {BosonTypes} from "../../domain/BosonTypes.sol";
  *
  * @notice This is the interface for the Boson Protocol ERC-721 Voucher NFT contract.
  *
- * The ERC-165 identifier for this interface is: 0x8a75c03e
+ * The ERC-165 identifier for this interface is: 0x24097336
  */
 interface IBosonVoucher is IERC721Upgradeable {
-    function issueVoucher(uint256 _exchangeId, BosonTypes.Buyer calldata _buyer) external;
 
-    function redeemVoucher(uint256 _exchangeId, address payable _holder) external;
+    /**
+     * @notice Issue a voucher to a buyer
+     *
+     * Minted voucher supply is sent to the buyer.
+     * Caller must have PROTOCOL role.
+     *
+     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
+     * @param _buyer - the buyer of the vouchers
+     */
+    function issueVoucher(uint256 _exchangeId, BosonTypes.Buyer calldata _buyer)
+    external;
+
+    /**
+     * @notice Burn a voucher
+     *
+     * Caller must have PROTOCOL role.
+     *
+     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
+     */
+    function burnVoucher(uint256 _exchangeId)
+    external;
+
+    /**
+     * @notice Redeem a voucher
+     *
+     * @param _exchangeId - the id of the exchange (corresponds to the ERC-1155 token id)
+     */
+    function redeemVoucher(uint256 _exchangeId, address payable _holder)
+    external;
+
 }
