@@ -2,7 +2,7 @@
 ## Intro | [Setup](docs/setup.md) | [Tasks](docs/tasks.md) |  [Architecture](docs/architecture.md) | [Domain Model](docs/domain.md)
 
 ## Status
-Currently in scaffolding phase. 
+Currently in building phase. 
 
 Done or in progress are:
 
@@ -10,13 +10,15 @@ Done or in progress are:
   - ✅ Developer setup and tasks documentation
   - ✅ Role-based access controller contract, with tests
   - ✅ High level architecture documentation 
+  - ✅ Proxied voucher NFT contract
   - ✅ Protocol Diamond contract, libs, and facets, with tests
   - ✅ Shared domain model for contracts (minimal)
-  - ✅ Protocol facet contracts and interfaces (minimal)
-  - ✅ Domain model expressed in JS, with tests  (minimal)
+  - ✅ Domain model expressed in JS, with tests
   - ✅ Shared script modules for use in deployment and testing
-  - 👉 Project structure documentation
-  - 👉 Github Actions for CI
+  - ✅ Github Actions for CI
+  - 👉 Protocol facet contracts and interfaces
+  - 👉 Mutual resolution game interface and contract 
+  - 👉 Support for EIP-712 meta-transactions
   
 ## Developers
   - [Setup](docs/setup.md) - Get going quickly on your local system.
