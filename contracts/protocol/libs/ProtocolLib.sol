@@ -94,8 +94,8 @@ library ProtocolLib {
         bool isMetaTransaction;
         // The domain Separator of the protocol
         bytes32 domainSeparator;
-        // transaction sender address => nonce
-        mapping(address => uint256) metaNonces;
+        // nonce => existance of nonce in the mapping
+        mapping(uint256 => bool) usedNonce;
     }
 
     // Individual facet initialization states

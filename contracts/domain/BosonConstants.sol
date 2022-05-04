@@ -79,6 +79,7 @@ contract BosonConstants {
     string internal constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
 
     // Revert Reasons: Meta-Transactions related
+    string internal constant NONCE_USED_ALREADY = "Nonce used already";
     string internal constant FUNCTION_CALL_NOT_SUCCESSFUL = "Function call not successful";
     string internal constant INVALID_FUNCTION_SIGNATURE =
         "functionSignature can not be of executeMetaTransaction method";

@@ -19,7 +19,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   // Common vars
   let InterfaceIds;
   let accounts, deployer, rando, operator;
-  let erc165, protocolDiamond, accessController, accountHandler, support;
+  let erc165, protocolDiamond, accessController, accountHandler, support, result;
   let metaTransactionsHandler, nonce, functionSignature;
   let seller, id, active;
 
@@ -84,23 +84,30 @@ describe("IBosonMetaTransactionsHandler", function () {
 
   // All supported methods
   context("📋 Meta Transactions Handler Methods", async function () {
-    context("👉 getNonce()", async function () {
-      it("should return correct nonce value", async function () {
-        // What we expect the initial nonce value will be.
-        let expectedNonce = "0";
+    context("👉 isUsedNonce()", async function () {
+      it("should return false if nonce is not used", async function () {
+        // We expect that the nonce is Not used before.
+        let expectedResult = false;
 
-        // Get the nonce value
-        nonce = await metaTransactionsHandler.connect(operator).getNonce(operator.address);
+        // Set a random nonce
+        nonce = parseInt(ethers.utils.randomBytes(8));
+
+        // Check if nonce is used before
+        result = await metaTransactionsHandler.connect(operator).isUsedNonce(nonce);
 
         // Verify the expectation
-        assert.equal(nonce.toString(), expectedNonce, "Nonce is incorrect");
+        assert.equal(result, expectedResult, "Nonce is used");
       });
 
-      it("should be incremented after executing any meta transaction", async function () {
-        // Verify the initial nonce value is zero
-        let expectedNonce = "0";
-        nonce = await metaTransactionsHandler.connect(operator).getNonce(operator.address);
-        assert.equal(nonce.toString(), expectedNonce, "Nonce is incorrect");
+      it("should be true after executing a meta transaction with nonce", async function () {
+        // We expect that the nonce is Not used before.
+        let expectedResult = false;
+        // Set a random nonce
+        nonce = parseInt(ethers.utils.randomBytes(8));
+        result = await metaTransactionsHandler.connect(operator).isUsedNonce(nonce);
+
+        // Verify the expectation
+        assert.equal(result, expectedResult, "Nonce is used");
 
         // Create a valid seller for meta transaction
         id = "1";
@@ -118,26 +125,25 @@ describe("IBosonMetaTransactionsHandler", function () {
           metaTransactionsHandler.address
         );
         // Send as meta transaction
-        await metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v);
+        await metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v);
 
-        //Verify that nonce value for operator increments by 1.
-        expectedNonce = "1";
-        nonce = await metaTransactionsHandler.connect(operator).getNonce(operator.address);
-        assert.equal(nonce.toString(), expectedNonce, "Nonce is incorrect");
+        // We expect that the nonce is used now. Hence expecting to return true.
+        expectedResult = true;
+        result = await metaTransactionsHandler.connect(operator).isUsedNonce(nonce);
+        assert.equal(result, expectedResult, "Nonce is not used");
 
-        //Verify that nonce value for rando stays the same.
-        expectedNonce = "0";
-        nonce = await metaTransactionsHandler.connect(rando).getNonce(rando.address);
-        assert.equal(nonce.toString(), expectedNonce, "Nonce is incorrect");
+        //Verify that another nonce value is unused.
+        expectedResult = false;
+        nonce = nonce + 1;
+        result = await metaTransactionsHandler.connect(rando).isUsedNonce(nonce);
+        assert.equal(result, expectedResult, "Nonce is used");
       });
     });
 
     context("👉 executeMetaTransaction()", async function () {
-      it("Should emit a MetaTransactionExecuted event", async () => {
-        // Get the nonce value
-        let expectedNonce = "0";
-        nonce = await metaTransactionsHandler.connect(operator).getNonce(operator.address);
-        assert.equal(nonce.toString(), expectedNonce, "Nonce is incorrect");
+      it("Should emit MetaTransactionExecuted and UsedNonce events", async () => {
+        // Set a random nonce
+        nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Create a valid seller for meta transaction
         id = "1";
@@ -158,21 +164,25 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // send a meta transaction, check for event
         await expect(
-          metaTransactionsHandler.connect(deployer).executeMetaTransaction(operator.address, functionSignature, r, s, v)
+          metaTransactionsHandler
+            .connect(deployer)
+            .executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v)
         )
           .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-          .withArgs(operator.address, deployer.address, functionSignature);
+          .withArgs(operator.address, deployer.address, functionSignature)
+          .to.emit(metaTransactionsHandler, "UsedNonce")
+          .withArgs(nonce);
 
-        // Verify that nonce value is incremented by 1.
-        expectedNonce = "1";
-        nonce = await metaTransactionsHandler.connect(operator).getNonce(operator.address);
-        assert.equal(nonce.toString(), expectedNonce, "Nonce is incorrect");
+        // Verify that nonce is used. Expect true.
+        let expectedResult = true;
+        result = await metaTransactionsHandler.connect(operator).isUsedNonce(nonce);
+        assert.equal(result, expectedResult, "Nonce is unused");
       });
 
       context("💔 Revert Reasons", async function () {
         beforeEach(async function () {
-          // Get meta transaction nonce
-          nonce = await metaTransactionsHandler.connect(operator).getNonce(operator.address);
+          // Set a random nonce
+          nonce = parseInt(ethers.utils.randomBytes(8));
         });
 
         it("Should fail when try to call executeMetaTransaction method itself", async function () {
@@ -180,6 +190,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           functionSignature = metaTransactionsHandler.interface.encodeFunctionData("executeMetaTransaction", [
             operator.address,
             ethers.constants.HashZero, // hash of zero
+            nonce,
             ethers.utils.randomBytes(32), // random bytes32
             ethers.utils.randomBytes(32), // random bytes32
             parseInt(ethers.utils.randomBytes(8)), // random uint8
@@ -195,7 +206,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // send a meta transaction, expecting revert
           await expect(
-            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v)
+            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v)
           ).to.revertedWith(RevertReasons.INVALID_FUNCTION_SIGNATURE);
         });
 
@@ -218,12 +229,12 @@ describe("IBosonMetaTransactionsHandler", function () {
           );
 
           // Execute the meta transaction.
-          await metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v);
+          await metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v);
 
           // Execute meta transaction again with the same nonce, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v)
-          ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
         });
 
         it("Should fail when Signer and Signature do not match", async function () {
@@ -246,7 +257,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Execute meta transaction, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v)
+            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v)
           ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         });
       });

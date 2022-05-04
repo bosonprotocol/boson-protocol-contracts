@@ -435,8 +435,8 @@ describe("IBosonTwinHandler", function () {
         // Create a twin
         await twinHandler.connect(operator).createTwin(twin);
 
-        // Get meta transaction nonce
-        nonce = await metaTransactionsHandler.connect(operator).getNonce(operator.address);
+        // Set a random nonce
+        nonce = parseInt(ethers.utils.randomBytes(8));
       });
 
       it("should emit a TwinDeleted event", async function () {
@@ -469,7 +469,7 @@ describe("IBosonTwinHandler", function () {
           metaTransactionsHandler.address
         );
         // Remove the twin. Send as meta transaction.
-        await metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v);
+        await metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v);
 
         // Expect twin to be not found.
         [success] = await twinHandler.connect(rando).getTwin(twin.id);
@@ -500,7 +500,7 @@ describe("IBosonTwinHandler", function () {
           );
           // Attempt to Remove a twin, expecting revert. Send as meta transaction.
           await expect(
-            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v)
+            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v)
           ).to.revertedWith(RevertReasons.NO_SUCH_TWIN);
         });
 
@@ -546,7 +546,7 @@ describe("IBosonTwinHandler", function () {
           );
           // Attempt to Remove a twin, expecting revert. Send as meta transaction.
           await expect(
-            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v)
+            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v)
           ).to.revertedWith(RevertReasons.TWIN_HAS_BUNDLES);
         });
       });

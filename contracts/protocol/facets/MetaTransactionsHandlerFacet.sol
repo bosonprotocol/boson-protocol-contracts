@@ -68,13 +68,12 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     }
 
     /**
-     * @notice Query the latest nonce of an address
+     * @notice Checks nonce and returns true if used already.
      *
-     * @param _user - the meta-transaction struct.
-     * @return nonce -  The latest nonce for the address.
+     * @param _nonce - the nonce that we want to check.
      */
-    function getNonce(address _user) external view returns (uint256 nonce) {
-        nonce = protocolMetaTxInfo().metaNonces[_user];
+    function isUsedNonce(uint256 _nonce) external view returns(bool) {
+        return protocolMetaTxInfo().usedNonce[_nonce];
     }
 
     /**
@@ -116,12 +115,14 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Handles the incoming meta transaction.
      *
      * Reverts if:
+     * - nonce is already used by another transaction.
      * - function signature matches to executeMetaTransaction.
      * - sender does not match the recovered signer.
      * - any code executed in the signed transaction reverts.
      *
      * @param _userAddress  - the sender of the transaction.
      * @param _functionSignature - the function signature.
+     * @param _nonce - the nonce value of the transaction.
      * @param _sigR - r part of the signer's signature.
      * @param _sigS - s part of the signer's signature.
      * @param _sigV - v part of the signer's signature.
@@ -129,19 +130,22 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     function executeMetaTransaction(
         address _userAddress,
         bytes memory _functionSignature,
+        uint256 _nonce,
         bytes32 _sigR,
         bytes32 _sigS,
         uint8 _sigV
     ) public override payable returns (bytes memory) {
+        require(!protocolMetaTxInfo().usedNonce[_nonce], NONCE_USED_ALREADY);
+
         bytes4 destinationFunctionSig = convertBytesToBytes4(_functionSignature);
         require(destinationFunctionSig != msg.sig, INVALID_FUNCTION_SIGNATURE);
 
-        uint256 nonce = protocolMetaTxInfo().metaNonces[_userAddress];
-        MetaTransaction memory metaTx = MetaTransaction({nonce: nonce, from: _userAddress, functionSignature: _functionSignature});
+        MetaTransaction memory metaTx = MetaTransaction({nonce: _nonce, from: _userAddress, functionSignature: _functionSignature});
         require(verify(_userAddress, metaTx, _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
 
-        // Increment the nonce.
-        protocolMetaTxInfo().metaNonces[_userAddress] = nonce + 1;
+        // Store the nonce provided to avoid playback of the same tx
+        protocolMetaTxInfo().usedNonce[_nonce] = true;
+        emit UsedNonce(_nonce);
 
         // Set the current transaction signer and transaction type.
         setCurrentSenderAddress(_userAddress);

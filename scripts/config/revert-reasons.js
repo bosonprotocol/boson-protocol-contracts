@@ -67,6 +67,7 @@ exports.RevertReasons = {
   ERC20_INSUFFICIENT_ALLOWANCE: "ERC20: insufficient allowance",
 
   // Meta-Transactions related
+  NONCE_USED_ALREADY: "Nonce used already",
   FUNCTION_CALL_NOT_SUCCESSFUL: "Function call not successful",
   INVALID_FUNCTION_SIGNATURE: "functionSignature can not be of executeMetaTransaction method",
   INVALID_SIGNATURE: "Invalid signature",
