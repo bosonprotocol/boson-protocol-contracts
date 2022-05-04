@@ -25,7 +25,9 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
      * @notice Handles the incoming meta transaction.
      *
      * Reverts if:
+     * - function signature matches to executeMetaTransaction.
      * - sender does not match the recovered signer.
+     * - any code executed in the signed transaction reverts.
      *
      * @param _userAddress  - the sender of the transaction.
      * @param _functionSignature - the function signature.

@@ -38,22 +38,20 @@ library MetaTransactionsLib {
      * @notice Get the current sender address from storage.
      */
     function getCurrentSenderAddress() internal view returns (address) {
-        return ProtocolLib.protocolMetaTransactionsStorage().currentSenderAddress;
+        return ProtocolLib.protocolMetaTxInfo().currentSenderAddress;
     }
 
     /**
      * @notice Returns the current sender address.
-     *
-     * @return sender - The message sender of the transaction.
      */
-    function getCaller() internal view returns (address sender) {
-        bool isItAMetaTransaction = ProtocolLib.protocolMetaTransactionsStorage().isMetaTransaction;
+    function getCaller() internal view returns (address) {
+        bool isItAMetaTransaction = ProtocolLib.protocolMetaTxInfo().isMetaTransaction;
 
         // Get sender from the storage if this is a meta transaction
         if (isItAMetaTransaction) {
-            sender = getCurrentSenderAddress();
+            return getCurrentSenderAddress();
         } else {
-            sender = msg.sender;
+            return msg.sender;
         }
     }
 }

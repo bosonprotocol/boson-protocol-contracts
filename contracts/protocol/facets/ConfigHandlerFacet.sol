@@ -60,8 +60,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         pc.nextTwinId = 1;
 
         // Initialize protocol meta-transaction config params
-        ProtocolLib.ProtocolMetaTransactionsStorage storage pmts = protocolMetaTransactionsStorage();
-        pmts.domainSeparator = MetaTransactionsLib.domainSeparator("BosonProtocolDiamond", "V1");
+        ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
+        pmti.domainSeparator = MetaTransactionsLib.domainSeparator("BosonProtocolDiamond", "V1");
     }
 
     /**

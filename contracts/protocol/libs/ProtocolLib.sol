@@ -12,7 +12,7 @@ library ProtocolLib {
     bytes32 internal constant PROTOCOL_STORAGE_POSITION = keccak256("boson.protocol.storage");
     bytes32 internal constant PROTOCOL_COUNTERS_POSITION = keccak256("boson.protocol.counters");
     bytes32 internal constant PROTOCOL_INITIALIZERS_POSITION = keccak256("boson.protocol.initializers");
-    bytes32 internal constant PROTOCOL_META_TRANSACTIONS_STORAGE_POSITION = keccak256("boson.protocol.metaTransactionsStorage");
+    bytes32 internal constant PROTOCOL_META_TX_POSITION = keccak256("boson.protocol.metaTransactionsStorage");
 
     // Shared storage for all protocol facets
     struct ProtocolStorage {
@@ -87,7 +87,7 @@ library ProtocolLib {
     }
 
     // Storage related to Meta Transactions
-    struct ProtocolMetaTransactionsStorage {
+    struct ProtocolMetaTxInfo {
         // The current sender address associated with the transaction
         address currentSenderAddress;
         // A flag that tells us whether the current transaction is a meta-transaction or a regular transaction.
@@ -131,12 +131,12 @@ library ProtocolLib {
     /**
      * @dev Get the protocol meta-transactions storage slot
      *
-     * @return pmts the protocol meta-transactions storage slot
+     * @return pmti the protocol meta-transactions storage slot
      */
-    function protocolMetaTransactionsStorage() internal pure returns (ProtocolMetaTransactionsStorage storage pmts) {
-        bytes32 position = PROTOCOL_META_TRANSACTIONS_STORAGE_POSITION;
+    function protocolMetaTxInfo() internal pure returns (ProtocolMetaTxInfo storage pmti) {
+        bytes32 position = PROTOCOL_META_TX_POSITION;
         assembly {
-            pmts.slot := position
+            pmti.slot := position
         }
     }
 

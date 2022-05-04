@@ -67,10 +67,10 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     /**
      * @dev Get the Protocol meta-transactions storage slot
      *
-     * @return pmts the Protocol meta-transactions storage slot
+     * @return pmti the Protocol meta-transactions storage slot
      */
-    function protocolMetaTransactionsStorage() internal pure returns (ProtocolLib.ProtocolMetaTransactionsStorage storage pmts) {
-        pmts = ProtocolLib.protocolMetaTransactionsStorage();
+    function protocolMetaTxInfo() internal pure returns (ProtocolLib.ProtocolMetaTxInfo storage pmti) {
+        pmti = ProtocolLib.protocolMetaTxInfo();
     }
 
     /**
