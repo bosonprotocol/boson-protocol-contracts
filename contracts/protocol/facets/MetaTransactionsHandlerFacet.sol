@@ -104,15 +104,12 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     /**
      * @notice Sets the current transaction sender.
      *
-     * Emits a CurrentSenderAddressChanged event.
-     *
      * @param _signerAddress - Address of the transaction signer.
      */
     function setCurrentSenderAddress(address _signerAddress)
         internal
     {
         protocolMetaTransactionsStorage().currentSenderAddress = _signerAddress;
-        emit CurrentSenderAddressChanged(_signerAddress, msg.sender);
     }
 
     /**
@@ -150,7 +147,10 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
 
         // invoke local function with an external call
         (bool success, bytes memory returnData) = address(this).call(_functionSignature);
-        require(success, FUNCTION_CALL_NOT_SUCCESSFUL);
+
+        // If error, return error message
+        string memory errorMessage = (returnData.length == 0) ? FUNCTION_CALL_NOT_SUCCESSFUL : (string (returnData));
+        require(success, errorMessage);
 
         // Reset current transaction signer and transaction type.
         setCurrentSenderAddress(address(0));

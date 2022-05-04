@@ -501,7 +501,7 @@ describe("IBosonTwinHandler", function () {
           // Attempt to Remove a twin, expecting revert. Send as meta transaction.
           await expect(
             metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v)
-          ).to.revertedWith(RevertReasons.FUNCTION_CALL_NOT_SUCCESSFUL);
+          ).to.revertedWith(RevertReasons.NO_SUCH_TWIN);
         });
 
         it("Caller is not the seller", async function () {
@@ -547,7 +547,7 @@ describe("IBosonTwinHandler", function () {
           // Attempt to Remove a twin, expecting revert. Send as meta transaction.
           await expect(
             metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v)
-          ).to.revertedWith(RevertReasons.FUNCTION_CALL_NOT_SUCCESSFUL);
+          ).to.revertedWith(RevertReasons.TWIN_HAS_BUNDLES);
         });
       });
     });

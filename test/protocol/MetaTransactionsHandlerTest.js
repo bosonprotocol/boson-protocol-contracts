@@ -4,6 +4,7 @@ const { expect, assert } = require("chai");
 const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
+const Seller = require("../../scripts/domain/Seller");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -18,8 +19,9 @@ describe("IBosonMetaTransactionsHandler", function () {
   // Common vars
   let InterfaceIds;
   let accounts, deployer, rando, operator;
-  let erc165, protocolDiamond, accessController, twinHandler, support;
+  let erc165, protocolDiamond, accessController, accountHandler, support;
   let metaTransactionsHandler, nonce, functionSignature;
+  let seller, id, active;
 
   before(async function () {
     // get interface Ids
@@ -40,7 +42,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, ["TwinHandlerFacet", "MetaTransactionsHandlerFacet"]);
+    await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet", "MetaTransactionsHandlerFacet"]);
 
     // Add config Handler
     const protocolConfig = [
@@ -60,8 +62,8 @@ describe("IBosonMetaTransactionsHandler", function () {
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
 
-    // Cast Diamond to ITwinHandler
-    twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
+    // Cast Diamond to IBosonAccountHandler
+    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
 
     // Cast Diamond to IBosonMetaTransactionsHandler
     metaTransactionsHandler = await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamond.address);
@@ -100,8 +102,14 @@ describe("IBosonMetaTransactionsHandler", function () {
         nonce = await metaTransactionsHandler.connect(operator).getNonce(operator.address);
         assert.equal(nonce.toString(), expectedNonce, "Nonce is incorrect");
 
-        // Prepare the function signature for a facet function.
-        functionSignature = twinHandler.interface.encodeFunctionData("getNextTwinId");
+        // Create a valid seller for meta transaction
+        id = "1";
+        active = true;
+        seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, active);
+        expect(seller.isValid()).is.true;
+        // Prepare the function signature for the facet function.
+        functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
+
         // Collect the signature components
         let { r, s, v } = await prepareDataSignatureParameters(
           operator,
@@ -109,7 +117,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           functionSignature,
           metaTransactionsHandler.address
         );
-        // Get next twin id. Send as meta transaction
+        // Send as meta transaction
         await metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, r, s, v);
 
         //Verify that nonce value for operator increments by 1.
@@ -131,8 +139,15 @@ describe("IBosonMetaTransactionsHandler", function () {
         nonce = await metaTransactionsHandler.connect(operator).getNonce(operator.address);
         assert.equal(nonce.toString(), expectedNonce, "Nonce is incorrect");
 
-        // Prepare the function signature for a facet function.
-        functionSignature = twinHandler.interface.encodeFunctionData("getNextTwinId");
+        // Create a valid seller for meta transaction
+        id = "1";
+        active = true;
+        seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, active);
+        expect(seller.isValid()).is.true;
+
+        // Prepare the function signature for the facet function.
+        functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
+
         // Collect the signature components
         let { r, s, v } = await prepareDataSignatureParameters(
           operator,
@@ -185,8 +200,15 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
 
         it("Should fail when replay transaction", async function () {
-          // Prepare the function signature for a facet function.
-          functionSignature = twinHandler.interface.encodeFunctionData("getNextTwinId");
+          // Create a valid seller for meta transaction
+          id = "1";
+          active = true;
+          seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, active);
+          expect(seller.isValid()).is.true;
+
+          // Prepare the function signature for the facet function.
+          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
+
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             operator,
@@ -205,8 +227,15 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
 
         it("Should fail when Signer and Signature do not match", async function () {
-          // Prepare the function signature for a facet function.
-          functionSignature = twinHandler.interface.encodeFunctionData("getNextTwinId");
+          // Create a valid seller for meta transaction
+          id = "1";
+          active = true;
+          seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, active);
+          expect(seller.isValid()).is.true;
+
+          // Prepare the function signature for the facet function.
+          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
+
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             rando, // Different user, not operator.
