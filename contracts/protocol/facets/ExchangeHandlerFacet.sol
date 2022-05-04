@@ -198,8 +198,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         // Bail if no such exchange
         if (!exists) return (false, false);
 
-        // Derive isFinalized from exchage state or dispute state
-        if (exchange.disputed) {
+        // Derive isFinalized from exchange state or dispute state
+        if (exchange.state == ExchangeState.Disputed) {
             // Get the dispute
             Dispute storage dispute;
             (, dispute) = fetchDispute(_exchangeId);

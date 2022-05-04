@@ -3,14 +3,14 @@
  */
 class DisputeState {}
 
-DisputeState.Disputed = 0;
+DisputeState.Resolving = 0;
 DisputeState.Retracted = 1;
 DisputeState.Resolved = 2;
 DisputeState.Escalated = 3;
 DisputeState.Decided = 4;
 
 DisputeState.Modes = [
-  DisputeState.Disputed,
+  DisputeState.Resolving,
   DisputeState.Retracted,
   DisputeState.Resolved,
   DisputeState.Escalated,

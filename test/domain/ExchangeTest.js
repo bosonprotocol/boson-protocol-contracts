@@ -11,7 +11,7 @@ describe("Exchange", function () {
   let object, promoted, clone, dehydrated, rehydrated, key, value, struct;
   let id, offerId, buyerId;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
-  let exchange, finalizedDate, disputed, state;
+  let exchange, finalizedDate, state;
 
   beforeEach(async function () {
     // Required voucher constructor params
@@ -27,20 +27,18 @@ describe("Exchange", function () {
     offerId = "2112";
     buyerId = "99";
     finalizedDate = "1661447000";
-    disputed = false;
     state = ExchangeState.Completed;
-    exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, disputed, state);
+    exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated Exchange instance", async function () {
-      exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, disputed, state);
+      exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
       expect(exchange.idIsValid()).is.true;
       expect(exchange.offerIdIsValid()).is.true;
       expect(exchange.buyerIdIsValid()).is.true;
       expect(exchange.finalizedDateIsValid()).is.true;
       expect(exchange.voucherIsValid()).is.true;
-      expect(exchange.disputedIsValid()).is.true;
       expect(exchange.stateIsValid()).is.true;
       expect(exchange.isValid()).is.true;
     });
@@ -49,7 +47,7 @@ describe("Exchange", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid exchange, then set fields in tests directly
-      exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, disputed, state);
+      exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
       expect(exchange.isValid()).is.true;
     });
 
@@ -134,38 +132,6 @@ describe("Exchange", function () {
       expect(exchange.isValid()).is.true;
     });
 
-    it("Always present, disputed must be a boolean", async function () {
-      // Invalid field value
-      exchange.disputed = 12;
-      expect(exchange.disputedIsValid()).is.false;
-      expect(exchange.isValid()).is.false;
-
-      // Invalid field value
-      exchange.disputed = "zedzdeadbaby";
-      expect(exchange.disputedIsValid()).is.false;
-      expect(exchange.isValid()).is.false;
-
-      // Invalid field value
-      exchange.disputed = null;
-      expect(exchange.disputedIsValid()).is.false;
-      expect(exchange.isValid()).is.false;
-
-      // Invalid field value
-      exchange.disputed = undefined;
-      expect(exchange.disputedIsValid()).is.false;
-      expect(exchange.isValid()).is.false;
-
-      // Valid field value
-      exchange.disputed = false;
-      expect(exchange.disputedIsValid()).is.true;
-      expect(exchange.isValid()).is.true;
-
-      // Valid field value
-      exchange.disputed = true;
-      expect(exchange.disputedIsValid()).is.true;
-      expect(exchange.isValid()).is.true;
-    });
-
     it("If present, voucher must be a valid Voucher instance", async function () {
       // Invalid field value
       exchange.voucher = 12;
@@ -234,7 +200,7 @@ describe("Exchange", function () {
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid exchange, then set fields in tests directly
-      exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, disputed, state);
+      exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
       expect(exchange.isValid()).is.true;
 
       // Get plain object
@@ -244,12 +210,11 @@ describe("Exchange", function () {
         buyerId,
         finalizedDate,
         voucher,
-        disputed,
         state,
       };
 
       // Struct representation
-      struct = [id, offerId, buyerId, finalizedDate, voucherStruct, disputed, state];
+      struct = [id, offerId, buyerId, finalizedDate, voucherStruct, state];
     });
 
     context("👉 Static", async function () {

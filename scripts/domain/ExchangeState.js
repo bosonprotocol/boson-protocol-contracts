@@ -8,6 +8,7 @@ ExchangeState.Revoked = 1;
 ExchangeState.Canceled = 2;
 ExchangeState.Redeemed = 3;
 ExchangeState.Completed = 4;
+ExchangeState.Disputed = 5;
 
 ExchangeState.Modes = [
   ExchangeState.Committed,
@@ -15,6 +16,7 @@ ExchangeState.Modes = [
   ExchangeState.Canceled,
   ExchangeState.Redeemed,
   ExchangeState.Completed,
+  ExchangeState.Disputed,
 ];
 
 // Export

@@ -41,7 +41,7 @@ describe("IBosonExchangeHandler", function () {
     metadataHash,
     voided;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
-  let exchange, finalizedDate, disputed, state, exchangeStruct, response, exists;
+  let exchange, finalizedDate, state, exchangeStruct, response, exists;
 
   before(async function () {
     // get interface Ids
@@ -192,10 +192,9 @@ describe("IBosonExchangeHandler", function () {
 
       // Required exchange constructor params
       finalizedDate = "0";
-      disputed = false;
       state = ExchangeState.Committed;
-      exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, disputed, state);
-      exchangeStruct = [id, offerId, buyerId, finalizedDate, voucherStruct, disputed, state];
+      exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
+      exchangeStruct = [id, offerId, buyerId, finalizedDate, voucherStruct, state];
     });
 
     context("👉 commitToOffer()", async function () {
