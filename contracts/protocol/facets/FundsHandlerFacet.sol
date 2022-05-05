@@ -5,7 +5,7 @@ import {IBosonFundsHandler} from "../../interfaces/handlers/IBosonFundsHandler.s
 import {DiamondLib} from "../../diamond/DiamondLib.sol";
 import {ProtocolBase} from "../bases/ProtocolBase.sol";
 import {ProtocolLib} from "../libs/ProtocolLib.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title FundsHandlerFacet
@@ -52,10 +52,9 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         } else {
             // transfer tokens from the caller
             try IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _amount)  {
-            } catch Error(string memory reason) {
+            } catch (bytes memory error) {
+                string memory reason = error.length == 0 ? TOKEN_TRANSFER_FAILED : string(error);
                 revert(reason);
-            } catch {
-                revert(TOKEN_TRANSFER_FAILED);
             }
         }
 
