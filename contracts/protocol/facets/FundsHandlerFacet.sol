@@ -77,10 +77,10 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * @param _entityId - seller or buyer id to check
      * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
      */
-    function getAvailabeFunds(uint256 _entityId) external view override returns (FundsInfo[] memory availableFunds) {
+    function getAvailabeFunds(uint256 _entityId) external view override returns (Funds[] memory availableFunds) {
         // get list of token addresses for the entity
         address[] memory tokenList = protocolStorage().tokenList[_entityId];
-        availableFunds = new FundsInfo[](tokenList.length);
+        availableFunds = new Funds[](tokenList.length);
 
         for (uint i = 0; i < tokenList.length; i++) {
             address tokenAddress = tokenList[i];
@@ -97,7 +97,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             uint availableAmount = protocolStorage().availableFunds[_entityId][tokenAddress];
 
             // add entry to the return variable
-            availableFunds[i] = FundsInfo(tokenAddress, tokenName, availableAmount);
+            availableFunds[i] = Funds(tokenAddress, tokenName, availableAmount);
         }
     }
 }
