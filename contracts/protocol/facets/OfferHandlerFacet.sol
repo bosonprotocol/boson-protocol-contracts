@@ -73,46 +73,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
             Offer memory _offer = _offers[i];
             createOfferInternal(_offer);
         }
-    }
-    
-
-    /**
-     * @notice Updates an existing offer.
-     *
-     * Emits an OfferUpdated event if successful.
-     *
-     * Reverts if:
-     * - Offer does not exist
-     * - Offer is not updateable, i.e. is voided or some exchanges exist
-     * - Caller is not the operator of the offer
-     * - Valid from date is greater than valid until date
-     * - Valid until date is not in the future
-     * - Buyer cancel penalty is greater than price
-     * - Voided is set to true
-     *
-     * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
-     */
-    function updateOffer(
-        Offer memory _offer
-    )
-    external
-    override
-    {
-        // Offer must be updateable
-        (, bool updateable) = isOfferUpdateable(_offer.id);
-        require(updateable, OFFER_NOT_UPDATEABLE);
-
-        // Get seller id, we assume seller id exists if offer exists
-        (, uint256 sellerId) = getSellerIdByOperator(msg.sender);
-
-        // Caller's seller id must match offer seller id
-        require(sellerId == _offer.sellerId, NOT_OPERATOR);
-
-        // Store the offer
-        storeOffer(_offer);
-
-        // Notify watchers of state change
-        emit OfferUpdated(_offer.id, _offer.sellerId, _offer);
     }   
     
     /**
@@ -177,7 +137,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     /**
      * @notice Sets new valid until date
      *
-     * Emits an OfferUpdated event if successful.
+     * Emits an OfferExtended event if successful.
      *
      * Reverts if:
      * - Offer does not exist
@@ -203,13 +163,13 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         offer.validUntilDate = _validUntilDate;
 
         // Notify watchers of state change
-        emit OfferUpdated(_offerId, offer.sellerId, offer);
+        emit OfferExtended(_offerId, offer.sellerId, _validUntilDate);
     }
 
     /**
      * @notice Sets new valid until date
      *
-     * Emits an OfferUpdated event if successful.
+     * Emits an OfferExtended event if successful.
      *
      * Reverts if:
      * - Number of offers exceeds maximum allowed number per batch
@@ -274,36 +234,5 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         (exists, offer) = fetchOffer(_offerId);
         offerVoided = offer.voided;
     }
-
-
-    /**
-     * @notice Tells if offer is can be updated or not
-     *
-     * Offer is updateable if:
-     * - it exists
-     * - is not voided
-     * - has no exchanges
-     *
-     * @param _offerId - the id of the offer to check
-     * @return exists - the offer was found
-     * @return offerUpdateable - true if updateable, false otherwise
-     */
-    function isOfferUpdateable(uint256 _offerId)
-    public
-    view
-    returns(bool exists, bool offerUpdateable)
-    {
-        // Get the offer
-        Offer storage offer;
-        (exists, offer) = fetchOffer(_offerId);
-
-        // Offer must exist, not be voided, and have no exchanges to be updateable
-        offerUpdateable =
-            exists &&
-            !offer.voided &&
-            (protocolStorage().exchangeIdsByOffer[_offerId].length == 0);
-        
-    }
-
 
 }

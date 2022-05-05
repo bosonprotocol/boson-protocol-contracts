@@ -9,7 +9,7 @@ import {IBosonOfferEvents} from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xbea4053c
+ * The ERC-165 identifier for this interface is: 0x470fdf53
  */
 interface IBosonOfferHandler is IBosonOfferEvents {
 
@@ -45,24 +45,6 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
      */
     function createOfferBatch(BosonTypes.Offer[] calldata _offers) external;
-
-    /**
-     * @notice Updates an existing offer.
-     *
-     * Emits an OfferUpdated event if successful.
-     *
-     * Reverts if:
-     * - Offer does not exist
-     * - Offer is not updateable, i.e. is voided or some exchanges exist
-     * - Caller is not the operator of the offer
-     * - Valid from date is greater than valid until date
-     * - Valid until date is not in the future
-     * - Buyer cancel penalty is greater than price
-     * - Voided is set to true
-     *
-     * @param _offer - the fully populated struct with offer id set to offer to be updated, active exchanges set to 0 and voided set to false
-     */
-    function updateOffer(BosonTypes.Offer memory _offer) external;
 
     /**
      * @notice Voids a given offer
@@ -104,7 +86,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
     /**
      * @notice Sets new valid until date
      *
-     * Emits an OfferUpdated event if successful.
+     * Emits an OfferExtended event if successful.
      *
      * Reverts if:
      * - Offer does not exist
@@ -119,7 +101,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
     /**
      * @notice Sets new valid until date
      *
-     * Emits an OfferUpdated event if successful.
+     * Emits an OfferExtended event if successful.
      *
      * Reverts if:
      * - Number of offers exceeds maximum allowed number per batch
@@ -160,17 +142,4 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      */
     function isOfferVoided(uint256 _offerId) external view returns (bool exists, bool offerVoided);
 
-    /**
-     * @notice Tells if offer is can be updated or not
-     *
-     * Offer is updateable if:
-     * - it exists
-     * - is not voided
-     * - has no exchanges
-     *
-     * @param _offerId - the id of the offer to check
-     * @return exists - the offer was found
-     * @return offerUpdateable - true if updateable, false otherwise
-     */
-    function isOfferUpdateable(uint256 _offerId) external view returns (bool exists, bool offerUpdateable);
 }
