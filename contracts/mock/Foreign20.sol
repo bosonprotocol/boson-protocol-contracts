@@ -6,14 +6,14 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 /**
  * @title Foreign20
  *
- * @notice Mock ERC-(721/2981) NFT for Unit Testing
+ * @notice Mock ERC-(20) NFT for Unit Testing
  */
 contract Foreign20 is ERC20Upgradeable {
     string public constant TOKEN_NAME = "Foreign20";
     string public constant TOKEN_SYMBOL = "20Test";
 
     /**
-     * Mint a Sample NFT
+     * Mint some tokens
      * @param _account - address that gets the tokens
      * @param _amount - amount to mint
      */
