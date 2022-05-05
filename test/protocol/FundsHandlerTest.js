@@ -158,7 +158,7 @@ describe("IBosonFundsHandler", function () {
         await fundsHandler.getAvailableFunds(seller.id);
       });
 
-      context.only("💔 Revert Reasons", async function () {
+      context("💔 Revert Reasons", async function () {
         it("Seller id does not exist", async function () {
           // Attempt to deposit the funds, expecting revert
           seller.id = "555";
