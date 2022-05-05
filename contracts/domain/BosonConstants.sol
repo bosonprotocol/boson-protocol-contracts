@@ -77,4 +77,5 @@ contract BosonConstants {
     string internal constant ETH_WRONG_ADDRESS = "Eth address must be 0";
     string internal constant ETH_WRONG_AMOUNT = "Transferred value must match amount";
     string internal constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
+    string internal constant TOKEN_NAME_UNSPECIFIED = "Token name unspecified";
 }

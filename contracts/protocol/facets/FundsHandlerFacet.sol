@@ -5,7 +5,7 @@ import {IBosonFundsHandler} from "../../interfaces/handlers/IBosonFundsHandler.s
 import {DiamondLib} from "../../diamond/DiamondLib.sol";
 import {ProtocolBase} from "../bases/ProtocolBase.sol";
 import {ProtocolLib} from "../libs/ProtocolLib.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /**
  * @title FundsHandlerFacet
@@ -51,7 +51,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             require(msg.value == _amount, ETH_WRONG_AMOUNT);
         } else {
             // transfer tokens from the caller
-            try IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _amount)  {
+            try ERC20(_tokenAddress).transferFrom(msg.sender, address(this), _amount)  {
             } catch (bytes memory error) {
                 string memory reason = error.length == 0 ? TOKEN_TRANSFER_FAILED : string(error);
                 revert(reason);
@@ -71,4 +71,33 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         emit FundsDeposited(_sellerId, msg.sender, _tokenAddress, _amount);              
     }
     
+    /**
+     * @notice For a given seller or buyer id it returns the information about the funds that can use as a sellerDeposit and/or be withdrawn
+     *
+     * @param _entityId - seller or buyer id to check
+     * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
+     */
+    function getAvailabeFunds(uint256 _entityId) external view override returns (FundsInfo[] memory availableFunds) {
+        // get list of token addresses for the entity
+        address[] memory tokenList = protocolStorage().tokenList[_entityId];
+        availableFunds = new FundsInfo[](tokenList.length);
+
+        for (uint i = 0; i < tokenList.length; i++) {
+            address tokenAddress = tokenList[i];
+            string memory tokenName;
+            
+            // try to get token name
+            try ERC20(tokenAddress).name() returns (string memory name) {
+                tokenName = name;
+            } catch {
+                tokenName = TOKEN_NAME_UNSPECIFIED;
+            }
+
+            // retrieve available amount from the stroage
+            uint availableAmount = protocolStorage().availableFunds[_entityId][tokenAddress];
+
+            // add entry to the return variable
+            availableFunds[i] = FundsInfo(tokenAddress, tokenName, availableAmount);
+        }
+    }
 }

@@ -131,4 +131,10 @@ contract BosonTypes {
         uint256[] offerIds;
         uint256[] twinIds;
     }
+
+    struct FundsInfo {
+        address tokenAddress;
+        string tokenName;
+        uint256 availableAmount;
+    }
 }
