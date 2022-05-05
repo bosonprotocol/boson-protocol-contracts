@@ -169,9 +169,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             .executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v)
         )
           .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-          .withArgs(operator.address, deployer.address, functionSignature)
-          .to.emit(metaTransactionsHandler, "UsedNonce")
-          .withArgs(nonce);
+          .withArgs(operator.address, deployer.address, functionSignature, nonce);
 
         // Verify that nonce is used. Expect true.
         let expectedResult = true;

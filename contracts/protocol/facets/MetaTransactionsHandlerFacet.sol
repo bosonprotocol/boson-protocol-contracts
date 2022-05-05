@@ -145,7 +145,6 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
 
         // Store the nonce provided to avoid playback of the same tx
         protocolMetaTxInfo().usedNonce[_nonce] = true;
-        emit UsedNonce(_nonce);
 
         // Set the current transaction signer and transaction type.
         setCurrentSenderAddress(_userAddress);
@@ -162,7 +161,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         setCurrentSenderAddress(address(0));
         protocolMetaTxInfo().isMetaTransaction = false;
 
-        emit MetaTransactionExecuted(_userAddress, payable(msg.sender), _functionSignature);
+        emit MetaTransactionExecuted(_userAddress, payable(msg.sender), _functionSignature, _nonce);
         return returnData;
     }
 }
