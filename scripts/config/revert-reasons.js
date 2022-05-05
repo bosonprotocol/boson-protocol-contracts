@@ -58,8 +58,8 @@ exports.RevertReasons = {
   EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS: "Exchange for the bundled offers exists",
 
   // Funds related
-  ETH_WRONG_ADDRESS: "Eth address must be 0",
-  ETH_WRONG_AMOUNT: "Transferred value must match amount",
+  NATIVE_WRONG_ADDRESS: "Native token address must be 0",
+  NATIVE_WRONG_AMOUNT: "Transferred value must match amount",
   TOKEN_TRANSFER_FAILED: "Token transfer failed",
 
   // Outside the protocol revert reasons

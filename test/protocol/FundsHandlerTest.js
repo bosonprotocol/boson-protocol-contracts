@@ -185,7 +185,7 @@ describe("IBosonFundsHandler", function () {
             fundsHandler
               .connect(rando)
               .depositFunds(seller.id, mockToken.address, depositAmount, { value: depositAmount })
-          ).to.revertedWith(RevertReasons.ETH_WRONG_ADDRESS);
+          ).to.revertedWith(RevertReasons.NATIVE_WRONG_ADDRESS);
         });
 
         it("Native currency deposited, but the amount does not match msg.value", async function () {
@@ -194,7 +194,7 @@ describe("IBosonFundsHandler", function () {
             fundsHandler
               .connect(rando)
               .depositFunds(seller.id, ethers.constants.AddressZero, depositAmount * 2, { value: depositAmount })
-          ).to.revertedWith(RevertReasons.ETH_WRONG_AMOUNT);
+          ).to.revertedWith(RevertReasons.NATIVE_WRONG_AMOUNT);
         });
 
         it("Token address contract does not support transferFrom", async function () {

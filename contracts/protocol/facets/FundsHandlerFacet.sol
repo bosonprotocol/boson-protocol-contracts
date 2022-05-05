@@ -47,8 +47,8 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
 
         if (msg.value != 0) {
             // receiving native currency
-            require(_tokenAddress == address(0), ETH_WRONG_ADDRESS);
-            require(msg.value == _amount, ETH_WRONG_AMOUNT);
+            require(_tokenAddress == address(0), NATIVE_WRONG_ADDRESS);
+            require(msg.value == _amount, NATIVE_WRONG_AMOUNT);
         } else {
             // transfer tokens from the caller
             try IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _amount)  {
