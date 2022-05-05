@@ -9,5 +9,5 @@ import {BosonTypes} from "../../domain/BosonTypes.sol";
  * @notice Events related to management of funds within the protocol.
  */
 interface IBosonFundsEvents {
-
+    event FundsDeposited(uint256 indexed sellerId, address indexed depositedBy, address indexed tokenAddress, uint256 amount);
 }

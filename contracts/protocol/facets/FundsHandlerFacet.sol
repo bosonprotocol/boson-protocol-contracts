@@ -68,7 +68,8 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
 
         // update the available funds
         ps.availableFundsSeller[_sellerId][_tokenAddress] += _amount;
-              
+
+        emit FundsDeposited(_sellerId, msg.sender, _tokenAddress, _amount);              
     }
     
 }

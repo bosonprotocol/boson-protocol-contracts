@@ -30,6 +30,11 @@ contract BosonTypes {
         Decided
     }
 
+    enum ExchangeRole {
+        Seller,
+        Buyer
+    }
+
     struct Seller {
         uint256 id;
         address operator;

@@ -56,4 +56,9 @@ exports.RevertReasons = {
   NO_SUCH_EXCHANGE: "No such exchange",
   FULFILLMENT_PERIOD_NOT_ELAPSED: "Fulfillment period has not yet elapsed",
   EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS: "Exchange for the bundled offers exists",
+
+  // Revert Reasons: Funds related
+  ETH_WRONG_ADDRESS: "Eth address must be 0",
+  ETH_WRONG_AMOUNT: "Transferred value must match amount",
+  TOKEN_TRANSFER_FAILED: "Token transfer failed",
 };
