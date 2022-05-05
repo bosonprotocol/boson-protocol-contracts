@@ -370,11 +370,11 @@ describe("IBosonOfferHandler", function () {
         offerStruct = offer.toStruct();
       });
 
-      it("should emit an OfferUpdated event", async function () {
+      it("should emit an OfferExtended event", async function () {
         // Extend the valid until date, testing for the event
         await expect(offerHandler.connect(operator).extendOffer(offer.id, offer.validUntilDate))
-          .to.emit(offerHandler, "OfferUpdated")
-          .withArgs(id, offer.sellerId, offerStruct);
+          .to.emit(offerHandler, "OfferExtended")
+          .withArgs(id, offer.sellerId, offer.validUntilDate);
       });
 
       it("should update state", async function () {
@@ -930,17 +930,16 @@ describe("IBosonOfferHandler", function () {
         for (const offerToExtend of offersToExtend) {
           let i = offerToExtend - 1;
           offers[i].validUntilDate = newValidUntilDate;
-          offerStructs[i] = offers[i].toStruct();
         }
       });
 
-      it("should emit OfferUpdated events", async function () {
+      it("should emit OfferExtended events", async function () {
         // Extend the valid until date, testing for the event
         await expect(offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate))
-          .to.emit(offerHandler, "OfferUpdated")
-          .withArgs(offersToExtend[0], offer.sellerId, offerStructs[offersToExtend[0] - 1])
-          .withArgs(offersToExtend[1], offer.sellerId, offerStructs[offersToExtend[1] - 1])
-          .withArgs(offersToExtend[2], offer.sellerId, offerStructs[offersToExtend[2] - 1]);
+          .to.emit(offerHandler, "OfferExtended")
+          .withArgs(offersToExtend[0], offer.sellerId, newValidUntilDate)
+          .withArgs(offersToExtend[1], offer.sellerId, newValidUntilDate)
+          .withArgs(offersToExtend[2], offer.sellerId, newValidUntilDate);
       });
 
       it("should update state", async function () {

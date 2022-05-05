@@ -137,7 +137,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     /**
      * @notice Sets new valid until date
      *
-     * Emits an OfferUpdated event if successful.
+     * Emits an OfferExtended event if successful.
      *
      * Reverts if:
      * - Offer does not exist
@@ -163,13 +163,13 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         offer.validUntilDate = _validUntilDate;
 
         // Notify watchers of state change
-        emit OfferUpdated(_offerId, offer.sellerId, offer);
+        emit OfferExtended(_offerId, offer.sellerId, _validUntilDate);
     }
 
     /**
      * @notice Sets new valid until date
      *
-     * Emits an OfferUpdated event if successful.
+     * Emits an OfferExtended event if successful.
      *
      * Reverts if:
      * - Number of offers exceeds maximum allowed number per batch

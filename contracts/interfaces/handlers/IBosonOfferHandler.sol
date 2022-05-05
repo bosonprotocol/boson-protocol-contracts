@@ -86,7 +86,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
     /**
      * @notice Sets new valid until date
      *
-     * Emits an OfferUpdated event if successful.
+     * Emits an OfferExtended event if successful.
      *
      * Reverts if:
      * - Offer does not exist
@@ -101,7 +101,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
     /**
      * @notice Sets new valid until date
      *
-     * Emits an OfferUpdated event if successful.
+     * Emits an OfferExtended event if successful.
      *
      * Reverts if:
      * - Number of offers exceeds maximum allowed number per batch
