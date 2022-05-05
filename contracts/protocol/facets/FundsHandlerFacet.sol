@@ -62,7 +62,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
 
         // if the current amount of token is 0, the token address must be added to the token list
         if (ps.availableFunds[_sellerId][_tokenAddress] == 0) {
-            ps.tokenListSeller[_sellerId].push(_tokenAddress);
+            ps.tokenList[_sellerId].push(_tokenAddress);
         }
 
         // update the available funds
