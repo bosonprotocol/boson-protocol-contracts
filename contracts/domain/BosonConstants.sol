@@ -72,4 +72,9 @@ contract BosonConstants {
     string internal constant TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE = "Twin already exists in the same bundle";
     string internal constant BUNDLE_OFFER_MUST_BE_UNIQUE = "Offer must be unique to a bundle";
     string internal constant EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS = "Exchange for the bundled offers exists";
+
+    // Revert Reasons: Funds related
+    string internal constant NATIVE_WRONG_ADDRESS = "Native token address must be 0";
+    string internal constant NATIVE_WRONG_AMOUNT = "Transferred value must match amount";
+    string internal constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
 }

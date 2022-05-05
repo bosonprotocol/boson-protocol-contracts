@@ -63,6 +63,10 @@ library ProtocolLib {
         mapping(address => uint256) sellerIdByClerk;
         //buyer wallet address => buyerId
         mapping(address => uint256) buyerIdByWallet;
+        // seller/buyer id => token address => amount
+        mapping(uint256 => mapping(address => uint256)) availableFunds;
+        // seller/buyer id => all tokens with balance > 0
+        mapping(uint256 => address[]) tokenList;
     }
 
     // Incrementing ID counters
