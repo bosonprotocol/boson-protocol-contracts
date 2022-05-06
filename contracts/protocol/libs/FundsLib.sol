@@ -17,22 +17,20 @@ library FundsLib {
      * @notice Takes in the exchange id and encumbers buyer's and seller's funds during the commitToOffer
      *
      * Reverts if:
-     * - price is in native token and buyer caller does not send enough
+     * - offer price is in native token and buyer caller does not send enough
      * - if contract at token address does not support erc20 function transferFrom
      * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - if seller has less funds available than sellerDeposit
      *
-     * @param _exchangeId - id of the exchange
+     * @param _offerId - id of the offer with the details
      */
-    function encumberFunds(uint256 _exchangeId) internal {
+    function encumberFunds(uint256 _offerId) internal {
         // Load protocol storage
         ProtocolLib.ProtocolStorage storage ps = ProtocolLib.protocolStorage();
 
         // fetch offer to get the exchange token, price and seller 
         // this will be called only from commitToOffer so we expecte that exchange and consequently offer actually exist
-        uint256 offerId = ps.exchanges[_exchangeId].offerId;
-
-        BosonTypes.Offer storage offer = ps.offers[offerId];
+        BosonTypes.Offer storage offer = ps.offers[_offerId];
         address exchangeToken = offer.exchangeToken;
         uint256 price = offer.price;
 

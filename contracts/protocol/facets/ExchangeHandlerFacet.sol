@@ -39,6 +39,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
      * - offer's quantity available is zero
      * - buyer address is zero
      * - buyer account is inactive
+     * - offer price is in native token and buyer caller does not send enough
+     * - if contract at token address does not support erc20 function transferFrom
+     * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - if seller has less funds available than sellerDeposit
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
@@ -91,6 +95,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
             (, buyer) = fetchBuyer(buyerId);
 
         }
+
+        // Encumber funds before creating the exchange
+        FundsLib.encumberFunds(_offerId);
 
         // Create and store a new exchange
         uint256 exchangeId = protocolCounters().nextExchangeId++;

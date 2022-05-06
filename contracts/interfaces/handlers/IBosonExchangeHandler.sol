@@ -17,13 +17,20 @@ interface IBosonExchangeHandler is IBosonExchangeEvents {
      * @notice Commit to an offer (first step of an exchange)
      *
      * Emits an BuyerCommitted event if successful.
-     * Issues a voucher to the buyer address
+     * Issues a voucher to the buyer address.
      *
      * Reverts if:
-     * - buyer address is zero
      * - offerId is invalid
      * - offer has been voided
      * - offer has expired
+     * - offer is not yet available for commits
+     * - offer's quantity available is zero
+     * - buyer address is zero
+     * - buyer account is inactive
+     * - offer price is in native token and buyer caller does not send enough
+     * - if contract at token address does not support erc20 function transferFrom
+     * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - if seller has less funds available than sellerDeposit
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
