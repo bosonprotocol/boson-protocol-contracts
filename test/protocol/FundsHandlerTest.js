@@ -5,6 +5,7 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
+const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -142,20 +143,28 @@ describe("IBosonFundsHandler", function () {
           .withArgs(seller.id, rando.address, ethers.constants.AddressZero, depositAmount);
       });
 
-      it.skip("should update state", async function () {
-        // implement when getter is in place
-
+      it("should update state", async function () {
         // Deposit token
         await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount);
 
-        await fundsHandler.getAvailableFunds(seller.id);
+        // Read on chain state
+        let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
 
-        // Deposit native currency
+        // Chain state should match the expected availabe funds
+        let expectedAvailableFunds = new FundsList([new Funds(mockToken.address, "", depositAmount)]);
+        expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
+
+        // Deposit native currency to the same seller id
         await fundsHandler
           .connect(rando)
           .depositFunds(seller.id, ethers.constants.AddressZero, depositAmount, { value: depositAmount });
 
-        await fundsHandler.getAvailableFunds(seller.id);
+        // Get new on chain state
+        returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+
+        // Chain state should match the expected availabe funds
+        expectedAvailableFunds.funds.push(new Funds(ethers.constants.AddressZero, "Native currency", depositAmount));
+        expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
       });
 
       context("💔 Revert Reasons", async function () {

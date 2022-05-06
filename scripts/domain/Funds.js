@@ -132,5 +132,94 @@ class Funds {
   }
 }
 
+/**
+ * Boson Protocol Domain Entity: Collection of Funds
+ *
+ * See: {BosonTypes.Funds}
+ */
+class FundsList {
+  constructor(funds) {
+    this.funds = funds;
+  }
+
+  /**
+   * Get a new FundsList instance from a pojo representation
+   * @param o
+   * @returns {FundsList}
+   */
+  static fromObject(o) {
+    const { funds } = o;
+    return new FundsList(funds.map((f) => Funds.fromObject(f)));
+  }
+
+  /**
+   * Get a new FundsList instance from a returned struct representation
+   * @param struct
+   * @returns {*}
+   */
+  static fromStruct(struct) {
+    return FundsList.fromObject({
+      funds: struct.map((funds) => Funds.fromStruct(funds)),
+    });
+  }
+
+  /**
+   * Get a database representation of this FundsList instance
+   * @returns {object}
+   */
+  toObject() {
+    return JSON.parse(this.toString());
+  }
+
+  /**
+   * Get a string representation of this FundsList instance
+   * @returns {string}
+   */
+  toString() {
+    return JSON.stringify(this);
+  }
+
+  /**
+   * Get a struct representation of this FundsList instance
+   * @returns {string}
+   */
+  toStruct() {
+    return this.funds.map((f) => f.toStruct());
+  }
+
+  /**
+   * Clone this FundsList
+   * @returns {FundsList}
+   */
+  clone() {
+    return FundsList.fromObject(this.toObject());
+  }
+
+  /**
+   * Is this FundsList instance's funds field valid?
+   * Must be a list of Funds instances
+   * @returns {boolean}
+   */
+  fundsIsValid() {
+    let valid = false;
+    let { funds } = this;
+    try {
+      valid =
+        Array.isArray(funds) &&
+        funds.reduce((previousFunds, currentFunds) => previousFunds && currentFunds.isValid(), true);
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this FundsList instance valid?
+   * @returns {boolean}
+   */
+  isValid() {
+    return this.fundsIsValid();
+  }
+}
+
 // Export
-module.exports = Funds;
+exports.Funds = Funds;
+exports.FundsList = FundsList;

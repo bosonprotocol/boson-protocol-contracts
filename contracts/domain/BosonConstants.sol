@@ -78,4 +78,5 @@ contract BosonConstants {
     string internal constant ETH_WRONG_AMOUNT = "Transferred value must match amount";
     string internal constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
     string internal constant TOKEN_NAME_UNSPECIFIED = "Token name unspecified";
+    string internal constant NATIVE_CURRENCY = "Native currency";
 }

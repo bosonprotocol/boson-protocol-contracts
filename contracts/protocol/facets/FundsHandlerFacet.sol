@@ -77,7 +77,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * @param _entityId - seller or buyer id to check
      * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
      */
-    function getAvailabeFunds(uint256 _entityId) external view override returns (Funds[] memory availableFunds) {
+    function getAvailableFunds(uint256 _entityId) external view override returns (Funds[] memory availableFunds) {
         // get list of token addresses for the entity
         address[] memory tokenList = protocolStorage().tokenList[_entityId];
         availableFunds = new Funds[](tokenList.length);
@@ -86,11 +86,16 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             address tokenAddress = tokenList[i];
             string memory tokenName;
             
-            // try to get token name
-            try ERC20(tokenAddress).name() returns (string memory name) {
-                tokenName = name;
-            } catch {
-                tokenName = TOKEN_NAME_UNSPECIFIED;
+            if (tokenAddress == address(0)) {
+                // it tokenAddress is 0, it represents the native currency
+                tokenName = NATIVE_CURRENCY;
+            } else {
+                // try to get token name
+                try ERC20(tokenAddress).name() returns (string memory name) {
+                    tokenName = name;
+                } catch {
+                    tokenName = TOKEN_NAME_UNSPECIFIED;
+                }
             }
 
             // retrieve available amount from the stroage
