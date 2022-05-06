@@ -12,6 +12,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * @dev 
  */
 library FundsLib {
+    event FundsEnucumbered(address indexed exchangeToken, uint256 amount);
     
     /**
      * @notice Takes in the exchange id and encumbers buyer's and seller's funds during the commitToOffer
@@ -60,6 +61,8 @@ library FundsLib {
                 }
             }
         }
+
+        emit FundsEnucumbered(exchangeToken, price + sellerDeposit);
     }
 
     /**
