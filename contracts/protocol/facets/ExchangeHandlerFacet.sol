@@ -6,6 +6,7 @@ import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHan
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
+import { FundsLib } from "../libs/FundsLib.sol";
 
 /**
  * @title ExchangeHandlerFacet
@@ -56,6 +57,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         bool exists;
         Offer storage offer;
         (exists, offer) = fetchOffer(_offerId);
+
+        
 
         // Make sure offer exists, is available, and isn't void, expired, or sold out
         require(exists, NO_SUCH_OFFER);

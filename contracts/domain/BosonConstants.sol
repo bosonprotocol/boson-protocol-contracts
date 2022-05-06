@@ -76,7 +76,11 @@ contract BosonConstants {
     // Revert Reasons: Funds related
     string internal constant NATIVE_WRONG_ADDRESS = "Native token address must be 0";
     string internal constant NATIVE_WRONG_AMOUNT = "Transferred value must match amount";
-    string internal constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
     string internal constant TOKEN_NAME_UNSPECIFIED = "Token name unspecified";
     string internal constant NATIVE_CURRENCY = "Native currency";
 }
+
+// Librarires cannot inherit BosonConstants, therefore the revert reasons are defined on file level
+string constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
+string constant INSUFFICIENT_VALUE_SENT = "Insufficient value sent";
+string constant INSUFFICIENT_AVAILABLE_FUNDS = "Insufficient available funds";
