@@ -5,7 +5,8 @@ import {IBosonFundsHandler} from "../../interfaces/handlers/IBosonFundsHandler.s
 import {DiamondLib} from "../../diamond/DiamondLib.sol";
 import {ProtocolBase} from "../bases/ProtocolBase.sol";
 import {ProtocolLib} from "../libs/ProtocolLib.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /**
  * @title FundsHandlerFacet
@@ -51,7 +52,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             require(msg.value == _amount, NATIVE_WRONG_AMOUNT);
         } else {
             // transfer tokens from the caller
-            try ERC20(_tokenAddress).transferFrom(msg.sender, address(this), _amount)  {
+            try IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _amount)  {
             } catch (bytes memory error) {
                 string memory reason = error.length == 0 ? TOKEN_TRANSFER_FAILED : string(error);
                 revert(reason);
@@ -91,7 +92,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
                 tokenName = NATIVE_CURRENCY;
             } else {
                 // try to get token name
-                try ERC20(tokenAddress).name() returns (string memory name) {
+                try IERC20Metadata(tokenAddress).name() returns (string memory name) {
                     tokenName = name;
                 } catch {
                     tokenName = TOKEN_NAME_UNSPECIFIED;
