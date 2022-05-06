@@ -51,7 +51,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             require(msg.value == _amount, NATIVE_WRONG_AMOUNT);
         } else {
             // transfer tokens from the caller
-            try IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _amount)  {
+            try ERC20(_tokenAddress).transferFrom(msg.sender, address(this), _amount)  {
             } catch (bytes memory error) {
                 string memory reason = error.length == 0 ? TOKEN_TRANSFER_FAILED : string(error);
                 revert(reason);
