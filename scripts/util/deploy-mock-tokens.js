@@ -8,9 +8,8 @@ const ethers = hre.ethers;
  *
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployMockTokens(gasLimit) {
-  const deployedTokens = [],
-    tokens = ["BosonToken", "Foreign721", "Foreign1155", "FallbackError"];
+async function deployMockTokens(gasLimit, tokens = ["BosonToken", "Foreign721", "Foreign1155", "FallbackError"]) {
+  const deployedTokens = [];
 
   // Deploy all the mock tokens
   while (tokens.length) {

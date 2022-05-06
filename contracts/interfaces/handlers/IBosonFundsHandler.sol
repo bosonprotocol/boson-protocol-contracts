@@ -18,8 +18,8 @@ interface IBosonFundsHandler is IBosonFundsEvents {
      *
      * Reverts if:
      * - seller id does not exist
-     * - it receives some eth, but token address is different from the zero
-     * - it receives some eth, and the amount does not match msg.value
+     * - it receives some native currency (e.g. ETH), but token address is not zero
+     * - it receives some native currency (e.g. ETH), and the amount does not match msg.value
      * - if contract at token address does not support erc20 function transferFrom
      * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      *

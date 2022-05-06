@@ -82,9 +82,7 @@ describe("IBosonFundsHandler", function () {
     fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
 
     // Deploy the mock token
-    let TokenContractFactory = await ethers.getContractFactory("Foreign20");
-    mockToken = await TokenContractFactory.deploy({ gasLimit });
-    await mockToken.deployed();
+    [mockToken] = await deployMockTokens(gasLimit, ["Foreign20"]);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -121,7 +119,7 @@ describe("IBosonFundsHandler", function () {
       // approve protocol to transfer the tokens
       await mockToken.connect(operator).approve(protocolDiamond.address, "1000000");
 
-      //
+      // set the deposit amount
       depositAmount = "100";
     });
 
@@ -167,6 +165,20 @@ describe("IBosonFundsHandler", function () {
         expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
       });
 
+      it.skip("should be possible to top up the account", async function () {
+        // implement when getter is in place
+
+        // Deposit token
+        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount);
+
+        await fundsHandler.getAvailableFunds(seller.id);
+
+        // Deposit the same token again
+        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount);
+
+        await fundsHandler.getAvailableFunds(seller.id);
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Seller id does not exist", async function () {
           // Attempt to deposit the funds, expecting revert
@@ -182,7 +194,7 @@ describe("IBosonFundsHandler", function () {
             fundsHandler
               .connect(rando)
               .depositFunds(seller.id, mockToken.address, depositAmount, { value: depositAmount })
-          ).to.revertedWith(RevertReasons.ETH_WRONG_ADDRESS);
+          ).to.revertedWith(RevertReasons.NATIVE_WRONG_ADDRESS);
         });
 
         it("Native currency deposited, but the amount does not match msg.value", async function () {
@@ -191,12 +203,12 @@ describe("IBosonFundsHandler", function () {
             fundsHandler
               .connect(rando)
               .depositFunds(seller.id, ethers.constants.AddressZero, depositAmount * 2, { value: depositAmount })
-          ).to.revertedWith(RevertReasons.ETH_WRONG_AMOUNT);
+          ).to.revertedWith(RevertReasons.NATIVE_WRONG_AMOUNT);
         });
 
         it("Token address contract does not support transferFrom", async function () {
           // Deploy a contract without the transferFrom
-          [bosonToken] = await deployMockTokens(gasLimit);
+          [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
 
           // Attempt to deposit the funds, expecting revert
           await expect(
@@ -213,18 +225,18 @@ describe("IBosonFundsHandler", function () {
 
         it("Token contract revert for another reason", async function () {
           // insufficient funds
-
+          // approve more than account actually have
           await mockToken.connect(rando).approve(protocolDiamond.address, depositAmount);
           // Attempt to deposit the funds, expecting revert
           await expect(
             fundsHandler.connect(rando).depositFunds(seller.id, mockToken.address, depositAmount)
-          ).to.revertedWith("ERC20: transfer amount exceeds balance");
+          ).to.revertedWith(RevertReasons.ERC20_EXCEEDS_BALANCE);
 
           // not approved
           depositAmount = "10000000";
           await expect(
             fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount)
-          ).to.revertedWith("ERC20: insufficient allowance");
+          ).to.revertedWith(RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE);
         });
       });
     });

@@ -29,8 +29,8 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      *
      * Reverts if:
      * - seller id does not exist
-     * - it receives some eth, but token address is different from the zero
-     * - it receives some eth, and the amount does not match msg.value
+     * - it receives some native currency (e.g. ETH), but token address is not zero
+     * - it receives some native currency (e.g. ETH), and the amount does not match msg.value
      * - if contract at token address does not support erc20 function transferFrom
      * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      *
@@ -47,11 +47,11 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
 
         if (msg.value != 0) {
             // receiving native currency
-            require(_tokenAddress == address(0), ETH_WRONG_ADDRESS);
-            require(msg.value == _amount, ETH_WRONG_AMOUNT);
+            require(_tokenAddress == address(0), NATIVE_WRONG_ADDRESS);
+            require(msg.value == _amount, NATIVE_WRONG_AMOUNT);
         } else {
             // transfer tokens from the caller
-            try ERC20(_tokenAddress).transferFrom(msg.sender, address(this), _amount)  {
+            try IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _amount)  {
             } catch (bytes memory error) {
                 string memory reason = error.length == 0 ? TOKEN_TRANSFER_FAILED : string(error);
                 revert(reason);

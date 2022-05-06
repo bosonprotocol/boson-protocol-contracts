@@ -74,8 +74,8 @@ contract BosonConstants {
     string internal constant EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS = "Exchange for the bundled offers exists";
 
     // Revert Reasons: Funds related
-    string internal constant ETH_WRONG_ADDRESS = "Eth address must be 0";
-    string internal constant ETH_WRONG_AMOUNT = "Transferred value must match amount";
+    string internal constant NATIVE_WRONG_ADDRESS = "Native token address must be 0";
+    string internal constant NATIVE_WRONG_AMOUNT = "Transferred value must match amount";
     string internal constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
     string internal constant TOKEN_NAME_UNSPECIFIED = "Token name unspecified";
     string internal constant NATIVE_CURRENCY = "Native currency";

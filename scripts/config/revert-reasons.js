@@ -57,8 +57,12 @@ exports.RevertReasons = {
   FULFILLMENT_PERIOD_NOT_ELAPSED: "Fulfillment period has not yet elapsed",
   EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS: "Exchange for the bundled offers exists",
 
-  // Revert Reasons: Funds related
-  ETH_WRONG_ADDRESS: "Eth address must be 0",
-  ETH_WRONG_AMOUNT: "Transferred value must match amount",
+  // Funds related
+  NATIVE_WRONG_ADDRESS: "Native token address must be 0",
+  NATIVE_WRONG_AMOUNT: "Transferred value must match amount",
   TOKEN_TRANSFER_FAILED: "Token transfer failed",
+
+  // Outside the protocol revert reasons
+  ERC20_EXCEEDS_BALANCE: "ERC20: transfer amount exceeds balance",
+  ERC20_INSUFFICIENT_ALLOWANCE: "ERC20: insufficient allowance",
 };
