@@ -493,6 +493,7 @@ describe("IBosonFundsHandler", function () {
       });
 
       it("when someone else deposits on buyer's behalf, callers funds are transferred", async function () {
+        let randoBuyerId = "2"; // 1: seller, 2: rando
         // buyer will commit to an offer on rando's behalf
         // get token balance before the commit
         const buyerTokenBalanceBefore = await mockToken.balanceOf(buyer.address);
@@ -514,6 +515,10 @@ describe("IBosonFundsHandler", function () {
           randoTokenBalanceBefore.toString(),
           "Rando's token balance should remain the same"
         );
+        // make sure that rando is actually the buyer of the exchange
+        let exchange;
+        [, exchange] = await exchangeHandler.getExchange("1");
+        expect(exchange.buyerId.toString()).to.eql(randoBuyerId, "Wrong buyer id");
 
         // get native currency balance before the commit
         const buyerNativeBalanceBefore = await ethers.provider.getBalance(buyer.address);
@@ -537,66 +542,96 @@ describe("IBosonFundsHandler", function () {
           randoNativeBalanceBefore.toString(),
           "Rando's native balance should remain the same"
         );
+        // make sure that rando is actually the buyer of the exchange
+        [, exchange] = await exchangeHandler.getExchange("2");
+        expect(exchange.buyerId.toString()).to.eql(randoBuyerId, "Wrong buyer id");
+
+        // make sure that randoBuyerId actually belongs to rando address
+        [, buyer] = await accountHandler.getBuyer(randoBuyerId);
+        expect(buyer.wallet).to.eql(rando.address, "Wrong buyer address");
       });
 
       context("💔 Revert Reasons", async function () {
         it("Insufficient native currency sent", async function () {
-          // Attempt to deposit the funds, expecting revert
-          seller.id = "555";
+          // Attempt to commit to an offer, expecting revert
           await expect(
-            fundsHandler.connect(rando).depositFunds(seller.id, mockToken.address, depositAmount)
-          ).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
+            exchangeHandler
+              .connect(buyer)
+              .commitToOffer(buyer.address, offerNative.id, { value: ethers.BigNumber.from(price).sub("1").toString() })
+          ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_SENT);
         });
 
         it("Native currency sent together with ERC20 token transfer", async function () {
-          // Attempt to deposit the funds, expecting revert
+          // Attempt to commit to an offer, expecting revert
           await expect(
-            fundsHandler
-              .connect(rando)
-              .depositFunds(seller.id, mockToken.address, depositAmount, { value: depositAmount })
-          ).to.revertedWith(RevertReasons.NATIVE_WRONG_ADDRESS);
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id, { value: price })
+          ).to.revertedWith(RevertReasons.NATIVE_NOT_ALLOWED);
         });
 
         it("Token address contract does not support transferFrom", async function () {
           // Deploy a contract without the transferFrom
           [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
 
-          // Attempt to deposit the funds, expecting revert
-          await expect(
-            fundsHandler.connect(rando).depositFunds(seller.id, bosonToken.address, depositAmount)
-          ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
+          // create an offer with a bad token contrat
+          offerToken.exchangeToken = bosonToken.address;
+          offerToken.id = "3";
+          await offerHandler.connect(operator).createOffer(offerToken);
+
+          // Attempt to commit to an offer, expecting revert
+          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
+            RevertReasons.TOKEN_TRANSFER_FAILED
+          );
         });
 
         it("Token address is not a contract", async function () {
-          // Attempt to deposit the funds, expecting revert
-          await expect(
-            fundsHandler.connect(rando).depositFunds(seller.id, admin.address, depositAmount)
-          ).to.revertedWith("");
+          // create an offer with a bad token contrat
+          offerToken.exchangeToken = admin.address;
+          offerToken.id = "3";
+          await offerHandler.connect(operator).createOffer(offerToken);
+
+          // Attempt to commit to an offer, expecting revert
+          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith("");
         });
 
         it("Token contract revert for another reason", async function () {
           // insufficient funds
           // approve more than account actually have
-          await mockToken.connect(rando).approve(protocolDiamond.address, depositAmount);
-          // Attempt to deposit the funds, expecting revert
-          await expect(
-            fundsHandler.connect(rando).depositFunds(seller.id, mockToken.address, depositAmount)
-          ).to.revertedWith(RevertReasons.ERC20_EXCEEDS_BALANCE);
+          await mockToken.connect(rando).approve(protocolDiamond.address, price);
+          // Attempt to commit to an offer, expecting revert
+          await expect(exchangeHandler.connect(rando).commitToOffer(rando.address, offerToken.id)).to.revertedWith(
+            RevertReasons.ERC20_EXCEEDS_BALANCE
+          );
 
           // not approved
-          depositAmount = "10000000";
-          await expect(
-            fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount)
-          ).to.revertedWith(RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE);
+          await mockToken
+            .connect(rando)
+            .approve(protocolDiamond.address, ethers.BigNumber.from(price).sub("1").toString());
+          // Attempt to commit to an offer, expecting revert
+          await expect(exchangeHandler.connect(rando).commitToOffer(rando.address, offerToken.id)).to.revertedWith(
+            RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE
+          );
         });
 
         it("Seller'a availableFunds is less than the required sellerDeposit", async function () {
-          // Attempt to deposit the funds, expecting revert
+          // create an offer with token with higher seller deposit
+          offerToken.sellerDeposit = ethers.BigNumber.from(offerToken.sellerDeposit).mul("4");
+          offerToken.id = "3";
+          await offerHandler.connect(operator).createOffer(offerToken);
+
+          // Attempt to commit to an offer, expecting revert
+          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
+            RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS
+          );
+
+          // create an offer with native currency with higher seller deposit
+          offerNative.sellerDeposit = ethers.BigNumber.from(offerNative.sellerDeposit).mul("4");
+          offerNative.id = "4";
+          await offerHandler.connect(operator).createOffer(offerNative);
+
+          // Attempt to commit to an offer, expecting revert
           await expect(
-            fundsHandler
-              .connect(rando)
-              .depositFunds(seller.id, ethers.constants.AddressZero, depositAmount * 2, { value: depositAmount })
-          ).to.revertedWith(RevertReasons.NATIVE_WRONG_AMOUNT);
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price })
+          ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
         });
       });
     });
