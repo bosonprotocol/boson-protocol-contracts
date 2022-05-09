@@ -99,7 +99,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         }
 
         // Encumber funds before creating the exchange
-        FundsLib.encumberFunds(_offerId);
+        FundsLib.encumberFunds(_offerId, buyerId);
 
         // Create and store a new exchange
         uint256 exchangeId = protocolCounters().nextExchangeId++;

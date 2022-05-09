@@ -48,7 +48,6 @@ describe("IBosonFundsHandler", function () {
     metadataUri,
     metadataHash,
     voided;
-  let fundsEncumbered;
   let block, blockNumber;
 
   before(async function () {
@@ -389,22 +388,25 @@ describe("IBosonFundsHandler", function () {
         .depositFunds(seller.id, ethers.constants.AddressZero, `${2 * sellerDeposit}`, {
           value: `${2 * sellerDeposit}`,
         });
-
-      // total amount encumbered
-      fundsEncumbered = ethers.BigNumber.from(sellerDeposit).add(ethers.BigNumber.from(price)).toString();
     });
 
     context("👉 encumberFunds()", async function () {
       it("should emit a FundsEncumbered event", async function () {
+        let buyerId = "2"; // 1: seller, 2: buyer
+
         // Commit to an offer with erc20 token, test for FundsEncumbered event
         await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id))
           .to.emit(exchangeHandler, "FundsEncumbered")
-          .withArgs(mockToken.address, fundsEncumbered);
+          .withArgs(buyerId, mockToken.address, price)
+          .to.emit(exchangeHandler, "FundsEncumbered")
+          .withArgs(sellerId, mockToken.address, sellerDeposit);
 
         // Commit to an offer with native currency, test for FundsEncumbered event
         await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price }))
           .to.emit(exchangeHandler, "FundsEncumbered")
-          .withArgs(ethers.constants.AddressZero, fundsEncumbered);
+          .withArgs(buyerId, ethers.constants.AddressZero, price)
+          .to.emit(exchangeHandler, "FundsEncumbered")
+          .withArgs(sellerId, ethers.constants.AddressZero, sellerDeposit);
       });
 
       it("should update state", async function () {

@@ -12,7 +12,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * @dev 
  */
 library FundsLib {
-    event FundsEncumbered(address indexed exchangeToken, uint256 amount);
+    event FundsEncumbered(uint256 indexed entityId, address indexed exchangeToken, uint256 amount);
     
     /**
      * @notice Takes in the exchange id and encumbers buyer's and seller's funds during the commitToOffer
@@ -26,7 +26,7 @@ library FundsLib {
      *
      * @param _offerId - id of the offer with the details
      */
-    function encumberFunds(uint256 _offerId) internal {
+    function encumberFunds(uint256 _offerId, uint256 _buyerId) internal {
         // Load protocol storage
         ProtocolLib.ProtocolStorage storage ps = ProtocolLib.protocolStorage();
 
@@ -67,7 +67,8 @@ library FundsLib {
             }
         }
 
-        emit FundsEncumbered(exchangeToken, price + sellerDeposit);
+        emit FundsEncumbered(_buyerId, exchangeToken, price);
+        emit FundsEncumbered(sellerId, exchangeToken, sellerDeposit);
     }
 
     /**
