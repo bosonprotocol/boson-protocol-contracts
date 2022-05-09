@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {TOKEN_TRANSFER_FAILED, INSUFFICIENT_VALUE_SENT, INSUFFICIENT_AVAILABLE_FUNDS} from "../../domain/BosonConstants.sol";
+import {NATIVE_NOT_ALLOWED, TOKEN_TRANSFER_FAILED, INSUFFICIENT_VALUE_SENT, INSUFFICIENT_AVAILABLE_FUNDS} from "../../domain/BosonConstants.sol";
 import {BosonTypes} from "../../domain/BosonTypes.sol";
 import {ProtocolLib} from "../libs/ProtocolLib.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -19,6 +19,7 @@ library FundsLib {
      *
      * Reverts if:
      * - offer price is in native token and buyer caller does not send enough
+     * - offer price is in some ERC20 token and caller also send native currency
      * - if contract at token address does not support erc20 function transferFrom
      * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - if seller has less funds available than sellerDeposit
@@ -40,6 +41,9 @@ library FundsLib {
             // if transfer is in native currency, msg.value must match offer price
             require(msg.value == price, INSUFFICIENT_VALUE_SENT);
         } else {
+            // when price is in erc20 token, transferring native currency is not allowed
+            require(msg.value == 0, NATIVE_NOT_ALLOWED);
+
             // if transfer is in ERC20 token, try to transfer the amount from buyer to the protocol
             transferFundsToProtocol(exchangeToken, price);
         }

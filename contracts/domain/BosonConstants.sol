@@ -80,7 +80,8 @@ contract BosonConstants {
     string internal constant NATIVE_CURRENCY = "Native currency";
 }
 
-// Librarires cannot inherit BosonConstants, therefore the revert reasons are defined on file level
+// Librarires cannot inherit BosonConstants, therefore the revert reasons are defined on the file level
 string constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
 string constant INSUFFICIENT_VALUE_SENT = "Insufficient value sent";
 string constant INSUFFICIENT_AVAILABLE_FUNDS = "Insufficient available funds";
+string constant NATIVE_NOT_ALLOWED = "Transfer of native currency not allowed";

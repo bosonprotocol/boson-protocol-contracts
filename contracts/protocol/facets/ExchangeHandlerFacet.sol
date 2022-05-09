@@ -41,6 +41,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, IBosonFundsLibEvents, Pr
      * - buyer address is zero
      * - buyer account is inactive
      * - offer price is in native token and buyer caller does not send enough
+     * - offer price is in some ERC20 token and caller also send native currency
      * - if contract at token address does not support erc20 function transferFrom
      * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - if seller has less funds available than sellerDeposit
@@ -53,6 +54,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, IBosonFundsLibEvents, Pr
         uint256 _offerId
     )
     external
+    payable
     override
     {
         // Make sure buyer address is not zero address

@@ -28,6 +28,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents {
      * - buyer address is zero
      * - buyer account is inactive
      * - offer price is in native token and buyer caller does not send enough
+     * - offer price is in some ERC20 token and caller also send native currency
      * - if contract at token address does not support erc20 function transferFrom
      * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - if seller has less funds available than sellerDeposit
@@ -35,7 +36,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents {
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
      */
-    function commitToOffer(address payable _buyer, uint256 _offerId) external;
+    function commitToOffer(address payable _buyer, uint256 _offerId) external payable;
 
     /**
      * @notice Complete an exchange.
