@@ -8,6 +8,7 @@ import "./handlers/IBosonConfigHandler.sol";
 import "./handlers/IBosonDisputeHandler.sol";
 import "./handlers/IBosonExchangeHandler.sol";
 import "./handlers/IBosonGroupHandler.sol";
+import "./handlers/IBosonMetaTransactionsHandler.sol";
 import "./handlers/IBosonOfferHandler.sol";
 import "./handlers/IBosonOrchestrationHandler.sol";
 import "./handlers/IBosonTwinHandler.sol";
@@ -56,6 +57,10 @@ contract SupportedInterfaces {
 
     function getIBosonGroupHandler() public pure returns (bytes4 id) {
         id = type(IBosonGroupHandler).interfaceId;
+    }
+
+    function getIBosonMetaTransactionsHandler() public pure returns (bytes4 id) {
+        id = type(IBosonMetaTransactionsHandler).interfaceId;
     }
 
     function getIBosonOfferHandler() public pure returns (bytes4 id) {

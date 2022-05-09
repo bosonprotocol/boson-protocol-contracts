@@ -65,4 +65,11 @@ exports.RevertReasons = {
   // Outside the protocol revert reasons
   ERC20_EXCEEDS_BALANCE: "ERC20: transfer amount exceeds balance",
   ERC20_INSUFFICIENT_ALLOWANCE: "ERC20: insufficient allowance",
+
+  // Meta-Transactions related
+  NONCE_USED_ALREADY: "Nonce used already",
+  FUNCTION_CALL_NOT_SUCCESSFUL: "Function call not successful",
+  INVALID_FUNCTION_SIGNATURE: "functionSignature can not be of executeMetaTransaction method",
+  INVALID_SIGNATURE: "Invalid signature",
+  SIGNER_AND_SIGNATURE_DO_NOT_MATCH: "Signer and signature do not match",
 };

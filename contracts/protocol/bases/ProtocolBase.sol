@@ -65,6 +65,15 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
+     * @dev Get the Protocol meta-transactions storage slot
+     *
+     * @return pmti the Protocol meta-transactions storage slot
+     */
+    function protocolMetaTxInfo() internal pure returns (ProtocolLib.ProtocolMetaTxInfo storage pmti) {
+        pmti = ProtocolLib.protocolMetaTxInfo();
+    }
+
+    /**
      * @dev Get the Protocol Initializers slot
      *
      * @return pi the Protocol Initializers slot

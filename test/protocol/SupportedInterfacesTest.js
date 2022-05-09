@@ -86,6 +86,12 @@ describe("SupportedInterfaces", function () {
         assert.equal(actual, expected);
       });
 
+      it("getIBosonMetaTransactionsHandler() should return expected id", async function () {
+        const expected = InterfaceIds.IBosonMetaTransactionsHandler;
+        const actual = await supportedInterfaces.getIBosonMetaTransactionsHandler();
+        assert.equal(actual, expected);
+      });
+
       it("getIBosonOrchestrationHandler() should return expected id", async function () {
         const expected = InterfaceIds.IBosonOrchestrationHandler;
         const actual = await supportedInterfaces.getIBosonOrchestrationHandler();
