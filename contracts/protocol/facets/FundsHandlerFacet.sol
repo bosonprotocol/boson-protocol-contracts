@@ -88,7 +88,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             string memory tokenName;
             
             if (tokenAddress == address(0)) {
-                // it tokenAddress is 0, it represents the native currency
+                // if tokenAddress is 0, it represents the native currency
                 tokenName = NATIVE_CURRENCY;
             } else {
                 // try to get token name
