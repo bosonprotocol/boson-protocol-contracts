@@ -79,4 +79,12 @@ contract BosonConstants {
     string internal constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
     string internal constant TOKEN_NAME_UNSPECIFIED = "Token name unspecified";
     string internal constant NATIVE_CURRENCY = "Native currency";
+
+    // Revert Reasons: Meta-Transactions related
+    string internal constant NONCE_USED_ALREADY = "Nonce used already";
+    string internal constant FUNCTION_CALL_NOT_SUCCESSFUL = "Function call not successful";
+    string internal constant INVALID_FUNCTION_SIGNATURE =
+        "functionSignature can not be of executeMetaTransaction method";
+    string internal constant INVALID_SIGNATURE = "Invalid signature";
+    string internal constant SIGNER_AND_SIGNATURE_DO_NOT_MATCH = "Signer and signature do not match";
 }
