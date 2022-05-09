@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {BosonTypes} from "../../domain/BosonTypes.sol";
 import {IBosonExchangeEvents} from "../events/IBosonExchangeEvents.sol";
+import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
 
 /**
  * @title IBosonExchangeHandler
@@ -11,7 +12,7 @@ import {IBosonExchangeEvents} from "../events/IBosonExchangeEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0xa0356709
  */
-interface IBosonExchangeHandler is IBosonExchangeEvents {
+interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
 
     /**
      * @notice Commit to an offer (first step of an exchange)

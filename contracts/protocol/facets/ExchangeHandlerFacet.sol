@@ -7,14 +7,13 @@ import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
-import { IBosonFundsLibEvents } from "../../interfaces/events/IBosonFundsEvents.sol";
 
 /**
  * @title ExchangeHandlerFacet
  *
  * @notice Handles exchanges associated with offers within the protocol
  */
-contract ExchangeHandlerFacet is IBosonExchangeHandler, IBosonFundsLibEvents, ProtocolBase {
+contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
 
     /**
      * @notice Facet Initializer

@@ -12,7 +12,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * @dev 
  */
 library FundsLib {
-    event FundsEnucumbered(address indexed exchangeToken, uint256 amount);
+    event FundsEncumbered(address indexed exchangeToken, uint256 amount);
     
     /**
      * @notice Takes in the exchange id and encumbers buyer's and seller's funds during the commitToOffer
@@ -31,17 +31,17 @@ library FundsLib {
         ProtocolLib.ProtocolStorage storage ps = ProtocolLib.protocolStorage();
 
         // fetch offer to get the exchange token, price and seller 
-        // this will be called only from commitToOffer so we expecte that exchange and consequently offer actually exist
+        // this will be called only from commitToOffer so we expect that exchange and consequently the offer actually exist
         BosonTypes.Offer storage offer = ps.offers[_offerId];
         address exchangeToken = offer.exchangeToken;
         uint256 price = offer.price;
 
         // validate buyer inputs
         if (exchangeToken == address(0)) {
-            // if transfer is in native currency, msg.value must match offer price
+            // if transfer is in the native currency, msg.value must match offer price
             require(msg.value == price, INSUFFICIENT_VALUE_SENT);
         } else {
-            // when price is in erc20 token, transferring native currency is not allowed
+            // when price is in an erc20 token, transferring the native currency is not allowed
             require(msg.value == 0, NATIVE_NOT_ALLOWED);
 
             // if transfer is in ERC20 token, try to transfer the amount from buyer to the protocol
@@ -62,11 +62,12 @@ library FundsLib {
                 if (ps.tokenList[sellerId][i] == exchangeToken) {
                     ps.tokenList[sellerId][i] = ps.tokenList[sellerId][len-1];
                     ps.tokenList[sellerId].pop();
+                    break;
                 }
             }
         }
 
-        emit FundsEnucumbered(exchangeToken, price + sellerDeposit);
+        emit FundsEncumbered(exchangeToken, price + sellerDeposit);
     }
 
     /**

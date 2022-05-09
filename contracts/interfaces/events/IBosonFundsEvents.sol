@@ -13,5 +13,5 @@ interface IBosonFundsEvents {
 }
 
 interface IBosonFundsLibEvents {
-    event FundsEnucumbered(address indexed exchangeToken, uint256 amount);
+    event FundsEncumbered(address indexed exchangeToken, uint256 amount);
 }
