@@ -7,6 +7,7 @@ const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const Offer = require("../../scripts/domain/Offer");
+
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -182,7 +183,7 @@ describe("IBosonFundsHandler", function () {
         // Read on chain state
         let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
 
-        // Chain state should match the expected availabe funds
+        // Chain state should match the expected available funds
         let expectedAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", depositAmount)]);
         expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
 
@@ -194,7 +195,7 @@ describe("IBosonFundsHandler", function () {
         // Get new on chain state
         returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
 
-        // Chain state should match the expected availabe funds
+        // Chain state should match the expected available funds
         expectedAvailableFunds.funds.push(new Funds(ethers.constants.AddressZero, "Native currency", depositAmount));
         expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
       });
@@ -206,7 +207,7 @@ describe("IBosonFundsHandler", function () {
         // Read on chain state
         let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
 
-        // Chain state should match the expected availabe funds
+        // Chain state should match the expected available funds
         let expectedAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", depositAmount)]);
         expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
 
@@ -216,7 +217,7 @@ describe("IBosonFundsHandler", function () {
         // Get new on chain state
         returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
 
-        // Chain state should match the expected availabe funds
+        // Chain state should match the expected available funds
         expectedAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", `${3 * depositAmount}`)]);
         expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
       });
@@ -298,7 +299,7 @@ describe("IBosonFundsHandler", function () {
         // Read on chain state
         let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
 
-        // Chain state should match the expected availabe funds
+        // Chain state should match the expected available funds
         let expectedAvailableFunds = new FundsList([
           new Funds(mockToken.address, "Token name unspecified", depositAmount),
         ]);

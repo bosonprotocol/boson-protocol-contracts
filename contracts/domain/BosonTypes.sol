@@ -137,4 +137,10 @@ contract BosonTypes {
         string tokenName;
         uint256 availableAmount;
     }
+
+    struct MetaTransaction {
+        uint256 nonce;
+        address from;
+        bytes functionSignature;
+    }
 }

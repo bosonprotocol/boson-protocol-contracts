@@ -6,6 +6,7 @@ import {DiamondLib} from "../../diamond/DiamondLib.sol";
 import {ProtocolBase} from "../bases/ProtocolBase.sol";
 import {ProtocolLib} from "../libs/ProtocolLib.sol";
 import {FundsLib} from "../libs/FundsLib.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /**
@@ -101,5 +102,5 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             // add entry to the return variable
             availableFunds[i] = Funds(tokenAddress, tokenName, availableAmount);
         }
-    }    
+    }
 }
