@@ -6,6 +6,7 @@ import {DiamondLib} from "../../diamond/DiamondLib.sol";
 import {ProtocolBase} from "../bases/ProtocolBase.sol";
 import {ProtocolLib} from "../libs/ProtocolLib.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /**
  * @title FundsHandlerFacet
@@ -29,8 +30,8 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      *
      * Reverts if:
      * - seller id does not exist
-     * - it receives some eth, but token address is not zero
-     * - it receives some eth, and the amount does not match msg.value
+     * - it receives some native currency (e.g. ETH), but token address is not zero
+     * - it receives some native currency (e.g. ETH), and the amount does not match msg.value
      * - if contract at token address does not support erc20 function transferFrom
      * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      *
@@ -71,4 +72,38 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         emit FundsDeposited(_sellerId, msg.sender, _tokenAddress, _amount);              
     }
     
+    /**
+     * @notice For a given seller or buyer id it returns the information about the funds that can use as a sellerDeposit and/or be withdrawn
+     *
+     * @param _entityId - seller or buyer id to check
+     * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
+     */
+    function getAvailableFunds(uint256 _entityId) external view override returns (Funds[] memory availableFunds) {
+        // get list of token addresses for the entity
+        address[] memory tokenList = protocolStorage().tokenList[_entityId];
+        availableFunds = new Funds[](tokenList.length);
+
+        for (uint i = 0; i < tokenList.length; i++) {
+            address tokenAddress = tokenList[i];
+            string memory tokenName;
+            
+            if (tokenAddress == address(0)) {
+                // if tokenAddress is 0, it represents the native currency
+                tokenName = NATIVE_CURRENCY;
+            } else {
+                // try to get token name
+                try IERC20Metadata(tokenAddress).name() returns (string memory name) {
+                    tokenName = name;
+                } catch {
+                    tokenName = TOKEN_NAME_UNSPECIFIED;
+                }
+            }
+
+            // retrieve available amount from the stroage
+            uint availableAmount = protocolStorage().availableFunds[_entityId][tokenAddress];
+
+            // add entry to the return variable
+            availableFunds[i] = Funds(tokenAddress, tokenName, availableAmount);
+        }
+    }
 }

@@ -132,6 +132,12 @@ contract BosonTypes {
         uint256[] twinIds;
     }
 
+    struct Funds {
+        address tokenAddress;
+        string tokenName;
+        uint256 availableAmount;
+    }
+
     struct MetaTransaction {
         uint256 nonce;
         address from;

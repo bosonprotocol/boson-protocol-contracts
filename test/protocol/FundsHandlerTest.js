@@ -5,6 +5,7 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
+const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -140,34 +141,50 @@ describe("IBosonFundsHandler", function () {
           .withArgs(seller.id, rando.address, ethers.constants.AddressZero, depositAmount);
       });
 
-      it.skip("should update state", async function () {
-        // implement when getter is in place
-
+      it("should update state", async function () {
         // Deposit token
         await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount);
 
-        await fundsHandler.getAvailableFunds(seller.id);
+        // Read on chain state
+        let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
 
-        // Deposit native currency
+        // Chain state should match the expected available funds
+        let expectedAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", depositAmount)]);
+        expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
+
+        // Deposit native currency to the same seller id
         await fundsHandler
           .connect(rando)
           .depositFunds(seller.id, ethers.constants.AddressZero, depositAmount, { value: depositAmount });
 
-        await fundsHandler.getAvailableFunds(seller.id);
+        // Get new on chain state
+        returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+
+        // Chain state should match the expected available funds
+        expectedAvailableFunds.funds.push(new Funds(ethers.constants.AddressZero, "Native currency", depositAmount));
+        expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
       });
 
-      it.skip("should be possible to top up the account", async function () {
-        // implement when getter is in place
-
+      it("should be possible to top up the account", async function () {
         // Deposit token
         await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount);
 
-        await fundsHandler.getAvailableFunds(seller.id);
+        // Read on chain state
+        let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+
+        // Chain state should match the expected available funds
+        let expectedAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", depositAmount)]);
+        expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
 
         // Deposit the same token again
-        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount);
+        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, 2 * depositAmount);
 
-        await fundsHandler.getAvailableFunds(seller.id);
+        // Get new on chain state
+        returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+
+        // Chain state should match the expected available funds
+        expectedAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", `${3 * depositAmount}`)]);
+        expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -229,6 +246,29 @@ describe("IBosonFundsHandler", function () {
             fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount)
           ).to.revertedWith(RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE);
         });
+      });
+    });
+
+    context("👉 getAvailableFunds()", async function () {
+      it("Returns info also for ERC20 tokens without the name", async function () {
+        // Deploy the mock token with no name
+        [mockToken] = await deployMockTokens(gasLimit, ["Foreign20NoName"]);
+        // top up operators account
+        await mockToken.mint(operator.address, "1000000");
+        // approve protocol to transfer the tokens
+        await mockToken.connect(operator).approve(protocolDiamond.address, "1000000");
+
+        // Deposit token
+        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount);
+
+        // Read on chain state
+        let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+
+        // Chain state should match the expected available funds
+        let expectedAvailableFunds = new FundsList([
+          new Funds(mockToken.address, "Token name unspecified", depositAmount),
+        ]);
+        expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
       });
     });
   });

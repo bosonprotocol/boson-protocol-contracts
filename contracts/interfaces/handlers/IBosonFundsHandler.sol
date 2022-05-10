@@ -9,7 +9,7 @@ import {IBosonFundsEvents} from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles custody and withdrawal of buyer and seller funds within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xa07fcc70
+ * The ERC-165 identifier for this interface is: 0xc003e99a
  */
 interface IBosonFundsHandler is IBosonFundsEvents {
 
@@ -18,8 +18,8 @@ interface IBosonFundsHandler is IBosonFundsEvents {
      *
      * Reverts if:
      * - seller id does not exist
-     * - it receives some eth, but token address is not zero
-     * - it receives some eth, and the amount does not match msg.value
+     * - it receives some native currency (e.g. ETH), but token address is not zero
+     * - it receives some native currency (e.g. ETH), and the amount does not match msg.value
      * - if contract at token address does not support erc20 function transferFrom
      * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      *
@@ -29,4 +29,11 @@ interface IBosonFundsHandler is IBosonFundsEvents {
      */
      function depositFunds(uint256 _sellerId, address _tokenAddress, uint256 _amount) external payable;
 
+    /**
+     * @notice For a given seller or buyer id it returns the information about the funds that can use as a sellerDeposit and/or be withdrawn
+     *
+     * @param _entityId - seller or buyer id to check
+     * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
+     */
+    function getAvailableFunds(uint256 _entityId) external view returns (BosonTypes.Funds[] memory availableFunds);
 }
