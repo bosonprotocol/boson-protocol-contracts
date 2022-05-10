@@ -78,8 +78,6 @@ contract BosonConstants {
     string internal constant NATIVE_WRONG_AMOUNT = "Transferred value must match amount";
     string internal constant TOKEN_NAME_UNSPECIFIED = "Token name unspecified";
     string internal constant NATIVE_CURRENCY = "Native currency";
-    string internal constant TOKEN_NAME_UNSPECIFIED = "Token name unspecified";
-    string internal constant NATIVE_CURRENCY = "Native currency";
 
     // Revert Reasons: Meta-Transactions related
     string internal constant NONCE_USED_ALREADY = "Nonce used already";
