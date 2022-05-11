@@ -9,7 +9,7 @@ import {IBosonFundsEvents} from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles custody and withdrawal of buyer and seller funds within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xc003e99a
+ * The ERC-165 identifier for this interface is: 0x613133e7
  */
 interface IBosonFundsHandler is IBosonFundsEvents {
 

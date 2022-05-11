@@ -23,7 +23,14 @@ describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
   let accounts, deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, game;
-  let erc165, protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, disputeHandler;
+  let erc165,
+    protocolDiamond,
+    accessController,
+    accountHandler,
+    exchangeHandler,
+    offerHandler,
+    fundsHandler,
+    disputeHandler;
   let bosonVoucher, gasLimit;
   let id, buyerId, offer, offerId, seller, sellerId, nextExchangeId, newBuyerId;
   let block, blockNumber, tx, txReceipt, event, clients;
@@ -75,6 +82,7 @@ describe("IBosonExchangeHandler", function () {
       "AccountHandlerFacet",
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
+      "FundsHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -108,6 +116,9 @@ describe("IBosonExchangeHandler", function () {
 
     // Cast Diamond to IBosonExchangeHandler
     exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonFundsHandler
+    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -199,9 +210,16 @@ describe("IBosonExchangeHandler", function () {
     });
 
     context("👉 commitToOffer()", async function () {
+      beforeEach(async function () {
+        // Deposit seller funds so the commit will succeed
+        await fundsHandler
+          .connect(operator)
+          .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+      });
+
       it("should emit a BuyerCommitted event", async function () {
         // Commit to offer, testing for the event
-        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
         txReceipt = await tx.wait();
         event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
@@ -225,7 +243,7 @@ describe("IBosonExchangeHandler", function () {
 
       it("should increment the next exchange id counter", async function () {
         // Commit to offer, creating a new exchange
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
         // Get the next exchange id and ensure it was incremented by the creation of the offer
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
@@ -247,7 +265,7 @@ describe("IBosonExchangeHandler", function () {
         it("buyer address is the zero address", async function () {
           // Attempt to commit, expecting revert
           await expect(
-            exchangeHandler.connect(buyer).commitToOffer(ethers.constants.AddressZero, offerId)
+            exchangeHandler.connect(buyer).commitToOffer(ethers.constants.AddressZero, offerId, { value: price })
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
@@ -256,17 +274,22 @@ describe("IBosonExchangeHandler", function () {
           offerId = "666";
 
           // Attempt to commit, expecting revert
-          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId)).to.revertedWith(
-            RevertReasons.NO_SUCH_OFFER
-          );
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
         });
       });
     });
 
     context("👉 completeExchange()", async function () {
       beforeEach(async function () {
+        // Deposit seller funds so the commit will succeed
+        await fundsHandler
+          .connect(operator)
+          .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
         // Commit to offer, retrieving the event
-        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
         txReceipt = await tx.wait();
         event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
@@ -372,8 +395,13 @@ describe("IBosonExchangeHandler", function () {
 
     context("👉 revokeVoucher()", async function () {
       beforeEach(async function () {
+        // Deposit seller funds so the commit will succeed
+        await fundsHandler
+          .connect(operator)
+          .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
         // Commit to offer, retrieving the event
-        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
         txReceipt = await tx.wait();
         event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
@@ -547,8 +575,13 @@ describe("IBosonExchangeHandler", function () {
 
     context("👉 isExchangeFinalized()", async function () {
       beforeEach(async function () {
+        // Deposit seller funds so the commit will succeed
+        await fundsHandler
+          .connect(operator)
+          .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
         // Commit to offer, creating a new exchange
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
       });
 
       context("👍 undisputed exchange", async function () {
@@ -666,8 +699,13 @@ describe("IBosonExchangeHandler", function () {
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
         expect(nextExchangeId).to.equal(id);
 
+        // Deposit seller funds so the commit will succeed
+        await fundsHandler
+          .connect(operator)
+          .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
         // Commit to offer, creating a new exchange
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
         // Get the next exchange id and ensure it was incremented by the creation of the offer
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
@@ -687,8 +725,13 @@ describe("IBosonExchangeHandler", function () {
 
     context("👉 getExchange()", async function () {
       beforeEach(async function () {
+        // Deposit seller funds so the commit will succeed
+        await fundsHandler
+          .connect(operator)
+          .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
         // Commit to offer, getting the exchange struct from the event
-        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
         txReceipt = await tx.wait();
         event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
@@ -727,8 +770,13 @@ describe("IBosonExchangeHandler", function () {
 
     context("👉 getExchangeState()", async function () {
       beforeEach(async function () {
+        // Deposit seller funds so the commit will succeed
+        await fundsHandler
+          .connect(operator)
+          .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
         // Commit to offer, getting the exchange struct from the event
-        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
         txReceipt = await tx.wait();
         event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
