@@ -5,7 +5,8 @@ exports.RevertReasons = {
   // Access related
   ACCESS_DENIED: "Access denied, caller doesn't have role",
   NOT_BUYER_OR_SELLER: "Not buyer or seller",
-  NOT_BUYER_OR_OWNER: "Not buyer or current owner",
+  NOT_VOUCHER_HOLDER: "Not current voucher holder",
+  WRONG_BUYER: "Buyer account exists but does not own exchange",
 
   // General
   INVALID_ADDRESS: "Invalid address",

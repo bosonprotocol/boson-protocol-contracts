@@ -86,7 +86,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         } else {
 
             // create the buyer account
-            (buyerId, buyer) = autoCreateBuyer(_buyer);
+            (buyerId, buyer) = createBuyerInternal(_buyer);
 
         }
 
@@ -219,7 +219,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
      * Reverts if
      * - Exchange does not exist
      * - Exchange is not in committed state
-     * - Caller is not original buyer and does not own voucher
+     * - Caller does not own voucher
      *
      * Emits
      * - VoucherCanceled
@@ -236,25 +236,20 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         // Make sure the exchange exists, is in committed state
         require(exchange.state == ExchangeState.Committed, INVALID_STATE_TRANSITION);
 
-        // Is this the buyer?
+        // Must be current owner
+        IBosonVoucher bosonVoucher = IBosonVoucher(protocolStorage().voucherAddress);
+        require(bosonVoucher.ownerOf(_exchangeId) == msg.sender, NOT_VOUCHER_HOLDER);
+
+        // Get the caller's buyer account
         bool buyerExists;
         uint256 buyerId;
         (buyerExists, buyerId) = getBuyerIdByWallet(msg.sender);
 
-        // Make sure caller is either original buyer or current owner of voucher
-        if (buyerExists) {
-            require(buyerExists && buyerId == exchange.buyerId, WRONG_BUYER);
-        } else {
-            // If not the original buyer, must be current owner
-            IBosonVoucher bosonVoucher = IBosonVoucher(protocolStorage().voucherAddress);
-            require(bosonVoucher.ownerOf(_exchangeId) == msg.sender, NOT_BUYER_OR_OWNER);
+        // Create buyer account for new owner if needed
+        if (!buyerExists) (buyerId,) = createBuyerInternal(payable(msg.sender));
 
-            // create buyer account for new owner
-            (buyerId,) = autoCreateBuyer(payable(msg.sender));
-
-            // Update buyer id on the exchange
-            exchange.buyerId = buyerId;
-        }
+        // Update buyer id for the exchange if it changed
+        if (exchange.buyerId != buyerId) exchange.buyerId = buyerId;
 
         // Finalize the exchange, burning the voucher
         finalizeExchange(exchange, ExchangeState.Canceled);
@@ -359,7 +354,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
      * @return buyerId - the new Buyer id
      * @return buyer - the new Buyer struct
      */
-    function autoCreateBuyer(address payable _buyer)
+    function createBuyerInternal(address payable _buyer)
     internal
     returns (uint256 buyerId, Buyer storage buyer)
     {
@@ -389,7 +384,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
             _targetState == ExchangeState.Canceled
         );
 
-        // Set the exchange state to completed
+        // Set the exchange state to the target state
         _exchange.state = _targetState;
 
         // Store the time the exchange was finalized

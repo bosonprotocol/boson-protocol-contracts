@@ -7,6 +7,7 @@ const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
 const Offer = require("../../scripts/domain/Offer");
 const Seller = require("../../scripts/domain/Seller");
+const Buyer = require("../../scripts/domain/Buyer");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const { getEvent, setNextBlockTimestamp } = require("../../scripts/util/test-utils.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -541,12 +542,38 @@ describe("IBosonExchangeHandler", function () {
         assert.equal(exchange.buyerId, newBuyerId, "Buyer ID is incorrect");
       });
 
+      it("should update state when new owner (already a buyer) calls", async function () {
+        // Transfer voucher to new owner
+        await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
+
+        // Get the id that will be assigned to the new owner
+        newBuyerId = await accountHandler.connect(rando).getNextAccountId();
+
+        // Create a buyer account for the new owner
+        await accountHandler.connect(newOwner).createBuyer(new Buyer("0", newOwner.address, true));
+
+        // Cancel the voucher
+        await exchangeHandler.connect(newOwner).cancelVoucher(exchange.id);
+
+        // Get the exchange struct from the contract
+        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+
+        // Parse the struct
+        exchange = Exchange.fromStruct(response);
+
+        // State should match ExchangeState.Canceled
+        assert.equal(exchange.state, ExchangeState.Canceled, "Exchange state is incorrect");
+
+        // Buyer ID should match the expected id
+        assert.equal(exchange.buyerId, newBuyerId, "Buyer ID is incorrect");
+      });
+
       context("💔 Revert Reasons", async function () {
         /*
          * Reverts if
          * - Exchange does not exist
          * - Exchange is not in committed state
-         * - Caller is not original buyer and does not own voucher
+         * - Caller does not own voucher
          */
 
         it("exchange id is invalid", async function () {
@@ -569,10 +596,10 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
-        it("caller is not original buyer and does not own voucher", async function () {
-          // Attempt to complete the exchange, expecting revert
+        it("caller does not own voucher", async function () {
+          // Attempt to cancel the voucher, expecting revert
           await expect(exchangeHandler.connect(rando).cancelVoucher(exchange.id)).to.revertedWith(
-            RevertReasons.NOT_BUYER_OR_OWNER
+            RevertReasons.NOT_VOUCHER_HOLDER
           );
         });
       });
@@ -614,7 +641,7 @@ describe("IBosonExchangeHandler", function () {
           // Complete exchange
           await exchangeHandler.connect(operator).completeExchange(exchange.id);
 
-          // Now in Revoked state, ask if exchange is finalized
+          // Now in Completed state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
 
           // It should be finalized

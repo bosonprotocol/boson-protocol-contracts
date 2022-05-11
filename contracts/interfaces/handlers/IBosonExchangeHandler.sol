@@ -76,7 +76,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
      * Reverts if
      * - Exchange does not exist
      * - Exchange is not in committed state
-     * - Caller is not original buyer and does not own voucher
+     * - Caller does not own voucher
      *
      * Emits
      * - VoucherCanceled

@@ -27,8 +27,7 @@ contract BosonConstants {
     string internal constant NOT_OPERATOR = "Not seller's operator";
     string internal constant NOT_ADMIN = "Not seller's admin";
     string internal constant NOT_BUYER_OR_SELLER = "Not buyer or seller";
-    string internal constant WRONG_BUYER = "Buyer account exists but does not own exchange";
-    string internal constant NOT_BUYER_OR_OWNER = "Not buyer or current owner";
+    string internal constant NOT_VOUCHER_HOLDER = "Not current voucher holder";
 
     // Revert Reasons: Account-related
     string internal constant NO_SUCH_SELLER = "No such seller";
