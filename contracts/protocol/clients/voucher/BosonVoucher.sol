@@ -63,18 +63,6 @@ contract BosonVoucher is IBosonVoucher, ClientBase, ERC721Upgradeable {
     }
 
     /**
-     * @notice Redeem a voucher
-     *
-     * @param _exchangeId - the id of the exchange (corresponds to the ERC-1155 token id)
-     */
-    function redeemVoucher(uint256 _exchangeId, address payable _holder)
-    external
-    override
-    {
-        // TODO implement
-    }
-
-    /**
      * @notice Implementation of the {IERC165} interface.
      *
      * N.B. This method is inherited from several parents and

@@ -76,18 +76,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         Buyer storage buyer;
         (exists, buyerId) = getBuyerIdByWallet(_buyer);
         if (exists) {
-
             // Fetch the existing buyer account
             (,buyer) = fetchBuyer(buyerId);
 
             // Make sure buyer account is active
             require(buyer.active, MUST_BE_ACTIVE);
-
         } else {
-
             // create the buyer account
             (buyerId, buyer) = createBuyerInternal(_buyer);
-
         }
 
         // Encumber funds before creating the exchange
@@ -139,8 +135,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         Exchange storage exchange = getValidExchange(_exchangeId);
 
         // Make sure the exchange is in redeemed state
-        // TODO: Uncomment check for redeemed state once redeemVoucher is working
-        //require(exchange.state == ExchangeState.Redeemed, INVALID_STATE_TRANSITION);
+        require(exchange.state == ExchangeState.Redeemed, INVALID_STATE_TRANSITION);
 
         // Get the offer, which will definitely exist
         Offer storage offer;
@@ -236,26 +231,50 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         // Make sure the exchange exists, is in committed state
         require(exchange.state == ExchangeState.Committed, INVALID_STATE_TRANSITION);
 
-        // Must be current owner
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolStorage().voucherAddress);
-        require(bosonVoucher.ownerOf(_exchangeId) == msg.sender, NOT_VOUCHER_HOLDER);
-
-        // Get the caller's buyer account
-        bool buyerExists;
-        uint256 buyerId;
-        (buyerExists, buyerId) = getBuyerIdByWallet(msg.sender);
-
-        // Create buyer account for new owner if needed
-        if (!buyerExists) (buyerId,) = createBuyerInternal(payable(msg.sender));
-
-        // Update buyer id for the exchange if it changed
-        if (exchange.buyerId != buyerId) exchange.buyerId = buyerId;
+        // Reconcile voucher's current owner with stored exchange in case it changed hands
+        reconcileBuyer(exchange);
 
         // Finalize the exchange, burning the voucher
         finalizeExchange(exchange, ExchangeState.Canceled);
 
         // Notify watchers of state change
         emit VoucherCanceled(exchange.offerId, _exchangeId, msg.sender);
+    }
+
+    /**
+     * @notice Redeem a voucher.
+     *
+     * Reverts if
+     * - Exchange does not exist
+     * - Exchange is not in committed state
+     * - Caller does not own voucher
+     *
+     * Emits
+     * - VoucherRedeemed
+     *
+     * @param _exchangeId - the id of the exchange
+     */
+    function redeemVoucher(uint256 _exchangeId)
+    external
+    override
+    {
+        // Get the exchange
+        Exchange storage exchange = getValidExchange(_exchangeId);
+
+        // Make sure the exchange exists, is in committed state
+        require(exchange.state == ExchangeState.Committed, INVALID_STATE_TRANSITION);
+
+        // Reconcile voucher's current owner with stored exchange in case it changed hands
+        reconcileBuyer(exchange);
+
+        // Store the time the exchange was finalized
+        exchange.voucher.redeemedDate = block.timestamp;
+
+        // Set the exchange state to the Redeemed
+        exchange.state = ExchangeState.Redeemed;
+
+        // Notify watchers of state change
+        emit VoucherRedeemed(exchange.offerId, _exchangeId, msg.sender);
     }
 
     /**
@@ -348,6 +367,42 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     }
 
     /**
+     * @notice Reconcile current voucher owner with stored exchange.
+     *
+     * In the period between committing and canceling or redeeming,
+     * the voucher may have changed hands. This method reconciles
+     * the various possibilities with the stored exchange.
+     *
+     * Based on the current owner, this method will
+     * - original owner (take no action)
+     * - new owner with an existing buyer account (update buyerId in exchange)
+     * - new owner with no buyer account (create one and update buyerId in exchange)
+     *
+     * Reverts if
+     * - caller is not owner of the voucher associated with the exchange
+     *
+     * @param _exchange - the exchange to update if needed
+     */
+    function reconcileBuyer(Exchange storage _exchange)
+    internal
+    {
+        // Must be current owner
+        IBosonVoucher bosonVoucher = IBosonVoucher(protocolStorage().voucherAddress);
+        require(bosonVoucher.ownerOf(_exchange.id) == msg.sender, NOT_VOUCHER_HOLDER);
+
+        // Get the caller's buyer account
+        bool buyerExists;
+        uint256 buyerId;
+        (buyerExists, buyerId) = getBuyerIdByWallet(msg.sender);
+
+        // Create buyer account for new owner if needed
+        if (!buyerExists) (buyerId,) = createBuyerInternal(payable(msg.sender));
+
+        // Update buyer id for the exchange if it changed
+        if (_exchange.buyerId != buyerId) _exchange.buyerId = buyerId;
+    }
+
+    /**
      * @notice Create a buyer account when needed
      *
      * @param _buyer - the address of the buyer
@@ -409,7 +464,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolStorage().voucherAddress);
         bosonVoucher.burnVoucher(_exchangeId);
     }
-
 
     /**
      * @notice Get a valid exchange
