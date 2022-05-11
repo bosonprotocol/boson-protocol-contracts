@@ -57,19 +57,13 @@ function getSignatureParameters(signature) {
   };
 }
 
-async function prepareDataSignatureParameters(user, nonce, functionSignature, metaTransactionsHandlerAddress) {
+async function prepareDataSignatureParameters(user, customTransactionTypes, message, metaTransactionsHandlerAddress) {
   // Initialize data
   const domainType = [
     { name: "name", type: "string" },
     { name: "version", type: "string" },
     { name: "chainId", type: "uint256" },
     { name: "verifyingContract", type: "address" },
-  ];
-
-  const metaTransactionType = [
-    { name: "nonce", type: "uint256" },
-    { name: "from", type: "address" },
-    { name: "functionSignature", type: "bytes" },
   ];
 
   const domainData = {
@@ -79,18 +73,15 @@ async function prepareDataSignatureParameters(user, nonce, functionSignature, me
     verifyingContract: metaTransactionsHandlerAddress,
   };
 
-  // Prepare the message
-  let message = {};
-  message.nonce = parseInt(nonce);
-  message.from = user.address;
-  message.functionSignature = functionSignature;
+  // Prepare the types
+  let metaTxTypes = {
+    EIP712Domain: domainType,
+  };
+  metaTxTypes = Object.assign({}, metaTxTypes, customTransactionTypes);
 
   // Prepare the data to sign
   let dataToSign = JSON.stringify({
-    types: {
-      EIP712Domain: domainType,
-      MetaTransaction: metaTransactionType,
-    },
+    types: metaTxTypes,
     domain: domainData,
     primaryType: "MetaTransaction",
     message: message,

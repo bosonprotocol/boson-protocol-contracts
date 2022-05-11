@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import { IBosonMetaTransactionsHandler } from "../../interfaces/handlers/IBosonMetaTransactionsHandler.sol";
+import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 
@@ -112,6 +113,39 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     }
 
     /**
+     * @notice Verifies the current transaction sender.
+     *
+     * Reverts if:
+     * - sender does not match the recovered signer.
+     *
+     * @param _userAddress  - the sender of the transaction.
+     * @param _functionSignature - the function signature.
+     * @param _nonce - the nonce value of the transaction.
+     * @param _sigR - r part of the signer's signature.
+     * @param _sigS - s part of the signer's signature.
+     * @param _sigV - v part of the signer's signature.
+     */
+    function verifySignerAndSignature(
+        address _userAddress,
+        bytes memory _functionSignature,
+        uint256 _nonce,
+        bytes32 _sigR,
+        bytes32 _sigS,
+        uint8 _sigV
+    )
+        internal view
+    {
+        bytes4 destinationFunctionSig = convertBytesToBytes4(_functionSignature);
+
+        if (destinationFunctionSig == IBosonExchangeHandler.commitToOffer.selector) {
+            // TODO: handle details signature of meta transaction
+        } else {
+            MetaTransaction memory metaTx = MetaTransaction({nonce: _nonce, from: _userAddress, functionSignature: _functionSignature});
+            require(verify(_userAddress, metaTx, _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+        }
+    }
+
+    /**
      * @notice Handles the incoming meta transaction.
      *
      * Reverts if:
@@ -140,8 +174,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         bytes4 destinationFunctionSig = convertBytesToBytes4(_functionSignature);
         require(destinationFunctionSig != msg.sig, INVALID_FUNCTION_SIGNATURE);
 
-        MetaTransaction memory metaTx = MetaTransaction({nonce: _nonce, from: _userAddress, functionSignature: _functionSignature});
-        require(verify(_userAddress, metaTx, _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+        verifySignerAndSignature(_userAddress, _functionSignature, _nonce, _sigR, _sigS, _sigV);
 
         // Store the nonce provided to avoid playback of the same tx
         protocolMetaTxInfo().usedNonce[_nonce] = true;

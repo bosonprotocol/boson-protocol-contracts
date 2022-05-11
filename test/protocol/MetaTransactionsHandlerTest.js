@@ -114,16 +114,35 @@ describe("IBosonMetaTransactionsHandler", function () {
         active = true;
         seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, active);
         expect(seller.isValid()).is.true;
+
         // Prepare the function signature for the facet function.
         functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
+
+        // Set the message Type
+        const metaTransactionType = [
+          { name: "nonce", type: "uint256" },
+          { name: "from", type: "address" },
+          { name: "functionSignature", type: "bytes" },
+        ];
+
+        let customTransactionType = {
+          MetaTransaction: metaTransactionType,
+        };
+
+        // Prepare the message
+        let message = {};
+        message.nonce = parseInt(nonce);
+        message.from = operator.address;
+        message.functionSignature = functionSignature;
 
         // Collect the signature components
         let { r, s, v } = await prepareDataSignatureParameters(
           operator,
-          nonce,
-          functionSignature,
+          customTransactionType,
+          message,
           metaTransactionsHandler.address
         );
+
         // Send as meta transaction
         await metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v);
 
@@ -154,11 +173,28 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Prepare the function signature for the facet function.
         functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
 
+        // Set the message Type
+        const metaTransactionType = [
+          { name: "nonce", type: "uint256" },
+          { name: "from", type: "address" },
+          { name: "functionSignature", type: "bytes" },
+        ];
+
+        let customTransactionType = {
+          MetaTransaction: metaTransactionType,
+        };
+
+        // Prepare the message
+        let message = {};
+        message.nonce = parseInt(nonce);
+        message.from = operator.address;
+        message.functionSignature = functionSignature;
+
         // Collect the signature components
         let { r, s, v } = await prepareDataSignatureParameters(
           operator,
-          nonce,
-          functionSignature,
+          customTransactionType,
+          message,
           metaTransactionsHandler.address
         );
 
@@ -194,11 +230,28 @@ describe("IBosonMetaTransactionsHandler", function () {
             parseInt(ethers.utils.randomBytes(8)), // random uint8
           ]);
 
+          // Set the message Type
+          const metaTransactionType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "functionSignature", type: "bytes" },
+          ];
+
+          let customTransactionType = {
+            MetaTransaction: metaTransactionType,
+          };
+
+          // Prepare the message
+          let message = {};
+          message.nonce = parseInt(nonce);
+          message.from = operator.address;
+          message.functionSignature = functionSignature;
+
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             operator,
-            nonce,
-            functionSignature,
+            customTransactionType,
+            message,
             metaTransactionsHandler.address
           );
 
@@ -218,11 +271,28 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Prepare the function signature for the facet function.
           functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
 
+          // Set the message Type
+          const metaTransactionType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "functionSignature", type: "bytes" },
+          ];
+
+          let customTransactionType = {
+            MetaTransaction: metaTransactionType,
+          };
+
+          // Prepare the message
+          let message = {};
+          message.nonce = parseInt(nonce);
+          message.from = operator.address;
+          message.functionSignature = functionSignature;
+
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             operator,
-            nonce,
-            functionSignature,
+            customTransactionType,
+            message,
             metaTransactionsHandler.address
           );
 
@@ -245,11 +315,28 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Prepare the function signature for the facet function.
           functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
 
+          // Set the message Type
+          const metaTransactionType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "functionSignature", type: "bytes" },
+          ];
+
+          let customTransactionType = {
+            MetaTransaction: metaTransactionType,
+          };
+
+          // Prepare the message
+          let message = {};
+          message.nonce = parseInt(nonce);
+          message.from = rando.address;
+          message.functionSignature = functionSignature;
+
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             rando, // Different user, not operator.
-            nonce,
-            functionSignature,
+            customTransactionType,
+            message,
             metaTransactionsHandler.address
           );
 
