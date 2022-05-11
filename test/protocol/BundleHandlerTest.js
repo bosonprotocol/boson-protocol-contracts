@@ -31,6 +31,7 @@ describe("IBosonBundleHandler", function () {
     accountHandler,
     bundleHandler,
     exchangeHandler,
+    fundsHandler,
     bosonVoucher,
     bosonToken,
     twin,
@@ -99,6 +100,7 @@ describe("IBosonBundleHandler", function () {
       "OfferHandlerFacet",
       "BundleHandlerFacet",
       "ExchangeHandlerFacet",
+      "FundsHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -133,6 +135,8 @@ describe("IBosonBundleHandler", function () {
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
     // Cast Diamond to IBosonExchangeHandler
     exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
+    // Cast Diamond to IBosonFundsHandler
+    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
 
     // Deploy the mock tokens
     [bosonToken] = await deployMockTokens(gasLimit);
@@ -506,9 +510,14 @@ describe("IBosonBundleHandler", function () {
       });
 
       it("Exchange already exists for the offerId in bundle", async function () {
+        // Deposit seller funds so the commit will succeed
+        await fundsHandler
+          .connect(operator)
+          .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
         // Commit to an offer
         let offerIdToCommit = bundle.offerIds[0];
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerIdToCommit);
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerIdToCommit, { value: price });
 
         // Attempt to Create a bundle, expecting revert
         await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
@@ -1162,9 +1171,14 @@ describe("IBosonBundleHandler", function () {
         });
 
         it("Exchange already exists for the offerId in bundle", async function () {
+          // Deposit seller funds so the commit will succeed
+          await fundsHandler
+            .connect(operator)
+            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
           // Commit to an offer
           let offerIdToCommit = offerIdsToAdd[0];
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerIdToCommit);
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerIdToCommit, { value: price });
 
           // Attempt to add offers to a bundle, expecting revert
           await expect(bundleHandler.connect(operator).addOffersToBundle(bundle.id, offerIdsToAdd)).to.revertedWith(
@@ -1319,9 +1333,14 @@ describe("IBosonBundleHandler", function () {
         });
 
         it("Exchange already exists for the offerId in bundle", async function () {
+          // Deposit seller funds so the commit will succeed
+          await fundsHandler
+            .connect(operator)
+            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
           // Commit to an offer
           let offerIdToCommit = offerIdsToRemove[0];
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerIdToCommit);
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerIdToCommit, { value: price });
 
           // Attempt to remove offers from the bundle, expecting revert
           await expect(
@@ -1491,9 +1510,14 @@ describe("IBosonBundleHandler", function () {
         });
 
         it("Exchange exists for bundled offer", async function () {
+          // Deposit seller funds so the commit will succeed
+          await fundsHandler
+            .connect(operator)
+            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
           // Commit to an offer
           let offerIdToCommit = bundle.offerIds[0];
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerIdToCommit);
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerIdToCommit, { value: price });
 
           // Attempt to Remove a bundle, expecting revert
           await expect(bundleHandler.connect(operator).removeBundle(bundle.id)).to.revertedWith(

@@ -5,6 +5,7 @@ import {IBosonFundsHandler} from "../../interfaces/handlers/IBosonFundsHandler.s
 import {DiamondLib} from "../../diamond/DiamondLib.sol";
 import {ProtocolBase} from "../bases/ProtocolBase.sol";
 import {ProtocolLib} from "../libs/ProtocolLib.sol";
+import {FundsLib} from "../libs/FundsLib.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
@@ -49,14 +50,10 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         if (msg.value != 0) {
             // receiving native currency
             require(_tokenAddress == address(0), NATIVE_WRONG_ADDRESS);
-            require(msg.value == _amount, NATIVE_WRONG_AMOUNT);
+            require(_amount == msg.value, NATIVE_WRONG_AMOUNT);
         } else {
             // transfer tokens from the caller
-            try IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _amount)  {
-            } catch (bytes memory error) {
-                string memory reason = error.length == 0 ? TOKEN_TRANSFER_FAILED : string(error);
-                revert(reason);
-            }
+            FundsLib.transferFundsToProtocol(_tokenAddress, _amount);
         }
 
         ProtocolLib.ProtocolStorage storage ps = protocolStorage();
@@ -88,7 +85,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             string memory tokenName;
             
             if (tokenAddress == address(0)) {
-                // if tokenAddress is 0, it represents the native currency
+                // it tokenAddress is 0, it represents the native currency
                 tokenName = NATIVE_CURRENCY;
             } else {
                 // try to get token name

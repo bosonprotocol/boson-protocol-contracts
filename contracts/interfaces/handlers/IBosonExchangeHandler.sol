@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {BosonTypes} from "../../domain/BosonTypes.sol";
 import {IBosonExchangeEvents} from "../events/IBosonExchangeEvents.sol";
+import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
 
 /**
  * @title IBosonExchangeHandler
@@ -11,24 +12,32 @@ import {IBosonExchangeEvents} from "../events/IBosonExchangeEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0xa0356709
  */
-interface IBosonExchangeHandler is IBosonExchangeEvents {
+interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
 
     /**
      * @notice Commit to an offer (first step of an exchange)
      *
      * Emits an BuyerCommitted event if successful.
-     * Issues a voucher to the buyer address
+     * Issues a voucher to the buyer address.
      *
      * Reverts if:
-     * - buyer address is zero
      * - offerId is invalid
      * - offer has been voided
      * - offer has expired
+     * - offer is not yet available for commits
+     * - offer's quantity available is zero
+     * - buyer address is zero
+     * - buyer account is inactive
+     * - offer price is in native token and buyer caller does not send enough
+     * - offer price is in some ERC20 token and caller also send native currency
+     * - if contract at token address does not support erc20 function transferFrom
+     * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - if seller has less funds available than sellerDeposit
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
      */
-    function commitToOffer(address payable _buyer, uint256 _offerId) external;
+    function commitToOffer(address payable _buyer, uint256 _offerId) external payable;
 
     /**
      * @notice Complete an exchange.

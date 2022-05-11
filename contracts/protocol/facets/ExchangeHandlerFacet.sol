@@ -6,6 +6,7 @@ import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHan
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
+import { FundsLib } from "../libs/FundsLib.sol";
 
 /**
  * @title ExchangeHandlerFacet
@@ -38,6 +39,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
      * - offer's quantity available is zero
      * - buyer address is zero
      * - buyer account is inactive
+     * - offer price is in native token and buyer caller does not send enough
+     * - offer price is in some ERC20 token and caller also send native currency
+     * - if contract at token address does not support erc20 function transferFrom
+     * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - if seller has less funds available than sellerDeposit
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
@@ -47,6 +53,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         uint256 _offerId
     )
     external
+    payable
     override
     {
         // Make sure buyer address is not zero address
@@ -56,6 +63,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         bool exists;
         Offer storage offer;
         (exists, offer) = fetchOffer(_offerId);
+
+        
 
         // Make sure offer exists, is available, and isn't void, expired, or sold out
         require(exists, NO_SUCH_OFFER);
@@ -88,6 +97,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
             (, buyer) = fetchBuyer(buyerId);
 
         }
+
+        // Encumber funds before creating the exchange
+        FundsLib.encumberFunds(_offerId, buyerId);
 
         // Create and store a new exchange
         uint256 exchangeId = protocolCounters().nextExchangeId++;
