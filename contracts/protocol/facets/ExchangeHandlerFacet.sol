@@ -64,8 +64,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         Offer storage offer;
         (exists, offer) = fetchOffer(_offerId);
 
-        
-
         // Make sure offer exists, is available, and isn't void, expired, or sold out
         require(exists, NO_SUCH_OFFER);
         require(block.timestamp >= offer.validFromDate, OFFER_NOT_AVAILABLE);

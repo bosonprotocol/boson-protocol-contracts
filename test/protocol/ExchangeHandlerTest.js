@@ -471,8 +471,13 @@ describe("IBosonExchangeHandler", function () {
 
     context("👉 cancelVoucher()", async function () {
       beforeEach(async function () {
+        // Deposit seller funds so the commit will succeed
+        await fundsHandler
+          .connect(operator)
+          .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
         // Commit to offer, retrieving the event
-        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
         txReceipt = await tx.wait();
         event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
