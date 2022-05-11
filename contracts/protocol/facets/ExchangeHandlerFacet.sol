@@ -78,14 +78,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
 
         } else {
 
-            // get the id that will be assigned
-            buyerId = protocolCounters().nextAccountId;
-
-            // create the buyer (id is ignored)
-            IBosonAccountHandler(address(this)).createBuyer(Buyer(0, _buyer, true));
-
-            // fetch the buyer account
-            (, buyer) = fetchBuyer(buyerId);
+            // create the buyer account
+            (buyerId, buyer) = autoCreateBuyer(_buyer);
 
         }
 
@@ -131,7 +125,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     external
     override
     {
-
         // Get the exchange
         Exchange storage exchange = getValidExchange(_exchangeId);
 
@@ -161,15 +154,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
             require(buyerExists && buyerId == exchange.buyerId, NOT_BUYER_OR_SELLER);
         }
 
-        // Set the exchange state to completed
-        exchange.state = ExchangeState.Completed;
-
-        // Store the time the exchange was finalized
-        exchange.finalizedDate = block.timestamp;
+        // Finalize the exchange
+        finalizeExchange(exchange, ExchangeState.Completed);
 
         // Notify watchers of state change
         emit ExchangeCompleted(exchange.offerId, exchange.buyerId, exchange.id);
-
     }
 
     /**
@@ -183,7 +172,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
      * Emits
      * - VoucherRevoked
      *
-     * @param _exchangeId - the id of the exchange to complete
+     * @param _exchangeId - the id of the exchange
      */
     function revokeVoucher(uint256 _exchangeId)
     external
@@ -207,19 +196,61 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         // Only seller's operator may call
         require(sellerExists && offer.sellerId == sellerId, NOT_OPERATOR);
 
-        // Set the exchange state to Revoked
-        exchange.state = ExchangeState.Revoked;
-
-        // Store the time the exchange was finalized
-        exchange.finalizedDate = block.timestamp;
-
-        // Burn voucher
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolStorage().voucherAddress);
-        bosonVoucher.burnVoucher(_exchangeId);
+        // Finalize the exchange, burning the voucher
+        finalizeExchange(exchange, ExchangeState.Revoked);
 
         // Notify watchers of state change
         emit VoucherRevoked(offer.id, _exchangeId, msg.sender);
+    }
 
+    /**
+     * @notice Cancel a voucher.
+     *
+     * Reverts if
+     * - Exchange does not exist
+     * - Exchange is not in committed state
+     * - Caller is not original buyer and does not own voucher
+     *
+     * Emits
+     * - VoucherCanceled
+     *
+     * @param _exchangeId - the id of the exchange
+     */
+    function cancelVoucher(uint256 _exchangeId)
+    external
+    override
+    {
+        // Get the exchange
+        Exchange storage exchange = getValidExchange(_exchangeId);
+
+        // Make sure the exchange exists, is in committed state
+        require(exchange.state == ExchangeState.Committed, INVALID_STATE_TRANSITION);
+
+        // Is this the buyer?
+        bool buyerExists;
+        uint256 buyerId;
+        (buyerExists, buyerId) = getBuyerIdByWallet(msg.sender);
+
+        // Make sure caller is either original buyer or current owner of voucher
+        if (buyerExists) {
+            require(buyerExists && buyerId == exchange.buyerId, WRONG_BUYER);
+        } else {
+            // If not the original buyer, must be current owner
+            IBosonVoucher bosonVoucher = IBosonVoucher(protocolStorage().voucherAddress);
+            require(bosonVoucher.ownerOf(_exchangeId) == msg.sender, NOT_BUYER_OR_OWNER);
+
+            // create buyer account for new owner
+            (buyerId,) = autoCreateBuyer(payable(msg.sender));
+
+            // Update buyer id on the exchange
+            exchange.buyerId = buyerId;
+        }
+
+        // Finalize the exchange, burning the voucher
+        finalizeExchange(exchange, ExchangeState.Canceled);
+
+        // Notify watchers of state change
+        emit VoucherCanceled(exchange.offerId, _exchangeId, msg.sender);
     }
 
     /**
@@ -304,9 +335,76 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
      *
      * @return nextExchangeId - the next exchange Id
      */
-    function getNextExchangeId() external view returns (uint256 nextExchangeId) {
+    function getNextExchangeId()
+    external
+    view
+    returns (uint256 nextExchangeId) {
         nextExchangeId = protocolCounters().nextExchangeId;
     }
+
+    /**
+     * @notice Create a buyer account when needed
+     *
+     * @param _buyer - the address of the buyer
+     * @return buyerId - the new Buyer id
+     * @return buyer - the new Buyer struct
+     */
+    function autoCreateBuyer(address payable _buyer)
+    internal
+    returns (uint256 buyerId, Buyer storage buyer)
+    {
+        // get the id that will be assigned
+        buyerId = protocolCounters().nextAccountId;
+
+        // create the buyer (id is ignored)
+        IBosonAccountHandler(address(this)).createBuyer(Buyer(0, _buyer, true));
+
+        // fetch the buyer account
+        (, buyer) = fetchBuyer(buyerId);
+    }
+
+    /**
+     * @notice Transition exchange to a "finalized" state
+     *
+     * Target state must be Completed, Revoked, or Canceled.
+     * Sets finalizedDate and releases funds associated with the exchange
+     */
+    function finalizeExchange(Exchange storage _exchange, ExchangeState _targetState)
+    internal
+    {
+        // Make sure target state is a final state
+        require(
+            _targetState == ExchangeState.Completed ||
+            _targetState == ExchangeState.Revoked ||
+            _targetState == ExchangeState.Canceled
+        );
+
+        // Set the exchange state to completed
+        _exchange.state = _targetState;
+
+        // Store the time the exchange was finalized
+        _exchange.finalizedDate = block.timestamp;
+
+        // Burn the voucher if canceling or revoking
+        if (_targetState != ExchangeState.Completed) burnVoucher(_exchange.id);
+
+        // TODO: Uncomment when FundsLib.releaseFunds is available
+        // releaseFunds(_exchange.id);
+
+    }
+
+    /**
+     * @notice Burn the voucher associated with a given exchange
+     *
+     * @param _exchangeId - the id of the exchange
+     */
+    function burnVoucher(uint256 _exchangeId)
+    internal
+    {
+        IBosonVoucher bosonVoucher = IBosonVoucher(protocolStorage().voucherAddress);
+        bosonVoucher.burnVoucher(_exchangeId);
+    }
+
 
     /**
      * @notice Get a valid exchange
@@ -328,6 +426,5 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
 
         // Make sure the exchange exists
         require(exchangeExists, NO_SUCH_EXCHANGE);
-
     }
 }

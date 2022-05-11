@@ -12,4 +12,5 @@ interface IBosonExchangeEvents {
     event BuyerCommitted(uint256 indexed offerId, uint256 indexed buyerId, uint256 indexed exchangeId, BosonTypes.Exchange exchange);
     event ExchangeCompleted(uint256 indexed offerId, uint256 indexed buyerId, uint256 indexed exchangeId);
     event VoucherRevoked(uint256 indexed offerId, uint256 indexed exchangeId, address indexed revokedBy);
+    event VoucherCanceled(uint256 indexed offerId, uint256 indexed exchangeId, address indexed canceledBy);
 }

@@ -62,6 +62,21 @@ interface IBosonExchangeHandler is IBosonExchangeEvents {
     function revokeVoucher(uint256 _exchangeId) external;
 
     /**
+     * @notice Cancel a voucher.
+     *
+     * Reverts if
+     * - Exchange does not exist
+     * - Exchange is not in committed state
+     * - Caller is not original buyer and does not own voucher
+     *
+     * Emits
+     * - VoucherCanceled
+     *
+     * @param _exchangeId - the id of the exchange
+     */
+    function cancelVoucher(uint256 _exchangeId) external;
+
+    /**
      * @notice Is the given exchange in a finalized state?
      *
      * Returns true if

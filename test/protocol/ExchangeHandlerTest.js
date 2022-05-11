@@ -22,10 +22,10 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, operator, admin, clerk, treasury, rando, game;
+  let accounts, deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, game;
   let erc165, protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, disputeHandler;
   let bosonVoucher, gasLimit;
-  let id, buyer, buyerId, offer, offerId, seller, sellerId, nextExchangeId;
+  let id, buyerId, offer, offerId, seller, sellerId, nextExchangeId, newBuyerId;
   let block, blockNumber, tx, txReceipt, event, clients;
   let support, oneMonth, oneWeek, newTime;
   let price,
@@ -58,7 +58,8 @@ describe("IBosonExchangeHandler", function () {
     treasury = accounts[4];
     buyer = accounts[5];
     rando = accounts[6];
-    game = accounts[7]; // the MR Game that is allowed to push the Dispute into final states
+    newOwner = accounts[7];
+    game = accounts[8]; // the MR Game that is allowed to push the Dispute into final states
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -335,10 +336,10 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
-        // TODO: include when redeemVoucher method becomes available
+        // TODO: Uncomment when redeemVoucher works and contract reverts in this case
         it.skip("exchange is not in redeemed state", async function () {
-          // Cancel voucher
-          // TODO cancel the voucher when
+          // Cancel the voucher
+          await exchangeHandler.connect(buyer).cancelVoucher(exchange.id);
 
           // Attempt to complete the exchange, expecting revert
           await expect(exchangeHandler.connect(operator).completeExchange(exchange.id)).to.revertedWith(
@@ -415,15 +416,15 @@ describe("IBosonExchangeHandler", function () {
           // An invalid exchange id
           id = "666";
 
-          // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).completeExchange(id)).to.revertedWith(
+          // Attempt to revoke the voucher, expecting revert
+          await expect(exchangeHandler.connect(operator).revokeVoucher(id)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
 
-        it.skip("exchange is not in committed state", async function () {
-          // TODO: redeemVoucher when that method becomes available
-          // await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+        it("exchange is not in committed state", async function () {
+          // Cancel the voucher
+          await exchangeHandler.connect(buyer).cancelVoucher(exchange.id);
 
           // Attempt to revoke the voucher, expecting revert
           await expect(exchangeHandler.connect(operator).revokeVoucher(exchange.id)).to.revertedWith(
@@ -432,12 +433,113 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("caller is not seller's operator", async function () {
-          // TODO: redeemVoucher when that method becomes available
-          // await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
-
           // Attempt to complete the exchange, expecting revert
           await expect(exchangeHandler.connect(rando).revokeVoucher(exchange.id)).to.revertedWith(
             RevertReasons.NOT_OPERATOR
+          );
+        });
+      });
+    });
+
+    context("👉 cancelVoucher()", async function () {
+      beforeEach(async function () {
+        // Commit to offer, retrieving the event
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+        txReceipt = await tx.wait();
+        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        exchange.voucher.committedDate = block.timestamp.toString();
+        exchangeStruct = exchange.toStruct();
+      });
+
+      it("should emit an VoucherCanceled event when original buyer calls", async function () {
+        // Cancel the voucher, expecting event
+        await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id))
+          .to.emit(exchangeHandler, "VoucherCanceled")
+          .withArgs(offerId, exchange.id, buyer.address);
+      });
+
+      it("should emit an VoucherCanceled event when new owner (not a buyer) calls", async function () {
+        // Transfer voucher to new owner
+        await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
+
+        // Cancel the voucher, expecting event
+        await expect(exchangeHandler.connect(newOwner).cancelVoucher(exchange.id))
+          .to.emit(exchangeHandler, "VoucherCanceled")
+          .withArgs(offerId, exchange.id, newOwner.address);
+      });
+
+      it("should update state when original buyer calls", async function () {
+        // Cancel the voucher
+        await exchangeHandler.connect(buyer).cancelVoucher(exchange.id);
+
+        // Get the exchange state
+        [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+        // It should match ExchangeState.Canceled
+        assert.equal(response, ExchangeState.Canceled, "Exchange state is incorrect");
+      });
+
+      it("should update state when new owner (not a buyer) calls", async function () {
+        // Transfer voucher to new owner
+        await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
+
+        // Get the id that will be assigned to the new owner
+        newBuyerId = await accountHandler.connect(rando).getNextAccountId();
+
+        // Cancel the voucher
+        await exchangeHandler.connect(newOwner).cancelVoucher(exchange.id);
+
+        // Get the exchange struct from the contract
+        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+
+        // Parse the struct
+        exchange = Exchange.fromStruct(response);
+
+        // State should match ExchangeState.Canceled
+        assert.equal(exchange.state, ExchangeState.Canceled, "Exchange state is incorrect");
+
+        // Buyer ID should match the expected id
+        assert.equal(exchange.buyerId, newBuyerId, "Buyer ID is incorrect");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        /*
+         * Reverts if
+         * - Exchange does not exist
+         * - Exchange is not in committed state
+         * - Caller is not original buyer and does not own voucher
+         */
+
+        it("exchange id is invalid", async function () {
+          // An invalid exchange id
+          id = "666";
+
+          // Attempt to cancel the voucher, expecting revert
+          await expect(exchangeHandler.connect(buyer).cancelVoucher(id)).to.revertedWith(
+            RevertReasons.NO_SUCH_EXCHANGE
+          );
+        });
+
+        it("exchange is not in committed state", async function () {
+          // Revoke the voucher
+          await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
+
+          // Attempt to cancel the voucher, expecting revert
+          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE_TRANSITION
+          );
+        });
+
+        it("caller is not original buyer and does not own voucher", async function () {
+          // Attempt to complete the exchange, expecting revert
+          await expect(exchangeHandler.connect(rando).cancelVoucher(exchange.id)).to.revertedWith(
+            RevertReasons.NOT_BUYER_OR_OWNER
           );
         });
       });
@@ -461,7 +563,7 @@ describe("IBosonExchangeHandler", function () {
         // TODO Include this test when BosonVoucher.redeemVoucher works
         it.skip("should return false if exchange is in Redeemed state", async function () {
           // Redeem voucher
-          [exists, response] = await bosonVoucher.connect(buyer).redeemVoucher(exchange.id, buyer.address);
+          [exists, response] = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id, buyer.address);
 
           // Now in Redeemed state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
@@ -470,10 +572,9 @@ describe("IBosonExchangeHandler", function () {
           assert.equal(response, false, "Incorrectly reports finalized state");
         });
 
-        // TODO Include this test when ExchangeHandlerFacet.completeExchange works
-        it.skip("should return true if exchange is in Completed state", async function () {
+        it("should return true if exchange is in Completed state", async function () {
           // Complete exchange
-          [exists, response] = await exchangeHandler.connect(operator).completeExchange(exchange.id);
+          await exchangeHandler.connect(operator).completeExchange(exchange.id);
 
           // Now in Revoked state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
@@ -482,10 +583,9 @@ describe("IBosonExchangeHandler", function () {
           assert.equal(response, true, "Incorrectly reports unfinalized state");
         });
 
-        // TODO Include this test when ExchangeHandlerFacet.revokeVoucher works
-        it.skip("should return true if exchange is in Revoked state", async function () {
+        it("should return true if exchange is in Revoked state", async function () {
           // Revoke voucher
-          [exists, response] = await bosonVoucher.connect(operator).revokeVoucher(exchange.id);
+          await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
 
           // Now in Revoked state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
@@ -494,10 +594,9 @@ describe("IBosonExchangeHandler", function () {
           assert.equal(response, true, "Incorrectly reports unfinalized state");
         });
 
-        // TODO Include this test when ExchangeHandlerFacet.cancelVoucher works
-        it.skip("should return true if exchange is in Canceled state", async function () {
+        it("should return true if exchange is in Canceled state", async function () {
           // Cancel voucher
-          [exists, response] = await bosonVoucher.connect(buyer).cancelVoucher(exchange.id);
+          await exchangeHandler.connect(buyer).cancelVoucher(exchange.id);
 
           // Now in Canceled state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
