@@ -13,7 +13,7 @@ import { ProtocolBase } from "../bases/ProtocolBase.sol";
  */
 contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, ProtocolBase {
 
-    bytes32 private constant META_TRANSACTION_TYPEHASH = keccak256(bytes("MetaTransaction(uint256 nonce,address from,bytes functionSignature)"));
+    bytes32 private constant META_TRANSACTION_TYPEHASH = keccak256(bytes("MetaTransaction(uint256 nonce,address from,address contractAddress,string functionName,bytes functionSignature)"));
 
     /**
      * @notice Facet Initializer
@@ -64,7 +64,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      */
     function hashMetaTransaction(MetaTransaction memory _metaTx) internal pure returns (bytes32) {
         return keccak256(abi.encode(
-            META_TRANSACTION_TYPEHASH, _metaTx.nonce, _metaTx.from, keccak256(_metaTx.functionSignature)
+            META_TRANSACTION_TYPEHASH, _metaTx.nonce, _metaTx.from, _metaTx.contractAddress, keccak256(bytes(_metaTx.functionName)), keccak256(_metaTx.functionSignature)
         ));
     }
 
@@ -118,7 +118,8 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * Reverts if:
      * - sender does not match the recovered signer.
      *
-     * @param _userAddress  - the sender of the transaction.
+     * @param _userAddress - the sender of the transaction.
+     * @param _functionName - the function name that we want to execute.
      * @param _functionSignature - the function signature.
      * @param _nonce - the nonce value of the transaction.
      * @param _sigR - r part of the signer's signature.
@@ -127,6 +128,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      */
     function verifySignerAndSignature(
         address _userAddress,
+        string memory _functionName,
         bytes memory _functionSignature,
         uint256 _nonce,
         bytes32 _sigR,
@@ -139,8 +141,10 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
 
         if (destinationFunctionSig == IBosonExchangeHandler.commitToOffer.selector) {
             // TODO: handle details signature of meta transaction
+            MetaTransaction memory metaTx = MetaTransaction({nonce: _nonce, from: _userAddress, contractAddress: address(this), functionName: _functionName, functionSignature: _functionSignature});
+            require(verify(_userAddress, metaTx, _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         } else {
-            MetaTransaction memory metaTx = MetaTransaction({nonce: _nonce, from: _userAddress, functionSignature: _functionSignature});
+            MetaTransaction memory metaTx = MetaTransaction({nonce: _nonce, from: _userAddress, contractAddress: address(this), functionName: _functionName, functionSignature: _functionSignature});
             require(verify(_userAddress, metaTx, _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         }
     }
@@ -154,7 +158,8 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * - sender does not match the recovered signer.
      * - any code executed in the signed transaction reverts.
      *
-     * @param _userAddress  - the sender of the transaction.
+     * @param _userAddress - the sender of the transaction.
+     * @param _functionName - the function name that we want to execute.
      * @param _functionSignature - the function signature.
      * @param _nonce - the nonce value of the transaction.
      * @param _sigR - r part of the signer's signature.
@@ -163,6 +168,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      */
     function executeMetaTransaction(
         address _userAddress,
+        string memory _functionName,
         bytes memory _functionSignature,
         uint256 _nonce,
         bytes32 _sigR,
@@ -174,7 +180,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         bytes4 destinationFunctionSig = convertBytesToBytes4(_functionSignature);
         require(destinationFunctionSig != msg.sig, INVALID_FUNCTION_SIGNATURE);
 
-        verifySignerAndSignature(_userAddress, _functionSignature, _nonce, _sigR, _sigS, _sigV);
+        verifySignerAndSignature(_userAddress, _functionName, _functionSignature, _nonce, _sigR, _sigS, _sigV);
 
         // Store the nonce provided to avoid playback of the same tx
         protocolMetaTxInfo().usedNonce[_nonce] = true;

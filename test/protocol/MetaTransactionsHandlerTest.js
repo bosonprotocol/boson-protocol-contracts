@@ -122,6 +122,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         const metaTransactionType = [
           { name: "nonce", type: "uint256" },
           { name: "from", type: "address" },
+          { name: "contractAddress", type: "address" },
+          { name: "functionName", type: "string" },
           { name: "functionSignature", type: "bytes" },
         ];
 
@@ -133,6 +135,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         let message = {};
         message.nonce = parseInt(nonce);
         message.from = operator.address;
+        message.contractAddress = accountHandler.address;
+        message.functionName = "createSeller";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -144,7 +148,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         );
 
         // Send as meta transaction
-        await metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v);
+        await metaTransactionsHandler.executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v);
 
         // We expect that the nonce is used now. Hence expecting to return true.
         expectedResult = true;
@@ -177,6 +181,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         const metaTransactionType = [
           { name: "nonce", type: "uint256" },
           { name: "from", type: "address" },
+          { name: "contractAddress", type: "address" },
+          { name: "functionName", type: "string" },
           { name: "functionSignature", type: "bytes" },
         ];
 
@@ -188,6 +194,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         let message = {};
         message.nonce = parseInt(nonce);
         message.from = operator.address;
+        message.contractAddress = accountHandler.address;
+        message.functionName = "createSeller";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -202,7 +210,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         await expect(
           metaTransactionsHandler
             .connect(deployer)
-            .executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v)
+            .executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v)
         )
           .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
           .withArgs(operator.address, deployer.address, functionSignature, nonce);
@@ -223,6 +231,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Function signature for executeMetaTransaction function.
           functionSignature = metaTransactionsHandler.interface.encodeFunctionData("executeMetaTransaction", [
             operator.address,
+            "executeMetaTransaction",
             ethers.constants.HashZero, // hash of zero
             nonce,
             ethers.utils.randomBytes(32), // random bytes32
@@ -234,6 +243,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           const metaTransactionType = [
             { name: "nonce", type: "uint256" },
             { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
             { name: "functionSignature", type: "bytes" },
           ];
 
@@ -245,6 +256,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           let message = {};
           message.nonce = parseInt(nonce);
           message.from = operator.address;
+          message.contractAddress = metaTransactionsHandler.address;
+          message.functionName = "executeMetaTransaction";
           message.functionSignature = functionSignature;
 
           // Collect the signature components
@@ -257,7 +270,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // send a meta transaction, expecting revert
           await expect(
-            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v)
+            metaTransactionsHandler.executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v)
           ).to.revertedWith(RevertReasons.INVALID_FUNCTION_SIGNATURE);
         });
 
@@ -275,6 +288,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           const metaTransactionType = [
             { name: "nonce", type: "uint256" },
             { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
             { name: "functionSignature", type: "bytes" },
           ];
 
@@ -286,6 +301,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           let message = {};
           message.nonce = parseInt(nonce);
           message.from = operator.address;
+          message.contractAddress = accountHandler.address;
+          message.functionName = "createSeller";
           message.functionSignature = functionSignature;
 
           // Collect the signature components
@@ -297,11 +314,11 @@ describe("IBosonMetaTransactionsHandler", function () {
           );
 
           // Execute the meta transaction.
-          await metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v);
+          await metaTransactionsHandler.executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v);
 
           // Execute meta transaction again with the same nonce, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v)
+            metaTransactionsHandler.executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v)
           ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
         });
 
@@ -319,6 +336,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           const metaTransactionType = [
             { name: "nonce", type: "uint256" },
             { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
             { name: "functionSignature", type: "bytes" },
           ];
 
@@ -330,6 +349,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           let message = {};
           message.nonce = parseInt(nonce);
           message.from = rando.address;
+          message.contractAddress = accountHandler.address;
+          message.functionName = "createSeller";
           message.functionSignature = functionSignature;
 
           // Collect the signature components
@@ -342,7 +363,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Execute meta transaction, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v)
+            metaTransactionsHandler.executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v)
           ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         });
       });

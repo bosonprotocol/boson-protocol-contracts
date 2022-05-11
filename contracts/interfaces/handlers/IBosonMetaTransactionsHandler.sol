@@ -29,7 +29,8 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
      * - sender does not match the recovered signer.
      * - any code executed in the signed transaction reverts.
      *
-     * @param _userAddress  - the sender of the transaction.
+     * @param _userAddress - the sender of the transaction.
+     * @param _functionName - the function name that we want to execute.
      * @param _functionSignature - the function signature.
      * @param _nonce - the nonce value of the transaction.
      * @param _sigR - r part of the signer's signature.
@@ -38,6 +39,7 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
      */
     function executeMetaTransaction(
         address _userAddress,
+        string memory _functionName,
         bytes memory _functionSignature,
         uint256 _nonce,
         bytes32 _sigR,

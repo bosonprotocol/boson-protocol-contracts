@@ -466,6 +466,8 @@ describe("IBosonTwinHandler", function () {
         const metaTransactionType = [
           { name: "nonce", type: "uint256" },
           { name: "from", type: "address" },
+          { name: "contractAddress", type: "address" },
+          { name: "functionName", type: "string" },
           { name: "functionSignature", type: "bytes" },
         ];
 
@@ -477,6 +479,8 @@ describe("IBosonTwinHandler", function () {
         let message = {};
         message.nonce = parseInt(nonce);
         message.from = operator.address;
+        message.contractAddress = twinHandler.address;
+        message.functionName = "removeTwin";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -487,7 +491,7 @@ describe("IBosonTwinHandler", function () {
           metaTransactionsHandler.address
         );
         // Remove the twin. Send as meta transaction.
-        await metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v);
+        await metaTransactionsHandler.executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v);
 
         // Expect twin to be not found.
         [success] = await twinHandler.connect(rando).getTwin(twin.id);
@@ -514,6 +518,8 @@ describe("IBosonTwinHandler", function () {
           const metaTransactionType = [
             { name: "nonce", type: "uint256" },
             { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
             { name: "functionSignature", type: "bytes" },
           ];
 
@@ -525,6 +531,8 @@ describe("IBosonTwinHandler", function () {
           let message = {};
           message.nonce = parseInt(nonce);
           message.from = operator.address;
+          message.contractAddress = twinHandler.address;
+          message.functionName = "removeTwin";
           message.functionSignature = functionSignature;
 
           // Collect the signature components
@@ -536,7 +544,7 @@ describe("IBosonTwinHandler", function () {
           );
           // Attempt to Remove a twin, expecting revert. Send as meta transaction.
           await expect(
-            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v)
+            metaTransactionsHandler.executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v)
           ).to.revertedWith(RevertReasons.NO_SUCH_TWIN);
         });
 
@@ -578,6 +586,8 @@ describe("IBosonTwinHandler", function () {
           const metaTransactionType = [
             { name: "nonce", type: "uint256" },
             { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
             { name: "functionSignature", type: "bytes" },
           ];
 
@@ -589,6 +599,8 @@ describe("IBosonTwinHandler", function () {
           let message = {};
           message.nonce = parseInt(nonce);
           message.from = operator.address;
+          message.contractAddress = twinHandler.address;
+          message.functionName = "removeTwin";
           message.functionSignature = functionSignature;
 
           // Collect the signature components
@@ -601,7 +613,7 @@ describe("IBosonTwinHandler", function () {
 
           // Attempt to Remove a twin, expecting revert. Send as meta transaction.
           await expect(
-            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v)
+            metaTransactionsHandler.executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v)
           ).to.revertedWith(RevertReasons.TWIN_HAS_BUNDLES);
         });
       });
