@@ -217,7 +217,7 @@ describe("IBosonExchangeHandler", function () {
 
     context("👉 commitToOffer()", async function () {
       it("should emit a BuyerCommitted event", async function () {
-        // Commit to offer, testing for the event
+        // Commit to offer, retrieving the event
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
         txReceipt = await tx.wait();
         event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
@@ -282,10 +282,8 @@ describe("IBosonExchangeHandler", function () {
 
     context("👉 completeExchange()", async function () {
       beforeEach(async function () {
-        // Commit to offer, retrieving the event
+        // Commit to offer
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-        txReceipt = await tx.wait();
-        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
@@ -391,10 +389,8 @@ describe("IBosonExchangeHandler", function () {
 
     context("👉 revokeVoucher()", async function () {
       beforeEach(async function () {
-        // Commit to offer, retrieving the event
+        // Commit to offer
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-        txReceipt = await tx.wait();
-        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
@@ -462,10 +458,136 @@ describe("IBosonExchangeHandler", function () {
 
     context("👉 cancelVoucher()", async function () {
       beforeEach(async function () {
+        // Commit to offer
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        exchange.voucher.committedDate = block.timestamp.toString();
+        exchangeStruct = exchange.toStruct();
+      });
+
+      it("should emit an VoucherCanceled event when original buyer calls", async function () {
+        // Cancel the voucher, expecting event
+        await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id))
+          .to.emit(exchangeHandler, "VoucherCanceled")
+          .withArgs(offerId, exchange.id, buyer.address);
+      });
+
+      it("should emit an VoucherCanceled event when new owner (not a buyer) calls", async function () {
+        // Transfer voucher to new owner
+        await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
+
+        // Cancel the voucher, expecting event
+        await expect(exchangeHandler.connect(newOwner).cancelVoucher(exchange.id))
+          .to.emit(exchangeHandler, "VoucherCanceled")
+          .withArgs(offerId, exchange.id, newOwner.address);
+      });
+
+      it("should update state when original buyer calls", async function () {
+        // Cancel the voucher
+        await exchangeHandler.connect(buyer).cancelVoucher(exchange.id);
+
+        // Get the exchange state
+        [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+        // It should match ExchangeState.Canceled
+        assert.equal(response, ExchangeState.Canceled, "Exchange state is incorrect");
+      });
+
+      it("should update state when new owner (not a buyer) calls", async function () {
+        // Transfer voucher to new owner
+        await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
+
+        // Get the id that will be assigned to the new owner
+        newBuyerId = await accountHandler.connect(rando).getNextAccountId();
+
+        // Cancel the voucher
+        await exchangeHandler.connect(newOwner).cancelVoucher(exchange.id);
+
+        // Get the exchange struct from the contract
+        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+
+        // Parse the struct
+        exchange = Exchange.fromStruct(response);
+
+        // State should match ExchangeState.Canceled
+        assert.equal(exchange.state, ExchangeState.Canceled, "Exchange state is incorrect");
+
+        // Buyer ID should match the expected id
+        assert.equal(exchange.buyerId, newBuyerId, "Buyer ID is incorrect");
+      });
+
+      it("should update state when new owner (already a buyer) calls", async function () {
+        // Transfer voucher to new owner
+        await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
+
+        // Get the id that will be assigned to the new owner
+        newBuyerId = await accountHandler.connect(rando).getNextAccountId();
+
+        // Create a buyer account for the new owner
+        await accountHandler.connect(newOwner).createBuyer(new Buyer("0", newOwner.address, true));
+
+        // Cancel the voucher
+        await exchangeHandler.connect(newOwner).cancelVoucher(exchange.id);
+
+        // Get the exchange struct from the contract
+        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+
+        // Parse the struct
+        exchange = Exchange.fromStruct(response);
+
+        // State should match ExchangeState.Canceled
+        assert.equal(exchange.state, ExchangeState.Canceled, "Exchange state is incorrect");
+
+        // Buyer ID should match the expected id
+        assert.equal(exchange.buyerId, newBuyerId, "Buyer ID is incorrect");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        /*
+         * Reverts if
+         * - Exchange does not exist
+         * - Exchange is not in committed state
+         * - Caller does not own voucher
+         */
+
+        it("exchange id is invalid", async function () {
+          // An invalid exchange id
+          id = "666";
+
+          // Attempt to cancel the voucher, expecting revert
+          await expect(exchangeHandler.connect(buyer).cancelVoucher(id)).to.revertedWith(
+            RevertReasons.NO_SUCH_EXCHANGE
+          );
+        });
+
+        it("exchange is not in committed state", async function () {
+          // Revoke the voucher
+          await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
+
+          // Attempt to cancel the voucher, expecting revert
+          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE_TRANSITION
+          );
+        });
+
+        it("caller does not own voucher", async function () {
+          // Attempt to cancel the voucher, expecting revert
+          await expect(exchangeHandler.connect(rando).cancelVoucher(exchange.id)).to.revertedWith(
+            RevertReasons.NOT_VOUCHER_HOLDER
+          );
+        });
+      });
+    });
+
+    context("👉 isExchangeFinalized()", async function () {
+      beforeEach(async function () {
         // Commit to offer, retrieving the event
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-        txReceipt = await tx.wait();
-        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
@@ -592,10 +714,8 @@ describe("IBosonExchangeHandler", function () {
 
     context("👉 redeemVoucher()", async function () {
       beforeEach(async function () {
-        // Commit to offer, retrieving the event
+        // Commit to offer
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-        txReceipt = await tx.wait();
-        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
@@ -872,10 +992,8 @@ describe("IBosonExchangeHandler", function () {
 
     context("👉 getExchange()", async function () {
       beforeEach(async function () {
-        // Commit to offer, getting the exchange struct from the event
+        // Commit to offer
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-        txReceipt = await tx.wait();
-        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
@@ -912,10 +1030,8 @@ describe("IBosonExchangeHandler", function () {
 
     context("👉 getExchangeState()", async function () {
       beforeEach(async function () {
-        // Commit to offer, getting the exchange struct from the event
+        // Commit to offer
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-        txReceipt = await tx.wait();
-        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
