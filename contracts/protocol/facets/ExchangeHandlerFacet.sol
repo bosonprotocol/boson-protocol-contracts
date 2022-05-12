@@ -98,6 +98,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         exchange.state = ExchangeState.Committed;
         exchange.voucher.committedDate = block.timestamp;
 
+        // Store the time the voucher expires
+        uint256 startDate = (block.timestamp >= offer.redeemableFromDate) ? block.timestamp : offer.redeemableFromDate;
+        exchange.voucher.validUntilDate = startDate + offer.voucherValidDuration;
+
         // Map the offerId to the exchangeId as one-to-many
         protocolStorage().exchangeIdsByOffer[_offerId].push(exchangeId);
 
@@ -110,7 +114,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
 
         // Notify watchers of state change
         emit BuyerCommitted(_offerId, buyerId, exchangeId, exchange);
-
     }
 
     /**
@@ -239,6 +242,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Caller does not own voucher
+     * - Current time is prior to offer.redeemableFromDate
+     * - Current time is after exchange.voucher.validUntilDate
      *
      * Emits
      * - VoucherRedeemed
@@ -258,6 +263,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         // Get the offer, which will definitely exist
         Offer storage offer;
         (, offer) = fetchOffer(exchange.offerId);
+
+        // Make sure the voucher is redeemable
+        require(
+            block.timestamp >= offer.redeemableFromDate &&
+            block.timestamp <= exchange.voucher.validUntilDate,
+            VOUCHER_NOT_REDEEMABLE
+        );
 
         // Store the time the exchange was redeemed
         exchange.voucher.redeemedDate = block.timestamp;

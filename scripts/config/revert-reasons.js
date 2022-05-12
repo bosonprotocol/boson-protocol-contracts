@@ -57,6 +57,7 @@ exports.RevertReasons = {
   NO_SUCH_EXCHANGE: "No such exchange",
   FULFILLMENT_PERIOD_NOT_ELAPSED: "Fulfillment period has not yet elapsed",
   EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS: "Exchange for the bundled offers exists",
+  VOUCHER_NOT_REDEEMABLE: "Voucher not yet valid or already expired",
 
   // Funds related
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",
