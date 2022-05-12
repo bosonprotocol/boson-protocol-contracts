@@ -131,11 +131,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     external
     override
     {
-        // Get the exchange
-        Exchange storage exchange = getValidExchange(_exchangeId);
-
-        // Make sure the exchange is in redeemed state
-        require(exchange.state == ExchangeState.Redeemed, INVALID_STATE_TRANSITION);
+        // Get the exchange, should be in redeemed state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
 
         // Get the offer, which will definitely exist
         Offer storage offer;
@@ -183,11 +180,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     external
     override
     {
-        // Get the exchange
-        Exchange storage exchange = getValidExchange(_exchangeId);
-
-        // Make sure the exchange exists, is in committed state
-        require(exchange.state == ExchangeState.Committed, INVALID_STATE_TRANSITION);
+        // Get the exchange, should be in committed state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Get the offer, which will definitely exist
         Offer storage offer;
@@ -225,11 +219,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     external
     override
     {
-        // Get the exchange
-        Exchange storage exchange = getValidExchange(_exchangeId);
-
-        // Make sure the exchange exists, is in committed state
-        require(exchange.state == ExchangeState.Committed, INVALID_STATE_TRANSITION);
+        // Get the exchange, should be in committed state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Reconcile voucher's current owner with stored exchange in case it changed hands
         reconcileBuyer(exchange);
@@ -258,20 +249,28 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     external
     override
     {
-        // Get the exchange
-        Exchange storage exchange = getValidExchange(_exchangeId);
-
-        // Make sure the exchange exists, is in committed state
-        require(exchange.state == ExchangeState.Committed, INVALID_STATE_TRANSITION);
+        // Get the exchange, should be in committed state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Reconcile voucher's current owner with stored exchange in case it changed hands
         reconcileBuyer(exchange);
 
-        // Store the time the exchange was finalized
+        // Get the offer, which will definitely exist
+        Offer storage offer;
+        (, offer) = fetchOffer(exchange.offerId);
+
+        // Store the time the exchange was redeemed
         exchange.voucher.redeemedDate = block.timestamp;
+
+        // Store the time the voucher expires
+        uint256 startDate = (block.timestamp >= offer.redeemableFromDate) ? block.timestamp : offer.redeemableFromDate;
+        exchange.voucher.validUntilDate = startDate + offer.voucherValidDuration;
 
         // Set the exchange state to the Redeemed
         exchange.state = ExchangeState.Redeemed;
+
+        // Burn the voucher
+        burnVoucher(_exchangeId);
 
         // Notify watchers of state change
         emit VoucherRedeemed(exchange.offerId, _exchangeId, msg.sender);
@@ -470,11 +469,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
      *
      * Reverts if
      * - Exchange does not exist
+     * - Exchange is not in th expected state
      *
      * @param _exchangeId - the id of the exchange to complete
+     * @param _expectedState - the id the exchange should be in
      * @return exchange - the exchange
      */
-    function getValidExchange(uint256 _exchangeId)
+    function getValidExchange(uint256 _exchangeId, ExchangeState _expectedState)
     internal
     view
     returns(Exchange storage exchange)
@@ -485,5 +486,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
 
         // Make sure the exchange exists
         require(exchangeExists, NO_SUCH_EXCHANGE);
+
+        // Make sure the exchange is in expected state
+        require(exchange.state == _expectedState, INVALID_STATE_TRANSITION);
     }
 }
