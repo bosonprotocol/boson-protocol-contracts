@@ -766,7 +766,7 @@ describe("IBosonExchangeHandler", function () {
         exchangeStruct = exchange.toStruct();
       });
 
-      it("should emit an VoucherRedeemed event when original buyer calls", async function () {
+      it("should emit a VoucherRedeemed event when original buyer calls", async function () {
         // Set time forward to the offer's redeemableFromDate
         await setNextBlockTimestamp(Number(redeemableFromDate));
 
