@@ -219,7 +219,7 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("should emit a BuyerCommitted event", async function () {
-        // Commit to offer, testing for the event
+        // Commit to offer, retrieving the event
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
         txReceipt = await tx.wait();
         event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
@@ -289,10 +289,8 @@ describe("IBosonExchangeHandler", function () {
           .connect(operator)
           .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
 
-        // Commit to offer, retrieving the event
+        // Commit to offer
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-        txReceipt = await tx.wait();
-        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
@@ -401,10 +399,8 @@ describe("IBosonExchangeHandler", function () {
           .connect(operator)
           .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
 
-        // Commit to offer, retrieving the event
+        // Commit to offer
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-        txReceipt = await tx.wait();
-        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
@@ -477,10 +473,8 @@ describe("IBosonExchangeHandler", function () {
           .connect(operator)
           .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
 
-        // Commit to offer, retrieving the event
+        // Commit to offer
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-        txReceipt = await tx.wait();
-        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
@@ -762,10 +756,8 @@ describe("IBosonExchangeHandler", function () {
           .connect(operator)
           .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
 
-        // Commit to offer, getting the exchange struct from the event
+        // Commit to offer
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-        txReceipt = await tx.wait();
-        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
@@ -807,10 +799,8 @@ describe("IBosonExchangeHandler", function () {
           .connect(operator)
           .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
 
-        // Commit to offer, getting the exchange struct from the event
+        // Commit to offer
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-        txReceipt = await tx.wait();
-        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
