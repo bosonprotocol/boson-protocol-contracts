@@ -97,7 +97,7 @@ library FundsLib {
         uint256 pot = price + sellerDeposit;
 
         // calculate protocol fee
-        uint256 protocolFee = pot*ps.protocolFeePercentage/100;
+        uint256 protocolFee = offer.protocolFee;
 
         // calculate the payoffs depending on state exchange is in
         uint256 sellerPayoff;
@@ -129,7 +129,7 @@ library FundsLib {
             } else {
                 // RESOLVED or DECIDED
                 uint256 buyerPercent = dispute.resolution.buyerPercent;
-                buyerPayoff = pot * buyerPercent/100;
+                buyerPayoff = pot * buyerPercent/10000;
                 sellerPayoff = pot - buyerPayoff - protocolFee;
             }           
         }  
