@@ -8,4 +8,5 @@ pragma solidity ^0.8.0;
  */
 interface IBosonMetaTransactionsEvents {
     event MetaTransactionExecuted(address indexed userAddress, address payable indexed relayerAddress, bytes functionSignature, uint256 nonce);
+    event MetaTxCommitToOfferExecuted(address indexed userAddress, address payable indexed relayerAddress, bytes functionSignature, uint256 nonce);
 }
