@@ -487,11 +487,20 @@ describe("IBosonTwinHandler", function () {
         let { r, s, v } = await prepareDataSignatureParameters(
           operator,
           customTransactionType,
+          "MetaTransaction",
           message,
           metaTransactionsHandler.address
         );
         // Remove the twin. Send as meta transaction.
-        await metaTransactionsHandler.executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v);
+        await metaTransactionsHandler.executeMetaTransaction(
+          operator.address,
+          message.functionName,
+          functionSignature,
+          nonce,
+          r,
+          s,
+          v
+        );
 
         // Expect twin to be not found.
         [success] = await twinHandler.connect(rando).getTwin(twin.id);
@@ -539,12 +548,21 @@ describe("IBosonTwinHandler", function () {
           let { r, s, v } = await prepareDataSignatureParameters(
             operator,
             customTransactionType,
+            "MetaTransaction",
             message,
             metaTransactionsHandler.address
           );
           // Attempt to Remove a twin, expecting revert. Send as meta transaction.
           await expect(
-            metaTransactionsHandler.executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v)
+            metaTransactionsHandler.executeMetaTransaction(
+              operator.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
           ).to.revertedWith(RevertReasons.NO_SUCH_TWIN);
         });
 
@@ -607,13 +625,22 @@ describe("IBosonTwinHandler", function () {
           let { r, s, v } = await prepareDataSignatureParameters(
             operator,
             customTransactionType,
+            "MetaTransaction",
             message,
             metaTransactionsHandler.address
           );
 
           // Attempt to Remove a twin, expecting revert. Send as meta transaction.
           await expect(
-            metaTransactionsHandler.executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v)
+            metaTransactionsHandler.executeMetaTransaction(
+              operator.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
           ).to.revertedWith(RevertReasons.TWIN_HAS_BUNDLES);
         });
       });

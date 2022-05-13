@@ -57,7 +57,13 @@ function getSignatureParameters(signature) {
   };
 }
 
-async function prepareDataSignatureParameters(user, customTransactionTypes, message, metaTransactionsHandlerAddress) {
+async function prepareDataSignatureParameters(
+  user,
+  customTransactionTypes,
+  primaryType,
+  message,
+  metaTransactionsHandlerAddress
+) {
   // Initialize data
   const domainType = [
     { name: "name", type: "string" },
@@ -83,7 +89,7 @@ async function prepareDataSignatureParameters(user, customTransactionTypes, mess
   let dataToSign = JSON.stringify({
     types: metaTxTypes,
     domain: domainData,
-    primaryType: "MetaTransaction",
+    primaryType: primaryType,
     message: message,
   });
 
