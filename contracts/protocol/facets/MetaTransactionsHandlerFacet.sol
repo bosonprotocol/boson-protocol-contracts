@@ -108,43 +108,19 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * - signer is a zero address
      *
      * @param _user  - the sender of the transaction.
-     * @param _metaTx - the meta-transaction struct.
+     * @param _hashMetaTransaction - hashed meta transaction.
      * @param _sigR - r part of the signer's signature.
      * @param _sigS - s part of the signer's signature.
      * @param _sigV - v part of the signer's signature.
      */
     function verify(
         address _user,
-        MetaTransaction memory _metaTx,
+        bytes32 _hashMetaTransaction,
         bytes32 _sigR,
         bytes32 _sigS,
         uint8 _sigV
     ) internal view returns (bool) {
-        address signer = ecrecover(toTypedMessageHash(hashMetaTransaction(_metaTx)), _sigV, _sigR, _sigS);
-        require(signer != address(0), INVALID_SIGNATURE);
-        return signer == _user;
-    }
-
-    /**
-     * @notice Recovers the Signer from the Signature components.
-     *
-     * Reverts if:
-     * - signer is a zero address
-     *
-     * @param _user  - the sender of the transaction.
-     * @param _metaTx - the meta-transaction struct.
-     * @param _sigR - r part of the signer's signature.
-     * @param _sigS - s part of the signer's signature.
-     * @param _sigV - v part of the signer's signature.
-     */
-    function verifySigCommitToOffer(
-        address _user,
-        MetaTxCommitToOffer memory _metaTx,
-        bytes32 _sigR,
-        bytes32 _sigS,
-        uint8 _sigV
-    ) internal view returns (bool) {
-        address signer = ecrecover(toTypedMessageHash(hashMetaTxCommitToOffer(_metaTx)), _sigV, _sigR, _sigS);
+        address signer = ecrecover(toTypedMessageHash(_hashMetaTransaction), _sigV, _sigR, _sigS);
         require(signer != address(0), INVALID_SIGNATURE);
         return signer == _user;
     }
@@ -193,7 +169,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
 
         // verifySignerAndSignature(_userAddress, _functionName, _functionSignature, _nonce, _sigR, _sigS, _sigV);
         MetaTransaction memory metaTx = MetaTransaction({nonce: _nonce, from: _userAddress, contractAddress: address(this), functionName: _functionName, functionSignature: _functionSignature});
-        require(verify(_userAddress, metaTx, _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+        require(verify(_userAddress, hashMetaTransaction(metaTx), _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
 
         // Store the nonce provided to avoid playback of the same tx
         protocolMetaTxInfo().usedNonce[_nonce] = true;
@@ -251,7 +227,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         require(destinationFunctionSig != msg.sig, INVALID_FUNCTION_SIGNATURE);
 
         MetaTxCommitToOffer memory metaTx = MetaTxCommitToOffer({nonce: _nonce, from: _userAddress, contractAddress: address(this), functionName: _functionName, functionSignature: _functionSignature, offerDetails: _offerDetails});
-        require(verifySigCommitToOffer(_userAddress, metaTx, _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+        require(verify(_userAddress, hashMetaTxCommitToOffer(metaTx), _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
 
         // Store the nonce provided to avoid playback of the same tx
         protocolMetaTxInfo().usedNonce[_nonce] = true;
