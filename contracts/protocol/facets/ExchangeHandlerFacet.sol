@@ -274,10 +274,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         // Store the time the exchange was redeemed
         exchange.voucher.redeemedDate = block.timestamp;
 
-        // Store the time the voucher expires
-        uint256 startDate = (block.timestamp >= offer.redeemableFromDate) ? block.timestamp : offer.redeemableFromDate;
-        exchange.voucher.validUntilDate = startDate + offer.voucherValidDuration;
-
         // Set the exchange state to the Redeemed
         exchange.state = ExchangeState.Redeemed;
 
