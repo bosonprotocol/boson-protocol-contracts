@@ -109,6 +109,13 @@ async function prepareDataSignatureParameters(user, nonce, functionSignature, me
   };
 }
 
+function calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration) {
+  const startDate = ethers.BigNumber.from(block.timestamp).gte(ethers.BigNumber.from(redeemableFromDate))
+    ? ethers.BigNumber.from(block.timestamp)
+    : ethers.BigNumber.from(redeemableFromDate);
+  return startDate.add(ethers.BigNumber.from(voucherValidDuration)).toString();
+}
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
 exports.prepareDataSignatureParameters = prepareDataSignatureParameters;
+exports.calculateVoucherExpiry = calculateVoucherExpiry;

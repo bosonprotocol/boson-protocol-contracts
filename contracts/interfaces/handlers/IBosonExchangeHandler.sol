@@ -10,7 +10,7 @@ import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xa0356709
+ * The ERC-165 identifier for this interface is: 0x028ba007
  */
 interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
 
@@ -69,6 +69,36 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
      * @param _exchangeId - the id of the exchange to complete
      */
     function revokeVoucher(uint256 _exchangeId) external;
+
+    /**
+     * @notice Cancel a voucher.
+     *
+     * Reverts if
+     * - Exchange does not exist
+     * - Exchange is not in committed state
+     * - Caller does not own voucher
+     *
+     * Emits
+     * - VoucherCanceled
+     *
+     * @param _exchangeId - the id of the exchange
+     */
+    function cancelVoucher(uint256 _exchangeId) external;
+
+    /**
+     * @notice Redeem a voucher.
+     *
+     * Reverts if
+     * - Exchange does not exist
+     * - Exchange is not in committed state
+     * - Caller does not own voucher
+     *
+     * Emits
+     * - VoucherRedeemed
+     *
+     * @param _exchangeId - the id of the exchange
+     */
+    function redeemVoucher(uint256 _exchangeId) external;
 
     /**
      * @notice Is the given exchange in a finalized state?

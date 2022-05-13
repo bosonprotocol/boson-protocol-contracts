@@ -5,6 +5,7 @@ exports.RevertReasons = {
   // Access related
   ACCESS_DENIED: "Access denied, caller doesn't have role",
   NOT_BUYER_OR_SELLER: "Not buyer or seller",
+  NOT_VOUCHER_HOLDER: "Not current voucher holder",
 
   // General
   INVALID_ADDRESS: "Invalid address",
@@ -56,6 +57,7 @@ exports.RevertReasons = {
   NO_SUCH_EXCHANGE: "No such exchange",
   FULFILLMENT_PERIOD_NOT_ELAPSED: "Fulfillment period has not yet elapsed",
   EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS: "Exchange for the bundled offers exists",
+  VOUCHER_NOT_REDEEMABLE: "Voucher not yet valid or already expired",
 
   // Funds related
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",

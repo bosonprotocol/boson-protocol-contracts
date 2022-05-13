@@ -27,6 +27,7 @@ contract BosonConstants {
     string internal constant NOT_OPERATOR = "Not seller's operator";
     string internal constant NOT_ADMIN = "Not seller's admin";
     string internal constant NOT_BUYER_OR_SELLER = "Not buyer or seller";
+    string internal constant NOT_VOUCHER_HOLDER = "Not current voucher holder";
 
     // Revert Reasons: Account-related
     string internal constant NO_SUCH_SELLER = "No such seller";
@@ -57,6 +58,7 @@ contract BosonConstants {
     // Revert Reasons: Exchange related
     string internal constant NO_SUCH_EXCHANGE = "No such exchange";
     string internal constant FULFILLMENT_PERIOD_NOT_ELAPSED = "Fulfillment period has not yet elapsed";
+    string internal constant VOUCHER_NOT_REDEEMABLE = "Voucher not yet valid or already expired";
 
     // Revert Reasons: Twin related
     string internal constant NO_SUCH_TWIN = "No such twin";
