@@ -55,6 +55,7 @@ describe("IBosonBundleHandler", function () {
   let offerId,
     price,
     sellerDeposit,
+    protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
     validFromDate,
@@ -67,6 +68,7 @@ describe("IBosonBundleHandler", function () {
     offerChecksum,
     voided,
     invalidOfferId;
+  let protocolFeePrecentage;
 
   before(async function () {
     // get interface Ids
@@ -108,12 +110,15 @@ describe("IBosonBundleHandler", function () {
     [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
     [bosonVoucher] = clients;
 
+    // set protocolFeePrecentage
+    protocolFeePrecentage = "200"; // 0.2 %
+
     // Add config Handler, so twin id starts at 1
     const protocolConfig = [
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
       bosonVoucher.address,
-      "0",
+      protocolFeePrecentage,
       "100",
       "100",
       "100",
@@ -197,8 +202,13 @@ describe("IBosonBundleHandler", function () {
         // Required constructor params
         offerId = sellerId = "1"; // argument sent to contract for createOffer will be ignored
         price = ethers.utils.parseUnits("1.5", "ether").toString();
-        sellerDeposit = price = ethers.utils.parseUnits("0.25", "ether").toString();
-        buyerCancelPenalty = price = ethers.utils.parseUnits("0.05", "ether").toString();
+        sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
+        protocolFee = ethers.BigNumber.from(price)
+          .add(sellerDeposit)
+          .mul(protocolFeePrecentage)
+          .div("10000")
+          .toString();
+        buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
         blockNumber = await ethers.provider.getBlockNumber();
         block = await ethers.provider.getBlock(blockNumber);
@@ -220,6 +230,7 @@ describe("IBosonBundleHandler", function () {
           sellerId,
           price,
           sellerDeposit,
+          protocolFee,
           buyerCancelPenalty,
           quantityAvailable,
           validFromDate,

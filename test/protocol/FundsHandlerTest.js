@@ -38,6 +38,7 @@ describe("IBosonFundsHandler", function () {
   let depositAmount;
   let price,
     sellerDeposit,
+    protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
     validFromDate,
@@ -49,6 +50,7 @@ describe("IBosonFundsHandler", function () {
     metadataUri,
     metadataHash,
     voided;
+  let protocolFeePrecentage;
   let block, blockNumber;
 
   before(async function () {
@@ -88,12 +90,15 @@ describe("IBosonFundsHandler", function () {
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
     [, , [bosonVoucher]] = await deployProtocolClients(protocolClientArgs, gasLimit);
 
+    // set protocolFeePrecentage
+    protocolFeePrecentage = "200"; // 0.2 %
+
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
       bosonVoucher.address,
-      "0",
+      protocolFeePrecentage,
       "100",
       "100",
       "100",
@@ -325,8 +330,9 @@ describe("IBosonFundsHandler", function () {
 
       // Required constructor params
       price = ethers.utils.parseUnits("1.5", "ether").toString();
-      sellerDeposit = price = ethers.utils.parseUnits("0.25", "ether").toString();
-      buyerCancelPenalty = price = ethers.utils.parseUnits("0.05", "ether").toString();
+      sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
+      protocolFee = ethers.BigNumber.from(price).add(sellerDeposit).mul(protocolFeePrecentage).div("10000").toString();
+      buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "2";
       validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
       validUntilDate = ethers.BigNumber.from(block.timestamp)
@@ -351,6 +357,7 @@ describe("IBosonFundsHandler", function () {
         sellerId,
         price,
         sellerDeposit,
+        protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
         validFromDate,

@@ -13,6 +13,7 @@ class Offer {
             uint256 sellerId;
             uint256 price;
             uint256 sellerDeposit;
+            uint256 protocolFee;
             uint256 buyerCancelPenalty;
             uint256 quantityAvailable;
             uint256 validFromDate;
@@ -32,6 +33,7 @@ class Offer {
     sellerId,
     price,
     sellerDeposit,
+    protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
     validFromDate,
@@ -48,6 +50,7 @@ class Offer {
     this.sellerId = sellerId;
     this.price = price;
     this.sellerDeposit = sellerDeposit;
+    this.protocolFee = protocolFee;
     this.buyerCancelPenalty = buyerCancelPenalty;
     this.quantityAvailable = quantityAvailable;
     this.validFromDate = validFromDate;
@@ -72,6 +75,7 @@ class Offer {
       sellerId,
       price,
       sellerDeposit,
+      protocolFee,
       buyerCancelPenalty,
       quantityAvailable,
       validFromDate,
@@ -90,6 +94,7 @@ class Offer {
       sellerId,
       price,
       sellerDeposit,
+      protocolFee,
       buyerCancelPenalty,
       quantityAvailable,
       validFromDate,
@@ -114,6 +119,7 @@ class Offer {
       sellerId,
       price,
       sellerDeposit,
+      protocolFee,
       buyerCancelPenalty,
       quantityAvailable,
       validFromDate,
@@ -132,6 +138,7 @@ class Offer {
       sellerId,
       price,
       sellerDeposit,
+      protocolFee,
       buyerCancelPenalty,
       quantityAvailable,
       validFromDate,
@@ -150,6 +157,7 @@ class Offer {
       sellerId: sellerId.toString(),
       price: price.toString(),
       sellerDeposit: sellerDeposit.toString(),
+      protocolFee: protocolFee.toString(),
       buyerCancelPenalty: buyerCancelPenalty.toString(),
       quantityAvailable: quantityAvailable.toString(),
       validFromDate: validFromDate.toString(),
@@ -190,6 +198,7 @@ class Offer {
       this.sellerId,
       this.price,
       this.sellerDeposit,
+      this.protocolFee,
       this.buyerCancelPenalty,
       this.quantityAvailable,
       this.validFromDate,
@@ -264,6 +273,20 @@ class Offer {
     let { sellerDeposit } = this;
     try {
       valid = typeof sellerDeposit === "string" && typeof ethers.BigNumber.from(sellerDeposit) === "object";
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this Offer instance's protocolFee field valid?
+   * Must be a string representation of a big number
+   * @returns {boolean}
+   */
+  protocolFeeIsValid() {
+    let valid = false;
+    let { protocolFee } = this;
+    try {
+      valid = typeof protocolFee === "string" && typeof ethers.BigNumber.from(protocolFee) === "object";
     } catch (e) {}
     return valid;
   }
@@ -442,6 +465,7 @@ class Offer {
       this.sellerIdIsValid() &&
       this.priceIsValid() &&
       this.sellerDepositIsValid() &&
+      this.protocolFeeIsValid() &&
       this.buyerCancelPenaltyIsValid() &&
       this.quantityAvailableIsValid() &&
       this.validFromDateIsValid() &&
