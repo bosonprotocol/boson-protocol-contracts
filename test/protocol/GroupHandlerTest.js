@@ -143,13 +143,13 @@ describe("IBosonGroupHandler", function () {
         // Required constructor params
         id = sellerId = "1"; // argument sent to contract for createGroup will be ignored
         price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
-        sellerDeposit = price = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
+        sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
         protocolFee = ethers.BigNumber.from(price)
           .add(sellerDeposit)
           .mul(protocolFeePrecentage)
           .div("10000")
           .toString();
-        buyerCancelPenalty = price = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
+        buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
         quantityAvailable = `${i * 2}`;
         validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
         validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();

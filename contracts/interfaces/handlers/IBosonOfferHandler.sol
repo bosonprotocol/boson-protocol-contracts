@@ -22,8 +22,9 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Caller is not an operator
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
-     * - Buyer cancel penalty is greater than price
      * - Voided is set to true
+     * - Seller deposit is less than protocol fee
+     * - Sum of buyer cancel penalty and protocol fee is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to 0x0
      */
@@ -39,8 +40,9 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Number of offers exceeds maximum allowed number per batch
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
-     * - Buyer cancel penalty is greater than price
      * - Voided is set to true
+     * - Seller deposit is less than protocol fee
+     * - Sum of buyer cancel penalty and protocol fee is greater than price
      *
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
      */
