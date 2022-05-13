@@ -145,4 +145,18 @@ contract BosonTypes {
         string functionName;
         bytes functionSignature;
     }
+
+    struct MetaTxCommitToOffer {
+        uint256 nonce;
+        address from;
+        address contractAddress;
+        string functionName;
+        bytes functionSignature;
+        OfferDetails offerDetails;
+    }
+
+    struct OfferDetails {
+        address buyer;
+        uint256 offerId;
+    }
 }
