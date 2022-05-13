@@ -10,7 +10,7 @@ describe("OfferDetails", function () {
   // Suite-wide scope
   let offerDetails, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
   let accounts;
-  let buyer, offerId;
+  let buyer, offerId, msgValue;
 
   beforeEach(async function () {
     // Get accounts
@@ -19,12 +19,13 @@ describe("OfferDetails", function () {
     // Required constructor params
     buyer = accounts[0].address;
     offerId = "1";
+    msgValue = "1";
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated OfferDetails instance", async function () {
       // Create a valid offerDetails, then set fields in tests directly
-      offerDetails = new OfferDetails(buyer, offerId);
+      offerDetails = new OfferDetails(buyer, offerId, msgValue);
       expect(offerDetails.isValid()).is.true;
     });
   });
@@ -32,7 +33,7 @@ describe("OfferDetails", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid offerDetails, then set fields in tests directly
-      offerDetails = new OfferDetails(buyer, offerId);
+      offerDetails = new OfferDetails(buyer, offerId, msgValue);
       expect(offerDetails.isValid()).is.true;
     });
 
@@ -84,18 +85,46 @@ describe("OfferDetails", function () {
       expect(offerDetails.offerIdIsValid()).is.true;
       expect(offerDetails.isValid()).is.true;
     });
+
+    it("Always present, msgValue must be the string representation of a BigNumber", async function () {
+      // Invalid field value
+      offerDetails.msgValue = "zedzdeadbaby";
+      expect(offerDetails.msgValueIsValid()).is.false;
+      expect(offerDetails.isValid()).is.false;
+
+      // Invalid field value
+      offerDetails.msgValue = new Date();
+      expect(offerDetails.msgValueIsValid()).is.false;
+      expect(offerDetails.isValid()).is.false;
+
+      // Invalid field value
+      offerDetails.msgValue = 12;
+      expect(offerDetails.msgValueIsValid()).is.false;
+      expect(offerDetails.isValid()).is.false;
+
+      // Valid field value
+      offerDetails.msgValue = "0";
+      expect(offerDetails.msgValueIsValid()).is.true;
+      expect(offerDetails.isValid()).is.true;
+
+      // Valid field value
+      offerDetails.msgValue = "126";
+      expect(offerDetails.msgValueIsValid()).is.true;
+      expect(offerDetails.isValid()).is.true;
+    });
   });
 
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid offerDetails, then set fields in tests directly
-      offerDetails = new OfferDetails(buyer, offerId);
+      offerDetails = new OfferDetails(buyer, offerId, msgValue);
       expect(offerDetails.isValid()).is.true;
 
       // Create plain object
       object = {
         buyer,
         offerId,
+        msgValue,
       };
     });
 
@@ -114,7 +143,7 @@ describe("OfferDetails", function () {
       });
 
       it("OfferDetails.fromStruct() should return a OfferDetails instance with the same values as the given struct", async function () {
-        struct = [offerDetails.buyer, offerDetails.offerId];
+        struct = [offerDetails.buyer, offerDetails.offerId, offerDetails.msgValue];
 
         // Get struct
         offerDetails = OfferDetails.fromStruct(struct);

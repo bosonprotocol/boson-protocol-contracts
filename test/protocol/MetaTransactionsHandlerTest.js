@@ -22,7 +22,15 @@ describe("IBosonMetaTransactionsHandler", function () {
   // Common vars
   let InterfaceIds;
   let accounts, deployer, rando, operator, buyer;
-  let erc165, protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, support, result;
+  let erc165,
+    protocolDiamond,
+    accessController,
+    accountHandler,
+    fundsHandler,
+    exchangeHandler,
+    offerHandler,
+    support,
+    result;
   let metaTransactionsHandler, nonce, functionSignature;
   let seller, sellerId, offerId, id;
   let block, blockNumber, clients;
@@ -70,6 +78,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
       "AccountHandlerFacet",
+      "FundsHandlerFacet",
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
       "MetaTransactionsHandlerFacet",
@@ -100,6 +109,9 @@ describe("IBosonMetaTransactionsHandler", function () {
 
     // Cast Diamond to IBosonAccountHandler
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonFundsHandler
+    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
 
     // Cast Diamond to IBosonOfferHandler
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
@@ -477,6 +489,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         offerType = [
           { name: "buyer", type: "address" },
           { name: "offerId", type: "uint256" },
+          { name: "msgValue", type: "uint256" },
         ];
 
         // Set the message Type
@@ -495,8 +508,13 @@ describe("IBosonMetaTransactionsHandler", function () {
         };
 
         // prepare the OfferDetails struct
-        validOfferDetails = new OfferDetails(buyer.address, offer.id);
+        validOfferDetails = new OfferDetails(buyer.address, offer.id, price);
         expect(validOfferDetails.isValid()).is.true;
+
+        // Deposit native currency to the same seller id
+        await fundsHandler
+          .connect(rando)
+          .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
       });
 
       it("Should emit MetaTxCommitToOfferExecuted and UsedNonce events", async () => {
@@ -531,7 +549,8 @@ describe("IBosonMetaTransactionsHandler", function () {
             nonce,
             r,
             s,
-            v
+            v,
+            { value: price }
           )
         )
           .to.emit(metaTransactionsHandler, "MetaTxCommitToOfferExecuted")
@@ -585,7 +604,8 @@ describe("IBosonMetaTransactionsHandler", function () {
               nonce,
               r,
               s,
-              v
+              v,
+              { value: price }
             )
           ).to.revertedWith(RevertReasons.INVALID_FUNCTION_SIGNATURE);
         });
@@ -621,7 +641,8 @@ describe("IBosonMetaTransactionsHandler", function () {
             nonce,
             r,
             s,
-            v
+            v,
+            { value: price }
           );
 
           // Execute meta transaction again with the same nonce, expecting revert.
@@ -634,7 +655,8 @@ describe("IBosonMetaTransactionsHandler", function () {
               nonce,
               r,
               s,
-              v
+              v,
+              { value: price }
             )
           ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
         });
@@ -671,7 +693,8 @@ describe("IBosonMetaTransactionsHandler", function () {
               nonce,
               r,
               s,
-              v
+              v,
+              { value: price }
             )
           ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         });

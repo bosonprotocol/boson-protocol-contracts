@@ -158,5 +158,6 @@ contract BosonTypes {
     struct OfferDetails {
         address buyer;
         uint256 offerId;
+        uint256 msgValue;
     }
 }

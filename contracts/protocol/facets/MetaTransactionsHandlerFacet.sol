@@ -14,8 +14,8 @@ import { ProtocolBase } from "../bases/ProtocolBase.sol";
 contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, ProtocolBase {
 
     bytes32 private constant META_TRANSACTION_TYPEHASH = keccak256(bytes("MetaTransaction(uint256 nonce,address from,address contractAddress,string functionName,bytes functionSignature)"));
-    bytes32 private constant OFFER_DETAILS_TYPEHASH = keccak256("OfferDetails(address buyer,uint256 offerId)");
-    bytes32 private constant META_TX_COMMIT_TO_OFFER_TYPEHASH = keccak256("MetaTxCommitToOffer(uint256 nonce,address from,address contractAddress,string functionName,bytes functionSignature,OfferDetails offerDetails)OfferDetails(address buyer,uint256 offerId)");
+    bytes32 private constant OFFER_DETAILS_TYPEHASH = keccak256("OfferDetails(address buyer,uint256 offerId,uint256 msgValue)");
+    bytes32 private constant META_TX_COMMIT_TO_OFFER_TYPEHASH = keccak256("MetaTxCommitToOffer(uint256 nonce,address from,address contractAddress,string functionName,bytes functionSignature,OfferDetails offerDetails)OfferDetails(address buyer,uint256 offerId,uint256 msgValue)");
 
     /**
      * @notice Facet Initializer
@@ -88,7 +88,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      */
     function hashOfferDetails(OfferDetails memory _offerDetails) internal pure returns (bytes32) {
         return keccak256(abi.encode(
-            OFFER_DETAILS_TYPEHASH, _offerDetails.buyer, _offerDetails.offerId
+            OFFER_DETAILS_TYPEHASH, _offerDetails.buyer, _offerDetails.offerId, _offerDetails.msgValue
         ));
     }
 
@@ -179,7 +179,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         protocolMetaTxInfo().isMetaTransaction = true;
 
         // invoke local function with an external call
-        (bool success, bytes memory returnData) = address(this).call(_functionSignature);
+        (bool success, bytes memory returnData) = address(this).call{value: msg.value}(_functionSignature);
 
         // If error, return error message
         string memory errorMessage = (returnData.length == 0) ? FUNCTION_CALL_NOT_SUCCESSFUL : (string (returnData));
@@ -237,7 +237,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         protocolMetaTxInfo().isMetaTransaction = true;
 
         // invoke local function with an external call
-        (bool success, bytes memory returnData) = address(this).call(_functionSignature);
+        (bool success, bytes memory returnData) = address(this).call{value: msg.value}(_functionSignature);
 
         // If error, return error message
         string memory errorMessage = (returnData.length == 0) ? FUNCTION_CALL_NOT_SUCCESSFUL : (string (returnData));
