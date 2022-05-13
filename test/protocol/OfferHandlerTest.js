@@ -234,7 +234,7 @@ describe("IBosonOfferHandler", function () {
           .withArgs(nextOfferId, sellerId, offerStruct);
       });
 
-      it.only("should ignore any provided protocol fee and and calculate the correct one", async function () {
+      it("should ignore any provided protocol fee and and calculate the correct one", async function () {
         // set some other sellerId
         offer.protocolFee = "999";
 
