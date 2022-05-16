@@ -15,7 +15,12 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { getEvent, setNextBlockTimestamp, calculateVoucherExpiry, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
+const {
+  getEvent,
+  setNextBlockTimestamp,
+  calculateVoucherExpiry,
+  calculateProtocolFee,
+} = require("../../scripts/util/test-utils.js");
 
 /**
  *  Test the Boson Exchange Handler interface
