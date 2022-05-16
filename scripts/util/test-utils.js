@@ -109,6 +109,11 @@ async function prepareDataSignatureParameters(user, nonce, functionSignature, me
   };
 }
 
+function calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage) {
+  return ethers.BigNumber.from(price).add(sellerDeposit).mul(protocolFeePrecentage).div("10000").toString();
+}
+
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
 exports.prepareDataSignatureParameters = prepareDataSignatureParameters;
+exports.calculateProtocolFee = calculateProtocolFee;

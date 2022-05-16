@@ -9,7 +9,7 @@ const Offer = require("../../scripts/domain/Offer");
 const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
-const { getEvent, setNextBlockTimestamp } = require("../../scripts/util/test-utils.js");
+const { getEvent, setNextBlockTimestamp, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -94,7 +94,7 @@ describe("IBosonExchangeHandler", function () {
     [bosonVoucher] = clients;
 
     // set protocolFeePrecentage
-    protocolFeePrecentage = "200"; // 0.2 %
+    protocolFeePrecentage = "200"; // 2 %
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
@@ -158,7 +158,7 @@ describe("IBosonExchangeHandler", function () {
       // Required constructor params
       price = ethers.utils.parseUnits("1.5", "ether").toString();
       sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      protocolFee = ethers.BigNumber.from(price).add(sellerDeposit).mul(protocolFeePrecentage).div("10000").toString();
+      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
