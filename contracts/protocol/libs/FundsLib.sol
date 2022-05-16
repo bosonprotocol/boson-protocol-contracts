@@ -5,6 +5,7 @@ import {NATIVE_NOT_ALLOWED, TOKEN_TRANSFER_FAILED, INSUFFICIENT_VALUE_SENT, INSU
 import {BosonTypes} from "../../domain/BosonTypes.sol";
 import {ProtocolLib} from "../libs/ProtocolLib.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "hardhat/console.sol";
 
 /**
  * @title FundsLib
@@ -14,6 +15,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 library FundsLib {
     event FundsEncumbered(uint256 indexed entityId, address indexed exchangeToken, uint256 amount);
     event FundsReleased(uint256 indexed exchangeId, uint256 indexed entityId, address indexed exchangeToken, uint256 amount);
+    event ExchangeFee(uint256 indexed exchangeId, address indexed exchangeToken, uint256 amount);
     
     /**
      * @notice Takes in the offer id and buyer id and encumbers buyer's and seller's funds during the commitToOffer
@@ -93,10 +95,10 @@ library FundsLib {
         uint256 sellerDeposit = offer.sellerDeposit;
         uint256 price = offer.price;
 
-        // sum of price and sellerDeposit occurs multiple times, so
+        // sum of price and sellerDeposit occurs multiple times
         uint256 pot = price + sellerDeposit;
 
-        // calculate protocol fee
+        // retrieve protocol fee
         uint256 protocolFee = offer.protocolFee;
 
         // calculate the payoffs depending on state exchange is in
@@ -140,6 +142,11 @@ library FundsLib {
         uint256 buyerId = exchange.buyerId;
         increaseAvailableFunds(sellerId, exchangeToken, sellerPayoff);
         increaseAvailableFunds(buyerId, exchangeToken, buyerPayoff);
+
+        if (protocolFee > 0) {
+            increaseAvailableFunds(0, exchangeToken, protocolFee);
+            emit ExchangeFee(_exchangeId, exchangeToken, protocolFee);
+        }
         
         // Notify the external observers
         emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff);
@@ -150,7 +157,7 @@ library FundsLib {
     /**
      * @notice Increases the amount, availabe to withdraw or use as a seller deposit
      *
-     * @param _entityId - seller or buyer id
+     * @param _entityId - seller or buyer id, or 0 for protocol
      * @param _tokenAddress - funds contract address or zero address for native currency
      * @param _amount - amount to be credited
      */

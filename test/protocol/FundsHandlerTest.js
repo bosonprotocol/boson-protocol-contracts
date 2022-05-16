@@ -15,6 +15,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
+const { setNextBlockTimestamp } = require("../../scripts/util/test-utils.js");
 
 /**
  *  Test the Boson Funds Handler interface
@@ -52,6 +53,7 @@ describe("IBosonFundsHandler", function () {
     voided;
   let protocolFeePrecentage;
   let block, blockNumber;
+  let exchangeId, buyerId, sellerPayoff, buyerPayoff;
 
   before(async function () {
     // get interface Ids
@@ -315,7 +317,7 @@ describe("IBosonFundsHandler", function () {
 
   // Funds library methods.
   // Cannot be invoked directly, so tests calls the methods that use them
-  context("📋 FundsLib  Methods", async function () {
+  context.only("📋 FundsLib  Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
       id = offerId = sellerId = "1";
@@ -642,6 +644,91 @@ describe("IBosonFundsHandler", function () {
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price })
           ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+        });
+      });
+    });
+
+    context("👉 releaseFunds()", async function () {
+      beforeEach(async function () {
+        // commit to offer
+        exchangeId = "1";
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+      });
+
+      context("Final state COMPLETED", async function () {
+        beforeEach(async function () {
+          // Set time forward to the offer's redeemableFromDate
+          await setNextBlockTimestamp(Number(redeemableFromDate));
+
+          // console.log(offerToken)
+          buyerId = "2";
+          sellerId = "1";
+          exchangeId = "1";
+
+          // succesfully redeem exchange
+          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+          // expected payoffs
+          // buyer: 0
+          buyerPayoff = 0;
+
+          // seller: sellerDeposit + price - protocolFee
+          sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit)
+            .add(offerToken.price)
+            .sub(offerToken.protocolFee)
+            .toString();
+        });
+
+        it("should emit a FundsReleased event", async function () {
+          // Complete the exchange, expecting event
+          await expect(exchangeHandler.connect(buyer).completeExchange(exchangeId))
+            .to.emit(exchangeHandler, "FundsReleased")
+            .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
+            .to.emit(exchangeHandler, "FundsReleased")
+            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff)
+            .to.emit(exchangeHandler, "ExchangeFee")
+            .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee);
+        });
+
+        it("should update state", async function () {
+          // commit again, so seller has nothing in available funds
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+
+          // Read on chain state
+          let sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+          let buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
+
+          // Chain state should match the expected available funds
+          let expectedSellerAvailableFunds = new FundsList([
+            new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
+          ]);
+          let expectedBuyerAvailableFunds = new FundsList([]);
+          expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+          expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+
+          // Complete and exchange so the funds are released
+          await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
+          // Available funds should be increased for
+          // buyer: 0
+          // seller: sellerDeposit + price - protocolFee
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+          expectedSellerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", sellerPayoff));
+          expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+          expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+
+          // complete another exchange so we test funds are only updated, no new entry is created
+          await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
+          await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+          expectedSellerAvailableFunds.funds[1] = new Funds(
+            mockToken.address,
+            "Foreign20",
+            ethers.BigNumber.from(sellerPayoff).mul(2).toString()
+          );
+          expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+          expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
         });
       });
     });

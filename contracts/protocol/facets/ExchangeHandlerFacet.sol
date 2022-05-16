@@ -459,8 +459,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         // Burn the voucher if canceling or revoking
         if (_targetState != ExchangeState.Completed) burnVoucher(_exchange.id);
 
-        // TODO: Uncomment when FundsLib.releaseFunds is available
-        // releaseFunds(_exchange.id);
+        // Release the funds
+        FundsLib.releaseFunds(_exchange.id);
 
     }
 
