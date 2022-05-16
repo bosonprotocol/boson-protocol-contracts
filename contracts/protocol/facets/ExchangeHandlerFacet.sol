@@ -236,6 +236,39 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     }
 
     /**
+     * @notice Expire a voucher.
+     *
+     * Reverts if
+     * - Exchange does not exist
+     * - Exchange is not in committed state
+     * - Redemption period has not yet elapsed
+     *
+     * Emits
+     * - VoucherExpired
+     *
+     * @param _exchangeId - the id of the exchange
+     */
+    function expireVoucher(uint256 _exchangeId)
+    external
+    override
+    {
+        // Get the exchange, should be in committed state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
+
+        // Make sure that the voucher has expired
+        require(block.timestamp >= exchange.voucher.validUntilDate, VOUCHER_STILL_VALID);
+
+        // Finalize the exchange, burning the voucher
+        finalizeExchange(exchange, ExchangeState.Canceled);
+
+        // Make it possible to determine how this exchange reached the Canceled state
+        exchange.voucher.expired = true;
+
+        // Notify watchers of state change
+        emit VoucherExpired(exchange.offerId, _exchangeId, msg.sender);
+    }
+
+    /**
      * @notice Redeem a voucher.
      *
      * Reverts if
@@ -457,7 +490,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
 
         // TODO: Uncomment when FundsLib.releaseFunds is available
         // releaseFunds(_exchange.id);
-
     }
 
     /**
