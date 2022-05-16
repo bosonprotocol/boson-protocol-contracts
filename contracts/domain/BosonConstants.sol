@@ -58,6 +58,7 @@ contract BosonConstants {
     // Revert Reasons: Exchange related
     string internal constant NO_SUCH_EXCHANGE = "No such exchange";
     string internal constant FULFILLMENT_PERIOD_NOT_ELAPSED = "Fulfillment period has not yet elapsed";
+    string internal constant VOUCHER_NOT_REDEEMABLE = "Voucher not yet valid or already expired";
 
     // Revert Reasons: Twin related
     string internal constant NO_SUCH_TWIN = "No such twin";
