@@ -26,6 +26,7 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
      * Reverts if:
      * - nonce is already used by another transaction.
      * - function signature matches to executeMetaTransaction.
+     * - function name does not match with bytes 4 version of the function signature.
      * - sender does not match the recovered signer.
      * - any code executed in the signed transaction reverts.
      *
@@ -52,14 +53,11 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
      *
      * Reverts if:
      * - nonce is already used by another transaction.
-     * - function signature matches to executeMetaTransaction.
      * - sender does not match the recovered signer.
      * - any code executed in the signed transaction reverts.
      *
      * @param _userAddress - the sender of the transaction.
-     * @param _functionName - the function name that we want to execute.
      * @param _offerDetails - the fully populated BosonTypes.OfferDetails struct.
-     * @param _functionSignature - the function signature.
      * @param _nonce - the nonce value of the transaction.
      * @param _sigR - r part of the signer's signature.
      * @param _sigS - s part of the signer's signature.
@@ -67,9 +65,7 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
      */
     function executeMetaTxCommitToOffer(
         address _userAddress,
-        string memory _functionName,
         BosonTypes.OfferDetails calldata _offerDetails,
-        bytes memory _functionSignature,
         uint256 _nonce,
         bytes32 _sigR,
         bytes32 _sigS,

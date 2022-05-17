@@ -480,7 +480,7 @@ describe("IBosonTwinHandler", function () {
         message.nonce = parseInt(nonce);
         message.from = operator.address;
         message.contractAddress = twinHandler.address;
-        message.functionName = "removeTwin";
+        message.functionName = "removeTwin(uint256)";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -541,7 +541,7 @@ describe("IBosonTwinHandler", function () {
           message.nonce = parseInt(nonce);
           message.from = operator.address;
           message.contractAddress = twinHandler.address;
-          message.functionName = "removeTwin";
+          message.functionName = "removeTwin(uint256)";
           message.functionSignature = functionSignature;
 
           // Collect the signature components
@@ -618,7 +618,7 @@ describe("IBosonTwinHandler", function () {
           message.nonce = parseInt(nonce);
           message.from = operator.address;
           message.contractAddress = twinHandler.address;
-          message.functionName = "removeTwin";
+          message.functionName = "removeTwin(uint256)";
           message.functionSignature = functionSignature;
 
           // Collect the signature components

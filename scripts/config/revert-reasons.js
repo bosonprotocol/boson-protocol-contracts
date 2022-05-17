@@ -77,4 +77,5 @@ exports.RevertReasons = {
   INVALID_FUNCTION_SIGNATURE: "functionSignature can not be of executeMetaTransaction method",
   INVALID_SIGNATURE: "Invalid signature",
   SIGNER_AND_SIGNATURE_DO_NOT_MATCH: "Signer and signature do not match",
+  INVALID_FUNCTION_NAME: "Invalid function name",
 };

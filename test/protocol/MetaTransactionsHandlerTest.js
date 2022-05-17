@@ -189,7 +189,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         message.nonce = parseInt(nonce);
         message.from = operator.address;
         message.contractAddress = accountHandler.address;
-        message.functionName = "createSeller";
+        message.functionName = "createSeller((uint256,address,address,address,address,bool))";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -245,7 +245,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         expect(seller.isValid()).is.true;
       });
 
-      it("Should emit MetaTransactionExecuted and UsedNonce events", async () => {
+      it("Should emit MetaTransactionExecuted event", async () => {
         // Prepare the function signature for the facet function.
         functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
 
@@ -258,7 +258,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         message.nonce = parseInt(nonce);
         message.from = operator.address;
         message.contractAddress = accountHandler.address;
-        message.functionName = "createSeller";
+        message.functionName = "createSeller((uint256,address,address,address,address,bool))";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -277,7 +277,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             .executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v)
         )
           .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-          .withArgs(operator.address, deployer.address, functionSignature, nonce);
+          .withArgs(operator.address, deployer.address, message.functionName, nonce);
 
         // Verify that nonce is used. Expect true.
         let expectedResult = true;
@@ -307,7 +307,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.nonce = parseInt(nonce);
           message.from = operator.address;
           message.contractAddress = metaTransactionsHandler.address;
-          message.functionName = "executeMetaTransaction";
+          message.functionName = "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)";
           message.functionSignature = functionSignature;
 
           // Collect the signature components
@@ -333,6 +333,47 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_FUNCTION_SIGNATURE);
         });
 
+        it("Should fail when function name is incorrect", async function () {
+          let incorrectFunctionName = "createSeller"; // there are no function argument types here.
+
+          // Prepare the function signature for the facet function.
+          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
+
+          let customTransactionType = {
+            MetaTransaction: metaTransactionType,
+          };
+
+          // Prepare the message
+          let message = {};
+          message.nonce = parseInt(nonce);
+          message.from = operator.address;
+          message.contractAddress = accountHandler.address;
+          message.functionName = incorrectFunctionName;
+          message.functionSignature = functionSignature;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            operator,
+            customTransactionType,
+            "MetaTransaction",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Execute meta transaction, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTransaction(
+              operator.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
+          ).to.revertedWith(RevertReasons.INVALID_FUNCTION_NAME);
+        });
+
         it("Should fail when replay transaction", async function () {
           // Prepare the function signature for the facet function.
           functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
@@ -346,7 +387,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.nonce = parseInt(nonce);
           message.from = operator.address;
           message.contractAddress = accountHandler.address;
-          message.functionName = "createSeller";
+          message.functionName = "createSeller((uint256,address,address,address,address,bool))";
           message.functionSignature = functionSignature;
 
           // Collect the signature components
@@ -396,7 +437,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.nonce = parseInt(nonce);
           message.from = rando.address;
           message.contractAddress = accountHandler.address;
-          message.functionName = "createSeller";
+          message.functionName = "createSeller((uint256,address,address,address,address,bool))";
           message.functionSignature = functionSignature;
 
           // Collect the signature components
@@ -498,7 +539,6 @@ describe("IBosonMetaTransactionsHandler", function () {
           { name: "from", type: "address" },
           { name: "contractAddress", type: "address" },
           { name: "functionName", type: "string" },
-          { name: "functionSignature", type: "bytes" },
           { name: "offerDetails", type: "OfferDetails" },
         ];
 
@@ -517,17 +557,13 @@ describe("IBosonMetaTransactionsHandler", function () {
           .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
       });
 
-      it("Should emit MetaTxCommitToOfferExecuted and UsedNonce events", async () => {
-        // Prepare the function signature for the facet function.
-        functionSignature = exchangeHandler.interface.encodeFunctionData("commitToOffer", [buyer.address, offerId]);
-
+      it("Should emit MetaTransactionExecuted event", async () => {
         // Prepare the message
         let message = {};
         message.nonce = parseInt(nonce);
         message.from = operator.address;
         message.contractAddress = exchangeHandler.address;
-        message.functionName = "commitToOffer";
-        message.functionSignature = functionSignature;
+        message.functionName = "commitToOffer(address,uint256)";
         message.offerDetails = validOfferDetails;
 
         // Collect the signature components
@@ -541,20 +577,12 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // send a meta transaction, check for event
         await expect(
-          metaTransactionsHandler.executeMetaTxCommitToOffer(
-            operator.address,
-            message.functionName,
-            validOfferDetails,
-            functionSignature,
-            nonce,
-            r,
-            s,
-            v,
-            { value: price }
-          )
+          metaTransactionsHandler.executeMetaTxCommitToOffer(operator.address, validOfferDetails, nonce, r, s, v, {
+            value: price,
+          })
         )
-          .to.emit(metaTransactionsHandler, "MetaTxCommitToOfferExecuted")
-          .withArgs(operator.address, deployer.address, functionSignature, nonce);
+          .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+          .withArgs(operator.address, deployer.address, message.functionName, nonce);
 
         // Verify that nonce is used. Expect true.
         let expectedResult = true;
@@ -563,64 +591,13 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
-        it("Should fail when try to call executeMetaTransaction method itself", async function () {
-          // Function signature for executeMetaTransaction function.
-          functionSignature = metaTransactionsHandler.interface.encodeFunctionData("executeMetaTxCommitToOffer", [
-            operator.address,
-            "executeMetaTxCommitToOffer",
-            validOfferDetails,
-            ethers.constants.HashZero, // hash of zero
-            nonce,
-            ethers.utils.randomBytes(32), // random bytes32
-            ethers.utils.randomBytes(32), // random bytes32
-            parseInt(ethers.utils.randomBytes(8)), // random uint8
-          ]);
-
-          // Prepare the message
-          let message = {};
-          message.nonce = parseInt(nonce);
-          message.from = operator.address;
-          message.contractAddress = metaTransactionsHandler.address;
-          message.functionName = "executeMetaTxCommitToOffer";
-          message.functionSignature = functionSignature;
-          message.offerDetails = validOfferDetails;
-
-          // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
-            operator,
-            customTransactionType,
-            "MetaTxCommitToOffer",
-            message,
-            metaTransactionsHandler.address
-          );
-
-          // send a meta transaction, expecting revert
-          await expect(
-            metaTransactionsHandler.executeMetaTxCommitToOffer(
-              operator.address,
-              message.functionName,
-              validOfferDetails,
-              functionSignature,
-              nonce,
-              r,
-              s,
-              v,
-              { value: price }
-            )
-          ).to.revertedWith(RevertReasons.INVALID_FUNCTION_SIGNATURE);
-        });
-
         it("Should fail when replay transaction", async function () {
-          // Prepare the function signature for the facet function.
-          functionSignature = exchangeHandler.interface.encodeFunctionData("commitToOffer", [buyer.address, offerId]);
-
           // Prepare the message
           let message = {};
           message.nonce = parseInt(nonce);
           message.from = operator.address;
           message.contractAddress = exchangeHandler.address;
-          message.functionName = "commitToOffer";
-          message.functionSignature = functionSignature;
+          message.functionName = "commitToOffer(address,uint256)";
           message.offerDetails = validOfferDetails;
 
           // Collect the signature components
@@ -635,9 +612,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Execute the meta transaction.
           await metaTransactionsHandler.executeMetaTxCommitToOffer(
             operator.address,
-            message.functionName,
             validOfferDetails,
-            functionSignature,
             nonce,
             r,
             s,
@@ -647,31 +622,19 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Execute meta transaction again with the same nonce, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTxCommitToOffer(
-              operator.address,
-              message.functionName,
-              validOfferDetails,
-              functionSignature,
-              nonce,
-              r,
-              s,
-              v,
-              { value: price }
-            )
+            metaTransactionsHandler.executeMetaTxCommitToOffer(operator.address, validOfferDetails, nonce, r, s, v, {
+              value: price,
+            })
           ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
         });
 
         it("Should fail when Signer and Signature do not match", async function () {
-          // Prepare the function signature for the facet function.
-          functionSignature = exchangeHandler.interface.encodeFunctionData("commitToOffer", [buyer.address, offerId]);
-
           // Prepare the message
           let message = {};
           message.nonce = parseInt(nonce);
           message.from = rando.address;
           message.contractAddress = exchangeHandler.address;
-          message.functionName = "commitToOffer";
-          message.functionSignature = functionSignature;
+          message.functionName = "commitToOffer(address,uint256)";
           message.offerDetails = validOfferDetails;
 
           // Collect the signature components
@@ -685,17 +648,9 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Execute meta transaction, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTxCommitToOffer(
-              operator.address,
-              message.functionName,
-              validOfferDetails,
-              functionSignature,
-              nonce,
-              r,
-              s,
-              v,
-              { value: price }
-            )
+            metaTransactionsHandler.executeMetaTxCommitToOffer(operator.address, validOfferDetails, nonce, r, s, v, {
+              value: price,
+            })
           ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         });
       });

@@ -88,6 +88,7 @@ contract BosonConstants {
         "functionSignature can not be of executeMetaTransaction method";
     string internal constant INVALID_SIGNATURE = "Invalid signature";
     string internal constant SIGNER_AND_SIGNATURE_DO_NOT_MATCH = "Signer and signature do not match";
+    string internal constant INVALID_FUNCTION_NAME = "Invalid function name";
 }
 
 // Librarires cannot inherit BosonConstants, therefore the revert reasons are defined on the file level

@@ -151,7 +151,6 @@ contract BosonTypes {
         address from;
         address contractAddress;
         string functionName;
-        bytes functionSignature;
         OfferDetails offerDetails;
     }
 
