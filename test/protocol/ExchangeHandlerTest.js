@@ -23,7 +23,7 @@ const { getEvent, setNextBlockTimestamp, calculateVoucherExpiry } = require("../
 describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, game;
+  let accounts, deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, game, fauxClient;
   let erc165,
     protocolDiamond,
     accessController,
@@ -33,7 +33,7 @@ describe("IBosonExchangeHandler", function () {
     fundsHandler,
     disputeHandler;
   let bosonVoucher, gasLimit;
-  let id, buyerId, offer, offerId, seller, sellerId, nextExchangeId, newBuyerId;
+  let id, buyerId, offer, offerId, seller, sellerId, nextExchangeId, nextAccountId;
   let block, blockNumber, tx, txReceipt, event, clients;
   let support, oneMonth, oneWeek, newTime;
   let price,
@@ -68,6 +68,7 @@ describe("IBosonExchangeHandler", function () {
     rando = accounts[6];
     newOwner = accounts[7];
     game = accounts[8]; // the MR Game that is allowed to push the Dispute into final states
+    fauxClient = accounts[9];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -90,6 +91,7 @@ describe("IBosonExchangeHandler", function () {
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
     [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
     [bosonVoucher] = clients;
+    await accessController.grantRole(Role.CLIENT, bosonVoucher.address);
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
@@ -380,7 +382,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to complete the exchange, expecting revert
           await expect(exchangeHandler.connect(operator).completeExchange(exchange.id)).to.revertedWith(
-            RevertReasons.INVALID_STATE_TRANSITION
+            RevertReasons.INVALID_STATE
           );
         });
 
@@ -473,7 +475,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to revoke the voucher, expecting revert
           await expect(exchangeHandler.connect(operator).revokeVoucher(exchange.id)).to.revertedWith(
-            RevertReasons.INVALID_STATE_TRANSITION
+            RevertReasons.INVALID_STATE
           );
         });
 
@@ -522,7 +524,7 @@ describe("IBosonExchangeHandler", function () {
           .withArgs(offerId, exchange.id, newOwner.address);
       });
 
-      it("should update state when original buyer calls", async function () {
+      it("should update state when buyer calls", async function () {
         // Cancel the voucher
         await exchangeHandler.connect(buyer).cancelVoucher(exchange.id);
 
@@ -531,55 +533,6 @@ describe("IBosonExchangeHandler", function () {
 
         // It should match ExchangeState.Canceled
         assert.equal(response, ExchangeState.Canceled, "Exchange state is incorrect");
-      });
-
-      it("should update state when new owner (not a buyer) calls", async function () {
-        // Transfer voucher to new owner
-        await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
-
-        // Get the id that will be assigned to the new owner
-        newBuyerId = await accountHandler.connect(rando).getNextAccountId();
-
-        // Cancel the voucher
-        await exchangeHandler.connect(newOwner).cancelVoucher(exchange.id);
-
-        // Get the exchange struct from the contract
-        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
-
-        // Parse the struct
-        exchange = Exchange.fromStruct(response);
-
-        // State should match ExchangeState.Canceled
-        assert.equal(exchange.state, ExchangeState.Canceled, "Exchange state is incorrect");
-
-        // Buyer ID should match the expected id
-        assert.equal(exchange.buyerId, newBuyerId, "Buyer ID is incorrect");
-      });
-
-      it("should update state when new owner (already a buyer) calls", async function () {
-        // Transfer voucher to new owner
-        await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
-
-        // Get the id that will be assigned to the new owner
-        newBuyerId = await accountHandler.connect(rando).getNextAccountId();
-
-        // Create a buyer account for the new owner
-        await accountHandler.connect(newOwner).createBuyer(new Buyer("0", newOwner.address, true));
-
-        // Cancel the voucher
-        await exchangeHandler.connect(newOwner).cancelVoucher(exchange.id);
-
-        // Get the exchange struct from the contract
-        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
-
-        // Parse the struct
-        exchange = Exchange.fromStruct(response);
-
-        // State should match ExchangeState.Canceled
-        assert.equal(exchange.state, ExchangeState.Canceled, "Exchange state is incorrect");
-
-        // Buyer ID should match the expected id
-        assert.equal(exchange.buyerId, newBuyerId, "Buyer ID is incorrect");
       });
 
       context("💔 Revert Reasons", async function () {
@@ -606,7 +559,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to cancel the voucher, expecting revert
           await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id)).to.revertedWith(
-            RevertReasons.INVALID_STATE_TRANSITION
+            RevertReasons.INVALID_STATE
           );
         });
 
@@ -710,7 +663,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to expire the voucher, expecting revert
           await expect(exchangeHandler.connect(buyer).expireVoucher(exchange.id)).to.revertedWith(
-            RevertReasons.INVALID_STATE_TRANSITION
+            RevertReasons.INVALID_STATE
           );
         });
 
@@ -742,7 +695,7 @@ describe("IBosonExchangeHandler", function () {
         exchangeStruct = exchange.toStruct();
       });
 
-      it("should emit a VoucherRedeemed event when original buyer calls", async function () {
+      it("should emit a VoucherRedeemed event when buyer calls", async function () {
         // Set time forward to the offer's redeemableFromDate
         await setNextBlockTimestamp(Number(redeemableFromDate));
 
@@ -752,20 +705,7 @@ describe("IBosonExchangeHandler", function () {
           .withArgs(offerId, exchange.id, buyer.address);
       });
 
-      it("should emit a VoucherRedeemed event when new owner (not a buyer) calls", async function () {
-        // Transfer voucher to new owner
-        await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
-
-        // Set time forward to the offer's redeemableFromDate
-        await setNextBlockTimestamp(Number(redeemableFromDate));
-
-        // Redeem the voucher, expecting event
-        await expect(exchangeHandler.connect(newOwner).redeemVoucher(exchange.id))
-          .to.emit(exchangeHandler, "VoucherRedeemed")
-          .withArgs(offerId, exchange.id, newOwner.address);
-      });
-
-      it("should update state when original buyer calls", async function () {
+      it("should update state when buyer calls", async function () {
         // Set time forward to the offer's redeemableFromDate
         await setNextBlockTimestamp(Number(redeemableFromDate));
 
@@ -777,61 +717,6 @@ describe("IBosonExchangeHandler", function () {
 
         // It should match ExchangeState.Redeemed
         assert.equal(response, ExchangeState.Redeemed, "Exchange state is incorrect");
-      });
-
-      it("should update state when new owner (not a buyer) calls", async function () {
-        // Transfer voucher to new owner
-        await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
-
-        // Get the id that will be assigned to the new owner
-        newBuyerId = await accountHandler.connect(rando).getNextAccountId();
-
-        // Set time forward to the offer's redeemableFromDate
-        await setNextBlockTimestamp(Number(redeemableFromDate));
-
-        // Redeem the voucher
-        await exchangeHandler.connect(newOwner).redeemVoucher(exchange.id);
-
-        // Get the exchange struct from the contract
-        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
-
-        // Parse the struct
-        exchange = Exchange.fromStruct(response);
-
-        // State should match ExchangeState.Redeemed
-        assert.equal(exchange.state, ExchangeState.Redeemed, "Exchange state is incorrect");
-
-        // Buyer ID should match the expected id
-        assert.equal(exchange.buyerId, newBuyerId, "Buyer ID is incorrect");
-      });
-
-      it("should update state when new owner (already a buyer) calls", async function () {
-        // Transfer voucher to new owner
-        await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
-
-        // Get the id that will be assigned to the new owner
-        newBuyerId = await accountHandler.connect(rando).getNextAccountId();
-
-        // Create a buyer account for the new owner
-        await accountHandler.connect(newOwner).createBuyer(new Buyer("0", newOwner.address, true));
-
-        // Set time forward to the offer's redeemableFromDate
-        await setNextBlockTimestamp(Number(redeemableFromDate));
-
-        // Redeem the voucher
-        await exchangeHandler.connect(newOwner).redeemVoucher(exchange.id);
-
-        // Get the exchange struct from the contract
-        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
-
-        // Parse the struct
-        exchange = Exchange.fromStruct(response);
-
-        // State should match ExchangeState.Redeemed
-        assert.equal(exchange.state, ExchangeState.Redeemed, "Exchange state is incorrect");
-
-        // Buyer ID should match the expected id
-        assert.equal(exchange.buyerId, newBuyerId, "Buyer ID is incorrect");
       });
 
       context("💔 Revert Reasons", async function () {
@@ -860,7 +745,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to redeem the voucher, expecting revert
           await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
-            RevertReasons.INVALID_STATE_TRANSITION
+            RevertReasons.INVALID_STATE
           );
         });
 
@@ -885,6 +770,127 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to redeem the voucher, expecting revert
           await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
             RevertReasons.VOUCHER_NOT_REDEEMABLE
+          );
+        });
+      });
+    });
+
+    context("👉 onVoucherTransferred()", async function () {
+      beforeEach(async function () {
+        // Commit to offer, retrieving the event
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        exchange.voucher.committedDate = block.timestamp.toString();
+
+        // Update the validUntilDate date in the expected exchange struct
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration);
+
+        // Get the struct
+        exchangeStruct = exchange.toStruct();
+
+        // Grant CLIENT role to an EOA for testing
+        await accessController.grantRole(Role.CLIENT, fauxClient.address);
+      });
+
+      it("should emit an VoucherTransferred event when called by CLIENT-roled address", async function () {
+        // Get the next buyer id
+        nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+
+        // Call onVoucherTransferred, expecting event
+        await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(exchange.id, newOwner.address))
+          .to.emit(exchangeHandler, "VoucherTransferred")
+          .withArgs(offerId, exchange.id, nextAccountId);
+      });
+
+      it("should update exchange when new buyer (with existing, active account) calls", async function () {
+        // Get the next buyer id
+        nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+
+        // Create a buyer account for the new owner
+        await accountHandler.connect(newOwner).createBuyer(new Buyer("0", newOwner.address, true));
+
+        // Call onVoucherTransferred, expecting event
+        await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(exchange.id, newOwner.address))
+          .to.emit(exchangeHandler, "VoucherTransferred")
+          .withArgs(offerId, exchange.id, nextAccountId);
+      });
+
+      it("should update exchange when new buyer (no account) calls", async function () {
+        // Get the next buyer id
+        nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+
+        // Call onVoucherTransferred, expecting event
+        await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(exchange.id, newOwner.address))
+          .to.emit(exchangeHandler, "VoucherTransferred")
+          .withArgs(offerId, exchange.id, nextAccountId);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        /**
+         * Reverts if
+         * - Caller does not have CLIENT role
+         * - Exchange does not exist
+         * - Exchange is not in committed state
+         * - Voucher has expired
+         * - New buyer's existing account is deactivated
+         */
+
+        it("Caller does not have CLIENT role", async function () {
+          // Attempt to call onVoucherTransferred, expecting revert
+          await expect(
+            exchangeHandler.connect(rando).onVoucherTransferred(exchange.id, newOwner.address)
+          ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+        });
+
+        it("exchange id is invalid", async function () {
+          // An invalid exchange id
+          id = "666";
+
+          // Attempt to call onVoucherTransferred, expecting revert
+          await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(id, newOwner.address)).to.revertedWith(
+            RevertReasons.NO_SUCH_EXCHANGE
+          );
+        });
+
+        it("exchange is not in committed state", async function () {
+          // Revoke the voucher
+          await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
+
+          // Attempt to call onVoucherTransferred, expecting revert
+          await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(id, newOwner.address)).to.revertedWith(
+            RevertReasons.INVALID_STATE
+          );
+        });
+
+        it("Voucher has expired", async function () {
+          // Set time forward past the voucher's validUntilDate
+          await setNextBlockTimestamp(Number(redeemableFromDate) + Number(voucherValidDuration) + Number(oneWeek));
+
+          // Attempt to call onVoucherTransferred, expecting revert
+          await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(id, newOwner.address)).to.revertedWith(
+            RevertReasons.VOUCHER_HAS_EXPIRED
+          );
+        });
+
+        // TODO: Include this test when AccountHandlerFacet.updateBuyer is implemented
+        it.skip("New buyer's existing account is deactivated", async function () {
+          // Get the next buyer id
+          nextAccountId = await accountHandler.connect(rando).getNextAccountId();
+
+          // Create a buyer account for the new owner
+          await accountHandler.connect(newOwner).createBuyer(new Buyer("0", newOwner.address, true));
+
+          // Update buyer account, deactivating it
+          await accountHandler.connect(newOwner).updateBuyer(new Buyer(nextAccountId, newOwner.address, false));
+
+          // Attempt to call onVoucherTransferred, expecting revert
+          await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(id, newOwner.address)).to.revertedWith(
+            RevertReasons.MUST_BE_ACTIVE
           );
         });
       });

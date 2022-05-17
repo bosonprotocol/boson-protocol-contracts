@@ -109,4 +109,29 @@ contract BosonVoucher is IBosonVoucher, ClientBase, ERC721Upgradeable {
         return exists ? offer.metadataUri : "";
     }
 
+    /**
+     * @dev Update buyer on transfer
+     *
+     * When an issued voucher is subsequently transferred,
+     * either on the secondary market or just between wallets,
+     * the protocol needs to be alerted to the change of buyer
+     * address.
+     *
+     * The buyer account associated with the exchange will be
+     * replaced. If the new voucher holder already has a
+     * Boson Protocol buyer account, it will be used. Otherwise,
+     * a new buyer account will be created and associated with
+     * the exchange.
+     */
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal override {
+        // Only act when transferring, not minting or burning
+        if (from != address(0) && to != address(0)) {
+            onVoucherTransferred(tokenId, payable(to));
+        }
+    }
+
 }
