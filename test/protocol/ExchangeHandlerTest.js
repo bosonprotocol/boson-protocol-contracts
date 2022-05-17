@@ -16,7 +16,12 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { getEvent, setNextBlockTimestamp, calculateVoucherExpiry, prepareDataSignatureParameters } = require("../../scripts/util/test-utils.js");
+const {
+  getEvent,
+  setNextBlockTimestamp,
+  calculateVoucherExpiry,
+  prepareDataSignatureParameters,
+} = require("../../scripts/util/test-utils.js");
 
 /**
  *  Test the Boson Exchange Handler interface
@@ -307,15 +312,9 @@ describe("IBosonExchangeHandler", function () {
           metaTransactionsHandler.address
         );
         // Commit to offer, creating a new exchange. Send as meta transaction.
-        await metaTransactionsHandler.executeMetaTxCommitToOffer(
-          operator.address,
-          validOfferDetails,
-          nonce,
-          r,
-          s,
-          v,
-          { value: price }
-        );
+        await metaTransactionsHandler.executeMetaTxCommitToOffer(operator.address, validOfferDetails, nonce, r, s, v, {
+          value: price,
+        });
 
         // Get the next exchange id and ensure it was incremented by the creation of the offer
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
@@ -394,15 +393,9 @@ describe("IBosonExchangeHandler", function () {
           );
           // Commit to offer, creating a new exchange. Send as meta transaction.
           await expect(
-            metaTransactionsHandler.executeMetaTxCommitToOffer(
-              operator.address,
-              validOfferDetails,
-              nonce,
-              r,
-              s,
-              v,
-              { value: price }
-            )
+            metaTransactionsHandler.executeMetaTxCommitToOffer(operator.address, validOfferDetails, nonce, r, s, v, {
+              value: price,
+            })
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
@@ -452,15 +445,9 @@ describe("IBosonExchangeHandler", function () {
           );
           // Commit to offer, creating a new exchange. Send as meta transaction.
           await expect(
-            metaTransactionsHandler.executeMetaTxCommitToOffer(
-              operator.address,
-              validOfferDetails,
-              nonce,
-              r,
-              s,
-              v,
-              { value: price }
-            )
+            metaTransactionsHandler.executeMetaTxCommitToOffer(operator.address, validOfferDetails, nonce, r, s, v, {
+              value: price,
+            })
           ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
         });
       });
