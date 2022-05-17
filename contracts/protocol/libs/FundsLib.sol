@@ -5,7 +5,6 @@ import {NATIVE_NOT_ALLOWED, TOKEN_TRANSFER_FAILED, INSUFFICIENT_VALUE_SENT, INSU
 import {BosonTypes} from "../../domain/BosonTypes.sol";
 import {ProtocolLib} from "../libs/ProtocolLib.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "hardhat/console.sol";
 
 /**
  * @title FundsLib
@@ -140,17 +139,14 @@ library FundsLib {
         address exchangeToken = offer.exchangeToken;
         uint256 sellerId = offer.sellerId;
         uint256 buyerId = exchange.buyerId;
-        increaseAvailableFunds(sellerId, exchangeToken, sellerPayoff);
-        increaseAvailableFunds(buyerId, exchangeToken, buyerPayoff);
-
-        if (protocolFee > 0) {
-            increaseAvailableFunds(0, exchangeToken, protocolFee);
-            emit ExchangeFee(_exchangeId, exchangeToken, protocolFee);
-        }
-        
+        if (sellerPayoff > 0) increaseAvailableFunds(sellerId, exchangeToken, sellerPayoff);
+        if (buyerPayoff > 0) increaseAvailableFunds(buyerId, exchangeToken, buyerPayoff);
+        if (protocolFee > 0) increaseAvailableFunds(0, exchangeToken, protocolFee);       
+                
         // Notify the external observers
         emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff);
         emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff);
+        emit ExchangeFee(_exchangeId, exchangeToken, protocolFee);
     }
 
 
