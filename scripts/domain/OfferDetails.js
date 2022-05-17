@@ -11,14 +11,12 @@ class OfferDetails {
         struct OfferDetails {
             address buyer;
             uint256 offerId;
-            uint256 msgValue;
         }
   */
 
-  constructor(buyer, offerId, msgValue) {
+  constructor(buyer, offerId) {
     this.buyer = buyer;
     this.offerId = offerId;
-    this.msgValue = msgValue;
   }
 
   /**
@@ -27,9 +25,9 @@ class OfferDetails {
    * @returns {OfferDetails}
    */
   static fromObject(o) {
-    const { buyer, offerId, msgValue } = o;
+    const { buyer, offerId } = o;
 
-    return new OfferDetails(buyer, offerId, msgValue);
+    return new OfferDetails(buyer, offerId);
   }
 
   /**
@@ -38,15 +36,14 @@ class OfferDetails {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let buyer, offerId, msgValue;
+    let buyer, offerId;
 
     // destructure struct
-    [buyer, offerId, msgValue] = struct;
+    [buyer, offerId] = struct;
 
     return OfferDetails.fromObject({
       buyer: buyer,
       offerId: offerId.toString(),
-      msgValue: msgValue.toString(),
     });
   }
 
@@ -71,7 +68,7 @@ class OfferDetails {
    * @returns {string}
    */
   toStruct() {
-    return [this.buyer, this.offerId, this.msgValue];
+    return [this.buyer, this.offerId];
   }
 
   /**
@@ -112,25 +109,11 @@ class OfferDetails {
   }
 
   /**
-   * Is this OfferDetails instance's msgValue field valid?
-   * Must be a string representation of a big number
-   * @returns {boolean}
-   */
-  msgValueIsValid() {
-    let valid = false;
-    let { msgValue } = this;
-    try {
-      valid = typeof msgValue === "string" && typeof ethers.BigNumber.from(msgValue) === "object";
-    } catch (e) {}
-    return valid;
-  }
-
-  /**
    * Is this OfferDetails instance valid?
    * @returns {boolean}
    */
   isValid() {
-    return this.buyerIsValid() && this.offerIdIsValid() && this.msgValueIsValid();
+    return this.buyerIsValid() && this.offerIdIsValid();
   }
 }
 

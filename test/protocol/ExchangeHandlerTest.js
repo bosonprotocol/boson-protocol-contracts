@@ -275,7 +275,6 @@ describe("IBosonExchangeHandler", function () {
         const offerType = [
           { name: "buyer", type: "address" },
           { name: "offerId", type: "uint256" },
-          { name: "msgValue", type: "uint256" },
         ];
 
         // prepare the OfferDetails struct
@@ -355,7 +354,6 @@ describe("IBosonExchangeHandler", function () {
           const offerType = [
             { name: "buyer", type: "address" },
             { name: "offerId", type: "uint256" },
-            { name: "msgValue", type: "uint256" },
           ];
 
           // prepare the OfferDetails struct
@@ -407,7 +405,6 @@ describe("IBosonExchangeHandler", function () {
           const offerType = [
             { name: "buyer", type: "address" },
             { name: "offerId", type: "uint256" },
-            { name: "msgValue", type: "uint256" },
           ];
 
           // prepare the OfferDetails struct

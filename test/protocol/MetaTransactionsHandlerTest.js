@@ -530,7 +530,6 @@ describe("IBosonMetaTransactionsHandler", function () {
         offerType = [
           { name: "buyer", type: "address" },
           { name: "offerId", type: "uint256" },
-          { name: "msgValue", type: "uint256" },
         ];
 
         // Set the message Type

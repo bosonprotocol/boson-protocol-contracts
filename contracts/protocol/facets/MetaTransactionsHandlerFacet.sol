@@ -14,8 +14,8 @@ import { ProtocolBase } from "../bases/ProtocolBase.sol";
 contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, ProtocolBase {
     // Structs
     bytes32 private constant META_TRANSACTION_TYPEHASH = keccak256(bytes("MetaTransaction(uint256 nonce,address from,address contractAddress,string functionName,bytes functionSignature)"));
-    bytes32 private constant OFFER_DETAILS_TYPEHASH = keccak256("OfferDetails(address buyer,uint256 offerId,uint256 msgValue)");
-    bytes32 private constant META_TX_COMMIT_TO_OFFER_TYPEHASH = keccak256("MetaTxCommitToOffer(uint256 nonce,address from,address contractAddress,string functionName,OfferDetails offerDetails)OfferDetails(address buyer,uint256 offerId,uint256 msgValue)");
+    bytes32 private constant OFFER_DETAILS_TYPEHASH = keccak256("OfferDetails(address buyer,uint256 offerId)");
+    bytes32 private constant META_TX_COMMIT_TO_OFFER_TYPEHASH = keccak256("MetaTxCommitToOffer(uint256 nonce,address from,address contractAddress,string functionName,OfferDetails offerDetails)OfferDetails(address buyer,uint256 offerId)");
 
     // Function names
     string private constant COMMIT_TO_OFFER = "commitToOffer(address,uint256)";
@@ -105,7 +105,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     function hashOfferDetails(OfferDetails memory _offerDetails) internal pure returns (bytes32) {
         return
             keccak256(
-                abi.encode(OFFER_DETAILS_TYPEHASH, _offerDetails.buyer, _offerDetails.offerId, _offerDetails.msgValue)
+                abi.encode(OFFER_DETAILS_TYPEHASH, _offerDetails.buyer, _offerDetails.offerId)
             );
     }
 
