@@ -225,8 +225,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
-        // Make sure the caller is the owner of the voucher
-        checkVoucherOwner(_exchangeId);
+        // Make sure the caller is buyer associated with the exchange
+        checkBuyer(exchange.buyerId);
 
         // Finalize the exchange, burning the voucher
         finalizeExchange(exchange, ExchangeState.Canceled);
@@ -290,8 +290,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
-        // Make sure the caller is the owner of the voucher
-        checkVoucherOwner(_exchangeId);
+        // Make sure the caller is buyer associated with the exchange
+        checkBuyer(exchange.buyerId);
 
         // Get the offer, which will definitely exist
         Offer storage offer;
@@ -543,20 +543,24 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     }
 
     /**
-     * @notice Modifier that makes sure caller is the buyer associated with exchange
+     * @notice Make sure the caller is buyer associated with the exchange
      *
      * Reverts if
-     * - caller is not owner of the voucher associated with the exchange
+     * - caller is not the buyer associated with exchange
      *
-     * @param _exchangeId - the id of the exchange to check
+     * @param _currentBuyer - id of current buyer associated with the exchange
      */
-    function checkVoucherOwner(uint256 _exchangeId)
+    function checkBuyer(uint256 _currentBuyer)
     internal
     view
     {
-        // Must be current owner of voucher
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolStorage().voucherAddress);
-        require(bosonVoucher.ownerOf(_exchangeId) == msg.sender, NOT_VOUCHER_HOLDER);
+        // Get the caller's buyer account id
+        bool buyerExists;
+        uint256 buyerId;
+        (buyerExists, buyerId) = getBuyerIdByWallet(msg.sender);
+
+        // Must be the buyer associated with the exchange (which is always voucher holder)
+        require(buyerId == _currentBuyer, NOT_VOUCHER_HOLDER);
     }
 
 }

@@ -807,27 +807,45 @@ describe("IBosonExchangeHandler", function () {
           .withArgs(offerId, exchange.id, nextAccountId);
       });
 
-      it("should update exchange when new buyer (with existing, active account) calls", async function () {
+      it("should update exchange when new buyer (with existing, active account) is passed", async function () {
         // Get the next buyer id
         nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
         // Create a buyer account for the new owner
         await accountHandler.connect(newOwner).createBuyer(new Buyer("0", newOwner.address, true));
 
-        // Call onVoucherTransferred, expecting event
-        await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(exchange.id, newOwner.address))
-          .to.emit(exchangeHandler, "VoucherTransferred")
-          .withArgs(offerId, exchange.id, nextAccountId);
+        // Call onVoucherTransferred
+        await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(exchange.id, newOwner.address));
+
+        // Get the exchange
+        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+
+        // Marshal response to entity
+        exchange = Exchange.fromStruct(response);
+        expect(exchange.isValid());
+
+        // Exchange's voucher expired flag should be true
+        assert.equal(exchange.buyerId, nextAccountId, "Exchange.buyerId not updated");
+
       });
 
-      it("should update exchange when new buyer (no account) calls", async function () {
+      it("should update exchange when new buyer (no account) is passed", async function () {
         // Get the next buyer id
         nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
-        // Call onVoucherTransferred, expecting event
-        await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(exchange.id, newOwner.address))
-          .to.emit(exchangeHandler, "VoucherTransferred")
-          .withArgs(offerId, exchange.id, nextAccountId);
+        // Call onVoucherTransferred
+        await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(exchange.id, newOwner.address));
+
+        // Get the exchange
+        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+
+        // Marshal response to entity
+        exchange = Exchange.fromStruct(response);
+        expect(exchange.isValid());
+
+        // Exchange's voucher expired flag should be true
+        assert.equal(exchange.buyerId, nextAccountId, "Exchange.buyerId not updated");
+
       });
 
       context("💔 Revert Reasons", async function () {
