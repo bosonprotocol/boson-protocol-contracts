@@ -555,9 +555,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     view
     {
         // Get the caller's buyer account id
-        bool buyerExists;
         uint256 buyerId;
-        (buyerExists, buyerId) = getBuyerIdByWallet(msg.sender);
+        (, buyerId) = getBuyerIdByWallet(msg.sender);
 
         // Must be the buyer associated with the exchange (which is always voucher holder)
         require(buyerId == _currentBuyer, NOT_VOUCHER_HOLDER);
