@@ -826,7 +826,6 @@ describe("IBosonExchangeHandler", function () {
 
         // Exchange's voucher expired flag should be true
         assert.equal(exchange.buyerId, nextAccountId, "Exchange.buyerId not updated");
-
       });
 
       it("should update exchange when new buyer (no account) is passed", async function () {
@@ -845,7 +844,6 @@ describe("IBosonExchangeHandler", function () {
 
         // Exchange's voucher expired flag should be true
         assert.equal(exchange.buyerId, nextAccountId, "Exchange.buyerId not updated");
-
       });
 
       context("💔 Revert Reasons", async function () {
