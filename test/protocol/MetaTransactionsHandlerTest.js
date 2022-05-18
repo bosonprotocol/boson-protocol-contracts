@@ -6,7 +6,7 @@ const { gasLimit } = require("../../environments");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const Offer = require("../../scripts/domain/Offer");
-const OfferDetails = require("../../scripts/domain/OfferDetails");
+const MetaTxOfferDetails = require("../../scripts/domain/MetaTxOfferDetails");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -538,16 +538,16 @@ describe("IBosonMetaTransactionsHandler", function () {
           { name: "from", type: "address" },
           { name: "contractAddress", type: "address" },
           { name: "functionName", type: "string" },
-          { name: "offerDetails", type: "OfferDetails" },
+          { name: "offerDetails", type: "MetaTxOfferDetails" },
         ];
 
         customTransactionType = {
           MetaTxCommitToOffer: metaTransactionType,
-          OfferDetails: offerType,
+          MetaTxOfferDetails: offerType,
         };
 
-        // prepare the OfferDetails struct
-        validOfferDetails = new OfferDetails(buyer.address, offer.id, price);
+        // prepare the MetaTxOfferDetails struct
+        validOfferDetails = new MetaTxOfferDetails(buyer.address, offer.id, price);
         expect(validOfferDetails.isValid()).is.true;
 
         // Deposit native currency to the same seller id

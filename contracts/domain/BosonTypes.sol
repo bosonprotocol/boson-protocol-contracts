@@ -151,10 +151,10 @@ contract BosonTypes {
         address from;
         address contractAddress;
         string functionName;
-        OfferDetails offerDetails;
+        MetaTxOfferDetails offerDetails;
     }
 
-    struct OfferDetails {
+    struct MetaTxOfferDetails {
         address buyer;
         uint256 offerId;
     }

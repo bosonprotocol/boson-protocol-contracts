@@ -6,7 +6,7 @@ const Role = require("../../scripts/domain/Role");
 const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
 const Offer = require("../../scripts/domain/Offer");
-const OfferDetails = require("../../scripts/domain/OfferDetails");
+const MetaTxOfferDetails = require("../../scripts/domain/MetaTxOfferDetails");
 const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
@@ -277,8 +277,8 @@ describe("IBosonExchangeHandler", function () {
           { name: "offerId", type: "uint256" },
         ];
 
-        // prepare the OfferDetails struct
-        let validOfferDetails = new OfferDetails(buyer.address, offer.id, price);
+        // prepare the MetaTxOfferDetails struct
+        let validOfferDetails = new MetaTxOfferDetails(buyer.address, offer.id, price);
         expect(validOfferDetails.isValid()).is.true;
 
         const metaTransactionType = [
@@ -286,12 +286,12 @@ describe("IBosonExchangeHandler", function () {
           { name: "from", type: "address" },
           { name: "contractAddress", type: "address" },
           { name: "functionName", type: "string" },
-          { name: "offerDetails", type: "OfferDetails" },
+          { name: "offerDetails", type: "MetaTxOfferDetails" },
         ];
 
         const customTransactionTypes = {
           MetaTxCommitToOffer: metaTransactionType,
-          OfferDetails: offerType,
+          MetaTxOfferDetails: offerType,
         };
 
         // Prepare the message
@@ -356,8 +356,8 @@ describe("IBosonExchangeHandler", function () {
             { name: "offerId", type: "uint256" },
           ];
 
-          // prepare the OfferDetails struct
-          let validOfferDetails = new OfferDetails(ethers.constants.AddressZero, offer.id, price);
+          // prepare the MetaTxOfferDetails struct
+          let validOfferDetails = new MetaTxOfferDetails(ethers.constants.AddressZero, offer.id, price);
           expect(validOfferDetails.isValid()).is.true;
 
           const metaTransactionType = [
@@ -365,12 +365,12 @@ describe("IBosonExchangeHandler", function () {
             { name: "from", type: "address" },
             { name: "contractAddress", type: "address" },
             { name: "functionName", type: "string" },
-            { name: "offerDetails", type: "OfferDetails" },
+            { name: "offerDetails", type: "MetaTxOfferDetails" },
           ];
 
           const customTransactionTypes = {
             MetaTxCommitToOffer: metaTransactionType,
-            OfferDetails: offerType,
+            MetaTxOfferDetails: offerType,
           };
 
           // Prepare the message
@@ -407,8 +407,8 @@ describe("IBosonExchangeHandler", function () {
             { name: "offerId", type: "uint256" },
           ];
 
-          // prepare the OfferDetails struct
-          let validOfferDetails = new OfferDetails(buyer.address, offerId, price);
+          // prepare the MetaTxOfferDetails struct
+          let validOfferDetails = new MetaTxOfferDetails(buyer.address, offerId, price);
           expect(validOfferDetails.isValid()).is.true;
 
           const metaTransactionType = [
@@ -416,12 +416,12 @@ describe("IBosonExchangeHandler", function () {
             { name: "from", type: "address" },
             { name: "contractAddress", type: "address" },
             { name: "functionName", type: "string" },
-            { name: "offerDetails", type: "OfferDetails" },
+            { name: "offerDetails", type: "MetaTxOfferDetails" },
           ];
 
           const customTransactionTypes = {
             MetaTxCommitToOffer: metaTransactionType,
-            OfferDetails: offerType,
+            MetaTxOfferDetails: offerType,
           };
 
           // Prepare the message

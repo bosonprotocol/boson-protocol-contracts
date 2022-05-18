@@ -2,13 +2,13 @@ const ethers = require("ethers");
 const eip55 = require("eip55");
 
 /**
- * Boson Protocol Domain Entity: OfferDetails
+ * Boson Protocol Domain Entity: MetaTxOfferDetails
  *
- * See: {BosonTypes.OfferDetails}
+ * See: {BosonTypes.MetaTxOfferDetails}
  */
-class OfferDetails {
+class MetaTxOfferDetails {
   /*
-        struct OfferDetails {
+        struct MetaTxOfferDetails {
             address buyer;
             uint256 offerId;
         }
@@ -20,18 +20,18 @@ class OfferDetails {
   }
 
   /**
-   * Get a new OfferDetails instance from a pojo representation
+   * Get a new MetaTxOfferDetails instance from a pojo representation
    * @param o
-   * @returns {OfferDetails}
+   * @returns {MetaTxOfferDetails}
    */
   static fromObject(o) {
     const { buyer, offerId } = o;
 
-    return new OfferDetails(buyer, offerId);
+    return new MetaTxOfferDetails(buyer, offerId);
   }
 
   /**
-   * Get a new OfferDetails instance from a returned struct representation
+   * Get a new MetaTxOfferDetails instance from a returned struct representation
    * @param struct
    * @returns {*}
    */
@@ -41,14 +41,14 @@ class OfferDetails {
     // destructure struct
     [buyer, offerId] = struct;
 
-    return OfferDetails.fromObject({
+    return MetaTxOfferDetails.fromObject({
       buyer: buyer,
       offerId: offerId.toString(),
     });
   }
 
   /**
-   * Get a database representation of this OfferDetails instance
+   * Get a database representation of this MetaTxOfferDetails instance
    * @returns {object}
    */
   toObject() {
@@ -56,7 +56,7 @@ class OfferDetails {
   }
 
   /**
-   * Get a string representation of this OfferDetails instance
+   * Get a string representation of this MetaTxOfferDetails instance
    * @returns {string}
    */
   toString() {
@@ -64,7 +64,7 @@ class OfferDetails {
   }
 
   /**
-   * Get a struct representation of this OfferDetails instance
+   * Get a struct representation of this MetaTxOfferDetails instance
    * @returns {string}
    */
   toStruct() {
@@ -72,15 +72,15 @@ class OfferDetails {
   }
 
   /**
-   * Clone this OfferDetails
-   * @returns {OfferDetails}
+   * Clone this MetaTxOfferDetails
+   * @returns {MetaTxOfferDetails}
    */
   clone() {
-    return OfferDetails.fromObject(this.toObject());
+    return MetaTxOfferDetails.fromObject(this.toObject());
   }
 
   /**
-   * Is this OfferDetails instance's buyer field valid?
+   * Is this MetaTxOfferDetails instance's buyer field valid?
    * Must be a eip55 compliant Ethereum address
    *
    * @returns {boolean}
@@ -95,7 +95,7 @@ class OfferDetails {
   }
 
   /**
-   * Is this OfferDetails instance's offerId field valid?
+   * Is this MetaTxOfferDetails instance's offerId field valid?
    * Must be a string representation of a big number
    * @returns {boolean}
    */
@@ -109,7 +109,7 @@ class OfferDetails {
   }
 
   /**
-   * Is this OfferDetails instance valid?
+   * Is this MetaTxOfferDetails instance valid?
    * @returns {boolean}
    */
   isValid() {
@@ -118,4 +118,4 @@ class OfferDetails {
 }
 
 // Export
-module.exports = OfferDetails;
+module.exports = MetaTxOfferDetails;

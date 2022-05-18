@@ -1,12 +1,12 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
-const OfferDetails = require("../../scripts/domain/OfferDetails");
+const MetaTxOfferDetails = require("../../scripts/domain/MetaTxOfferDetails");
 
 /**
- *  Test the OfferDetails domain entity
+ *  Test the MetaTxOfferDetails domain entity
  */
-describe("OfferDetails", function () {
+describe("MetaTxOfferDetails", function () {
   // Suite-wide scope
   let offerDetails, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
   let accounts;
@@ -22,9 +22,9 @@ describe("OfferDetails", function () {
   });
 
   context("📋 Constructor", async function () {
-    it("Should allow creation of valid, fully populated OfferDetails instance", async function () {
+    it("Should allow creation of valid, fully populated MetaTxOfferDetails instance", async function () {
       // Create a valid offerDetails, then set fields in tests directly
-      offerDetails = new OfferDetails(buyer, offerId);
+      offerDetails = new MetaTxOfferDetails(buyer, offerId);
       expect(offerDetails.isValid()).is.true;
     });
   });
@@ -32,7 +32,7 @@ describe("OfferDetails", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid offerDetails, then set fields in tests directly
-      offerDetails = new OfferDetails(buyer, offerId);
+      offerDetails = new MetaTxOfferDetails(buyer, offerId);
       expect(offerDetails.isValid()).is.true;
     });
 
@@ -89,7 +89,7 @@ describe("OfferDetails", function () {
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid offerDetails, then set fields in tests directly
-      offerDetails = new OfferDetails(buyer, offerId);
+      offerDetails = new MetaTxOfferDetails(buyer, offerId);
       expect(offerDetails.isValid()).is.true;
 
       // Create plain object
@@ -100,12 +100,12 @@ describe("OfferDetails", function () {
     });
 
     context("👉 Static", async function () {
-      it("OfferDetails.fromObject() should return a OfferDetails instance with the same values as the given plain object", async function () {
+      it("MetaTxOfferDetails.fromObject() should return a MetaTxOfferDetails instance with the same values as the given plain object", async function () {
         // Promote to instance
-        promoted = OfferDetails.fromObject(object);
+        promoted = MetaTxOfferDetails.fromObject(object);
 
-        // Is a OfferDetails instance
-        expect(promoted instanceof OfferDetails).is.true;
+        // Is a MetaTxOfferDetails instance
+        expect(promoted instanceof MetaTxOfferDetails).is.true;
 
         // Key values all match
         for ([key, value] of Object.entries(offerDetails)) {
@@ -113,11 +113,11 @@ describe("OfferDetails", function () {
         }
       });
 
-      it("OfferDetails.fromStruct() should return a OfferDetails instance with the same values as the given struct", async function () {
+      it("MetaTxOfferDetails.fromStruct() should return a MetaTxOfferDetails instance with the same values as the given struct", async function () {
         struct = [offerDetails.buyer, offerDetails.offerId];
 
         // Get struct
-        offerDetails = OfferDetails.fromStruct(struct);
+        offerDetails = MetaTxOfferDetails.fromStruct(struct);
 
         // Ensure it marshals back to a valid offerDetails
         expect(offerDetails.isValid()).to.be.true;
@@ -125,7 +125,7 @@ describe("OfferDetails", function () {
     });
 
     context("👉 Instance", async function () {
-      it("instance.toString() should return a JSON string representation of the OfferDetails instance", async function () {
+      it("instance.toString() should return a JSON string representation of the MetaTxOfferDetails instance", async function () {
         dehydrated = offerDetails.toString();
         rehydrated = JSON.parse(dehydrated);
 
@@ -134,12 +134,12 @@ describe("OfferDetails", function () {
         }
       });
 
-      it("instance.toObject() should return a plain object representation of the OfferDetails instance", async function () {
+      it("instance.toObject() should return a plain object representation of the MetaTxOfferDetails instance", async function () {
         // Get plain object
         object = offerDetails.toObject();
 
-        // Not an OfferDetails instance
-        expect(object instanceof OfferDetails).is.false;
+        // Not an MetaTxOfferDetails instance
+        expect(object instanceof MetaTxOfferDetails).is.false;
 
         // Key values all match
         for ([key, value] of Object.entries(offerDetails)) {
@@ -147,23 +147,23 @@ describe("OfferDetails", function () {
         }
       });
 
-      it("OfferDetails.toStruct() should return a struct representation of the OfferDetails instance", async function () {
+      it("MetaTxOfferDetails.toStruct() should return a struct representation of the MetaTxOfferDetails instance", async function () {
         // Get struct from offerDetails
         struct = offerDetails.toStruct();
 
         // Marshal back to an offerDetails instance
-        offerDetails = OfferDetails.fromStruct(struct);
+        offerDetails = MetaTxOfferDetails.fromStruct(struct);
 
         // Ensure it marshals back to a valid offerDetails
         expect(offerDetails.isValid()).to.be.true;
       });
 
-      it("instance.clone() should return another OfferDetails instance with the same property values", async function () {
+      it("instance.clone() should return another MetaTxOfferDetails instance with the same property values", async function () {
         // Get plain object
         clone = offerDetails.clone();
 
-        // Is an OfferDetails instance
-        expect(clone instanceof OfferDetails).is.true;
+        // Is an MetaTxOfferDetails instance
+        expect(clone instanceof MetaTxOfferDetails).is.true;
 
         // Key values all match
         for ([key, value] of Object.entries(offerDetails)) {

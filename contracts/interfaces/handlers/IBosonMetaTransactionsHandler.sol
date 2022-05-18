@@ -57,7 +57,7 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
      * - any code executed in the signed transaction reverts.
      *
      * @param _userAddress - the sender of the transaction.
-     * @param _offerDetails - the fully populated BosonTypes.OfferDetails struct.
+     * @param _offerDetails - the fully populated BosonTypes.MetaTxOfferDetails struct.
      * @param _nonce - the nonce value of the transaction.
      * @param _sigR - r part of the signer's signature.
      * @param _sigS - s part of the signer's signature.
@@ -65,7 +65,7 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
      */
     function executeMetaTxCommitToOffer(
         address _userAddress,
-        BosonTypes.OfferDetails calldata _offerDetails,
+        BosonTypes.MetaTxOfferDetails calldata _offerDetails,
         uint256 _nonce,
         bytes32 _sigR,
         bytes32 _sigS,
