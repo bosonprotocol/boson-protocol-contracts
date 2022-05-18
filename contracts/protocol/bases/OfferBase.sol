@@ -66,6 +66,9 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // when creating offer, it cannot be set to voided
         require(!_offer.voided, OFFER_MUST_BE_ACTIVE);
 
+        // Calculate and set the protocol fee
+        _offer.protocolFee = protocolStorage().protocolFeePercentage*(_offer.price + _offer.sellerDeposit)/10000;
+
         // Get storage location for offer
         (, Offer storage offer) = fetchOffer(_offer.id);
 
@@ -74,6 +77,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.sellerId = _offer.sellerId;
         offer.price = _offer.price;
         offer.sellerDeposit = _offer.sellerDeposit;
+        offer.protocolFee = _offer.protocolFee;
         offer.buyerCancelPenalty = _offer.buyerCancelPenalty;
         offer.quantityAvailable = _offer.quantityAvailable;
         offer.validFromDate = _offer.validFromDate;

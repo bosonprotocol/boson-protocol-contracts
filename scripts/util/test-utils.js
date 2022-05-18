@@ -112,7 +112,13 @@ function calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration)
     : ethers.BigNumber.from(redeemableFromDate);
   return startDate.add(ethers.BigNumber.from(voucherValidDuration)).toString();
 }
+
+function calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage) {
+  return ethers.BigNumber.from(price).add(sellerDeposit).mul(protocolFeePrecentage).div("10000").toString();
+}
+
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
 exports.prepareDataSignatureParameters = prepareDataSignatureParameters;
 exports.calculateVoucherExpiry = calculateVoucherExpiry;
+exports.calculateProtocolFee = calculateProtocolFee;

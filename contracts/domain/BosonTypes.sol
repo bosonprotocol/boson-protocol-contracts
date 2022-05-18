@@ -56,6 +56,7 @@ contract BosonTypes {
         uint256 sellerId;
         uint256 price;
         uint256 sellerDeposit;
+        uint256 protocolFee;
         uint256 buyerCancelPenalty;
         uint256 quantityAvailable;
         uint256 validFromDate;

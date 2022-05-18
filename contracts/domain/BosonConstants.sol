@@ -59,6 +59,7 @@ contract BosonConstants {
     string internal constant NO_SUCH_EXCHANGE = "No such exchange";
     string internal constant FULFILLMENT_PERIOD_NOT_ELAPSED = "Fulfillment period has not yet elapsed";
     string internal constant VOUCHER_NOT_REDEEMABLE = "Voucher not yet valid or already expired";
+    string internal constant VOUCHER_STILL_VALID = "Voucher still valid";
 
     // Revert Reasons: Twin related
     string internal constant NO_SUCH_TWIN = "No such twin";
@@ -91,7 +92,8 @@ contract BosonConstants {
     string internal constant INVALID_FUNCTION_NAME = "Invalid function name";
 }
 
-// Librarires cannot inherit BosonConstants, therefore the revert reasons are defined on the file level
+// TODO: Refactor to use file level constants throughout or use custom Errors
+// Libraries cannot inherit BosonConstants, therefore these revert reasons are defined on the file level
 string constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
 string constant INSUFFICIENT_VALUE_SENT = "Insufficient value sent";
 string constant INSUFFICIENT_AVAILABLE_FUNDS = "Insufficient available funds";

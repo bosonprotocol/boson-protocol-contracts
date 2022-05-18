@@ -16,7 +16,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
-const { getEvent } = require("../../scripts/util/test-utils.js");
+const { getEvent, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 
 /**
@@ -45,6 +45,7 @@ describe("IBosonOrchestrationHandler", function () {
     sellerId,
     price,
     sellerDeposit,
+    protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
     validFromDate,
@@ -56,6 +57,7 @@ describe("IBosonOrchestrationHandler", function () {
     metadataUri,
     offerChecksum,
     voided;
+  let protocolFeePrecentage;
   let group, groupStruct, nextGroupId;
   let method, tokenAddress, tokenId, threshold;
   let offerIds, condition;
@@ -97,12 +99,15 @@ describe("IBosonOrchestrationHandler", function () {
       "OrchestrationHandlerFacet",
     ]);
 
+    // set protocolFeePrecentage
+    protocolFeePrecentage = "200"; // 2 %
+
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
-      "0",
+      protocolFeePrecentage,
       "100",
       "100",
       "100",
@@ -176,8 +181,9 @@ describe("IBosonOrchestrationHandler", function () {
       // Required constructor params
       id = sellerId = "1"; // argument sent to contract for createOffer will be ignored
       price = ethers.utils.parseUnits("1.5", "ether").toString();
-      sellerDeposit = price = ethers.utils.parseUnits("0.25", "ether").toString();
-      buyerCancelPenalty = price = ethers.utils.parseUnits("0.05", "ether").toString();
+      sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
+      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+      buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       validFromDate = ethers.BigNumber.from(Date.now()).toString(); // valid from now
       validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // until 6 months
@@ -195,6 +201,7 @@ describe("IBosonOrchestrationHandler", function () {
         sellerId,
         price,
         sellerDeposit,
+        protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
         validFromDate,
@@ -636,8 +643,9 @@ describe("IBosonOrchestrationHandler", function () {
           id = `${i + 1}`; // argument sent to contract for createGroup will be ignored
           sellerId = "1";
           price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
-          sellerDeposit = price = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
-          buyerCancelPenalty = price = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
+          sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
+          protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+          buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
           quantityAvailable = `${i * 2}`;
           validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
           validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
@@ -655,6 +663,7 @@ describe("IBosonOrchestrationHandler", function () {
             sellerId,
             price,
             sellerDeposit,
+            protocolFee,
             buyerCancelPenalty,
             quantityAvailable,
             validFromDate,
