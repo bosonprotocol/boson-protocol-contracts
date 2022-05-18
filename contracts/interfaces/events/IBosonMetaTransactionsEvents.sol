@@ -7,5 +7,5 @@ pragma solidity ^0.8.0;
  * @notice Events related to meta-transactions in the protocol.
  */
 interface IBosonMetaTransactionsEvents {
-    event MetaTransactionExecuted(address indexed userAddress, address payable indexed relayerAddress, bytes functionSignature, uint256 nonce);
+    event MetaTransactionExecuted(address indexed userAddress, address indexed relayerAddress, string indexed functionName, uint256 nonce);
 }

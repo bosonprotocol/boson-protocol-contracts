@@ -142,6 +142,21 @@ contract BosonTypes {
     struct MetaTransaction {
         uint256 nonce;
         address from;
+        address contractAddress;
+        string functionName;
         bytes functionSignature;
+    }
+
+    struct MetaTxCommitToOffer {
+        uint256 nonce;
+        address from;
+        address contractAddress;
+        string functionName;
+        MetaTxOfferDetails offerDetails;
+    }
+
+    struct MetaTxOfferDetails {
+        address buyer;
+        uint256 offerId;
     }
 }

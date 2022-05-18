@@ -461,15 +461,46 @@ describe("IBosonTwinHandler", function () {
 
         // Prepare the function signature
         functionSignature = twinHandler.interface.encodeFunctionData("removeTwin", [twin.id]);
+
+        // Set the message Type
+        const metaTransactionType = [
+          { name: "nonce", type: "uint256" },
+          { name: "from", type: "address" },
+          { name: "contractAddress", type: "address" },
+          { name: "functionName", type: "string" },
+          { name: "functionSignature", type: "bytes" },
+        ];
+
+        let customTransactionType = {
+          MetaTransaction: metaTransactionType,
+        };
+
+        // Prepare the message
+        let message = {};
+        message.nonce = parseInt(nonce);
+        message.from = operator.address;
+        message.contractAddress = twinHandler.address;
+        message.functionName = "removeTwin(uint256)";
+        message.functionSignature = functionSignature;
+
         // Collect the signature components
         let { r, s, v } = await prepareDataSignatureParameters(
           operator,
-          nonce,
-          functionSignature,
+          customTransactionType,
+          "MetaTransaction",
+          message,
           metaTransactionsHandler.address
         );
         // Remove the twin. Send as meta transaction.
-        await metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v);
+        await metaTransactionsHandler.executeMetaTransaction(
+          operator.address,
+          message.functionName,
+          functionSignature,
+          nonce,
+          r,
+          s,
+          v
+        );
 
         // Expect twin to be not found.
         [success] = await twinHandler.connect(rando).getTwin(twin.id);
@@ -491,16 +522,47 @@ describe("IBosonTwinHandler", function () {
 
           // Prepare the function signature
           functionSignature = twinHandler.interface.encodeFunctionData("removeTwin", [nonExistantTwinId]);
+
+          // Set the message Type
+          const metaTransactionType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
+            { name: "functionSignature", type: "bytes" },
+          ];
+
+          let customTransactionType = {
+            MetaTransaction: metaTransactionType,
+          };
+
+          // Prepare the message
+          let message = {};
+          message.nonce = parseInt(nonce);
+          message.from = operator.address;
+          message.contractAddress = twinHandler.address;
+          message.functionName = "removeTwin(uint256)";
+          message.functionSignature = functionSignature;
+
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             operator,
-            nonce,
-            functionSignature,
+            customTransactionType,
+            "MetaTransaction",
+            message,
             metaTransactionsHandler.address
           );
           // Attempt to Remove a twin, expecting revert. Send as meta transaction.
           await expect(
-            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v)
+            metaTransactionsHandler.executeMetaTransaction(
+              operator.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
           ).to.revertedWith(RevertReasons.NO_SUCH_TWIN);
         });
 
@@ -537,16 +599,48 @@ describe("IBosonTwinHandler", function () {
 
           // Prepare the function signature
           functionSignature = twinHandler.interface.encodeFunctionData("removeTwin", [twin.id]);
+
+          // Set the message Type
+          const metaTransactionType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
+            { name: "functionSignature", type: "bytes" },
+          ];
+
+          let customTransactionType = {
+            MetaTransaction: metaTransactionType,
+          };
+
+          // Prepare the message
+          let message = {};
+          message.nonce = parseInt(nonce);
+          message.from = operator.address;
+          message.contractAddress = twinHandler.address;
+          message.functionName = "removeTwin(uint256)";
+          message.functionSignature = functionSignature;
+
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             operator,
-            nonce,
-            functionSignature,
+            customTransactionType,
+            "MetaTransaction",
+            message,
             metaTransactionsHandler.address
           );
+
           // Attempt to Remove a twin, expecting revert. Send as meta transaction.
           await expect(
-            metaTransactionsHandler.executeMetaTransaction(operator.address, functionSignature, nonce, r, s, v)
+            metaTransactionsHandler.executeMetaTransaction(
+              operator.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
           ).to.revertedWith(RevertReasons.TWIN_HAS_BUNDLES);
         });
       });
