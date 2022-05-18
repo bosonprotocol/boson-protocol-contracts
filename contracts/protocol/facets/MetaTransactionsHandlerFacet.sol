@@ -151,19 +151,19 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * - signer is a zero address
      *
      * @param _user  - the sender of the transaction.
-     * @param _hashMetaTransaction - hashed meta transaction.
+     * @param _hashedMetaTx - hashed meta transaction.
      * @param _sigR - r part of the signer's signature.
      * @param _sigS - s part of the signer's signature.
      * @param _sigV - v part of the signer's signature.
      */
     function verify(
         address _user,
-        bytes32 _hashMetaTransaction,
+        bytes32 _hashedMetaTx,
         bytes32 _sigR,
         bytes32 _sigS,
         uint8 _sigV
     ) internal view returns (bool) {
-        address signer = ecrecover(toTypedMessageHash(_hashMetaTransaction), _sigV, _sigR, _sigS);
+        address signer = ecrecover(toTypedMessageHash(_hashedMetaTx), _sigV, _sigR, _sigS);
         require(signer != address(0), INVALID_SIGNATURE);
         return signer == _user;
     }
