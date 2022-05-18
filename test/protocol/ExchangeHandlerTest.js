@@ -15,7 +15,12 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { getEvent, setNextBlockTimestamp, calculateVoucherExpiry } = require("../../scripts/util/test-utils.js");
+const {
+  getEvent,
+  setNextBlockTimestamp,
+  calculateVoucherExpiry,
+  calculateProtocolFee,
+} = require("../../scripts/util/test-utils.js");
 
 /**
  *  Test the Boson Exchange Handler interface
@@ -38,6 +43,7 @@ describe("IBosonExchangeHandler", function () {
   let support, oneMonth, oneWeek, newTime;
   let price,
     sellerDeposit,
+    protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
     validFromDate,
@@ -48,6 +54,7 @@ describe("IBosonExchangeHandler", function () {
     metadataUri,
     metadataHash,
     voided;
+  let protocolFeePrecentage;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state, exchangeStruct, response, exists;
 
@@ -91,12 +98,15 @@ describe("IBosonExchangeHandler", function () {
     [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
     [bosonVoucher] = clients;
 
+    // set protocolFeePrecentage
+    protocolFeePrecentage = "200"; // 2 %
+
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
       bosonVoucher.address,
-      "0",
+      protocolFeePrecentage,
       "0",
       "0",
       "0",
@@ -152,8 +162,9 @@ describe("IBosonExchangeHandler", function () {
 
       // Required constructor params
       price = ethers.utils.parseUnits("1.5", "ether").toString();
-      sellerDeposit = price = ethers.utils.parseUnits("0.25", "ether").toString();
-      buyerCancelPenalty = price = ethers.utils.parseUnits("0.05", "ether").toString();
+      sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
+      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+      buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
       validUntilDate = ethers.BigNumber.from(block.timestamp)
@@ -178,6 +189,7 @@ describe("IBosonExchangeHandler", function () {
         sellerId,
         price,
         sellerDeposit,
+        protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
         validFromDate,
