@@ -81,6 +81,10 @@ contract BosonConstants {
     string internal constant NATIVE_WRONG_AMOUNT = "Transferred value must match amount";
     string internal constant TOKEN_NAME_UNSPECIFIED = "Token name unspecified";
     string internal constant NATIVE_CURRENCY = "Native currency";
+    string internal constant TOO_MANY_TOKENS = "Too many tokens";
+    string internal constant TOKEN_AMOUNT_MISMATCH = "Number of amounts should match number of tokens";
+    string internal constant NOTHING_TO_WITHDRAW = "Nothing to withdraw";
+    string internal constant NOT_AUTHORIZED = "Not authorized to withdraw";
 
     // Revert Reasons: Meta-Transactions related
     string internal constant NONCE_USED_ALREADY = "Nonce used already";

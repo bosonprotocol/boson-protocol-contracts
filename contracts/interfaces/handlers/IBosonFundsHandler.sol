@@ -9,7 +9,7 @@ import {IBosonFundsEvents} from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles custody and withdrawal of buyer and seller funds within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x613133e7
+ * The ERC-165 identifier for this interface is: 0x096fc4d4
  */
 interface IBosonFundsHandler is IBosonFundsEvents {
 
@@ -36,4 +36,21 @@ interface IBosonFundsHandler is IBosonFundsEvents {
      * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
      */
     function getAvailableFunds(uint256 _entityId) external view returns (BosonTypes.Funds[] memory availableFunds);
+
+    /**
+     * @notice Withdraw the specified funds
+     *
+     * Reverts if:
+     * - caller is not associated with the entity id
+     * - token list length does not match amount list length
+     * - token list length exceeds the maximum allowed number of tokens
+     * - caller tries to withdraw more that they have in available funds
+     * - there is nothing to withdraw
+     * - transfer of funds is not succesful
+     *
+     * @param _entityId - seller or buyer id
+     * @param _tokenList - list of contract addresses of tokens that are being withdrawn
+     * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
+     */
+    function withdrawFunds(uint256 _entityId, address[] calldata _tokenList, uint256[] calldata _tokenAmounts) external;
 }

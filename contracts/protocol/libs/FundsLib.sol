@@ -13,6 +13,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  */
 library FundsLib {
     event FundsEncumbered(uint256 indexed entityId, address indexed exchangeToken, uint256 amount);
+    event FundsWithdrawn(uint256 indexed sellerId, address indexed withdrawnTo, address indexed tokenAddress, uint256 amount);    
+
     
     /**
      * @notice Takes in the exchange id and encumbers buyer's and seller's funds during the commitToOffer
@@ -48,25 +50,12 @@ library FundsLib {
             transferFundsToProtocol(exchangeToken, price);
         }
 
-        // make sure that seller has enough funds in the pool and reduce the available funds
+        // decrease availabel funds
         uint256 sellerId = offer.sellerId;
         uint256 sellerDeposit = offer.sellerDeposit;
-        uint256 availableFunds = ps.availableFunds[sellerId][exchangeToken];
-        require(availableFunds >= sellerDeposit, INSUFFICIENT_AVAILABLE_FUNDS);
-        ps.availableFunds[sellerId][exchangeToken] = availableFunds - sellerDeposit;
+        decreaseAvailableFunds(sellerId, exchangeToken, sellerDeposit);
 
-        // if availableFunds are totally emptied, the token address is removed from the seller's tokenList
-        if (availableFunds == sellerDeposit) {
-            uint len = ps.tokenList[sellerId].length;
-            for (uint i = 0; i < len; i++) {
-                if (ps.tokenList[sellerId][i] == exchangeToken) {
-                    ps.tokenList[sellerId][i] = ps.tokenList[sellerId][len-1];
-                    ps.tokenList[sellerId].pop();
-                    break;
-                }
-            }
-        }
-
+        // notify external observers
         emit FundsEncumbered(_buyerId, exchangeToken, price);
         emit FundsEncumbered(sellerId, exchangeToken, sellerDeposit);
     }
@@ -75,8 +64,8 @@ library FundsLib {
      * @notice Tries to transfer tokens from the caller to the protocol
      *
      * Reverts if:
-     * - if contract at token address does not support erc20 function transferFrom
-     * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - contract at token address does not support erc20 function transferFrom
+     * - calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      *
      * @param _tokenAddress - address of the token to be transferred
      * @param _amount - amount to be transferred
@@ -87,6 +76,72 @@ library FundsLib {
         } catch (bytes memory error) {
             string memory reason = error.length == 0 ? TOKEN_TRANSFER_FAILED : string(error);
             revert(reason);
+        }
+    }
+
+    /**
+     * @notice Tries to transfer native currency or tokens from the protocol to the recepient
+     *
+     * Reverts if:
+     * - transfer of native currency is not successulf (i.e. recepient is a contract which reverted)
+     * - contract at token address does not support erc20 function transfer
+     * - available funds is less than amount to be decreased
+     *
+     * @param _tokenAddress - address of the token to be transferred
+     * @param _to - address of the recepient
+     * @param _amount - amount to be transferred
+     */
+    function transferFundsFromProtocol(uint256 _entityId, address _tokenAddress, address payable _to, uint256 _amount) internal {
+        // first decrease the amount to prevent the reentrancy attack
+        FundsLib.decreaseAvailableFunds(_entityId, _tokenAddress, _amount); 
+
+        // try to transfer the funds
+        if (_tokenAddress == address(0)) {
+            // transfer native currency
+            (bool success, ) = _to.call{value: _amount}("");
+            require(success, TOKEN_TRANSFER_FAILED);
+        } else {
+            try IERC20(_tokenAddress).transfer(_to, _amount)  {
+            } catch (bytes memory error) {
+                string memory reason = error.length == 0 ? TOKEN_TRANSFER_FAILED : string(error);
+                revert(reason);
+            }
+        }
+
+        // notify the external observers
+        emit FundsWithdrawn(_entityId, _to, _tokenAddress, _amount);    
+    }
+
+    /**
+     * @notice Decreases the amount, availabe to withdraw or use as a seller deposit
+     *
+     * Reverts if:
+     * - available funds is less than amount to be decreased
+     *
+     * @param _entityId - seller or buyer id, or 0 for protocol
+     * @param _tokenAddress - funds contract address or zero address for native currency
+     * @param _amount - amount to be taken away
+     */
+    function decreaseAvailableFunds(uint256 _entityId, address _tokenAddress, uint256 _amount) internal {
+        ProtocolLib.ProtocolStorage storage ps = ProtocolLib.protocolStorage();
+
+        // get available fnds from storage
+        uint256 availableFunds = ps.availableFunds[_entityId][_tokenAddress];
+
+        // make sure that seller has enough funds in the pool and reduce the available funds
+        require(availableFunds >= _amount, INSUFFICIENT_AVAILABLE_FUNDS);
+        ps.availableFunds[_entityId][_tokenAddress] = availableFunds - _amount;
+
+        // if availableFunds are totally emptied, the token address is removed from the seller's tokenList
+        if (availableFunds == _amount) {
+            uint len = ps.tokenList[_entityId].length;
+            for (uint i = 0; i < len; i++) {
+                if (ps.tokenList[_entityId][i] == _tokenAddress) {
+                    ps.tokenList[_entityId][i] = ps.tokenList[_entityId][len-1];
+                    ps.tokenList[_entityId].pop();
+                    break;
+                }
+            }
         }
     }
 }
