@@ -58,6 +58,8 @@ exports.RevertReasons = {
   NO_SUCH_EXCHANGE: "No such exchange",
   FULFILLMENT_PERIOD_NOT_ELAPSED: "Fulfillment period has not yet elapsed",
   EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS: "Exchange for the bundled offers exists",
+  VOUCHER_NOT_REDEEMABLE: "Voucher not yet valid or already expired",
+  VOUCHER_STILL_VALID: "Voucher still valid",
 
   // Funds related
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",
@@ -77,4 +79,5 @@ exports.RevertReasons = {
   INVALID_FUNCTION_SIGNATURE: "functionSignature can not be of executeMetaTransaction method",
   INVALID_SIGNATURE: "Invalid signature",
   SIGNER_AND_SIGNATURE_DO_NOT_MATCH: "Signer and signature do not match",
+  INVALID_FUNCTION_NAME: "Invalid function name",
 };
