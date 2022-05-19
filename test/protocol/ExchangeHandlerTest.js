@@ -115,6 +115,7 @@ describe("IBosonExchangeHandler", function () {
       "0",
       "0",
       "0",
+      "0"
     ];
 
     // Deploy the Config facet, initializing the protocol config

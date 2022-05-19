@@ -31,7 +31,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         uint16 _maxOffersPerGroup,
         uint16 _maxTwinsPerBundle,
         uint16 _maxOffersPerBundle,
-        uint16 _maxOffersPerBatch
+        uint16 _maxOffersPerBatch,
+        uint16 _maxTokensPerWithdrawal
     )
     public
     onlyUnInitialized(type(IBosonConfigHandler).interfaceId)
@@ -49,6 +50,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         ps.maxTwinsPerBundle = _maxTwinsPerBundle;
         ps.maxOffersPerBundle = _maxOffersPerBundle;
         ps.maxOffersPerBatch = _maxOffersPerBatch;
+        ps.maxTokensPerWithdrawal = _maxTokensPerWithdrawal;
 
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -311,7 +313,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolStorage().maxTokensPerWithdrawal = _maxTokensPerWithdrawal;
-        emit MaxOffersPerBatchChanged(_maxTokensPerWithdrawal, msg.sender);
+        emit MaxTokensPerWithdrawalChanged(_maxTokensPerWithdrawal, msg.sender);
     }
 
     /**
