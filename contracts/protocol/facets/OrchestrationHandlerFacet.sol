@@ -40,8 +40,9 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      * - in offer struct:
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
+     *   - Seller deposit is less than protocol fee
+     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      */
@@ -66,8 +67,9 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
+     *   - Seller deposit is less than protocol fee
+     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - Condition includes invalid combination of parameters
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
@@ -103,8 +105,9 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
     *   - Caller is not an operator
     *   - Valid from date is greater than valid until date
     *   - Valid until date is not in the future
-    *   - Buyer cancel penalty is greater than price
     *   - Voided is set to true
+    *   - Seller deposit is less than protocol fee
+    *   - Sum of buyer cancel penalty and protocol fee is greater than price
     * - when adding to the group if:
     *   - Group does not exists
     *   - Caller is not the operator of the group
@@ -136,8 +139,9 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
+     *   - Seller deposit is less than protocol fee
+     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
@@ -167,8 +171,9 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
+     *   - Seller deposit is less than protocol fee
+     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token
@@ -209,7 +214,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
 
         // construct new bundle
         // - bundleId is 0, and it is ignored
-        // - note that _offer fields are updated during createOfferInternal, so they represent correct values
+        // - note that _twin fields are updated during createTwinInternal, so they represent correct values
         Bundle memory _bundle = Bundle(0, _sellerId, new uint256[](1), new uint256[](1));
         _bundle.offerIds[0] = _offerId;
         _bundle.twinIds[0] = _twin.id;
@@ -233,8 +238,9 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
+     *   - Seller deposit is less than protocol fee
+     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - Condition includes invalid combination of parameters
      *
      * @param _seller - the fully populated seller struct
@@ -267,8 +273,9 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
+     *   - Seller deposit is less than protocol fee
+     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
@@ -302,8 +309,9 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
+     *   - Seller deposit is less than protocol fee
+     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token

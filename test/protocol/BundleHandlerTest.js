@@ -202,9 +202,9 @@ describe("IBosonBundleHandler", function () {
         // Required constructor params
         offerId = sellerId = "1"; // argument sent to contract for createOffer will be ignored
         price = ethers.utils.parseUnits("1.5", "ether").toString();
-        sellerDeposit = price = ethers.utils.parseUnits("0.25", "ether").toString();
+        sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
         protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
-        buyerCancelPenalty = price = ethers.utils.parseUnits("0.05", "ether").toString();
+        buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
         blockNumber = await ethers.provider.getBlockNumber();
         block = await ethers.provider.getBlock(blockNumber);

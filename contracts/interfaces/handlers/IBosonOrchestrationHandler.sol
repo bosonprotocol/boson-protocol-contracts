@@ -30,8 +30,9 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      * - in offer struct:
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
+     *   - Seller deposit is less than protocol fee
+     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      */
@@ -47,8 +48,9 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
+     *   - Seller deposit is less than protocol fee
+     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - Condition includes invalid combination of parameters
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
@@ -70,8 +72,9 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
+     *   - Seller deposit is less than protocol fee
+     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - when adding to the group if:
      *   - Group does not exists
      *   - Caller is not the operator of the group
@@ -95,8 +98,9 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
+     *   - Seller deposit is less than protocol fee
+     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
@@ -119,8 +123,9 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
+     *   - Seller deposit is less than protocol fee
+     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token
@@ -151,8 +156,9 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
+     *   - Seller deposit is less than protocol fee
+     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - Condition includes invalid combination of parameters
      *
      * @param _seller - the fully populated seller struct
@@ -181,8 +187,9 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
+     *   - Seller deposit is less than protocol fee
+     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
@@ -212,8 +219,9 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
-     *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
+     *   - Seller deposit is less than protocol fee
+     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token

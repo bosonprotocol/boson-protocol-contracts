@@ -21,7 +21,7 @@ const {
   setNextBlockTimestamp,
   calculateVoucherExpiry,
   prepareDataSignatureParameters,
-  calculateProtocolFee
+  calculateProtocolFee,
 } = require("../../scripts/util/test-utils.js");
 
 /**
