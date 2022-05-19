@@ -15,7 +15,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { setNextBlockTimestamp, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
+const { setNextBlockTimestamp, calculateProtocolFee, getEvent } = require("../../scripts/util/test-utils.js");
 
 /**
  *  Test the Boson Funds Handler interface
@@ -31,6 +31,7 @@ describe("IBosonFundsHandler", function () {
     fundsHandler,
     exchangeHandler,
     offerHandler,
+    configHandler,
     bosonVoucher;
   let support, oneMonth, oneWeek;
   let seller, active;
@@ -1119,6 +1120,69 @@ describe("IBosonFundsHandler", function () {
             expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
           });
+        });
+      });
+
+      context("Changing the protocol fee", async function () {
+        beforeEach(async function () {
+          // Cast Diamond to IBosonConfigHandler
+          configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
+
+          // expected payoffs
+          // buyer: 0
+          buyerPayoff = 0;
+
+          // seller: sellerDeposit + price - protocolFee
+          sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit)
+            .add(offerToken.price)
+            .sub(offerToken.protocolFee)
+            .toString();
+
+          // set the new procol fee
+          protocolFeePrecentage = "300"; // 3%
+          await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePrecentage);
+        });
+
+        it("Protocol fee for existing exchanges should be the same as at the offer creation", async function () {
+          // Set time forward to the offer's redeemableFromDate
+          await setNextBlockTimestamp(Number(redeemableFromDate));
+
+          // succesfully redeem exchange
+          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+          // Complete the exchange, expecting event
+          await expect(exchangeHandler.connect(buyer).completeExchange(exchangeId))
+            .to.emit(exchangeHandler, "FundsReleased")
+            .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
+            .to.emit(exchangeHandler, "FundsReleased")
+            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff)
+            .to.emit(exchangeHandler, "ExchangeFee")
+            .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee);
+        });
+
+        it("Protocol fee for new exchanges should be the same as at the offer creation", async function () {
+          // similar as teste before, excpet the commit to offer is done after the procol fee change
+
+          // commit to offer and get the correct exchangeId
+          const tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+          const txReceipt = await tx.wait();
+          const event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+          exchangeId = event.exchangeId.toString();
+
+          // Set time forward to the offer's redeemableFromDate
+          await setNextBlockTimestamp(Number(redeemableFromDate));
+
+          // succesfully redeem exchange
+          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+          // Complete the exchange, expecting event
+          await expect(exchangeHandler.connect(buyer).completeExchange(exchangeId))
+            .to.emit(exchangeHandler, "FundsReleased")
+            .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
+            .to.emit(exchangeHandler, "FundsReleased")
+            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff)
+            .to.emit(exchangeHandler, "ExchangeFee")
+            .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee);
         });
       });
     });
