@@ -14,7 +14,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
-const { getEvent } = require("../../scripts/util/test-utils.js");
+const { getEvent, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 
 /**
  *  Test the Boson Group Handler interface
@@ -30,6 +30,7 @@ describe("IBosonGroupHandler", function () {
     sellerId,
     price,
     sellerDeposit,
+    protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
     validFromDate,
@@ -41,6 +42,7 @@ describe("IBosonGroupHandler", function () {
     metadataUri,
     offerChecksum,
     voided;
+  let protocolFeePrecentage;
   let group, nextGroupId, invalidGroupId;
   let offerIds, condition;
   let groupHandlerFacet_Factory;
@@ -74,12 +76,15 @@ describe("IBosonGroupHandler", function () {
     await deployProtocolHandlerFacets(protocolDiamond, ["OfferHandlerFacet"]);
     await deployProtocolHandlerFacets(protocolDiamond, ["GroupHandlerFacet"]);
 
+    // set protocolFeePrecentage
+    protocolFeePrecentage = "200"; // 2 %
+
     // Add config Handler, so ids starts at 1
     const protocolConfig = [
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
-      "0",
+      protocolFeePrecentage,
       "100",
       "100",
       "100",
@@ -138,8 +143,9 @@ describe("IBosonGroupHandler", function () {
         // Required constructor params
         id = sellerId = "1"; // argument sent to contract for createGroup will be ignored
         price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
-        sellerDeposit = price = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
-        buyerCancelPenalty = price = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
+        sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
+        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+        buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
         quantityAvailable = `${i * 2}`;
         validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
         validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
@@ -157,6 +163,7 @@ describe("IBosonGroupHandler", function () {
           sellerId,
           price,
           sellerDeposit,
+          protocolFee,
           buyerCancelPenalty,
           quantityAvailable,
           validFromDate,

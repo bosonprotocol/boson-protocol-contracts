@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
+const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 
 /**
  *  Test the Offer domain entity
@@ -14,6 +15,7 @@ describe("Offer", function () {
     sellerId,
     price,
     sellerDeposit,
+    protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
     validFromDate,
@@ -25,8 +27,11 @@ describe("Offer", function () {
     metadataUri,
     offerChecksum,
     voided;
+  let protocolFeePrecentage;
 
   beforeEach(async function () {
+    protocolFeePrecentage = "200"; // 2 %
+
     // Get a list of accounts
     accounts = await ethers.getSigners();
 
@@ -37,8 +42,9 @@ describe("Offer", function () {
     // Required constructor params
     id = sellerId = "0";
     price = ethers.utils.parseUnits("1.5", "ether").toString();
-    sellerDeposit = price = ethers.utils.parseUnits("0.25", "ether").toString();
-    buyerCancelPenalty = price = ethers.utils.parseUnits("0.05", "ether").toString();
+    sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
+    protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+    buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
     quantityAvailable = "1";
     validFromDate = ethers.BigNumber.from(Date.now()).toString(); // valid from now
     validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // until 6 months
@@ -59,6 +65,7 @@ describe("Offer", function () {
         sellerId,
         price,
         sellerDeposit,
+        protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
         validFromDate,
@@ -83,6 +90,7 @@ describe("Offer", function () {
         sellerId,
         price,
         sellerDeposit,
+        protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
         validFromDate,
@@ -176,6 +184,33 @@ describe("Offer", function () {
       // Valid field value
       offer.sellerDeposit = "126";
       expect(offer.sellerDepositIsValid()).is.true;
+      expect(offer.isValid()).is.true;
+    });
+
+    it("Always present, protocolFee must be the string representation of a BigNumber", async function () {
+      // Invalid field value
+      offer.protocolFee = "zedzdeadbaby";
+      expect(offer.protocolFeeIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Invalid field value
+      offer.protocolFee = new Date();
+      expect(offer.protocolFeeIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Invalid field value
+      offer.protocolFee = 12;
+      expect(offer.protocolFeeIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Valid field value
+      offer.protocolFee = "0";
+      expect(offer.protocolFeeIsValid()).is.true;
+      expect(offer.isValid()).is.true;
+
+      // Valid field value
+      offer.protocolFee = "126";
+      expect(offer.protocolFeeIsValid()).is.true;
       expect(offer.isValid()).is.true;
     });
 
@@ -485,6 +520,7 @@ describe("Offer", function () {
         sellerId,
         price,
         sellerDeposit,
+        protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
         validFromDate,
@@ -505,6 +541,7 @@ describe("Offer", function () {
         sellerId,
         price,
         sellerDeposit,
+        protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
         validFromDate,
@@ -539,6 +576,7 @@ describe("Offer", function () {
           offer.sellerId,
           offer.price,
           offer.sellerDeposit,
+          offer.protocolFee,
           offer.buyerCancelPenalty,
           offer.quantityAvailable,
           offer.validFromDate,

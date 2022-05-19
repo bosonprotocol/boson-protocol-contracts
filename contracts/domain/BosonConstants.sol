@@ -39,6 +39,7 @@ contract BosonConstants {
     string internal constant NO_SUCH_OFFER = "No such offer";
     string internal constant OFFER_PERIOD_INVALID = "Offer period invalid";
     string internal constant OFFER_PENALTY_INVALID = "Offer penalty invalid";
+    string internal constant OFFER_DEPOSIT_INVALID = "Offer deposit invalid";
     string internal constant OFFER_MUST_BE_ACTIVE = "Offer must be active";
     string internal constant OFFER_NOT_UPDATEABLE = "Offer not updateable";
     string internal constant OFFER_MUST_BE_UNIQUE = "Offer must be unique to a group";
@@ -93,6 +94,7 @@ contract BosonConstants {
         "functionSignature can not be of executeMetaTransaction method";
     string internal constant INVALID_SIGNATURE = "Invalid signature";
     string internal constant SIGNER_AND_SIGNATURE_DO_NOT_MATCH = "Signer and signature do not match";
+    string internal constant INVALID_FUNCTION_NAME = "Invalid function name";
 }
 
 // TODO: Refactor to use file level constants throughout or use custom Errors

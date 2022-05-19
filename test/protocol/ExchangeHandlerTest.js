@@ -6,6 +6,7 @@ const Role = require("../../scripts/domain/Role");
 const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
 const Offer = require("../../scripts/domain/Offer");
+const MetaTxOfferDetails = require("../../scripts/domain/MetaTxOfferDetails");
 const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
@@ -15,7 +16,13 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { getEvent, setNextBlockTimestamp, calculateVoucherExpiry } = require("../../scripts/util/test-utils.js");
+const {
+  getEvent,
+  setNextBlockTimestamp,
+  calculateVoucherExpiry,
+  prepareDataSignatureParameters,
+  calculateProtocolFee,
+} = require("../../scripts/util/test-utils.js");
 
 /**
  *  Test the Boson Exchange Handler interface
@@ -38,6 +45,7 @@ describe("IBosonExchangeHandler", function () {
   let support, oneMonth, oneWeek, newTime;
   let price,
     sellerDeposit,
+    protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
     validFromDate,
@@ -48,8 +56,10 @@ describe("IBosonExchangeHandler", function () {
     metadataUri,
     metadataHash,
     voided;
+  let protocolFeePrecentage;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state, exchangeStruct, response, exists;
+  let metaTransactionsHandler, nonce;
 
   before(async function () {
     // get interface Ids
@@ -84,6 +94,7 @@ describe("IBosonExchangeHandler", function () {
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
       "FundsHandlerFacet",
+      "MetaTransactionsHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -91,12 +102,15 @@ describe("IBosonExchangeHandler", function () {
     [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
     [bosonVoucher] = clients;
 
+    // set protocolFeePrecentage
+    protocolFeePrecentage = "200"; // 2 %
+
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
       bosonVoucher.address,
-      "0",
+      protocolFeePrecentage,
       "0",
       "0",
       "0",
@@ -120,6 +134,9 @@ describe("IBosonExchangeHandler", function () {
 
     // Cast Diamond to IBosonFundsHandler
     fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonMetaTransactionsHandler
+    metaTransactionsHandler = await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamond.address);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -152,8 +169,9 @@ describe("IBosonExchangeHandler", function () {
 
       // Required constructor params
       price = ethers.utils.parseUnits("1.5", "ether").toString();
-      sellerDeposit = price = ethers.utils.parseUnits("0.25", "ether").toString();
-      buyerCancelPenalty = price = ethers.utils.parseUnits("0.05", "ether").toString();
+      sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
+      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+      buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
       validUntilDate = ethers.BigNumber.from(block.timestamp)
@@ -178,6 +196,7 @@ describe("IBosonExchangeHandler", function () {
         sellerId,
         price,
         sellerDeposit,
+        protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
         validFromDate,
@@ -216,6 +235,11 @@ describe("IBosonExchangeHandler", function () {
     });
 
     context("👉 commitToOffer()", async function () {
+      beforeEach(async function () {
+        // Set a random nonce
+        nonce = parseInt(ethers.utils.randomBytes(8));
+      });
+
       it("should emit a BuyerCommitted event", async function () {
         // Commit to offer, retrieving the event
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -254,6 +278,56 @@ describe("IBosonExchangeHandler", function () {
         expect(nextExchangeId).to.equal(++id);
       });
 
+      it("[Meta Transaction] should increment the next exchange id counter", async function () {
+        // Set the offer Type
+        const offerType = [
+          { name: "buyer", type: "address" },
+          { name: "offerId", type: "uint256" },
+        ];
+
+        // prepare the MetaTxOfferDetails struct
+        let validOfferDetails = new MetaTxOfferDetails(buyer.address, offer.id, price);
+        expect(validOfferDetails.isValid()).is.true;
+
+        const metaTransactionType = [
+          { name: "nonce", type: "uint256" },
+          { name: "from", type: "address" },
+          { name: "contractAddress", type: "address" },
+          { name: "functionName", type: "string" },
+          { name: "offerDetails", type: "MetaTxOfferDetails" },
+        ];
+
+        const customTransactionTypes = {
+          MetaTxCommitToOffer: metaTransactionType,
+          MetaTxOfferDetails: offerType,
+        };
+
+        // Prepare the message
+        let message = {};
+        message.nonce = parseInt(nonce);
+        message.from = operator.address;
+        message.contractAddress = exchangeHandler.address;
+        message.functionName = "commitToOffer(address,uint256)";
+        message.offerDetails = validOfferDetails;
+
+        // Collect the signature components
+        let { r, s, v } = await prepareDataSignatureParameters(
+          operator,
+          customTransactionTypes,
+          "MetaTxCommitToOffer",
+          message,
+          metaTransactionsHandler.address
+        );
+        // Commit to offer, creating a new exchange. Send as meta transaction.
+        await metaTransactionsHandler.executeMetaTxCommitToOffer(operator.address, validOfferDetails, nonce, r, s, v, {
+          value: price,
+        });
+
+        // Get the next exchange id and ensure it was incremented by the creation of the offer
+        nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
+        expect(nextExchangeId).to.equal(++id);
+      });
+
       context("💔 Revert Reasons", async function () {
         /*
          * Reverts if:
@@ -280,6 +354,105 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to commit, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+        });
+
+        it("[Meta Transaction] buyer address is the zero address", async function () {
+          // Set the offer Type
+          const offerType = [
+            { name: "buyer", type: "address" },
+            { name: "offerId", type: "uint256" },
+          ];
+
+          // prepare the MetaTxOfferDetails struct
+          let validOfferDetails = new MetaTxOfferDetails(ethers.constants.AddressZero, offer.id, price);
+          expect(validOfferDetails.isValid()).is.true;
+
+          const metaTransactionType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
+            { name: "offerDetails", type: "MetaTxOfferDetails" },
+          ];
+
+          const customTransactionTypes = {
+            MetaTxCommitToOffer: metaTransactionType,
+            MetaTxOfferDetails: offerType,
+          };
+
+          // Prepare the message
+          let message = {};
+          message.nonce = parseInt(nonce);
+          message.from = operator.address;
+          message.contractAddress = exchangeHandler.address;
+          message.functionName = "commitToOffer(address,uint256)";
+          message.offerDetails = validOfferDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            operator,
+            customTransactionTypes,
+            "MetaTxCommitToOffer",
+            message,
+            metaTransactionsHandler.address
+          );
+          // Commit to offer, creating a new exchange. Send as meta transaction.
+          await expect(
+            metaTransactionsHandler.executeMetaTxCommitToOffer(operator.address, validOfferDetails, nonce, r, s, v, {
+              value: price,
+            })
+          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+        });
+
+        it("[Meta Transaction] offer id is invalid", async function () {
+          // An invalid offer id
+          offerId = "666";
+
+          // Set the offer Type
+          const offerType = [
+            { name: "buyer", type: "address" },
+            { name: "offerId", type: "uint256" },
+          ];
+
+          // prepare the MetaTxOfferDetails struct
+          let validOfferDetails = new MetaTxOfferDetails(buyer.address, offerId, price);
+          expect(validOfferDetails.isValid()).is.true;
+
+          const metaTransactionType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
+            { name: "offerDetails", type: "MetaTxOfferDetails" },
+          ];
+
+          const customTransactionTypes = {
+            MetaTxCommitToOffer: metaTransactionType,
+            MetaTxOfferDetails: offerType,
+          };
+
+          // Prepare the message
+          let message = {};
+          message.nonce = parseInt(nonce);
+          message.from = operator.address;
+          message.contractAddress = exchangeHandler.address;
+          message.functionName = "commitToOffer(address,uint256)";
+          message.offerDetails = validOfferDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            operator,
+            customTransactionTypes,
+            "MetaTxCommitToOffer",
+            message,
+            metaTransactionsHandler.address
+          );
+          // Commit to offer, creating a new exchange. Send as meta transaction.
+          await expect(
+            metaTransactionsHandler.executeMetaTxCommitToOffer(operator.address, validOfferDetails, nonce, r, s, v, {
+              value: price,
+            })
           ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
         });
       });
@@ -737,7 +910,6 @@ describe("IBosonExchangeHandler", function () {
 
         // Update the validUntilDate date in the expected exchange struct
         exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration);
-
         // Get the struct
         exchangeStruct = exchange.toStruct();
       });

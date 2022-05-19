@@ -20,6 +20,7 @@ exports.RevertReasons = {
   OFFER_HAS_BEEN_VOIDED: "Offer has been voided",
   OFFER_PERIOD_INVALID: "Offer period invalid",
   OFFER_PENALTY_INVALID: "Offer penalty invalid",
+  OFFER_DEPOSIT_INVALID: "Offer deposit invalid",
   OFFER_MUST_BE_ACTIVE: "Offer must be active",
   OFFER_NOT_UPDATEABLE: "Offer not updateable",
   OFFER_MUST_BE_UNIQUE: "Offer must be unique to a group",
@@ -78,4 +79,5 @@ exports.RevertReasons = {
   INVALID_FUNCTION_SIGNATURE: "functionSignature can not be of executeMetaTransaction method",
   INVALID_SIGNATURE: "Invalid signature",
   SIGNER_AND_SIGNATURE_DO_NOT_MATCH: "Signer and signature do not match",
+  INVALID_FUNCTION_NAME: "Invalid function name",
 };

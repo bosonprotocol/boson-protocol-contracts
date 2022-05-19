@@ -12,6 +12,7 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
+const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 
 /**
  *  Test the Boson Offer Handler interface
@@ -27,6 +28,7 @@ describe("IBosonOfferHandler", function () {
     sellerId,
     price,
     sellerDeposit,
+    protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
     validFromDate,
@@ -38,6 +40,7 @@ describe("IBosonOfferHandler", function () {
     metadataUri,
     offerChecksum,
     voided;
+  let protocolFeePrecentage;
   let block, blockNumber;
 
   before(async function () {
@@ -71,12 +74,15 @@ describe("IBosonOfferHandler", function () {
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
     [, , [bosonVoucher]] = await deployProtocolClients(protocolClientArgs, gasLimit);
 
+    // set protocolFeePrecentage
+    protocolFeePrecentage = "200"; // 2 %
+
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
       bosonVoucher.address,
-      "0",
+      protocolFeePrecentage,
       "100",
       "100",
       "100",
@@ -137,8 +143,9 @@ describe("IBosonOfferHandler", function () {
       // Required constructor params
       id = sellerId = "1"; // argument sent to contract for createOffer will be ignored
       price = ethers.utils.parseUnits("1.5", "ether").toString();
-      sellerDeposit = price = ethers.utils.parseUnits("0.25", "ether").toString();
-      buyerCancelPenalty = price = ethers.utils.parseUnits("0.05", "ether").toString();
+      sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
+      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage); // will be ignored, but set the correct value here for the tests
+      buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
       validUntilDate = ethers.BigNumber.from(block.timestamp)
@@ -158,6 +165,7 @@ describe("IBosonOfferHandler", function () {
         sellerId,
         price,
         sellerDeposit,
+        protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
         validFromDate,
@@ -227,6 +235,33 @@ describe("IBosonOfferHandler", function () {
           .withArgs(nextOfferId, sellerId, offerStruct);
       });
 
+      it("should ignore any provided protocol fee and calculate the correct one", async function () {
+        // set some protocole fee
+        offer.protocolFee = "999";
+
+        // Create an offer, testing for the event
+        await expect(offerHandler.connect(operator).createOffer(offer))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct);
+      });
+
+      it("after the protocol fee changes, new offers should have the new fee", async function () {
+        // Cast Diamond to IBosonConfigHandler
+        const configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
+
+        // set the new procol fee
+        protocolFeePrecentage = "300"; // 3%
+        await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePrecentage);
+
+        offer.id = await offerHandler.getNextOfferId();
+        offer.protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+
+        // Create a new offer
+        await expect(offerHandler.connect(operator).createOffer(offer))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(nextOfferId, offer.sellerId, offer.toStruct());
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
@@ -254,9 +289,23 @@ describe("IBosonOfferHandler", function () {
           );
         });
 
-        it("Buyer cancel penalty is less than item price", async function () {
-          // Set buyer cancel penalty higher than offer price
-          offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
+        it("Seller deposit is less than protocol fee", async function () {
+          // Set buyer deposit less than the protocol fee
+          // First calculate the threshold where sellerDeposit == protocolFee and then reduce it for some number
+          let threshold = ethers.BigNumber.from(offer.price)
+            .mul(protocolFeePrecentage)
+            .div(ethers.BigNumber.from("10000").sub(protocolFeePrecentage));
+          offer.sellerDeposit = threshold.sub("10").toString();
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
+            RevertReasons.OFFER_DEPOSIT_INVALID
+          );
+        });
+
+        it("Sum of buyer cancel penalty and protocol fee is greater than price", async function () {
+          // Set buyer cancel penalty higher than offer price minus protocolFee
+          offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).sub(offer.protocolFee).add("10").toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
@@ -632,8 +681,9 @@ describe("IBosonOfferHandler", function () {
         id = `${i + 1}`;
         sellerId = "1"; //
         price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
-        sellerDeposit = price = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
-        buyerCancelPenalty = price = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
+        sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
+        buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
+        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
         quantityAvailable = `${i * 2}`;
         validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
         validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
@@ -651,6 +701,7 @@ describe("IBosonOfferHandler", function () {
           sellerId,
           price,
           sellerDeposit,
+          protocolFee,
           buyerCancelPenalty,
           quantityAvailable,
           validFromDate,
@@ -774,9 +825,26 @@ describe("IBosonOfferHandler", function () {
           );
         });
 
-        it("Buyer cancel penalty is less than item price in some offer", async function () {
-          // Set buyer cancel penalty higher than offer price
-          offers[0].buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
+        it("Seller deposit is less than protocol fee", async function () {
+          // Set buyer deposit less than the protocol fee
+          // First calculate the threshold where sellerDeposit == protocolFee and then reduce it for some number
+          let threshold = ethers.BigNumber.from(offers[0].price)
+            .mul(protocolFeePrecentage)
+            .div(ethers.BigNumber.from("10000").sub(protocolFeePrecentage));
+          offers[0].sellerDeposit = threshold.sub("10").toString();
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
+            RevertReasons.OFFER_DEPOSIT_INVALID
+          );
+        });
+
+        it("Sum of buyer cancel penalty and protocol fee is greater than price", async function () {
+          // Set buyer cancel penalty higher than offer price minus protocolFee
+          offers[0].buyerCancelPenalty = ethers.BigNumber.from(offer.price)
+            .add(offers[0].protocolFee)
+            .add("10")
+            .toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
