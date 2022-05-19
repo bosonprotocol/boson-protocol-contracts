@@ -236,6 +236,60 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     }
 
     /**
+     * @notice Expire a voucher.
+     *
+     * Reverts if
+     * - Exchange does not exist
+     * - Exchange is not in committed state
+     * - Redemption period has not yet elapsed
+     *
+     * Emits
+     * - VoucherExpired
+     *
+     * @param _exchangeId - the id of the exchange
+     */
+    function expireVoucher(uint256 _exchangeId)
+    external
+    override
+    {
+        // Get the exchange, should be in committed state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
+
+        // Make sure that the voucher has expired
+        require(block.timestamp >= exchange.voucher.validUntilDate, VOUCHER_STILL_VALID);
+
+        // Get the offer, which will definitely exist
+        Offer storage offer;
+        (, offer) = fetchOffer(exchange.offerId);
+
+        // Make sure the voucher is redeemable
+        require(
+            block.timestamp >= offer.redeemableFromDate &&
+            block.timestamp <= exchange.voucher.validUntilDate,
+            VOUCHER_NOT_REDEEMABLE
+        );
+
+        // Store the time the exchange was redeemed
+        exchange.voucher.redeemedDate = block.timestamp;
+
+        // Store the time the voucher expires
+        uint256 startDate = (block.timestamp >= offer.redeemableFromDate) ? block.timestamp : offer.redeemableFromDate;
+        exchange.voucher.validUntilDate = startDate + offer.voucherValidDuration;
+
+        // Set the exchange state to the Redeemed
+        exchange.state = ExchangeState.Redeemed;
+
+        // Burn the voucher
+        burnVoucher(_exchangeId);
+
+        // Make it possible to determine how this exchange reached the Canceled state
+        exchange.voucher.expired = true;
+
+        // Notify watchers of state change
+        emit VoucherExpired(exchange.offerId, _exchangeId, msg.sender);
+    }
+
+    /**
      * @notice Redeem a voucher.
      *
      * Reverts if
@@ -273,10 +327,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
 
         // Store the time the exchange was redeemed
         exchange.voucher.redeemedDate = block.timestamp;
-
-        // Store the time the voucher expires
-        uint256 startDate = (block.timestamp >= offer.redeemableFromDate) ? block.timestamp : offer.redeemableFromDate;
-        exchange.voucher.validUntilDate = startDate + offer.voucherValidDuration;
 
         // Set the exchange state to the Redeemed
         exchange.state = ExchangeState.Redeemed;
@@ -461,7 +511,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
 
         // Release the funds
         FundsLib.releaseFunds(_exchange.id);
-
     }
 
     /**

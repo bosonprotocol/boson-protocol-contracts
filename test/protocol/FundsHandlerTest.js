@@ -15,7 +15,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { setNextBlockTimestamp } = require("../../scripts/util/test-utils.js");
+const { setNextBlockTimestamp, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 
 /**
  *  Test the Boson Funds Handler interface
@@ -100,7 +100,7 @@ describe("IBosonFundsHandler", function () {
     [, , [bosonVoucher]] = await deployProtocolClients(protocolClientArgs, gasLimit);
 
     // set protocolFeePrecentage
-    protocolFeePrecentage = "200"; // 0.2 %
+    protocolFeePrecentage = "200"; // 2 %
 
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
@@ -340,7 +340,7 @@ describe("IBosonFundsHandler", function () {
       // Required constructor params
       price = ethers.utils.parseUnits("1.5", "ether").toString();
       sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      protocolFee = ethers.BigNumber.from(price).add(sellerDeposit).mul(protocolFeePrecentage).div("10000").toString();
+      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "2";
       validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now

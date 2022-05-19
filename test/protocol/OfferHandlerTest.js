@@ -12,6 +12,7 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
+const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 
 /**
  *  Test the Boson Offer Handler interface
@@ -74,7 +75,7 @@ describe("IBosonOfferHandler", function () {
     [, , [bosonVoucher]] = await deployProtocolClients(protocolClientArgs, gasLimit);
 
     // set protocolFeePrecentage
-    protocolFeePrecentage = "200"; // 0.2 %
+    protocolFeePrecentage = "200"; // 2 %
 
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
@@ -143,7 +144,7 @@ describe("IBosonOfferHandler", function () {
       id = sellerId = "1"; // argument sent to contract for createOffer will be ignored
       price = ethers.utils.parseUnits("1.5", "ether").toString();
       sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      protocolFee = ethers.BigNumber.from(price).add(sellerDeposit).mul(protocolFeePrecentage).div("10000").toString(); // will be ignored, but set the correct value here for the tests
+      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage); // will be ignored, but set the correct value here for the tests
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
@@ -234,8 +235,8 @@ describe("IBosonOfferHandler", function () {
           .withArgs(nextOfferId, sellerId, offerStruct);
       });
 
-      it("should ignore any provided protocol fee and and calculate the correct one", async function () {
-        // set some other sellerId
+      it("should ignore any provided protocol fee and calculate the correct one", async function () {
+        // set some protocole fee
         offer.protocolFee = "999";
 
         // Create an offer, testing for the event
@@ -665,11 +666,7 @@ describe("IBosonOfferHandler", function () {
         price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
         sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
         buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
-        protocolFee = ethers.BigNumber.from(price)
-          .add(sellerDeposit)
-          .mul(protocolFeePrecentage)
-          .div("10000")
-          .toString();
+        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
         quantityAvailable = `${i * 2}`;
         validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
         validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();

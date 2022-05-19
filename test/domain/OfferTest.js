@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
+const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 
 /**
  *  Test the Offer domain entity
@@ -29,7 +30,7 @@ describe("Offer", function () {
   let protocolFeePrecentage;
 
   beforeEach(async function () {
-    protocolFeePrecentage = "200"; // 0.2 %
+    protocolFeePrecentage = "200"; // 2 %
 
     // Get a list of accounts
     accounts = await ethers.getSigners();
@@ -42,7 +43,7 @@ describe("Offer", function () {
     id = sellerId = "0";
     price = ethers.utils.parseUnits("1.5", "ether").toString();
     sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-    protocolFee = ethers.BigNumber.from(price).add(sellerDeposit).mul(protocolFeePrecentage).div("10000").toString();
+    protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
     buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
     quantityAvailable = "1";
     validFromDate = ethers.BigNumber.from(Date.now()).toString(); // valid from now

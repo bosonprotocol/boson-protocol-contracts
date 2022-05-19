@@ -16,7 +16,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
-const { getEvent } = require("../../scripts/util/test-utils.js");
+const { getEvent, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 
 /**
@@ -100,7 +100,7 @@ describe("IBosonOrchestrationHandler", function () {
     ]);
 
     // set protocolFeePrecentage
-    protocolFeePrecentage = "200"; // 0.2 %
+    protocolFeePrecentage = "200"; // 2 %
 
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
@@ -182,7 +182,7 @@ describe("IBosonOrchestrationHandler", function () {
       id = sellerId = "1"; // argument sent to contract for createOffer will be ignored
       price = ethers.utils.parseUnits("1.5", "ether").toString();
       sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      protocolFee = ethers.BigNumber.from(price).add(sellerDeposit).mul(protocolFeePrecentage).div("10000").toString();
+      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       validFromDate = ethers.BigNumber.from(Date.now()).toString(); // valid from now
@@ -644,11 +644,7 @@ describe("IBosonOrchestrationHandler", function () {
           sellerId = "1";
           price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
           sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
-          protocolFee = ethers.BigNumber.from(price)
-            .add(sellerDeposit)
-            .mul(protocolFeePrecentage)
-            .div("10000")
-            .toString();
+          protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
           buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
           quantityAvailable = `${i * 2}`;
           validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
