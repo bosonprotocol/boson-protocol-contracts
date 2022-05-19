@@ -10,7 +10,7 @@ import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x1a9cab74
+ * The ERC-165 identifier for this interface is: 0x619e9d29
  */
 interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
 
@@ -20,7 +20,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
      * Emits an BuyerCommitted event if successful.
      * Issues a voucher to the buyer address.
      *
-     * Reverts if:
+     * Reverts if
      * - offerId is invalid
      * - offer has been voided
      * - offer has expired
@@ -108,6 +108,8 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Caller does not own voucher
+     * - Current time is prior to offer.redeemableFromDate
+     * - Current time is after exchange.voucher.validUntilDate
      *
      * Emits
      * - VoucherRedeemed
@@ -115,6 +117,21 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
      * @param _exchangeId - the id of the exchange
      */
     function redeemVoucher(uint256 _exchangeId) external;
+
+    /**
+     * @notice Inform protocol of new buyer associated with an exchange
+     *
+     * Reverts if
+     * - Caller does not have CLIENT role
+     * - Exchange does not exist
+     * - Exchange is not in committed state
+     * - Voucher has expired
+     * - New buyer's existing account is deactivated
+     *
+     * @param _exchangeId - the id of the exchange
+     * @param _newBuyer - the address of the new buyer
+     */
+    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) external;
 
     /**
      * @notice Is the given exchange in a finalized state?
