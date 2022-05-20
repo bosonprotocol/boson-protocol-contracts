@@ -14,7 +14,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 /**
  *  Test the Boson Account Handler interface
  */
-describe.only("IBosonAccountHandler", function () {
+describe("IBosonAccountHandler", function () {
   // Common vars
   let InterfaceIds;
   let accounts, deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, other4;
