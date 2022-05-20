@@ -20,8 +20,9 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Caller is not an operator
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
-     * - Buyer cancel penalty is greater than price
      * - Voided is set to true
+     * - Seller deposit is less than protocol fee
+     * - Sum of buyer cancel penalty and protocol fee is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      */
@@ -32,7 +33,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         _offer.sellerId = sellerId;
 
         // Get the next offerId and increment the counter
-        uint256 offerId = ProtocolLib.protocolCounters().nextOfferId++;
+        uint256 offerId = protocolCounters().nextOfferId++;
         _offer.id = offerId;
 
         // Store the offer
@@ -48,8 +49,9 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * Reverts if:
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
-     * - Buyer cancel penalty is greater than price
      * - Voided is set to true
+     * - Seller deposit is less than protocol fee
+     * - Sum of buyer cancel penalty and protocol fee is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      */
@@ -60,14 +62,18 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // validUntil date must be in the future
         require(_offer.validUntilDate > block.timestamp, OFFER_PERIOD_INVALID);
 
-        // buyerCancelPenalty should be less or equal to the item price
-        require(_offer.buyerCancelPenalty <= _offer.price, OFFER_PENALTY_INVALID);
-
         // when creating offer, it cannot be set to voided
         require(!_offer.voided, OFFER_MUST_BE_ACTIVE);
 
         // Calculate and set the protocol fee
-        _offer.protocolFee = protocolStorage().protocolFeePercentage*(_offer.price + _offer.sellerDeposit)/10000;
+        uint256 protocolFee = protocolStorage().protocolFeePercentage*(_offer.price + _offer.sellerDeposit)/10000;
+        _offer.protocolFee = protocolFee;
+        
+        // condition for succesfull payout when exchange final state is revoked        
+        require(_offer.sellerDeposit >= protocolFee, OFFER_DEPOSIT_INVALID);
+
+        // condition for succesfull payout when exchange final state is canceled
+        require(_offer.buyerCancelPenalty + protocolFee <= _offer.price, OFFER_PENALTY_INVALID);
 
         // Get storage location for offer
         (, Offer storage offer) = fetchOffer(_offer.id);

@@ -41,6 +41,7 @@ contract BosonConstants {
     string internal constant NO_SUCH_OFFER = "No such offer";
     string internal constant OFFER_PERIOD_INVALID = "Offer period invalid";
     string internal constant OFFER_PENALTY_INVALID = "Offer penalty invalid";
+    string internal constant OFFER_DEPOSIT_INVALID = "Offer deposit invalid";
     string internal constant OFFER_MUST_BE_ACTIVE = "Offer must be active";
     string internal constant OFFER_NOT_UPDATEABLE = "Offer not updateable";
     string internal constant OFFER_MUST_BE_UNIQUE = "Offer must be unique to a group";

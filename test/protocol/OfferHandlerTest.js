@@ -245,6 +245,23 @@ describe("IBosonOfferHandler", function () {
           .withArgs(nextOfferId, sellerId, offerStruct);
       });
 
+      it("after the protocol fee changes, new offers should have the new fee", async function () {
+        // Cast Diamond to IBosonConfigHandler
+        const configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
+
+        // set the new procol fee
+        protocolFeePrecentage = "300"; // 3%
+        await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePrecentage);
+
+        offer.id = await offerHandler.getNextOfferId();
+        offer.protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+
+        // Create a new offer
+        await expect(offerHandler.connect(operator).createOffer(offer))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(nextOfferId, offer.sellerId, offer.toStruct());
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
@@ -272,9 +289,23 @@ describe("IBosonOfferHandler", function () {
           );
         });
 
-        it("Buyer cancel penalty is less than item price", async function () {
-          // Set buyer cancel penalty higher than offer price
-          offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
+        it("Seller deposit is less than protocol fee", async function () {
+          // Set buyer deposit less than the protocol fee
+          // First calculate the threshold where sellerDeposit == protocolFee and then reduce it for some number
+          let threshold = ethers.BigNumber.from(offer.price)
+            .mul(protocolFeePrecentage)
+            .div(ethers.BigNumber.from("10000").sub(protocolFeePrecentage));
+          offer.sellerDeposit = threshold.sub("10").toString();
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
+            RevertReasons.OFFER_DEPOSIT_INVALID
+          );
+        });
+
+        it("Sum of buyer cancel penalty and protocol fee is greater than price", async function () {
+          // Set buyer cancel penalty higher than offer price minus protocolFee
+          offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).sub(offer.protocolFee).add("10").toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
@@ -794,9 +825,26 @@ describe("IBosonOfferHandler", function () {
           );
         });
 
-        it("Buyer cancel penalty is less than item price in some offer", async function () {
-          // Set buyer cancel penalty higher than offer price
-          offers[0].buyerCancelPenalty = ethers.BigNumber.from(offer.price).add(10).toString();
+        it("Seller deposit is less than protocol fee", async function () {
+          // Set buyer deposit less than the protocol fee
+          // First calculate the threshold where sellerDeposit == protocolFee and then reduce it for some number
+          let threshold = ethers.BigNumber.from(offers[0].price)
+            .mul(protocolFeePrecentage)
+            .div(ethers.BigNumber.from("10000").sub(protocolFeePrecentage));
+          offers[0].sellerDeposit = threshold.sub("10").toString();
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
+            RevertReasons.OFFER_DEPOSIT_INVALID
+          );
+        });
+
+        it("Sum of buyer cancel penalty and protocol fee is greater than price", async function () {
+          // Set buyer cancel penalty higher than offer price minus protocolFee
+          offers[0].buyerCancelPenalty = ethers.BigNumber.from(offer.price)
+            .add(offers[0].protocolFee)
+            .add("10")
+            .toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
