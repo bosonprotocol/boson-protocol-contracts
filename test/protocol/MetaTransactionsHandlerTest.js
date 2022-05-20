@@ -555,7 +555,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         };
 
         // prepare the MetaTxOfferDetails struct
-        validOfferDetails = new MetaTxOfferDetails(buyer.address, offer.id, price);
+        validOfferDetails = new MetaTxOfferDetails(buyer.address, offer.id);
         expect(validOfferDetails.isValid()).is.true;
 
         // Deposit native currency to the same seller id

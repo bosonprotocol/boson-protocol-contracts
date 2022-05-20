@@ -289,7 +289,7 @@ describe("IBosonExchangeHandler", function () {
         ];
 
         // prepare the MetaTxOfferDetails struct
-        let validOfferDetails = new MetaTxOfferDetails(buyer.address, offer.id, price);
+        let validOfferDetails = new MetaTxOfferDetails(buyer.address, offer.id);
         expect(validOfferDetails.isValid()).is.true;
 
         const metaTransactionType = [
@@ -419,7 +419,7 @@ describe("IBosonExchangeHandler", function () {
           ];
 
           // prepare the MetaTxOfferDetails struct
-          let validOfferDetails = new MetaTxOfferDetails(buyer.address, offerId, price);
+          let validOfferDetails = new MetaTxOfferDetails(buyer.address, offerId);
           expect(validOfferDetails.isValid()).is.true;
 
           const metaTransactionType = [
