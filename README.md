@@ -3,7 +3,7 @@
 
 ## Status
 Currently in building phase. 
-SOme random change.
+SOme random change #2.
 Done or in progress are:
 
   - ✅ Developer environment configuration
