@@ -14,13 +14,13 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 /**
  *  Test the Boson Account Handler interface
  */
-describe("IBosonAccountHandler", function () {
+describe.only("IBosonAccountHandler", function () {
   // Common vars
   let InterfaceIds;
   let accounts, deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, other4;
   let erc165, protocolDiamond, accessController, accountHandler, gasLimit;
   let seller, sellerStruct, active, seller2, seller2Struct, id2;
-  let buyer, buyerStruct;
+  let buyer, buyerStruct, buyer2, buyer2Struct;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
 
@@ -776,6 +776,233 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to create another buyer with same wallet address
           await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(
+            RevertReasons.BUYER_ADDRESS_MUST_BE_UNIQUE
+          );
+        });
+      });
+    });
+
+    context("👉 updateBuyer()", async function () {
+      beforeEach(async function () {
+        // Create a buyer
+        await accountHandler.connect(rando).createBuyer(buyer);
+
+        // id of the current buyer and increment nextAccountId
+        id = nextAccountId++;
+      });
+
+      it("should emit a BuyerUpdated event with correct values if values change", async function () {
+        buyer.wallet = other2.address;
+        buyer.active = false;
+        expect(buyer.isValid()).is.true;
+
+        buyerStruct = buyer.toStruct();
+
+        //Update a buyer, testing for the event
+        await expect(accountHandler.connect(other1).updateBuyer(buyer))
+          .to.emit(accountHandler, "BuyerUpdated")
+          .withArgs(buyer.id, buyerStruct);
+      });
+
+      it("should emit a BuerUpdated event with correct values if values stay the same", async function () {
+        //Update a buyer, testing for the event
+        await expect(accountHandler.connect(other1).updateBuyer(buyer))
+          .to.emit(accountHandler, "BuyerUpdated")
+          .withArgs(buyer.id, buyerStruct);
+      });
+
+      it("should update state of all fields exceipt Id", async function () {
+        buyer.wallet = other2.address;
+        buyer.active = false;
+        expect(buyer.isValid()).is.true;
+
+        buyerStruct = buyer.toStruct();
+
+        // Update buyer
+        await accountHandler.connect(other1).updateBuyer(buyer);
+
+        // Get the buyer as a struct
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
+
+        // Parse into entity
+        let returnedBuyer = Buyer.fromStruct(buyerStruct);
+
+        // Returned values should match the input in updateBuyer
+        for ([key, value] of Object.entries(buyer)) {
+          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update state correctly if values are the same", async function () {
+        // Update buyer
+        await accountHandler.connect(other1).updateBuyer(buyer);
+
+        // Get the buyer as a struct
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
+
+        // Parse into entity
+        let returnedBuyer = Buyer.fromStruct(buyerStruct);
+
+        // Returned values should match the input in updateBuyer
+        for ([key, value] of Object.entries(buyer)) {
+          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update only active flag", async function () {
+        buyer.active = false;
+        expect(buyer.isValid()).is.true;
+
+        buyerStruct = buyer.toStruct();
+
+        // Update buyer
+        await accountHandler.connect(other1).updateBuyer(buyer);
+
+        // Get the buyer as a struct
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
+
+        // Parse into entity
+        let returnedBuyer = Buyer.fromStruct(buyerStruct);
+
+        // Returned values should match the input in updateBuyer
+        for ([key, value] of Object.entries(buyer)) {
+          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update only wallet address", async function () {
+        buyer.wallet = other2.address;
+        expect(buyer.isValid()).is.true;
+
+        buyerStruct = buyer.toStruct();
+
+        // Update buyer
+        await accountHandler.connect(other1).updateBuyer(buyer);
+
+        // Get the buyer as a struct
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
+
+        // Parse into entity
+        let returnedBuyer = Buyer.fromStruct(buyerStruct);
+
+        // Returned values should match the input in updateBuyer
+        for ([key, value] of Object.entries(buyer)) {
+          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update the correct buyer", async function () {
+        // Confgiure another buyer
+        id2 = nextAccountId++;
+        buyer2 = new Buyer(id2.toString(), other3.address, active);
+        expect(buyer2.isValid()).is.true;
+
+        buyer2Struct = buyer2.toStruct();
+
+        //Create buyer2, testing for the event
+        await expect(accountHandler.connect(rando).createBuyer(buyer2))
+          .to.emit(accountHandler, "BuyerCreated")
+          .withArgs(buyer2.id, buyer2Struct);
+
+        //Update first buyer
+        buyer.wallet = other2.address;
+        buyer.active = false;
+        expect(buyer.isValid()).is.true;
+
+        buyerStruct = buyer.toStruct();
+
+        // Update a buyer
+        await accountHandler.connect(other1).updateBuyer(buyer);
+
+        // Get the first buyer as a struct
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
+
+        // Parse into entity
+        let returnedBuyer = Buyer.fromStruct(buyerStruct);
+
+        // Returned values should match the input in updateBuyer
+        for ([key, value] of Object.entries(buyer)) {
+          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
+        }
+
+        //Check buyer hasn't been changed
+        [, buyer2Struct] = await accountHandler.connect(rando).getBuyer(buyer2.id);
+
+        // Parse into entity
+        let returnedSeller2 = Buyer.fromStruct(buyer2Struct);
+
+        //returnedSeller2 should still contain original values
+        for ([key, value] of Object.entries(buyer2)) {
+          expect(JSON.stringify(returnedSeller2[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should be able to only update second time with new wallet address", async function () {
+        buyer.wallet = other2.address;
+        buyerStruct = buyer.toStruct();
+
+        // Update buyer, testing for the event
+        await expect(accountHandler.connect(other1).updateBuyer(buyer))
+          .to.emit(accountHandler, "BuyerUpdated")
+          .withArgs(buyer.id, buyerStruct);
+
+        buyer.wallet = other3.address;
+        buyerStruct = buyer.toStruct();
+
+        // Update buyer, testing for the event
+        await expect(accountHandler.connect(other2).updateBuyer(buyer))
+          .to.emit(accountHandler, "BuyerUpdated")
+          .withArgs(buyer.id, buyerStruct);
+
+        // Attempt to update the buyer with original wallet address, expecting revert
+        await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NOT_BUYER_WALLET);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Buyer does not exist", async function () {
+          // Set invalid id
+          buyer.id = "444";
+
+          // Attempt to update the buyer, expecting revert
+          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NO_SUCH_BUYER);
+
+          // Set invalid id
+          buyer.id = "0";
+
+          // Attempt to update the buyer, expecting revert
+          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NO_SUCH_BUYER);
+        });
+
+        it("Caller is not buyer wallet address", async function () {
+          // Attempt to update the buyer, expecting revert
+          await expect(accountHandler.connect(other2).updateBuyer(buyer)).to.revertedWith(
+            RevertReasons.NOT_BUYER_WALLET
+          );
+        });
+
+        it("wallet address is the zero address", async function () {
+          buyer.wallet = ethers.constants.AddressZero;
+
+          // Attempt to update the buyer, expecting revert
+          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
+        });
+
+        it("wallet address is unique to this seller Id", async function () {
+          buyer2 = new Buyer("2", other2.address, active);
+          buyer2Struct = buyer2.toStruct();
+
+          //Create second buyer, testing for the event
+          await expect(accountHandler.connect(rando).createBuyer(buyer2))
+            .to.emit(accountHandler, "BuyerCreated")
+            .withArgs(buyer2.id, buyer2Struct);
+
+          //Set wallet address value to be same as first buyer created in Buyer Methods beforeEach
+          buyer2.wallet = other1.address; //already being used by buyer 1
+
+          // Attempt to update buyer 2 with non-unique wallet address, expecting revert
+          await expect(accountHandler.connect(other2).updateBuyer(buyer2)).to.revertedWith(
             RevertReasons.BUYER_ADDRESS_MUST_BE_UNIQUE
           );
         });
