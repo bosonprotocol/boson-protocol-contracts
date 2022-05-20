@@ -64,6 +64,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         _buyer.id = buyerId;
         storeBuyer(_buyer);
 
+        //check that the wallet address is unique to one buyer Id
+        require(protocolStorage().buyerIdByWallet[_buyer.wallet] == 0, BUYER_ADDRESS_MUST_BE_UNIQUE);
+
         //Map the buyer's wallet address to the buyerId.
         protocolStorage().buyerIdByWallet[_buyer.wallet] = buyerId;
 
@@ -151,7 +154,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         //check that the wallet address is unique to one buyer Id if new
         require(protocolStorage().buyerIdByWallet[_buyer.wallet] == 0 || 
-                protocolStorage().buyerIdByWallet[_buyer.wallet] == _buyer.id ,BUYER_ADDRESS_MUST_BE_UNIQUE);
+                protocolStorage().buyerIdByWallet[_buyer.wallet] == _buyer.id, BUYER_ADDRESS_MUST_BE_UNIQUE);
        
         //Delete current mappings
         delete protocolStorage().buyerIdByWallet[_buyer.wallet];
