@@ -14,6 +14,7 @@ Role.Names = [
   "PROTOCOL", // Role for facets of the ProtocolDiamond
   "CLIENT", // Role for clients of the ProtocolDiamond
   "UPGRADER", // Role for performing contract and config upgrades
+  "FEE_COLLECTOR", // Role for collecting fees from the protocol
 ];
 
 Role.Names.forEach((roleName) => {

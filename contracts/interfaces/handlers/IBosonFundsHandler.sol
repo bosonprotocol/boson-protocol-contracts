@@ -54,4 +54,20 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
      * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
      */
     function withdrawFunds(uint256 _entityId, address[] calldata _tokenList, uint256[] calldata _tokenAmounts) external;
+
+    /**
+     * @notice Withdraw the protocol fees
+     *
+     * Reverts if:
+     * - caller does not have the FEE_COLLECTOR role
+     * - token list length does not match amount list length
+     * - token list length exceeds the maximum allowed number of tokens
+     * - caller tries to withdraw more that they have in available funds
+     * - there is nothing to withdraw
+     * - transfer of funds is not succesful
+     *
+     * @param _tokenList - list of contract addresses of tokens that are being withdrawn
+     * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
+     */
+    function withdrawProtocolFees(address[] calldata _tokenList, uint256[] calldata _tokenAmounts) external;
 }

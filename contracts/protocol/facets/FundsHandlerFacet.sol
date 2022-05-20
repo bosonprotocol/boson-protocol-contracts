@@ -113,6 +113,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
      */
     function withdrawFunds(uint256 _entityId, address[] calldata _tokenList, uint256[] calldata _tokenAmounts) external override {
+        // address that will receive the funds
         address payable destinationAddress;
 
         // first check if the caller is a buyer
@@ -133,6 +134,46 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             }
         }
     
+        withdrawFundsInternal(destinationAddress, _entityId, _tokenList, _tokenAmounts);
+    }
+
+    /**
+     * @notice Withdraw the protocol fees
+     *
+     * Reverts if:
+     * - caller does not have the FEE_COLLECTOR role
+     * - token list length does not match amount list length
+     * - token list length exceeds the maximum allowed number of tokens
+     * - caller tries to withdraw more that they have in available funds
+     * - there is nothing to withdraw
+     * - transfer of funds is not succesful
+     *
+     * @param _tokenList - list of contract addresses of tokens that are being withdrawn
+     * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
+     */
+    function withdrawProtocolFees(address[] calldata _tokenList, uint256[] calldata _tokenAmounts) external override onlyRole(FEE_COLLECTOR) {
+        // withdraw the funds
+        withdrawFundsInternal(payable(msg.sender), 0, _tokenList, _tokenAmounts);
+    }
+
+    /**
+     * @notice Withdraw the specified funds
+     *
+     * Reverts if:
+     * - caller is not associated with the entity id
+     * - token list length does not match amount list length
+     * - token list length exceeds the maximum allowed number of tokens
+     * - caller tries to withdraw more that they have in available funds
+     * - there is nothing to withdraw
+     * - transfer of funds is not succesful
+     *
+     * @param _destinationAddress - wallet that will receive funds
+     * @param _entityId - seller or buyer id
+     * @param _tokenList - list of contract addresses of tokens that are being withdrawn
+     * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
+     */
+    function withdrawFundsInternal(address payable _destinationAddress, uint256 _entityId, address[] calldata _tokenList, uint256[] calldata _tokenAmounts) internal {
+            
         // make sure that the data is complete
         require(_tokenList.length == _tokenAmounts.length, TOKEN_AMOUNT_MISMATCH);
 
@@ -156,14 +197,15 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             for (uint i = 0; i < len; i++) {
                 // get available fnds from storage
                 uint256 availableFunds = protocolStorage().availableFunds[_entityId][tokenList[i]];
-                FundsLib.transferFundsFromProtocol(_entityId, tokenList[i], destinationAddress, availableFunds); 
+                FundsLib.transferFundsFromProtocol(_entityId, tokenList[i], _destinationAddress, availableFunds); 
             }
         } else {
             for (uint i = 0; i < _tokenList.length; i++) {
                 // make sure that at least something will be withdrawn
                 require(_tokenAmounts[i] > 0, NOTHING_TO_WITHDRAW);                
-                FundsLib.transferFundsFromProtocol(_entityId, _tokenList[i], destinationAddress, _tokenAmounts[i]); 
+                FundsLib.transferFundsFromProtocol(_entityId, _tokenList[i], _destinationAddress, _tokenAmounts[i]); 
             }
         }
     }
+    
 }

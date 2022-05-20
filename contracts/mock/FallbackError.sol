@@ -20,6 +20,17 @@ contract WithoutFallbackError {
     ) external {
         IBosonFundsHandler(_fundsHandlerAddress).withdrawFunds(_buyerId, _tokenList, _tokenAmounts);
     }
+
+    /**
+     * @notice Function to call withdrawFunds on funds handler, contract being the fee collector
+     */
+    function withdrawProtocolFees(
+        address _fundsHandlerAddress,
+        address[] calldata _tokenList,
+        uint256[] calldata _tokenAmounts
+    ) external {
+        IBosonFundsHandler(_fundsHandlerAddress).withdrawProtocolFees(_tokenList, _tokenAmounts);
+    }
 }
 
 /**
