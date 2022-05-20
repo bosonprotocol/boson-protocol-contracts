@@ -3,10 +3,14 @@ const ethers = hre.ethers;
 const { expect, assert } = require("chai");
 const { gasLimit } = require("../../environments");
 
+const Exchange = require("../../scripts/domain/Exchange");
+const ExchangeState = require("../../scripts/domain/ExchangeState");
+const MetaTxExchangeDetails = require("../../scripts/domain/MetaTxExchangeDetails");
+const MetaTxOfferDetails = require("../../scripts/domain/MetaTxOfferDetails");
+const Offer = require("../../scripts/domain/Offer");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
-const Offer = require("../../scripts/domain/Offer");
-const MetaTxOfferDetails = require("../../scripts/domain/MetaTxOfferDetails");
+const Voucher = require("../../scripts/domain/Voucher");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -32,10 +36,16 @@ describe("IBosonMetaTransactionsHandler", function () {
     support,
     result;
   let metaTransactionsHandler, nonce, functionSignature;
-  let seller, sellerId, offerId, id;
+  let seller, sellerId, offerId, id, buyerId;
   let block, blockNumber, clients;
   let bosonVoucher;
-  let validOfferDetails, offerType, metaTransactionType, customTransactionType;
+  let validOfferDetails,
+    offerType,
+    metaTransactionType,
+    metaTxExchangeType,
+    customTransactionType,
+    validExchangeDetails,
+    exchangeType;
   let offer,
     price,
     sellerDeposit,
@@ -54,6 +64,8 @@ describe("IBosonMetaTransactionsHandler", function () {
     oneMonth,
     oneWeek;
   let protocolFeePrecentage;
+  let voucher, committedDate, redeemedDate, expired;
+  let exchange, finalizedDate, state;
 
   before(async function () {
     // get interface Ids
@@ -658,6 +670,204 @@ describe("IBosonMetaTransactionsHandler", function () {
             metaTransactionsHandler.executeMetaTxCommitToOffer(operator.address, validOfferDetails, nonce, r, s, v, {
               value: price,
             })
+          ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+        });
+      });
+    });
+
+    context("👉 executeMetaTxCancelVoucher()", async function () {
+      beforeEach(async function () {
+        // Set a random nonce
+        nonce = parseInt(ethers.utils.randomBytes(8));
+
+        // Initial ids for all the things
+        id = offerId = sellerId = "1";
+        buyerId = "2"; // created after seller
+
+        // Create an offer to commit to
+        oneWeek = 604800 * 1000; //  7 days in milliseconds
+        oneMonth = 2678400 * 1000; // 31 days in milliseconds
+
+        // Get the current block info
+        blockNumber = await ethers.provider.getBlockNumber();
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Required constructor params
+        price = ethers.utils.parseUnits("1.5", "ether").toString();
+        sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
+        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+        buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
+        quantityAvailable = "1";
+        validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
+        validUntilDate = ethers.BigNumber.from(block.timestamp)
+          .add(oneMonth * 6)
+          .toString(); // until 6 months
+        redeemableFromDate = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+        fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
+        voucherValidDuration = oneMonth.toString(); // offers valid for one month
+        exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
+        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
+        voided = false;
+
+        // Create a valid seller
+        seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
+        expect(seller.isValid()).is.true;
+        await accountHandler.connect(operator).createSeller(seller);
+
+        // Create a valid offer entity
+        offer = new Offer(
+          offerId,
+          sellerId,
+          price,
+          sellerDeposit,
+          protocolFee,
+          buyerCancelPenalty,
+          quantityAvailable,
+          validFromDate,
+          validUntilDate,
+          redeemableFromDate,
+          fulfillmentPeriodDuration,
+          voucherValidDuration,
+          exchangeToken,
+          metadataUri,
+          metadataHash,
+          voided
+        );
+        expect(offer.isValid()).is.true;
+
+        // Create the offer
+        await offerHandler.connect(operator).createOffer(offer);
+
+        // Required voucher constructor params
+        committedDate = "0";
+        validUntilDate = "0";
+        redeemedDate = "0";
+        expired = false;
+        voucher = new Voucher(committedDate, validUntilDate, redeemedDate, expired);
+
+        // Required exchange constructor params
+        finalizedDate = "0";
+        state = ExchangeState.Committed;
+        exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
+
+        // Set the exchange Type
+        exchangeType = [{ name: "exchangeId", type: "uint256" }];
+
+        // Set the message Type
+        metaTxExchangeType = [
+          { name: "nonce", type: "uint256" },
+          { name: "from", type: "address" },
+          { name: "contractAddress", type: "address" },
+          { name: "functionName", type: "string" },
+          { name: "exchangeDetails", type: "MetaTxExchangeDetails" },
+        ];
+
+        customTransactionType = {
+          MetaTxExchange: metaTxExchangeType,
+          MetaTxExchangeDetails: exchangeType,
+        };
+
+        // prepare the MetaTxExchangeDetails struct
+        validExchangeDetails = new MetaTxExchangeDetails(exchange.id);
+        expect(validExchangeDetails.isValid()).is.true;
+
+        // Deposit native currency to the same seller id
+        await fundsHandler
+          .connect(rando)
+          .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
+        // Commit to offer
+        await exchangeHandler.connect(operator).commitToOffer(operator.address, offerId, { value: price });
+      });
+
+      it("Should emit MetaTransactionExecuted event", async () => {
+        // Prepare the message
+        let message = {};
+        message.nonce = parseInt(nonce);
+        message.from = operator.address;
+        message.contractAddress = exchangeHandler.address;
+        message.functionName = "cancelVoucher(uint256)";
+        message.exchangeDetails = validExchangeDetails;
+
+        // Collect the signature components
+        let { r, s, v } = await prepareDataSignatureParameters(
+          operator,
+          customTransactionType,
+          "MetaTxExchange",
+          message,
+          metaTransactionsHandler.address
+        );
+
+        // send a meta transaction, check for event
+        await expect(
+          metaTransactionsHandler.executeMetaTxCancelVoucher(operator.address, validExchangeDetails, nonce, r, s, v)
+        )
+          .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+          .withArgs(operator.address, deployer.address, message.functionName, nonce);
+
+        // Verify that nonce is used. Expect true.
+        let expectedResult = true;
+        result = await metaTransactionsHandler.connect(operator).isUsedNonce(nonce);
+        assert.equal(result, expectedResult, "Nonce is unused");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Should fail when replay transaction", async function () {
+          // Prepare the message
+          let message = {};
+          message.nonce = parseInt(nonce);
+          message.from = operator.address;
+          message.contractAddress = exchangeHandler.address;
+          message.functionName = "cancelVoucher(uint256)";
+          message.exchangeDetails = validExchangeDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            operator,
+            customTransactionType,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Execute the meta transaction.
+          await metaTransactionsHandler.executeMetaTxCancelVoucher(
+            operator.address,
+            validExchangeDetails,
+            nonce,
+            r,
+            s,
+            v
+          );
+
+          // Execute meta transaction again with the same nonce, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTxCancelVoucher(operator.address, validExchangeDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+        });
+
+        it("Should fail when Signer and Signature do not match", async function () {
+          // Prepare the message
+          let message = {};
+          message.nonce = parseInt(nonce);
+          message.from = rando.address;
+          message.contractAddress = exchangeHandler.address;
+          message.functionName = "cancelVoucher(uint256)";
+          message.exchangeDetails = validExchangeDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            rando, // Different user, not operator.
+            customTransactionType,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Execute meta transaction, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTxCancelVoucher(operator.address, validExchangeDetails, nonce, r, s, v)
           ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         });
       });

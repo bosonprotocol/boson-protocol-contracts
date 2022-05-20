@@ -673,9 +673,7 @@ describe("IBosonExchangeHandler", function () {
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Set the exchange Type
-        exchangeType = [
-          { name: "exchangeId", type: "uint256" },
-        ];
+        exchangeType = [{ name: "exchangeId", type: "uint256" }];
       });
 
       it("should emit an VoucherCanceled event when original buyer calls", async function () {
@@ -786,8 +784,16 @@ describe("IBosonExchangeHandler", function () {
           message,
           metaTransactionsHandler.address
         );
+
         // Cancel the voucher. Send as meta transaction.
-        await metaTransactionsHandler.executeMetaTxCancelVoucher(newOwner.address, validExchangeDetails, nonce, r, s, v);
+        await metaTransactionsHandler.executeMetaTxCancelVoucher(
+          newOwner.address,
+          validExchangeDetails,
+          nonce,
+          r,
+          s,
+          v
+        );
 
         // Get the exchange state
         [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -869,9 +875,9 @@ describe("IBosonExchangeHandler", function () {
           );
 
           // Attempt to cancel the voucher, expecting revert. Send as meta transaction.
-          await expect(metaTransactionsHandler.executeMetaTxCancelVoucher(buyer.address, validExchangeDetails, nonce, r, s, v)).to.revertedWith(
-            RevertReasons.NO_SUCH_EXCHANGE
-          );
+          await expect(
+            metaTransactionsHandler.executeMetaTxCancelVoucher(buyer.address, validExchangeDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
         });
 
         it("[Meta Transaction] exchange is not in committed state", async function () {
@@ -913,9 +919,9 @@ describe("IBosonExchangeHandler", function () {
           );
 
           // Attempt to cancel the voucher, expecting revert. Send as meta transaction.
-          await expect(metaTransactionsHandler.executeMetaTxCancelVoucher(buyer.address, validExchangeDetails, nonce, r, s, v)).to.revertedWith(
-            RevertReasons.INVALID_STATE
-          );
+          await expect(
+            metaTransactionsHandler.executeMetaTxCancelVoucher(buyer.address, validExchangeDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.INVALID_STATE);
         });
 
         it("[Meta Transaction] caller does not own voucher", async function () {
@@ -954,9 +960,9 @@ describe("IBosonExchangeHandler", function () {
           );
 
           // Attempt to cancel the voucher, expecting revert. Send as meta transaction.
-          await expect(metaTransactionsHandler.executeMetaTxCancelVoucher(rando.address, validExchangeDetails, nonce, r, s, v)).to.revertedWith(
-            RevertReasons.NOT_VOUCHER_HOLDER
-          );
+          await expect(
+            metaTransactionsHandler.executeMetaTxCancelVoucher(rando.address, validExchangeDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.NOT_VOUCHER_HOLDER);
         });
       });
     });
