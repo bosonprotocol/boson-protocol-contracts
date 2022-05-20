@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 jobs:
   rerun-ci:
-    if: ${{ !github.event.pull_request.draft }}
+    if: ${{ github.ref != 'refs/heads/main' }}
     uses: ./.github/workflows/ci.yaml
     secrets: inherit
 
