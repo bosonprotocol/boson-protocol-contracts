@@ -73,7 +73,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
      /**
-     * @notice Updates a seller. All fiels should be filled, even those staying the same.
+     * @notice Updates a seller. All fields should be filled, even those staying the same.
      *
      * Emits a SellerUpdated event if successful.
      *
@@ -83,7 +83,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - Caller is not the admin address of the seller
      * - Seller does not exist
      *
-     * @param _seller - the fully populated struct with seller id set to 0x0
+     * @param _seller - the fully populated seller struct
      */
     function updateSeller(Seller memory _seller)
     external
@@ -118,6 +118,50 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         // Notify watchers of state change
         emit SellerUpdated(_seller.id, _seller);
+    }
+
+    /**
+     * @notice Updates a buyer. All fields should be filled, even those staying the same.
+     *
+     * Emits a BuyerUpdated event if successful.
+     *
+     * Reverts if:
+     * - Caller is not the wallet address associated with the buyer account
+     * - Wallet address is zero address
+     * - Address is not unique to this buyer
+     * - Buyer does not exist
+     *
+     * @param _buyer - the fully populated buyer struct
+     */
+    function updateBuyer(Buyer memory _buyer) 
+    external
+    override
+    {
+        bool exists;
+        Buyer storage buyer;
+
+        //Check Buyer exists in sellers mapping
+        (exists, buyer) = fetchBuyer(_buyer.id);
+
+        //Buyer must already exist
+        require(exists, NO_SUCH_BUYER);
+
+        //Check that msg.sender is the wallet address for this buyer
+        require(buyer.wallet  == msg.sender, NOT_BUYER_WALLET); 
+
+        //check that the wallet address is unique to one buyer Id if new
+        require(protocolStorage().buyerIdByWallet[_buyer.wallet] == 0 || 
+                protocolStorage().buyerIdByWallet[_buyer.wallet] == _buyer.id ,BUYER_ADDRESS_MUST_BE_UNIQUE);
+       
+        //Delete current mappings
+        delete protocolStorage().buyerIdByWallet[_buyer.wallet];
+
+        storeBuyer(_buyer);
+        
+        // Notify watchers of state change
+        emit BuyerUpdated(_buyer.id, _buyer);
+
+        
     }
   
     /**
@@ -210,9 +254,6 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     {
         //Check for zero address
         require(_buyer.wallet != address(0), INVALID_ADDRESS);
-
-        //check that the wallet address is unique to one buyer Id
-        require(protocolStorage().buyerIdByWallet[_buyer.wallet] == 0,BUYER_ADDRESS_MUST_BE_UNIQUE);
 
         // Get storage location for buyer
         (,Buyer storage buyer) = fetchBuyer(_buyer.id);
