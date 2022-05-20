@@ -7,6 +7,7 @@ import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
+import { MetaTransactionsLib } from "../libs/MetaTransactionsLib.sol";
 
 /**
  * @title ExchangeHandlerFacet
@@ -554,9 +555,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     internal
     view
     {
-        // Get the caller's buyer account id
         uint256 buyerId;
-        (, buyerId) = getBuyerIdByWallet(msg.sender);
+
+        // Get sender of the transaction
+        address msgSender = MetaTransactionsLib.getCaller();
+
+        // Get the caller's buyer account id
+        (, buyerId) = getBuyerIdByWallet(msgSender);
 
         // Must be the buyer associated with the exchange (which is always voucher holder)
         require(buyerId == _currentBuyer, NOT_VOUCHER_HOLDER);
