@@ -9,7 +9,7 @@ exports.RevertReasons = {
 
   // General
   INVALID_ADDRESS: "Invalid address",
-  INVALID_STATE_TRANSITION: "Invalid state transition",
+  INVALID_STATE: "Invalid state",
 
   // Facet initializer related
   ALREADY_INITIALIZED: "Already initialized",
@@ -60,6 +60,7 @@ exports.RevertReasons = {
   EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS: "Exchange for the bundled offers exists",
   VOUCHER_NOT_REDEEMABLE: "Voucher not yet valid or already expired",
   VOUCHER_STILL_VALID: "Voucher still valid",
+  VOUCHER_HAS_EXPIRED: "Voucher has expired",
 
   // Funds related
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",

@@ -49,4 +49,17 @@ abstract contract ClientBase is BosonTypes, BosonConstants {
 
     }
 
+    /**
+     * @notice Inform protocol of new buyer associated with an exchange
+     *
+     * @param _exchangeId - the id of the exchange
+     * @param _newBuyer - the address of the new buyer
+     */
+    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer)
+    internal
+    {
+        ClientLib.ProxyStorage memory ps = ClientLib.proxyStorage();
+        IBosonExchangeHandler(ps.protocolDiamond).onVoucherTransferred(_exchangeId, _newBuyer);
+    }
+
 }

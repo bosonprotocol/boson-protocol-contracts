@@ -17,7 +17,7 @@ contract BosonConstants {
 
     // Revert Reasons: General
     string internal constant INVALID_ADDRESS = "Invalid address";
-    string internal constant INVALID_STATE_TRANSITION = "Invalid state transition";
+    string internal constant INVALID_STATE = "Invalid state";
 
     // Revert Reasons: Facet initializer related
     string internal constant ALREADY_INITIALIZED = "Already initialized";
@@ -61,6 +61,7 @@ contract BosonConstants {
     string internal constant FULFILLMENT_PERIOD_NOT_ELAPSED = "Fulfillment period has not yet elapsed";
     string internal constant VOUCHER_NOT_REDEEMABLE = "Voucher not yet valid or already expired";
     string internal constant VOUCHER_STILL_VALID = "Voucher still valid";
+    string internal constant VOUCHER_HAS_EXPIRED = "Voucher has expired";
 
     // Revert Reasons: Twin related
     string internal constant NO_SUCH_TWIN = "No such twin";
