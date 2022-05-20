@@ -705,6 +705,12 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration);
         // Get the struct
         exchangeStruct = exchange.toStruct();
+
+        // Set a random nonce
+        nonce = parseInt(ethers.utils.randomBytes(8));
+
+        // Set the exchange Type
+        exchangeType = [{ name: "exchangeId", type: "uint256" }];
       });
 
       it("should emit a VoucherRedeemed event when buyer calls", async function () {
@@ -727,6 +733,52 @@ describe("IBosonExchangeHandler", function () {
         // Get the exchange state
         [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
+        // It should match ExchangeState.Redeemed
+        assert.equal(response, ExchangeState.Redeemed, "Exchange state is incorrect");
+      });
+
+      it("[Meta Transaction] should emit a VoucherRedeemed event when buyer calls", async function () {
+        // Set time forward to the offer's redeemableFromDate
+        await setNextBlockTimestamp(Number(redeemableFromDate));
+
+        // prepare the MetaTxExchangeDetails struct
+        let validExchangeDetails = new MetaTxExchangeDetails(exchange.id);
+        expect(validExchangeDetails.isValid()).is.true;
+
+        const metaTxExchangeType = [
+          { name: "nonce", type: "uint256" },
+          { name: "from", type: "address" },
+          { name: "contractAddress", type: "address" },
+          { name: "functionName", type: "string" },
+          { name: "exchangeDetails", type: "MetaTxExchangeDetails" },
+        ];
+
+        const customTransactionTypes = {
+          MetaTxExchange: metaTxExchangeType,
+          MetaTxExchangeDetails: exchangeType,
+        };
+
+        // Prepare the message
+        let message = {};
+        message.nonce = parseInt(nonce);
+        message.from = buyer.address;
+        message.contractAddress = exchangeHandler.address;
+        message.functionName = "redeemVoucher(uint256)";
+        message.exchangeDetails = validExchangeDetails;
+
+        // Collect the signature components
+        let { r, s, v } = await prepareDataSignatureParameters(
+          buyer,
+          customTransactionTypes,
+          "MetaTxExchange",
+          message,
+          metaTransactionsHandler.address
+        );
+        // Redeem the voucher. Send as meta transaction.
+        await metaTransactionsHandler.executeMetaTxRedeemVoucher(buyer.address, validExchangeDetails, nonce, r, s, v);
+
+        // Get the exchange state
+        [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
         // It should match ExchangeState.Redeemed
         assert.equal(response, ExchangeState.Redeemed, "Exchange state is incorrect");
       });
@@ -783,6 +835,219 @@ describe("IBosonExchangeHandler", function () {
           await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
             RevertReasons.VOUCHER_NOT_REDEEMABLE
           );
+        });
+
+        it("[Meta Transaction] exchange id is invalid", async function () {
+          // An invalid exchange id
+          id = "666";
+
+          // prepare the MetaTxExchangeDetails struct
+          let validExchangeDetails = new MetaTxExchangeDetails(id);
+          expect(validExchangeDetails.isValid()).is.true;
+
+          const metaTxExchangeType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
+            { name: "exchangeDetails", type: "MetaTxExchangeDetails" },
+          ];
+
+          const customTransactionTypes = {
+            MetaTxExchange: metaTxExchangeType,
+            MetaTxExchangeDetails: exchangeType,
+          };
+
+          // Prepare the message
+          let message = {};
+          message.nonce = parseInt(nonce);
+          message.from = buyer.address;
+          message.contractAddress = exchangeHandler.address;
+          message.functionName = "redeemVoucher(uint256)";
+          message.exchangeDetails = validExchangeDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionTypes,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Attempt to redeem the voucher, expecting revert. Send as meta transaction.
+          await expect(
+            metaTransactionsHandler.executeMetaTxRedeemVoucher(buyer.address, validExchangeDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+        });
+
+        it("[Meta Transaction] exchange is not in committed state", async function () {
+          // Revoke the voucher
+          await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
+
+          // prepare the MetaTxExchangeDetails struct
+          let validExchangeDetails = new MetaTxExchangeDetails(exchange.id);
+          expect(validExchangeDetails.isValid()).is.true;
+
+          const metaTxExchangeType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
+            { name: "exchangeDetails", type: "MetaTxExchangeDetails" },
+          ];
+
+          const customTransactionTypes = {
+            MetaTxExchange: metaTxExchangeType,
+            MetaTxExchangeDetails: exchangeType,
+          };
+
+          // Prepare the message
+          let message = {};
+          message.nonce = parseInt(nonce);
+          message.from = buyer.address;
+          message.contractAddress = exchangeHandler.address;
+          message.functionName = "redeemVoucher(uint256)";
+          message.exchangeDetails = validExchangeDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionTypes,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Attempt to redeem the voucher, expecting revert. Send as meta transaction.
+          await expect(
+            metaTransactionsHandler.executeMetaTxRedeemVoucher(buyer.address, validExchangeDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.INVALID_STATE);
+        });
+
+        it("[Meta Transaction] caller does not own voucher", async function () {
+          // prepare the MetaTxExchangeDetails struct
+          let validExchangeDetails = new MetaTxExchangeDetails(exchange.id);
+          expect(validExchangeDetails.isValid()).is.true;
+
+          const metaTxExchangeType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
+            { name: "exchangeDetails", type: "MetaTxExchangeDetails" },
+          ];
+
+          const customTransactionTypes = {
+            MetaTxExchange: metaTxExchangeType,
+            MetaTxExchangeDetails: exchangeType,
+          };
+
+          // Prepare the message
+          let message = {};
+          message.nonce = parseInt(nonce);
+          message.from = rando.address;
+          message.contractAddress = exchangeHandler.address;
+          message.functionName = "redeemVoucher(uint256)";
+          message.exchangeDetails = validExchangeDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            rando,
+            customTransactionTypes,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Attempt to redeem the voucher, expecting revert. Send as meta transaction.
+          await expect(
+            metaTransactionsHandler.executeMetaTxRedeemVoucher(rando.address, validExchangeDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.NOT_VOUCHER_HOLDER);
+        });
+
+        it("[Meta Transaction] current time is prior to offer's redeemableFromDate", async function () {
+          // prepare the MetaTxExchangeDetails struct
+          let validExchangeDetails = new MetaTxExchangeDetails(exchange.id);
+          expect(validExchangeDetails.isValid()).is.true;
+
+          const metaTxExchangeType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
+            { name: "exchangeDetails", type: "MetaTxExchangeDetails" },
+          ];
+
+          const customTransactionTypes = {
+            MetaTxExchange: metaTxExchangeType,
+            MetaTxExchangeDetails: exchangeType,
+          };
+
+          // Prepare the message
+          let message = {};
+          message.nonce = parseInt(nonce);
+          message.from = buyer.address;
+          message.contractAddress = exchangeHandler.address;
+          message.functionName = "redeemVoucher(uint256)";
+          message.exchangeDetails = validExchangeDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionTypes,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+          // Attempt to redeem the voucher, expecting revert. Send as meta transaction.
+          await expect(
+            metaTransactionsHandler.executeMetaTxRedeemVoucher(buyer.address, validExchangeDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.VOUCHER_NOT_REDEEMABLE);
+        });
+
+        it("[Meta Transaction] current time is after to voucher's validUntilDate", async function () {
+          // Set time forward past the voucher's validUntilDate
+          await setNextBlockTimestamp(Number(redeemableFromDate) + Number(voucherValidDuration) + Number(oneWeek));
+
+          // prepare the MetaTxExchangeDetails struct
+          let validExchangeDetails = new MetaTxExchangeDetails(exchange.id);
+          expect(validExchangeDetails.isValid()).is.true;
+
+          const metaTxExchangeType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
+            { name: "exchangeDetails", type: "MetaTxExchangeDetails" },
+          ];
+
+          const customTransactionTypes = {
+            MetaTxExchange: metaTxExchangeType,
+            MetaTxExchangeDetails: exchangeType,
+          };
+
+          // Prepare the message
+          let message = {};
+          message.nonce = parseInt(nonce);
+          message.from = buyer.address;
+          message.contractAddress = exchangeHandler.address;
+          message.functionName = "redeemVoucher(uint256)";
+          message.exchangeDetails = validExchangeDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionTypes,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Attempt to redeem the voucher, expecting revert. Send as meta transaction.
+          await expect(
+            metaTransactionsHandler.executeMetaTxRedeemVoucher(buyer.address, validExchangeDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.VOUCHER_NOT_REDEEMABLE);
         });
       });
     });
