@@ -106,7 +106,7 @@ describe("IBosonAccountHandler", function () {
     });
 
     context("👉 createSeller()", async function () {
-      it("should emit a SellerCreated event", async function () {
+      it.only("should emit a SellerCreated event", async function () {
         // Create a seller, testing for the event
         await expect(accountHandler.connect(admin).createSeller(seller))
           .to.emit(accountHandler, "SellerCreated")
