@@ -62,6 +62,7 @@ describe("IBosonFundsHandler", function () {
     expectedBuyerAvailableFunds,
     expectedProtocolAvailableFunds;
   let disputeId, buyerPercentage;
+  let tokenListSeller, tokenListBuyer, tokenAmountsSeller, tokenAmountsBuyer, tokenList, tokenAmounts;
 
   before(async function () {
     // get interface Ids
@@ -109,6 +110,7 @@ describe("IBosonFundsHandler", function () {
       "0x0000000000000000000000000000000000000000",
       bosonVoucher.address,
       protocolFeePrecentage,
+      "100",
       "100",
       "100",
       "100",
@@ -319,6 +321,493 @@ describe("IBosonFundsHandler", function () {
           new Funds(mockToken.address, "Token name unspecified", depositAmount),
         ]);
         expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
+      });
+    });
+
+    context("👉 withdrawFunds()", async function () {
+      beforeEach(async function () {
+        // Initial ids for all the things
+        id = offerId = sellerId = exchangeId = "1";
+        buyerId = "2";
+
+        // Create an offer to commit to
+        oneWeek = 604800 * 1000; //  7 days in milliseconds
+        oneMonth = 2678400 * 1000; // 31 days in milliseconds
+
+        // Get the current block info
+        blockNumber = await ethers.provider.getBlockNumber();
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Required constructor params
+        price = ethers.utils.parseUnits("1.5", "ether").toString();
+        sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
+        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+        buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
+        quantityAvailable = "2";
+        validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
+        validUntilDate = ethers.BigNumber.from(block.timestamp)
+          .add(oneMonth * 6)
+          .toString(); // until 6 months
+        redeemableFromDate = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+        fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
+        voucherValidDuration = oneMonth.toString(); // offers valid for one month
+        exchangeToken = mockToken.address; // Zero addy ~ chain base currency
+        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
+        voided = false;
+
+        // Create a valid offer entity
+        offerToken = new Offer(
+          offerId,
+          sellerId,
+          price,
+          sellerDeposit,
+          protocolFee,
+          buyerCancelPenalty,
+          quantityAvailable,
+          validFromDate,
+          validUntilDate,
+          redeemableFromDate,
+          fulfillmentPeriodDuration,
+          voucherValidDuration,
+          exchangeToken,
+          metadataUri,
+          metadataHash,
+          voided
+        );
+        expect(offerToken.isValid()).is.true;
+
+        offerNative = offerToken.clone();
+        offerNative.id = "2";
+        offerNative.exchangeToken = ethers.constants.AddressZero;
+        expect(offerNative.isValid()).is.true;
+
+        // Create both offers
+        await offerHandler.connect(operator).createOffer(offerToken);
+        await offerHandler.connect(operator).createOffer(offerNative);
+
+        // top up seller's and buyer's account
+        await mockToken.mint(operator.address, sellerDeposit);
+        await mockToken.mint(buyer.address, price);
+
+        // approve protocol to transfer the tokens
+        await mockToken.connect(operator).approve(protocolDiamond.address, sellerDeposit);
+        await mockToken.connect(buyer).approve(protocolDiamond.address, price);
+
+        // deposit to seller's pool
+        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, sellerDeposit);
+        await fundsHandler.connect(operator).depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, {
+          value: sellerDeposit,
+        });
+
+        // commit to both offers
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: offerNative.price });
+
+        // cancel the voucher, so both seller and buyer have something to withdraw
+        await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
+        await exchangeHandler.connect(buyer).cancelVoucher(++exchangeId); // canceling the voucher in the native currency
+
+        // expected payoffs - they are the same for token and native currency
+        // buyer: price - buyerCancelPenalty - protocolFee
+        buyerPayoff = ethers.BigNumber.from(offerToken.price)
+          .sub(offerToken.buyerCancelPenalty)
+          .sub(offerToken.protocolFee)
+          .toString();
+
+        // seller: sellerDeposit + buyerCancelPenalty
+        sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit).add(offerToken.buyerCancelPenalty).toString();
+      });
+
+      it("should emit a FundsWithdrawn event", async function () {
+        // Withdraw funds, testing for the event
+        // Withdraw token
+        tokenListSeller = [mockToken.address, ethers.constants.AddressZero];
+        tokenListBuyer = [ethers.constants.AddressZero, mockToken.address];
+
+        tokenAmountsSeller = [sellerPayoff, ethers.BigNumber.from(sellerPayoff).div("2").toString()];
+        tokenAmountsBuyer = [buyerPayoff, ethers.BigNumber.from(buyerPayoff).div("5").toString()];
+
+        // seller withdrawal
+        await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, tokenListSeller, tokenAmountsSeller))
+          .to.emit(fundsHandler, "FundsWithdrawn")
+          .withArgs(sellerId, treasury.address, mockToken.address, sellerPayoff)
+          .to.emit(fundsHandler, "FundsWithdrawn")
+          .withArgs(sellerId, treasury.address, ethers.constants.Zero, ethers.BigNumber.from(sellerPayoff).div("2"));
+
+        // buyer withdrawal
+        await expect(fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer))
+          .to.emit(fundsHandler, "FundsWithdrawn")
+          .withArgs(buyerId, buyer.address, mockToken.address, ethers.BigNumber.from(buyerPayoff).div("5"))
+          .to.emit(fundsHandler, "FundsWithdrawn")
+          .withArgs(buyerId, buyer.address, ethers.constants.Zero, buyerPayoff);
+      });
+
+      it("should update state", async function () {
+        // WITHDRAW ONE TOKEN PARTIALLY
+
+        // Read on chain state
+        sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        const treasuryBalanceBefore = await ethers.provider.getBalance(treasury.address);
+
+        // Chain state should match the expected available funds before the withdrawal
+        expectedSellerAvailableFunds = new FundsList([
+          new Funds(mockToken.address, "Foreign20", sellerPayoff),
+          new Funds(ethers.constants.AddressZero, "Native currency", sellerPayoff),
+        ]);
+        expect(sellersAvailableFunds).to.eql(
+          expectedSellerAvailableFunds,
+          "Seller available funds mismatch before withdrawal"
+        );
+
+        // withdraw funds
+        const withdrawAmount = ethers.BigNumber.from(sellerPayoff)
+          .sub(ethers.utils.parseUnits("0.1", "ether"))
+          .toString();
+        await fundsHandler.connect(clerk).withdrawFunds(sellerId, [ethers.constants.AddressZero], [withdrawAmount]);
+
+        // Read on chain state
+        sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        const treasuryBalanceAfter = await ethers.provider.getBalance(treasury.address);
+
+        // Chain state should match the expected available funds after the withdrawal
+        // Native currency available funds are reduced for the withdrawal amount
+        expectedSellerAvailableFunds.funds[1] = new Funds(
+          ethers.constants.AddressZero,
+          "Native currency",
+          ethers.BigNumber.from(sellerPayoff).sub(withdrawAmount).toString()
+        );
+        expect(sellersAvailableFunds).to.eql(
+          expectedSellerAvailableFunds,
+          "Seller available funds mismatch after withdrawal"
+        );
+        // Native currency balance is increased for the withdrawAmount
+        expect(treasuryBalanceAfter).to.eql(
+          treasuryBalanceBefore.add(withdrawAmount),
+          "Treasury token balance mismatch"
+        );
+
+        // WITHDRAW ONE TOKEN FULLY
+
+        // Read on chain state
+        buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
+        const buyerBalanceBefore = await mockToken.balanceOf(buyer.address);
+
+        // Chain state should match the expected available funds before the withdrawal
+        expectedBuyerAvailableFunds = new FundsList([
+          new Funds(mockToken.address, "Foreign20", buyerPayoff),
+          new Funds(ethers.constants.AddressZero, "Native currency", buyerPayoff),
+        ]);
+        expect(buyerAvailableFunds).to.eql(
+          expectedBuyerAvailableFunds,
+          "Buyer available funds mismatch before withdrawal"
+        );
+
+        // withdraw funds
+        await fundsHandler.connect(buyer).withdrawFunds(buyerId, [mockToken.address], [buyerPayoff]);
+
+        // Read on chain state
+        buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
+        const buyerBalanceAfter = await mockToken.balanceOf(buyer.address);
+
+        // Chain state should match the expected available funds after the withdrawal
+        // Since all tokens are withdrawn, token should be removed from the list
+        expectedBuyerAvailableFunds = new FundsList([
+          new Funds(ethers.constants.AddressZero, "Native currency", buyerPayoff),
+        ]);
+        expect(buyerAvailableFunds).to.eql(
+          expectedBuyerAvailableFunds,
+          "Buyer available funds mismatch after withdrawal"
+        );
+        // Token balance is increased for the buyer payoff
+        expect(buyerBalanceAfter).to.eql(buyerBalanceBefore.add(buyerPayoff), "Buyer token balance mismatch");
+      });
+
+      it("should allow to withdraw all funds at once", async function () {
+        // Read on chain state
+        sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        const treasuryNativeBalanceBefore = await ethers.provider.getBalance(treasury.address);
+        const treasuryTokenBalanceBefore = await mockToken.balanceOf(treasury.address);
+
+        // Chain state should match the expected available funds before the withdrawal
+        expectedSellerAvailableFunds = new FundsList([
+          new Funds(mockToken.address, "Foreign20", sellerPayoff),
+          new Funds(ethers.constants.AddressZero, "Native currency", sellerPayoff),
+        ]);
+        expect(sellersAvailableFunds).to.eql(
+          expectedSellerAvailableFunds,
+          "Seller available funds mismatch before withdrawal"
+        );
+
+        // withdraw all funds
+        await fundsHandler.connect(clerk).withdrawFunds(sellerId, [], []);
+
+        // Read on chain state
+        sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        const treasuryNativeBalanceAfter = await ethers.provider.getBalance(treasury.address);
+        const treasuryTokenBalanceAfter = await mockToken.balanceOf(treasury.address);
+
+        // Chain state should match the expected available funds after the withdrawal
+        // Funds available should be an empty list
+        expectedSellerAvailableFunds = new FundsList([]);
+        expect(sellersAvailableFunds).to.eql(
+          expectedSellerAvailableFunds,
+          "Seller available funds mismatch after withdrawal"
+        );
+        // Native currency balance is increased for the withdrawAmount
+        expect(treasuryNativeBalanceAfter).to.eql(
+          treasuryNativeBalanceBefore.add(sellerPayoff),
+          "Treasury token balance mismatch"
+        );
+        expect(treasuryTokenBalanceAfter).to.eql(
+          treasuryTokenBalanceBefore.add(sellerPayoff),
+          "Treasury native currency balance mismatch"
+        );
+      });
+
+      it("if user has more different tokens than maximum number allowed to withdraw, only part of it is withdrawn", async function () {
+        // set maximum tokens per withdraw to 1
+        configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
+        await configHandler.connect(deployer).setMaxTokensPerWithdrawal("1");
+
+        // Read on chain state
+        sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        const treasuryNativeBalanceBefore = await ethers.provider.getBalance(treasury.address);
+        const treasuryTokenBalanceBefore = await mockToken.balanceOf(treasury.address);
+
+        // Chain state should match the expected available funds before the withdrawal
+        expectedSellerAvailableFunds = new FundsList([
+          new Funds(mockToken.address, "Foreign20", sellerPayoff),
+          new Funds(ethers.constants.AddressZero, "Native currency", sellerPayoff),
+        ]);
+        expect(sellersAvailableFunds).to.eql(
+          expectedSellerAvailableFunds,
+          "Seller available funds mismatch before withdrawal"
+        );
+
+        // withdraw all funds
+        await fundsHandler.connect(clerk).withdrawFunds(sellerId, [], []);
+
+        // Read on chain state
+        sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        let treasuryNativeBalanceAfter = await ethers.provider.getBalance(treasury.address);
+        const treasuryTokenBalanceAfter = await mockToken.balanceOf(treasury.address);
+
+        // Chain state should match the expected available funds after the withdrawal
+        // Funds available should still have the entries from above the threshold
+        expectedSellerAvailableFunds = new FundsList([
+          new Funds(ethers.constants.AddressZero, "Native currency", sellerPayoff),
+        ]);
+        expect(sellersAvailableFunds).to.eql(
+          expectedSellerAvailableFunds,
+          "Seller available funds mismatch after first withdrawal"
+        );
+        // Token balance is increased for sellerPayoff, while native currency balance remains the same
+        expect(treasuryNativeBalanceAfter).to.eql(
+          treasuryNativeBalanceBefore,
+          "Treasury token balance mismatch after first withdrawal"
+        );
+        expect(treasuryTokenBalanceAfter).to.eql(
+          treasuryTokenBalanceBefore.add(sellerPayoff),
+          "Treasury native currency balance mismatch after first withdrawal"
+        );
+
+        // withdraw all funds again
+        await fundsHandler.connect(clerk).withdrawFunds(sellerId, [], []);
+
+        // Read on chain state
+        sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        treasuryNativeBalanceAfter = await ethers.provider.getBalance(treasury.address);
+
+        // Chain state should match the expected available funds after the withdrawal
+        // Funds available should now be an empty list
+        expectedSellerAvailableFunds = new FundsList([]);
+        expect(sellersAvailableFunds).to.eql(
+          expectedSellerAvailableFunds,
+          "Seller available funds mismatch after second withdrawal"
+        );
+        // Native currency balance is increased for the withdrawAmount
+        expect(treasuryNativeBalanceAfter).to.eql(
+          treasuryNativeBalanceBefore.add(sellerPayoff),
+          "Treasury token balance mismatch after second withdrawal"
+        );
+      });
+
+      it("It's possible to withdraw same toke twice if in total enough available funds", async function () {
+        let reduction = ethers.utils.parseUnits("0.1", "ether").toString();
+        // Withdraw token
+        tokenListSeller = [mockToken.address, mockToken.address];
+        tokenAmountsSeller = [ethers.BigNumber.from(sellerPayoff).sub(reduction).toString(), reduction];
+
+        // seller withdrawal
+        await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, tokenListSeller, tokenAmountsSeller))
+          .to.emit(fundsHandler, "FundsWithdrawn")
+          .withArgs(sellerId, treasury.address, mockToken.address, sellerPayoff)
+          .to.emit(fundsHandler, "FundsWithdrawn")
+          .withArgs(sellerId, treasury.address, mockToken.address, reduction);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Caller is not authorized to withdraw", async function () {
+          // Attempt to withdraw the buyer funds, expecting revert
+          await expect(fundsHandler.connect(rando).withdrawFunds(buyerId, [], [])).to.revertedWith(
+            RevertReasons.NOT_AUTHORIZED
+          );
+
+          // Attempt to withdraw the seller funds, expecting revert
+          await expect(fundsHandler.connect(rando).withdrawFunds(sellerId, [], [])).to.revertedWith(
+            RevertReasons.NOT_AUTHORIZED
+          );
+
+          // not even the admin, operator or trasuary are allowed to withdraw
+          // Attempt to withdraw the seller funds as admin, expecting revert
+          await expect(fundsHandler.connect(admin).withdrawFunds(sellerId, [], [])).to.revertedWith(
+            RevertReasons.NOT_AUTHORIZED
+          );
+
+          // Attempt to withdraw the seller funds as operator, expecting revert
+          await expect(fundsHandler.connect(operator).withdrawFunds(sellerId, [], [])).to.revertedWith(
+            RevertReasons.NOT_AUTHORIZED
+          );
+
+          // Attempt to withdraw the seller funds as treasury, expecting revert
+          await expect(fundsHandler.connect(treasury).withdrawFunds(sellerId, [], [])).to.revertedWith(
+            RevertReasons.NOT_AUTHORIZED
+          );
+        });
+
+        it("Token list address does not match token amount address", async function () {
+          // Withdraw token
+          tokenList = [mockToken.address, ethers.constants.AddressZero];
+          tokenAmounts = [sellerPayoff];
+
+          // Attempt to withdraw the funds, expecting revert
+          await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, tokenList, tokenAmounts)).to.revertedWith(
+            RevertReasons.TOKEN_AMOUNT_MISMATCH
+          );
+        });
+
+        it("Caller wants to withdraw more different tokens than allowed", async function () {
+          tokenList = new Array(101).fill(ethers.constants.AddressZero);
+          tokenAmounts = new Array(101).fill("1");
+
+          // Attempt to withdraw the funds, expecting revert
+          await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, tokenList, tokenAmounts)).to.revertedWith(
+            RevertReasons.TOO_MANY_TOKENS
+          );
+        });
+
+        it("Caller tries to withdraw more than they have in the available funds", async function () {
+          // Withdraw token
+          tokenList = [mockToken.address];
+          tokenAmounts = [ethers.BigNumber.from(sellerPayoff).mul("2")];
+
+          // Attempt to withdraw the funds, expecting revert
+          await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, tokenList, tokenAmounts)).to.revertedWith(
+            RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS
+          );
+        });
+
+        it("Caller tries to withdraw the same token twice", async function () {
+          // Withdraw token
+          tokenList = [mockToken.address, mockToken.address];
+          tokenAmounts = [sellerPayoff, sellerPayoff];
+
+          // Attempt to withdraw the funds, expecting revert
+          await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, tokenList, tokenAmounts)).to.revertedWith(
+            RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS
+          );
+        });
+
+        it("Nothing to withdraw", async function () {
+          // Withdraw token
+          tokenList = [mockToken.address];
+          tokenAmounts = ["0"];
+
+          await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, tokenList, tokenAmounts)).to.revertedWith(
+            RevertReasons.NOTHING_TO_WITHDRAW
+          );
+
+          // first withdraw everything
+          await fundsHandler.connect(clerk).withdrawFunds(sellerId, [], []);
+
+          // Attempt to withdraw the funds, expecting revert
+          await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, [], [])).to.revertedWith(
+            RevertReasons.NOTHING_TO_WITHDRAW
+          );
+        });
+
+        it("Transfer of funds failed - revert in fallback", async function () {
+          // deploy a contract that cannot receive funds
+          const [fallbackErrorContract] = await deployMockTokens(gasLimit, ["FallbackError"]);
+
+          // commit to offer on behalf of some contract
+          const tx = await exchangeHandler
+            .connect(buyer)
+            .commitToOffer(fallbackErrorContract.address, offerNative.id, { value: price });
+          const txReceipt = await tx.wait();
+          const event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+          exchangeId = event.exchangeId;
+          const fallbackContractBuyerId = event.buyerId;
+
+          // revoke the voucher so the contract gets credited some funds
+          await exchangeHandler.connect(operator).revokeVoucher(exchangeId);
+
+          // we call a fallbackContract which calls fundsHandler.withdraw, which should revert
+          await expect(
+            fallbackErrorContract.withdrawFunds(
+              fundsHandler.address,
+              fallbackContractBuyerId,
+              [ethers.constants.AddressZero],
+              [offerNative.price]
+            ) // during the revoke it's released more than offerToken.price
+          ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
+        });
+
+        it("Transfer of funds failed - no payable fallback or receive", async function () {
+          // deploy a contract that cannot receive funds
+          const [fallbackErrorContract] = await deployMockTokens(gasLimit, ["WithoutFallbackError"]);
+
+          // commit to offer on behalf of some contract
+          const tx = await exchangeHandler
+            .connect(buyer)
+            .commitToOffer(fallbackErrorContract.address, offerNative.id, { value: price });
+          const txReceipt = await tx.wait();
+          const event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+          exchangeId = event.exchangeId;
+          const fallbackContractBuyerId = event.buyerId;
+
+          // revoke the voucher so the contract gets credited some funds
+          await exchangeHandler.connect(operator).revokeVoucher(exchangeId);
+
+          // we call a fallbackContract which calls fundsHandler.withdraw, which should revert
+          await expect(
+            fallbackErrorContract.withdrawFunds(
+              fundsHandler.address,
+              fallbackContractBuyerId,
+              [ethers.constants.AddressZero],
+              [offerNative.price]
+            ) // during the revoke it's released more than offerToken.price
+          ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
+        });
+
+        it("Transfer of funds failed - ERC20 token does not exist anymore", async function () {
+          // destruct mockToken
+          await mockToken.destruct();
+
+          await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, [], [])).to.revertedWith(
+            RevertReasons.EOA_FUNCTION_CALL
+          );
+        });
+
+        it("Transfer of funds failed - revert durin ERC20 transfer", async function () {
+          // pause mockToken
+          await mockToken.pause();
+
+          await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, [], [])).to.revertedWith(
+            RevertReasons.ERC20_PAUSED
+          );
+        });
       });
     });
   });
@@ -610,7 +1099,9 @@ describe("IBosonFundsHandler", function () {
           await offerHandler.connect(operator).createOffer(offerToken);
 
           // Attempt to commit to an offer, expecting revert
-          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith("");
+          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
+            RevertReasons.EOA_FUNCTION_CALL
+          );
         });
 
         it("Token contract revert for another reason", async function () {

@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {BosonTypes} from "../../domain/BosonTypes.sol";
 import {IBosonFundsEvents} from "../events/IBosonFundsEvents.sol";
+import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
 
 /**
  * @title IBosonFundsHandler
@@ -11,7 +12,7 @@ import {IBosonFundsEvents} from "../events/IBosonFundsEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0x096fc4d4
  */
-interface IBosonFundsHandler is IBosonFundsEvents {
+interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
 
     /**
      * @notice Receives funds from the caller and stores it to the seller id, so they can be used during the commitToOffer

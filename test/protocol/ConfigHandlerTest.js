@@ -55,7 +55,7 @@ describe("IBosonConfigHandler", function () {
       maxTwinsPerBundle,
       maxOffersPerBundle,
       maxOffersPerBatch,
-      maxTokensPerWithdrawal
+      maxTokensPerWithdrawal,
     ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 

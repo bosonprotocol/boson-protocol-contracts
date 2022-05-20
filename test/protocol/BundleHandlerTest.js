@@ -123,7 +123,7 @@ describe("IBosonBundleHandler", function () {
       "100",
       "100",
       "100",
-      "100"
+      "100",
     ];
 
     // Deploy the Config facet, initializing the protocol config

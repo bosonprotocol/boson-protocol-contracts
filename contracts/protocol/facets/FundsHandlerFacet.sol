@@ -138,8 +138,9 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
 
         // limit maximum number of tokens to avoid running into block gas limit in a loop
         uint maxTokensPerWithdrawal = protocolStorage().maxTokensPerWithdrawal;
-        require(_tokenList.length <= protocolStorage().maxTokensPerWithdrawal, TOO_MANY_TOKENS);
+        require(_tokenList.length <= maxTokensPerWithdrawal, TOO_MANY_TOKENS);
 
+        // two possible options: withdraw all, or withdraw only specified tokens and amounts
         if (_tokenList.length == 0) {
             // withdraw everything
             
@@ -160,7 +161,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         } else {
             for (uint i = 0; i < _tokenList.length; i++) {
                 // make sure that at least something will be withdrawn
-                require(_tokenAmounts[i] == 0, NOTHING_TO_WITHDRAW);                
+                require(_tokenAmounts[i] > 0, NOTHING_TO_WITHDRAW);                
                 FundsLib.transferFundsFromProtocol(_entityId, _tokenList[i], destinationAddress, _tokenAmounts[i]); 
             }
         }
