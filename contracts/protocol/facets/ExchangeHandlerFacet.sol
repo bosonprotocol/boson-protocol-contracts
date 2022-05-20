@@ -555,12 +555,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     internal
     view
     {
-        uint256 buyerId;
-
         // Get sender of the transaction
         address msgSender = MetaTransactionsLib.getCaller();
 
         // Get the caller's buyer account id
+        uint256 buyerId;
         (, buyerId) = getBuyerIdByWallet(msgSender);
 
         // Must be the buyer associated with the exchange (which is always voucher holder)
