@@ -863,7 +863,6 @@ describe("IBosonExchangeHandler", function () {
 
         // Update the validUntilDate date in the expected exchange struct
         exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration);
-
         // Get the struct
         exchangeStruct = exchange.toStruct();
       });

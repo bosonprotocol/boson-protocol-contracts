@@ -13,9 +13,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  */
 library FundsLib {
     event FundsEncumbered(uint256 indexed entityId, address indexed exchangeToken, uint256 amount);
+    event FundsReleased(uint256 indexed exchangeId, uint256 indexed entityId, address indexed exchangeToken, uint256 amount);
+    event ExchangeFee(uint256 indexed exchangeId, address indexed exchangeToken, uint256 amount);
     
     /**
-     * @notice Takes in the exchange id and encumbers buyer's and seller's funds during the commitToOffer
+     * @notice Takes in the offer id and buyer id and encumbers buyer's and seller's funds during the commitToOffer
      *
      * Reverts if:
      * - offer price is in native token and buyer caller does not send enough
@@ -31,7 +33,7 @@ library FundsLib {
         ProtocolLib.ProtocolStorage storage ps = ProtocolLib.protocolStorage();
 
         // fetch offer to get the exchange token, price and seller 
-        // this will be called only from commitToOffer so we expect that exchange and consequently the offer actually exist
+        // this will be called only from commitToOffer so we expect that exchange actually exist
         BosonTypes.Offer storage offer = ps.offers[_offerId];
         address exchangeToken = offer.exchangeToken;
         uint256 price = offer.price;
@@ -70,6 +72,104 @@ library FundsLib {
         emit FundsEncumbered(_buyerId, exchangeToken, price);
         emit FundsEncumbered(sellerId, exchangeToken, sellerDeposit);
     }
+
+    /**
+     * @notice Takes in the exchange id and releases the funds to buyer and seller, depending on the state of the exchange.
+     * It is called only from finalizeExchange and ?? finalizeDispute ?? // TODO: update description whne dispute functions are done
+     *
+     * @param _exchangeId - exchange id
+     */
+    function releaseFunds(uint256 _exchangeId) internal {
+        // Load protocol storage
+        ProtocolLib.ProtocolStorage storage ps = ProtocolLib.protocolStorage();
+
+        // Get the exchange and its state
+        // Since this should be called only from certain functions from exchangeHandler and disputeHandler
+        // exhange must exist and be in a completed state, so that's not checked explicitly
+        BosonTypes.Exchange storage exchange = ps.exchanges[_exchangeId];
+        BosonTypes.ExchangeState exchangeState = exchange.state;
+
+        // Get offer from storage to get the details about sellerDeposit, price, sellerId, exchangeToken and buyerCancelPenalty
+        BosonTypes.Offer storage offer = ps.offers[exchange.offerId];
+        uint256 sellerDeposit = offer.sellerDeposit;
+        uint256 price = offer.price;
+
+        // sum of price and sellerDeposit occurs multiple times
+        uint256 pot = price + sellerDeposit;
+
+        // retrieve protocol fee
+        uint256 protocolFee = offer.protocolFee;
+
+        // calculate the payoffs depending on state exchange is in
+        uint256 sellerPayoff;
+        uint256 buyerPayoff;
+
+        if (exchangeState == BosonTypes.ExchangeState.Completed) {
+            // COMPLETED
+            // buyerPayoff is 0
+            sellerPayoff = pot - protocolFee;
+        } else if (exchangeState == BosonTypes.ExchangeState.Revoked) {
+            // REVOKED
+            // sellerPayoff is 0
+            buyerPayoff = pot - protocolFee;
+        } else if (exchangeState == BosonTypes.ExchangeState.Canceled) {
+            // CANCELED
+            uint256 buyerCancelPenalty = offer.buyerCancelPenalty;
+            sellerPayoff = sellerDeposit + buyerCancelPenalty;
+            buyerPayoff = price - buyerCancelPenalty - protocolFee;
+        } else  {
+            // DISPUTED
+            // get the information about the dispute, which must exist
+            BosonTypes.Dispute storage dispute = ps.disputes[_exchangeId];
+            BosonTypes.DisputeState disputeState = dispute.state;
+
+            if (disputeState == BosonTypes.DisputeState.Retracted) {
+                // RETRACTED - same as "COMPLETED"
+                // buyerPayoff is 0
+                sellerPayoff = pot - protocolFee;
+            } else {
+                // RESOLVED or DECIDED
+                uint256 buyerPercent = dispute.resolution.buyerPercent;
+                buyerPayoff = pot * buyerPercent/10000;
+                sellerPayoff = pot - buyerPayoff - protocolFee;
+            }           
+        }  
+
+        // Store payoffs to availablefunds
+        address exchangeToken = offer.exchangeToken;
+        uint256 sellerId = offer.sellerId;
+        uint256 buyerId = exchange.buyerId;
+        if (sellerPayoff > 0) increaseAvailableFunds(sellerId, exchangeToken, sellerPayoff);
+        if (buyerPayoff > 0) increaseAvailableFunds(buyerId, exchangeToken, buyerPayoff);
+        if (protocolFee > 0) increaseAvailableFunds(0, exchangeToken, protocolFee);       
+                
+        // Notify the external observers
+        emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff);
+        emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff);
+        emit ExchangeFee(_exchangeId, exchangeToken, protocolFee);
+    }
+
+
+    /**
+     * @notice Increases the amount, availabe to withdraw or use as a seller deposit
+     *
+     * @param _entityId - seller or buyer id, or 0 for protocol
+     * @param _tokenAddress - funds contract address or zero address for native currency
+     * @param _amount - amount to be credited
+     */
+
+    function increaseAvailableFunds(uint256 _entityId, address _tokenAddress, uint256 _amount) internal {
+        ProtocolLib.ProtocolStorage storage ps = ProtocolLib.protocolStorage();
+
+        // if the current amount of token is 0, the token address must be added to the token list
+        if (ps.availableFunds[_entityId][_tokenAddress] == 0) {
+            ps.tokenList[_entityId].push(_tokenAddress);
+        }
+
+        // update the available funds
+        ps.availableFunds[_entityId][_tokenAddress] += _amount;
+    }
+
 
     /**
      * @notice Tries to transfer tokens from the caller to the protocol

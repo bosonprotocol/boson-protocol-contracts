@@ -56,15 +56,8 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             FundsLib.transferFundsToProtocol(_tokenAddress, _amount);
         }
 
-        ProtocolLib.ProtocolStorage storage ps = protocolStorage();
-
-        // if the current amount of token is 0, the token address must be added to the token list
-        if (ps.availableFunds[_sellerId][_tokenAddress] == 0) {
-            ps.tokenList[_sellerId].push(_tokenAddress);
-        }
-
-        // update the available funds
-        ps.availableFunds[_sellerId][_tokenAddress] += _amount;
+        // increase available funds
+        FundsLib.increaseAvailableFunds(_sellerId, _tokenAddress, _amount);
 
         emit FundsDeposited(_sellerId, msg.sender, _tokenAddress, _amount);              
     }

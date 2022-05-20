@@ -245,6 +245,23 @@ describe("IBosonOfferHandler", function () {
           .withArgs(nextOfferId, sellerId, offerStruct);
       });
 
+      it("after the protocol fee changes, new offers should have the new fee", async function () {
+        // Cast Diamond to IBosonConfigHandler
+        const configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
+
+        // set the new procol fee
+        protocolFeePrecentage = "300"; // 3%
+        await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePrecentage);
+
+        offer.id = await offerHandler.getNextOfferId();
+        offer.protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+
+        // Create a new offer
+        await expect(offerHandler.connect(operator).createOffer(offer))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(nextOfferId, offer.sellerId, offer.toStruct());
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
