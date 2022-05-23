@@ -804,7 +804,7 @@ describe("IBosonAccountHandler", function () {
           .withArgs(buyer.id, buyerStruct);
       });
 
-      it("should emit a BuerUpdated event with correct values if values stay the same", async function () {
+      it("should emit a BuyerUpdated event with correct values if values stay the same", async function () {
         //Update a buyer, testing for the event
         await expect(accountHandler.connect(other1).updateBuyer(buyer))
           .to.emit(accountHandler, "BuyerUpdated")
