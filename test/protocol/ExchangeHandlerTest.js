@@ -58,7 +58,7 @@ describe("IBosonExchangeHandler", function () {
     voided;
   let protocolFeePrecentage;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
-  let exchange, finalizedDate, state, exchangeStruct, response, exists;
+  let exchange, finalizedDate, state, exchangeStruct, response, exists, buyerStruct;
   let metaTransactionsHandler, nonce;
 
   before(async function () {
@@ -1017,6 +1017,48 @@ describe("IBosonExchangeHandler", function () {
 
         // Exchange's voucher expired flag should be true
         assert.equal(exchange.buyerId, nextAccountId, "Exchange.buyerId not updated");
+      });
+
+      it("should be triggered when a voucher is transferred", async function () {
+        // Transfer voucher, expecting event
+        await expect(bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id)).to.emit(
+          exchangeHandler,
+          "VoucherTransferred"
+        );
+      });
+
+      it("should not be triggered when a voucher is issued", async function () {
+        // Get the next buyer id
+        nextAccountId = await accountHandler.getNextAccountId();
+
+        // Get the next exchange id
+        nextExchangeId = await exchangeHandler.getNextExchangeId();
+
+        // Get a buyer struct
+        buyerStruct = new Buyer(nextAccountId, newOwner.address, true).toStruct();
+
+        // Create a buyer account
+        await accountHandler.connect(newOwner).createBuyer(new Buyer("0", newOwner.address, true));
+
+        // Grant PROTOCOL role to EOA address for test
+        await accessController.grantRole(Role.PROTOCOL, rando.address);
+
+        // Issue voucher, expecting no event
+        await expect(bosonVoucher.connect(rando).issueVoucher(nextExchangeId, buyerStruct)).to.not.emit(
+          exchangeHandler,
+          "VoucherTransferred"
+        );
+      });
+
+      it("should not be triggered when a voucher is burned", async function () {
+        // Grant PROTOCOL role to EOA address for test
+        await accessController.grantRole(Role.PROTOCOL, rando.address);
+
+        // Burn voucher, expecting no event
+        await expect(bosonVoucher.connect(rando).burnVoucher(exchange.id)).to.not.emit(
+          exchangeHandler,
+          "VoucherTransferred"
+        );
       });
 
       context("💔 Revert Reasons", async function () {
