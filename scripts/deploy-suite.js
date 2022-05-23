@@ -33,6 +33,7 @@ function getConfig() {
     const maxTwinsPerBundle = "100";
     const maxOffersPerBundle = "100";
     const maxOffersPerBatch = "100";
+    const maxTokensPerWithdrawal = "100";
 
     // Boson Token (ERC-20) contract address
     const TOKEN = {
@@ -66,7 +67,8 @@ function getConfig() {
             maxOffersPerGroup,
             maxTwinsPerBundle,            
             maxOffersPerBundle,
-            maxOffersPerBatch
+            maxOffersPerBatch,
+            maxTokensPerWithdrawal
     };
 }
 
@@ -78,7 +80,7 @@ function getNoArgFacetNames(){
     return [
         "DisputeHandlerFacet",
         "ExchangeHandlerFacet",
-//      "FundsHandlerFacet", // No functions yet
+        "FundsHandlerFacet",
         "OfferHandlerFacet",
         "TwinHandlerFacet",
         "BundleHandlerFacet",
@@ -134,7 +136,8 @@ async function main() {
         config.maxOffersPerGroup,
         config.maxTwinsPerBundle,        
         config.maxOffersPerBundle,
-        config.maxOffersPerBatch
+        config.maxOffersPerBatch,
+        config.maxTokensPerWithdrawal
     ];
     [configHandlerFacet] = await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
     deploymentComplete('ConfigHandlerFacet', configHandlerFacet.address, [], contracts);

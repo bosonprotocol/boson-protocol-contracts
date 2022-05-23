@@ -9,7 +9,7 @@ import {IBosonConfigEvents} from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x18b6a3d5
+ * The ERC-165 identifier for this interface is: 0x41e75f1e
  */
 interface IBosonConfigHandler is IBosonConfigEvents {
 
@@ -127,4 +127,18 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Get the maximum offers per bundle
      */
     function getMaxOffersPerBundle() external view returns (uint16);
+
+     /**
+     * @notice Sets the maximum numbers of tokens that can be withdrawn in a single transaction
+     *
+     * Emits a mMxTokensPerWithdrawalChanged event.
+     *
+     * @param _maxTokensPerWithdrawal - the maximum length of token list when calling {FundsHandlerFacet.withdraw}
+     */
+    function setMaxTokensPerWithdrawal(uint16 _maxTokensPerWithdrawal) external;
+
+    /**
+     * @notice Get the maximum tokens per withdrawal
+     */
+    function getMaxTokensPerWithdrawal() external view returns (uint16);
 }

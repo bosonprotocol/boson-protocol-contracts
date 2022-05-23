@@ -31,7 +31,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         uint16 _maxOffersPerGroup,
         uint16 _maxTwinsPerBundle,
         uint16 _maxOffersPerBundle,
-        uint16 _maxOffersPerBatch
+        uint16 _maxOffersPerBatch,
+        uint16 _maxTokensPerWithdrawal
     )
     public
     onlyUnInitialized(type(IBosonConfigHandler).interfaceId)
@@ -49,6 +50,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         ps.maxTwinsPerBundle = _maxTwinsPerBundle;
         ps.maxOffersPerBundle = _maxOffersPerBundle;
         ps.maxOffersPerBatch = _maxOffersPerBatch;
+        ps.maxTokensPerWithdrawal = _maxTokensPerWithdrawal;
 
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -296,5 +298,33 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     returns (uint16)
     {
         return protocolStorage().maxOffersPerBatch;
+    }
+    
+    /**
+     * @notice Sets the maximum numbers of tokens that can be withdrawn in a single transaction
+     *
+     * Emits a mMxTokensPerWithdrawalChanged event.
+     *
+     * @param _maxTokensPerWithdrawal - the maximum length of token list when calling {FundsHandlerFacet.withdraw}
+     */
+    function setMaxTokensPerWithdrawal(uint16 _maxTokensPerWithdrawal)
+    external
+    override
+    onlyRole(ADMIN)
+    {
+        protocolStorage().maxTokensPerWithdrawal = _maxTokensPerWithdrawal;
+        emit MaxTokensPerWithdrawalChanged(_maxTokensPerWithdrawal, msg.sender);
+    }
+
+    /**
+     * @notice Get the maximum tokens per withdrawal
+     */
+    function getMaxTokensPerWithdrawal()
+    external
+    override
+    view
+    returns (uint16)
+    {
+        return protocolStorage().maxTokensPerWithdrawal;
     }
 }

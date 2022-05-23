@@ -22,5 +22,6 @@ contract AccessController is AccessControlUpgradeable, BosonConstants {
         _setRoleAdmin(PROTOCOL, ADMIN);
         _setRoleAdmin(CLIENT, ADMIN);
         _setRoleAdmin(UPGRADER, ADMIN);
+        _setRoleAdmin(FEE_COLLECTOR, ADMIN);
     }
 }

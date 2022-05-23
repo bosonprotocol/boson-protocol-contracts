@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  *
  * @notice Mock ERC-(20) NFT for Unit Testing
  */
-contract Foreign20 is ERC20 {
+contract Foreign20 is ERC20Pausable {
     string public constant TOKEN_NAME = "Foreign20";
     string public constant TOKEN_SYMBOL = "20Test";
 
@@ -22,6 +22,20 @@ contract Foreign20 is ERC20 {
      */
     function mint(address _account, uint256 _amount) public {
         _mint(_account, _amount);
+    }
+
+    /**
+     * Pause the token transfers
+     */
+    function pause() public {
+        _pause();
+    }
+
+    /**
+     * Deletes the contract code
+     */
+    function destruct() public {
+        selfdestruct(payable(msg.sender));
     }
 }
 
