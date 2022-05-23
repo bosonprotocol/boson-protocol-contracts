@@ -61,15 +61,13 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         // Get the next account Id and increment the counter
         uint256 buyerId = protocolCounters().nextAccountId++;
 
-        _buyer.id = buyerId;
-        storeBuyer(_buyer);
-
         //check that the wallet address is unique to one buyer Id
         require(protocolStorage().buyerIdByWallet[_buyer.wallet] == 0, BUYER_ADDRESS_MUST_BE_UNIQUE);
 
-        //Map the buyer's wallet address to the buyerId.
-        protocolStorage().buyerIdByWallet[_buyer.wallet] = buyerId;
+        _buyer.id = buyerId;
+        storeBuyer(_buyer);
 
+       
         //Notify watchers of state change
         emit BuyerCreated(_buyer.id, _buyer);
 
@@ -116,7 +114,6 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         delete protocolStorage().sellerIdByAdmin[_seller.admin];
         delete protocolStorage().sellerIdByClerk[_seller.clerk];
    
-
         storeSeller(_seller);
 
         // Notify watchers of state change
@@ -157,7 +154,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
                 protocolStorage().buyerIdByWallet[_buyer.wallet] == _buyer.id, BUYER_ADDRESS_MUST_BE_UNIQUE);
        
         //Delete current mappings
-        delete protocolStorage().buyerIdByWallet[_buyer.wallet];
+        delete protocolStorage().buyerIdByWallet[msg.sender];
 
         storeBuyer(_buyer);
         
@@ -265,6 +262,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         buyer.id = _buyer.id;
         buyer.wallet = _buyer.wallet;
         buyer.active = _buyer.active;
+
+        //Map the buyer's wallet address to the buyerId.
+        protocolStorage().buyerIdByWallet[_buyer.wallet] = _buyer.id;
     }
 
    
