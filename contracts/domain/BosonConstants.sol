@@ -28,12 +28,15 @@ contract BosonConstants {
     string internal constant NOT_ADMIN = "Not seller's admin";
     string internal constant NOT_BUYER_OR_SELLER = "Not buyer or seller";
     string internal constant NOT_VOUCHER_HOLDER = "Not current voucher holder";
+    string internal constant NOT_BUYER_WALLET = "Not buyer's wallet address";
 
     // Revert Reasons: Account-related
     string internal constant NO_SUCH_SELLER = "No such seller";
     string internal constant MUST_BE_ACTIVE = "Account must be active";
     string internal constant SELLER_ADDRESS_MUST_BE_UNIQUE = "Seller address cannot be assigned to another seller Id";
     string internal constant BUYER_ADDRESS_MUST_BE_UNIQUE = "Buyer address cannot be assigned to another buyer Id";
+    string internal constant NO_SUCH_BUYER = "No such buyer";
+    string internal constant WALLET_OWNS_VOUCHERS = "Wallet address owns vouchers";
 
     // Revert Reasons: Offer related
     string internal constant NO_SUCH_OFFER = "No such offer";

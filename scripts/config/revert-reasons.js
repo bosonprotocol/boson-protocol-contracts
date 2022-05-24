@@ -39,6 +39,9 @@ exports.RevertReasons = {
   SELLER_ADDRESS_MUST_BE_UNIQUE: "Seller address cannot be assigned to another seller Id",
   BUYER_ADDRESS_MUST_BE_UNIQUE: "Buyer address cannot be assigned to another buyer Id",
   NOT_ADMIN: "Not seller's admin",
+  NOT_BUYER_WALLET: "Not buyer's wallet address",
+  NO_SUCH_BUYER: "No such buyer",
+  WALLET_OWNS_VOUCHERS: "Wallet address owns vouchers",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",
