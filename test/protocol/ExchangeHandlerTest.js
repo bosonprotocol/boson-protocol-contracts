@@ -95,6 +95,7 @@ describe("IBosonExchangeHandler", function () {
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
       "FundsHandlerFacet",
+      "DisputeHandlerFacet",
       "MetaTransactionsHandlerFacet",
     ]);
 
@@ -136,6 +137,9 @@ describe("IBosonExchangeHandler", function () {
 
     // Cast Diamond to IBosonFundsHandler
     fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonDisputeHandler
+    disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
 
     // Cast Diamond to IBosonMetaTransactionsHandler
     metaTransactionsHandler = await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamond.address);
@@ -1163,15 +1167,19 @@ describe("IBosonExchangeHandler", function () {
         });
       });
 
-      // TODO Include this context when DisputeHandlerFacet.raiseDispute works
-      context.skip("👎 disputed exchange", async function () {
+      context("👎 disputed exchange", async function () {
         beforeEach(async function () {
+          // Set time forward to the offer's redeemableFromDate
+          await setNextBlockTimestamp(Number(redeemableFromDate));
+
+          // Redeem voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
           // Raise a dispute on the exchange
-          // await disputeHandler.connect(buyer).raiseDispute(exchange.id, "Tastes wierd");
+          await disputeHandler.connect(buyer).raiseDispute(exchange.id, "Tastes wierd");
         });
 
-        // TODO Include this test when DisputeHandlerFacet.raiseDispute works
-        it.skip("should return false if exchange has a dispute in Disputed state", async function () {
+        it("should return false if exchange has a dispute in Disputed state", async function () {
           // In Disputed state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
 

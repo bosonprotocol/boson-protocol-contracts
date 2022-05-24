@@ -29,7 +29,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * Emits an DisputeCreated event if successful.
      *
      * Reverts if:
-     * - caller does not hold a voucher for the given offer id
+     * - caller does not hold a voucher for the given exchange id
      * - exchange does not exist
      * - exchange is not in a redeemed state
      * - the complaint is blank
@@ -44,15 +44,15 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     external
     override
     {
-        // Make sure the caller is buyer associated with the exchange
-        checkBuyer(_exchangeId);
-
         // Buyer must provide a reason to dispute
         require(bytes(_complaint).length > 0, COMPLAINT_MISSING);
 
         // Get the exchange, should be in redeemed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
-        
+
+        // Make sure the caller is buyer associated with the exchange
+        checkBuyer(exchange.buyerId);
+
         // Set the exhange state to disputed
         exchange.state = ExchangeState.Disputed;
 

@@ -1,4 +1,5 @@
 const ethers = require("ethers");
+const Resolution = require("./Resolution");
 
 /**
  * Boson Protocol Domain Entity: Dispute
@@ -6,10 +7,24 @@ const ethers = require("ethers");
  * See: {BosonTypes.Dispute}
  */
 class Dispute {
-  constructor(exchangeId, complaint, state) {
+  /*
+    struct Dispute {
+        uint256 exchangeId;
+        uint256 disputedDate;
+        uint256 finalizedDate;
+        string complaint;
+        DisputeState state;
+        Resolution resolution;
+    }
+    */
+
+  constructor(exchangeId, disputedDate, finalizedDate, complaint, state, resolution) {
     this.exchangeId = exchangeId;
+    this.disputedDate = disputedDate;
+    this.finalizedDate = finalizedDate;
     this.complaint = complaint;
     this.state = state;
+    this.resolution = resolution;
   }
 
   /**
@@ -18,8 +33,9 @@ class Dispute {
    * @returns {Dispute}
    */
   static fromObject(o) {
-    const { exchangeId, complaint, state } = o;
-    return new Dispute(exchangeId, complaint, state);
+    const { exchangeId, disputedDate, finalizedDate, complaint, state, resolution } = o;
+    const r = Resolution.fromObject(resolution);
+    return new Dispute(exchangeId, disputedDate, finalizedDate, complaint, state, r);
   }
 
   /**
@@ -28,15 +44,18 @@ class Dispute {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let exchangeId, complaint, state;
+    let exchangeId, disputedDate, finalizedDate, complaint, state, resolution;
 
     // destructure struct
-    [exchangeId, complaint, state] = struct;
+    [exchangeId, disputedDate, finalizedDate, complaint, state, resolution] = struct;
 
     return Dispute.fromObject({
       exchangeId: exchangeId.toString(),
+      disputedDate: disputedDate.toString(),
+      finalizedDate: finalizedDate.toString(),
       complaint,
       state,
+      resolution: Resolution.fromStruct(resolution).toObject(),
     });
   }
 
@@ -61,7 +80,14 @@ class Dispute {
    * @returns {string}
    */
   toStruct() {
-    return [this.exchangeId, this.complaint, this.state];
+    return [
+      this.exchangeId,
+      this.disputedDate,
+      this.finalizedDate,
+      this.complaint,
+      this.state,
+      this.resolution.toStruct(),
+    ];
   }
 
   /**
@@ -82,6 +108,34 @@ class Dispute {
     let { exchangeId } = this;
     try {
       valid = typeof exchangeId === "string" && typeof ethers.BigNumber.from(exchangeId) === "object";
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this Dispute instance's disputedDate field valid?
+   * Must be a string representation of a big number
+   * @returns {boolean}
+   */
+  disputedDateIsValid() {
+    let valid = false;
+    let { disputedDate } = this;
+    try {
+      valid = typeof disputedDate === "string" && typeof ethers.BigNumber.from(disputedDate) === "object";
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this Dispute instance's disputedDate field valid?
+   * Must be a string representation of a big number
+   * @returns {boolean}
+   */
+  finalizedDateIsValid() {
+    let valid = false;
+    let { finalizedDate } = this;
+    try {
+      valid = typeof finalizedDate === "string" && typeof ethers.BigNumber.from(finalizedDate) === "object";
     } catch (e) {}
     return valid;
   }
@@ -115,13 +169,31 @@ class Dispute {
   }
 
   /**
+   * Is this Dispute instance's resolution field valid?
+   * Must be an array of numbers
+   * @returns {boolean}
+   */
+  resolutionIsValid() {
+    let valid = false;
+    let { resolution } = this;
+    try {
+      valid = typeof resolution === "object" && resolution.constructor.name === "Resolution" && resolution.isValid();
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
    * Is this Dispute instance valid?
    * @returns {boolean}
    */
   isValid() {
     return (
-      this.exchangeIdIsValid() && this.complaintIsValid() && this.stateIsValid() // &&
-      // ...
+      this.exchangeIdIsValid() &&
+      this.disputedDateIsValid() &&
+      this.finalizedDateIsValid() &&
+      this.complaintIsValid() &&
+      this.stateIsValid() &&
+      this.resolutionIsValid()
     );
   }
 }

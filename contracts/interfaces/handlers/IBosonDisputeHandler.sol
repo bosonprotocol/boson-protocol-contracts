@@ -19,7 +19,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents {
      * Emits an DisputeCreated event if successful.
      *
      * Reverts if:
-     * - caller does not hold a voucher for the given offer id
+     * - caller does not hold a voucher for the given exchange id
      * - exchange does not exist
      * - exchange is not in a redeemed state
      * - the complaint is blank
