@@ -20,9 +20,10 @@ interface IBosonDisputeHandler is IBosonDisputeEvents {
      *
      * Reverts if:
      * - caller does not hold a voucher for the given offer id
-     * - a dispute already exists
+     * - exchange does not exist
+     * - exchange is not in a redeemed state
      * - the complaint is blank
-     *
+     * 
      * @param _offerId - the id of the associated offer
      * @param _complaint - the buyer's complaint description
      */

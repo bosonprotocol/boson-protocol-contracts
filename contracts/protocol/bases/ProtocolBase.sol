@@ -359,4 +359,51 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
         // Determine existence
         exists = (exchangeIds.length > 0);
     }
+
+    /**
+     * @notice Make sure the caller is buyer associated with the exchange
+     *
+     * Reverts if
+     * - caller is not the buyer associated with exchange
+     *
+     * @param _currentBuyer - id of current buyer associated with the exchange
+     */
+    function checkBuyer(uint256 _currentBuyer)
+    internal
+    view
+    {
+        // Get the caller's buyer account id
+        uint256 buyerId;
+        (, buyerId) = getBuyerIdByWallet(msg.sender);
+
+        // Must be the buyer associated with the exchange (which is always voucher holder)
+        require(buyerId == _currentBuyer, NOT_VOUCHER_HOLDER);
+    }
+
+        /**
+     * @notice Get a valid exchange
+     *
+     * Reverts if
+     * - Exchange does not exist
+     * - Exchange is not in th expected state
+     *
+     * @param _exchangeId - the id of the exchange to complete
+     * @param _expectedState - the id the exchange should be in
+     * @return exchange - the exchange
+     */
+    function getValidExchange(uint256 _exchangeId, ExchangeState _expectedState)
+    internal
+    view
+    returns(Exchange storage exchange)
+    {
+        // Get the exchange
+        bool exchangeExists;
+        (exchangeExists, exchange) = fetchExchange(_exchangeId);
+
+        // Make sure the exchange exists
+        require(exchangeExists, NO_SUCH_EXCHANGE);
+
+        // Make sure the exchange is in expected state
+        require(exchange.state == _expectedState, INVALID_STATE);
+    }
 }

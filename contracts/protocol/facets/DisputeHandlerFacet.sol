@@ -29,9 +29,9 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * Emits an DisputeCreated event if successful.
      *
      * Reverts if:
-     * - exchange does not exist
      * - caller does not hold a voucher for the given offer id
-     * - a dispute already exists for the exchange
+     * - exchange does not exist
+     * - exchange is not in a redeemed state
      * - the complaint is blank
      *
      * @param _exchangeId - the id of the associated exchange
@@ -44,22 +44,33 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     external
     override
     {
-        bool exists;
-        Exchange storage exchange;
-        Offer storage offer;
+        // Make sure the caller is buyer associated with the exchange
+        checkBuyer(_exchangeId);
 
-        // Get the exchange, revert if it doesn't exist
-        (exists, exchange) = fetchExchange(_exchangeId);
-        require(exists, NO_SUCH_EXCHANGE);
+        // Buyer must provide a reason to dispute
+        require(bytes(_complaint).length > 0, COMPLAINT_MISSING);
 
+        // Get the exchange, should be in redeemed state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
+        
+        // Set the exhange state to disputed
+        exchange.state = ExchangeState.Disputed;
+
+        // Fetch the dispute
+        (, Dispute storage dispute) = fetchDispute(_exchangeId);
+
+        // Set the initial values
+        dispute.exchangeId = _exchangeId;
+        dispute.disputedDate = block.timestamp;
+        dispute.complaint = _complaint;
+        dispute.state = DisputeState.Resolving; // this is the default value, however set it explicitly
+        // TODO gasestimate
+    
         // Get the offer, which will exist if the exchange does
-        (, offer) = fetchOffer(exchange.offerId);
-
-        // TODO implement further checks, create and store dispute
+        (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // Notify watchers of state change
         emit DisputeRaised(_exchangeId, exchange.buyerId, offer.sellerId, _complaint);
-
     }
 
 
