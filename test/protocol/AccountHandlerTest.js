@@ -11,7 +11,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
-const {calculateProtocolFee} = require("../../scripts/util/test-utils.js");
+const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 
 /**
@@ -29,22 +29,22 @@ describe("IBosonAccountHandler", function () {
   let oneMonth, oneWeek, blockNumber, block, protocolFeePrecentage;
   let bosonVoucher, clients;
   let offerId,
-      sellerId,
-      price,
-      sellerDeposit,
-      protocolFee,
-      buyerCancelPenalty,
-      quantityAvailable,
-      validFromDate,
-      validUntilDate,
-      redeemableFromDate,
-      fulfillmentPeriodDuration,
-      voucherValidDuration,
-      exchangeToken,
-      metadataUri,
-      metadataHash,
-      voided,
-      offer
+    sellerId,
+    price,
+    sellerDeposit,
+    protocolFee,
+    buyerCancelPenalty,
+    quantityAvailable,
+    validFromDate,
+    validUntilDate,
+    redeemableFromDate,
+    fulfillmentPeriodDuration,
+    voucherValidDuration,
+    exchangeToken,
+    metadataUri,
+    metadataHash,
+    voided,
+    offer;
 
   before(async function () {
     // get interface Ids
@@ -1008,7 +1008,7 @@ describe("IBosonAccountHandler", function () {
 
       context("💔 Revert Reasons", async function () {
         beforeEach(async function () {
-           // Initial ids for all the things
+          // Initial ids for all the things
           id = sellerId = await accountHandler.connect(rando).getNextAccountId();
           offerId = await offerHandler.connect(rando).getNextOfferId();
 
@@ -1074,9 +1074,9 @@ describe("IBosonAccountHandler", function () {
 
           // Deposit seller funds so the commit will succeed
           await fundsHandler
-          .connect(operator)
-          .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
-          
+            .connect(operator)
+            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
           //Commit to offer
           await exchangeHandler.connect(other1).commitToOffer(other1.address, offerId, { value: price });
 
