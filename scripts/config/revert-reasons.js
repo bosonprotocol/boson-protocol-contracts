@@ -41,6 +41,7 @@ exports.RevertReasons = {
   NOT_ADMIN: "Not seller's admin",
   NOT_BUYER_WALLET: "Not buyer's wallet address",
   NO_SUCH_BUYER: "No such buyer",
+  WALLET_OWNS_VOUCHERS: "Wallet address owns vouchers",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",

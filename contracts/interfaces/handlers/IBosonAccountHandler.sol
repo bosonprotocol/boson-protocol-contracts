@@ -57,7 +57,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function updateSeller(BosonTypes.Seller memory _seller) external;
 
     /**
-     * @notice Updates a buyer. All fields should be filled, even those staying the same.
+     * @notice Updates a buyer. All fields should be filled, even those staying the same. The wallet address cannot be updated if the current wallet address has oustanding vouchers
      *
      * Emits a BuyerUpdated event if successful.
      *
@@ -66,6 +66,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Wallet address is zero address
      * - Address is not unique to this buyer
      * - Buyer does not exist
+     * - Current wallet address has oustanding vouchers
      *
      * @param _buyer - the fully populated buyer struct
      */

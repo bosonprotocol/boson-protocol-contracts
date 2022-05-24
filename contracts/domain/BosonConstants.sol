@@ -36,6 +36,7 @@ contract BosonConstants {
     string internal constant SELLER_ADDRESS_MUST_BE_UNIQUE = "Seller address cannot be assigned to another seller Id";
     string internal constant BUYER_ADDRESS_MUST_BE_UNIQUE = "Buyer address cannot be assigned to another buyer Id";
     string internal constant NO_SUCH_BUYER = "No such buyer";
+    string internal constant WALLET_OWNS_VOUCHERS = "Wallet address owns vouchers";
 
     // Revert Reasons: Offer related
     string internal constant NO_SUCH_OFFER = "No such offer";

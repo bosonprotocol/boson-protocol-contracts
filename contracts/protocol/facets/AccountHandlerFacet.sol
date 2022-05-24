@@ -3,9 +3,11 @@ pragma solidity ^0.8.0;
 
 
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
+import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
+import "hardhat/console.sol";
 
 contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
@@ -55,6 +57,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     external
     override
     {
+        //Check for zero address
+        require(_buyer.wallet != address(0), INVALID_ADDRESS);
+
         //Check active is not set to false
         require(_buyer.active, MUST_BE_ACTIVE);
 
@@ -121,7 +126,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
-     * @notice Updates a buyer. All fields should be filled, even those staying the same.
+     * @notice Updates a buyer. All fields should be filled, even those staying the same. The wallet address cannot be updated if the current wallet address has oustanding vouchers
      *
      * Emits a BuyerUpdated event if successful.
      *
@@ -130,6 +135,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - Wallet address is zero address
      * - Address is not unique to this buyer
      * - Buyer does not exist
+     * - Current wallet address has oustanding vouchers
      *
      * @param _buyer - the fully populated buyer struct
      */
@@ -137,6 +143,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     external
     override
     {
+        //Check for zero address
+        require(_buyer.wallet != address(0), INVALID_ADDRESS);
+
         bool exists;
         Buyer storage buyer;
 
@@ -149,6 +158,12 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         //Check that msg.sender is the wallet address for this buyer
         require(buyer.wallet  == msg.sender, NOT_BUYER_WALLET); 
 
+        //Check that current wallet address does not own any vouchers, if changing wallet address
+        if(buyer.wallet != _buyer.wallet) {
+            IBosonVoucher bosonVoucher = IBosonVoucher(protocolStorage().voucherAddress);
+            require(bosonVoucher.balanceOf(buyer.wallet) == 0, WALLET_OWNS_VOUCHERS);
+        }
+      
         //check that the wallet address is unique to one buyer Id if new
         require(protocolStorage().buyerIdByWallet[_buyer.wallet] == 0 || 
                 protocolStorage().buyerIdByWallet[_buyer.wallet] == _buyer.id, BUYER_ADDRESS_MUST_BE_UNIQUE);
@@ -252,9 +267,6 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
    
     function storeBuyer(Buyer memory _buyer) internal 
     {
-        //Check for zero address
-        require(_buyer.wallet != address(0), INVALID_ADDRESS);
-
         // Get storage location for buyer
         (,Buyer storage buyer) = fetchBuyer(_buyer.id);
 
