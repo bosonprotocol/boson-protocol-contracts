@@ -1134,7 +1134,7 @@ describe("IBosonAccountHandler", function () {
           );
         });
 
-        it("current buyer wallet address has oustanding vouchers", async function () {
+        it("current buyer wallet address has outstanding vouchers", async function () {
           buyer.wallet = other4.address;
 
           // Attempt to update the buyer, expecting revert
