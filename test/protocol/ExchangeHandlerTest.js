@@ -60,7 +60,16 @@ describe("IBosonExchangeHandler", function () {
   let protocolFeePrecentage;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state, exchangeStruct, response, exists, buyerStruct;
-  let metaTransactionsHandler, nonce, offerType, exchangeType;
+  let metaTransactionsHandler,
+    metaTransactionType,
+    customTransactionTypes,
+    validOfferDetails,
+    validExchangeDetails,
+    nonce,
+    offerType,
+    exchangeType,
+    metaTxExchangeType,
+    message;
 
   before(async function () {
     // get interface Ids
@@ -239,17 +248,6 @@ describe("IBosonExchangeHandler", function () {
     });
 
     context("👉 commitToOffer()", async function () {
-      beforeEach(async function () {
-        // Set a random nonce
-        nonce = parseInt(ethers.utils.randomBytes(8));
-
-        // Set the offer Type
-        offerType = [
-          { name: "buyer", type: "address" },
-          { name: "offerId", type: "uint256" },
-        ];
-      });
-
       it("should emit a BuyerCommitted event", async function () {
         // Commit to offer, retrieving the event
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -288,48 +286,99 @@ describe("IBosonExchangeHandler", function () {
         expect(nextExchangeId).to.equal(++id);
       });
 
-      it("[Meta Transaction] should increment the next exchange id counter", async function () {
-        // prepare the MetaTxOfferDetails struct
-        let validOfferDetails = new MetaTxOfferDetails(buyer.address, offer.id);
-        expect(validOfferDetails.isValid()).is.true;
+      context("[Meta Transactions]", async function () {
+        beforeEach(async function () {
+          // Set a random nonce
+          nonce = parseInt(ethers.utils.randomBytes(8));
 
-        const metaTransactionType = [
-          { name: "nonce", type: "uint256" },
-          { name: "from", type: "address" },
-          { name: "contractAddress", type: "address" },
-          { name: "functionName", type: "string" },
-          { name: "offerDetails", type: "MetaTxOfferDetails" },
-        ];
+          // Set the offer Type
+          offerType = [
+            { name: "buyer", type: "address" },
+            { name: "offerId", type: "uint256" },
+          ];
 
-        const customTransactionTypes = {
-          MetaTxCommitToOffer: metaTransactionType,
-          MetaTxOfferDetails: offerType,
-        };
+          // Set the meta transaction Type
+          metaTransactionType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
+            { name: "offerDetails", type: "MetaTxOfferDetails" },
+          ];
 
-        // Prepare the message
-        let message = {};
-        message.nonce = parseInt(nonce);
-        message.from = operator.address;
-        message.contractAddress = exchangeHandler.address;
-        message.functionName = "commitToOffer(address,uint256)";
-        message.offerDetails = validOfferDetails;
+          // Set the custom transaction Type
+          customTransactionTypes = {
+            MetaTxCommitToOffer: metaTransactionType,
+            MetaTxOfferDetails: offerType,
+          };
 
-        // Collect the signature components
-        let { r, s, v } = await prepareDataSignatureParameters(
-          operator,
-          customTransactionTypes,
-          "MetaTxCommitToOffer",
-          message,
-          metaTransactionsHandler.address
-        );
-        // Commit to offer, creating a new exchange. Send as meta transaction.
-        await metaTransactionsHandler.executeMetaTxCommitToOffer(operator.address, validOfferDetails, nonce, r, s, v, {
-          value: price,
+          // Prepare the message
+          message = {};
+          message.nonce = parseInt(nonce);
+          message.from = operator.address;
+          message.contractAddress = exchangeHandler.address;
+          message.functionName = "commitToOffer(address,uint256)";
         });
 
-        // Get the next exchange id and ensure it was incremented by the creation of the offer
-        nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
-        expect(nextExchangeId).to.equal(++id);
+        it("should increment the next exchange id counter", async function () {
+          // prepare the MetaTxOfferDetails struct
+          validOfferDetails = new MetaTxOfferDetails(buyer.address, offer.id);
+          expect(validOfferDetails.isValid()).is.true;
+
+          // Prepare the message
+          message.offerDetails = validOfferDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            operator,
+            customTransactionTypes,
+            "MetaTxCommitToOffer",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Commit to offer, creating a new exchange. Send as meta transaction.
+          await metaTransactionsHandler.executeMetaTxCommitToOffer(
+            operator.address,
+            validOfferDetails,
+            nonce,
+            r,
+            s,
+            v,
+            {
+              value: price,
+            }
+          );
+
+          // Get the next exchange id and ensure it was incremented by the creation of the offer
+          nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
+          expect(nextExchangeId).to.equal(++id);
+        });
+
+        it("does not modify revert reasons", async function () {
+          // prepare the MetaTxOfferDetails struct
+          validOfferDetails = new MetaTxOfferDetails(ethers.constants.AddressZero, offer.id, price);
+          expect(validOfferDetails.isValid()).is.true;
+
+          // Prepare the message
+          message.offerDetails = validOfferDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            operator,
+            customTransactionTypes,
+            "MetaTxCommitToOffer",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Commit to offer, creating a new exchange. Send as meta transaction.
+          await expect(
+            metaTransactionsHandler.executeMetaTxCommitToOffer(operator.address, validOfferDetails, nonce, r, s, v, {
+              value: price,
+            })
+          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+        });
       });
 
       context("💔 Revert Reasons", async function () {
@@ -358,93 +407,6 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to commit, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
-          ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
-        });
-
-        it("[Meta Transaction] buyer address is the zero address", async function () {
-          // prepare the MetaTxOfferDetails struct
-          let validOfferDetails = new MetaTxOfferDetails(ethers.constants.AddressZero, offer.id, price);
-          expect(validOfferDetails.isValid()).is.true;
-
-          const metaTransactionType = [
-            { name: "nonce", type: "uint256" },
-            { name: "from", type: "address" },
-            { name: "contractAddress", type: "address" },
-            { name: "functionName", type: "string" },
-            { name: "offerDetails", type: "MetaTxOfferDetails" },
-          ];
-
-          const customTransactionTypes = {
-            MetaTxCommitToOffer: metaTransactionType,
-            MetaTxOfferDetails: offerType,
-          };
-
-          // Prepare the message
-          let message = {};
-          message.nonce = parseInt(nonce);
-          message.from = operator.address;
-          message.contractAddress = exchangeHandler.address;
-          message.functionName = "commitToOffer(address,uint256)";
-          message.offerDetails = validOfferDetails;
-
-          // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
-            operator,
-            customTransactionTypes,
-            "MetaTxCommitToOffer",
-            message,
-            metaTransactionsHandler.address
-          );
-          // Commit to offer, creating a new exchange. Send as meta transaction.
-          await expect(
-            metaTransactionsHandler.executeMetaTxCommitToOffer(operator.address, validOfferDetails, nonce, r, s, v, {
-              value: price,
-            })
-          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
-        });
-
-        it("[Meta Transaction] offer id is invalid", async function () {
-          // An invalid offer id
-          offerId = "666";
-
-          // prepare the MetaTxOfferDetails struct
-          let validOfferDetails = new MetaTxOfferDetails(buyer.address, offerId);
-          expect(validOfferDetails.isValid()).is.true;
-
-          const metaTransactionType = [
-            { name: "nonce", type: "uint256" },
-            { name: "from", type: "address" },
-            { name: "contractAddress", type: "address" },
-            { name: "functionName", type: "string" },
-            { name: "offerDetails", type: "MetaTxOfferDetails" },
-          ];
-
-          const customTransactionTypes = {
-            MetaTxCommitToOffer: metaTransactionType,
-            MetaTxOfferDetails: offerType,
-          };
-
-          // Prepare the message
-          let message = {};
-          message.nonce = parseInt(nonce);
-          message.from = operator.address;
-          message.contractAddress = exchangeHandler.address;
-          message.functionName = "commitToOffer(address,uint256)";
-          message.offerDetails = validOfferDetails;
-
-          // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
-            operator,
-            customTransactionTypes,
-            "MetaTxCommitToOffer",
-            message,
-            metaTransactionsHandler.address
-          );
-          // Commit to offer, creating a new exchange. Send as meta transaction.
-          await expect(
-            metaTransactionsHandler.executeMetaTxCommitToOffer(operator.address, validOfferDetails, nonce, r, s, v, {
-              value: price,
-            })
           ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
         });
       });
@@ -668,12 +630,6 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the struct
         exchangeStruct = exchange.toStruct();
-
-        // Set a random nonce
-        nonce = parseInt(ethers.utils.randomBytes(8));
-
-        // Set the exchange Type
-        exchangeType = [{ name: "exchangeId", type: "uint256" }];
       });
 
       it("should emit an VoucherCanceled event when original buyer calls", async function () {
@@ -704,101 +660,126 @@ describe("IBosonExchangeHandler", function () {
         assert.equal(response, ExchangeState.Canceled, "Exchange state is incorrect");
       });
 
-      it("[Meta Transaction] should cancel voucher when original buyer calls", async function () {
-        // prepare the MetaTxExchangeDetails struct
-        let validExchangeDetails = new MetaTxExchangeDetails(exchange.id);
-        expect(validExchangeDetails.isValid()).is.true;
+      context("[Meta Transactions]", async function () {
+        beforeEach(async function () {
+          // Set a random nonce
+          nonce = parseInt(ethers.utils.randomBytes(8));
 
-        const metaTxExchangeType = [
-          { name: "nonce", type: "uint256" },
-          { name: "from", type: "address" },
-          { name: "contractAddress", type: "address" },
-          { name: "functionName", type: "string" },
-          { name: "exchangeDetails", type: "MetaTxExchangeDetails" },
-        ];
+          // Set the exchange Type
+          exchangeType = [{ name: "exchangeId", type: "uint256" }];
 
-        const customTransactionTypes = {
-          MetaTxExchange: metaTxExchangeType,
-          MetaTxExchangeDetails: exchangeType,
-        };
+          // Set the meta transaction exchange Type
+          metaTxExchangeType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
+            { name: "exchangeDetails", type: "MetaTxExchangeDetails" },
+          ];
 
-        // Prepare the message
-        let message = {};
-        message.nonce = parseInt(nonce);
-        message.from = buyer.address;
-        message.contractAddress = exchangeHandler.address;
-        message.functionName = "cancelVoucher(uint256)";
-        message.exchangeDetails = validExchangeDetails;
+          // Set the custom transaction Types
+          customTransactionTypes = {
+            MetaTxExchange: metaTxExchangeType,
+            MetaTxExchangeDetails: exchangeType,
+          };
 
-        // Collect the signature components
-        let { r, s, v } = await prepareDataSignatureParameters(
-          buyer,
-          customTransactionTypes,
-          "MetaTxExchange",
-          message,
-          metaTransactionsHandler.address
-        );
-        // Cancel the voucher. Send as meta transaction.
-        await metaTransactionsHandler.executeMetaTxCancelVoucher(buyer.address, validExchangeDetails, nonce, r, s, v);
+          // Prepare the message
+          message = {};
+          message.nonce = parseInt(nonce);
+          message.contractAddress = exchangeHandler.address;
+          message.functionName = "cancelVoucher(uint256)";
+        });
 
-        // Get the exchange state
-        [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
-        // It should match ExchangeState.Canceled
-        assert.equal(response, ExchangeState.Canceled, "Exchange state is incorrect");
-      });
+        it("should cancel voucher when original buyer calls", async function () {
+          // prepare the MetaTxExchangeDetails struct
+          validExchangeDetails = new MetaTxExchangeDetails(exchange.id);
+          expect(validExchangeDetails.isValid()).is.true;
 
-      it("[Meta Transaction] should cancel voucher when new owner (not a buyer) calls", async function () {
-        // Transfer voucher to new owner
-        await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
+          // Prepare the message
+          message.from = buyer.address;
+          message.exchangeDetails = validExchangeDetails;
 
-        // prepare the MetaTxExchangeDetails struct
-        let validExchangeDetails = new MetaTxExchangeDetails(exchange.id);
-        expect(validExchangeDetails.isValid()).is.true;
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionTypes,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
 
-        const metaTxExchangeType = [
-          { name: "nonce", type: "uint256" },
-          { name: "from", type: "address" },
-          { name: "contractAddress", type: "address" },
-          { name: "functionName", type: "string" },
-          { name: "exchangeDetails", type: "MetaTxExchangeDetails" },
-        ];
+          // Cancel the voucher. Send as meta transaction.
+          await metaTransactionsHandler.executeMetaTxCancelVoucher(buyer.address, validExchangeDetails, nonce, r, s, v);
 
-        const customTransactionTypes = {
-          MetaTxExchange: metaTxExchangeType,
-          MetaTxExchangeDetails: exchangeType,
-        };
+          // Get the exchange state
+          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+          // It should match ExchangeState.Canceled
+          assert.equal(response, ExchangeState.Canceled, "Exchange state is incorrect");
+        });
 
-        // Prepare the message
-        let message = {};
-        message.nonce = parseInt(nonce);
-        message.from = newOwner.address;
-        message.contractAddress = exchangeHandler.address;
-        message.functionName = "cancelVoucher(uint256)";
-        message.exchangeDetails = validExchangeDetails;
+        it("should cancel voucher when new owner (not a buyer) calls", async function () {
+          // Transfer voucher to new owner
+          await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
 
-        // Collect the signature components
-        let { r, s, v } = await prepareDataSignatureParameters(
-          newOwner,
-          customTransactionTypes,
-          "MetaTxExchange",
-          message,
-          metaTransactionsHandler.address
-        );
+          // prepare the MetaTxExchangeDetails struct
+          validExchangeDetails = new MetaTxExchangeDetails(exchange.id);
+          expect(validExchangeDetails.isValid()).is.true;
 
-        // Cancel the voucher. Send as meta transaction.
-        await metaTransactionsHandler.executeMetaTxCancelVoucher(
-          newOwner.address,
-          validExchangeDetails,
-          nonce,
-          r,
-          s,
-          v
-        );
+          // Prepare the message
+          message.from = newOwner.address;
+          message.exchangeDetails = validExchangeDetails;
 
-        // Get the exchange state
-        [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
-        // It should match ExchangeState.Canceled
-        assert.equal(response, ExchangeState.Canceled, "Exchange state is incorrect");
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            newOwner,
+            customTransactionTypes,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Cancel the voucher. Send as meta transaction.
+          await metaTransactionsHandler.executeMetaTxCancelVoucher(
+            newOwner.address,
+            validExchangeDetails,
+            nonce,
+            r,
+            s,
+            v
+          );
+
+          // Get the exchange state
+          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+          // It should match ExchangeState.Canceled
+          assert.equal(response, ExchangeState.Canceled, "Exchange state is incorrect");
+        });
+
+        it("does not modify revert reasons", async function () {
+          // An invalid exchange id
+          id = "666";
+
+          // prepare the MetaTxExchangeDetails struct
+          validExchangeDetails = new MetaTxExchangeDetails(id);
+          expect(validExchangeDetails.isValid()).is.true;
+
+          // Prepare the message
+          message.from = buyer.address;
+          message.exchangeDetails = validExchangeDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionTypes,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Attempt to cancel the voucher, expecting revert. Send as meta transaction.
+          await expect(
+            metaTransactionsHandler.executeMetaTxCancelVoucher(buyer.address, validExchangeDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+        });
       });
 
       context("💔 Revert Reasons", async function () {
@@ -834,135 +815,6 @@ describe("IBosonExchangeHandler", function () {
           await expect(exchangeHandler.connect(rando).cancelVoucher(exchange.id)).to.revertedWith(
             RevertReasons.NOT_VOUCHER_HOLDER
           );
-        });
-
-        it("[Meta Transaction] exchange id is invalid", async function () {
-          // An invalid exchange id
-          id = "666";
-
-          // prepare the MetaTxExchangeDetails struct
-          let validExchangeDetails = new MetaTxExchangeDetails(id);
-          expect(validExchangeDetails.isValid()).is.true;
-
-          const metaTxExchangeType = [
-            { name: "nonce", type: "uint256" },
-            { name: "from", type: "address" },
-            { name: "contractAddress", type: "address" },
-            { name: "functionName", type: "string" },
-            { name: "exchangeDetails", type: "MetaTxExchangeDetails" },
-          ];
-
-          const customTransactionTypes = {
-            MetaTxExchange: metaTxExchangeType,
-            MetaTxExchangeDetails: exchangeType,
-          };
-
-          // Prepare the message
-          let message = {};
-          message.nonce = parseInt(nonce);
-          message.from = buyer.address;
-          message.contractAddress = exchangeHandler.address;
-          message.functionName = "cancelVoucher(uint256)";
-          message.exchangeDetails = validExchangeDetails;
-
-          // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
-            buyer,
-            customTransactionTypes,
-            "MetaTxExchange",
-            message,
-            metaTransactionsHandler.address
-          );
-
-          // Attempt to cancel the voucher, expecting revert. Send as meta transaction.
-          await expect(
-            metaTransactionsHandler.executeMetaTxCancelVoucher(buyer.address, validExchangeDetails, nonce, r, s, v)
-          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
-        });
-
-        it("[Meta Transaction] exchange is not in committed state", async function () {
-          // Revoke the voucher
-          await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
-
-          // prepare the MetaTxExchangeDetails struct
-          let validExchangeDetails = new MetaTxExchangeDetails(id);
-          expect(validExchangeDetails.isValid()).is.true;
-
-          const metaTxExchangeType = [
-            { name: "nonce", type: "uint256" },
-            { name: "from", type: "address" },
-            { name: "contractAddress", type: "address" },
-            { name: "functionName", type: "string" },
-            { name: "exchangeDetails", type: "MetaTxExchangeDetails" },
-          ];
-
-          const customTransactionTypes = {
-            MetaTxExchange: metaTxExchangeType,
-            MetaTxExchangeDetails: exchangeType,
-          };
-
-          // Prepare the message
-          let message = {};
-          message.nonce = parseInt(nonce);
-          message.from = buyer.address;
-          message.contractAddress = exchangeHandler.address;
-          message.functionName = "cancelVoucher(uint256)";
-          message.exchangeDetails = validExchangeDetails;
-
-          // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
-            buyer,
-            customTransactionTypes,
-            "MetaTxExchange",
-            message,
-            metaTransactionsHandler.address
-          );
-
-          // Attempt to cancel the voucher, expecting revert. Send as meta transaction.
-          await expect(
-            metaTransactionsHandler.executeMetaTxCancelVoucher(buyer.address, validExchangeDetails, nonce, r, s, v)
-          ).to.revertedWith(RevertReasons.INVALID_STATE);
-        });
-
-        it("[Meta Transaction] caller does not own voucher", async function () {
-          // prepare the MetaTxExchangeDetails struct
-          let validExchangeDetails = new MetaTxExchangeDetails(exchange.id);
-          expect(validExchangeDetails.isValid()).is.true;
-
-          const metaTxExchangeType = [
-            { name: "nonce", type: "uint256" },
-            { name: "from", type: "address" },
-            { name: "contractAddress", type: "address" },
-            { name: "functionName", type: "string" },
-            { name: "exchangeDetails", type: "MetaTxExchangeDetails" },
-          ];
-
-          const customTransactionTypes = {
-            MetaTxExchange: metaTxExchangeType,
-            MetaTxExchangeDetails: exchangeType,
-          };
-
-          // Prepare the message
-          let message = {};
-          message.nonce = parseInt(nonce);
-          message.from = rando.address;
-          message.contractAddress = exchangeHandler.address;
-          message.functionName = "cancelVoucher(uint256)";
-          message.exchangeDetails = validExchangeDetails;
-
-          // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
-            rando,
-            customTransactionTypes,
-            "MetaTxExchange",
-            message,
-            metaTransactionsHandler.address
-          );
-
-          // Attempt to cancel the voucher, expecting revert. Send as meta transaction.
-          await expect(
-            metaTransactionsHandler.executeMetaTxCancelVoucher(rando.address, validExchangeDetails, nonce, r, s, v)
-          ).to.revertedWith(RevertReasons.NOT_VOUCHER_HOLDER);
         });
       });
     });

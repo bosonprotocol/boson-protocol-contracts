@@ -672,6 +672,39 @@ describe("IBosonMetaTransactionsHandler", function () {
             })
           ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         });
+
+        it("Should fail when any code executed in the signed transaction reverts", async function () {
+          // An invalid offer id
+          offerId = "666";
+
+          // prepare the MetaTxOfferDetails struct
+          validOfferDetails = new MetaTxOfferDetails(buyer.address, offerId);
+          expect(validOfferDetails.isValid()).is.true;
+
+          // Prepare the message
+          let message = {};
+          message.nonce = parseInt(nonce);
+          message.from = operator.address;
+          message.contractAddress = exchangeHandler.address;
+          message.functionName = "commitToOffer(address,uint256)";
+          message.offerDetails = validOfferDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            operator,
+            customTransactionType,
+            "MetaTxCommitToOffer",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Execute meta transaction, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTxCommitToOffer(operator.address, validOfferDetails, nonce, r, s, v, {
+              value: price,
+            })
+          ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+        });
       });
     });
 
@@ -869,6 +902,37 @@ describe("IBosonMetaTransactionsHandler", function () {
           await expect(
             metaTransactionsHandler.executeMetaTxCancelVoucher(operator.address, validExchangeDetails, nonce, r, s, v)
           ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+        });
+
+        it("Should fail when any code executed in the signed transaction reverts", async function () {
+          // An invalid exchange id
+          id = "666";
+
+          // prepare the MetaTxExchangeDetails struct
+          validExchangeDetails = new MetaTxExchangeDetails(id);
+          expect(validExchangeDetails.isValid()).is.true;
+
+          // Prepare the message
+          let message = {};
+          message.nonce = parseInt(nonce);
+          message.from = buyer.address;
+          message.contractAddress = exchangeHandler.address;
+          message.functionName = "cancelVoucher(uint256)";
+          message.exchangeDetails = validExchangeDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionType,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Execute meta transaction, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTxCancelVoucher(buyer.address, validExchangeDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
         });
       });
     });
