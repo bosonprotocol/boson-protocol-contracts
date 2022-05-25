@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { expect } = require("chai");
+const { expect, assert } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
 const Exchange = require("../../scripts/domain/Exchange");
@@ -10,6 +10,7 @@ const Seller = require("../../scripts/domain/Seller");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const Dispute = require("../../scripts/domain/Dispute");
 const DisputeState = require("../../scripts/domain/DisputeState");
+const Resolution = require("../../scripts/domain/Resolution");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -35,7 +36,7 @@ describe("IBosonDisputeHandler", function () {
     disputeHandler;
   let bosonVoucher, gasLimit;
   let id, buyerId, offer, offerId, seller, sellerId;
-  let block, blockNumber, clients;
+  let block, blockNumber, tx, clients;
   let support, oneMonth, oneWeek, newTime;
   let price,
     sellerDeposit,
@@ -54,6 +55,7 @@ describe("IBosonDisputeHandler", function () {
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
   let dispute, disputedDate, complaint, disputeStruct;
+  let exists, response;
 
   before(async function () {
     // get interface Ids
@@ -245,15 +247,19 @@ describe("IBosonDisputeHandler", function () {
           .withArgs(exchange.id, buyerId, sellerId, complaint);
       });
 
-      // TODO: enable when disputeHandler.getDispute is implemented
-      it.skip("should update state", async function () {
+      it("should update state", async function () {
         // Raise a dispute
-        await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+        tx = await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
 
-        dispute = new Dispute(exchange.id, disputedDate, "0", complaint, DisputeState.Resolving);
+        // Get the block timestamp of the confirmed tx and set disputedDate
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+        disputedDate = block.timestamp.toString();
+
+        dispute = new Dispute(exchange.id, disputedDate, "0", complaint, DisputeState.Resolving, new Resolution("0"));
 
         // Get the dispute as a struct
-        [, disputeStruct] = await accountHandler.connect(rando).getDispute(exchange.id);
+        [, disputeStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
         // Parse into entity
         let returnedDispute = Dispute.fromStruct(disputeStruct);
@@ -314,6 +320,45 @@ describe("IBosonDisputeHandler", function () {
             RevertReasons.COMPLAINT_MISSING
           );
         });
+      });
+    });
+
+    context("👉 getDispute()", async function () {
+      beforeEach(async function () {
+        // Raise a dispute
+        tx = await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+        disputedDate = block.timestamp.toString();
+
+        // Expected value for dispute
+        dispute = new Dispute(exchange.id, disputedDate, "0", complaint, DisputeState.Resolving, new Resolution("0"));
+      });
+
+      it("should return true for exists if exchange id is valid", async function () {
+        // Get the dispute
+        [exists, response] = await disputeHandler.connect(rando).getDispute(exchange.id);
+
+        // Test existence flag
+        expect(exists).to.be.true;
+      });
+
+      it("should return false for exists if exchange id is not valid", async function () {
+        // Get the dispute
+        [exists, response] = await disputeHandler.connect(rando).getDispute(exchange.id + 10);
+
+        // Test existence flag
+        expect(exists).to.be.false;
+      });
+
+      it("should return the expected dispute if exchange id is valid", async function () {
+        // Get the exchange
+        [exists, response] = await disputeHandler.connect(rando).getDispute(exchange.id);
+
+        // It should match the expected exchange struct
+        assert.equal(dispute.toString(), Dispute.fromStruct(response).toString(), "Dispute struct is incorrect");
       });
     });
   });

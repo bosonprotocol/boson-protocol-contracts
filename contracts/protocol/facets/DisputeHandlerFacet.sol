@@ -63,9 +63,8 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         dispute.exchangeId = _exchangeId;
         dispute.disputedDate = block.timestamp;
         dispute.complaint = _complaint;
-        dispute.state = DisputeState.Resolving; // this is the default value, however set it explicitly
-        // TODO gasestimate
-    
+        dispute.state = DisputeState.Resolving;
+        
         // Get the offer, which will exist if the exchange does
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
@@ -73,5 +72,18 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         emit DisputeRaised(_exchangeId, exchange.buyerId, offer.sellerId, _complaint);
     }
 
+    /**
+     * @notice Gets the details about a given dispute.
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return exists - true if the dispute exists
+     * @return dispute - the dispute details. See {BosonTypes.Dispute}
+     */
+    function getDispute(uint256 _exchangeId)
+    external
+    view
+    returns(bool exists, Dispute memory dispute) {
+        return fetchDispute(_exchangeId);
+    }
 
 }
