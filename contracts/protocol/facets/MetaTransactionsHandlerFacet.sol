@@ -245,7 +245,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         setCurrentSenderAddress(address(0));
         protocolMetaTxInfo().isMetaTransaction = false;
 
-        emit MetaTransactionExecuted(_userAddress, payable(msg.sender), _functionName, _nonce);
+        emit MetaTransactionExecuted(_userAddress, msg.sender, _functionName, _nonce);
         return returnData;
     }
 
@@ -361,7 +361,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         bytes32 _sigR,
         bytes32 _sigS,
         uint8 _sigV
-    ) public payable override returns (bytes memory) {
+    ) public override returns (bytes memory) {
         bytes4 functionSelector = IBosonExchangeHandler.cancelVoucher.selector;
         bytes memory functionSignature = abi.encodeWithSelector(
             functionSelector,
