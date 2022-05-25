@@ -9,7 +9,7 @@ import {IBosonMetaTransactionsEvents} from "../events/IBosonMetaTransactionsEven
  *
  * @notice Manages incoming meta-transactions in the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xb1e3cc34
+ * The ERC-165 identifier for this interface is: 0x0ad484d4
  */
 interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
 
@@ -71,4 +71,28 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
         bytes32 _sigS,
         uint8 _sigV
     ) external payable returns (bytes memory);
+
+    /**
+     * @notice Handles the incoming meta transaction for cancel Voucher.
+     *
+     * Reverts if:
+     * - nonce is already used by another transaction.
+     * - sender does not match the recovered signer.
+     * - any code executed in the signed transaction reverts.
+     *
+     * @param _userAddress - the sender of the transaction.
+     * @param _exchangeDetails - the fully populated BosonTypes.MetaTxExchangeDetails struct.
+     * @param _nonce - the nonce value of the transaction.
+     * @param _sigR - r part of the signer's signature.
+     * @param _sigS - s part of the signer's signature.
+     * @param _sigV - v part of the signer's signature.
+     */
+    function executeMetaTxCancelVoucher(
+        address _userAddress,
+        BosonTypes.MetaTxExchangeDetails calldata _exchangeDetails,
+        uint256 _nonce,
+        bytes32 _sigR,
+        bytes32 _sigS,
+        uint8 _sigV
+    ) external returns (bytes memory);
 }

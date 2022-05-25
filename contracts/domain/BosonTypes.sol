@@ -161,4 +161,16 @@ contract BosonTypes {
         address buyer;
         uint256 offerId;
     }
+
+    struct MetaTxExchange {
+        uint256 nonce;
+        address from;
+        address contractAddress;
+        string functionName;
+        MetaTxExchangeDetails exchangeDetails;
+    }
+
+    struct MetaTxExchangeDetails {
+        uint256 exchangeId;
+    }
 }
