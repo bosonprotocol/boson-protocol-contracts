@@ -82,8 +82,56 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     function getDispute(uint256 _exchangeId)
     external
     view
+    override
     returns(bool exists, Dispute memory dispute) {
         return fetchDispute(_exchangeId);
     }
 
+    /**
+     * @notice Gets the state of a given dispute.
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return exists - true if the dispute exists
+     * @return state - the dispute state. See {BosonTypes.DisputeState}
+     */
+    function getDisputeState(uint256 _exchangeId)
+    external
+    view
+    override
+    returns(bool exists, DisputeState state) {
+        Dispute storage dispute;
+        (exists, dispute) = fetchDispute(_exchangeId);
+        if (exists) state = dispute.state;
+    }
+
+    /**
+     * @notice Is the given dispute in a finalized state?
+     *
+     * Returns true if
+     * - Dispute state is Retracted, Resolved, or Decided
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return exists - true if the dispute exists
+     * @return isFinalized - true if the dispute is finalized
+     */
+    function isDisputeFinalized(uint256 _exchangeId)
+    external
+    view
+    override
+    returns(bool exists, bool isFinalized) {
+        Dispute storage dispute;
+
+        // Get the dispute
+        (exists, dispute) = fetchDispute(_exchangeId);
+
+        // Bail if no such exchange
+        if (!exists) return (false, false);
+
+        // Check for finalized dispute state
+        isFinalized = (
+            dispute.state == DisputeState.Retracted ||
+            dispute.state == DisputeState.Resolved ||
+            dispute.state == DisputeState.Decided
+        );
+    }
 }

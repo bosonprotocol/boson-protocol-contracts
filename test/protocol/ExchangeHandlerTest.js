@@ -1377,7 +1377,7 @@ describe("IBosonExchangeHandler", function () {
         [exists, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
         // It should match ExchangeState.Committed
-        assert.equal(exchange.state, ExchangeState.Committed, "Exchange state is incorrect");
+        assert.equal(response, ExchangeState.Committed, "Exchange state is incorrect");
       });
     });
   });
