@@ -9,7 +9,7 @@ import {IBosonDisputeEvents} from "../events/IBosonDisputeEvents.sol";
  *
  * @notice Handles disputes associated with exchanges within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x5aef573c
+ * The ERC-165 identifier for this interface is: 0xb9463b81
  */
 interface IBosonDisputeHandler is IBosonDisputeEvents {
 
