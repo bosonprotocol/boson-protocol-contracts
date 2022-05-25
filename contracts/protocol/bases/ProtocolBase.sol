@@ -5,6 +5,7 @@ import {ProtocolLib} from "../libs/ProtocolLib.sol";
 import {DiamondLib} from "../../diamond/DiamondLib.sol";
 import {BosonTypes} from "../../domain/BosonTypes.sol";
 import {BosonConstants} from "../../domain/BosonConstants.sol";
+import {MetaTransactionsLib} from "../libs/MetaTransactionsLib.sol";
 
 /**
  * @title ProtocolBase
@@ -372,9 +373,12 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     internal
     view
     {
+        // Get sender of the transaction
+        address msgSender = MetaTransactionsLib.getCaller();
+
         // Get the caller's buyer account id
         uint256 buyerId;
-        (, buyerId) = getBuyerIdByWallet(msg.sender);
+        (, buyerId) = getBuyerIdByWallet(msgSender);
 
         // Must be the buyer associated with the exchange (which is always voucher holder)
         require(buyerId == _currentBuyer, NOT_VOUCHER_HOLDER);

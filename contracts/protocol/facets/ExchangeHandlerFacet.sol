@@ -7,7 +7,6 @@ import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
-import { MetaTransactionsLib } from "../libs/MetaTransactionsLib.sol";
 
 /**
  * @title ExchangeHandlerFacet
