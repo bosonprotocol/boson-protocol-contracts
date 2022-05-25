@@ -281,7 +281,7 @@ describe("IBosonDisputeHandler", function () {
         });
 
         it("Exchange id is invalid", async function () {
-          // An invalid offer id
+          // An invalid exchange id
           const exchangeId = "666";
 
           // Attempt to raise a dispute, expecting revert
@@ -320,6 +320,106 @@ describe("IBosonDisputeHandler", function () {
           // Attempt to raise a dispute, expecting revert
           await expect(disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint)).to.revertedWith(
             RevertReasons.COMPLAINT_MISSING
+          );
+        });
+      });
+    });
+
+
+    context("👉 retractDispute()", async function () {
+      beforeEach(async function () {
+        // Raise a dispute
+        tx = await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+
+        // Get the block timestamp of the confirmed tx and set disputedDate
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+        disputedDate = block.timestamp.toString();
+      });
+      
+      it("should emit a DisputeRetracted event", async function () {
+        // Raise the dispute, testing for the event
+        await expect(disputeHandler.connect(buyer).retractDispute(exchange.id))
+          .to.emit(disputeHandler, "DisputeRetracted")
+          .withArgs(exchange.id, buyer.address);
+      });
+
+      it("should update state", async function () {
+        // Retract the dispute
+        tx = await disputeHandler.connect(buyer).retractDispute(exchange.id);
+
+        // Get the block timestamp of the confirmed tx and set finalizedDate
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+        finalizedDate = block.timestamp.toString();
+
+        dispute = new Dispute(exchange.id, disputedDate, finalizedDate, complaint, DisputeState.Retracted, new Resolution("0"));
+
+        // Get the dispute as a struct
+        [, disputeStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
+
+        // Parse into entity
+        let returnedDispute = Dispute.fromStruct(disputeStruct);
+
+        // Returned values should match the input in createSeller
+        for (const [key, value] of Object.entries(dispute)) {
+          expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Get the dispute state
+        [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchange.id);
+
+        // It should match DisputeState.Resolving
+        assert.equal(response, DisputeState.Retracted, "Dispute state is incorrect");
+        
+        // exchange should also be finalized
+        // Get the dispute as a struct
+        [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+
+        // Parse into entity
+        let returnedExchange = Exchange.fromStruct(exchangeStruct);
+
+        // FinalizeDate should be set correctly
+        assert.equal(returnedExchange.finalizedDate, finalizedDate, "Exchange finalizeDate is incorect");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Exchange does not exist", async function () {
+          // An invalid exchange id
+          const exchangeId = "666";
+
+          // Attempt to retract the dispute, expecting revert
+          await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWith(
+            RevertReasons.NO_SUCH_EXCHANGE
+          );
+        });
+
+        it("Exchange is not in a disputed state", async function () {
+          exchange.id++;
+
+          // Commit to offer, creating a new exchange
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Attempt to retract the dispute, expecting revert
+          await expect(disputeHandler.connect(buyer).retractDispute(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE
+          );
+        });
+
+        it("Caller is not the buyer for the given exchange id", async function () {
+          // Attempt to retract the dispute, expecting revert
+          await expect(disputeHandler.connect(rando).retractDispute(exchange.id)).to.revertedWith(
+            RevertReasons.NOT_VOUCHER_HOLDER
+          );
+        });
+
+        it("Dispute is in some state other than resolving", async function () {
+          // Retract the dispute, put it into RETRACTED state
+          await disputeHandler.connect(buyer).retractDispute(exchange.id);
+
+          // Attempt to retract the dispute, expecting revert
+          await expect(disputeHandler.connect(buyer).retractDispute(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE
           );
         });
       });
@@ -439,7 +539,7 @@ describe("IBosonDisputeHandler", function () {
           assert.equal(response, false, "Incorrectly reports finalized state");
         });
 
-        it.skip("should return true if dispute is in Retracted state", async function () {
+        it("should return true if dispute is in Retracted state", async function () {
           // Retract dispute
           await disputeHandler.connect(buyer).retractDispute(exchange.id);
 

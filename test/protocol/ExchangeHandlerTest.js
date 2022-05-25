@@ -1230,10 +1230,9 @@ describe("IBosonExchangeHandler", function () {
           assert.equal(response, false, "Incorrectly reports unfinalized state");
         });
 
-        // TODO Include this test when DisputeHandlerFacet.retractDispute works
-        it.skip("should return true if exchange has a dispute in Retracted state", async function () {
+        it("should return true if exchange has a dispute in Retracted state", async function () {
           // Retract Dispute
-          [exists, response] = await disputeHandler.connect(buyer).retractDispute(exchange.id);
+          await disputeHandler.connect(buyer).retractDispute(exchange.id);
 
           // Now in Retracted state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);

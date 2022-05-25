@@ -16,7 +16,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents {
     /**
      * @notice Raise a dispute
      *
-     * Emits an DisputeCreated event if successful.
+     * Emits an DisputeRaised event if successful.
      *
      * Reverts if:
      * - caller does not hold a voucher for the given exchange id
@@ -28,6 +28,21 @@ interface IBosonDisputeHandler is IBosonDisputeEvents {
      * @param _complaint - the buyer's complaint description
      */
     function raiseDispute(uint256 _exchangeId, string calldata _complaint) external;
+
+    /**
+     * @notice Retracts the dispute and release the funds
+     *
+     * Emits an DisputeRetracted event if successful.
+     *
+     * Reverts if:
+     * - exchange does not exist
+     * - exchange is not in a disputed state
+     * - caller is not the buyer for the given exchange id
+     * - dispute is in some state other than resolving
+     *
+     * @param _exchangeId - the id of the associated exchange
+     */
+    function retractDispute(uint256 _exchangeId) external;
 
     /**
      * @notice Gets the details about a given dispute.
