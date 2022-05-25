@@ -53,7 +53,7 @@ describe("IBosonDisputeHandler", function () {
     voided;
   let protocolFeePrecentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
-  let exchange, finalizedDate, state;
+  let exchange, exchangeStruct, finalizedDate, state;
   let dispute, disputedDate, complaint, disputeStruct;
   let exists, response;
 
@@ -325,7 +325,6 @@ describe("IBosonDisputeHandler", function () {
       });
     });
 
-
     context("👉 retractDispute()", async function () {
       beforeEach(async function () {
         // Raise a dispute
@@ -336,7 +335,7 @@ describe("IBosonDisputeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
       });
-      
+
       it("should emit a DisputeRetracted event", async function () {
         // Raise the dispute, testing for the event
         await expect(disputeHandler.connect(buyer).retractDispute(exchange.id))
@@ -353,7 +352,14 @@ describe("IBosonDisputeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
         finalizedDate = block.timestamp.toString();
 
-        dispute = new Dispute(exchange.id, disputedDate, finalizedDate, complaint, DisputeState.Retracted, new Resolution("0"));
+        dispute = new Dispute(
+          exchange.id,
+          disputedDate,
+          finalizedDate,
+          complaint,
+          DisputeState.Retracted,
+          new Resolution("0")
+        );
 
         // Get the dispute as a struct
         [, disputeStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
@@ -371,7 +377,7 @@ describe("IBosonDisputeHandler", function () {
 
         // It should match DisputeState.Resolving
         assert.equal(response, DisputeState.Retracted, "Dispute state is incorrect");
-        
+
         // exchange should also be finalized
         // Get the dispute as a struct
         [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
