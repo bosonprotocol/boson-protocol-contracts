@@ -16,7 +16,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents {
     /**
      * @notice Raise a dispute
      *
-     * Emits an DisputeCreated event if successful.
+     * Emits an DisputeRaised event if successful.
      *
      * Reverts if:
      * - caller does not hold a voucher for the given exchange id

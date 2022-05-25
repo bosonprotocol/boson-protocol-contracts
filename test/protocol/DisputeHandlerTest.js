@@ -280,7 +280,7 @@ describe("IBosonDisputeHandler", function () {
         });
 
         it("Exchange id is invalid", async function () {
-          // An invalid offer id
+          // An invalid exchange id
           const exchangeId = "666";
 
           // Attempt to raise a dispute, expecting revert
