@@ -9,11 +9,12 @@ import {BosonTypes} from "../../domain/BosonTypes.sol";
  * @notice Events related to management of funds within the protocol.
  */
 interface IBosonFundsEvents {
-    event FundsDeposited(uint256 indexed sellerId, address indexed depositedBy, address indexed tokenAddress, uint256 amount);    
+    event FundsDeposited(uint256 indexed sellerId, address indexed depositedBy, address indexed tokenAddress, uint256 amount);  
 }
 
 interface IBosonFundsLibEvents {
-    event FundsEncumbered(uint256 indexed entityId, address indexed exchangeToken, uint256 amount);
+    event FundsEncumbered(uint256 indexed entityId, address indexed exchangeToken, uint256 amount);  
     event FundsReleased(uint256 indexed exchangeId, uint256 indexed entityId, address indexed exchangeToken, uint256 amount);
     event ExchangeFee(uint256 indexed exchangeId, address indexed exchangeToken, uint256 amount);
+    event FundsWithdrawn(uint256 indexed sellerId, address indexed withdrawnTo, address indexed tokenAddress, uint256 amount);  
 }

@@ -15,7 +15,7 @@ describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
   let accounts, deployer, rando, token, treasury, voucher;
-  let protocolFee, maxOffersPerGroup, maxTwinsPerBundle, maxOffersPerBundle, maxOffersPerBatch;
+  let protocolFee, maxOffersPerGroup, maxTwinsPerBundle, maxOffersPerBundle, maxOffersPerBatch, maxTokensPerWithdrawal;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
 
   before(async function () {
@@ -44,6 +44,7 @@ describe("IBosonConfigHandler", function () {
     maxTwinsPerBundle = 100;
     maxOffersPerBundle = 100;
     maxOffersPerBatch = 100;
+    maxTokensPerWithdrawal = 100;
 
     const protocolConfig = [
       token.address,
@@ -54,6 +55,7 @@ describe("IBosonConfigHandler", function () {
       maxTwinsPerBundle,
       maxOffersPerBundle,
       maxOffersPerBatch,
+      maxTokensPerWithdrawal,
     ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
@@ -172,7 +174,7 @@ describe("IBosonConfigHandler", function () {
 
     context("👉 setMaxOffersPerBatch()", async function () {
       beforeEach(async function () {
-        // set new value for max offers per buatch
+        // set new value for max offers per batch
         maxOffersPerBatch = 135;
       });
 
@@ -195,6 +197,37 @@ describe("IBosonConfigHandler", function () {
         it("caller is not the admin", async function () {
           // Attempt to set new max offer per batch, expecting revert
           await expect(configHandler.connect(rando).setMaxOffersPerBatch(maxOffersPerBatch)).to.revertedWith(
+            RevertReasons.ACCESS_DENIED
+          );
+        });
+      });
+    });
+
+    context("👉 setMaxTokensPerWithdrawal()", async function () {
+      beforeEach(async function () {
+        // set new value for max tokens per withdrawal
+        maxTokensPerWithdrawal = 598;
+      });
+
+      it("should emit a MaxTokensPerWithdrawalChanged event", async function () {
+        // Set new max tokens per withdrawal, testing for the event
+        await expect(configHandler.connect(deployer).setMaxTokensPerWithdrawal(maxTokensPerWithdrawal))
+          .to.emit(configHandler, "MaxTokensPerWithdrawalChanged")
+          .withArgs(maxTokensPerWithdrawal, deployer.address);
+      });
+
+      it("should update state", async function () {
+        // Set new max offer tokens per withdrawal
+        await configHandler.connect(deployer).setMaxTokensPerWithdrawal(maxTokensPerWithdrawal);
+
+        // Verify that new value is stored
+        expect(await configHandler.connect(rando).getMaxTokensPerWithdrawal()).to.equal(maxTokensPerWithdrawal);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("caller is not the admin", async function () {
+          // Attempt to set new tokens per withdrawal, expecting revert
+          await expect(configHandler.connect(rando).setMaxTokensPerWithdrawal(maxTokensPerWithdrawal)).to.revertedWith(
             RevertReasons.ACCESS_DENIED
           );
         });
@@ -232,6 +265,10 @@ describe("IBosonConfigHandler", function () {
       expect(await configHandler.connect(rando).getMaxOffersPerBatch()).to.equal(
         maxOffersPerBatch,
         "Invalid max offers per batch"
+      );
+      expect(await configHandler.connect(rando).getMaxTokensPerWithdrawal()).to.equal(
+        maxTokensPerWithdrawal,
+        "Invalid max tokens per withdrawal"
       );
     });
   });

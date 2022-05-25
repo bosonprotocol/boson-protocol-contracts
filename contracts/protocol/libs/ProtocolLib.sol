@@ -32,6 +32,8 @@ library ProtocolLib {
         uint16 maxTwinsPerBundle;
         // limit how many offers can be processed in single batch transaction
         uint16 maxOffersPerBatch;
+        // limit how many different tokens can be withdrawn in a single transaction
+        uint16 maxTokensPerWithdrawal;
         // offer id => offer
         mapping(uint256 => BosonTypes.Offer) offers;
         // exchange id => exchange

@@ -96,4 +96,116 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             availableFunds[i] = Funds(tokenAddress, tokenName, availableAmount);
         }
     }
+
+    /**
+     * @notice Withdraw the specified funds
+     *
+     * Reverts if:
+     * - caller is not associated with the entity id
+     * - token list length does not match amount list length
+     * - token list length exceeds the maximum allowed number of tokens
+     * - caller tries to withdraw more that they have in available funds
+     * - there is nothing to withdraw
+     * - transfer of funds is not succesful
+     *
+     * @param _entityId - seller or buyer id
+     * @param _tokenList - list of contract addresses of tokens that are being withdrawn
+     * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
+     */
+    function withdrawFunds(uint256 _entityId, address[] calldata _tokenList, uint256[] calldata _tokenAmounts) external override {
+        // address that will receive the funds
+        address payable destinationAddress;
+
+        // first check if the caller is a buyer
+        (bool exists, uint callerId) = getBuyerIdByWallet(msg.sender);
+        if(exists && callerId == _entityId) {
+            // caller is a buyer
+           destinationAddress = payable(msg.sender);
+        } else {
+            // check if the caller is a clerk
+            (exists, callerId) = getSellerIdByClerk(msg.sender);
+            if(exists && callerId == _entityId) {
+                // caller is a clerk. In this case funds are transferred to the treasury address
+                (, Seller storage seller) = fetchSeller(callerId);
+                destinationAddress = seller.treasury;
+            } else {
+                // in this branch, caller is neither buyer or clerk or does not match the _entityId 
+                revert(NOT_AUTHORIZED);
+            }
+        }
+    
+        withdrawFundsInternal(destinationAddress, _entityId, _tokenList, _tokenAmounts);
+    }
+
+    /**
+     * @notice Withdraw the protocol fees
+     *
+     * Reverts if:
+     * - caller does not have the FEE_COLLECTOR role
+     * - token list length does not match amount list length
+     * - token list length exceeds the maximum allowed number of tokens
+     * - caller tries to withdraw more that they have in available funds
+     * - there is nothing to withdraw
+     * - transfer of funds is not succesful
+     *
+     * @param _tokenList - list of contract addresses of tokens that are being withdrawn
+     * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
+     */
+    function withdrawProtocolFees(address[] calldata _tokenList, uint256[] calldata _tokenAmounts) external override onlyRole(FEE_COLLECTOR) {
+        // withdraw the funds
+        withdrawFundsInternal(payable(msg.sender), 0, _tokenList, _tokenAmounts);
+    }
+
+    /**
+     * @notice Withdraw the specified funds
+     *
+     * Reverts if:
+     * - caller is not associated with the entity id
+     * - token list length does not match amount list length
+     * - token list length exceeds the maximum allowed number of tokens
+     * - caller tries to withdraw more that they have in available funds
+     * - there is nothing to withdraw
+     * - transfer of funds is not succesful
+     *
+     * @param _destinationAddress - wallet that will receive funds
+     * @param _entityId - seller or buyer id
+     * @param _tokenList - list of contract addresses of tokens that are being withdrawn
+     * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
+     */
+    function withdrawFundsInternal(address payable _destinationAddress, uint256 _entityId, address[] calldata _tokenList, uint256[] calldata _tokenAmounts) internal {
+            
+        // make sure that the data is complete
+        require(_tokenList.length == _tokenAmounts.length, TOKEN_AMOUNT_MISMATCH);
+
+        // limit maximum number of tokens to avoid running into block gas limit in a loop
+        uint maxTokensPerWithdrawal = protocolStorage().maxTokensPerWithdrawal;
+        require(_tokenList.length <= maxTokensPerWithdrawal, TOO_MANY_TOKENS);
+
+        // two possible options: withdraw all, or withdraw only specified tokens and amounts
+        if (_tokenList.length == 0) {
+            // withdraw everything
+            
+            // get list of all user's tokens
+            address[] memory tokenList = protocolStorage().tokenList[_entityId];
+
+            // make sure that at least something will be withdrawn
+            require(tokenList.length != 0, NOTHING_TO_WITHDRAW);
+            
+            // make sure that tokenList is not too long
+            uint len = maxTokensPerWithdrawal <= tokenList.length ? maxTokensPerWithdrawal : tokenList.length;
+
+            for (uint i = 0; i < len; i++) {
+                // get available fnds from storage
+                uint256 availableFunds = protocolStorage().availableFunds[_entityId][tokenList[i]];
+                FundsLib.transferFundsFromProtocol(_entityId, tokenList[i], _destinationAddress, availableFunds); 
+            }
+        } else {
+            for (uint i = 0; i < _tokenList.length; i++) {
+                // make sure that at least something will be withdrawn
+                require(_tokenAmounts[i] > 0, NOTHING_TO_WITHDRAW);                
+                FundsLib.transferFundsFromProtocol(_entityId, _tokenList[i], _destinationAddress, _tokenAmounts[i]); 
+            }
+        }
+    }
+    
 }
