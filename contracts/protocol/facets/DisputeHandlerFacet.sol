@@ -61,9 +61,13 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // Set the initial values
         dispute.exchangeId = _exchangeId;
-        dispute.disputedDate = block.timestamp;
         dispute.complaint = _complaint;
         dispute.state = DisputeState.Resolving;
+
+        // Fetch the disputeDate
+        mapping (DisputeDate => uint256) storage disputeDates=fetchDisputeDates(_exchangeId);
+        disputeDates[DisputeDate.Disputed] = block.timestamp;
+        // disputeDates[DisputeDate.Timeout] = block.timestamp + voucherValidDuration[exchange.offerId]; // TODO add calculation once disputeValidDuration is added
         
         // Get the offer, which will exist if the exchange does
         (, Offer storage offer) = fetchOffer(exchange.offerId);
@@ -78,13 +82,21 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @param _exchangeId - the id of the exchange to check
      * @return exists - true if the dispute exists
      * @return dispute - the dispute details. See {BosonTypes.Dispute}
+     * @return disputeDatesList - list of dispute dates, ordered as {BosonTypes.DisputeDate}
      */
     function getDispute(uint256 _exchangeId)
     external
     view
     override
-    returns(bool exists, Dispute memory dispute) {
-        return fetchDispute(_exchangeId);
+    returns(bool exists, Dispute memory dispute, uint256[] memory disputeDatesList) {
+        (exists, dispute) = fetchDispute(_exchangeId);
+        if (exists) {
+            disputeDatesList = new uint256[](uint(type(DisputeDate).max)+1);
+            mapping(DisputeDate => uint256) storage disputeDates = fetchDisputeDates(_exchangeId);
+            for (uint i = 0; i <= uint(type(DisputeDate).max); i++) {
+                disputeDatesList[i] = disputeDates[DisputeDate(i)];
+            }
+        }
     }
 
     /**

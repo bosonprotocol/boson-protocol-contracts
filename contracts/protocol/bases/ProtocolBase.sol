@@ -254,6 +254,22 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
 
         // Determine existence
         exists = (_exchangeId > 0 && dispute.exchangeId == _exchangeId);
+    
+    }
+
+    /**
+     * @notice Fetches a dispute dates from storage by exchange id
+     *
+     * @param _exchangeId - the id of the exchange associated with the dispute
+     * @return disputeDates - pointer to the mappings for {Bosontype.DisputeDate}
+     */
+    function fetchDisputeDates(uint256 _exchangeId)
+    internal
+    view
+    returns (mapping(BosonTypes.DisputeDate => uint256) storage disputeDates)
+    {
+        // Get the disputeDates's slot
+        disputeDates = protocolStorage().disputeDates[_exchangeId];
     }
 
     /**
