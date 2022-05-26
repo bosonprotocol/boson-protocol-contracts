@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const Twin = require("../../scripts/domain/Twin.js");
+const TokenType = require("../../scripts/domain/TokenType.js");
 
 /**
  *  Test the Twin domain entity
@@ -9,7 +10,7 @@ const Twin = require("../../scripts/domain/Twin.js");
 describe("Twin", function () {
   // Suite-wide scope
   let twin, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let accounts, id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress;
+  let accounts, id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType;
 
   beforeEach(async function () {
     // Get a list of accounts
@@ -19,14 +20,15 @@ describe("Twin", function () {
     id = "1000";
     sellerId = "12";
     supplyAvailable = "500";
-    tokenId = "4096";
-    supplyIds = ["1", "2"];
+    tokenId = "0";
+    supplyIds = [];
     tokenAddress = accounts[0].address;
+    tokenType = TokenType.Fungible;
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated Twin instance", async function () {
-      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
       expect(twin.idIsValid()).is.true;
       expect(twin.sellerIdIsValid()).is.true;
       expect(twin.supplyAvailableIsValid()).is.true;
@@ -40,7 +42,7 @@ describe("Twin", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid twin, then set fields in tests directly
-      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
       expect(twin.isValid()).is.true;
     });
 
@@ -205,7 +207,7 @@ describe("Twin", function () {
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid twin, then set fields in tests directly
-      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
       expect(twin.isValid()).is.true;
 
       // Get plain object

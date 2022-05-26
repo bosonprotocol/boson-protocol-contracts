@@ -6,6 +6,7 @@ const { gasLimit } = require("../../environments");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const Twin = require("../../scripts/domain/Twin");
+const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -47,7 +48,7 @@ describe("IBosonTwinHandler", function () {
     supplyIds,
     tokenId,
     tokenAddress;
-  let bundleId, offerIds, twinIds, bundle;
+  let bundleId, offerIds, twinIds, bundle, tokenType;
   let metaTransactionsHandler, nonce, functionSignature;
 
   before(async function () {
@@ -148,12 +149,13 @@ describe("IBosonTwinHandler", function () {
       // Required constructor params
       id = sellerId = "1";
       supplyAvailable = "500";
-      tokenId = "4096";
-      supplyIds = ["1", "2"];
+      tokenId = "0"; // has to be zero, even if not used.
+      supplyIds = [];
       tokenAddress = bosonToken.address;
+      tokenType = TokenType.FungibleToken;
 
       // Create a valid twin, then set fields in tests directly
-      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
       expect(twin.isValid()).is.true;
 
       // How that twin looks as a returned struct
@@ -246,19 +248,19 @@ describe("IBosonTwinHandler", function () {
         twin.tokenAddress = foreign1155.address;
 
         // Mint a token and approve twinHandler contract to transfer it
-        await foreign1155.connect(operator).mint(twin.tokenId, twin.supplyIds[0]);
+        await foreign1155.connect(operator).mint(twin.tokenId, twin.supplyAvailable);
         await foreign1155.connect(operator).setApprovalForAll(twinHandler.address, true);
 
         // Create a twin, testing for the event
         const tx = await twinHandler.connect(operator).createTwin(twin);
         const txReceipt = await tx.wait();
-
         const event = getEvent(txReceipt, twinHandler, "TwinCreated");
 
-        twinInstance = Twin.fromStruct(event.twin);
         // Validate the instance
+        twinInstance = Twin.fromStruct(event.twin);
         expect(twinInstance.isValid()).to.be.true;
 
+        // Test fields
         assert.equal(event.twinId.toString(), nextTwinId, "Twin Id is incorrect");
         assert.equal(event.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
         assert.equal(Twin.fromStruct(event.twin).toString(), twin.toString(), "Twin struct is incorrect");

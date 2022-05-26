@@ -4,7 +4,9 @@ pragma solidity ^0.8.0;
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
+import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import { TwinBase } from "../bases/TwinBase.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 
@@ -13,7 +15,7 @@ import { FundsLib } from "../libs/FundsLib.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol
  */
-contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
+contract ExchangeHandlerFacet is IBosonExchangeHandler, TwinBase {
 
     /**
      * @notice Facet Initializer
@@ -315,6 +317,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
 
         // Notify watchers of state change
         emit VoucherRedeemed(exchange.offerId, _exchangeId, msg.sender);
+
+        // Transfer any bundled twins to buyer
+        transferTwins(exchange);
     }
 
     /**
@@ -562,4 +567,48 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         require(buyerId == _currentBuyer, NOT_VOUCHER_HOLDER);
     }
 
+    /**
+     * @notice Transfer any twins bundled with an exchange
+     *
+     * @param _exchange - the exchange
+     */
+    function transferTwins(Exchange storage _exchange)
+    internal
+    {
+        // See if there is an associated bundle
+        (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
+
+        // Transfer the twins
+        if (exists) {
+
+            // Get storage location for bundle
+            (, Bundle storage bundle) = fetchBundle(bundleId);
+
+            // Get the twin Ids in the bundle
+            uint256[] storage twinIds = bundle.twinIds;
+
+            // Visit the twins
+            for (uint256 j = 0; j < twinIds.length; j++) {
+
+                // Get the twin
+                (,Twin storage twin) = fetchTwin(twinIds[j]);
+
+                // Get the twin token contract
+                ITwinToken token = ITwinToken(twin.tokenAddress);
+
+                // TODO How to determine token type?
+                // supplyAvailable != 0 means ERC20/ER1155 style transfer
+                // supplyIds.length > 0 means ERC721
+                // tokenId is ambiguous. ignore for ERC20/ERC721. required for ERC1155, but 0 is valid??
+                //
+                // The fields were chosen with the notion that we would know the type ahead of time, not derive it.
+                //
+                // PROPOSAL:
+                // * We need an explicit TokenType enum because we can't derive the type from the current fields.
+                // * If we had a tokenType field for the Twin struct, we could validate inputs
+                //   - If type is ERC721, supplyAvailable should be zero and supplyIds non-zero
+                //   - If type is ERC1155 or ERC20, supplyAvailable should be non-zero and supplyIds empty
+            }
+        }
+    }
 }

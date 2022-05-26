@@ -1,5 +1,6 @@
 const ethers = require("ethers");
 const eip55 = require("eip55");
+const TokenType = require("./TokenType");
 
 /**
  * Boson Protocol Domain Entity: Twin
@@ -15,16 +16,18 @@ class Twin {
             uint256[] supplyIds;     // ERC-721
             uint256 tokenId;         // ERC-1155
             address tokenAddress;    // all
+            TokenType tokenType
         }
     */
 
-  constructor(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress) {
+  constructor(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType) {
     this.id = id;
     this.sellerId = sellerId;
     this.supplyAvailable = supplyAvailable;
-    this.supplyIds = supplyIds;
+    this.supplyIds = supplyIds || [];
     this.tokenId = tokenId;
     this.tokenAddress = tokenAddress;
+    this.tokenType = tokenType;
   }
 
   /**
@@ -33,8 +36,8 @@ class Twin {
    * @returns {Twin}
    */
   static fromObject(o) {
-    const { id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress } = o;
-    return new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+    const { id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType } = o;
+    return new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
   }
 
   /**
@@ -43,18 +46,19 @@ class Twin {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress;
+    let id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType;
 
     // destructure struct
-    [id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress] = struct;
+    [id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType] = struct;
 
     return Twin.fromObject({
       id: id.toString(),
       sellerId: sellerId.toString(),
       supplyAvailable: supplyAvailable.toString(),
-      supplyIds: supplyIds.map((supplyId) => supplyId.toString()),
-      tokenId: tokenId.toString(),
+      supplyIds: supplyIds ? supplyIds.map((supplyId) => supplyId.toString()) : [],
+      tokenId: tokenId ? tokenId.toString() : "",
       tokenAddress,
+      tokenType,
     });
   }
 
@@ -79,7 +83,15 @@ class Twin {
    * @returns {string}
    */
   toStruct() {
-    return [this.id, this.sellerId, this.supplyAvailable, this.supplyIds, this.tokenId, this.tokenAddress];
+    return [
+      this.id,
+      this.sellerId,
+      this.supplyAvailable,
+      this.supplyIds,
+      this.tokenId,
+      this.tokenAddress,
+      this.tokenType,
+    ];
   }
 
   /**
@@ -134,33 +146,30 @@ class Twin {
 
   /**
    * Is this Twin instance's supplyIds field valid?
-   * Must be an array of numbers
+   * Must be an array, and if members are present, they must be string representations of BigNumbers
    * @returns {boolean}
    */
   supplyIdsIsValid() {
     let valid = false;
     let { supplyIds } = this;
+    let validateMembers = (ok, supplyId) =>
+      ok && typeof supplyId === "string" && typeof ethers.BigNumber.from(supplyId) === "object";
     try {
-      const supplyIdsIsArray = Array.isArray(supplyIds);
-      if (supplyIdsIsArray) {
-        supplyIds.forEach((supplyId) => {
-          valid = typeof supplyId === "string" && typeof ethers.BigNumber.from(supplyId) === "object";
-        });
-      }
+      valid = Array.isArray(supplyIds) && (supplyIds.length === 0 || supplyIds.reduce(validateMembers, true));
     } catch (e) {}
     return valid;
   }
 
   /**
    * Is this Twin instance's tokenId field valid?
-   * Must be a string representation of a big number
+   * Must be an empty string or a string representation of a big number
    * @returns {boolean}
    */
   tokenIdIsValid() {
     let valid = false;
     let { tokenId } = this;
     try {
-      valid = typeof tokenId === "string" && typeof ethers.BigNumber.from(tokenId) === "object";
+      valid = typeof tokenId === "string" && (tokenId === "" || typeof ethers.BigNumber.from(tokenId) === "object");
     } catch (e) {}
     return valid;
   }
@@ -180,6 +189,19 @@ class Twin {
   }
 
   /**
+   * Is this Twin instance's tokenType field valid?
+   * @returns {boolean}
+   */
+  tokenTypeIsValid() {
+    let valid = false;
+    let { tokenType } = this;
+    try {
+      valid = TokenType.Types.includes(tokenType);
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
    * Is this Twin instance valid?
    * @returns {boolean}
    */
@@ -190,7 +212,8 @@ class Twin {
       this.supplyAvailableIsValid() &&
       this.supplyIdsIsValid() &&
       this.tokenIdIsValid() &&
-      this.tokenAddressIsValid()
+      this.tokenAddressIsValid() &&
+      this.tokenTypeIsValid()
     );
   }
 }
