@@ -124,14 +124,14 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Get the dispute
         (exists, dispute) = fetchDispute(_exchangeId);
 
-        // Bail if no such exchange
-        if (!exists) return (false, false);
-
-        // Check for finalized dispute state
-        isFinalized = (
-            dispute.state == DisputeState.Retracted ||
-            dispute.state == DisputeState.Resolved ||
-            dispute.state == DisputeState.Decided
-        );
+        // If exists, set value to isFinalized, otherwise it returns default (false,false)
+        if (exists) {
+            // Check for finalized dispute state
+            isFinalized = (
+                dispute.state == DisputeState.Retracted ||
+                dispute.state == DisputeState.Resolved ||
+                dispute.state == DisputeState.Decided
+            );
+        }
     }
 }
