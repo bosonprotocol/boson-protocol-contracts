@@ -596,18 +596,20 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, TwinBase {
                 // Get the twin token contract
                 ITwinToken token = ITwinToken(twin.tokenAddress);
 
-                // TODO How to determine token type?
-                // supplyAvailable != 0 means ERC20/ER1155 style transfer
-                // supplyIds.length > 0 means ERC721
-                // tokenId is ambiguous. ignore for ERC20/ERC721. required for ERC1155, but 0 is valid??
-                //
-                // The fields were chosen with the notion that we would know the type ahead of time, not derive it.
-                //
-                // PROPOSAL:
-                // * We need an explicit TokenType enum because we can't derive the type from the current fields.
-                // * If we had a tokenType field for the Twin struct, we could validate inputs
-                //   - If type is ERC721, supplyAvailable should be zero and supplyIds non-zero
-                //   - If type is ERC1155 or ERC20, supplyAvailable should be non-zero and supplyIds empty
+                // Get seller account
+                (,Seller storage seller) = fetchSeller(twin.sellerId);
+
+                // Transfer the token from the seller's operator to the buyer
+                if (twin.tokenType == TokenType.FungibleToken) {
+                    // ERC-20 style transfer
+                    require(token.transferFrom(seller.operator, msg.sender, 1), NO_TRANSFER_APPROVED);
+                } else if (twin.tokenType == TokenType.NonfungibleToken) {
+                    // ERC-721 style transfer
+                    token.safeTransferFrom(seller.operator, msg.sender, twin.tokenId, "");
+                } else {
+                    // ERC-1155 style transfer
+                    token.safeTransferFrom(seller.operator, msg.sender, twin.tokenId, 1, "");
+                }
             }
         }
     }
