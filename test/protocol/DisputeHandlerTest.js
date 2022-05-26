@@ -237,7 +237,7 @@ describe("IBosonDisputeHandler", function () {
       await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
       // Set the dispute reason
-      complaint = "Tastes wierd";
+      complaint = "Tastes weird";
     });
 
     context("👉 raiseDispute()", async function () {
@@ -265,7 +265,7 @@ describe("IBosonDisputeHandler", function () {
         // Parse into entity
         let returnedDispute = Dispute.fromStruct(disputeStruct);
 
-        // Returned values should match the input in createSeller
+        // Returned values should match expected dispute data
         for (const [key, value] of Object.entries(dispute)) {
           expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
         }
@@ -358,7 +358,7 @@ describe("IBosonDisputeHandler", function () {
         // Get the exchange
         [exists, response] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
-        // It should match the expected exchange struct
+        // It should match the expected dispute struct
         assert.equal(dispute.toString(), Dispute.fromStruct(response).toString(), "Dispute struct is incorrect");
       });
     });

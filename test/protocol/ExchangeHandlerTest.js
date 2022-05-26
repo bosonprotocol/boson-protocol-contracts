@@ -1058,7 +1058,7 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
           // Raise a dispute on the exchange
-          await disputeHandler.connect(buyer).raiseDispute(exchange.id, "Tastes wierd");
+          await disputeHandler.connect(buyer).raiseDispute(exchange.id, "Tastes weird");
         });
 
         it("should return false if exchange has a dispute in Disputed state", async function () {
