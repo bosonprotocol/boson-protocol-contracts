@@ -514,4 +514,5 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolStorage().voucherAddress);
         bosonVoucher.burnVoucher(_exchangeId);
     }
+
 }
