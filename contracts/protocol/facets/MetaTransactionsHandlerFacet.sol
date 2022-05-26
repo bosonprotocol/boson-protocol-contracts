@@ -21,6 +21,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     // Function names
     string private constant COMMIT_TO_OFFER = "commitToOffer(address,uint256)";
     string private constant CANCEL_VOUCHER = "cancelVoucher(uint256)";
+    string private constant REDEEM_VOUCHER = "redeemVoucher(uint256)";
 
     /**
      * @notice Facet Initializer
@@ -382,5 +383,50 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         );
 
         return executeTx(_userAddress, CANCEL_VOUCHER, functionSignature, _nonce);
+    }
+
+    /**
+     * @notice Handles the incoming meta transaction for Redeem Voucher.
+     *
+     * Reverts if:
+     * - nonce is already used by another transaction.
+     * - sender does not match the recovered signer.
+     * - any code executed in the signed transaction reverts.
+     *
+     * @param _userAddress - the sender of the transaction.
+     * @param _exchangeDetails - the fully populated BosonTypes.MetaTxExchangeDetails struct.
+     * @param _nonce - the nonce value of the transaction.
+     * @param _sigR - r part of the signer's signature.
+     * @param _sigS - s part of the signer's signature.
+     * @param _sigV - v part of the signer's signature.
+     */
+    function executeMetaTxRedeemVoucher(
+        address _userAddress,
+        MetaTxExchangeDetails calldata _exchangeDetails,
+        uint256 _nonce,
+        bytes32 _sigR,
+        bytes32 _sigS,
+        uint8 _sigV
+    ) public override returns (bytes memory) {
+        bytes4 functionSelector = IBosonExchangeHandler.redeemVoucher.selector;
+        bytes memory functionSignature = abi.encodeWithSelector(
+            functionSelector,
+            _exchangeDetails.exchangeId
+        );
+        validateTx(REDEEM_VOUCHER, functionSignature, _nonce);
+
+        MetaTxExchange memory metaTx = MetaTxExchange({
+            nonce: _nonce,
+            from: _userAddress,
+            contractAddress: address(this),
+            functionName: REDEEM_VOUCHER,
+            exchangeDetails: _exchangeDetails
+        });
+        require(
+            verify(_userAddress, hashMetaTxExchangeDetails(metaTx), _sigR, _sigS, _sigV),
+            SIGNER_AND_SIGNATURE_DO_NOT_MATCH
+        );
+
+        return executeTx(_userAddress, REDEEM_VOUCHER, functionSignature, _nonce);
     }
 }
