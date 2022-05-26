@@ -1026,6 +1026,123 @@ describe("IBosonMetaTransactionsHandler", function () {
           });
         });
       });
+
+      context("👉 executeMetaTxCompleteExchange()", async function () {
+        beforeEach(async function () {
+          // Prepare the message
+          message.functionName = "completeExchange(uint256)";
+          message.exchangeDetails = validExchangeDetails;
+          message.from = buyer.address;
+
+          // Set time forward to the offer's redeemableFromDate
+          await setNextBlockTimestamp(Number(redeemableFromDate));
+
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+        });
+
+        it("Should emit MetaTransactionExecuted event", async () => {
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionType,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // send a meta transaction, check for event
+          await expect(
+            metaTransactionsHandler.executeMetaTxCompleteExchange(buyer.address, validExchangeDetails, nonce, r, s, v)
+          )
+            .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+            .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+
+          // Get the exchange state
+          let response;
+          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+          // It should match ExchangeState.Completed
+          assert.equal(response, ExchangeState.Completed, "Exchange state is incorrect");
+
+          // Verify that nonce is used. Expect true.
+          let expectedResult = true;
+          result = await metaTransactionsHandler.connect(buyer).isUsedNonce(nonce);
+          assert.equal(result, expectedResult, "Nonce is unused");
+        });
+
+        it("does not modify revert reasons", async function () {
+          // An invalid exchange id
+          id = "666";
+
+          // prepare the MetaTxExchangeDetails struct
+          validExchangeDetails = new MetaTxExchangeDetails(id);
+          expect(validExchangeDetails.isValid()).is.true;
+
+          // Prepare the message
+          message.exchangeDetails = validExchangeDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionType,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Execute meta transaction, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTxCompleteExchange(buyer.address, validExchangeDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("Should fail when replay transaction", async function () {
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              buyer,
+              customTransactionType,
+              "MetaTxExchange",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute the meta transaction.
+            await metaTransactionsHandler.executeMetaTxCompleteExchange(
+              buyer.address,
+              validExchangeDetails,
+              nonce,
+              r,
+              s,
+              v
+            );
+
+            // Execute meta transaction again with the same nonce, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTxCompleteExchange(buyer.address, validExchangeDetails, nonce, r, s, v)
+            ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+          });
+
+          it("Should fail when Signer and Signature do not match", async function () {
+            // Prepare the message
+            message.from = rando.address;
+
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              rando, // Different user, not buyer.
+              customTransactionType,
+              "MetaTxExchange",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTxCompleteExchange(buyer.address, validExchangeDetails, nonce, r, s, v)
+            ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+          });
+        });
+      });
     });
   });
 });
