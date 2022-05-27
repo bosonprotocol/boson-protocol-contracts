@@ -1,16 +1,13 @@
 name: Deploy to internal test env
-# on:
-#   workflow_run:
-#     workflows: [Contracts CI]
-#     types: [completed]
-#     branches: [main]
 on:
-  push:
-    branches: [ create-automated-prs-with-deployed-addresses ]
+  workflow_run:
+    workflows: [Contracts CI]
+    types: [completed]
+    branches: [main]
 jobs:
   test_deploy:
     runs-on: contracts
-    # if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     env:
       DEPLOYER_GAS_LIMIT: ${{ secrets.DEPLOYER_GAS_LIMIT }}
       DEPLOYER_TEST_TXNODE: ${{ secrets.DEPLOYER_TEST_TXNODE }}
