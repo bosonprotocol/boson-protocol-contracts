@@ -1,25 +1,29 @@
 const { expect } = require("chai");
 const Dispute = require("../../scripts/domain/Dispute");
 const DisputeState = require("../../scripts/domain/DisputeState");
+const Resolution = require("../../scripts/domain/Resolution");
 
 /**
  *  Test the Dispute domain entity
  */
 describe("Dispute", function () {
   // Suite-wide scope
-  let dispute, object, promoted, clone, dehydrated, rehydrated, key, value;
-  let exchangeId, complaint, state; //, struct; //TODO: Add to/from struct tests
+  let dispute, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
+  let exchangeId, disputedDate, finalizedDate, complaint, state, resolution;
 
   beforeEach(async function () {
     // Required constructor params
     exchangeId = "2112";
+    disputedDate = "1661442001";
+    finalizedDate = "166145000";
     complaint = "complain text";
     state = DisputeState.Resolving;
+    resolution = new Resolution("500");
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated Dispute instance", async function () {
-      dispute = new Dispute(exchangeId, complaint, state);
+      dispute = new Dispute(exchangeId, disputedDate, finalizedDate, complaint, state, resolution);
       expect(dispute.exchangeIdIsValid()).is.true;
       expect(dispute.isValid()).is.true;
     });
@@ -28,7 +32,7 @@ describe("Dispute", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid dispute, then set fields in tests directly
-      dispute = new Dispute(exchangeId, complaint, state);
+      dispute = new Dispute(exchangeId, disputedDate, finalizedDate, complaint, state, resolution);
       expect(dispute.isValid()).is.true;
     });
 
@@ -56,6 +60,60 @@ describe("Dispute", function () {
       // Valid field value
       dispute.exchangeId = "126";
       expect(dispute.exchangeIdIsValid()).is.true;
+      expect(dispute.isValid()).is.true;
+    });
+
+    it("Always present, disputedDate must be the string representation of a BigNumber", async function () {
+      // Invalid field value
+      dispute.disputedDate = "zedzdeadbaby";
+      expect(dispute.disputedDateIsValid()).is.false;
+      expect(dispute.isValid()).is.false;
+
+      // Invalid field value
+      dispute.disputedDate = new Date();
+      expect(dispute.disputedDateIsValid()).is.false;
+      expect(dispute.isValid()).is.false;
+
+      // Invalid field value
+      dispute.disputedDate = 12;
+      expect(dispute.disputedDateIsValid()).is.false;
+      expect(dispute.isValid()).is.false;
+
+      // Valid field value
+      dispute.disputedDate = "0";
+      expect(dispute.disputedDateIsValid()).is.true;
+      expect(dispute.isValid()).is.true;
+
+      // Valid field value
+      dispute.disputedDate = "126";
+      expect(dispute.disputedDateIsValid()).is.true;
+      expect(dispute.isValid()).is.true;
+    });
+
+    it("Always present, finalizedDate must be the string representation of a BigNumber", async function () {
+      // Invalid field value
+      dispute.finalizedDate = "zedzdeadbaby";
+      expect(dispute.finalizedDateIsValid()).is.false;
+      expect(dispute.isValid()).is.false;
+
+      // Invalid field value
+      dispute.finalizedDate = new Date();
+      expect(dispute.finalizedDateIsValid()).is.false;
+      expect(dispute.isValid()).is.false;
+
+      // Invalid field value
+      dispute.finalizedDate = 12;
+      expect(dispute.finalizedDateIsValid()).is.false;
+      expect(dispute.isValid()).is.false;
+
+      // Valid field value
+      dispute.finalizedDate = "0";
+      expect(dispute.finalizedDateIsValid()).is.true;
+      expect(dispute.isValid()).is.true;
+
+      // Valid field value
+      dispute.finalizedDate = "126";
+      expect(dispute.finalizedDateIsValid()).is.true;
       expect(dispute.isValid()).is.true;
     });
 
@@ -102,29 +160,53 @@ describe("Dispute", function () {
       expect(dispute.stateIsValid()).is.true;
       expect(dispute.isValid()).is.true;
     });
+
+    it("Always present, resolution must be a valid Resolution instance", async function () {
+      // Invalid field value
+      dispute.resolution = "zedzdeadbaby";
+      expect(dispute.resolutionIsValid()).is.false;
+      expect(dispute.isValid()).is.false;
+
+      // Invalid field value
+      dispute.resolution = new Date();
+      expect(dispute.resolutionIsValid()).is.false;
+      expect(dispute.isValid()).is.false;
+
+      // Invalid field value
+      dispute.resolution = 12;
+      expect(dispute.resolutionIsValid()).is.false;
+      expect(dispute.isValid()).is.false;
+
+      // Valid field value
+      dispute.resolution = "126";
+      expect(dispute.resolutionIsValid()).is.false;
+      expect(dispute.isValid()).is.false;
+
+      // Valid field value
+      dispute.resolution = resolution;
+      expect(dispute.resolutionIsValid()).is.true;
+      expect(dispute.isValid()).is.true;
+    });
   });
 
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid dispute, then set fields in tests directly
-      dispute = new Dispute(exchangeId, complaint, state);
+      dispute = new Dispute(exchangeId, disputedDate, finalizedDate, complaint, state, resolution);
       expect(dispute.isValid()).is.true;
 
       // Get plain object
       object = {
         exchangeId,
+        disputedDate,
+        finalizedDate,
         complaint,
         state,
+        resolution: resolution.toObject(),
       };
 
       // Struct representation
-      /*
-            struct = [
-                exchangeId,
-                complaint,
-                state
-            ]
-*/
+      struct = [exchangeId, disputedDate, finalizedDate, complaint, state, resolution.toStruct()];
     });
 
     context("👉 Static", async function () {
@@ -137,8 +219,17 @@ describe("Dispute", function () {
 
         // Key values all match
         for ([key, value] of Object.entries(dispute)) {
+          console.log(JSON.stringify(promoted[key]), JSON.stringify(value));
           expect(JSON.stringify(promoted[key]) === JSON.stringify(value)).is.true;
         }
+      });
+
+      it("Dispute.fromStruct() should return an Dispute instance from a struct representation", async function () {
+        // Get instance from struct
+        dispute = Dispute.fromStruct(struct);
+
+        // Ensure it marshals back to a valid dispute
+        expect(dispute.isValid()).to.be.true;
       });
     });
 
