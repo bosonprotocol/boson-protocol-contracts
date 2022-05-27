@@ -7,7 +7,6 @@ import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import "hardhat/console.sol";
 
 contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
@@ -72,11 +71,46 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         _buyer.id = buyerId;
         storeBuyer(_buyer);
 
-       
         //Notify watchers of state change
         emit BuyerCreated(_buyer.id, _buyer);
 
     }
+
+    /**
+     * @notice Creates a Dispute Resolver
+     *
+     * Emits a ResolverCreated event if successful.
+     *
+     * Reverts if:
+     * - Wallet address is zero address
+     * - Active is not true
+     * - Wallet address is not unique to this resolver
+     *
+     * @param _resolver - the fully populated struct with resolver id set to 0x0
+     */
+    function createResolver(Resolver memory _resolver) 
+    external
+    override
+    {
+        //Check for zero address
+        require(_resolver.wallet != address(0), INVALID_ADDRESS);
+
+        //Check active is not set to false
+        require(_resolver.active, MUST_BE_ACTIVE);
+
+        // Get the next account Id and increment the counter
+        uint256 resolverId = protocolCounters().nextAccountId++;
+
+        //check that the wallet address is unique to one buyer Id
+        require(protocolStorage().resolverIdByWallet[_resolver.wallet] == 0, RESOLVER_ADDRESS_MUST_BE_UNIQUE);
+
+        _resolver.id = resolverId;
+        storeResolver(_resolver);
+
+        //Notify watchers of state change
+        emit ResolverCreated(_resolver.id, _resolver);
+    }
+
 
      /**
      * @notice Updates a seller. All fields should be filled, even those staying the same.
@@ -243,6 +277,22 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
+     * @notice Gets the details about a resolver.
+     *
+     * @param _resolverId - the id of the resolver to check
+     * @return exists - the resolver was found
+     * @return resolver - the resolver details. See {BosonTypes.Resolver}
+     */
+    function getResolver(uint256 _resolverId) 
+    external
+    override
+    view returns (bool exists, Resolver memory resolver) 
+    {
+        return fetchResolver(_resolverId);
+    }
+
+
+    /**
      * @notice Gets the next account Id that can be assigned to an account.
      *
      * @return nextAccountId - the account Id
@@ -258,11 +308,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     /**
      * @notice Validates buyer struct and stores it to storage
      *
-     * Reverts if:
-     * - Wallet address is zero address
-     * - Wallet address is not unique to this buyer
-     *
-     * @param _buyer - the fully populated struct with seller id set
+     * @param _buyer - the fully populated struct with buyer id set
      */
    
     function storeBuyer(Buyer memory _buyer) internal 
@@ -277,6 +323,27 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         //Map the buyer's wallet address to the buyerId.
         protocolStorage().buyerIdByWallet[_buyer.wallet] = _buyer.id;
+    }
+
+
+    /**
+     * @notice Validates resolver struct and stores it to storage
+     *
+     * @param _resolver - the fully populated struct with resolver id set
+     */
+   
+    function storeResolver(Resolver memory _resolver) internal 
+    {
+        // Get storage location for resolver
+        (,Resolver storage resolver) = fetchResolver(_resolver.id);
+
+        // Set resolver props individually since memory structs can't be copied to storage
+        resolver.id = _resolver.id;
+        resolver.wallet = _resolver.wallet;
+        resolver.active = _resolver.active;
+
+        //Map the resolver's wallet address to the resolverId.
+        protocolStorage().resolverIdByWallet[_resolver.wallet] = _resolver.id;
     }
 
    

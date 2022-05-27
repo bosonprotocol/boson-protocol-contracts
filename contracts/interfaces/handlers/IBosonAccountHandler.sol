@@ -42,6 +42,20 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function createBuyer(BosonTypes.Buyer memory _buyer) external;
 
     /**
+     * @notice Creates a Dispute Resolver
+     *
+     * Emits a ResolverCreated event if successful.
+     *
+     * Reverts if:
+     * - Wallet address is zero address
+     * - Active is not true
+     * - Wallet address is not unique to this resolver
+     *
+     * @param _resolver - the fully populated struct with resolver id set to 0x0
+     */
+    function createResolver(BosonTypes.Resolver memory _resolver) external;
+
+    /**
      * @notice Updates a seller
      *
      * Emits a SellerUpdated event if successful.
@@ -101,6 +115,15 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @return buyer - the buyer details. See {BosonTypes.Buyer}
      */
     function getBuyer(uint256 _buyerId) external view returns (bool exists, BosonTypes.Buyer memory buyer);
+
+    /**
+     * @notice Gets the details about a resolver.
+     *
+     * @param _resolverId - the id of the resolver to check
+     * @return exists - the resolver was found
+     * @return resolver - the resolver details. See {BosonTypes.Resolver}
+     */
+    function getResolver(uint256 _resolverId) external view returns (bool exists, BosonTypes.Resolver memory resolver);
 
     /**
      * @notice Gets the next account Id that can be assigned to an account.

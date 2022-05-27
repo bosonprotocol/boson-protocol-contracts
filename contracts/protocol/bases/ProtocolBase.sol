@@ -181,11 +181,26 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return buyer - the buyer details. See {BosonTypes.Buyer}
      */
     function fetchBuyer(uint256 _buyerId) internal view returns (bool exists, BosonTypes.Buyer storage buyer) {
-        // Get the buyer's's slot
+        // Get the buyer's slot
         buyer = protocolStorage().buyers[_buyerId];
 
         // Determine existence
         exists = (_buyerId > 0 && buyer.id == _buyerId);
+    }
+
+    /**
+     * @notice Fetches a given resolver from storage by id
+     *
+     * @param _resolverId - the id of the resolver
+     * @return exists - whether the resolver exists
+     * @return resolver - the resolver details. See {BosonTypes.Resolver}
+     */
+    function fetchResolver(uint256 _resolverId) internal view returns (bool exists, BosonTypes.Resolver storage resolver) {
+        // Get the resolver's slot
+        resolver = protocolStorage().resolvers[_resolverId];
+
+        // Determine existence
+        exists = (_resolverId > 0 && resolver.id == _resolverId);
     }
 
     /**
