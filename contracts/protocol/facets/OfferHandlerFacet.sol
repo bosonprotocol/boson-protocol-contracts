@@ -34,16 +34,19 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Voided is set to true
      * - Seller deposit is less than protocol fee
      * - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - Dispute duration is zero
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
      */
     function createOffer(
-        Offer memory _offer
+        Offer memory _offer,
+        uint256 _disputeValidDuration
     )
     external
     override
     {    
-        createOfferInternal(_offer);
+        createOfferInternal(_offer, _disputeValidDuration);
     }
 
     /**
@@ -59,11 +62,14 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Voided is set to true
      * - Seller deposit is less than protocol fee
      * - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - Any of dispute durations is zero
      *
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
+     * @param _disputeValidDurations - the array of durations of disputes for exchanges associated with the offers
      */
     function createOfferBatch(
-        Offer[] memory _offers
+        Offer[] memory _offers,
+        uint256[] calldata _disputeValidDurations
     )
     external
     override
@@ -74,7 +80,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
             
             // create offer and update structs values to represent true state
             Offer memory _offer = _offers[i];
-            createOfferInternal(_offer);
+            createOfferInternal(_offer, _disputeValidDurations[i]);
         }
     }   
     

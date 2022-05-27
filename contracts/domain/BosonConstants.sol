@@ -51,6 +51,7 @@ contract BosonConstants {
     string internal constant OFFER_NOT_AVAILABLE = "Offer is not yet available";
     string internal constant OFFER_SOLD_OUT = "Offer has sold out";
     string internal constant EXCHANGE_FOR_OFFER_EXISTS = "Exchange for offer exists";
+    string internal constant INVALID_DISPUTE_DURATION = "Invalid dispute duration";
 
     // Revert Reasons: Group related
     string internal constant NO_SUCH_GROUP = "No such offer";

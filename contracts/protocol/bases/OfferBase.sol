@@ -23,10 +23,12 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Voided is set to true
      * - Seller deposit is less than protocol fee
      * - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - Dispute duration is zero
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
      */
-    function createOfferInternal(Offer memory _offer) internal {
+    function createOfferInternal(Offer memory _offer, uint256 _disputeValidDuration) internal {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
         require(exists, NOT_OPERATOR);
@@ -39,8 +41,13 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // Store the offer
         storeOffer(_offer);
 
+        // Store the dispute duration
+        require(_disputeValidDuration > 0, INVALID_DISPUTE_DURATION);
+        protocolStorage().disputeDurationByOffer[offerId] = _disputeValidDuration;
+
         // Notify watchers of state change
         emit OfferCreated(offerId, sellerId, _offer);
+        emit DisputeDurationSet(offerId, _disputeValidDuration);
     }
 
     /**

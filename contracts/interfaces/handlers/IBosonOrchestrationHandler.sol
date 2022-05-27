@@ -13,7 +13,7 @@ import {IBosonBundleEvents} from "../events/IBosonBundleEvents.sol";
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  *
- * The ERC-165 identifier for this interface is: 0x6a0eb655
+ * The ERC-165 identifier for this interface is: 0x73fb8c02
  */
 interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, IBosonOfferEvents, IBosonTwinEvents, IBosonBundleEvents {
     /**
@@ -33,10 +33,13 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - Dispute duration is zero
      *
+     * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
      */
-    function createSellerAndOffer(BosonTypes.Seller calldata _seller, BosonTypes.Offer memory _offer) external;
+    function createSellerAndOffer(BosonTypes.Seller calldata _seller, BosonTypes.Offer memory _offer, uint256 _disputeValidDuration) external;
 
     /**
      * @notice Takes an offer and a condition, creates an offer, then a group with that offer and the given condition.
@@ -51,13 +54,16 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - Dispute duration is zero
      * - Condition includes invalid combination of parameters
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
      * @param _condition - the fully populated condition struct
      */
     function createOfferWithCondition(
         BosonTypes.Offer memory _offer,
+        uint256 _disputeValidDuration,
         BosonTypes.Condition memory _condition
     )
     external;
@@ -75,15 +81,18 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - Dispute duration is zero
      * - when adding to the group if:
      *   - Group does not exists
      *   - Caller is not the operator of the group
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
      * @param _groupId - id of the group, where offer will be added
      */
     function createOfferAddToGroup(
         BosonTypes.Offer memory _offer,
+        uint256 _disputeValidDuration,
         uint256 _groupId
     )
     external;
@@ -101,14 +110,17 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - Dispute duration is zero
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
      * @param _twin - the fully populated twin struct
      */
     function createOfferAndTwinWithBundle(
         BosonTypes.Offer memory _offer,
+        uint256 _disputeValidDuration,
         BosonTypes.Twin memory _twin
     )
     external;
@@ -126,16 +138,19 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - Dispute duration is zero
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      */
     function createOfferWithConditionAndTwinAndBundle(
         BosonTypes.Offer memory _offer,
+        uint256 _disputeValidDuration,
         BosonTypes.Condition memory _condition,
         BosonTypes.Twin memory _twin
     )
@@ -159,15 +174,18 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - Dispute duration is zero
      * - Condition includes invalid combination of parameters
      *
      * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
      * @param _condition - the fully populated condition struct
      */
     function createSellerAndOfferWithCondition(
         BosonTypes.Seller memory _seller,
         BosonTypes.Offer memory _offer,
+        uint256 _disputeValidDuration,
         BosonTypes.Condition memory _condition
     )
     external;
@@ -190,16 +208,19 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - Dispute duration is zero
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
      * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
      * @param _twin - the fully populated twin struct
      */
     function createSellerAndOfferAndTwinWithBundle(
         BosonTypes.Seller memory _seller,
         BosonTypes.Offer memory _offer,
+        uint256 _disputeValidDuration,
         BosonTypes.Twin memory _twin
     )
     external;
@@ -222,18 +243,21 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - Dispute duration is zero
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
      * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      */
     function createSellerAndOfferWithConditionAndTwinAndBundle(
         BosonTypes.Seller memory _seller,
         BosonTypes.Offer memory _offer,
+        uint256 _disputeValidDuration,
         BosonTypes.Condition memory _condition,
         BosonTypes.Twin memory _twin
     )

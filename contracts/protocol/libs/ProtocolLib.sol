@@ -70,6 +70,8 @@ library ProtocolLib {
         mapping(uint256 => mapping(address => uint256)) availableFunds;
         // seller/buyer id => all tokens with balance > 0
         mapping(uint256 => address[]) tokenList;
+        // offer id => dispute valid duration
+        mapping(uint256 => uint256) disputeDurationByOffer;
     }
 
     // Incrementing ID counters

@@ -9,7 +9,7 @@ import {IBosonOfferEvents} from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xc0a5d49f
+ * The ERC-165 identifier for this interface is: 0x94c0547f
  */
 interface IBosonOfferHandler is IBosonOfferEvents {
 
@@ -25,10 +25,12 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Voided is set to true
      * - Seller deposit is less than protocol fee
      * - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - Dispute duration is zero
      *
      * @param _offer - the fully populated struct with offer id set to 0x0
+     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
      */
-    function createOffer(BosonTypes.Offer memory _offer) external;
+    function createOffer(BosonTypes.Offer memory _offer, uint256 _disputeValidDuration) external;
 
     /**
      * @notice Creates a batch of offers.
@@ -43,10 +45,12 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Voided is set to true
      * - Seller deposit is less than protocol fee
      * - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - Any of dispute durations is zero
      *
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
+     * @param _disputeValidDurations - the array of durations of disputes for exchanges associated with the offers
      */
-    function createOfferBatch(BosonTypes.Offer[] calldata _offers) external;
+    function createOfferBatch(BosonTypes.Offer[] calldata _offers, uint256[] calldata _disputeValidDurations) external;
 
     /**
      * @notice Voids a given offer
