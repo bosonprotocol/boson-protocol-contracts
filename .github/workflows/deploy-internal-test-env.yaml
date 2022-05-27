@@ -1,13 +1,16 @@
 name: Deploy to internal test env
+# on:
+#   workflow_run:
+#     workflows: [Contracts CI]
+#     types: [completed]
+#     branches: [main]
 on:
-  workflow_run:
-    workflows: [Contracts CI]
-    types: [completed]
-    branches: [main]
+  push:
+    branches: [ create-automated-prs-with-deployed-addresses ]
 jobs:
   test_deploy:
     runs-on: contracts
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # if: ${{ github.event.workflow_run.conclusion == 'success' }}
     env:
       DEPLOYER_GAS_LIMIT: ${{ secrets.DEPLOYER_GAS_LIMIT }}
       DEPLOYER_TEST_TXNODE: ${{ secrets.DEPLOYER_TEST_TXNODE }}
@@ -54,6 +57,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           add-paths: |
             addresses/1234-test.json
+            logs/test.deploy.contracts.txt
           commit-message: Add json file with addresses for test environment.
           title: '[Test Environment] New deployed addresses'
           body: >
