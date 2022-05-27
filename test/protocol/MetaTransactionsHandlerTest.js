@@ -10,12 +10,14 @@ const MetaTxOfferDetails = require("../../scripts/domain/MetaTxOfferDetails");
 const Offer = require("../../scripts/domain/Offer");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
+const Twin = require("../../scripts/domain/Twin");
 const Voucher = require("../../scripts/domain/Voucher");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   prepareDataSignatureParameters,
   calculateProtocolFee,
@@ -29,7 +31,7 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 describe("IBosonMetaTransactionsHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, buyer;
+  let accounts, deployer, rando, operator, buyer, admin;
   let erc165,
     protocolDiamond,
     accessController,
@@ -37,6 +39,8 @@ describe("IBosonMetaTransactionsHandler", function () {
     fundsHandler,
     exchangeHandler,
     offerHandler,
+    twinHandler,
+    bosonToken,
     support,
     result;
   let metaTransactionsHandler, nonce, functionSignature;
@@ -71,6 +75,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let protocolFeePrecentage;
   let voucher, committedDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
+  let twin, supplyAvailable, tokenId, supplyIds, tokenAddress, success;
 
   before(async function () {
     // get interface Ids
@@ -84,6 +89,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     operator = accounts[1];
     buyer = accounts[3];
     rando = accounts[4];
+    admin = accounts[5];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -100,6 +106,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       "FundsHandlerFacet",
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
+      "TwinHandlerFacet",
       "MetaTransactionsHandlerFacet",
     ]);
 
@@ -142,8 +149,14 @@ describe("IBosonMetaTransactionsHandler", function () {
     // Cast Diamond to IBosonExchangeHandler
     exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
 
+    // Cast Diamond to ITwinHandler
+    twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
+
     // Cast Diamond to IBosonMetaTransactionsHandler
     metaTransactionsHandler = await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamond.address);
+
+    // Deploy the mock tokens
+    [bosonToken] = await deployMockTokens(gasLimit);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -344,6 +357,73 @@ describe("IBosonMetaTransactionsHandler", function () {
             v
           )
         ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
+      });
+
+      context("👉 msg.sender is replaced with msgSender", async function () {
+        context("TwinHandler", async function () {
+          beforeEach(async function () {
+            // Create the seller
+            await accountHandler.connect(admin).createSeller(seller);
+
+            // Required constructor params
+            id = sellerId = "1";
+            supplyAvailable = "500";
+            tokenId = "4096";
+            supplyIds = ["1", "2"];
+            tokenAddress = bosonToken.address;
+
+            // Create a valid twin, then set fields in tests directly
+            twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+            expect(twin.isValid()).is.true;
+
+            // Approving the twinHandler contract to transfer seller's tokens
+            await bosonToken.connect(operator).approve(twinHandler.address, 1);
+
+            // Create a twin
+            await twinHandler.connect(operator).createTwin(twin);
+
+            // Prepare the message
+            message.from = operator.address;
+            message.contractAddress = twinHandler.address;
+          });
+
+          it("removeTwin() can remove a twin", async function () {
+            // Expect twin to be found.
+            [success] = await twinHandler.connect(rando).getTwin(twin.id);
+            expect(success).to.be.true;
+
+            // Prepare the function signature
+            functionSignature = twinHandler.interface.encodeFunctionData("removeTwin", [twin.id]);
+
+            // Prepare the message
+            message.functionName = "removeTwin(uint256)";
+            message.functionSignature = functionSignature;
+
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              operator,
+              customTransactionType,
+              "MetaTransaction",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Remove the twin. Send as meta transaction.
+            await metaTransactionsHandler.executeMetaTransaction(
+              operator.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            );
+
+            // Expect twin to be not found.
+            [success] = await twinHandler.connect(rando).getTwin(twin.id);
+            expect(success).to.be.false;
+          });
+        });
       });
 
       context("💔 Revert Reasons", async function () {
@@ -1022,6 +1102,123 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Execute meta transaction, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTxRedeemVoucher(buyer.address, validExchangeDetails, nonce, r, s, v)
+            ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+          });
+        });
+      });
+
+      context("👉 executeMetaTxCompleteExchange()", async function () {
+        beforeEach(async function () {
+          // Prepare the message
+          message.functionName = "completeExchange(uint256)";
+          message.exchangeDetails = validExchangeDetails;
+          message.from = buyer.address;
+
+          // Set time forward to the offer's redeemableFromDate
+          await setNextBlockTimestamp(Number(redeemableFromDate));
+
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+        });
+
+        it("Should emit MetaTransactionExecuted event", async () => {
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionType,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // send a meta transaction, check for event
+          await expect(
+            metaTransactionsHandler.executeMetaTxCompleteExchange(buyer.address, validExchangeDetails, nonce, r, s, v)
+          )
+            .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+            .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+
+          // Get the exchange state
+          let response;
+          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+          // It should match ExchangeState.Completed
+          assert.equal(response, ExchangeState.Completed, "Exchange state is incorrect");
+
+          // Verify that nonce is used. Expect true.
+          let expectedResult = true;
+          result = await metaTransactionsHandler.connect(buyer).isUsedNonce(nonce);
+          assert.equal(result, expectedResult, "Nonce is unused");
+        });
+
+        it("does not modify revert reasons", async function () {
+          // An invalid exchange id
+          id = "666";
+
+          // prepare the MetaTxExchangeDetails struct
+          validExchangeDetails = new MetaTxExchangeDetails(id);
+          expect(validExchangeDetails.isValid()).is.true;
+
+          // Prepare the message
+          message.exchangeDetails = validExchangeDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionType,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Execute meta transaction, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTxCompleteExchange(buyer.address, validExchangeDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("Should fail when replay transaction", async function () {
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              buyer,
+              customTransactionType,
+              "MetaTxExchange",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute the meta transaction.
+            await metaTransactionsHandler.executeMetaTxCompleteExchange(
+              buyer.address,
+              validExchangeDetails,
+              nonce,
+              r,
+              s,
+              v
+            );
+
+            // Execute meta transaction again with the same nonce, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTxCompleteExchange(buyer.address, validExchangeDetails, nonce, r, s, v)
+            ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+          });
+
+          it("Should fail when Signer and Signature do not match", async function () {
+            // Prepare the message
+            message.from = rando.address;
+
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              rando, // Different user, not buyer.
+              customTransactionType,
+              "MetaTxExchange",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTxCompleteExchange(buyer.address, validExchangeDetails, nonce, r, s, v)
             ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
           });
         });

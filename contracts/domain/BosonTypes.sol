@@ -110,6 +110,8 @@ contract BosonTypes {
 
     struct Dispute {
         uint256 exchangeId;
+        uint256 disputedDate;
+        uint256 finalizedDate;
         string complaint;
         DisputeState state;
         Resolution resolution;

@@ -65,7 +65,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         dispute.state = DisputeState.Resolving;
 
         // Fetch the disputeDate
-        mapping (DisputeDate => uint256) storage disputeDates=fetchDisputeDates(_exchangeId);
+        mapping (DisputeDate => uint256) storage disputeDates = fetchDisputeDates(_exchangeId);
         disputeDates[DisputeDate.Disputed] = block.timestamp;
         // disputeDates[DisputeDate.Timeout] = block.timestamp + voucherValidDuration[exchange.offerId]; // TODO add calculation once disputeValidDuration is added
         
@@ -136,7 +136,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Get the dispute
         (exists, dispute) = fetchDispute(_exchangeId);
 
-        // If exists, set value to isFinalized, otherwise it returns default (false,false)
+        // if exists, set isFinalized to true if state is a valid finalized state
         if (exists) {
             // Check for finalized dispute state
             isFinalized = (
