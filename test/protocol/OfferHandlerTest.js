@@ -40,6 +40,7 @@ describe("IBosonOfferHandler", function () {
     metadataUri,
     offerChecksum,
     voided;
+  let disputeValidDuration, disputeValidDurations;
   let protocolFeePrecentage;
   let block, blockNumber;
 
@@ -183,19 +184,22 @@ describe("IBosonOfferHandler", function () {
 
       // How that offer looks as a returned struct
       offerStruct = offer.toStruct();
+
+      // Set the dispute valid duration
+      disputeValidDuration = oneWeek;
     });
 
     context("👉 createOffer()", async function () {
       it("should emit an OfferCreated event", async function () {
         // Create an offer, testing for the event
-        await expect(offerHandler.connect(operator).createOffer(offer))
+        await expect(offerHandler.connect(operator).createOffer(offer, disputeValidDuration))
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(nextOfferId, offer.sellerId, offerStruct);
       });
 
       it("should update state", async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
 
         // Get the offer as a struct
         [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
@@ -213,7 +217,7 @@ describe("IBosonOfferHandler", function () {
         offer.id = "444";
 
         // Create an offer, testing for the event
-        await expect(offerHandler.connect(operator).createOffer(offer))
+        await expect(offerHandler.connect(operator).createOffer(offer, disputeValidDuration))
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(nextOfferId, offer.sellerId, offerStruct);
 
@@ -231,7 +235,7 @@ describe("IBosonOfferHandler", function () {
         offer.sellerId = "123";
 
         // Create an offer, testing for the event
-        await expect(offerHandler.connect(operator).createOffer(offer))
+        await expect(offerHandler.connect(operator).createOffer(offer, disputeValidDuration))
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct);
       });
@@ -241,7 +245,7 @@ describe("IBosonOfferHandler", function () {
         offer.protocolFee = "999";
 
         // Create an offer, testing for the event
-        await expect(offerHandler.connect(operator).createOffer(offer))
+        await expect(offerHandler.connect(operator).createOffer(offer, disputeValidDuration))
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct);
       });
@@ -258,7 +262,7 @@ describe("IBosonOfferHandler", function () {
         offer.protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
 
         // Create a new offer
-        await expect(offerHandler.connect(operator).createOffer(offer))
+        await expect(offerHandler.connect(operator).createOffer(offer, disputeValidDuration))
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(nextOfferId, offer.sellerId, offer.toStruct());
       });
@@ -266,7 +270,9 @@ describe("IBosonOfferHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(rando).createOffer(offer)).to.revertedWith(RevertReasons.NOT_OPERATOR);
+          await expect(offerHandler.connect(rando).createOffer(offer, disputeValidDuration)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
         });
 
         it("Valid from date is greater than valid until date", async function () {
@@ -275,7 +281,7 @@ describe("IBosonOfferHandler", function () {
           offer.validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
+          await expect(offerHandler.connect(operator).createOffer(offer, disputeValidDuration)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
         });
@@ -285,7 +291,7 @@ describe("IBosonOfferHandler", function () {
           offer.validUntilDate = ethers.BigNumber.from(offer.validFromDate - (oneMonth / 1000) * 6).toString(); // 6 months ago
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
+          await expect(offerHandler.connect(operator).createOffer(offer, disputeValidDuration)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
         });
@@ -299,7 +305,7 @@ describe("IBosonOfferHandler", function () {
           offer.sellerDeposit = threshold.sub("10").toString();
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
+          await expect(offerHandler.connect(operator).createOffer(offer, disputeValidDuration)).to.revertedWith(
             RevertReasons.OFFER_DEPOSIT_INVALID
           );
         });
@@ -309,7 +315,7 @@ describe("IBosonOfferHandler", function () {
           offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).sub(offer.protocolFee).add("10").toString();
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
+          await expect(offerHandler.connect(operator).createOffer(offer, disputeValidDuration)).to.revertedWith(
             RevertReasons.OFFER_PENALTY_INVALID
           );
         });
@@ -319,7 +325,7 @@ describe("IBosonOfferHandler", function () {
           offer.voided = true;
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
+          await expect(offerHandler.connect(operator).createOffer(offer, disputeValidDuration)).to.revertedWith(
             RevertReasons.OFFER_MUST_BE_ACTIVE
           );
         });
@@ -329,7 +335,7 @@ describe("IBosonOfferHandler", function () {
     context("👉 voidOffer()", async function () {
       beforeEach(async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
 
         // id of the current offer and increment nextOfferId
         id = nextOfferId++;
@@ -410,7 +416,7 @@ describe("IBosonOfferHandler", function () {
     context("👉 extendOffer()", async function () {
       beforeEach(async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
 
         // id of the current offer and increment nextOfferId
         id = nextOfferId++;
@@ -522,7 +528,7 @@ describe("IBosonOfferHandler", function () {
     context("👉 getOffer()", async function () {
       beforeEach(async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
 
         // id of the current offer and increment nextOfferId
         id = nextOfferId++;
@@ -559,7 +565,7 @@ describe("IBosonOfferHandler", function () {
     context("👉 getNextOfferId()", async function () {
       beforeEach(async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
 
         // id of the current offer and increment nextOfferId
         id = nextOfferId++;
@@ -578,7 +584,7 @@ describe("IBosonOfferHandler", function () {
 
       it("should be incremented after an offer is created", async function () {
         // Create another offer
-        await offerHandler.connect(operator).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
 
         // What we expect the next offer id to be
         expected = ++nextOfferId;
@@ -611,7 +617,7 @@ describe("IBosonOfferHandler", function () {
     context("👉 isOfferVoided()", async function () {
       beforeEach(async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
 
         // id of the current offer and increment nextOfferId
         id = nextOfferId++;
@@ -677,6 +683,7 @@ describe("IBosonOfferHandler", function () {
       // create 5 offers
       offers = [];
       offerStructs = [];
+      disputeValidDurations = [];
       for (let i = 0; i < 5; i++) {
         // Required constructor params
         id = `${i + 1}`;
@@ -719,13 +726,15 @@ describe("IBosonOfferHandler", function () {
 
         offers.push(offer);
         offerStructs.push(offer.toStruct());
+
+        disputeValidDurations.push(oneWeek);
       }
     });
 
     context("👉 createOfferBatch()", async function () {
       it("should emit an OfferCreated event for all offers", async function () {
         // Create an offer, testing for the event
-        await expect(offerHandler.connect(operator).createOfferBatch(offers))
+        await expect(offerHandler.connect(operator).createOfferBatch(offers, disputeValidDurations))
           .to.emit(offerHandler, "OfferCreated")
           .withArgs("1", offer.sellerId, offerStructs[0])
           .withArgs("2", offer.sellerId, offerStructs[1])
@@ -736,7 +745,7 @@ describe("IBosonOfferHandler", function () {
 
       it("should update state", async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOfferBatch(offers);
+        await offerHandler.connect(operator).createOfferBatch(offers, disputeValidDurations);
 
         for (let i = 0; i < 5; i++) {
           // Get the offer as a struct
@@ -760,7 +769,7 @@ describe("IBosonOfferHandler", function () {
         offers[4].id = "888";
 
         // Create an offer, testing for the event
-        await expect(offerHandler.connect(operator).createOfferBatch(offers))
+        await expect(offerHandler.connect(operator).createOfferBatch(offers, disputeValidDurations))
           .to.emit(offerHandler, "OfferCreated")
           .withArgs("1", offer.sellerId, offerStructs[0])
           .withArgs("2", offer.sellerId, offerStructs[1])
@@ -788,7 +797,7 @@ describe("IBosonOfferHandler", function () {
         offers[4].sellerId = "567";
 
         // Create an offer, testing for the event
-        await expect(offerHandler.connect(operator).createOfferBatch(offers))
+        await expect(offerHandler.connect(operator).createOfferBatch(offers, disputeValidDurations))
           .to.emit(offerHandler, "OfferCreated")
           .withArgs("1", sellerId, offerStructs[0])
           .withArgs("2", sellerId, offerStructs[1])
@@ -800,7 +809,7 @@ describe("IBosonOfferHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(rando).createOfferBatch(offers)).to.revertedWith(
+          await expect(offerHandler.connect(rando).createOfferBatch(offers, disputeValidDurations)).to.revertedWith(
             RevertReasons.NOT_OPERATOR
           );
         });
@@ -811,7 +820,7 @@ describe("IBosonOfferHandler", function () {
           offers[4].validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
+          await expect(offerHandler.connect(operator).createOfferBatch(offers, disputeValidDurations)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
         });
@@ -821,7 +830,7 @@ describe("IBosonOfferHandler", function () {
           offer.validUntilDate = ethers.BigNumber.from(offer.validFromDate - (oneMonth / 1000) * 6).toString(); // 6 months ago
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
+          await expect(offerHandler.connect(operator).createOfferBatch(offers, disputeValidDurations)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
         });
@@ -835,7 +844,7 @@ describe("IBosonOfferHandler", function () {
           offers[0].sellerDeposit = threshold.sub("10").toString();
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
+          await expect(offerHandler.connect(operator).createOfferBatch(offers, disputeValidDurations)).to.revertedWith(
             RevertReasons.OFFER_DEPOSIT_INVALID
           );
         });
@@ -848,7 +857,7 @@ describe("IBosonOfferHandler", function () {
             .toString();
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
+          await expect(offerHandler.connect(operator).createOfferBatch(offers, disputeValidDurations)).to.revertedWith(
             RevertReasons.OFFER_PENALTY_INVALID
           );
         });
@@ -858,7 +867,7 @@ describe("IBosonOfferHandler", function () {
           offers[1].voided = true;
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
+          await expect(offerHandler.connect(operator).createOfferBatch(offers, disputeValidDurations)).to.revertedWith(
             RevertReasons.OFFER_MUST_BE_ACTIVE
           );
         });
@@ -868,7 +877,7 @@ describe("IBosonOfferHandler", function () {
           offers = new Array(101).fill(offer);
 
           // Attempt to create the offers, expecting revert
-          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
+          await expect(offerHandler.connect(operator).createOfferBatch(offers, disputeValidDurations)).to.revertedWith(
             RevertReasons.TOO_MANY_OFFERS
           );
         });
@@ -879,7 +888,7 @@ describe("IBosonOfferHandler", function () {
       let offersToVoid;
       beforeEach(async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOfferBatch(offers);
+        await offerHandler.connect(operator).createOfferBatch(offers, disputeValidDurations);
 
         offersToVoid = ["1", "3", "5"];
       });
@@ -991,7 +1000,7 @@ describe("IBosonOfferHandler", function () {
       let offersToExtend, newValidUntilDate;
       beforeEach(async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOfferBatch(offers);
+        await offerHandler.connect(operator).createOfferBatch(offers, disputeValidDurations);
 
         offersToExtend = ["1", "3", "5"];
         newValidUntilDate = ethers.BigNumber.from(offers[4].validUntilDate).add("10000").toString(); // offer "5" has the highest validUntilDate so we need to set something greater

@@ -72,6 +72,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     voided,
     oneMonth,
     oneWeek;
+  let disputeValidDuration;
   let protocolFeePrecentage;
   let voucher, committedDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
@@ -642,8 +643,11 @@ describe("IBosonMetaTransactionsHandler", function () {
         );
         expect(offer.isValid()).is.true;
 
+        // Set the dispute valid duration
+        disputeValidDuration = oneWeek;
+
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
 
         // Set the offer Type
         offerType = [
@@ -844,8 +848,11 @@ describe("IBosonMetaTransactionsHandler", function () {
         );
         expect(offer.isValid()).is.true;
 
+        // Set the dispute valid duration
+        disputeValidDuration = oneWeek;
+
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
 
         // Required voucher constructor params
         committedDate = "0";

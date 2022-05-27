@@ -45,6 +45,7 @@ describe("IBosonAccountHandler", function () {
     metadataHash,
     voided,
     offer;
+  let disputeValidDuration;
 
   before(async function () {
     // get interface Ids
@@ -1070,8 +1071,11 @@ describe("IBosonAccountHandler", function () {
           );
           expect(offer.isValid()).is.true;
 
+          // Set the dispute valid duration
+          disputeValidDuration = oneWeek;
+
           // Create the offer
-          await offerHandler.connect(operator).createOffer(offer);
+          await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
 
           // Deposit seller funds so the commit will succeed
           await fundsHandler

@@ -57,6 +57,7 @@ describe("IBosonExchangeHandler", function () {
   let protocolFeePrecentage;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state, exchangeStruct, response, exists, buyerStruct;
+  let disputeValidDuration;
 
   before(async function () {
     // get interface Ids
@@ -207,8 +208,11 @@ describe("IBosonExchangeHandler", function () {
       );
       expect(offer.isValid()).is.true;
 
+      // Set the dispute valid duration
+      disputeValidDuration = oneWeek;
+
       // Create the offer
-      await offerHandler.connect(operator).createOffer(offer);
+      await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
 
       // Required voucher constructor params
       committedDate = "0";

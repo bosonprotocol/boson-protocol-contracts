@@ -68,6 +68,7 @@ describe("IBosonBundleHandler", function () {
     offerChecksum,
     voided,
     invalidOfferId;
+  let disputeValidDuration;
   let protocolFeePrecentage;
 
   before(async function () {
@@ -194,12 +195,15 @@ describe("IBosonBundleHandler", function () {
         await twinHandler.connect(operator).createTwin(twin);
       }
 
+      // Some periods in milliseconds
+      oneWeek = 604800 * 1000; //  7 days in milliseconds
+      oneMonth = 2678400 * 1000; // 31 days in milliseconds
+
+      // Set the dispute valid duration
+      disputeValidDuration = oneWeek;
+
       // create 5 offers
       for (let i = 0; i < 5; i++) {
-        // Some periods in milliseconds
-        oneWeek = 604800 * 1000; //  7 days in milliseconds
-        oneMonth = 2678400 * 1000; // 31 days in milliseconds
-
         // Required constructor params
         offerId = sellerId = "1"; // argument sent to contract for createOffer will be ignored
         price = ethers.utils.parseUnits("1.5", "ether").toString();
@@ -243,7 +247,7 @@ describe("IBosonBundleHandler", function () {
 
         expect(offer.isValid()).is.true;
 
-        await offerHandler.connect(operator).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
       }
 
       // The first bundle id
@@ -406,7 +410,7 @@ describe("IBosonBundleHandler", function () {
         let expectedNewOfferId = "6";
         seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
         await accountHandler.connect(rando).createSeller(seller);
-        const tx = await offerHandler.connect(rando).createOffer(offer); // creates an offer with id 6
+        const tx = await offerHandler.connect(rando).createOffer(offer, disputeValidDuration); // creates an offer with id 6
         const txReceipt = await tx.wait();
         const event = getEvent(txReceipt, offerHandler, "OfferCreated");
         assert.equal(event.offerId.toString(), expectedNewOfferId, "Offer Id is not 6");
@@ -1125,7 +1129,7 @@ describe("IBosonBundleHandler", function () {
           let expectedNewOfferId = "6";
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           await accountHandler.connect(rando).createSeller(seller);
-          const tx = await offerHandler.connect(rando).createOffer(offer); // creates an offer with id 6
+          const tx = await offerHandler.connect(rando).createOffer(offer, disputeValidDuration); // creates an offer with id 6
           const txReceipt = await tx.wait();
           const event = getEvent(txReceipt, offerHandler, "OfferCreated");
           assert.equal(event.offerId.toString(), expectedNewOfferId, "Offer Id is not 6");
@@ -1310,7 +1314,7 @@ describe("IBosonBundleHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_NOT_IN_BUNDLE);
 
           // create an offer and add it to another bundle
-          await offerHandler.connect(operator).createOffer(offer);
+          await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
           bundle.offerIds = ["6"];
           await bundleHandler.connect(operator).createBundle(bundle);
 
