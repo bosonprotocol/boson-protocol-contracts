@@ -9,7 +9,7 @@ import {IBosonDisputeEvents} from "../events/IBosonDisputeEvents.sol";
  *
  * @notice Handles disputes associated with exchanges within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xb9463b81
+ * The ERC-165 identifier for this interface is: 0xbc2a7fd4
  */
 interface IBosonDisputeHandler is IBosonDisputeEvents {
 
@@ -37,4 +37,25 @@ interface IBosonDisputeHandler is IBosonDisputeEvents {
      * @return dispute - the dispute details. See {BosonTypes.Dispute}
      */
     function getDispute(uint256 _exchangeId) external view returns(bool exists, BosonTypes.Dispute memory dispute);
+       
+    /**
+     * @notice Gets the state of a given dispute.
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return exists - true if the dispute exists
+     * @return state - the dispute state. See {BosonTypes.DisputeState}
+     */
+    function getDisputeState(uint256 _exchangeId) external view returns(bool exists, BosonTypes.DisputeState state);
+
+    /**
+     * @notice Is the given dispute in a finalized state?
+     *
+     * Returns true if
+     * - Dispute state is Retracted, Resolved, or Decided
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return exists - true if the dispute exists
+     * @return isFinalized - true if the dispute is finalized
+     */
+    function isDisputeFinalized(uint256 _exchangeId) external view returns(bool exists, bool isFinalized);
 }

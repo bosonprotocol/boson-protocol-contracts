@@ -168,7 +168,7 @@ describe("IBosonDisputeHandler", function () {
       sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
       protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
-      quantityAvailable = "1";
+      quantityAvailable = "2";
       validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
       validUntilDate = ethers.BigNumber.from(block.timestamp)
         .add(oneMonth * 6)
@@ -223,9 +223,10 @@ describe("IBosonDisputeHandler", function () {
       exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
 
       // Deposit seller funds so the commit will succeed
+      const fundsToDeposit = ethers.BigNumber.from(sellerDeposit).mul(quantityAvailable);
       await fundsHandler
         .connect(operator)
-        .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+        .depositFunds(seller.id, ethers.constants.AddressZero, fundsToDeposit, { value: fundsToDeposit });
 
       // Commit to offer, creating a new exchange
       await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -360,6 +361,129 @@ describe("IBosonDisputeHandler", function () {
 
         // It should match the expected dispute struct
         assert.equal(dispute.toString(), Dispute.fromStruct(response).toString(), "Dispute struct is incorrect");
+      });
+
+      it("should return false for exists if exchange id is valid, but dispute was not raised", async function () {
+        exchange.id++;
+
+        // Commit to offer, creating a new exchange
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+        // Get the exchange
+        [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+
+        // Test existence flag
+        expect(exists).to.be.true;
+
+        // Get the dispute
+        [exists, response] = await disputeHandler.connect(rando).getDispute(exchange.id);
+
+        // Test existence flag
+        expect(exists).to.be.false;
+      });
+    });
+
+    context("👉 getDisputeState()", async function () {
+      beforeEach(async function () {
+        // Raise a dispute
+        tx = await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+      });
+
+      it("should return true for exists if exchange id is valid", async function () {
+        // Get the dispute state
+        [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchange.id);
+
+        // Test existence flag
+        expect(exists).to.be.true;
+      });
+
+      it("should return false for exists if exchange id is not valid", async function () {
+        // Attempt to get the dispute state for invalid dispute
+        [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchange.id + 10);
+
+        // Test existence flag
+        expect(exists).to.be.false;
+      });
+
+      it("should return the expected dispute state if exchange id is valid", async function () {
+        // TODO when retract/resolve/decide is implemented, use it here, since DisputeState.Resolving is default value
+        // Get the dispute state
+        [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchange.id);
+
+        // It should match DisputeState.Resolving
+        assert.equal(response, DisputeState.Resolving, "Dispute state is incorrect");
+      });
+    });
+
+    context("👉 isDisputeFinalized()", async function () {
+      it("should return false if exchange is not disputed", async function () {
+        // Dispute not raised, ask if dispute is finalized
+        [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchange.id);
+
+        // It should not be finalized
+        assert.equal(exists, false, "Incorrectly reports existence");
+        assert.equal(response, false, "Incorrectly reports finalized state");
+      });
+
+      it("should return false if exchange does not exist", async function () {
+        // Exchange does not exist, ask if dispute is finalized
+        [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchange.id + 10);
+
+        // It should not be finalized
+        assert.equal(exists, false, "Incorrectly reports existence");
+        assert.equal(response, false, "Incorrectly reports finalized state");
+      });
+
+      context("disputed exchange", async function () {
+        beforeEach(async function () {
+          // Raise a dispute
+          tx = await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+        });
+
+        it("should return false if dispute is in Resolving state", async function () {
+          // Dispute in resolving state, ask if exchange is finalized
+          [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchange.id);
+
+          // It should exist, but not be finalized
+          assert.equal(exists, true, "Incorrectly reports existence");
+          assert.equal(response, false, "Incorrectly reports finalized state");
+        });
+
+        it.skip("should return true if dispute is in Retracted state", async function () {
+          // Retract dispute
+          await disputeHandler.connect(buyer).retractDispute(exchange.id);
+
+          // Dispute in retracted state, ask if exchange is finalized
+          [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchange.id);
+
+          // It should exist and be finalized
+          assert.equal(exists, true, "Incorrectly reports existence");
+          assert.equal(response, true, "Incorrectly reports unfinalized state");
+        });
+
+        it.skip("should return true if dispute is in Resolved state", async function () {
+          // Retract dispute
+          await disputeHandler.connect(buyer).resolveDispute(exchange.id);
+
+          // Dispute in resolved state, ask if exchange is finalized
+          [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchange.id);
+
+          // It should exist and be finalized
+          assert.equal(exists, true, "Incorrectly reports existence");
+          assert.equal(response, true, "Incorrectly reports unfinalized state");
+        });
+
+        it.skip("should return true if dispute is in Decided state", async function () {
+          // Retract dispute
+          await disputeHandler.connect(buyer).decideDispute(exchange.id);
+
+          // Dispute in decided state, ask if exchange is finalized
+          [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchange.id);
+
+          // It should exist and be finalized
+          assert.equal(exists, true, "Incorrectly reports existence");
+          assert.equal(response, true, "Incorrectly reports unfinalized state");
+        });
       });
     });
   });
