@@ -142,8 +142,6 @@ describe("Dispute", function () {
       // Get plain object
       object = {
         exchangeId,
-        disputedDate,
-        finalizedDate,
         complaint,
         state,
         resolution: resolution.toObject(),

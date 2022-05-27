@@ -18,8 +18,6 @@ class Dispute {
 
   constructor(exchangeId, complaint, state, resolution) {
     this.exchangeId = exchangeId;
-    this.disputedDate = disputedDate;
-    this.finalizedDate = finalizedDate;
     this.complaint = complaint;
     this.state = state;
     this.resolution = resolution;
@@ -49,8 +47,6 @@ class Dispute {
 
     return Dispute.fromObject({
       exchangeId: exchangeId.toString(),
-      disputedDate: disputedDate.toString(),
-      finalizedDate: finalizedDate.toString(),
       complaint,
       state,
       resolution: Resolution.fromStruct(resolution).toObject(),
