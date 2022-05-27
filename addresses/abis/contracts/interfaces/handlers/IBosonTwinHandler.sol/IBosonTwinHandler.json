@@ -1,0 +1,214 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IBosonTwinHandler",
+  "sourceName": "contracts/interfaces/handlers/IBosonTwinHandler.sol",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "twinId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "sellerId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sellerId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "supplyAvailable",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "supplyIds",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.Twin",
+          "name": "twin",
+          "type": "tuple"
+        }
+      ],
+      "name": "TwinCreated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "twinId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "sellerId",
+          "type": "uint256"
+        }
+      ],
+      "name": "TwinDeleted",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sellerId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "supplyAvailable",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "supplyIds",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            }
+          ],
+          "internalType": "struct BosonTypes.Twin",
+          "name": "_twin",
+          "type": "tuple"
+        }
+      ],
+      "name": "createTwin",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getNextTwinId",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "nextTwinId",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_twinId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getTwin",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "exists",
+          "type": "bool"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sellerId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "supplyAvailable",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "supplyIds",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            }
+          ],
+          "internalType": "struct BosonTypes.Twin",
+          "name": "twin",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_twinId",
+          "type": "uint256"
+        }
+      ],
+      "name": "removeTwin",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

@@ -1,0 +1,185 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "AccountBase",
+  "sourceName": "contracts/protocol/bases/AccountBase.sol",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "buyerId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address payable",
+              "name": "wallet",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.Buyer",
+          "name": "buyer",
+          "type": "tuple"
+        }
+      ],
+      "name": "BuyerCreated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "buyerId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address payable",
+              "name": "wallet",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.Buyer",
+          "name": "buyer",
+          "type": "tuple"
+        }
+      ],
+      "name": "BuyerUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "sellerId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "operator",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.Seller",
+          "name": "seller",
+          "type": "tuple"
+        }
+      ],
+      "name": "SellerCreated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "sellerId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "operator",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.Seller",
+          "name": "seller",
+          "type": "tuple"
+        }
+      ],
+      "name": "SellerUpdated",
+      "type": "event"
+    }
+  ],
+  "bytecode": "0x6080604052348015600f57600080fd5b50603f80601d6000396000f3fe6080604052600080fdfea26469706673582212206ea350b6f01aa62e20473a2bb8b1481ea3b9d1c373ba66cd2cb7259a37a69b4164736f6c63430008090033",
+  "deployedBytecode": "0x6080604052600080fdfea26469706673582212206ea350b6f01aa62e20473a2bb8b1481ea3b9d1c373ba66cd2cb7259a37a69b4164736f6c63430008090033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

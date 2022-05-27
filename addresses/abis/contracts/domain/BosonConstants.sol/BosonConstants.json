@@ -1,0 +1,10 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "BosonConstants",
+  "sourceName": "contracts/domain/BosonConstants.sol",
+  "abi": [],
+  "bytecode": "0x6080604052348015600f57600080fd5b50603f80601d6000396000f3fe6080604052600080fdfea2646970667358221220bc248af08e8e412d8474ea2e19aa4bb50f012e6986968bcebe9766d4ff0d973964736f6c63430008090033",
+  "deployedBytecode": "0x6080604052600080fdfea2646970667358221220bc248af08e8e412d8474ea2e19aa4bb50f012e6986968bcebe9766d4ff0d973964736f6c63430008090033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

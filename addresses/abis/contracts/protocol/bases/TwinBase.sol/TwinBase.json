@@ -1,0 +1,87 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "TwinBase",
+  "sourceName": "contracts/protocol/bases/TwinBase.sol",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "twinId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "sellerId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sellerId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "supplyAvailable",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "supplyIds",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.Twin",
+          "name": "twin",
+          "type": "tuple"
+        }
+      ],
+      "name": "TwinCreated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "twinId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "sellerId",
+          "type": "uint256"
+        }
+      ],
+      "name": "TwinDeleted",
+      "type": "event"
+    }
+  ],
+  "bytecode": "0x6080604052348015600f57600080fd5b50603f80601d6000396000f3fe6080604052600080fdfea26469706673582212205138dfcf4b8fea5f70d864548803103dfa2f8db35d50748d400f7350e9d8609764736f6c63430008090033",
+  "deployedBytecode": "0x6080604052600080fdfea26469706673582212205138dfcf4b8fea5f70d864548803103dfa2f8db35d50748d400f7350e9d8609764736f6c63430008090033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
