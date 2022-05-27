@@ -24,6 +24,3 @@ node_modules
 
 # Test Coverage
 coverage*
-
-# Logs
-logs
