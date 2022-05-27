@@ -124,7 +124,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Get the dispute
         (exists, dispute) = fetchDispute(_exchangeId);
 
-        // If exists, set value to isFinalized, otherwise it returns default (false,false)
+        // if exists, set isFinalized to true if state is a valid finalized state
         if (exists) {
             // Check for finalized dispute state
             isFinalized = (
