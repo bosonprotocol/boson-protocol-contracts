@@ -38,6 +38,10 @@ jobs:
         shell: bash
         run: |
           mkdir -p addresses/abis
+      - name: Create empty subfolder of test directory
+        shell: bash
+        run: |
+          mkdir -p addresses/abis/test
       - run: npm run deploy-suite:test
       - name: Upload test deploy output
         uses: actions/upload-artifact@v2
@@ -47,14 +51,11 @@ jobs:
       - name: Copy abis from artifacts directory to abis subfolder
         shell: bash
         run: |
-          rsync -av --exclude='*.dbg.json' artifacts/contracts addresses/abis
+          rsync -av --exclude='*.dbg.json' artifacts/contracts/interfaces addresses/abis/tests/
       - name: Create Automated Pull Request
         uses: peter-evans/create-pull-request@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          add-paths: |
-            addresses/1234-test.json
-            logs/test.deploy.contracts.txt
           commit-message: Add json file with addresses for test environment.
           title: '[Test Environment] New deployed addresses'
           body: >
