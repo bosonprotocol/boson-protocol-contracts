@@ -141,10 +141,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         Offer storage offer;
         (,offer) = fetchOffer(exchange.offerId);
 
+        // Get sender of the transaction
+        address msgSender = MetaTransactionsLib.getCaller();
+
         // Get seller id associated with caller
         bool sellerExists;
         uint256 sellerId;
-        (sellerExists, sellerId) = getSellerIdByOperator(msg.sender);
+        (sellerExists, sellerId) = getSellerIdByOperator(msgSender);
 
         // Seller may only call after fulfillment period elapses, buyer may call any time
         if (sellerExists && offer.sellerId == sellerId) {
@@ -155,7 +158,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
             // Is this the buyer?
             bool buyerExists;
             uint256 buyerId;
-            (buyerExists, buyerId) = getBuyerIdByWallet(msg.sender);
+            (buyerExists, buyerId) = getBuyerIdByWallet(msgSender);
             require(buyerExists && buyerId == exchange.buyerId, NOT_BUYER_OR_SELLER);
         }
 
