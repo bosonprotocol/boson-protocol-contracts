@@ -226,13 +226,15 @@ describe("IBosonOrchestrationHandler", function () {
     });
 
     context("👉 createSellerAndOffer()", async function () {
-      it("should emit a SellerCreated and OfferCreated event", async function () {
+      it("should emit a SellerCreated, OfferCreated and DisputeDurationSet events", async function () {
         // Create a seller and an offer, testing for the event
         await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, disputeValidDuration))
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct);
+          .withArgs(nextOfferId, offer.sellerId, offerStruct)
+          .to.emit(orchestrationHandler, "DisputeDurationSet")
+          .withArgs(nextOfferId, disputeValidDuration);
       });
 
       it("should update state", async function () {
@@ -296,7 +298,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer, testing for the event
         await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, disputeValidDuration))
-          .to.emit(offerHandler, "OfferCreated")
+          .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct);
       });
 
@@ -403,6 +405,16 @@ describe("IBosonOrchestrationHandler", function () {
             orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, disputeValidDuration)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
+
+        it("Dispute valid duration is 0", async function () {
+          // Set dispute valid duration to 0
+          disputeValidDuration = "0";
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, disputeValidDuration)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
+        });
       });
     });
 
@@ -438,22 +450,21 @@ describe("IBosonOrchestrationHandler", function () {
         await accountHandler.connect(admin).createSeller(seller);
       });
 
-      it("should emit an OfferCreated and GroupCreated event", async function () {
+      it("should emit an OfferCreated, DisputeDurationSet and GroupCreated events", async function () {
         // Create an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
           .createOfferWithCondition(offer, disputeValidDuration, condition);
+
+        // OfferCreated and DisputeDurationSet events
+        await expect(tx)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct)
+          .to.emit(orchestrationHandler, "DisputeDurationSet")
+          .withArgs(nextOfferId, disputeValidDuration);
+
+        // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
-
-        // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
-
-        assert.equal(eventOfferCreated.offerId.toString(), offer.id, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), offer.toString(), "Offer struct is incorrect");
 
         // GroupCreated event
         const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
@@ -500,17 +511,12 @@ describe("IBosonOrchestrationHandler", function () {
         const tx = await orchestrationHandler
           .connect(operator)
           .createOfferWithCondition(offer, disputeValidDuration, condition);
-        const txReceipt = await tx.wait();
 
         // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
+        await expect(tx).to.emit(orchestrationHandler, "OfferCreated").withArgs(nextOfferId, sellerId, offerStruct);
 
-        assert.equal(eventOfferCreated.offerId.toString(), nextOfferId, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), Offer.fromStruct(offerStruct).toString(), "Offer struct is incorrect");
+        // Events with structs that contain arrays must be tested differently
+        const txReceipt = await tx.wait();
 
         // GroupCreated event
         const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
@@ -531,17 +537,12 @@ describe("IBosonOrchestrationHandler", function () {
         const tx = await orchestrationHandler
           .connect(operator)
           .createOfferWithCondition(offer, disputeValidDuration, condition);
-        const txReceipt = await tx.wait();
 
         // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
+        await expect(tx).to.emit(orchestrationHandler, "OfferCreated").withArgs(nextOfferId, sellerId, offerStruct);
 
-        assert.equal(eventOfferCreated.offerId.toString(), nextOfferId, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), Offer.fromStruct(offerStruct).toString(), "Offer struct is incorrect");
+        // Events with structs that contain arrays must be tested differently
+        const txReceipt = await tx.wait();
 
         // GroupCreated event
         const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
@@ -601,6 +602,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler.connect(operator).createOfferWithCondition(offer, disputeValidDuration, condition)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
+        });
+
+        it("Dispute valid duration is 0", async function () {
+          // Set dispute valid duration to 0
+          disputeValidDuration = "0";
+
+          // Attempt to create an offer with condition, expecting revert
+          await expect(
+            orchestrationHandler.connect(operator).createOfferWithCondition(offer, disputeValidDuration, condition)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
         });
 
         it("Condition 'None' has some values in other fields", async function () {
@@ -727,22 +738,21 @@ describe("IBosonOrchestrationHandler", function () {
         offerStruct = offer.toStruct();
       });
 
-      it("should emit an OfferCreated and GroupUpdated event", async function () {
+      it("should emit an OfferCreated, DisputeDurationSet and GroupUpdated events", async function () {
         // Create an offer, add it to the group, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
           .createOfferAddToGroup(offer, disputeValidDuration, nextGroupId);
+
+        // OfferCreated and DisputeDurationSet events
+        await expect(tx)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct)
+          .to.emit(orchestrationHandler, "DisputeDurationSet")
+          .withArgs(nextOfferId, disputeValidDuration);
+
+        // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
-
-        // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
-
-        assert.equal(eventOfferCreated.offerId.toString(), offer.id, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), offer.toString(), "Offer struct is incorrect");
 
         // GroupUpdated event
         const eventGroupUpdated = getEvent(txReceipt, orchestrationHandler, "GroupUpdated");
@@ -789,17 +799,12 @@ describe("IBosonOrchestrationHandler", function () {
         const tx = await orchestrationHandler
           .connect(operator)
           .createOfferAddToGroup(offer, disputeValidDuration, nextGroupId);
-        const txReceipt = await tx.wait();
 
         // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
+        await expect(tx).to.emit(orchestrationHandler, "OfferCreated").withArgs(nextOfferId, sellerId, offerStruct);
 
-        assert.equal(eventOfferCreated.offerId.toString(), nextOfferId, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), Offer.fromStruct(offerStruct).toString(), "Offer struct is incorrect");
+        // Events with structs that contain arrays must be tested differently
+        const txReceipt = await tx.wait();
 
         // GroupUpdated event
         const eventGroupUpdated = getEvent(txReceipt, orchestrationHandler, "GroupUpdated");
@@ -820,17 +825,12 @@ describe("IBosonOrchestrationHandler", function () {
         const tx = await orchestrationHandler
           .connect(operator)
           .createOfferAddToGroup(offer, disputeValidDuration, nextGroupId);
-        const txReceipt = await tx.wait();
 
         // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
+        await expect(tx).to.emit(orchestrationHandler, "OfferCreated").withArgs(nextOfferId, sellerId, offerStruct);
 
-        assert.equal(eventOfferCreated.offerId.toString(), nextOfferId, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), Offer.fromStruct(offerStruct).toString(), "Offer struct is incorrect");
+        // Events with structs that contain arrays must be tested differently
+        const txReceipt = await tx.wait();
 
         // GroupUpdated event
         const eventGroupUpdated = getEvent(txReceipt, orchestrationHandler, "GroupUpdated");
@@ -890,6 +890,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler.connect(operator).createOfferAddToGroup(offer, disputeValidDuration, nextGroupId)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
+        });
+
+        it("Dispute valid duration is 0", async function () {
+          // Set dispute valid duration to 0
+          disputeValidDuration = "0";
+
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(
+            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, disputeValidDuration, nextGroupId)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
         });
 
         it("Group does not exist", async function () {
@@ -954,7 +964,7 @@ describe("IBosonOrchestrationHandler", function () {
         await accountHandler.connect(admin).createSeller(seller);
       });
 
-      it("should emit an OfferCreated, a TwinCreated and a BundleCreated event", async function () {
+      it("should emit an OfferCreated, a DisputeDurationSet, a TwinCreated and a BundleCreated events", async function () {
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
 
@@ -962,17 +972,16 @@ describe("IBosonOrchestrationHandler", function () {
         const tx = await orchestrationHandler
           .connect(operator)
           .createOfferAndTwinWithBundle(offer, disputeValidDuration, twin);
+
+        // OfferCreated and DisputeDurationSet events
+        await expect(tx)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct)
+          .to.emit(orchestrationHandler, "DisputeDurationSet")
+          .withArgs(nextOfferId, disputeValidDuration);
+
+        // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
-
-        // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
-
-        assert.equal(eventOfferCreated.offerId.toString(), offer.id, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), offer.toString(), "Offer struct is incorrect");
 
         // TwinCreated event
         const eventTwinCreated = getEvent(txReceipt, orchestrationHandler, "TwinCreated");
@@ -1047,17 +1056,16 @@ describe("IBosonOrchestrationHandler", function () {
         const tx = await orchestrationHandler
           .connect(operator)
           .createOfferAndTwinWithBundle(offer, disputeValidDuration, twin);
-        const txReceipt = await tx.wait();
 
         // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
+        await expect(tx)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct)
+          .to.emit(orchestrationHandler, "DisputeDurationSet")
+          .withArgs(nextOfferId, disputeValidDuration);
 
-        assert.equal(eventOfferCreated.offerId.toString(), nextOfferId, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), Offer.fromStruct(offerStruct).toString(), "Offer struct is incorrect");
+        // Events with structs that contain arrays must be tested differently
+        const txReceipt = await tx.wait();
 
         // TwinCreated event
         const eventTwinCreated = getEvent(txReceipt, orchestrationHandler, "TwinCreated");
@@ -1096,17 +1104,12 @@ describe("IBosonOrchestrationHandler", function () {
         const tx = await orchestrationHandler
           .connect(operator)
           .createOfferAndTwinWithBundle(offer, disputeValidDuration, twin);
-        const txReceipt = await tx.wait();
 
         // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
+        await expect(tx).to.emit(orchestrationHandler, "OfferCreated").withArgs(nextOfferId, sellerId, offerStruct);
 
-        assert.equal(eventOfferCreated.offerId.toString(), nextOfferId, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), Offer.fromStruct(offerStruct).toString(), "Offer struct is incorrect");
+        // Events with structs that contain arrays must be tested differently
+        const txReceipt = await tx.wait();
 
         // TwinCreated event
         const eventTwinCreated = getEvent(txReceipt, orchestrationHandler, "TwinCreated");
@@ -1180,6 +1183,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, disputeValidDuration, twin)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
+        });
+
+        it("Dispute valid duration is 0", async function () {
+          // Set dispute valid duration to 0
+          disputeValidDuration = "0";
+
+          // Attempt to create an offer, twin and bundle, expecting revert
+          await expect(
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, disputeValidDuration, twin)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
         });
 
         it("should revert if protocol is not approved to transfer the ERC20 token", async function () {
@@ -1296,7 +1309,7 @@ describe("IBosonOrchestrationHandler", function () {
         await accountHandler.connect(admin).createSeller(seller);
       });
 
-      it("should emit an OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event", async function () {
+      it("should emit an OfferCreated, a DisputeDurationSet, a GroupCreated, a TwinCreated and a BundleCreated events", async function () {
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
 
@@ -1304,17 +1317,16 @@ describe("IBosonOrchestrationHandler", function () {
         const tx = await orchestrationHandler
           .connect(operator)
           .createOfferWithConditionAndTwinAndBundle(offer, disputeValidDuration, condition, twin);
+
+        // OfferCreated and DisputeDurationSet events
+        await expect(tx)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct)
+          .to.emit(orchestrationHandler, "DisputeDurationSet")
+          .withArgs(nextOfferId, disputeValidDuration);
+
+        // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
-
-        // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
-
-        assert.equal(eventOfferCreated.offerId.toString(), offer.id, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), offer.toString(), "Offer struct is incorrect");
 
         // GroupCreated event
         const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
@@ -1412,17 +1424,12 @@ describe("IBosonOrchestrationHandler", function () {
         const tx = await orchestrationHandler
           .connect(operator)
           .createOfferWithConditionAndTwinAndBundle(offer, disputeValidDuration, condition, twin);
-        const txReceipt = await tx.wait();
 
         // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
+        await expect(tx).to.emit(orchestrationHandler, "OfferCreated").withArgs(nextOfferId, sellerId, offerStruct);
 
-        assert.equal(eventOfferCreated.offerId.toString(), nextOfferId, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), Offer.fromStruct(offerStruct).toString(), "Offer struct is incorrect");
+        // Events with structs that contain arrays must be tested differently
+        const txReceipt = await tx.wait();
 
         // GroupCreated event
         const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
@@ -1471,17 +1478,12 @@ describe("IBosonOrchestrationHandler", function () {
         const tx = await orchestrationHandler
           .connect(operator)
           .createOfferWithConditionAndTwinAndBundle(offer, disputeValidDuration, condition, twin);
-        const txReceipt = await tx.wait();
 
         // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
+        await expect(tx).to.emit(orchestrationHandler, "OfferCreated").withArgs(nextOfferId, sellerId, offerStruct);
 
-        assert.equal(eventOfferCreated.offerId.toString(), nextOfferId, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), Offer.fromStruct(offerStruct).toString(), "Offer struct is incorrect");
+        // Events with structs that contain arrays must be tested differently
+        const txReceipt = await tx.wait();
 
         // GroupCreated event
         const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
@@ -1548,31 +1550,23 @@ describe("IBosonOrchestrationHandler", function () {
         groupStruct = group.toStruct();
       });
 
-      it("should emit a SellerCreated, an OfferCreated and a GroupCreated event", async function () {
+      it("should emit a SellerCreated, an OfferCreated, a DisputeDurationSet and a GroupCreated event", async function () {
         // Create a seller and an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
           .createSellerAndOfferWithCondition(seller, offer, disputeValidDuration, condition);
+
+        // SellerCreated, OfferCreated and DisputeDurationSet events
+        await expect(tx)
+          .to.emit(orchestrationHandler, "SellerCreated")
+          .withArgs(seller.id, sellerStruct)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct)
+          .to.emit(orchestrationHandler, "DisputeDurationSet")
+          .withArgs(nextOfferId, disputeValidDuration);
+
+        // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
-
-        // SellerCreated event
-        const eventSellerCreated = getEvent(txReceipt, orchestrationHandler, "SellerCreated");
-        const sellerInstance = Seller.fromStruct(eventSellerCreated.seller);
-        // Validate the instance
-        expect(sellerInstance.isValid()).to.be.true;
-
-        assert.equal(eventSellerCreated.sellerId.toString(), sellerId, "Seller Id is incorrect");
-        assert.equal(sellerInstance.toString(), seller.toString(), "Seller struct is incorrect");
-
-        // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
-
-        assert.equal(eventOfferCreated.offerId.toString(), offer.id, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), offer.toString(), "Offer struct is incorrect");
 
         // GroupCreated event
         const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
@@ -1633,30 +1627,16 @@ describe("IBosonOrchestrationHandler", function () {
         const tx = await orchestrationHandler
           .connect(operator)
           .createSellerAndOfferWithCondition(seller, offer, disputeValidDuration, condition);
+
+        // SellerCreated and OfferCreated events
+        await expect(tx)
+          .to.emit(orchestrationHandler, "SellerCreated")
+          .withArgs(seller.id, sellerStruct)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct);
+
+        // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
-
-        // SellerCreated event
-        const eventSellerCreated = getEvent(txReceipt, orchestrationHandler, "SellerCreated");
-        const sellerInstance = Seller.fromStruct(eventSellerCreated.seller);
-        // Validate the instance
-        expect(sellerInstance.isValid()).to.be.true;
-
-        assert.equal(eventSellerCreated.sellerId.toString(), sellerId, "Seller Id is incorrect");
-        assert.equal(
-          sellerInstance.toString(),
-          Seller.fromStruct(sellerStruct).toString(),
-          "Seller struct is incorrect"
-        );
-
-        // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
-
-        assert.equal(eventOfferCreated.offerId.toString(), nextOfferId, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), Offer.fromStruct(offerStruct).toString(), "Offer struct is incorrect");
 
         // GroupCreated event
         const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
@@ -1710,26 +1690,16 @@ describe("IBosonOrchestrationHandler", function () {
         const tx = await orchestrationHandler
           .connect(operator)
           .createSellerAndOfferAndTwinWithBundle(seller, offer, disputeValidDuration, twin);
+
+        // SellerCreated and OfferCreated events
+        await expect(tx)
+          .to.emit(orchestrationHandler, "SellerCreated")
+          .withArgs(seller.id, sellerStruct)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct);
+
+        // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
-
-        // SellerCreated event
-        const eventSellerCreated = getEvent(txReceipt, orchestrationHandler, "SellerCreated");
-        const sellerInstance = Seller.fromStruct(eventSellerCreated.seller);
-        // Validate the instance
-        expect(sellerInstance.isValid()).to.be.true;
-
-        assert.equal(eventSellerCreated.sellerId.toString(), sellerId, "Seller Id is incorrect");
-        assert.equal(sellerInstance.toString(), seller.toString(), "Seller struct is incorrect");
-
-        // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
-
-        assert.equal(eventOfferCreated.offerId.toString(), offer.id, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), offer.toString(), "Offer struct is incorrect");
 
         // TwinCreated event
         const eventTwinCreated = getEvent(txReceipt, orchestrationHandler, "TwinCreated");
@@ -1818,30 +1788,16 @@ describe("IBosonOrchestrationHandler", function () {
         const tx = await orchestrationHandler
           .connect(operator)
           .createSellerAndOfferAndTwinWithBundle(seller, offer, disputeValidDuration, twin);
+
+        // SellerCreated and OfferCreated events
+        await expect(tx)
+          .to.emit(orchestrationHandler, "SellerCreated")
+          .withArgs(seller.id, sellerStruct)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct);
+
+        // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
-
-        // SellerCreated event
-        const eventSellerCreated = getEvent(txReceipt, orchestrationHandler, "SellerCreated");
-        const sellerInstance = Seller.fromStruct(eventSellerCreated.seller);
-        // Validate the instance
-        expect(sellerInstance.isValid()).to.be.true;
-
-        assert.equal(eventSellerCreated.sellerId.toString(), sellerId, "Seller Id is incorrect");
-        assert.equal(
-          sellerInstance.toString(),
-          Seller.fromStruct(sellerStruct).toString(),
-          "Seller struct is incorrect"
-        );
-
-        // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
-
-        assert.equal(eventOfferCreated.offerId.toString(), nextOfferId, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), Offer.fromStruct(offerStruct).toString(), "Offer struct is incorrect");
 
         // TwinCreated event
         const eventTwinCreated = getEvent(txReceipt, orchestrationHandler, "TwinCreated");
@@ -1925,7 +1881,7 @@ describe("IBosonOrchestrationHandler", function () {
         twinStruct = twin.toStruct();
       });
 
-      it("should emit a SellerCreated, an OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event", async function () {
+      it("should emit a SellerCreated, an OfferCreated, a GroupCreated, a DisputeDurationSet, a TwinCreated and a BundleCreated event", async function () {
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
 
@@ -1933,23 +1889,18 @@ describe("IBosonOrchestrationHandler", function () {
         const tx = await orchestrationHandler
           .connect(operator)
           .createSellerAndOfferWithConditionAndTwinAndBundle(seller, offer, disputeValidDuration, condition, twin);
+
+        // SellerCreated, OfferCreated and DisputeDurationSet events
+        await expect(tx)
+          .to.emit(orchestrationHandler, "SellerCreated")
+          .withArgs(seller.id, sellerStruct)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct)
+          .to.emit(orchestrationHandler, "DisputeDurationSet")
+          .withArgs(nextOfferId, disputeValidDuration);
+
+        // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
-
-        // SellerCreated event
-        const eventSellerCreated = getEvent(txReceipt, orchestrationHandler, "SellerCreated");
-        const sellerInstance = Seller.fromStruct(eventSellerCreated.seller);
-        // Validate the instance
-        expect(sellerInstance.isValid()).to.be.true;
-
-        // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
-
-        assert.equal(eventOfferCreated.offerId.toString(), offer.id, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), offer.toString(), "Offer struct is incorrect");
 
         // GroupCreated event
         const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");
@@ -2059,30 +2010,16 @@ describe("IBosonOrchestrationHandler", function () {
         const tx = await orchestrationHandler
           .connect(operator)
           .createSellerAndOfferWithConditionAndTwinAndBundle(seller, offer, disputeValidDuration, condition, twin);
+
+        // SellerCreated and OfferCreated events
+        await expect(tx)
+          .to.emit(orchestrationHandler, "SellerCreated")
+          .withArgs(seller.id, sellerStruct)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct);
+
+        // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
-
-        // SellerCreated event
-        const eventSellerCreated = getEvent(txReceipt, orchestrationHandler, "SellerCreated");
-        const sellerInstance = Seller.fromStruct(eventSellerCreated.seller);
-        // Validate the instance
-        expect(sellerInstance.isValid()).to.be.true;
-
-        assert.equal(eventSellerCreated.sellerId.toString(), sellerId, "Seller Id is incorrect");
-        assert.equal(
-          sellerInstance.toString(),
-          Seller.fromStruct(sellerStruct).toString(),
-          "Seller struct is incorrect"
-        );
-
-        // OfferCreated event
-        const eventOfferCreated = getEvent(txReceipt, orchestrationHandler, "OfferCreated");
-        const offerInstance = Offer.fromStruct(eventOfferCreated.offer);
-        // Validate the instance
-        expect(offerInstance.isValid()).to.be.true;
-
-        assert.equal(eventOfferCreated.offerId.toString(), nextOfferId, "Offer Id is incorrect");
-        assert.equal(eventOfferCreated.sellerId.toString(), offer.sellerId, "Seller Id is incorrect");
-        assert.equal(offerInstance.toString(), Offer.fromStruct(offerStruct).toString(), "Offer struct is incorrect");
 
         // GroupCreated event
         const eventGroupCreated = getEvent(txReceipt, orchestrationHandler, "GroupCreated");

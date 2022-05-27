@@ -18,6 +18,7 @@ contract BosonConstants {
     // Revert Reasons: General
     string internal constant INVALID_ADDRESS = "Invalid address";
     string internal constant INVALID_STATE = "Invalid state";
+    string internal constant ARRAY_LENGTH_MISMATCH = "Array length mismatch";
 
     // Revert Reasons: Facet initializer related
     string internal constant ALREADY_INITIALIZED = "Already initialized";

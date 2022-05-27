@@ -190,11 +190,13 @@ describe("IBosonOfferHandler", function () {
     });
 
     context("👉 createOffer()", async function () {
-      it("should emit an OfferCreated event", async function () {
+      it("should emit an OfferCreated and DisputeDurationSet events", async function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOffer(offer, disputeValidDuration))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct);
+          .withArgs(nextOfferId, offer.sellerId, offerStruct)
+          .to.emit(offerHandler, "DisputeDurationSet")
+          .withArgs(nextOfferId, disputeValidDuration);
       });
 
       it("should update state", async function () {
@@ -327,6 +329,16 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(operator).createOffer(offer, disputeValidDuration)).to.revertedWith(
             RevertReasons.OFFER_MUST_BE_ACTIVE
+          );
+        });
+
+        it("Dispute valid duration is 0", async function () {
+          // Set dispute valid duration to 0
+          disputeValidDuration = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, disputeValidDuration)).to.revertedWith(
+            RevertReasons.INVALID_DISPUTE_DURATION
           );
         });
       });
@@ -732,7 +744,7 @@ describe("IBosonOfferHandler", function () {
     });
 
     context("👉 createOfferBatch()", async function () {
-      it("should emit an OfferCreated event for all offers", async function () {
+      it("should emit an OfferCreated and DisputeDurationSet events for all offers", async function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOfferBatch(offers, disputeValidDurations))
           .to.emit(offerHandler, "OfferCreated")
@@ -740,7 +752,13 @@ describe("IBosonOfferHandler", function () {
           .withArgs("2", offer.sellerId, offerStructs[1])
           .withArgs("3", offer.sellerId, offerStructs[2])
           .withArgs("4", offer.sellerId, offerStructs[3])
-          .withArgs("5", offer.sellerId, offerStructs[4]);
+          .withArgs("5", offer.sellerId, offerStructs[4])
+          .to.emit(offerHandler, "DisputeDurationSet")
+          .withArgs("1", disputeValidDuration)
+          .withArgs("2", disputeValidDuration)
+          .withArgs("3", disputeValidDuration)
+          .withArgs("4", disputeValidDuration)
+          .withArgs("5", disputeValidDuration);
       });
 
       it("should update state", async function () {
@@ -879,6 +897,34 @@ describe("IBosonOfferHandler", function () {
           // Attempt to create the offers, expecting revert
           await expect(offerHandler.connect(operator).createOfferBatch(offers, disputeValidDurations)).to.revertedWith(
             RevertReasons.TOO_MANY_OFFERS
+          );
+        });
+
+        it("Dispute valid duration is 0 for some offer", async function () {
+          // Set dispute valid duration to 0
+          disputeValidDurations[2] = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOfferBatch(offers, disputeValidDurations)).to.revertedWith(
+            RevertReasons.INVALID_DISPUTE_DURATION
+          );
+        });
+
+        it("Number of dispute valid duration does not match the number of offers", async function () {
+          // Make dispute valid durations longer
+          disputeValidDurations.push(oneWeek);
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOfferBatch(offers, disputeValidDurations)).to.revertedWith(
+            RevertReasons.ARRAY_LENGTH_MISMATCH
+          );
+
+          // Make dispute valid durations shorter
+          disputeValidDurations = disputeValidDurations.slice(0, -2);
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOfferBatch(offers, disputeValidDurations)).to.revertedWith(
+            RevertReasons.ARRAY_LENGTH_MISMATCH
           );
         });
       });

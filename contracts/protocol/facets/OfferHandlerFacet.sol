@@ -76,8 +76,10 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     {
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offers.length <= protocolStorage().maxOffersPerBatch, TOO_MANY_OFFERS);
-        for (uint256 i = 0; i < _offers.length; i++) { 
-            
+        // number of dispute durations must match the number of offers
+        require(_offers.length == _disputeValidDurations.length, ARRAY_LENGTH_MISMATCH);
+
+        for (uint256 i = 0; i < _offers.length; i++) {        
             // create offer and update structs values to represent true state
             Offer memory _offer = _offers[i];
             createOfferInternal(_offer, _disputeValidDurations[i]);

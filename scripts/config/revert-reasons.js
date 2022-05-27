@@ -10,6 +10,7 @@ exports.RevertReasons = {
   // General
   INVALID_ADDRESS: "Invalid address",
   INVALID_STATE: "Invalid state",
+  ARRAY_LENGTH_MISMATCH: "Array length mismatch",
 
   // Facet initializer related
   ALREADY_INITIALIZED: "Already initialized",
@@ -25,6 +26,7 @@ exports.RevertReasons = {
   OFFER_NOT_UPDATEABLE: "Offer not updateable",
   OFFER_MUST_BE_UNIQUE: "Offer must be unique to a group",
   EXCHANGE_FOR_OFFER_EXISTS: "Exchange for offer exists",
+  INVALID_DISPUTE_DURATION: "Invalid dispute duration",
 
   // Group related
   NO_SUCH_GROUP: "No such offer",
