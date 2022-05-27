@@ -55,6 +55,8 @@ jobs:
         uses: peter-evans/create-pull-request@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          add-paths: |
+            addresses/1234-test.json
           commit-message: Add json file with addresses for test environment.
           title: '[Test Environment] New deployed addresses'
           body: >
