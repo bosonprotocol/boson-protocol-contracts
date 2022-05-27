@@ -1,0 +1,180 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "SupportedInterfaces",
+  "sourceName": "contracts/interfaces/SupportedInterfaces.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "getIBosonAccountHandler",
+      "outputs": [
+        {
+          "internalType": "bytes4",
+          "name": "id",
+          "type": "bytes4"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getIBosonBundleHandler",
+      "outputs": [
+        {
+          "internalType": "bytes4",
+          "name": "id",
+          "type": "bytes4"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getIBosonClient",
+      "outputs": [
+        {
+          "internalType": "bytes4",
+          "name": "id",
+          "type": "bytes4"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getIBosonConfigHandler",
+      "outputs": [
+        {
+          "internalType": "bytes4",
+          "name": "id",
+          "type": "bytes4"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getIBosonDisputeHandler",
+      "outputs": [
+        {
+          "internalType": "bytes4",
+          "name": "id",
+          "type": "bytes4"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getIBosonExchangeHandler",
+      "outputs": [
+        {
+          "internalType": "bytes4",
+          "name": "id",
+          "type": "bytes4"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getIBosonFundsHandler",
+      "outputs": [
+        {
+          "internalType": "bytes4",
+          "name": "id",
+          "type": "bytes4"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getIBosonGroupHandler",
+      "outputs": [
+        {
+          "internalType": "bytes4",
+          "name": "id",
+          "type": "bytes4"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getIBosonMetaTransactionsHandler",
+      "outputs": [
+        {
+          "internalType": "bytes4",
+          "name": "id",
+          "type": "bytes4"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getIBosonOfferHandler",
+      "outputs": [
+        {
+          "internalType": "bytes4",
+          "name": "id",
+          "type": "bytes4"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getIBosonOrchestrationHandler",
+      "outputs": [
+        {
+          "internalType": "bytes4",
+          "name": "id",
+          "type": "bytes4"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getIBosonTwinHandler",
+      "outputs": [
+        {
+          "internalType": "bytes4",
+          "name": "id",
+          "type": "bytes4"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getIBosonVoucher",
+      "outputs": [
+        {
+          "internalType": "bytes4",
+          "name": "id",
+          "type": "bytes4"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x608060405234801561001057600080fd5b506101cc806100206000396000f3fe608060405234801561001057600080fd5b50600436106100cf5760003560e01c80636cc6eee21161008c57806392d454521161006657806392d4545214610162578063ac552d391461016f578063bdd188331461017c578063db32de431461018957600080fd5b80636cc6eee21461013b57806371674d66146101485780638dee522d1461015557600080fd5b80631ad807a3146100d45780633a53d164146100fa5780634cd9cbfe146101075780634dd7e43914610114578063639df738146101215780636793c7cf1461012e575b600080fd5b636a0eb65560e01b5b6040516001600160e01b0319909116815260200160405180910390f35b63b9463b8160e01b6100dd565b634d0d87ad60e01b6100dd565b63a13dc8bd60e01b6100dd565b6317c286ab60e01b6100dd565b63c4c6c36b60e01b6100dd565b6320f3af8f60e11b6100dd565b63c0a5d49f60e01b6100dd565b63c3d9030360e01b6100dd565b6344f98e5d60e01b6100dd565b63619e9d2960e01b6100dd565b631883424760e01b6100dd565b63123b476760e01b6100dd56fea2646970667358221220d6acb27202248a501fb9d7b9b0cf6ac174b5b0c70e13a2248eea9bbb1f06aa5964736f6c63430008090033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100cf5760003560e01c80636cc6eee21161008c57806392d454521161006657806392d4545214610162578063ac552d391461016f578063bdd188331461017c578063db32de431461018957600080fd5b80636cc6eee21461013b57806371674d66146101485780638dee522d1461015557600080fd5b80631ad807a3146100d45780633a53d164146100fa5780634cd9cbfe146101075780634dd7e43914610114578063639df738146101215780636793c7cf1461012e575b600080fd5b636a0eb65560e01b5b6040516001600160e01b0319909116815260200160405180910390f35b63b9463b8160e01b6100dd565b634d0d87ad60e01b6100dd565b63a13dc8bd60e01b6100dd565b6317c286ab60e01b6100dd565b63c4c6c36b60e01b6100dd565b6320f3af8f60e11b6100dd565b63c0a5d49f60e01b6100dd565b63c3d9030360e01b6100dd565b6344f98e5d60e01b6100dd565b63619e9d2960e01b6100dd565b631883424760e01b6100dd565b63123b476760e01b6100dd56fea2646970667358221220d6acb27202248a501fb9d7b9b0cf6ac174b5b0c70e13a2248eea9bbb1f06aa5964736f6c63430008090033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
