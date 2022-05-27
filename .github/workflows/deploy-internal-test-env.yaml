@@ -1,9 +1,12 @@
 name: Deploy to internal test env
+# on:
+#   workflow_run:
+#     workflows: [Contracts CI]
+#     types: [completed]
+#     branches: [main]
 on:
-  workflow_run:
-    workflows: [Contracts CI]
-    types: [completed]
-    branches: [main]
+  push:
+    branches: [ create-automated-prs-with-deployed-addresses ]
 jobs:
   test_deploy:
     runs-on: contracts
