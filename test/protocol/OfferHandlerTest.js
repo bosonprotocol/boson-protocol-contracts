@@ -43,6 +43,7 @@ describe("IBosonOfferHandler", function () {
   let disputeValidDuration, disputeValidDurations;
   let protocolFeePrecentage;
   let block, blockNumber;
+  let response;
 
   before(async function () {
     // get interface Ids
@@ -213,6 +214,10 @@ describe("IBosonOfferHandler", function () {
         for ([key, value] of Object.entries(offer)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
+
+        // Make sure that disputeValidDuration was properly set
+        [, response] = await offerHandler.connect(rando).getDisputeValidDuration(id);
+        expect(response, disputeValidDuration, "disputeValidDuration mismatch");
       });
 
       it("should ignore any provided id and assign the next available", async function () {
@@ -574,6 +579,40 @@ describe("IBosonOfferHandler", function () {
       });
     });
 
+    context("👉 getDisputeValidDuration()", async function () {
+      beforeEach(async function () {
+        // Create an offer
+        await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
+
+        // id of the current offer and increment nextOfferId
+        id = nextOfferId++;
+      });
+
+      it("should return true for exists if disputeValidDuration is found", async function () {
+        // Get the exists flag
+        [exists] = await offerHandler.connect(rando).getDisputeValidDuration(id);
+
+        // Validate
+        expect(exists).to.be.true;
+      });
+
+      it("should return false for exists if disputeValidDuration is not found", async function () {
+        // Get the exists flag
+        [exists] = await offerHandler.connect(rando).getDisputeValidDuration(invalidOfferId);
+
+        // Validate
+        expect(exists).to.be.false;
+      });
+
+      it("should return the correct valued for disputeValidDuration if found", async function () {
+        // Get the disputeValidDuration
+        [, response] = await offerHandler.connect(rando).getDisputeValidDuration(id);
+
+        // Validate
+        expect(response, disputeValidDuration, "disputeValidDuration mismatch");
+      });
+    });
+
     context("👉 getNextOfferId()", async function () {
       beforeEach(async function () {
         // Create an offer
@@ -739,7 +778,7 @@ describe("IBosonOfferHandler", function () {
         offers.push(offer);
         offerStructs.push(offer.toStruct());
 
-        disputeValidDurations.push(oneWeek);
+        disputeValidDurations.push(`${(i + 1) * oneWeek}`);
       }
     });
 
@@ -754,11 +793,11 @@ describe("IBosonOfferHandler", function () {
           .withArgs("4", offer.sellerId, offerStructs[3])
           .withArgs("5", offer.sellerId, offerStructs[4])
           .to.emit(offerHandler, "DisputeDurationSet")
-          .withArgs("1", disputeValidDuration)
-          .withArgs("2", disputeValidDuration)
-          .withArgs("3", disputeValidDuration)
-          .withArgs("4", disputeValidDuration)
-          .withArgs("5", disputeValidDuration);
+          .withArgs("1", disputeValidDurations[0])
+          .withArgs("2", disputeValidDurations[1])
+          .withArgs("3", disputeValidDurations[2])
+          .withArgs("4", disputeValidDurations[3])
+          .withArgs("5", disputeValidDurations[4]);
       });
 
       it("should update state", async function () {
@@ -776,6 +815,10 @@ describe("IBosonOfferHandler", function () {
           for ([key, value] of Object.entries(offers[i])) {
             expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
           }
+
+          // Make sure that disputeValidDuration was properly set
+          [, response] = await offerHandler.connect(rando).getDisputeValidDuration(id);
+          expect(response, disputeValidDurations[i], "disputeValidDuration mismatch");
         }
       });
 

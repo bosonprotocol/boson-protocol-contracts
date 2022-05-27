@@ -57,7 +57,7 @@ describe("IBosonOrchestrationHandler", function () {
     metadataUri,
     offerChecksum,
     voided;
-  let disputeValidDuration;
+  let disputeValidDuration, returnedDisputeValidDuration;
   let protocolFeePrecentage;
   let group, groupStruct, nextGroupId;
   let method, tokenAddress, tokenId, threshold;
@@ -262,6 +262,10 @@ describe("IBosonOrchestrationHandler", function () {
         for ([key, value] of Object.entries(offer, disputeValidDuration)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
+
+        // Make sure that disputeValidDuration was properly set
+        [, returnedDisputeValidDuration] = await offerHandler.connect(rando).getDisputeValidDuration(id);
+        expect(returnedDisputeValidDuration, disputeValidDuration, "disputeValidDuration mismatch");
       });
 
       it("should ignore any provided id and assign the next available", async function () {
@@ -491,6 +495,10 @@ describe("IBosonOrchestrationHandler", function () {
         for ([key, value] of Object.entries(offer, disputeValidDuration)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
+
+        // Make sure that disputeValidDuration was properly set
+        [, returnedDisputeValidDuration] = await offerHandler.connect(rando).getDisputeValidDuration(id);
+        expect(returnedDisputeValidDuration, disputeValidDuration, "disputeValidDuration mismatch");
 
         // Get the group as a struct
         [, groupStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
@@ -780,6 +788,10 @@ describe("IBosonOrchestrationHandler", function () {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
 
+        // Make sure that disputeValidDuration was properly set
+        [, returnedDisputeValidDuration] = await offerHandler.connect(rando).getDisputeValidDuration(id);
+        expect(returnedDisputeValidDuration, disputeValidDuration, "disputeValidDuration mismatch");
+
         // Get the group as a struct
         [, groupStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
 
@@ -1021,6 +1033,10 @@ describe("IBosonOrchestrationHandler", function () {
         for ([key, value] of Object.entries(offer, disputeValidDuration)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
+
+        // Make sure that disputeValidDuration was properly set
+        [, returnedDisputeValidDuration] = await offerHandler.connect(rando).getDisputeValidDuration(id);
+        expect(returnedDisputeValidDuration, disputeValidDuration, "disputeValidDuration mismatch");
 
         // Get the twin as a struct
         [, twinStruct] = await twinHandler.connect(rando).getTwin(nextTwinId);
@@ -1379,6 +1395,10 @@ describe("IBosonOrchestrationHandler", function () {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
 
+        // Make sure that disputeValidDuration was properly set
+        [, returnedDisputeValidDuration] = await offerHandler.connect(rando).getDisputeValidDuration(id);
+        expect(returnedDisputeValidDuration, disputeValidDuration, "disputeValidDuration mismatch");
+
         // Get the group as a struct
         [, groupStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
 
@@ -1617,6 +1637,10 @@ describe("IBosonOrchestrationHandler", function () {
         for ([key, value] of Object.entries(group)) {
           expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
         }
+
+        // Make sure that disputeValidDuration was properly set
+        [, returnedDisputeValidDuration] = await offerHandler.connect(rando).getDisputeValidDuration(id);
+        expect(returnedDisputeValidDuration, disputeValidDuration, "disputeValidDuration mismatch");
       });
 
       it("should ignore any provided ids and assign the next available", async function () {
@@ -1752,6 +1776,10 @@ describe("IBosonOrchestrationHandler", function () {
         for ([key, value] of Object.entries(offer, disputeValidDuration)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
+
+        // Make sure that disputeValidDuration was properly set
+        [, returnedDisputeValidDuration] = await offerHandler.connect(rando).getDisputeValidDuration(id);
+        expect(returnedDisputeValidDuration, disputeValidDuration, "disputeValidDuration mismatch");
 
         // Get the twin as a struct
         [, twinStruct] = await twinHandler.connect(rando).getTwin(nextTwinId);
@@ -1963,6 +1991,10 @@ describe("IBosonOrchestrationHandler", function () {
         for ([key, value] of Object.entries(offer, disputeValidDuration)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
+
+        // Make sure that disputeValidDuration was properly set
+        [, returnedDisputeValidDuration] = await offerHandler.connect(rando).getDisputeValidDuration(id);
+        expect(returnedDisputeValidDuration, disputeValidDuration, "disputeValidDuration mismatch");
 
         // Get the group as a struct
         [, groupStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);

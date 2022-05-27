@@ -203,6 +203,21 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
+     * @notice Fetches a dispute DurationByOffer from storage by associated offer id
+     *
+     * @param _offerId - the id of the offer
+     * @return exists - whether the disputeValidDuration exists
+     * @return disputeValidDuration - the offer details. See {BosonTypes.Offer}
+     */
+    function fetchDisputeValidDuration(uint256 _offerId) internal view returns (bool exists, uint256 disputeValidDuration) {
+        // Get the disputeValidDuration 
+        disputeValidDuration = protocolStorage().disputeDurationByOffer[_offerId];
+
+        // Determine existence
+        exists = disputeValidDuration > 0;
+    }    
+
+    /**
      * @notice Fetches a given group from storage by id
      *
      * @param _groupId - the id of the group

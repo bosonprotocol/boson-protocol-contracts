@@ -215,6 +215,20 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     }
 
     /**
+     * @notice Gets the information about the duration of disputes for a given offer
+     *
+     * @param _offerId - the id of the offer to check
+     * @return exists - the dispute valid duration was found
+     * @return disputeValidDuration - the duration of dispute period for exchanges associated with the offer
+     */
+    function getDisputeValidDuration(uint256 _offerId)
+    external
+    view
+    returns(bool exists, uint256 disputeValidDuration) {
+        return fetchDisputeValidDuration(_offerId);
+    }
+
+    /**
      * @notice Gets the next offer id.
      *
      * Does not increment the counter.
