@@ -425,6 +425,15 @@ describe("IBosonDisputeHandler", function () {
         assert.equal(response, false, "Incorrectly reports finalized state");
       });
 
+      it("should return false if exchange does not exist", async function () {
+        // Exchange does not exist, ask if dispute is finalized
+        [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchange.id);
+
+        // It should not be finalized
+        assert.equal(exists, false, "Incorrectly reports existence");
+        assert.equal(response, false, "Incorrectly reports finalized state");
+      });
+
       context("disputed exchange", async function () {
         beforeEach(async function () {
           // Raise a dispute
