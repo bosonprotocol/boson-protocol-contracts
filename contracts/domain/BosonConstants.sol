@@ -101,6 +101,9 @@ contract BosonConstants {
     string internal constant INVALID_SIGNATURE = "Invalid signature";
     string internal constant SIGNER_AND_SIGNATURE_DO_NOT_MATCH = "Signer and signature do not match";
     string internal constant INVALID_FUNCTION_NAME = "Invalid function name";
+
+    // Revert Reasons: Dispute related
+    string internal constant COMPLAINT_MISSING = "Complaint missing";
 }
 
 // TODO: Refactor to use file level constants throughout or use custom Errors

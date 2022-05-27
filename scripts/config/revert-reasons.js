@@ -92,4 +92,7 @@ exports.RevertReasons = {
   INVALID_SIGNATURE: "Invalid signature",
   SIGNER_AND_SIGNATURE_DO_NOT_MATCH: "Signer and signature do not match",
   INVALID_FUNCTION_NAME: "Invalid function name",
+
+  // Dispute related
+  COMPLAINT_MISSING: "Complaint missing",
 };
