@@ -371,7 +371,7 @@ describe("IBosonDisputeHandler", function () {
         // It should match the expected dispute struct
         assert.equal(dispute.toString(), Dispute.fromStruct(responseDispute).toString(), "Dispute struct is incorrect");
 
-        // It should match the expected dispute struct
+        // It should match the expected dispute dates struct
         assert.equal(
           disputeDates.toString(),
           DisputeDates.fromStruct(responseDisputeDates).toString(),
@@ -392,10 +392,25 @@ describe("IBosonDisputeHandler", function () {
         expect(exists).to.be.true;
 
         // Get the dispute
-        [exists, response] = await disputeHandler.connect(rando).getDispute(exchange.id);
+        [exists, disputeStruct, disputeDates] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
         // Test existence flag
         expect(exists).to.be.false;
+
+        // dispute struct and dispute dates should contain the default values
+        // expected values
+        dispute = new Dispute("0", "", DisputeState.Resolving, new Resolution("0"));
+
+        // Parse into entity
+        const returnedDispute = Dispute.fromStruct(disputeStruct);
+
+        // Returned values should match expected dispute data
+        for (const [key, value] of Object.entries(dispute)) {
+          expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Dispute dates should be empty
+        expect(disputeDates).to.eql([], "Dispute dates should be empty");
       });
     });
 
