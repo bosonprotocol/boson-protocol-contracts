@@ -137,7 +137,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @return exists - the dispute valid duration was found
      * @return disputeValidDuration - the duration of dispute period for exchanges associated with the offer
      */
-    function getDisputeValidDuration(uint256 _offerId) external view     returns(bool exists, uint256 disputeValidDuration);
+    function getDisputeValidDuration(uint256 _offerId) external view returns(bool exists, uint256 disputeValidDuration);
 
     /**
      * @notice Gets the next offer id.

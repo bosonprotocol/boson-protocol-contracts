@@ -208,7 +208,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      *
      * @param _offerId - the id of the offer
      * @return exists - whether the disputeValidDuration exists
-     * @return disputeValidDuration - the offer details. See {BosonTypes.Offer}
+     * @return disputeValidDuration - the duration of dispute period for exchanges associated with the offer
      */
     function fetchDisputeValidDuration(uint256 _offerId) internal view returns (bool exists, uint256 disputeValidDuration) {
         // Get the disputeValidDuration 
