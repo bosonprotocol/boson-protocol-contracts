@@ -16,9 +16,13 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     bytes32 private constant META_TRANSACTION_TYPEHASH = keccak256(bytes("MetaTransaction(uint256 nonce,address from,address contractAddress,string functionName,bytes functionSignature)"));
     bytes32 private constant OFFER_DETAILS_TYPEHASH = keccak256("MetaTxOfferDetails(address buyer,uint256 offerId)");
     bytes32 private constant META_TX_COMMIT_TO_OFFER_TYPEHASH = keccak256("MetaTxCommitToOffer(uint256 nonce,address from,address contractAddress,string functionName,MetaTxOfferDetails offerDetails)MetaTxOfferDetails(address buyer,uint256 offerId)");
-
+    bytes32 private constant EXCHANGE_DETAILS_TYPEHASH = keccak256("MetaTxExchangeDetails(uint256 exchangeId)");
+    bytes32 private constant META_TX_EXCHANGE_TYPEHASH = keccak256("MetaTxExchange(uint256 nonce,address from,address contractAddress,string functionName,MetaTxExchangeDetails exchangeDetails)MetaTxExchangeDetails(uint256 exchangeId)");
     // Function names
     string private constant COMMIT_TO_OFFER = "commitToOffer(address,uint256)";
+    string private constant CANCEL_VOUCHER = "cancelVoucher(uint256)";
+    string private constant REDEEM_VOUCHER = "redeemVoucher(uint256)";
+    string private constant COMPLETE_EXCHANGE = "completeExchange(uint256)";
 
     /**
      * @notice Facet Initializer
@@ -98,6 +102,25 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     }
 
     /**
+     * @notice Returns hashed meta transaction for Exchange handler functions with just one argument as exchangeId.
+     *
+     * @param _metaTx  - BosonTypes.MetaTxExchange struct.
+     */
+    function hashMetaTxExchangeDetails(MetaTxExchange memory _metaTx) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    META_TX_EXCHANGE_TYPEHASH,
+                    _metaTx.nonce,
+                    _metaTx.from,
+                    _metaTx.contractAddress,
+                    keccak256(bytes(_metaTx.functionName)),
+                    hashExchangeDetails(_metaTx.exchangeDetails)
+                )
+            );
+    }
+
+    /**
      * @notice Returns hashed representation of the offer struct.
      *
      * @param _offerDetails - the BosonTypes.MetaTxOfferDetails struct.
@@ -106,6 +129,18 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         return
             keccak256(
                 abi.encode(OFFER_DETAILS_TYPEHASH, _offerDetails.buyer, _offerDetails.offerId)
+            );
+    }
+
+    /**
+     * @notice Returns hashed representation of the exchange details struct.
+     *
+     * @param _exchangeDetails - the BosonTypes.MetaTxExchangeDetails struct.
+     */
+    function hashExchangeDetails(MetaTxExchangeDetails memory _exchangeDetails) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(EXCHANGE_DETAILS_TYPEHASH, _exchangeDetails.exchangeId)
             );
     }
 
@@ -212,7 +247,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         setCurrentSenderAddress(address(0));
         protocolMetaTxInfo().isMetaTransaction = false;
 
-        emit MetaTransactionExecuted(_userAddress, payable(msg.sender), _functionName, _nonce);
+        emit MetaTransactionExecuted(_userAddress, msg.sender, _functionName, _nonce);
         return returnData;
     }
 
@@ -304,5 +339,140 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         );
 
         return executeTx(_userAddress, COMMIT_TO_OFFER, functionSignature, _nonce);
+    }
+
+    /**
+     * @notice Handles the incoming meta transaction for cancel Voucher.
+     *
+     * Reverts if:
+     * - nonce is already used by another transaction.
+     * - sender does not match the recovered signer.
+     * - any code executed in the signed transaction reverts.
+     *
+     * @param _userAddress - the sender of the transaction.
+     * @param _exchangeDetails - the fully populated BosonTypes.MetaTxExchangeDetails struct.
+     * @param _nonce - the nonce value of the transaction.
+     * @param _sigR - r part of the signer's signature.
+     * @param _sigS - s part of the signer's signature.
+     * @param _sigV - v part of the signer's signature.
+     */
+    function executeMetaTxCancelVoucher(
+        address _userAddress,
+        MetaTxExchangeDetails calldata _exchangeDetails,
+        uint256 _nonce,
+        bytes32 _sigR,
+        bytes32 _sigS,
+        uint8 _sigV
+    ) public override returns (bytes memory) {
+        bytes4 functionSelector = IBosonExchangeHandler.cancelVoucher.selector;
+        bytes memory functionSignature = abi.encodeWithSelector(
+            functionSelector,
+            _exchangeDetails.exchangeId
+        );
+        validateTx(CANCEL_VOUCHER, functionSignature, _nonce);
+
+        MetaTxExchange memory metaTx = MetaTxExchange({
+            nonce: _nonce,
+            from: _userAddress,
+            contractAddress: address(this),
+            functionName: CANCEL_VOUCHER,
+            exchangeDetails: _exchangeDetails
+        });
+        require(
+            verify(_userAddress, hashMetaTxExchangeDetails(metaTx), _sigR, _sigS, _sigV),
+            SIGNER_AND_SIGNATURE_DO_NOT_MATCH
+        );
+
+        return executeTx(_userAddress, CANCEL_VOUCHER, functionSignature, _nonce);
+    }
+
+    /**
+     * @notice Handles the incoming meta transaction for Redeem Voucher.
+     *
+     * Reverts if:
+     * - nonce is already used by another transaction.
+     * - sender does not match the recovered signer.
+     * - any code executed in the signed transaction reverts.
+     *
+     * @param _userAddress - the sender of the transaction.
+     * @param _exchangeDetails - the fully populated BosonTypes.MetaTxExchangeDetails struct.
+     * @param _nonce - the nonce value of the transaction.
+     * @param _sigR - r part of the signer's signature.
+     * @param _sigS - s part of the signer's signature.
+     * @param _sigV - v part of the signer's signature.
+     */
+    function executeMetaTxRedeemVoucher(
+        address _userAddress,
+        MetaTxExchangeDetails calldata _exchangeDetails,
+        uint256 _nonce,
+        bytes32 _sigR,
+        bytes32 _sigS,
+        uint8 _sigV
+    ) public override returns (bytes memory) {
+        bytes4 functionSelector = IBosonExchangeHandler.redeemVoucher.selector;
+        bytes memory functionSignature = abi.encodeWithSelector(
+            functionSelector,
+            _exchangeDetails.exchangeId
+        );
+        validateTx(REDEEM_VOUCHER, functionSignature, _nonce);
+
+        MetaTxExchange memory metaTx = MetaTxExchange({
+            nonce: _nonce,
+            from: _userAddress,
+            contractAddress: address(this),
+            functionName: REDEEM_VOUCHER,
+            exchangeDetails: _exchangeDetails
+        });
+        require(
+            verify(_userAddress, hashMetaTxExchangeDetails(metaTx), _sigR, _sigS, _sigV),
+            SIGNER_AND_SIGNATURE_DO_NOT_MATCH
+        );
+
+        return executeTx(_userAddress, REDEEM_VOUCHER, functionSignature, _nonce);
+    }
+
+    /**
+     * @notice Handles the incoming meta transaction for Complete Exchange.
+     *
+     * Reverts if:
+     * - nonce is already used by another transaction.
+     * - sender does not match the recovered signer.
+     * - any code executed in the signed transaction reverts.
+     *
+     * @param _userAddress - the sender of the transaction.
+     * @param _exchangeDetails - the fully populated BosonTypes.MetaTxExchangeDetails struct.
+     * @param _nonce - the nonce value of the transaction.
+     * @param _sigR - r part of the signer's signature.
+     * @param _sigS - s part of the signer's signature.
+     * @param _sigV - v part of the signer's signature.
+     */
+    function executeMetaTxCompleteExchange(
+        address _userAddress,
+        MetaTxExchangeDetails calldata _exchangeDetails,
+        uint256 _nonce,
+        bytes32 _sigR,
+        bytes32 _sigS,
+        uint8 _sigV
+    ) public override returns (bytes memory) {
+        bytes4 functionSelector = IBosonExchangeHandler.completeExchange.selector;
+        bytes memory functionSignature = abi.encodeWithSelector(
+            functionSelector,
+            _exchangeDetails.exchangeId
+        );
+        validateTx(COMPLETE_EXCHANGE, functionSignature, _nonce);
+
+        MetaTxExchange memory metaTx = MetaTxExchange({
+            nonce: _nonce,
+            from: _userAddress,
+            contractAddress: address(this),
+            functionName: COMPLETE_EXCHANGE,
+            exchangeDetails: _exchangeDetails
+        });
+        require(
+            verify(_userAddress, hashMetaTxExchangeDetails(metaTx), _sigR, _sigS, _sigV),
+            SIGNER_AND_SIGNATURE_DO_NOT_MATCH
+        );
+
+        return executeTx(_userAddress, COMPLETE_EXCHANGE, functionSignature, _nonce);
     }
 }

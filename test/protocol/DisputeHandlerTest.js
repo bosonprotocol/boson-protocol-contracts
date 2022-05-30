@@ -10,6 +10,7 @@ const Seller = require("../../scripts/domain/Seller");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const Dispute = require("../../scripts/domain/Dispute");
 const DisputeState = require("../../scripts/domain/DisputeState");
+const DisputeDates = require("../../scripts/domain/DisputeDates");
 const Resolution = require("../../scripts/domain/Resolution");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -54,7 +55,8 @@ describe("IBosonDisputeHandler", function () {
   let protocolFeePrecentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, exchangeStruct, finalizedDate, state;
-  let dispute, disputedDate, complaint, disputeStruct;
+  let dispute, disputedDate, complaint, disputeStruct, responseDispute;
+  let disputeDates, expectedDisputeDates, responseDisputeDates;
   let exists, response;
 
   before(async function () {
@@ -238,7 +240,7 @@ describe("IBosonDisputeHandler", function () {
       await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
       // Set the dispute reason
-      complaint = "Tastes wierd";
+      complaint = "Tastes weird";
     });
 
     context("👉 raiseDispute()", async function () {
@@ -258,17 +260,23 @@ describe("IBosonDisputeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
 
-        dispute = new Dispute(exchange.id, disputedDate, "0", complaint, DisputeState.Resolving, new Resolution("0"));
+        // expected values
+        dispute = new Dispute(exchange.id, complaint, DisputeState.Resolving, new Resolution("0"));
+        expectedDisputeDates = new DisputeDates(disputedDate, "0", "0", "0");
 
         // Get the dispute as a struct
-        [, disputeStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
+        [, disputeStruct, disputeDates] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
         // Parse into entity
-        let returnedDispute = Dispute.fromStruct(disputeStruct);
+        const returnedDispute = Dispute.fromStruct(disputeStruct);
+        const returnedDisputeDates = DisputeDates.fromStruct(disputeDates);
 
-        // Returned values should match the input in createSeller
+        // Returned values should match expected dispute data
         for (const [key, value] of Object.entries(dispute)) {
           expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
+        }
+        for (const [key, value] of Object.entries(expectedDisputeDates)) {
+          expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
         }
       });
 
@@ -442,7 +450,8 @@ describe("IBosonDisputeHandler", function () {
         disputedDate = block.timestamp.toString();
 
         // Expected value for dispute
-        dispute = new Dispute(exchange.id, disputedDate, "0", complaint, DisputeState.Resolving, new Resolution("0"));
+        dispute = new Dispute(exchange.id, complaint, DisputeState.Resolving, new Resolution("0"));
+        disputeDates = new DisputeDates(disputedDate, "0", "0", "0");
       });
 
       it("should return true for exists if exchange id is valid", async function () {
@@ -463,10 +472,17 @@ describe("IBosonDisputeHandler", function () {
 
       it("should return the expected dispute if exchange id is valid", async function () {
         // Get the exchange
-        [exists, response] = await disputeHandler.connect(rando).getDispute(exchange.id);
+        [exists, responseDispute, responseDisputeDates] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
-        // It should match the expected exchange struct
-        assert.equal(dispute.toString(), Dispute.fromStruct(response).toString(), "Dispute struct is incorrect");
+        // It should match the expected dispute struct
+        assert.equal(dispute.toString(), Dispute.fromStruct(responseDispute).toString(), "Dispute struct is incorrect");
+
+        // It should match the expected dispute struct
+        assert.equal(
+          disputeDates.toString(),
+          DisputeDates.fromStruct(responseDisputeDates).toString(),
+          "Dispute dates are incorrect"
+        );
       });
 
       it("should return false for exists if exchange id is valid, but dispute was not raised", async function () {
@@ -531,6 +547,15 @@ describe("IBosonDisputeHandler", function () {
         assert.equal(response, false, "Incorrectly reports finalized state");
       });
 
+      it("should return false if exchange does not exist", async function () {
+        // Exchange does not exist, ask if dispute is finalized
+        [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchange.id + 10);
+
+        // It should not be finalized
+        assert.equal(exists, false, "Incorrectly reports existence");
+        assert.equal(response, false, "Incorrectly reports finalized state");
+      });
+
       context("disputed exchange", async function () {
         beforeEach(async function () {
           // Raise a dispute
@@ -541,7 +566,8 @@ describe("IBosonDisputeHandler", function () {
           // Dispute in resolving state, ask if exchange is finalized
           [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchange.id);
 
-          // It should not be finalized
+          // It should exist, but not be finalized
+          assert.equal(exists, true, "Incorrectly reports existence");
           assert.equal(response, false, "Incorrectly reports finalized state");
         });
 
@@ -552,7 +578,8 @@ describe("IBosonDisputeHandler", function () {
           // Dispute in retracted state, ask if exchange is finalized
           [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchange.id);
 
-          // It should be finalized
+          // It should exist and be finalized
+          assert.equal(exists, true, "Incorrectly reports existence");
           assert.equal(response, true, "Incorrectly reports unfinalized state");
         });
 
@@ -563,7 +590,8 @@ describe("IBosonDisputeHandler", function () {
           // Dispute in resolved state, ask if exchange is finalized
           [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchange.id);
 
-          // It should be finalized
+          // It should exist and be finalized
+          assert.equal(exists, true, "Incorrectly reports existence");
           assert.equal(response, true, "Incorrectly reports unfinalized state");
         });
 
@@ -574,7 +602,8 @@ describe("IBosonDisputeHandler", function () {
           // Dispute in decided state, ask if exchange is finalized
           [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchange.id);
 
-          // It should be finalized
+          // It should exist and be finalized
+          assert.equal(exists, true, "Incorrectly reports existence");
           assert.equal(response, true, "Incorrectly reports unfinalized state");
         });
       });
