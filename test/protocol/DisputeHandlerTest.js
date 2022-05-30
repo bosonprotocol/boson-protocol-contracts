@@ -360,24 +360,22 @@ describe("IBosonDisputeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
         finalizedDate = block.timestamp.toString();
 
-        dispute = new Dispute(
-          exchange.id,
-          disputedDate,
-          finalizedDate,
-          complaint,
-          DisputeState.Retracted,
-          new Resolution("0")
-        );
+        dispute = new Dispute(exchange.id, complaint, DisputeState.Retracted, new Resolution("0"));
+        expectedDisputeDates = new DisputeDates(disputedDate, "0", finalizedDate, "0");
 
         // Get the dispute as a struct
-        [, disputeStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
+        [, disputeStruct, disputeDates] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
-        // Parse into entity
+        // Parse into entities
         let returnedDispute = Dispute.fromStruct(disputeStruct);
+        const returnedDisputeDates = DisputeDates.fromStruct(disputeDates);
 
         // Returned values should match the input in createSeller
         for (const [key, value] of Object.entries(dispute)) {
           expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
+        }
+        for (const [key, value] of Object.entries(expectedDisputeDates)) {
+          expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the dispute state
