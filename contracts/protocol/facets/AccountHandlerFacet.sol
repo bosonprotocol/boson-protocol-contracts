@@ -306,7 +306,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
-     * @notice Validates buyer struct and stores it to storage
+     * @notice Stores buyer struct in storage
      *
      * @param _buyer - the fully populated struct with buyer id set
      */
@@ -327,7 +327,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
 
     /**
-     * @notice Validates resolver struct and stores it to storage
+     * @notice Stores resolver struct in storage
      *
      * @param _resolver - the fully populated struct with resolver id set
      */

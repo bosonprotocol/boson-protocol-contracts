@@ -138,7 +138,7 @@ describe("IBosonAccountHandler", function () {
   });
 
   // All supported Seller methods
-  context("📋 Seller Methods", async function () {
+  context.only("📋 Seller Methods", async function () {
     beforeEach(async function () {
       // The first seller id
       nextAccountId = "1";
@@ -1304,7 +1304,7 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should return the details of the resolver as a struct if found", async function () {
-        // Get the buyer as a struct
+        // Get the resolver as a struct
         [, resolverStruct] = await accountHandler.connect(rando).getResolver(id);
 
         // Parse into entity
