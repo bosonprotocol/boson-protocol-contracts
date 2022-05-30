@@ -138,7 +138,7 @@ describe("IBosonAccountHandler", function () {
   });
 
   // All supported Seller methods
-  context.only("📋 Seller Methods", async function () {
+  context("📋 Seller Methods", async function () {
     beforeEach(async function () {
       // The first seller id
       nextAccountId = "1";
