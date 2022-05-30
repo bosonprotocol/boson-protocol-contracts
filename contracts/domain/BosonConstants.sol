@@ -35,7 +35,8 @@ contract BosonConstants {
     string internal constant MUST_BE_ACTIVE = "Account must be active";
     string internal constant SELLER_ADDRESS_MUST_BE_UNIQUE = "Seller address cannot be assigned to another seller Id";
     string internal constant BUYER_ADDRESS_MUST_BE_UNIQUE = "Buyer address cannot be assigned to another buyer Id";
-    string internal constant RESOLVER_ADDRESS_MUST_BE_UNIQUE = "Resolver address cannot be assigned to another resolver Id";
+    string internal constant RESOLVER_ADDRESS_MUST_BE_UNIQUE =
+        "Resolver address cannot be assigned to another resolver Id";
     string internal constant NO_SUCH_BUYER = "No such buyer";
     string internal constant WALLET_OWNS_VOUCHERS = "Wallet address owns vouchers";
 
