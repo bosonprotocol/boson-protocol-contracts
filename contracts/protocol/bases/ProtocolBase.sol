@@ -189,18 +189,18 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
-     * @notice Fetches a given resolver from storage by id
+     * @notice Fetches a given dispute resolver from storage by id
      *
-     * @param _resolverId - the id of the resolver
+     * @param _disputeResolverId - the id of the resolver
      * @return exists - whether the resolver exists
-     * @return resolver - the resolver details. See {BosonTypes.Resolver}
+     * @return disputeResolver - the resolver details. See {BosonTypes.DisputeResolver}
      */
-    function fetchResolver(uint256 _resolverId) internal view returns (bool exists, BosonTypes.Resolver storage resolver) {
-        // Get the resolver's slot
-        resolver = protocolStorage().resolvers[_resolverId];
+    function fetchDisputeResolver(uint256 _disputeResolverId) internal view returns (bool exists, BosonTypes.DisputeResolver storage disputeResolver) {
+        // Get the dispute resolver's slot
+        disputeResolver = protocolStorage().disputeResolvers[_disputeResolverId];
 
         // Determine existence
-        exists = (_resolverId > 0 && resolver.id == _resolverId);
+        exists = (_disputeResolverId > 0 && disputeResolver.id == _disputeResolverId);
     }
 
     /**

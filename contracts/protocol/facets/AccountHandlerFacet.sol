@@ -84,31 +84,31 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * Reverts if:
      * - Wallet address is zero address
      * - Active is not true
-     * - Wallet address is not unique to this resolver
+     * - Wallet address is not unique to this dispute resolver
      *
-     * @param _resolver - the fully populated struct with resolver id set to 0x0
+     * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
      */
-    function createResolver(Resolver memory _resolver) 
+    function createDisputeResolver(DisputeResolver memory _disputeResolver)
     external
     override
     {
         //Check for zero address
-        require(_resolver.wallet != address(0), INVALID_ADDRESS);
+        require(_disputeResolver.wallet != address(0), INVALID_ADDRESS);
 
         //Check active is not set to false
-        require(_resolver.active, MUST_BE_ACTIVE);
+        require(_disputeResolver.active, MUST_BE_ACTIVE);
 
         // Get the next account Id and increment the counter
-        uint256 resolverId = protocolCounters().nextAccountId++;
+        uint256 disputeResolverId = protocolCounters().nextAccountId++;
 
         //check that the wallet address is unique to one buyer Id
-        require(protocolStorage().resolverIdByWallet[_resolver.wallet] == 0, RESOLVER_ADDRESS_MUST_BE_UNIQUE);
+        require(protocolStorage().disputeResolverIdByWallet[_disputeResolver.wallet] == 0, DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
 
-        _resolver.id = resolverId;
-        storeResolver(_resolver);
+        _disputeResolver.id = disputeResolverId;
+        storeDisputeResolver(_disputeResolver);
 
         //Notify watchers of state change
-        emit ResolverCreated(_resolver.id, _resolver);
+        emit DisputeResolverCreated(_disputeResolver.id, _disputeResolver);
     }
 
 
@@ -277,18 +277,18 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
-     * @notice Gets the details about a resolver.
+     * @notice Gets the details about a dispute resolver.
      *
-     * @param _resolverId - the id of the resolver to check
+     * @param _disputeResolverId - the id of the resolver to check
      * @return exists - the resolver was found
-     * @return resolver - the resolver details. See {BosonTypes.Resolver}
+     * @return disputeResolver - the resolver details. See {BosonTypes.DisputeResolver}
      */
-    function getResolver(uint256 _resolverId) 
+    function getDisputeResolver(uint256 _disputeResolverId) 
     external
     override
-    view returns (bool exists, Resolver memory resolver) 
+    view returns (bool exists, DisputeResolver memory disputeResolver) 
     {
-        return fetchResolver(_resolverId);
+        return fetchDisputeResolver(_disputeResolverId);
     }
 
 
@@ -327,23 +327,23 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
 
     /**
-     * @notice Stores resolver struct in storage
+     * @notice Stores DisputeResolver struct in storage
      *
-     * @param _resolver - the fully populated struct with resolver id set
+     * @param _disputeResolver - the fully populated struct with resolver id set
      */
    
-    function storeResolver(Resolver memory _resolver) internal 
+    function storeDisputeResolver(DisputeResolver memory _disputeResolver) internal 
     {
         // Get storage location for resolver
-        (,Resolver storage resolver) = fetchResolver(_resolver.id);
+        (,DisputeResolver storage disputeResolver) = fetchDisputeResolver(_disputeResolver.id);
 
         // Set resolver props individually since memory structs can't be copied to storage
-        resolver.id = _resolver.id;
-        resolver.wallet = _resolver.wallet;
-        resolver.active = _resolver.active;
+        disputeResolver.id = _disputeResolver.id;
+        disputeResolver.wallet = _disputeResolver.wallet;
+        disputeResolver.active = _disputeResolver.active;
 
-        //Map the resolver's wallet address to the resolverId.
-        protocolStorage().resolverIdByWallet[_resolver.wallet] = _resolver.id;
+        //Map the dispute resolver's wallet address to the dispute resolver Id.
+        protocolStorage().disputeResolverIdByWallet[_disputeResolver.wallet] = _disputeResolver.id;
     }
 
    
