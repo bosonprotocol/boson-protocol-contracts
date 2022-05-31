@@ -11,4 +11,5 @@ import {BosonTypes} from "../../domain/BosonTypes.sol";
 interface IBosonDisputeEvents {
     event DisputeRaised(uint256 indexed exchangeId, uint256 indexed buyerId, uint256 indexed sellerId, string complaint);
     event DisputeRetracted(uint256 indexed exchangeId, address indexed retractedBy);
+    event DisputeResolved(uint256 indexed exchangeId, BosonTypes.Resolution resolution, address indexed resolvedBy);
 }
