@@ -12,7 +12,6 @@ contract BosonConstants {
     bytes32 internal constant PROTOCOL = keccak256("PROTOCOL"); // Role for facets of the ProtocolDiamond
     bytes32 internal constant CLIENT = keccak256("CLIENT"); // Role for clients of the ProtocolDiamond
     bytes32 internal constant UPGRADER = keccak256("UPGRADER"); // Role for performing contract and config upgrades
-    bytes32 internal constant RESOLVER = keccak256("RESOLVER"); // Role for resolving the outcome of an escalated dispute
     bytes32 internal constant FEE_COLLECTOR = keccak256("FEE_COLLECTOR"); // Role for collecting fees from the protocol
 
     // Revert Reasons: General
@@ -36,7 +35,7 @@ contract BosonConstants {
     string internal constant SELLER_ADDRESS_MUST_BE_UNIQUE = "Seller address cannot be assigned to another seller Id";
     string internal constant BUYER_ADDRESS_MUST_BE_UNIQUE = "Buyer address cannot be assigned to another buyer Id";
     string internal constant DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE =
-        "Dispute Resolver address cannot be assigned to another resolver Id";
+        "Dispute Resolver address cannot be assigned to another dispute resolver Id";
     string internal constant NO_SUCH_BUYER = "No such buyer";
     string internal constant WALLET_OWNS_VOUCHERS = "Wallet address owns vouchers";
 

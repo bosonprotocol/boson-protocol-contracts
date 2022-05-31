@@ -79,7 +79,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     /**
      * @notice Creates a Dispute Resolver
      *
-     * Emits a ResolverCreated event if successful.
+     * Emits a DisputeResolverCreated event if successful.
      *
      * Reverts if:
      * - Wallet address is zero address
@@ -279,9 +279,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     /**
      * @notice Gets the details about a dispute resolver.
      *
-     * @param _disputeResolverId - the id of the resolver to check
-     * @return exists - the resolver was found
-     * @return disputeResolver - the resolver details. See {BosonTypes.DisputeResolver}
+     * @param _disputeResolverId - the id of the rdispute esolver to check
+     * @return exists - the dispute resolver was found
+     * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
      */
     function getDisputeResolver(uint256 _disputeResolverId) 
     external
@@ -329,15 +329,15 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     /**
      * @notice Stores DisputeResolver struct in storage
      *
-     * @param _disputeResolver - the fully populated struct with resolver id set
+     * @param _disputeResolver - the fully populated struct with dispute resolver id set
      */
    
     function storeDisputeResolver(DisputeResolver memory _disputeResolver) internal 
     {
-        // Get storage location for resolver
+        // Get storage location for dispute resolver
         (,DisputeResolver storage disputeResolver) = fetchDisputeResolver(_disputeResolver.id);
 
-        // Set resolver props individually since memory structs can't be copied to storage
+        // Set dispute resolver props individually since memory structs can't be copied to storage
         disputeResolver.id = _disputeResolver.id;
         disputeResolver.wallet = _disputeResolver.wallet;
         disputeResolver.active = _disputeResolver.active;

@@ -191,9 +191,9 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     /**
      * @notice Fetches a given dispute resolver from storage by id
      *
-     * @param _disputeResolverId - the id of the resolver
-     * @return exists - whether the resolver exists
-     * @return disputeResolver - the resolver details. See {BosonTypes.DisputeResolver}
+     * @param _disputeResolverId - the id of the dispute resolver
+     * @return exists - whether the dispute resolver exists
+     * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
      */
     function fetchDisputeResolver(uint256 _disputeResolverId) internal view returns (bool exists, BosonTypes.DisputeResolver storage disputeResolver) {
         // Get the dispute resolver's slot
@@ -281,7 +281,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     function fetchTwin(uint256 _twinId) internal view returns (bool exists, BosonTypes.Twin storage twin) {
         // Get the twin's slot
         twin = protocolStorage().twins[_twinId];
-
+ 
         // Determine existence
         exists = (_twinId > 0 && twin.id == _twinId);
     }

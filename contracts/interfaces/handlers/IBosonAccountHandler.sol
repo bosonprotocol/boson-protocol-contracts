@@ -44,7 +44,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     /**
      * @notice Creates a Dispute Resolver
      *
-     * Emits a ResolverCreated event if successful.
+     * Emits a DisputeResolverCreated event if successful.
      *
      * Reverts if:
      * - Wallet address is zero address
