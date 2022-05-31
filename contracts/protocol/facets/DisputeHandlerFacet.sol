@@ -78,7 +78,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     }
 
     /**
-     * @notice Retracts the dispute and release the funds
+     * @notice Retract the dispute and release the funds
      *
      * Emits an DisputeRetracted event if successful.
      *
@@ -101,7 +101,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         (, Dispute storage dispute) = fetchDispute(_exchangeId);
 
         // Make sure the dispute is in the resolving state
-        require(dispute.state == DisputeState.Resolving, INVALID_STATE);
+        require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);
 
         // update dispute and exchange
         fetchDisputeDates(_exchangeId)[DisputeDate.Finalized] = block.timestamp;

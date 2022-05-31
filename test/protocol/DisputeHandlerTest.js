@@ -345,7 +345,7 @@ describe("IBosonDisputeHandler", function () {
       });
 
       it("should emit a DisputeRetracted event", async function () {
-        // Raise the dispute, testing for the event
+        // Retract the dispute, testing for the event
         await expect(disputeHandler.connect(buyer).retractDispute(exchange.id))
           .to.emit(disputeHandler, "DisputeRetracted")
           .withArgs(exchange.id, buyer.address);
@@ -393,6 +393,16 @@ describe("IBosonDisputeHandler", function () {
 
         // FinalizeDate should be set correctly
         assert.equal(returnedExchange.finalizedDate, finalizedDate, "Exchange finalizeDate is incorect");
+      });
+
+      it.skip("dispute can be retracted if it's in escalated state", async function () {
+        // Escalate a dispute
+        await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
+        // Retract the dispute, testing for the event
+        await expect(disputeHandler.connect(buyer).retractDispute(exchange.id))
+          .to.emit(disputeHandler, "DisputeRetracted")
+          .withArgs(exchange.id, buyer.address);
       });
 
       context("💔 Revert Reasons", async function () {

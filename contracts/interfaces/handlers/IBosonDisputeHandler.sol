@@ -30,7 +30,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents {
     function raiseDispute(uint256 _exchangeId, string calldata _complaint) external;
 
     /**
-     * @notice Retracts the dispute and release the funds
+     * @notice Retract the dispute and release the funds
      *
      * Emits an DisputeRetracted event if successful.
      *
