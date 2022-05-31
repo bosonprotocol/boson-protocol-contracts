@@ -52,9 +52,25 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Caller is not the admin address of the seller
      * - Seller does not exist
      *
-     * @param _seller - the fully populated struct with seller id set to 0x0
+     * @param _seller - the fully populated seller struct
      */
     function updateSeller(BosonTypes.Seller memory _seller) external;
+
+    /**
+     * @notice Updates a buyer. All fields should be filled, even those staying the same. The wallet address cannot be updated if the current wallet address has oustanding vouchers
+     *
+     * Emits a BuyerUpdated event if successful.
+     *
+     * Reverts if:
+     * - Caller is not the wallet address associated with the buyer account
+     * - Wallet address is zero address
+     * - Address is not unique to this buyer
+     * - Buyer does not exist
+     * - Current wallet address has oustanding vouchers
+     *
+     * @param _buyer - the fully populated buyer struct
+     */
+    function updateBuyer(BosonTypes.Buyer memory _buyer) external;
 
     /**
      * @notice Gets the details about a seller.

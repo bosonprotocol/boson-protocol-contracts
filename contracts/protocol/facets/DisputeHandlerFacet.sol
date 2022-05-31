@@ -26,12 +26,12 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     /**
      * @notice Raise a dispute
      *
-     * Emits an DisputeCreated event if successful.
+     * Emits an DisputeRaised event if successful.
      *
      * Reverts if:
+     * - caller does not hold a voucher for the given exchange id
      * - exchange does not exist
-     * - caller does not hold a voucher for the given offer id
-     * - a dispute already exists for the exchange
+     * - exchange is not in a redeemed state
      * - the complaint is blank
      *
      * @param _exchangeId - the id of the associated exchange
@@ -44,23 +44,94 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     external
     override
     {
-        bool exists;
-        Exchange storage exchange;
-        Offer storage offer;
+        // Buyer must provide a reason to dispute
+        require(bytes(_complaint).length > 0, COMPLAINT_MISSING);
 
-        // Get the exchange, revert if it doesn't exist
-        (exists, exchange) = fetchExchange(_exchangeId);
-        require(exists, NO_SUCH_EXCHANGE);
+        // Get the exchange, should be in redeemed state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
 
+        // Make sure the caller is buyer associated with the exchange
+        checkBuyer(exchange.buyerId);
+
+        // Set the exhange state to disputed
+        exchange.state = ExchangeState.Disputed;
+
+        // Fetch the dispute
+        (, Dispute storage dispute) = fetchDispute(_exchangeId);
+
+        // Set the initial values
+        dispute.exchangeId = _exchangeId;
+        dispute.disputedDate = block.timestamp;
+        dispute.complaint = _complaint;
+        dispute.state = DisputeState.Resolving;
+        
         // Get the offer, which will exist if the exchange does
-        (, offer) = fetchOffer(exchange.offerId);
-
-        // TODO implement further checks, create and store dispute
+        (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // Notify watchers of state change
         emit DisputeRaised(_exchangeId, exchange.buyerId, offer.sellerId, _complaint);
-
     }
 
+    /**
+     * @notice Gets the details about a given dispute.
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return exists - true if the dispute exists
+     * @return dispute - the dispute details. See {BosonTypes.Dispute}
+     */
+    function getDispute(uint256 _exchangeId)
+    external
+    view
+    override
+    returns(bool exists, Dispute memory dispute) {
+        return fetchDispute(_exchangeId);
+    }
 
+    /**
+     * @notice Gets the state of a given dispute.
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return exists - true if the dispute exists
+     * @return state - the dispute state. See {BosonTypes.DisputeState}
+     */
+    function getDisputeState(uint256 _exchangeId)
+    external
+    view
+    override
+    returns(bool exists, DisputeState state) {
+        Dispute storage dispute;
+        (exists, dispute) = fetchDispute(_exchangeId);
+        if (exists) state = dispute.state;
+    }
+
+    /**
+     * @notice Is the given dispute in a finalized state?
+     *
+     * Returns true if
+     * - Dispute state is Retracted, Resolved, or Decided
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return exists - true if the dispute exists
+     * @return isFinalized - true if the dispute is finalized
+     */
+    function isDisputeFinalized(uint256 _exchangeId)
+    external
+    view
+    override
+    returns(bool exists, bool isFinalized) {
+        Dispute storage dispute;
+
+        // Get the dispute
+        (exists, dispute) = fetchDispute(_exchangeId);
+
+        // if exists, set isFinalized to true if state is a valid finalized state
+        if (exists) {
+            // Check for finalized dispute state
+            isFinalized = (
+                dispute.state == DisputeState.Retracted ||
+                dispute.state == DisputeState.Resolved ||
+                dispute.state == DisputeState.Decided
+            );
+        }
+    }
 }

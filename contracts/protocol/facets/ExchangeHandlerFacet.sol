@@ -9,6 +9,7 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { TwinBase } from "../bases/TwinBase.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
+import { MetaTransactionsLib } from "../libs/MetaTransactionsLib.sol";
 
 /**
  * @title ExchangeHandlerFacet
@@ -143,10 +144,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, TwinBase {
         Offer storage offer;
         (,offer) = fetchOffer(exchange.offerId);
 
+        // Get sender of the transaction
+        address msgSender = MetaTransactionsLib.getCaller();
+
         // Get seller id associated with caller
         bool sellerExists;
         uint256 sellerId;
-        (sellerExists, sellerId) = getSellerIdByOperator(msg.sender);
+        (sellerExists, sellerId) = getSellerIdByOperator(msgSender);
 
         // Seller may only call after fulfillment period elapses, buyer may call any time
         if (sellerExists && offer.sellerId == sellerId) {
@@ -157,7 +161,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, TwinBase {
             // Is this the buyer?
             bool buyerExists;
             uint256 buyerId;
-            (buyerExists, buyerId) = getBuyerIdByWallet(msg.sender);
+            (buyerExists, buyerId) = getBuyerIdByWallet(msgSender);
             require(buyerExists && buyerId == exchange.buyerId, NOT_BUYER_OR_SELLER);
         }
 

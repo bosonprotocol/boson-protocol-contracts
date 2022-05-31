@@ -108,6 +108,8 @@ contract BosonTypes {
 
     struct Dispute {
         uint256 exchangeId;
+        uint256 disputedDate;
+        uint256 finalizedDate;
         string complaint;
         DisputeState state;
         Resolution resolution;
@@ -165,5 +167,17 @@ contract BosonTypes {
     struct MetaTxOfferDetails {
         address buyer;
         uint256 offerId;
+    }
+
+    struct MetaTxExchange {
+        uint256 nonce;
+        address from;
+        address contractAddress;
+        string functionName;
+        MetaTxExchangeDetails exchangeDetails;
+    }
+
+    struct MetaTxExchangeDetails {
+        uint256 exchangeId;
     }
 }

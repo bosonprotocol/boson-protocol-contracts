@@ -5,11 +5,14 @@ const { expect } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
+const Offer = require("../../scripts/domain/Offer");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
+const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 
 /**
  *  Test the Boson Account Handler interface
@@ -18,11 +21,30 @@ describe("IBosonAccountHandler", function () {
   // Common vars
   let InterfaceIds;
   let accounts, deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, other4;
-  let erc165, protocolDiamond, accessController, accountHandler, gasLimit;
+  let erc165, protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, fundsHandler, gasLimit;
   let seller, sellerStruct, active, seller2, seller2Struct, id2;
-  let buyer, buyerStruct;
+  let buyer, buyerStruct, buyer2, buyer2Struct;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
+  let oneMonth, oneWeek, blockNumber, block, protocolFeePrecentage;
+  let bosonVoucher, clients;
+  let offerId,
+    sellerId,
+    price,
+    sellerDeposit,
+    protocolFee,
+    buyerCancelPenalty,
+    quantityAvailable,
+    validFromDate,
+    validUntilDate,
+    redeemableFromDate,
+    fulfillmentPeriodDuration,
+    voucherValidDuration,
+    exchangeToken,
+    metadataUri,
+    metadataHash,
+    voided,
+    offer;
 
   before(async function () {
     // get interface Ids
@@ -49,15 +71,32 @@ describe("IBosonAccountHandler", function () {
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
-    // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet"]);
+    // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
+    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
 
-    // Add config Handler, so seller id starts at 1
+    // Cut the protocol handler facets into the Diamond
+    await deployProtocolHandlerFacets(protocolDiamond, [
+      "AccountHandlerFacet",
+      "ExchangeHandlerFacet",
+      "OfferHandlerFacet",
+      "FundsHandlerFacet",
+    ]);
+
+    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
+    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    [bosonVoucher] = clients;
+    await accessController.grantRole(Role.CLIENT, bosonVoucher.address);
+
+    // set protocolFeePrecentage
+    protocolFeePrecentage = "200"; // 2 %
+
+    // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
       "0x0000000000000000000000000000000000000000",
       "0x0000000000000000000000000000000000000000",
-      "0x0000000000000000000000000000000000000000",
-      "0",
+      bosonVoucher.address,
+      protocolFeePrecentage,
       "0",
       "0",
       "0",
@@ -72,6 +111,15 @@ describe("IBosonAccountHandler", function () {
 
     // Cast Diamond to IBosonAccountHandler
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonOfferHandler
+    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonExchangeHandler
+    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonFundsHandler
+    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -778,6 +826,321 @@ describe("IBosonAccountHandler", function () {
           // Attempt to create another buyer with same wallet address
           await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(
             RevertReasons.BUYER_ADDRESS_MUST_BE_UNIQUE
+          );
+        });
+      });
+    });
+
+    context("👉 updateBuyer()", async function () {
+      beforeEach(async function () {
+        // Create a buyer
+        await accountHandler.connect(rando).createBuyer(buyer);
+
+        // id of the current buyer and increment nextAccountId
+        id = nextAccountId++;
+      });
+
+      it("should emit a BuyerUpdated event with correct values if values change", async function () {
+        buyer.wallet = other2.address;
+        buyer.active = false;
+        expect(buyer.isValid()).is.true;
+
+        buyerStruct = buyer.toStruct();
+
+        //Update a buyer, testing for the event
+        await expect(accountHandler.connect(other1).updateBuyer(buyer))
+          .to.emit(accountHandler, "BuyerUpdated")
+          .withArgs(buyer.id, buyerStruct);
+      });
+
+      it("should emit a BuyerUpdated event with correct values if values stay the same", async function () {
+        //Update a buyer, testing for the event
+        await expect(accountHandler.connect(other1).updateBuyer(buyer))
+          .to.emit(accountHandler, "BuyerUpdated")
+          .withArgs(buyer.id, buyerStruct);
+      });
+
+      it("should update state of all fields exceipt Id", async function () {
+        buyer.wallet = other2.address;
+        buyer.active = false;
+        expect(buyer.isValid()).is.true;
+
+        buyerStruct = buyer.toStruct();
+
+        // Update buyer
+        await accountHandler.connect(other1).updateBuyer(buyer);
+
+        // Get the buyer as a struct
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
+
+        // Parse into entity
+        let returnedBuyer = Buyer.fromStruct(buyerStruct);
+
+        // Returned values should match the input in updateBuyer
+        for ([key, value] of Object.entries(buyer)) {
+          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update state correctly if values are the same", async function () {
+        // Update buyer
+        await accountHandler.connect(other1).updateBuyer(buyer);
+
+        // Get the buyer as a struct
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
+
+        // Parse into entity
+        let returnedBuyer = Buyer.fromStruct(buyerStruct);
+
+        // Returned values should match the input in updateBuyer
+        for ([key, value] of Object.entries(buyer)) {
+          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update only active flag", async function () {
+        buyer.active = false;
+        expect(buyer.isValid()).is.true;
+
+        buyerStruct = buyer.toStruct();
+
+        // Update buyer
+        await accountHandler.connect(other1).updateBuyer(buyer);
+
+        // Get the buyer as a struct
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
+
+        // Parse into entity
+        let returnedBuyer = Buyer.fromStruct(buyerStruct);
+
+        // Returned values should match the input in updateBuyer
+        for ([key, value] of Object.entries(buyer)) {
+          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update only wallet address", async function () {
+        buyer.wallet = other2.address;
+        expect(buyer.isValid()).is.true;
+
+        buyerStruct = buyer.toStruct();
+
+        // Update buyer
+        await accountHandler.connect(other1).updateBuyer(buyer);
+
+        // Get the buyer as a struct
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
+
+        // Parse into entity
+        let returnedBuyer = Buyer.fromStruct(buyerStruct);
+
+        // Returned values should match the input in updateBuyer
+        for ([key, value] of Object.entries(buyer)) {
+          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update the correct buyer", async function () {
+        // Confgiure another buyer
+        id2 = nextAccountId++;
+        buyer2 = new Buyer(id2.toString(), other3.address, active);
+        expect(buyer2.isValid()).is.true;
+
+        buyer2Struct = buyer2.toStruct();
+
+        //Create buyer2, testing for the event
+        await expect(accountHandler.connect(rando).createBuyer(buyer2))
+          .to.emit(accountHandler, "BuyerCreated")
+          .withArgs(buyer2.id, buyer2Struct);
+
+        //Update first buyer
+        buyer.wallet = other2.address;
+        buyer.active = false;
+        expect(buyer.isValid()).is.true;
+
+        buyerStruct = buyer.toStruct();
+
+        // Update a buyer
+        await accountHandler.connect(other1).updateBuyer(buyer);
+
+        // Get the first buyer as a struct
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
+
+        // Parse into entity
+        let returnedBuyer = Buyer.fromStruct(buyerStruct);
+
+        // Returned values should match the input in updateBuyer
+        for ([key, value] of Object.entries(buyer)) {
+          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
+        }
+
+        //Check buyer hasn't been changed
+        [, buyer2Struct] = await accountHandler.connect(rando).getBuyer(buyer2.id);
+
+        // Parse into entity
+        let returnedSeller2 = Buyer.fromStruct(buyer2Struct);
+
+        //returnedSeller2 should still contain original values
+        for ([key, value] of Object.entries(buyer2)) {
+          expect(JSON.stringify(returnedSeller2[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should be able to only update second time with new wallet address", async function () {
+        buyer.wallet = other2.address;
+        buyerStruct = buyer.toStruct();
+
+        // Update buyer, testing for the event
+        await expect(accountHandler.connect(other1).updateBuyer(buyer))
+          .to.emit(accountHandler, "BuyerUpdated")
+          .withArgs(buyer.id, buyerStruct);
+
+        buyer.wallet = other3.address;
+        buyerStruct = buyer.toStruct();
+
+        // Update buyer, testing for the event
+        await expect(accountHandler.connect(other2).updateBuyer(buyer))
+          .to.emit(accountHandler, "BuyerUpdated")
+          .withArgs(buyer.id, buyerStruct);
+
+        // Attempt to update the buyer with original wallet address, expecting revert
+        await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NOT_BUYER_WALLET);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        beforeEach(async function () {
+          // Initial ids for all the things
+          id = sellerId = await accountHandler.connect(rando).getNextAccountId();
+          offerId = await offerHandler.connect(rando).getNextOfferId();
+
+          // Create a valid seller
+          seller = new Seller(id.toString(), operator.address, admin.address, clerk.address, treasury.address, active);
+          expect(seller.isValid()).is.true;
+
+          // Create a seller
+          await accountHandler.connect(admin).createSeller(seller);
+
+          [exists, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(operator.address);
+          expect(exists).is.true;
+
+          // Create an offer to commit to
+          oneWeek = 604800 * 1000; //  7 days in milliseconds
+          oneMonth = 2678400 * 1000; // 31 days in milliseconds
+
+          // Get the current block info
+          blockNumber = await ethers.provider.getBlockNumber();
+          block = await ethers.provider.getBlock(blockNumber);
+
+          // Required constructor params
+          price = ethers.utils.parseUnits("1.5", "ether").toString();
+          sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
+          protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+          buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
+          quantityAvailable = "1";
+          validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
+          validUntilDate = ethers.BigNumber.from(block.timestamp)
+            .add(oneMonth * 6)
+            .toString(); // until 6 months
+          redeemableFromDate = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+          fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
+          voucherValidDuration = oneMonth.toString(); // offers valid for one month
+          exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
+          metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+          metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
+          voided = false;
+
+          // Create a valid offer entity
+          offer = new Offer(
+            offerId.toString(),
+            sellerId.toString(),
+            price,
+            sellerDeposit,
+            protocolFee,
+            buyerCancelPenalty,
+            quantityAvailable,
+            validFromDate,
+            validUntilDate,
+            redeemableFromDate,
+            fulfillmentPeriodDuration,
+            voucherValidDuration,
+            exchangeToken,
+            metadataUri,
+            metadataHash,
+            voided
+          );
+          expect(offer.isValid()).is.true;
+
+          // Create the offer
+          await offerHandler.connect(operator).createOffer(offer);
+
+          // Deposit seller funds so the commit will succeed
+          await fundsHandler
+            .connect(operator)
+            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
+          //Commit to offer
+          await exchangeHandler.connect(other1).commitToOffer(other1.address, offerId, { value: price });
+
+          const balance = await bosonVoucher.connect(rando).balanceOf(other1.address);
+          expect(balance).equal(1);
+        });
+
+        it("Buyer does not exist", async function () {
+          // Set invalid id
+          buyer.id = "444";
+
+          // Attempt to update the buyer, expecting revert
+          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NO_SUCH_BUYER);
+
+          // Set invalid id
+          buyer.id = "0";
+
+          // Attempt to update the buyer, expecting revert
+          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NO_SUCH_BUYER);
+        });
+
+        it("Caller is not buyer wallet address", async function () {
+          // Attempt to update the buyer, expecting revert
+          await expect(accountHandler.connect(other2).updateBuyer(buyer)).to.revertedWith(
+            RevertReasons.NOT_BUYER_WALLET
+          );
+        });
+
+        it("wallet address is the zero address", async function () {
+          buyer.wallet = ethers.constants.AddressZero;
+
+          // Attempt to update the buyer, expecting revert
+          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
+        });
+
+        it("wallet address is unique to this seller Id", async function () {
+          id = await accountHandler.connect(rando).getNextAccountId();
+
+          buyer2 = new Buyer(id.toString(), other2.address, active);
+          buyer2Struct = buyer2.toStruct();
+
+          //Create second buyer, testing for the event
+          await expect(accountHandler.connect(rando).createBuyer(buyer2))
+            .to.emit(accountHandler, "BuyerCreated")
+            .withArgs(buyer2.id, buyer2Struct);
+
+          //Set wallet address value to be same as first buyer created in Buyer Methods beforeEach
+          buyer2.wallet = other1.address; //already being used by buyer 1
+
+          // Attempt to update buyer 2 with non-unique wallet address, expecting revert
+          await expect(accountHandler.connect(other2).updateBuyer(buyer2)).to.revertedWith(
+            RevertReasons.BUYER_ADDRESS_MUST_BE_UNIQUE
+          );
+        });
+
+        it("current buyer wallet address has outstanding vouchers", async function () {
+          buyer.wallet = other4.address;
+
+          // Attempt to update the buyer, expecting revert
+          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(
+            RevertReasons.WALLET_OWNS_VOUCHERS
           );
         });
       });

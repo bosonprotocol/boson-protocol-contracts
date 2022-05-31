@@ -39,6 +39,9 @@ exports.RevertReasons = {
   SELLER_ADDRESS_MUST_BE_UNIQUE: "Seller address cannot be assigned to another seller Id",
   BUYER_ADDRESS_MUST_BE_UNIQUE: "Buyer address cannot be assigned to another buyer Id",
   NOT_ADMIN: "Not seller's admin",
+  NOT_BUYER_WALLET: "Not buyer's wallet address",
+  NO_SUCH_BUYER: "No such buyer",
+  WALLET_OWNS_VOUCHERS: "Wallet address owns vouchers",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",
@@ -87,4 +90,7 @@ exports.RevertReasons = {
   INVALID_SIGNATURE: "Invalid signature",
   SIGNER_AND_SIGNATURE_DO_NOT_MATCH: "Signer and signature do not match",
   INVALID_FUNCTION_NAME: "Invalid function name",
+
+  // Dispute related
+  COMPLAINT_MISSING: "Complaint missing",
 };
