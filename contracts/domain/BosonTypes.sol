@@ -31,13 +31,6 @@ contract BosonTypes {
         Decided
     }
 
-    enum DisputeDate {
-        Disputed,
-        Escalated,
-        Finalized,
-        Timeout
-    }
-
     struct Seller {
         uint256 id;
         address operator;
@@ -113,6 +106,13 @@ contract BosonTypes {
         string complaint;
         DisputeState state;
         Resolution resolution;
+    }
+
+    struct DisputeDates {
+        uint256 disputed;
+        uint256 escalated;
+        uint256 finalized;
+        uint256 timeout;
     }
 
     struct Resolution {

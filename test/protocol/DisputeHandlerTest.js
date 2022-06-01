@@ -55,8 +55,8 @@ describe("IBosonDisputeHandler", function () {
   let protocolFeePrecentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
-  let dispute, disputedDate, complaint, disputeStruct, responseDispute;
-  let disputeDates, expectedDisputeDates, responseDisputeDates;
+  let dispute, disputedDate, complaint, disputeStruct;
+  let disputeDates, disputeDatesStruct;
   let exists, response;
 
   before(async function () {
@@ -262,20 +262,20 @@ describe("IBosonDisputeHandler", function () {
 
         // expected values
         dispute = new Dispute(exchange.id, complaint, DisputeState.Resolving, new Resolution("0"));
-        expectedDisputeDates = new DisputeDates(disputedDate, "0", "0", "0");
+        disputeDates = new DisputeDates(disputedDate, "0", "0", "0");
 
         // Get the dispute as a struct
-        [, disputeStruct, disputeDates] = await disputeHandler.connect(rando).getDispute(exchange.id);
+        [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
         // Parse into entity
         const returnedDispute = Dispute.fromStruct(disputeStruct);
-        const returnedDisputeDates = DisputeDates.fromStruct(disputeDates);
+        const returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
 
         // Returned values should match expected dispute data
         for (const [key, value] of Object.entries(dispute)) {
           expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
         }
-        for (const [key, value] of Object.entries(expectedDisputeDates)) {
+        for (const [key, value] of Object.entries(disputeDates)) {
           expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
         }
       });
@@ -366,15 +366,15 @@ describe("IBosonDisputeHandler", function () {
 
       it("should return the expected dispute if exchange id is valid", async function () {
         // Get the exchange
-        [exists, responseDispute, responseDisputeDates] = await disputeHandler.connect(rando).getDispute(exchange.id);
+        [exists, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
         // It should match the expected dispute struct
-        assert.equal(dispute.toString(), Dispute.fromStruct(responseDispute).toString(), "Dispute struct is incorrect");
+        assert.equal(dispute.toString(), Dispute.fromStruct(disputeStruct).toString(), "Dispute struct is incorrect");
 
         // It should match the expected dispute dates struct
         assert.equal(
           disputeDates.toString(),
-          DisputeDates.fromStruct(responseDisputeDates).toString(),
+          DisputeDates.fromStruct(disputeDatesStruct).toString(),
           "Dispute dates are incorrect"
         );
       });
@@ -392,25 +392,29 @@ describe("IBosonDisputeHandler", function () {
         expect(exists).to.be.true;
 
         // Get the dispute
-        [exists, disputeStruct, disputeDates] = await disputeHandler.connect(rando).getDispute(exchange.id);
+        [exists, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
         // Test existence flag
         expect(exists).to.be.false;
 
         // dispute struct and dispute dates should contain the default values
         // expected values
-        dispute = new Dispute("0", "", DisputeState.Resolving, new Resolution("0"));
+        dispute = new Dispute("0", "", 0, new Resolution("0"));
+        disputeDates = new DisputeDates("0", "0", "0", "0");
 
         // Parse into entity
         const returnedDispute = Dispute.fromStruct(disputeStruct);
+        const returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
 
         // Returned values should match expected dispute data
         for (const [key, value] of Object.entries(dispute)) {
           expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
         }
 
-        // Dispute dates should be empty
-        expect(disputeDates).to.eql([], "Dispute dates should be empty");
+        // Returned values should match expected dispute dates data
+        for (const [key, value] of Object.entries(disputeDates)) {
+          expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
+        }
       });
     });
 

@@ -1,14 +1,18 @@
 const ethers = require("ethers");
-const DisputeDate = require("./DisputeDate");
 
 /**
  * Boson Protocol Domain Entity: DisputeDates
  *
- * This is not really a separate entity, but is returned as a part of dispute
+ * See: {BosonTypes.DisputeDates}
  */
 class DisputeDates {
   /*
-      uint256[]
+    struct DisputeDates {
+      uint256 disputed;
+      uint256 escalated;
+      uint256 finalized;
+      uint256 timeout;
+      }
   */
 
   constructor(disputed, escalated, finalized, timeout) {
@@ -34,14 +38,17 @@ class DisputeDates {
    * @returns {*}
    */
   static fromStruct(struct) {
-    const o = {
-      disputed: struct[DisputeDate.Disputed].toString(),
-      escalated: struct[DisputeDate.Escalated].toString(),
-      finalized: struct[DisputeDate.Finalized].toString(),
-      timeout: struct[DisputeDate.Timeout].toString(),
-    };
+    let disputed, escalated, finalized, timeout;
 
-    return DisputeDates.fromObject(o);
+    // destructure struct
+    [disputed, escalated, finalized, timeout] = struct;
+
+    return DisputeDates.fromObject({
+      disputed: disputed.toString(),
+      escalated: escalated.toString(),
+      finalized: finalized.toString(),
+      timeout: timeout.toString(),
+    });
   }
 
   /**
@@ -65,12 +72,7 @@ class DisputeDates {
    * @returns {string}
    */
   toStruct() {
-    let s = [];
-    for (const dateMode of DisputeDate.Modes) {
-      s.push(this[dateMode] || "0");
-    }
-
-    return s;
+    return [this.disputed, this.escalated, this.finalized, this.timeout];
   }
 
   /**
