@@ -525,54 +525,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, TwinBase {
     }
 
     /**
-     * @notice Get a valid exchange
+     * @notice Transfer bundled twins associated with an exchange to the buyer
      *
      * Reverts if
-     * - Exchange does not exist
-     * - Exchange is not in th expected state
-     *
-     * @param _exchangeId - the id of the exchange to complete
-     * @param _expectedState - the id the exchange should be in
-     * @return exchange - the exchange
-     */
-    function getValidExchange(uint256 _exchangeId, ExchangeState _expectedState)
-    internal
-    view
-    returns(Exchange storage exchange)
-    {
-        // Get the exchange
-        bool exchangeExists;
-        (exchangeExists, exchange) = fetchExchange(_exchangeId);
-
-        // Make sure the exchange exists
-        require(exchangeExists, NO_SUCH_EXCHANGE);
-
-        // Make sure the exchange is in expected state
-        require(exchange.state == _expectedState, INVALID_STATE);
-    }
-
-    /**
-     * @notice Make sure the caller is buyer associated with the exchange
-     *
-     * Reverts if
-     * - caller is not the buyer associated with exchange
-     *
-     * @param _currentBuyer - id of current buyer associated with the exchange
-     */
-    function checkBuyer(uint256 _currentBuyer)
-    internal
-    view
-    {
-        // Get the caller's buyer account id
-        uint256 buyerId;
-        (, buyerId) = getBuyerIdByWallet(msg.sender);
-
-        // Must be the buyer associated with the exchange (which is always voucher holder)
-        require(buyerId == _currentBuyer, NOT_VOUCHER_HOLDER);
-    }
-
-    /**
-     * @notice Transfer any twins bundled with an exchange
+     * - a twin transfer fails
      *
      * @param _exchange - the exchange
      */
@@ -604,16 +560,51 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, TwinBase {
                 (,Seller storage seller) = fetchSeller(twin.sellerId);
 
                 // Transfer the token from the seller's operator to the buyer
+                // N.B. Using call here so as to normalize the revert reason
+                bool success;
+                bytes memory result;
                 if (twin.tokenType == TokenType.FungibleToken) {
                     // ERC-20 style transfer
-                    require(token.transferFrom(seller.operator, msg.sender, 1), NO_TRANSFER_APPROVED);
+                    (success, result) = twin.tokenAddress.call(
+                        abi.encodeWithSignature(
+                            "transferFrom(address,address,uint256)",
+                            seller.operator,
+                            msg.sender,
+                            1
+                        )
+                    );
                 } else if (twin.tokenType == TokenType.NonfungibleToken) {
-                    // ERC-721 style transfer
-                    token.safeTransferFrom(seller.operator, msg.sender, twin.tokenId, "");
-                } else {
+                    uint256 supply = twin.supplyIds.length;
+                    if (supply >= 1) {
+                        // Get the next token from the supply list
+                        uint256 tokenId = twin.supplyIds[supply-1];
+                        twin.supplyIds.pop();
+
+                        // ERC-721 style transfer
+                        (success, result) = twin.tokenAddress.call(
+                            abi.encodeWithSignature(
+                                "safeTransferFrom(address,address,uint256,bytes)",
+                                seller.operator,
+                                msg.sender,
+                                tokenId,
+                                ""
+                            )
+                        );
+                    }
+                } else if (twin.tokenType == TokenType.MultiToken){
                     // ERC-1155 style transfer
-                    token.safeTransferFrom(seller.operator, msg.sender, twin.tokenId, 1, "");
+                    (success, result) = twin.tokenAddress.call(
+                            abi.encodeWithSignature(
+                            "safeTransferFrom(address,address,uint256,uint256,bytes)",
+                            seller.operator,
+                            msg.sender,
+                            twin.tokenId,
+                            1,
+                            ""
+                        )
+                    );
                 }
+                require(success, TWIN_TRANSFER_FAILED);
             }
         }
     }

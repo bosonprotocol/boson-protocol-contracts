@@ -46,6 +46,7 @@ exports.RevertReasons = {
   // Twin related
   NO_SUCH_TWIN: "No such twin",
   NO_TRANSFER_APPROVED: "No transfer approved",
+  TWIN_TRANSFER_FAILED: "Twin could not be transferred",
   UNSUPPORTED_TOKEN: "Unsupported token",
   TWIN_HAS_BUNDLES: "Twin has bundles",
 

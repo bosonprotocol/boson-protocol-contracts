@@ -23,7 +23,7 @@ describe("Twin", function () {
     tokenId = "0";
     supplyIds = [];
     tokenAddress = accounts[0].address;
-    tokenType = TokenType.Fungible;
+    tokenType = TokenType.FungibleToken;
   });
 
   context("📋 Constructor", async function () {
@@ -35,6 +35,7 @@ describe("Twin", function () {
       expect(twin.supplyIdsIsValid()).is.true;
       expect(twin.tokenIdIsValid()).is.true;
       expect(twin.tokenAddressIsValid()).is.true;
+      expect(twin.tokenTypeIsValid()).is.true;
       expect(twin.isValid()).is.true;
     });
   });
@@ -202,6 +203,50 @@ describe("Twin", function () {
       expect(twin.tokenAddressIsValid()).is.true;
       expect(twin.isValid()).is.true;
     });
+
+    it("Always present, tokenType must be a valid TokenType", async function () {
+      // Invalid field value
+      twin.tokenType = "zedzdeadbaby";
+      expect(twin.tokenTypeIsValid()).is.false;
+      expect(twin.isValid()).is.false;
+
+      // Invalid field value
+      twin.tokenType = new Date();
+      expect(twin.tokenTypeIsValid()).is.false;
+      expect(twin.isValid()).is.false;
+
+      // Invalid field value
+      twin.tokenType = 12;
+      expect(twin.tokenTypeIsValid()).is.false;
+      expect(twin.isValid()).is.false;
+
+      // Invalid field value
+      twin.tokenType = "0";
+      expect(twin.tokenTypeIsValid()).is.false
+      expect(twin.isValid()).is.false;
+
+      // Invalid field value
+      twin.tokenType = "126";
+      expect(twin.tokenTypeIsValid()).is.false;
+      expect(twin.isValid()).is.false;
+
+      // Valid field value
+      twin.tokenType = TokenType.FungibleToken;
+      expect(twin.tokenTypeIsValid()).is.true;
+      expect(twin.isValid()).is.true;
+
+      // Valid field value
+      twin.tokenType = TokenType.NonFungibleToken;
+      expect(twin.tokenTypeIsValid()).is.true;
+      expect(twin.isValid()).is.true;
+
+      // Valid field value
+      twin.tokenType = TokenType.MultiToken;
+      expect(twin.tokenTypeIsValid()).is.true;
+      expect(twin.isValid()).is.true;
+
+    });
+
   });
 
   context("📋 Utility functions", async function () {
@@ -218,10 +263,11 @@ describe("Twin", function () {
         supplyIds,
         tokenId,
         tokenAddress,
+        tokenType
       };
 
       // Struct representation
-      struct = [id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress];
+      struct = [id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType];
     });
 
     context("👉 Static", async function () {
