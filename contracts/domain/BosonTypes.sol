@@ -6,6 +6,7 @@ pragma solidity ^0.8.0;
  *
  * @notice Enums and structs used by the Boson Protocol contract ecosystem.
  */
+
 contract BosonTypes {
     enum EvaluationMethod {
         None,
@@ -102,11 +103,16 @@ contract BosonTypes {
 
     struct Dispute {
         uint256 exchangeId;
-        uint256 disputedDate;
-        uint256 finalizedDate;
         string complaint;
         DisputeState state;
         Resolution resolution;
+    }
+
+    struct DisputeDates {
+        uint256 disputed;
+        uint256 escalated;
+        uint256 finalized;
+        uint256 timeout;
     }
 
     struct Resolution {

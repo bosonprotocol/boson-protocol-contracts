@@ -40,6 +40,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Exchange) exchanges;
         // exchange id => dispute
         mapping(uint256 => BosonTypes.Dispute) disputes;
+        // exchange id => dispute dates
+        mapping(uint256 => BosonTypes.DisputeDates ) disputeDates;
         // seller id => seller
         mapping(uint256 => BosonTypes.Seller) sellers;
         // buyer id => buyer

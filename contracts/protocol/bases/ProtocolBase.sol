@@ -164,7 +164,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the seller exists
      * @return seller - the seller details. See {BosonTypes.Seller}
      */
-    function fetchSeller(uint256 _sellerId) internal view returns (bool exists, BosonTypes.Seller storage seller) {
+    function fetchSeller(uint256 _sellerId) internal view returns (bool exists, Seller storage seller) {
         // Get the seller's slot
         seller = protocolStorage().sellers[_sellerId];
 
@@ -209,7 +209,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the offer exists
      * @return offer - the offer details. See {BosonTypes.Offer}
      */
-    function fetchOffer(uint256 _offerId) internal view returns (bool exists, BosonTypes.Offer storage offer) {
+    function fetchOffer(uint256 _offerId) internal view returns (bool exists, Offer storage offer) {
         // Get the offer's slot
         offer = protocolStorage().offers[_offerId];
 
@@ -224,7 +224,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the group exists
      * @return group - the group details. See {BosonTypes.Group}
      */
-    function fetchGroup(uint256 _groupId) internal view returns (bool exists, BosonTypes.Group storage group) {
+    function fetchGroup(uint256 _groupId) internal view returns (bool exists, Group storage group) {
         // Get the group's slot
         group = protocolStorage().groups[_groupId];
 
@@ -242,7 +242,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     function fetchExchange(uint256 _exchangeId)
         internal
         view
-        returns (bool exists, BosonTypes.Exchange storage exchange)
+        returns (bool exists, Exchange storage exchange)
     {
         // Get the exchange's slot
         exchange = protocolStorage().exchanges[_exchangeId];
@@ -261,13 +261,33 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     function fetchDispute(uint256 _exchangeId)
     internal
     view
-    returns (bool exists, BosonTypes.Dispute storage dispute)
+    returns (bool exists, Dispute storage dispute)
     {
         // Get the dispute's slot
         dispute = protocolStorage().disputes[_exchangeId];
 
         // Determine existence
         exists = (_exchangeId > 0 && dispute.exchangeId == _exchangeId);
+    
+    }
+
+    /**
+     * @notice Fetches a dispute dates from storage by exchange id
+     *
+     * @param _exchangeId - the id of the exchange associated with the dispute
+     * @return exists - whether the dispute exists
+     * @return disputeDates - the dispute dates details. {Bosontype.disputeDates}
+     */
+    function fetchDisputeDates(uint256 _exchangeId)
+    internal
+    view
+    returns (bool exists, DisputeDates storage disputeDates)
+    {
+        // Get the disputeDates's slot
+        disputeDates = protocolStorage().disputeDates[_exchangeId];
+
+        // Determine existence
+        exists = disputeDates.disputed > 0;
     }
 
     /**
@@ -277,7 +297,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the twin exists
      * @return twin - the twin details. See {BosonTypes.Twin}
      */
-    function fetchTwin(uint256 _twinId) internal view returns (bool exists, BosonTypes.Twin storage twin) {
+    function fetchTwin(uint256 _twinId) internal view returns (bool exists, Twin storage twin) {
         // Get the twin's slot
         twin = protocolStorage().twins[_twinId];
  
@@ -292,7 +312,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the bundle exists
      * @return bundle - the bundle details. See {BosonTypes.Bundle}
      */
-    function fetchBundle(uint256 _bundleId) internal view returns (bool exists, BosonTypes.Bundle storage bundle) {
+    function fetchBundle(uint256 _bundleId) internal view returns (bool exists, Bundle storage bundle) {
         // Get the bundle's slot
         bundle = protocolStorage().bundles[_bundleId];
 

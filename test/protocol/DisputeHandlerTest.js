@@ -10,6 +10,7 @@ const Seller = require("../../scripts/domain/Seller");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const Dispute = require("../../scripts/domain/Dispute");
 const DisputeState = require("../../scripts/domain/DisputeState");
+const DisputeDates = require("../../scripts/domain/DisputeDates");
 const Resolution = require("../../scripts/domain/Resolution");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -55,6 +56,7 @@ describe("IBosonDisputeHandler", function () {
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
   let dispute, disputedDate, complaint, disputeStruct;
+  let disputeDates, disputeDatesStruct;
   let exists, response;
 
   before(async function () {
@@ -258,17 +260,23 @@ describe("IBosonDisputeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
 
-        dispute = new Dispute(exchange.id, disputedDate, "0", complaint, DisputeState.Resolving, new Resolution("0"));
+        // expected values
+        dispute = new Dispute(exchange.id, complaint, DisputeState.Resolving, new Resolution("0"));
+        disputeDates = new DisputeDates(disputedDate, "0", "0", "0");
 
         // Get the dispute as a struct
-        [, disputeStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
+        [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
         // Parse into entity
-        let returnedDispute = Dispute.fromStruct(disputeStruct);
+        const returnedDispute = Dispute.fromStruct(disputeStruct);
+        const returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
 
         // Returned values should match expected dispute data
         for (const [key, value] of Object.entries(dispute)) {
           expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
+        }
+        for (const [key, value] of Object.entries(disputeDates)) {
+          expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
         }
       });
 
@@ -336,7 +344,8 @@ describe("IBosonDisputeHandler", function () {
         disputedDate = block.timestamp.toString();
 
         // Expected value for dispute
-        dispute = new Dispute(exchange.id, disputedDate, "0", complaint, DisputeState.Resolving, new Resolution("0"));
+        dispute = new Dispute(exchange.id, complaint, DisputeState.Resolving, new Resolution("0"));
+        disputeDates = new DisputeDates(disputedDate, "0", "0", "0");
       });
 
       it("should return true for exists if exchange id is valid", async function () {
@@ -357,10 +366,17 @@ describe("IBosonDisputeHandler", function () {
 
       it("should return the expected dispute if exchange id is valid", async function () {
         // Get the exchange
-        [exists, response] = await disputeHandler.connect(rando).getDispute(exchange.id);
+        [exists, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
         // It should match the expected dispute struct
-        assert.equal(dispute.toString(), Dispute.fromStruct(response).toString(), "Dispute struct is incorrect");
+        assert.equal(dispute.toString(), Dispute.fromStruct(disputeStruct).toString(), "Dispute struct is incorrect");
+
+        // It should match the expected dispute dates struct
+        assert.equal(
+          disputeDates.toString(),
+          DisputeDates.fromStruct(disputeDatesStruct).toString(),
+          "Dispute dates are incorrect"
+        );
       });
 
       it("should return false for exists if exchange id is valid, but dispute was not raised", async function () {
@@ -376,10 +392,29 @@ describe("IBosonDisputeHandler", function () {
         expect(exists).to.be.true;
 
         // Get the dispute
-        [exists, response] = await disputeHandler.connect(rando).getDispute(exchange.id);
+        [exists, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
         // Test existence flag
         expect(exists).to.be.false;
+
+        // dispute struct and dispute dates should contain the default values
+        // expected values
+        dispute = new Dispute("0", "", 0, new Resolution("0"));
+        disputeDates = new DisputeDates("0", "0", "0", "0");
+
+        // Parse into entity
+        const returnedDispute = Dispute.fromStruct(disputeStruct);
+        const returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
+
+        // Returned values should match expected dispute data
+        for (const [key, value] of Object.entries(dispute)) {
+          expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Returned values should match expected dispute dates data
+        for (const [key, value] of Object.entries(disputeDates)) {
+          expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
+        }
       });
     });
 
