@@ -359,7 +359,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
       });
 
-      context("👉 msg.sender is replaced with msgSender", async function () {
+      context("👉 msg.sender is replaced with msgSender()", async function () {
         context("TwinHandler", async function () {
           beforeEach(async function () {
             // Create the seller
