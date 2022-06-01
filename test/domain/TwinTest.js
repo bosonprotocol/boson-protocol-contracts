@@ -222,7 +222,7 @@ describe("Twin", function () {
 
       // Invalid field value
       twin.tokenType = "0";
-      expect(twin.tokenTypeIsValid()).is.false
+      expect(twin.tokenTypeIsValid()).is.false;
       expect(twin.isValid()).is.false;
 
       // Invalid field value
@@ -244,9 +244,7 @@ describe("Twin", function () {
       twin.tokenType = TokenType.MultiToken;
       expect(twin.tokenTypeIsValid()).is.true;
       expect(twin.isValid()).is.true;
-
     });
-
   });
 
   context("📋 Utility functions", async function () {
@@ -263,7 +261,7 @@ describe("Twin", function () {
         supplyIds,
         tokenId,
         tokenAddress,
-        tokenType
+        tokenType,
       };
 
       // Struct representation
