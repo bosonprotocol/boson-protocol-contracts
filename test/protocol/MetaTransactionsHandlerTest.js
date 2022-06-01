@@ -8,6 +8,8 @@ const ExchangeState = require("../../scripts/domain/ExchangeState");
 const MetaTxExchangeDetails = require("../../scripts/domain/MetaTxExchangeDetails");
 const MetaTxOfferDetails = require("../../scripts/domain/MetaTxOfferDetails");
 const Offer = require("../../scripts/domain/Offer");
+const OfferDates = require("../../scripts/domain/OfferDates");
+const OfferDurations = require("../../scripts/domain/OfferDurations");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const Twin = require("../../scripts/domain/Twin");
@@ -61,20 +63,17 @@ describe("IBosonMetaTransactionsHandler", function () {
     protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
-    validFromDate,
-    validUntilDate,
-    redeemableFromDate,
-    fulfillmentPeriodDuration,
-    voucherValidDuration,
     exchangeToken,
+    disputeResolver,
     metadataUri,
-    metadataHash,
+    offerChecksum,
     voided,
     oneMonth,
     oneWeek;
-  let disputeValidDuration;
+  let validFrom, validUntil, redeemableFrom, redeemableUntil, offerDates;
+  let fulfillmentPeriod, voucherValid, disputeValid, offerDurations;
   let protocolFeePrecentage;
-  let voucher, committedDate, redeemedDate, expired;
+  let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
   let twin, supplyAvailable, tokenId, supplyIds, tokenAddress, success;
 
@@ -605,16 +604,10 @@ describe("IBosonMetaTransactionsHandler", function () {
         protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
-        validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-        validUntilDate = ethers.BigNumber.from(block.timestamp)
-          .add(oneMonth * 6)
-          .toString(); // until 6 months
-        redeemableFromDate = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-        fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
-        voucherValidDuration = oneMonth.toString(); // offers valid for one month
         exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
+        disputeResolver = accounts[0].address;
+        offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+        metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
         voided = false;
 
         // Create a valid seller
@@ -624,30 +617,42 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Create a valid offer entity
         offer = new Offer(
-          offerId,
+          id,
           sellerId,
           price,
           sellerDeposit,
           protocolFee,
           buyerCancelPenalty,
           quantityAvailable,
-          validFromDate,
-          validUntilDate,
-          redeemableFromDate,
-          fulfillmentPeriodDuration,
-          voucherValidDuration,
           exchangeToken,
+          disputeResolver,
           metadataUri,
-          metadataHash,
+          offerChecksum,
           voided
         );
         expect(offer.isValid()).is.true;
 
-        // Set the dispute valid duration
-        disputeValidDuration = oneWeek;
+        // Required constructor params
+        validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
+        validUntil = ethers.BigNumber.from(block.timestamp)
+          .add(oneMonth * 6)
+          .toString(); // until 6 months
+        redeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+        redeemableUntil = "0"; // vouchers don't have fixed expiration date
+
+        // Create a valid offerDates, then set fields in tests directly
+        offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+
+        // Required constructor params
+        fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
+        voucherValid = oneMonth.toString(); // offers valid for one month
+        disputeValid = oneWeek.toString(); // dispute is valid for one month
+
+        // Create a valid offerDurations, then set fields in tests directly
+        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
         // Set the offer Type
         offerType = [
@@ -810,16 +815,10 @@ describe("IBosonMetaTransactionsHandler", function () {
         protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
-        validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-        validUntilDate = ethers.BigNumber.from(block.timestamp)
-          .add(oneMonth * 6)
-          .toString(); // until 6 months
-        redeemableFromDate = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-        fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
-        voucherValidDuration = oneMonth.toString(); // offers valid for one month
         exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
+        disputeResolver = accounts[0].address;
+        offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+        metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
         voided = false;
 
         // Create a valid seller
@@ -829,30 +828,44 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Create a valid offer entity
         offer = new Offer(
-          offerId,
+          id,
           sellerId,
           price,
           sellerDeposit,
           protocolFee,
           buyerCancelPenalty,
           quantityAvailable,
-          validFromDate,
-          validUntilDate,
-          redeemableFromDate,
-          fulfillmentPeriodDuration,
-          voucherValidDuration,
           exchangeToken,
+          disputeResolver,
           metadataUri,
-          metadataHash,
+          offerChecksum,
           voided
         );
         expect(offer.isValid()).is.true;
 
-        // Set the dispute valid duration
-        disputeValidDuration = oneWeek;
+        // Required constructor params
+        validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
+        validUntil = ethers.BigNumber.from(block.timestamp)
+          .add(oneMonth * 6)
+          .toString(); // until 6 months
+        redeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+        redeemableUntil = "0"; // vouchers don't have fixed expiration date
+
+        // Create a valid offerDates, then set fields in tests directly
+        offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+        expect(offerDates.isValid()).is.true;
+
+        // Required constructor params
+        fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
+        voucherValid = oneMonth.toString(); // offers valid for one month
+        disputeValid = oneWeek.toString(); // dispute is valid for one month
+
+        // Create a valid offerDurations, then set fields in tests directly
+        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+        expect(offerDurations.isValid()).is.true;
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
         // Required voucher constructor params
         committedDate = "0";
@@ -1013,8 +1026,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.exchangeDetails = validExchangeDetails;
           message.from = buyer.address;
 
-          // Set time forward to the offer's redeemableFromDate
-          await setNextBlockTimestamp(Number(redeemableFromDate));
+          // Set time forward to the offer's redeemableFrom
+          await setNextBlockTimestamp(Number(redeemableFrom));
         });
 
         it("Should emit MetaTransactionExecuted event", async () => {
@@ -1121,8 +1134,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.exchangeDetails = validExchangeDetails;
           message.from = buyer.address;
 
-          // Set time forward to the offer's redeemableFromDate
-          await setNextBlockTimestamp(Number(redeemableFromDate));
+          // Set time forward to the offer's redeemableFrom
+          await setNextBlockTimestamp(Number(redeemableFrom));
 
           // Redeem the voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);

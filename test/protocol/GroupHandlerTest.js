@@ -6,6 +6,8 @@ const { gasLimit } = require("../../environments");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const Offer = require("../../scripts/domain/Offer");
+const OfferDates = require("../../scripts/domain/OfferDates");
+const OfferDurations = require("../../scripts/domain/OfferDurations");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -33,15 +35,13 @@ describe("IBosonGroupHandler", function () {
     protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
-    validFromDate,
-    validUntilDate,
-    redeemableFromDate,
-    fulfillmentPeriodDuration,
-    voucherValidDuration,
     exchangeToken,
+    disputeResolver,
     metadataUri,
     offerChecksum,
     voided;
+  let validFrom, validUntil, redeemableFrom, redeemableUntil, offerDates;
+  let fulfillmentPeriod, voucherValid, disputeValid, offerDurations;
   let protocolFeePrecentage;
   let group, nextGroupId, invalidGroupId;
   let offerIds, condition;
@@ -49,7 +49,6 @@ describe("IBosonGroupHandler", function () {
   let method, tokenAddress, tokenId, threshold;
   let groupStruct;
   let offerIdsToAdd, offerIdsToRemove;
-  let disputeValidDuration;
 
   before(async function () {
     // get interface Ids
@@ -140,9 +139,6 @@ describe("IBosonGroupHandler", function () {
       nextGroupId = "1";
       invalidGroupId = "666";
 
-      // Set the dispute valid duration
-      disputeValidDuration = oneWeek;
-
       // create 5 offers
       for (let i = 0; i < 5; i++) {
         // Required constructor params
@@ -151,13 +147,9 @@ describe("IBosonGroupHandler", function () {
         sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
         protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
         buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
-        quantityAvailable = `${i * 2}`;
-        validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
-        validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
-        redeemableFromDate = ethers.BigNumber.from(validUntilDate + oneWeek).toString();
-        fulfillmentPeriodDuration = oneMonth.toString();
-        voucherValidDuration = oneMonth.toString();
+        quantityAvailable = `${(i + 1) * 2}`;
         exchangeToken = ethers.constants.AddressZero.toString();
+        disputeResolver = accounts[0].address;
         offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
         metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
         voided = false;
@@ -171,19 +163,32 @@ describe("IBosonGroupHandler", function () {
           protocolFee,
           buyerCancelPenalty,
           quantityAvailable,
-          validFromDate,
-          validUntilDate,
-          redeemableFromDate,
-          fulfillmentPeriodDuration,
-          voucherValidDuration,
           exchangeToken,
+          disputeResolver,
           metadataUri,
           offerChecksum,
           voided
         );
         expect(offer.isValid()).is.true;
 
-        await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
+        // Required constructor params
+        validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
+        validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
+        redeemableFrom = ethers.BigNumber.from(validUntil + oneWeek).toString();
+        redeemableUntil = "0"; // vouchers don't have fixed expiration date
+
+        // Create a valid offerDates, then set fields in tests directly
+        offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+
+        // Required constructor params
+        fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
+        voucherValid = oneMonth.toString(); // offers valid for one month
+        disputeValid = oneWeek.toString(); // dispute is valid for one month
+
+        // Create a valid offerDurations, then set fields in tests directly
+        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
       }
 
       // Required constructor params for Condition
@@ -311,7 +316,7 @@ describe("IBosonGroupHandler", function () {
           // create another seller and an offer
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           await accountHandler.connect(rando).createSeller(seller);
-          await offerHandler.connect(rando).createOffer(offer, disputeValidDuration); // creates an offer with id 6
+          await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations); // creates an offer with id 6
 
           // add offer belonging to another seller
           group.offerIds = ["2", "6"];
@@ -478,7 +483,7 @@ describe("IBosonGroupHandler", function () {
           // create another seller and an offer
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           await accountHandler.connect(rando).createSeller(seller);
-          await offerHandler.connect(rando).createOffer(offer, disputeValidDuration); // creates an offer with id 6
+          await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations); // creates an offer with id 6
 
           // add offer belonging to another seller
           offerIdsToAdd = ["1", "6"];
@@ -631,7 +636,7 @@ describe("IBosonGroupHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_NOT_IN_GROUP);
 
           // create an offer and add it to another group
-          await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
           group.offerIds = ["6"];
           await groupHandler.connect(operator).createGroup(group);
 

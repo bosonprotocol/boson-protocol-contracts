@@ -83,12 +83,13 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         require(_offerDates.validUntil > block.timestamp, OFFER_PERIOD_INVALID);
 
         // exactly one of redeemableUntil and voucherValid must be zero
-        require(_offerDates.redeemableUntil ^ _offerDurations.voucherValid == 0, VOUCHER_EXPIRY_UNDEFINED);
-
         // if redeemableUntil exist, it must be greater than validUntil
         if (_offerDates.redeemableUntil > 0) {
+            require(_offerDurations.voucherValid == 0, AMBIGOUS_VOUCHER_EXPIRY);
             require(_offerDates.redeemableFrom < _offerDates.redeemableUntil, REDEMPTION_PERIOD_INVALID);
             require(_offerDates.redeemableUntil >= _offerDates.validUntil, REDEMPTION_PERIOD_INVALID);
+        } else {
+            require(_offerDurations.voucherValid > 0, AMBIGOUS_VOUCHER_EXPIRY);
         }
 
         // fulfillment period must be grater than zero

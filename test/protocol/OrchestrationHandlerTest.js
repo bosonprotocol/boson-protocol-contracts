@@ -6,6 +6,8 @@ const { gasLimit } = require("../../environments");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const Offer = require("../../scripts/domain/Offer");
+const OfferDates = require("../../scripts/domain/OfferDates");
+const OfferDurations = require("../../scripts/domain/OfferDurations");
 const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
@@ -48,16 +50,13 @@ describe("IBosonOrchestrationHandler", function () {
     protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
-    validFromDate,
-    validUntilDate,
-    redeemableFromDate,
-    fulfillmentPeriodDuration,
-    voucherValidDuration,
     exchangeToken,
+    disputeResolver,
     metadataUri,
     offerChecksum,
     voided;
-  let disputeValidDuration, returnedDisputeValidDuration;
+  let validFrom, validUntil, redeemableFrom, redeemableUntil, offerDates, offerDatesStruct;
+  let fulfillmentPeriod, voucherValid, disputeValid, offerDurations, offerDurationsStruct;
   let protocolFeePrecentage;
   let group, groupStruct, nextGroupId;
   let method, tokenAddress, tokenId, threshold;
@@ -187,12 +186,8 @@ describe("IBosonOrchestrationHandler", function () {
       protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
-      validFromDate = ethers.BigNumber.from(Date.now()).toString(); // valid from now
-      validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // until 6 months
-      redeemableFromDate = ethers.BigNumber.from(Date.now() + oneWeek).toString(); // redeemable in 1 week
-      fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
-      voucherValidDuration = oneMonth.toString(); // offers valid for one month
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
+      disputeResolver = accounts[0].address;
       offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
       metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
       voided = false;
@@ -206,12 +201,8 @@ describe("IBosonOrchestrationHandler", function () {
         protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
-        validFromDate,
-        validUntilDate,
-        redeemableFromDate,
-        fulfillmentPeriodDuration,
-        voucherValidDuration,
         exchangeToken,
+        disputeResolver,
         metadataUri,
         offerChecksum,
         voided
@@ -221,25 +212,47 @@ describe("IBosonOrchestrationHandler", function () {
       // How that offer looks as a returned struct
       offerStruct = offer.toStruct();
 
-      // Set the dispute valid duration
-      disputeValidDuration = oneWeek;
+      // Required constructor params
+      validFrom = ethers.BigNumber.from(Date.now()).toString(); // valid from now
+      validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // until 6 months
+      redeemableFrom = ethers.BigNumber.from(Date.now() + oneWeek).toString(); // redeemable in 1 week
+      redeemableUntil = "0"; // vouchers don't have fixed expiration date
+
+      // Create a valid offerDates, then set fields in tests directly
+      offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+      expect(offerDates.isValid()).is.true;
+
+      // How that offer looks as a returned struct
+      offerDatesStruct = offerDates.toStruct();
+
+      // Required constructor params
+      fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
+      voucherValid = oneMonth.toString(); // offers valid for one month
+      disputeValid = oneWeek.toString(); // dispute is valid for one month
+
+      // Create a valid offerDurations, then set fields in tests directly
+      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+      expect(offerDurations.isValid()).is.true;
+
+      // How that offer looks as a returned struct
+      offerDurationsStruct = offerDurations.toStruct();
     });
 
     context("👉 createSellerAndOffer()", async function () {
-      it("should emit a SellerCreated, OfferCreated and DisputeDurationSet events", async function () {
+      it("should emit a SellerCreated and OfferCreated events", async function () {
         // Create a seller and an offer, testing for the event
-        await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, disputeValidDuration))
+        await expect(
+          orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+        )
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct)
-          .to.emit(orchestrationHandler, "DisputeDurationSet")
-          .withArgs(nextOfferId, disputeValidDuration);
+          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
       });
 
       it("should update state", async function () {
         // Create a seller and an offer
-        await orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, disputeValidDuration);
+        await orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations);
 
         // Get the seller as a struct
         [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
@@ -253,19 +266,23 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the offer as a struct
-        [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(id);
 
-        // Parse into entity
+        // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
+        let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+        let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
 
         // Returned values should match the input in createSellerAndOffer
-        for ([key, value] of Object.entries(offer, disputeValidDuration)) {
+        for ([key, value] of Object.entries(offer)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
-
-        // Make sure that disputeValidDuration was properly set
-        [, returnedDisputeValidDuration] = await offerHandler.connect(rando).getDisputeValidDuration(id);
-        expect(returnedDisputeValidDuration, disputeValidDuration, "disputeValidDuration mismatch");
+        for ([key, value] of Object.entries(offerDates)) {
+          expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(offerDurations)) {
+          expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
       });
 
       it("should ignore any provided id and assign the next available", async function () {
@@ -273,11 +290,13 @@ describe("IBosonOrchestrationHandler", function () {
         offer.id = "555";
 
         // Create a seller and an offer, testing for the event
-        await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, disputeValidDuration))
+        await expect(
+          orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+        )
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(nextAccountId, sellerStruct)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct);
+          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // wrong seller id should not exist
         [exists] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -301,9 +320,11 @@ describe("IBosonOrchestrationHandler", function () {
         offer.sellerId = "123";
 
         // Create a seller and an offer, testing for the event
-        await expect(orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, disputeValidDuration))
+        await expect(
+          orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+        )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -312,7 +333,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, disputeValidDuration)
+            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
           ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
 
@@ -321,7 +342,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, disputeValidDuration)
+            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
 
           seller.clerk = clerk.address;
@@ -329,7 +350,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, disputeValidDuration)
+            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
@@ -342,7 +363,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller with non-unique operator, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, disputeValidDuration)
+            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
           seller.admin = admin.address;
@@ -350,7 +371,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller with non-unique admin, expecting revert
           await expect(
-            orchestrationHandler.connect(other1).createSellerAndOffer(seller, offer, disputeValidDuration)
+            orchestrationHandler.connect(other1).createSellerAndOffer(seller, offer, offerDates, offerDurations)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
           seller.clerk = clerk.address;
@@ -358,35 +379,35 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller with non-unique clerk, expecting revert
           await expect(
-            orchestrationHandler.connect(other1).createSellerAndOffer(seller, offer, disputeValidDuration)
+            orchestrationHandler.connect(other1).createSellerAndOffer(seller, offer, offerDates, offerDurations)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
 
         it("Caller is not operator the specified in seller", async function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(rando).createSellerAndOffer(seller, offer, disputeValidDuration)
+            orchestrationHandler.connect(rando).createSellerAndOffer(seller, offer, offerDates, offerDurations)
           ).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
         it("Valid from date is greater than valid until date", async function () {
           // Reverse the from and until dates
-          offer.validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
-          offer.validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
+          offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
+          offerDates.validUntil = ethers.BigNumber.from(Date.now()).toString(); // now
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, disputeValidDuration)
+            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
         it("Valid until date is not in the future", async function () {
           // Set until date in the past
-          offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
+          offerDates.validUntil = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, disputeValidDuration)
+            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -396,7 +417,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, disputeValidDuration)
+            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
           ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
         });
 
@@ -406,17 +427,17 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, disputeValidDuration)
+            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
         it("Dispute valid duration is 0", async function () {
           // Set dispute valid duration to 0
-          disputeValidDuration = "0";
+          offerDurations.disputeValid = "0";
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, disputeValidDuration)
+            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
         });
       });
@@ -454,18 +475,16 @@ describe("IBosonOrchestrationHandler", function () {
         await accountHandler.connect(admin).createSeller(seller);
       });
 
-      it("should emit an OfferCreated, DisputeDurationSet and GroupCreated events", async function () {
+      it("should emit an OfferCreated and GroupCreated events", async function () {
         // Create an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferWithCondition(offer, disputeValidDuration, condition);
+          .createOfferWithCondition(offer, offerDates, offerDurations, condition);
 
-        // OfferCreated and DisputeDurationSet events
+        // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct)
-          .to.emit(orchestrationHandler, "DisputeDurationSet")
-          .withArgs(nextOfferId, disputeValidDuration);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -483,22 +502,28 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should update state", async function () {
         // Create an offer with condition
-        await orchestrationHandler.connect(operator).createOfferWithCondition(offer, disputeValidDuration, condition);
+        await orchestrationHandler
+          .connect(operator)
+          .createOfferWithCondition(offer, offerDates, offerDurations, condition);
 
         // Get the offer as a struct
-        [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(id);
 
-        // Parse into entity
+        // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
+        let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+        let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
 
-        // Returned values should match the input in createOfferWithCondition
-        for ([key, value] of Object.entries(offer, disputeValidDuration)) {
+        // Returned values should match the input in createSellerAndOffer
+        for ([key, value] of Object.entries(offer)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
-
-        // Make sure that disputeValidDuration was properly set
-        [, returnedDisputeValidDuration] = await offerHandler.connect(rando).getDisputeValidDuration(id);
-        expect(returnedDisputeValidDuration, disputeValidDuration, "disputeValidDuration mismatch");
+        for ([key, value] of Object.entries(offerDates)) {
+          expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(offerDurations)) {
+          expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
 
         // Get the group as a struct
         [, groupStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
@@ -518,10 +543,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferWithCondition(offer, disputeValidDuration, condition);
+          .createOfferWithCondition(offer, offerDates, offerDurations, condition);
 
         // OfferCreated event
-        await expect(tx).to.emit(orchestrationHandler, "OfferCreated").withArgs(nextOfferId, sellerId, offerStruct);
+        await expect(tx)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -544,10 +571,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferWithCondition(offer, disputeValidDuration, condition);
+          .createOfferWithCondition(offer, offerDates, offerDurations, condition);
 
         // OfferCreated event
-        await expect(tx).to.emit(orchestrationHandler, "OfferCreated").withArgs(nextOfferId, sellerId, offerStruct);
+        await expect(tx)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -567,28 +596,32 @@ describe("IBosonOrchestrationHandler", function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to create an offer with condition, expecting revert
           await expect(
-            orchestrationHandler.connect(rando).createOfferWithCondition(offer, disputeValidDuration, condition)
+            orchestrationHandler.connect(rando).createOfferWithCondition(offer, offerDates, offerDurations, condition)
           ).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
         it("Valid from date is greater than valid until date", async function () {
           // Reverse the from and until dates
-          offer.validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
-          offer.validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
+          offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
+          offerDates.validUntil = ethers.BigNumber.from(Date.now()).toString(); // now
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferWithCondition(offer, disputeValidDuration, condition)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
         it("Valid until date is not in the future", async function () {
           // Set until date in the past
-          offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
+          offerDates.validUntil = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferWithCondition(offer, disputeValidDuration, condition)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -598,7 +631,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferWithCondition(offer, disputeValidDuration, condition)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
           ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
         });
 
@@ -608,17 +643,21 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferWithCondition(offer, disputeValidDuration, condition)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
         it("Dispute valid duration is 0", async function () {
           // Set dispute valid duration to 0
-          disputeValidDuration = "0";
+          offerDurations.disputeValid = "0";
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferWithCondition(offer, disputeValidDuration, condition)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
         });
 
@@ -629,7 +668,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferWithCondition(offer, disputeValidDuration, condition)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
 
@@ -641,7 +682,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferWithCondition(offer, disputeValidDuration, condition)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
 
@@ -653,7 +696,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferWithCondition(offer, disputeValidDuration, condition)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
       });
@@ -667,9 +712,6 @@ describe("IBosonOrchestrationHandler", function () {
         // The first group id
         nextGroupId = "1";
 
-        // Set the dispute valid duration
-        disputeValidDuration = oneWeek;
-
         // create 3 offers
         for (let i = 0; i < 3; i++) {
           // Required constructor params
@@ -679,12 +721,7 @@ describe("IBosonOrchestrationHandler", function () {
           sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
           protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
           buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
-          quantityAvailable = `${i * 2}`;
-          validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
-          validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
-          redeemableFromDate = ethers.BigNumber.from(validUntilDate + oneWeek).toString();
-          fulfillmentPeriodDuration = oneMonth.toString();
-          voucherValidDuration = oneMonth.toString();
+          quantityAvailable = `${(i + 1) * 2}`;
           exchangeToken = ethers.constants.AddressZero.toString();
           offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
           metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
@@ -699,22 +736,39 @@ describe("IBosonOrchestrationHandler", function () {
             protocolFee,
             buyerCancelPenalty,
             quantityAvailable,
-            validFromDate,
-            validUntilDate,
-            redeemableFromDate,
-            fulfillmentPeriodDuration,
-            voucherValidDuration,
             exchangeToken,
+            disputeResolver,
             metadataUri,
             offerChecksum,
             voided
           );
           expect(offer.isValid()).is.true;
 
-          await offerHandler.connect(operator).createOffer(offer, disputeValidDuration);
+          // Required constructor params
+          validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
+          validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
+          redeemableFrom = ethers.BigNumber.from(validUntil + oneWeek).toString();
+          redeemableUntil = "0"; // vouchers don't have fixed expiration date
+
+          // Create a valid offerDates, then set fields in tests directly
+          offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+          expect(offerDates.isValid()).is.true;
+
+          // Required constructor params
+          fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
+          voucherValid = oneMonth.toString(); // offers valid for one month
+          disputeValid = oneWeek.toString(); // dispute is valid for one month
+
+          // Create a valid offerDurations, then set fields in tests directly
+          offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+          expect(offerDurations.isValid()).is.true;
+
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
           nextOfferId++;
         }
+        offerDatesStruct = offerDates.toStruct();
+        offerDurationsStruct = offerDurations.toStruct();
 
         // Required constructor params for Condition
         method = EvaluationMethod.AboveThreshold;
@@ -746,18 +800,16 @@ describe("IBosonOrchestrationHandler", function () {
         offerStruct = offer.toStruct();
       });
 
-      it("should emit an OfferCreated, DisputeDurationSet and GroupUpdated events", async function () {
+      it("should emit an OfferCreated and GroupUpdated events", async function () {
         // Create an offer, add it to the group, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferAddToGroup(offer, disputeValidDuration, nextGroupId);
+          .createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId);
 
-        // OfferCreated and DisputeDurationSet events
+        // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct)
-          .to.emit(orchestrationHandler, "DisputeDurationSet")
-          .withArgs(nextOfferId, disputeValidDuration);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -775,22 +827,28 @@ describe("IBosonOrchestrationHandler", function () {
 
       it("should update state", async function () {
         // Create an offer, add it to the group
-        await orchestrationHandler.connect(operator).createOfferAddToGroup(offer, disputeValidDuration, nextGroupId);
+        await orchestrationHandler
+          .connect(operator)
+          .createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId);
 
         // Get the offer as a struct
-        [, offerStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
 
-        // Parse into entity
+        // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
+        let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+        let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
 
-        // Returned values should match the input in createOfferAddToGroup
-        for ([key, value] of Object.entries(offer, disputeValidDuration)) {
+        // Returned values should match the input in createSellerAndOffer
+        for ([key, value] of Object.entries(offer)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
-
-        // Make sure that disputeValidDuration was properly set
-        [, returnedDisputeValidDuration] = await offerHandler.connect(rando).getDisputeValidDuration(id);
-        expect(returnedDisputeValidDuration, disputeValidDuration, "disputeValidDuration mismatch");
+        for ([key, value] of Object.entries(offerDates)) {
+          expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(offerDurations)) {
+          expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
 
         // Get the group as a struct
         [, groupStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
@@ -810,10 +868,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, add it to the group, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferAddToGroup(offer, disputeValidDuration, nextGroupId);
+          .createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId);
 
         // OfferCreated event
-        await expect(tx).to.emit(orchestrationHandler, "OfferCreated").withArgs(nextOfferId, sellerId, offerStruct);
+        await expect(tx)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -836,10 +896,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, add it to the group, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferAddToGroup(offer, disputeValidDuration, nextGroupId);
+          .createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId);
 
         // OfferCreated event
-        await expect(tx).to.emit(orchestrationHandler, "OfferCreated").withArgs(nextOfferId, sellerId, offerStruct);
+        await expect(tx)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -859,28 +921,28 @@ describe("IBosonOrchestrationHandler", function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(rando).createOfferAddToGroup(offer, disputeValidDuration, nextGroupId)
+            orchestrationHandler.connect(rando).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
           ).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
         it("Valid from date is greater than valid until date", async function () {
           // Reverse the from and until dates
-          offer.validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
-          offer.validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
+          offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
+          offerDates.validUntil = ethers.BigNumber.from(Date.now()).toString(); // now
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, disputeValidDuration, nextGroupId)
+            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
         it("Valid until date is not in the future", async function () {
           // Set until date in the past
-          offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
+          offerDates.validUntil = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, disputeValidDuration, nextGroupId)
+            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -890,7 +952,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, disputeValidDuration, nextGroupId)
+            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
           ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
         });
 
@@ -900,17 +962,17 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, disputeValidDuration, nextGroupId)
+            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
         it("Dispute valid duration is 0", async function () {
           // Set dispute valid duration to 0
-          disputeValidDuration = "0";
+          offerDurations.disputeValid = "0";
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, disputeValidDuration, nextGroupId)
+            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
         });
 
@@ -920,7 +982,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, disputeValidDuration, invalidGroupId)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, invalidGroupId)
           ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
 
           // Set invalid id
@@ -928,14 +992,16 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, disputeValidDuration, invalidGroupId)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, invalidGroupId)
           ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
         });
 
         it("Caller is not the seller of the group", async function () {
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(rando).createOfferAddToGroup(offer, disputeValidDuration, nextGroupId)
+            orchestrationHandler.connect(rando).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
           ).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
       });
@@ -976,21 +1042,19 @@ describe("IBosonOrchestrationHandler", function () {
         await accountHandler.connect(admin).createSeller(seller);
       });
 
-      it("should emit an OfferCreated, a DisputeDurationSet, a TwinCreated and a BundleCreated events", async function () {
+      it("should emit an OfferCreated, a TwinCreated and a BundleCreated events", async function () {
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
 
         // Create an offer, a twin and a bundle, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferAndTwinWithBundle(offer, disputeValidDuration, twin);
+          .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin);
 
-        // OfferCreated and DisputeDurationSet events
+        // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct)
-          .to.emit(orchestrationHandler, "DisputeDurationSet")
-          .withArgs(nextOfferId, disputeValidDuration);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1021,22 +1085,28 @@ describe("IBosonOrchestrationHandler", function () {
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
 
         // Create an offer, a twin and a bundle
-        await orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, disputeValidDuration, twin);
+        await orchestrationHandler
+          .connect(operator)
+          .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin);
 
         // Get the offer as a struct
-        [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(id);
 
-        // Parse into entity
+        // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
+        let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+        let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
 
-        // Returned values should match the input in createOfferAndTwinWithBundle
-        for ([key, value] of Object.entries(offer, disputeValidDuration)) {
+        // Returned values should match the input in createSellerAndOffer
+        for ([key, value] of Object.entries(offer)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
-
-        // Make sure that disputeValidDuration was properly set
-        [, returnedDisputeValidDuration] = await offerHandler.connect(rando).getDisputeValidDuration(id);
-        expect(returnedDisputeValidDuration, disputeValidDuration, "disputeValidDuration mismatch");
+        for ([key, value] of Object.entries(offerDates)) {
+          expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(offerDurations)) {
+          expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
 
         // Get the twin as a struct
         [, twinStruct] = await twinHandler.connect(rando).getTwin(nextTwinId);
@@ -1071,14 +1141,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, a twin and a bundle, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferAndTwinWithBundle(offer, disputeValidDuration, twin);
+          .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin);
 
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct)
-          .to.emit(orchestrationHandler, "DisputeDurationSet")
-          .withArgs(nextOfferId, disputeValidDuration);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1119,10 +1187,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, a twin and a bundle, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferAndTwinWithBundle(offer, disputeValidDuration, twin);
+          .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin);
 
         // OfferCreated event
-        await expect(tx).to.emit(orchestrationHandler, "OfferCreated").withArgs(nextOfferId, sellerId, offerStruct);
+        await expect(tx)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1156,28 +1226,28 @@ describe("IBosonOrchestrationHandler", function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(rando).createOfferAndTwinWithBundle(offer, disputeValidDuration, twin)
+            orchestrationHandler.connect(rando).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
           ).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
         it("Valid from date is greater than valid until date", async function () {
           // Reverse the from and until dates
-          offer.validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
-          offer.validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
+          offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
+          offerDates.validUntil = ethers.BigNumber.from(Date.now()).toString(); // now
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, disputeValidDuration, twin)
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
         it("Valid until date is not in the future", async function () {
           // Set until date in the past
-          offer.validUntilDate = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
+          offerDates.validUntil = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, disputeValidDuration, twin)
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -1187,7 +1257,7 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, disputeValidDuration, twin)
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
           ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
         });
 
@@ -1197,17 +1267,17 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, disputeValidDuration, twin)
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
         it("Dispute valid duration is 0", async function () {
           // Set dispute valid duration to 0
-          disputeValidDuration = "0";
+          offerDurations.disputeValid = "0";
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, disputeValidDuration, twin)
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
         });
 
@@ -1216,7 +1286,7 @@ describe("IBosonOrchestrationHandler", function () {
           twin.tokenAddress = bosonToken.address;
 
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, disputeValidDuration, twin)
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
           ).to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
         });
 
@@ -1225,7 +1295,7 @@ describe("IBosonOrchestrationHandler", function () {
           twin.tokenAddress = foreign721.address;
 
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, disputeValidDuration, twin)
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
           ).to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
         });
 
@@ -1234,7 +1304,7 @@ describe("IBosonOrchestrationHandler", function () {
           twin.tokenAddress = foreign1155.address;
 
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, disputeValidDuration, twin)
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
           ).to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
         });
 
@@ -1243,7 +1313,9 @@ describe("IBosonOrchestrationHandler", function () {
             twin.tokenAddress = ethers.constants.AddressZero;
 
             await expect(
-              orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, disputeValidDuration, twin)
+              orchestrationHandler
+                .connect(operator)
+                .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
             ).to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
           });
 
@@ -1251,7 +1323,9 @@ describe("IBosonOrchestrationHandler", function () {
             twin.tokenAddress = twinHandler.address;
 
             await expect(
-              orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, disputeValidDuration, twin)
+              orchestrationHandler
+                .connect(operator)
+                .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
             ).to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
           });
 
@@ -1259,7 +1333,9 @@ describe("IBosonOrchestrationHandler", function () {
             twin.tokenAddress = fallbackError.address;
 
             await expect(
-              orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, disputeValidDuration, twin)
+              orchestrationHandler
+                .connect(operator)
+                .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
             ).to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
           });
         });
@@ -1325,21 +1401,19 @@ describe("IBosonOrchestrationHandler", function () {
         await accountHandler.connect(admin).createSeller(seller);
       });
 
-      it("should emit an OfferCreated, a DisputeDurationSet, a GroupCreated, a TwinCreated and a BundleCreated events", async function () {
+      it("should emit an OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated events", async function () {
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
 
         // Create an offer with condition, twin and bundle
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferWithConditionAndTwinAndBundle(offer, disputeValidDuration, condition, twin);
+          .createOfferWithConditionAndTwinAndBundle(offer, offerDates, offerDurations, condition, twin);
 
-        // OfferCreated and DisputeDurationSet events
+        // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct)
-          .to.emit(orchestrationHandler, "DisputeDurationSet")
-          .withArgs(nextOfferId, disputeValidDuration);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1382,22 +1456,26 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, twin and bundle
         await orchestrationHandler
           .connect(operator)
-          .createOfferWithConditionAndTwinAndBundle(offer, disputeValidDuration, condition, twin);
+          .createOfferWithConditionAndTwinAndBundle(offer, offerDates, offerDurations, condition, twin);
 
         // Get the offer as a struct
-        [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(id);
 
-        // Parse into entity
+        // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
+        let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+        let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
 
-        // Returned values should match the input in createOfferWithConditionAndTwinAndBundle
-        for ([key, value] of Object.entries(offer, disputeValidDuration)) {
+        // Returned values should match the input in createSellerAndOffer
+        for ([key, value] of Object.entries(offer)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
-
-        // Make sure that disputeValidDuration was properly set
-        [, returnedDisputeValidDuration] = await offerHandler.connect(rando).getDisputeValidDuration(id);
-        expect(returnedDisputeValidDuration, disputeValidDuration, "disputeValidDuration mismatch");
+        for ([key, value] of Object.entries(offerDates)) {
+          expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(offerDurations)) {
+          expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
 
         // Get the group as a struct
         [, groupStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
@@ -1443,10 +1521,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, twin and bundle
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferWithConditionAndTwinAndBundle(offer, disputeValidDuration, condition, twin);
+          .createOfferWithConditionAndTwinAndBundle(offer, offerDates, offerDurations, condition, twin);
 
         // OfferCreated event
-        await expect(tx).to.emit(orchestrationHandler, "OfferCreated").withArgs(nextOfferId, sellerId, offerStruct);
+        await expect(tx)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1497,10 +1577,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, twin and bundle
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferWithConditionAndTwinAndBundle(offer, disputeValidDuration, condition, twin);
+          .createOfferWithConditionAndTwinAndBundle(offer, offerDates, offerDurations, condition, twin);
 
         // OfferCreated event
-        await expect(tx).to.emit(orchestrationHandler, "OfferCreated").withArgs(nextOfferId, sellerId, offerStruct);
+        await expect(tx)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1570,20 +1652,18 @@ describe("IBosonOrchestrationHandler", function () {
         groupStruct = group.toStruct();
       });
 
-      it("should emit a SellerCreated, an OfferCreated, a DisputeDurationSet and a GroupCreated event", async function () {
+      it("should emit a SellerCreated, an OfferCreated, and a GroupCreated event", async function () {
         // Create a seller and an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferWithCondition(seller, offer, disputeValidDuration, condition);
+          .createSellerAndOfferWithCondition(seller, offer, offerDates, offerDurations, condition);
 
-        // SellerCreated, OfferCreated and DisputeDurationSet events
+        // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct)
-          .to.emit(orchestrationHandler, "DisputeDurationSet")
-          .withArgs(nextOfferId, disputeValidDuration);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1603,7 +1683,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller and an offer with condition
         await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferWithCondition(seller, offer, disputeValidDuration, condition);
+          .createSellerAndOfferWithCondition(seller, offer, offerDates, offerDurations, condition);
 
         // Get the seller as a struct
         [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
@@ -1617,14 +1697,22 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the offer as a struct
-        [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(id);
 
-        // Parse into entity
+        // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
+        let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+        let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
 
-        // Returned values should match the input in createSellerAndOfferWithCondition
-        for ([key, value] of Object.entries(offer, disputeValidDuration)) {
+        // Returned values should match the input in createSellerAndOffer
+        for ([key, value] of Object.entries(offer)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(offerDates)) {
+          expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(offerDurations)) {
+          expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the group as a struct
@@ -1637,10 +1725,6 @@ describe("IBosonOrchestrationHandler", function () {
         for ([key, value] of Object.entries(group)) {
           expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
         }
-
-        // Make sure that disputeValidDuration was properly set
-        [, returnedDisputeValidDuration] = await offerHandler.connect(rando).getDisputeValidDuration(id);
-        expect(returnedDisputeValidDuration, disputeValidDuration, "disputeValidDuration mismatch");
       });
 
       it("should ignore any provided ids and assign the next available", async function () {
@@ -1650,14 +1734,14 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller and an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferWithCondition(seller, offer, disputeValidDuration, condition);
+          .createSellerAndOfferWithCondition(seller, offer, offerDates, offerDurations, condition);
 
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1713,14 +1797,14 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferAndTwinWithBundle(seller, offer, disputeValidDuration, twin);
+          .createSellerAndOfferAndTwinWithBundle(seller, offer, offerDates, offerDurations, twin);
 
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1753,7 +1837,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
         await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferAndTwinWithBundle(seller, offer, disputeValidDuration, twin);
+          .createSellerAndOfferAndTwinWithBundle(seller, offer, offerDates, offerDurations, twin);
 
         // Get the seller as a struct
         [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
@@ -1767,19 +1851,23 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the offer as a struct
-        [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(id);
 
-        // Parse into entity
+        // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
+        let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+        let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
 
-        // Returned values should match the input in createSellerAndOfferAndTwinWithBundle
-        for ([key, value] of Object.entries(offer, disputeValidDuration)) {
+        // Returned values should match the input in createSellerAndOffer
+        for ([key, value] of Object.entries(offer)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
-
-        // Make sure that disputeValidDuration was properly set
-        [, returnedDisputeValidDuration] = await offerHandler.connect(rando).getDisputeValidDuration(id);
-        expect(returnedDisputeValidDuration, disputeValidDuration, "disputeValidDuration mismatch");
+        for ([key, value] of Object.entries(offerDates)) {
+          expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(offerDurations)) {
+          expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
 
         // Get the twin as a struct
         [, twinStruct] = await twinHandler.connect(rando).getTwin(nextTwinId);
@@ -1815,14 +1903,14 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferAndTwinWithBundle(seller, offer, disputeValidDuration, twin);
+          .createSellerAndOfferAndTwinWithBundle(seller, offer, offerDates, offerDurations, twin);
 
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1909,23 +1997,28 @@ describe("IBosonOrchestrationHandler", function () {
         twinStruct = twin.toStruct();
       });
 
-      it("should emit a SellerCreated, an OfferCreated, a GroupCreated, a DisputeDurationSet, a TwinCreated and a BundleCreated event", async function () {
+      it("should emit a SellerCreated, an OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event", async function () {
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
 
         // Create a seller, an offer with condition, twin and bundle
         const tx = await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferWithConditionAndTwinAndBundle(seller, offer, disputeValidDuration, condition, twin);
+          .createSellerAndOfferWithConditionAndTwinAndBundle(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            condition,
+            twin
+          );
 
-        // SellerCreated, OfferCreated and DisputeDurationSet events
+        // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct)
-          .to.emit(orchestrationHandler, "DisputeDurationSet")
-          .withArgs(nextOfferId, disputeValidDuration);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1968,7 +2061,14 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller, an offer with condition, twin and bundle
         await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferWithConditionAndTwinAndBundle(seller, offer, disputeValidDuration, condition, twin);
+          .createSellerAndOfferWithConditionAndTwinAndBundle(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            condition,
+            twin
+          );
 
         // Get the seller as a struct
         [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
@@ -1982,19 +2082,23 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the offer as a struct
-        [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(id);
 
-        // Parse into entity
+        // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
+        let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+        let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
 
-        // Returned values should match the input in createSellerAndOfferWithConditionAndTwinAndBundle
-        for ([key, value] of Object.entries(offer, disputeValidDuration)) {
+        // Returned values should match the input in createSellerAndOffer
+        for ([key, value] of Object.entries(offer)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
         }
-
-        // Make sure that disputeValidDuration was properly set
-        [, returnedDisputeValidDuration] = await offerHandler.connect(rando).getDisputeValidDuration(id);
-        expect(returnedDisputeValidDuration, disputeValidDuration, "disputeValidDuration mismatch");
+        for ([key, value] of Object.entries(offerDates)) {
+          expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(offerDurations)) {
+          expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
 
         // Get the group as a struct
         [, groupStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
@@ -2041,14 +2145,21 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller, an offer with condition, twin and bundle
         const tx = await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferWithConditionAndTwinAndBundle(seller, offer, disputeValidDuration, condition, twin);
+          .createSellerAndOfferWithConditionAndTwinAndBundle(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            condition,
+            twin
+          );
 
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();

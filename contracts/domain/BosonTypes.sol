@@ -59,8 +59,8 @@ contract BosonTypes {
         uint256 protocolFee;
         uint256 buyerCancelPenalty;
         uint256 quantityAvailable;
-        address disputeResolver;
         address exchangeToken;
+        address disputeResolver;
         string metadataUri;
         string offerChecksum;
         bool voided;
