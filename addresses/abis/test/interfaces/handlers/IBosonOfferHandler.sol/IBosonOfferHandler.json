@@ -1,0 +1,557 @@
+{
+  "_format": "hh-sol-artifact-1",
+  "contractName": "IBosonOfferHandler",
+  "sourceName": "contracts/interfaces/handlers/IBosonOfferHandler.sol",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "offerId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "sellerId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sellerId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "price",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sellerDeposit",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "protocolFee",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "buyerCancelPenalty",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "quantityAvailable",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validFromDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntilDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "redeemableFromDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "fulfillmentPeriodDuration",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherValidDuration",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "exchangeToken",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "offerChecksum",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "voided",
+              "type": "bool"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.Offer",
+          "name": "offer",
+          "type": "tuple"
+        }
+      ],
+      "name": "OfferCreated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "offerId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "sellerId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "validUntilDate",
+          "type": "uint256"
+        }
+      ],
+      "name": "OfferExtended",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "offerId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "sellerId",
+          "type": "uint256"
+        }
+      ],
+      "name": "OfferVoided",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sellerId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "price",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sellerDeposit",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "protocolFee",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "buyerCancelPenalty",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "quantityAvailable",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validFromDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntilDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "redeemableFromDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "fulfillmentPeriodDuration",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherValidDuration",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "exchangeToken",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "offerChecksum",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "voided",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct BosonTypes.Offer",
+          "name": "_offer",
+          "type": "tuple"
+        }
+      ],
+      "name": "createOffer",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sellerId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "price",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sellerDeposit",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "protocolFee",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "buyerCancelPenalty",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "quantityAvailable",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validFromDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntilDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "redeemableFromDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "fulfillmentPeriodDuration",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherValidDuration",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "exchangeToken",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "offerChecksum",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "voided",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct BosonTypes.Offer[]",
+          "name": "_offers",
+          "type": "tuple[]"
+        }
+      ],
+      "name": "createOfferBatch",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_offerId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_validUntilDate",
+          "type": "uint256"
+        }
+      ],
+      "name": "extendOffer",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "_offerIds",
+          "type": "uint256[]"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_validUntilDate",
+          "type": "uint256"
+        }
+      ],
+      "name": "extendOfferBatch",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getNextOfferId",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "nextOfferId",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_offerId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getOffer",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "exists",
+          "type": "bool"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sellerId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "price",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sellerDeposit",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "protocolFee",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "buyerCancelPenalty",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "quantityAvailable",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validFromDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntilDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "redeemableFromDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "fulfillmentPeriodDuration",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherValidDuration",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "exchangeToken",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "offerChecksum",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "voided",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct BosonTypes.Offer",
+          "name": "offer",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_offerId",
+          "type": "uint256"
+        }
+      ],
+      "name": "isOfferVoided",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "exists",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "offerVoided",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_offerId",
+          "type": "uint256"
+        }
+      ],
+      "name": "voidOffer",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "_offerIds",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "voidOfferBatch",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}
