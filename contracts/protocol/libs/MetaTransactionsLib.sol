@@ -33,25 +33,4 @@ library MetaTransactionsLib {
             id := chainid()
         }
     }
-
-    /**
-     * @notice Get the current sender address from storage.
-     */
-    function getCurrentSenderAddress() internal view returns (address) {
-        return ProtocolLib.protocolMetaTxInfo().currentSenderAddress;
-    }
-
-    /**
-     * @notice Returns the current sender address.
-     */
-    function getCaller() internal view returns (address) {
-        bool isItAMetaTransaction = ProtocolLib.protocolMetaTxInfo().isMetaTransaction;
-
-        // Get sender from the storage if this is a meta transaction
-        if (isItAMetaTransaction) {
-            return getCurrentSenderAddress();
-        } else {
-            return msg.sender;
-        }
-    }
 }
