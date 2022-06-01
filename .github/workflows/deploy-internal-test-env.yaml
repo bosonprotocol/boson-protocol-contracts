@@ -20,13 +20,16 @@ jobs:
           fetch-depth: 2 # we want 2 of the latest commit history to identify PR author
       - name: Check Author Name of the PR that merged to main
         run: |
-          echo "AUTHOR_NAME=$(git log -n 2 --pretty=format:%an | tail -1)" >> "$GITHUB_ENV"
-      - name: Check Author Email of the PR that merged to main
-        run: |
-          echo "AUTHOR_EMAIL=$(git log -n 2 --pretty=format:%ae | tail -1)" >> "$GITHUB_ENV"
+          LATEST_COMMIT_MESSAGE=$(git show -s --format=%s)
+
+          if [[ $LATEST_COMMIT_MESSAGE == *"Merge pull request #"* ]]; then
+            echo "AUTHOR_NAME=$(git log -n 2 --pretty=format:%an | tail -1)" >> "$GITHUB_ENV"
+          else
+            echo "AUTHOR_NAME=$(git log -n 1 --pretty=format:%an | tail -1)" >> "$GITHUB_ENV"
+          fi
       - name: Check if we can generate a new automated PR
         run: |
-          if [[ "$AUTHOR_NAME" == "GitHub Actions Bot" && "$AUTHOR_EMAIL" == "noreply@github.com" ]]; then
+          if [[ "$AUTHOR_NAME" == "GitHub Actions Bot" || "$AUTHOR_NAME" == "github-actions[bot]" ]]; then
               echo "CAN_GENERATE_AUTOMATED_PR=false" >> "$GITHUB_ENV"
           else
               echo "CAN_GENERATE_AUTOMATED_PR=true" >> "$GITHUB_ENV"
