@@ -180,12 +180,27 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the buyer exists
      * @return buyer - the buyer details. See {BosonTypes.Buyer}
      */
-    function fetchBuyer(uint256 _buyerId) internal view returns (bool exists, Buyer storage buyer) {
-        // Get the buyer's's slot
+    function fetchBuyer(uint256 _buyerId) internal view returns (bool exists, BosonTypes.Buyer storage buyer) {
+        // Get the buyer's slot
         buyer = protocolStorage().buyers[_buyerId];
 
         // Determine existence
         exists = (_buyerId > 0 && buyer.id == _buyerId);
+    }
+
+    /**
+     * @notice Fetches a given dispute resolver from storage by id
+     *
+     * @param _disputeResolverId - the id of the dispute resolver
+     * @return exists - whether the dispute resolver exists
+     * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
+     */
+    function fetchDisputeResolver(uint256 _disputeResolverId) internal view returns (bool exists, BosonTypes.DisputeResolver storage disputeResolver) {
+        // Get the dispute resolver's slot
+        disputeResolver = protocolStorage().disputeResolvers[_disputeResolverId];
+
+        // Determine existence
+        exists = (_disputeResolverId > 0 && disputeResolver.id == _disputeResolverId);
     }
 
     /**
@@ -286,7 +301,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     function fetchTwin(uint256 _twinId) internal view returns (bool exists, Twin storage twin) {
         // Get the twin's slot
         twin = protocolStorage().twins[_twinId];
-
+ 
         // Determine existence
         exists = (_twinId > 0 && twin.id == _twinId);
     }

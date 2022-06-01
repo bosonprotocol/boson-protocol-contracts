@@ -46,7 +46,7 @@ contract BosonTypes {
         bool active;
     }
 
-    struct Resolver {
+    struct DisputeResolver {
         uint256 id;
         address payable wallet;
         bool active;
