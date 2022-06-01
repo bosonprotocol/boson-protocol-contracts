@@ -16,12 +16,8 @@ class Offer {
             uint256 protocolFee;
             uint256 buyerCancelPenalty;
             uint256 quantityAvailable;
-            uint256 validFromDate;
-            uint256 validUntilDate;
-            uint256 redeemableFromDate;
-            uint256 fulfillmentPeriodDuration;
-            uint256 voucherValidDuration;
             address exchangeToken;
+            address disputeResolver;
             string metadataUri;
             string offerChecksum;
             bool voided;
@@ -36,12 +32,8 @@ class Offer {
     protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
-    validFromDate,
-    validUntilDate,
-    redeemableFromDate,
-    fulfillmentPeriodDuration,
-    voucherValidDuration,
     exchangeToken,
+    disputeResolver,
     metadataUri,
     offerChecksum,
     voided
@@ -53,12 +45,8 @@ class Offer {
     this.protocolFee = protocolFee;
     this.buyerCancelPenalty = buyerCancelPenalty;
     this.quantityAvailable = quantityAvailable;
-    this.validFromDate = validFromDate;
-    this.validUntilDate = validUntilDate;
-    this.redeemableFromDate = redeemableFromDate;
-    this.voucherValidDuration = voucherValidDuration;
-    this.fulfillmentPeriodDuration = fulfillmentPeriodDuration;
     this.exchangeToken = exchangeToken;
+    this.disputeResolver = disputeResolver;
     this.metadataUri = metadataUri;
     this.offerChecksum = offerChecksum;
     this.voided = voided;
@@ -78,12 +66,8 @@ class Offer {
       protocolFee,
       buyerCancelPenalty,
       quantityAvailable,
-      validFromDate,
-      validUntilDate,
-      redeemableFromDate,
-      fulfillmentPeriodDuration,
-      voucherValidDuration,
       exchangeToken,
+      disputeResolver,
       metadataUri,
       offerChecksum,
       voided,
@@ -97,12 +81,8 @@ class Offer {
       protocolFee,
       buyerCancelPenalty,
       quantityAvailable,
-      validFromDate,
-      validUntilDate,
-      redeemableFromDate,
-      fulfillmentPeriodDuration,
-      voucherValidDuration,
       exchangeToken,
+      disputeResolver,
       metadataUri,
       offerChecksum,
       voided
@@ -122,12 +102,8 @@ class Offer {
       protocolFee,
       buyerCancelPenalty,
       quantityAvailable,
-      validFromDate,
-      validUntilDate,
-      redeemableFromDate,
-      fulfillmentPeriodDuration,
-      voucherValidDuration,
       exchangeToken,
+      disputeResolver,
       metadataUri,
       offerChecksum,
       voided;
@@ -141,12 +117,8 @@ class Offer {
       protocolFee,
       buyerCancelPenalty,
       quantityAvailable,
-      validFromDate,
-      validUntilDate,
-      redeemableFromDate,
-      fulfillmentPeriodDuration,
-      voucherValidDuration,
       exchangeToken,
+      disputeResolver,
       metadataUri,
       offerChecksum,
       voided,
@@ -160,12 +132,8 @@ class Offer {
       protocolFee: protocolFee.toString(),
       buyerCancelPenalty: buyerCancelPenalty.toString(),
       quantityAvailable: quantityAvailable.toString(),
-      validFromDate: validFromDate.toString(),
-      validUntilDate: validUntilDate.toString(),
-      redeemableFromDate: redeemableFromDate.toString(),
-      fulfillmentPeriodDuration: fulfillmentPeriodDuration.toString(),
-      voucherValidDuration: voucherValidDuration.toString(),
       exchangeToken,
+      disputeResolver,
       metadataUri,
       offerChecksum,
       voided,
@@ -201,12 +169,8 @@ class Offer {
       this.protocolFee,
       this.buyerCancelPenalty,
       this.quantityAvailable,
-      this.validFromDate,
-      this.validUntilDate,
-      this.redeemableFromDate,
-      this.fulfillmentPeriodDuration,
-      this.voucherValidDuration,
       this.exchangeToken,
+      this.disputeResolver,
       this.metadataUri,
       this.offerChecksum,
       this.voided,
@@ -320,83 +284,6 @@ class Offer {
   }
 
   /**
-   * Is this Offer instance's validFromDate field valid?
-   * Must be a string representation of a big number
-   * TODO: make sure it's time within a reasonable range?
-   * @returns {boolean}
-   */
-  validFromDateIsValid() {
-    let valid = false;
-    let { validFromDate } = this;
-    try {
-      valid = typeof validFromDate === "string" && typeof ethers.BigNumber.from(validFromDate) === "object";
-    } catch (e) {}
-    return valid;
-  }
-
-  /**
-   * Is this Offer instance's validUntilDate field valid?
-   * Must be a string representation of a big number
-   * TODO: make sure it's time within a reasonable range?
-   * @returns {boolean}
-   */
-  validUntilDateIsValid() {
-    let valid = false;
-    let { validUntilDate } = this;
-    try {
-      valid = typeof validUntilDate === "string" && typeof ethers.BigNumber.from(validUntilDate) === "object";
-    } catch (e) {}
-    return valid;
-  }
-
-  /**
-   * Is this Offer instance's redeemableFromDate field valid?
-   * Must be a string representation of a big number
-   * TODO: make sure it's time within a reasonable range?
-   * @returns {boolean}
-   */
-  redeemableFromDateIsValid() {
-    let valid = false;
-    let { redeemableFromDate } = this;
-    try {
-      valid = typeof redeemableFromDate === "string" && typeof ethers.BigNumber.from(redeemableFromDate) === "object";
-    } catch (e) {}
-    return valid;
-  }
-
-  /**
-   * Is this Offer instance's fulfillmentPeriodDuration field valid?
-   * Must be a string representation of a big number
-   * @returns {boolean}
-   */
-  fulfillmentPeriodDurationIsValid() {
-    let valid = false;
-    let { fulfillmentPeriodDuration } = this;
-    try {
-      valid =
-        typeof fulfillmentPeriodDuration === "string" &&
-        typeof ethers.BigNumber.from(fulfillmentPeriodDuration) === "object";
-    } catch (e) {}
-    return valid;
-  }
-
-  /**
-   * Is this Offer instance's voucherValidDuration field valid?
-   * Must be a string representation of a big number
-   * TODO: make sure it's time within a reasonable range?
-   * @returns {boolean}
-   */
-  voucherValidDurationIsValid() {
-    let valid = false;
-    let { voucherValidDuration } = this;
-    try {
-      valid =
-        typeof voucherValidDuration === "string" && typeof ethers.BigNumber.from(voucherValidDuration) === "object";
-    } catch (e) {}
-    return valid;
-  }
-
-  /**
    * Is this Offer instance's exchangeToken field valid?
    * Must be a eip55 compliant Ethereum address
    * Use "0x000.." for chain base currency, e.g., ETH
@@ -408,6 +295,22 @@ class Offer {
     let { exchangeToken } = this;
     try {
       valid = eip55.verify(eip55.encode(exchangeToken));
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this Offer instance's disputeResolver field valid?
+   * Must be a eip55 compliant Ethereum address
+   * Use "0x000.." for chain base currency, e.g., ETH
+   *
+   * @returns {boolean}
+   */
+  disputeResolverIsValid() {
+    let valid = false;
+    let { disputeResolver } = this;
+    try {
+      valid = eip55.verify(eip55.encode(disputeResolver));
     } catch (e) {}
     return valid;
   }
@@ -468,12 +371,8 @@ class Offer {
       this.protocolFeeIsValid() &&
       this.buyerCancelPenaltyIsValid() &&
       this.quantityAvailableIsValid() &&
-      this.validFromDateIsValid() &&
-      this.validUntilDateIsValid() &&
-      this.redeemableFromDateIsValid() &&
-      this.fulfillmentPeriodDurationIsValid() &&
-      this.voucherValidDurationIsValid() &&
       this.exchangeTokenIsValid() &&
+      this.disputeResolverIsValid() &&
       this.metadataUriIsValid() &&
       this.offerChecksumIsValid() &&
       this.voidedIsValid()
