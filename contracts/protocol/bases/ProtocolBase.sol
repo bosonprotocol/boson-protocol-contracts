@@ -5,7 +5,6 @@ import {ProtocolLib} from "../libs/ProtocolLib.sol";
 import {DiamondLib} from "../../diamond/DiamondLib.sol";
 import {BosonTypes} from "../../domain/BosonTypes.sol";
 import {BosonConstants} from "../../domain/BosonConstants.sol";
-import {MetaTransactionsLib} from "../libs/MetaTransactionsLib.sol";
 
 /**
  * @title ProtocolBase
@@ -388,12 +387,9 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     internal
     view
     {
-        // Get sender of the transaction
-        address msgSender = MetaTransactionsLib.getCaller();
-
         // Get the caller's buyer account id
         uint256 buyerId;
-        (, buyerId) = getBuyerIdByWallet(msgSender);
+        (, buyerId) = getBuyerIdByWallet(msgSender());
 
         // Must be the buyer associated with the exchange (which is always voucher holder)
         require(buyerId == _currentBuyer, NOT_VOUCHER_HOLDER);
@@ -424,5 +420,26 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
 
         // Make sure the exchange is in expected state
         require(exchange.state == _expectedState, INVALID_STATE);
+    }
+
+    /**
+     * @notice Get the current sender address from storage.
+     */
+    function getCurrentSenderAddress() internal view returns (address) {
+        return ProtocolLib.protocolMetaTxInfo().currentSenderAddress;
+    }
+
+    /**
+     * @notice Returns the current sender address.
+     */
+    function msgSender() internal view returns (address) {
+        bool isItAMetaTransaction = ProtocolLib.protocolMetaTxInfo().isMetaTransaction;
+
+        // Get sender from the storage if this is a meta transaction
+        if (isItAMetaTransaction) {
+            return getCurrentSenderAddress();
+        } else {
+            return msg.sender;
+        }
     }
 }
