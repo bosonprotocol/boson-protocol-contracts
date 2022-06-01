@@ -40,25 +40,33 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      * - in offer struct:
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
+     *   - Both voucher expiration date and voucher expiraton period are defined
+     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Voucher redeemable period is fixed, but it ends before it starts
+     *   - Voucher redeemable period is fixed, but it ends before offer expires
+     *   - Fulfillment period is set to zero
+     *   - Dispute duration is set to zero
      *   - Voided is set to true
+     *   - Available quantity is set to zero
+     *   - Dispute resolver wallet is not registered
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
-     * - Dispute duration is zero
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _seller - the fully populated seller struct
-     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
      */
     function createSellerAndOffer(
         Seller memory _seller,
         Offer memory _offer,
-        uint256 _disputeValidDuration
+        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations
     )
     external
     override
     {   
         checkAndCreateSeller(_seller);
-        createOfferInternal(_offer, _disputeValidDuration);
+        createOfferInternal(_offer, _offerDates, _offerDurations);
     }
 
     /**
@@ -71,26 +79,34 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
+     *   - Both voucher expiration date and voucher expiraton period are defined
+     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Voucher redeemable period is fixed, but it ends before it starts
+     *   - Voucher redeemable period is fixed, but it ends before offer expires
+     *   - Fulfillment period is set to zero
+     *   - Dispute duration is set to zero
      *   - Voided is set to true
+     *   - Available quantity is set to zero
+     *   - Dispute resolver wallet is not registered
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
-     * - Dispute duration is zero
      * - Condition includes invalid combination of parameters
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
      * @param _condition - the fully populated condition struct
      */
     function createOfferWithCondition(
         Offer memory _offer,
-        uint256 _disputeValidDuration,
+        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
         Condition memory _condition
     )
     public
     override
     {   
         // create offer and update structs values to represent true state
-        createOfferInternal(_offer, _disputeValidDuration);
+        createOfferInternal(_offer, _offerDates, _offerDurations);
 
         // construct new group
         // - groupid is 0, and it is ignored
@@ -103,35 +119,43 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
     } 
 
     /**
-    * @notice Takes an offer and group ID, creates an offer and adds it to the existing group with given id
-    *
-    * Emits an OfferCreated and a GroupUpdated event if successful.
-    *
-    * Reverts if:
-    * - in offer struct:
-    *   - Caller is not an operator
-    *   - Valid from date is greater than valid until date
-    *   - Valid until date is not in the future
-    *   - Voided is set to true
-    *   - Seller deposit is less than protocol fee
-    *   - Sum of buyer cancel penalty and protocol fee is greater than price
-    * - Dispute duration is zero
-    * - when adding to the group if:
-    *   - Group does not exists
-    *   - Caller is not the operator of the group
-    *
-    * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-    * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
-    * @param _groupId - id of the group, where offer will be added
-    */
+     * @notice Takes an offer and group ID, creates an offer and adds it to the existing group with given id
+     *
+     * Emits an OfferCreated and a GroupUpdated event if successful.
+     *
+     * Reverts if:
+     * - in offer struct:
+     *   - Caller is not an operator
+     *   - Valid from date is greater than valid until date
+     *   - Valid until date is not in the future
+     *   - Both voucher expiration date and voucher expiraton period are defined
+     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Voucher redeemable period is fixed, but it ends before it starts
+     *   - Voucher redeemable period is fixed, but it ends before offer expires
+     *   - Fulfillment period is set to zero
+     *   - Dispute duration is set to zero
+     *   - Voided is set to true
+     *   - Available quantity is set to zero
+     *   - Dispute resolver wallet is not registered
+     *   - Seller deposit is less than protocol fee
+     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - when adding to the group if:
+     *   - Group does not exists
+     *   - Caller is not the operator of the group
+     *
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
+     * @param _groupId - id of the group, where offer will be added
+     */
     function createOfferAddToGroup(
         Offer memory _offer,
-        uint256 _disputeValidDuration,
+        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
         uint256 _groupId
     )
     external {
         // create offer and update structs values to represent true state
-        createOfferInternal(_offer, _disputeValidDuration);
+        createOfferInternal(_offer, _offerDates, _offerDurations);
 
         // create an array with offer ids and add it to the group
         uint256[] memory _offerIds = new uint256[](1);
@@ -149,26 +173,34 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
+     *   - Both voucher expiration date and voucher expiraton period are defined
+     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Voucher redeemable period is fixed, but it ends before it starts
+     *   - Voucher redeemable period is fixed, but it ends before offer expires
+     *   - Fulfillment period is set to zero
+     *   - Dispute duration is set to zero
      *   - Voided is set to true
+     *   - Available quantity is set to zero
+     *   - Dispute resolver wallet is not registered
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
-     * - Dispute duration is zero
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
      * @param _twin - the fully populated twin struct
      */
     function createOfferAndTwinWithBundle(
         Offer memory _offer,
-        uint256 _disputeValidDuration,
+        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
         Twin memory _twin
     )
     public 
     override {
         // create seller and update structs values to represent true state
-        createOfferInternal(_offer, _disputeValidDuration);
+        createOfferInternal(_offer, _offerDates, _offerDurations);
 
         // create twin and pack everything into a bundle
         createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
@@ -184,28 +216,36 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
+     *   - Both voucher expiration date and voucher expiraton period are defined
+     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Voucher redeemable period is fixed, but it ends before it starts
+     *   - Voucher redeemable period is fixed, but it ends before offer expires
+     *   - Fulfillment period is set to zero
+     *   - Dispute duration is set to zero
      *   - Voided is set to true
+     *   - Available quantity is set to zero
+     *   - Dispute resolver wallet is not registered
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
-     * - Dispute duration is zero
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      */
     function createOfferWithConditionAndTwinAndBundle(
         Offer memory _offer,
-        uint256 _disputeValidDuration,
+        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
         Condition memory _condition,
         Twin memory _twin
     )
     public {
         // create offer with condition first
-        createOfferWithCondition(_offer, _disputeValidDuration, _condition);
+        createOfferWithCondition(_offer, _offerDates, _offerDurations, _condition);
         // create twin and pack everything into a bundle
         createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
     }
@@ -254,27 +294,35 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
+     *   - Both voucher expiration date and voucher expiraton period are defined
+     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Voucher redeemable period is fixed, but it ends before it starts
+     *   - Voucher redeemable period is fixed, but it ends before offer expires
+     *   - Fulfillment period is set to zero
+     *   - Dispute duration is set to zero
      *   - Voided is set to true
+     *   - Available quantity is set to zero
+     *   - Dispute resolver wallet is not registered
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
-     * - Dispute duration is zero
      * - Condition includes invalid combination of parameters
      *
      * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
      * @param _condition - the fully populated condition struct
      */
     function createSellerAndOfferWithCondition(
         Seller memory _seller,
         Offer memory _offer,
-        uint256 _disputeValidDuration,
+        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
         Condition memory _condition
     )
     external 
     override {
         checkAndCreateSeller(_seller);
-        createOfferWithCondition(_offer, _disputeValidDuration, _condition);
+        createOfferWithCondition(_offer, _offerDates, _offerDurations, _condition);
     } 
 
     /**
@@ -292,28 +340,36 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
+     *   - Both voucher expiration date and voucher expiraton period are defined
+     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Voucher redeemable period is fixed, but it ends before it starts
+     *   - Voucher redeemable period is fixed, but it ends before offer expires
+     *   - Fulfillment period is set to zero
+     *   - Dispute duration is set to zero
      *   - Voided is set to true
+     *   - Available quantity is set to zero
+     *   - Dispute resolver wallet is not registered
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
-     * - Dispute duration is zero
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
      * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
      * @param _twin - the fully populated twin struct
      */
     function createSellerAndOfferAndTwinWithBundle(
         Seller memory _seller,
         Offer memory _offer,
-        uint256 _disputeValidDuration,
+        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
         Twin memory _twin
     )
     external 
     override {
         checkAndCreateSeller(_seller);
-        createOfferAndTwinWithBundle(_offer, _disputeValidDuration, _twin);
+        createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _twin);
     }
 
     /**
@@ -331,30 +387,38 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
+     *   - Both voucher expiration date and voucher expiraton period are defined
+     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Voucher redeemable period is fixed, but it ends before it starts
+     *   - Voucher redeemable period is fixed, but it ends before offer expires
+     *   - Fulfillment period is set to zero
+     *   - Dispute duration is set to zero
      *   - Voided is set to true
+     *   - Available quantity is set to zero
+     *   - Dispute resolver wallet is not registered
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
-     * - Dispute duration is zero
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
      * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      */
     function createSellerAndOfferWithConditionAndTwinAndBundle(
         Seller memory _seller,
         Offer memory _offer,
-        uint256 _disputeValidDuration,
+        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
         Condition memory _condition,
         Twin memory _twin
     )
     external override {
         checkAndCreateSeller(_seller);
-        createOfferWithConditionAndTwinAndBundle(_offer, _disputeValidDuration, _condition, _twin);
+        createOfferWithConditionAndTwinAndBundle(_offer, _offerDates, _offerDurations, _condition, _twin);
     }
 
     /**

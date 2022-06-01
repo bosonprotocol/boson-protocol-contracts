@@ -67,9 +67,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
 
         // Make sure offer exists, is available, and isn't void, expired, or sold out
         require(exists, NO_SUCH_OFFER);
-        require(block.timestamp >= offer.validFromDate, OFFER_NOT_AVAILABLE);
+
+        OfferDates storage offerDates = fetchOfferDates(_offerId);
+        require(block.timestamp >= offerDates.validFrom, OFFER_NOT_AVAILABLE);
         require(!offer.voided, OFFER_HAS_BEEN_VOIDED);
-        require(block.timestamp < offer.validUntilDate, OFFER_HAS_EXPIRED);
+        require(block.timestamp < offerDates.validUntil, OFFER_HAS_EXPIRED);
         require(offer.quantityAvailable > 0, OFFER_SOLD_OUT);
 
         // Find or create the account associated with the specified buyer address
@@ -99,9 +101,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         exchange.state = ExchangeState.Committed;
         exchange.voucher.committedDate = block.timestamp;
 
-        // Store the time the voucher expires
-        uint256 startDate = (block.timestamp >= offer.redeemableFromDate) ? block.timestamp : offer.redeemableFromDate;
-        exchange.voucher.validUntilDate = startDate + offer.voucherValidDuration;
+        // Store the time the voucher expires // TODO: implement the start and and based on new requirements 
+        uint256 startDate = (block.timestamp >= offerDates.redeemableFrom) ? block.timestamp : offerDates.redeemableFrom;
+        exchange.voucher.validUntilDate = startDate + fetchOfferDurations(_offerId).voucherValid;
 
         // Map the offerId to the exchangeId as one-to-many
         protocolStorage().exchangeIdsByOffer[_offerId].push(exchangeId);
@@ -137,10 +139,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     {
         // Get the exchange, should be in redeemed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
+        uint256 offerId = exchange.offerId;
 
         // Get the offer, which will definitely exist
         Offer storage offer;
-        (,offer) = fetchOffer(exchange.offerId);
+        (,offer) = fetchOffer(offerId);
 
         // Get sender of the transaction
         address msgSender = MetaTransactionsLib.getCaller();
@@ -154,7 +157,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         if (sellerExists && offer.sellerId == sellerId) {
             // Make sure the fulfillment period has elapsed
             uint256 elapsed = block.timestamp - exchange.voucher.redeemedDate;
-            require(elapsed >= offer.fulfillmentPeriodDuration, FULFILLMENT_PERIOD_NOT_ELAPSED);
+            require(elapsed >= fetchOfferDurations(offerId).fulfillmentPeriod, FULFILLMENT_PERIOD_NOT_ELAPSED);
         } else {
             // Is this the buyer?
             bool buyerExists;
@@ -167,7 +170,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         finalizeExchange(exchange, ExchangeState.Completed);
 
         // Notify watchers of state change
-        emit ExchangeCompleted(exchange.offerId, exchange.buyerId, exchange.id);
+        emit ExchangeCompleted(offerId, exchange.buyerId, exchange.id);
     }
 
     /**
@@ -293,17 +296,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
+        uint256 offerId = exchange.offerId;
 
         // Make sure the caller is buyer associated with the exchange
         checkBuyer(exchange.buyerId);
 
-        // Get the offer, which will definitely exist
-        Offer storage offer;
-        (, offer) = fetchOffer(exchange.offerId);
-
         // Make sure the voucher is redeemable
         require(
-            block.timestamp >= offer.redeemableFromDate &&
+            block.timestamp >= fetchOfferDates(offerId).redeemableFrom &&
             block.timestamp <= exchange.voucher.validUntilDate,
             VOUCHER_NOT_REDEEMABLE
         );
@@ -318,7 +318,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         burnVoucher(_exchangeId);
 
         // Notify watchers of state change
-        emit VoucherRedeemed(exchange.offerId, _exchangeId, msg.sender);
+        emit VoucherRedeemed(offerId, _exchangeId, msg.sender);
     }
 
     /**

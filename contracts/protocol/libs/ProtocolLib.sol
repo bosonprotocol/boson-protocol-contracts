@@ -36,6 +36,10 @@ library ProtocolLib {
         uint16 maxTokensPerWithdrawal;
         // offer id => offer
         mapping(uint256 => BosonTypes.Offer) offers;
+        // offer id => offer dates
+        mapping(uint256 => BosonTypes.OfferDates) offerDates;
+        // offer id => offer durations
+        mapping(uint256 => BosonTypes.OfferDurations) offerDurations;
         // exchange id => exchange
         mapping(uint256 => BosonTypes.Exchange) exchanges;
         // exchange id => dispute

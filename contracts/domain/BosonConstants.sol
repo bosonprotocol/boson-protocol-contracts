@@ -52,7 +52,12 @@ contract BosonConstants {
     string internal constant OFFER_NOT_AVAILABLE = "Offer is not yet available";
     string internal constant OFFER_SOLD_OUT = "Offer has sold out";
     string internal constant EXCHANGE_FOR_OFFER_EXISTS = "Exchange for offer exists";
+    string internal constant VOUCHER_EXPIRY_UNDEFINED = "One of redeemableUntil and voucherValid must be non zero";
+    string internal constant REDEMPTION_PERIOD_INVALID = "Redemption period invalid";
+    string internal constant INVALID_FULFILLMENT_PERIOD = "Invalid fulfillemnt period";
     string internal constant INVALID_DISPUTE_DURATION = "Invalid dispute duration";
+    string internal constant INVALID_DISPUTE_RESOLVER = "Invalid dispute resolver";
+    string internal constant INVALID_QUANTITY_AVAILABLE = "Invalid quantity available";
 
     // Revert Reasons: Group related
     string internal constant NO_SUCH_GROUP = "No such offer";

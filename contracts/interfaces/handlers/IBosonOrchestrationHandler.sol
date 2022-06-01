@@ -30,16 +30,24 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      * - in offer struct:
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
+     *   - Both voucher expiration date and voucher expiraton period are defined
+     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Voucher redeemable period is fixed, but it ends before it starts
+     *   - Voucher redeemable period is fixed, but it ends before offer expires
+     *   - Fulfillment period is set to zero
+     *   - Dispute duration is set to zero
      *   - Voided is set to true
+     *   - Available quantity is set to zero
+     *   - Dispute resolver wallet is not registered
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
-     * - Dispute duration is zero
      *
      * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
      */
-    function createSellerAndOffer(BosonTypes.Seller calldata _seller, BosonTypes.Offer memory _offer, uint256 _disputeValidDuration) external;
+    function createSellerAndOffer(BosonTypes.Seller calldata _seller, BosonTypes.Offer memory _offer, BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations) external;
 
     /**
      * @notice Takes an offer and a condition, creates an offer, then a group with that offer and the given condition.
@@ -51,19 +59,27 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
+     *   - Both voucher expiration date and voucher expiraton period are defined
+     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Voucher redeemable period is fixed, but it ends before it starts
+     *   - Voucher redeemable period is fixed, but it ends before offer expires
+     *   - Fulfillment period is set to zero
+     *   - Dispute duration is set to zero
      *   - Voided is set to true
+     *   - Available quantity is set to zero
+     *   - Dispute resolver wallet is not registered
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
-     * - Dispute duration is zero
      * - Condition includes invalid combination of parameters
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
      * @param _condition - the fully populated condition struct
      */
     function createOfferWithCondition(
         BosonTypes.Offer memory _offer,
-        uint256 _disputeValidDuration,
+        BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
         BosonTypes.Condition memory _condition
     )
     external;
@@ -78,21 +94,29 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
+     *   - Both voucher expiration date and voucher expiraton period are defined
+     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Voucher redeemable period is fixed, but it ends before it starts
+     *   - Voucher redeemable period is fixed, but it ends before offer expires
+     *   - Fulfillment period is set to zero
+     *   - Dispute duration is set to zero
      *   - Voided is set to true
+     *   - Available quantity is set to zero
+     *   - Dispute resolver wallet is not registered
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
-     * - Dispute duration is zero
      * - when adding to the group if:
      *   - Group does not exists
      *   - Caller is not the operator of the group
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
      * @param _groupId - id of the group, where offer will be added
      */
     function createOfferAddToGroup(
         BosonTypes.Offer memory _offer,
-        uint256 _disputeValidDuration,
+        BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _groupId
     )
     external;
@@ -107,20 +131,28 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
+     *   - Both voucher expiration date and voucher expiraton period are defined
+     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Voucher redeemable period is fixed, but it ends before it starts
+     *   - Voucher redeemable period is fixed, but it ends before offer expires
+     *   - Fulfillment period is set to zero
+     *   - Dispute duration is set to zero
      *   - Voided is set to true
+     *   - Available quantity is set to zero
+     *   - Dispute resolver wallet is not registered
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
-     * - Dispute duration is zero
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
      * @param _twin - the fully populated twin struct
      */
     function createOfferAndTwinWithBundle(
         BosonTypes.Offer memory _offer,
-        uint256 _disputeValidDuration,
+        BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
         BosonTypes.Twin memory _twin
     )
     external;
@@ -135,22 +167,30 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
+     *   - Both voucher expiration date and voucher expiraton period are defined
+     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Voucher redeemable period is fixed, but it ends before it starts
+     *   - Voucher redeemable period is fixed, but it ends before offer expires
+     *   - Fulfillment period is set to zero
+     *   - Dispute duration is set to zero
      *   - Voided is set to true
+     *   - Available quantity is set to zero
+     *   - Dispute resolver wallet is not registered
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
-     * - Dispute duration is zero
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      */
     function createOfferWithConditionAndTwinAndBundle(
         BosonTypes.Offer memory _offer,
-        uint256 _disputeValidDuration,
+        BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
         BosonTypes.Condition memory _condition,
         BosonTypes.Twin memory _twin
     )
@@ -171,21 +211,29 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
+     *   - Both voucher expiration date and voucher expiraton period are defined
+     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Voucher redeemable period is fixed, but it ends before it starts
+     *   - Voucher redeemable period is fixed, but it ends before offer expires
+     *   - Fulfillment period is set to zero
+     *   - Dispute duration is set to zero
      *   - Voided is set to true
+     *   - Available quantity is set to zero
+     *   - Dispute resolver wallet is not registered
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
-     * - Dispute duration is zero
      * - Condition includes invalid combination of parameters
      *
      * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
      * @param _condition - the fully populated condition struct
      */
     function createSellerAndOfferWithCondition(
         BosonTypes.Seller memory _seller,
         BosonTypes.Offer memory _offer,
-        uint256 _disputeValidDuration,
+        BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
         BosonTypes.Condition memory _condition
     )
     external;
@@ -205,22 +253,30 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
+     *   - Both voucher expiration date and voucher expiraton period are defined
+     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Voucher redeemable period is fixed, but it ends before it starts
+     *   - Voucher redeemable period is fixed, but it ends before offer expires
+     *   - Fulfillment period is set to zero
+     *   - Dispute duration is set to zero
      *   - Voided is set to true
+     *   - Available quantity is set to zero
+     *   - Dispute resolver wallet is not registered
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
-     * - Dispute duration is zero
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
      * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
      * @param _twin - the fully populated twin struct
      */
     function createSellerAndOfferAndTwinWithBundle(
         BosonTypes.Seller memory _seller,
         BosonTypes.Offer memory _offer,
-        uint256 _disputeValidDuration,
+        BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
         BosonTypes.Twin memory _twin
     )
     external;
@@ -240,24 +296,32 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
+     *   - Both voucher expiration date and voucher expiraton period are defined
+     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Voucher redeemable period is fixed, but it ends before it starts
+     *   - Voucher redeemable period is fixed, but it ends before offer expires
+     *   - Fulfillment period is set to zero
+     *   - Dispute duration is set to zero
      *   - Voided is set to true
+     *   - Available quantity is set to zero
+     *   - Dispute resolver wallet is not registered
      *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
-     * - Dispute duration is zero
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
      * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
-     * @param _disputeValidDuration - the duration of disputes for exchanges associated with the offer
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      */
     function createSellerAndOfferWithConditionAndTwinAndBundle(
         BosonTypes.Seller memory _seller,
         BosonTypes.Offer memory _offer,
-        uint256 _disputeValidDuration,
+        BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
         BosonTypes.Condition memory _condition,
         BosonTypes.Twin memory _twin
     )
