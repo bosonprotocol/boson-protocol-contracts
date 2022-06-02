@@ -53,7 +53,7 @@ contract BosonTypes {
         bool active;
     }
 
-    struct Resolver {
+    struct DisputeResolver {
         uint256 id;
         address payable wallet;
         bool active;
@@ -67,15 +67,24 @@ contract BosonTypes {
         uint256 protocolFee;
         uint256 buyerCancelPenalty;
         uint256 quantityAvailable;
-        uint256 validFromDate;
-        uint256 validUntilDate;
-        uint256 redeemableFromDate;
-        uint256 fulfillmentPeriodDuration;
-        uint256 voucherValidDuration;
         address exchangeToken;
+        uint256 disputeResolverId;
         string metadataUri;
         string offerChecksum;
         bool voided;
+    }
+
+    struct OfferDates {
+        uint256 validFrom;
+        uint256 validUntil;
+        uint256 redeemableFrom;
+        uint256 redeemableUntil;
+    }
+
+    struct OfferDurations {
+        uint256 fulfillmentPeriod;
+        uint256 voucherValid;
+        uint256 disputeValid;
     }
 
     struct Group {
@@ -113,6 +122,13 @@ contract BosonTypes {
         string complaint;
         DisputeState state;
         Resolution resolution;
+    }
+
+    struct DisputeDates {
+        uint256 disputed;
+        uint256 escalated;
+        uint256 finalized;
+        uint256 timeout;
     }
 
     struct Resolution {

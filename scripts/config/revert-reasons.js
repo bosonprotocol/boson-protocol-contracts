@@ -10,6 +10,7 @@ exports.RevertReasons = {
   // General
   INVALID_ADDRESS: "Invalid address",
   INVALID_STATE: "Invalid state",
+  ARRAY_LENGTH_MISMATCH: "Array length mismatch",
 
   // Facet initializer related
   ALREADY_INITIALIZED: "Already initialized",
@@ -25,6 +26,12 @@ exports.RevertReasons = {
   OFFER_NOT_UPDATEABLE: "Offer not updateable",
   OFFER_MUST_BE_UNIQUE: "Offer must be unique to a group",
   EXCHANGE_FOR_OFFER_EXISTS: "Exchange for offer exists",
+  AMBIGOUS_VOUCHER_EXPIRY: "Exactly one of redeemableUntil and voucherValid must be non zero",
+  REDEMPTION_PERIOD_INVALID: "Redemption period invalid",
+  INVALID_FULFILLMENT_PERIOD: "Invalid fulfillemnt period",
+  INVALID_DISPUTE_DURATION: "Invalid dispute duration",
+  INVALID_DISPUTE_RESOLVER: "Invalid dispute resolver",
+  INVALID_QUANTITY_AVAILABLE: "Invalid quantity available",
 
   // Group related
   NO_SUCH_GROUP: "No such offer",
@@ -38,6 +45,7 @@ exports.RevertReasons = {
   NO_SUCH_SELLER: "No such seller",
   SELLER_ADDRESS_MUST_BE_UNIQUE: "Seller address cannot be assigned to another seller Id",
   BUYER_ADDRESS_MUST_BE_UNIQUE: "Buyer address cannot be assigned to another buyer Id",
+  DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE: "Dispute Resolver address cannot be assigned to another dispute resolver Id",
   NOT_ADMIN: "Not seller's admin",
   NOT_BUYER_WALLET: "Not buyer's wallet address",
   NO_SUCH_BUYER: "No such buyer",

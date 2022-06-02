@@ -9,7 +9,7 @@ import {IBosonAccountEvents} from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x18d9550a
+ * The ERC-165 identifier for this interface is: 0x1c0776a8
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
 
@@ -40,6 +40,20 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _buyer - the fully populated struct with buyer id set to 0x0
      */
     function createBuyer(BosonTypes.Buyer memory _buyer) external;
+
+    /**
+     * @notice Creates a Dispute Resolver
+     *
+     * Emits a DisputeResolverCreated event if successful.
+     *
+     * Reverts if:
+     * - Wallet address is zero address
+     * - Active is not true
+     * - Wallet address is not unique to this dispute resolver
+     *
+     * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
+     */
+    function createDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver) external;
 
     /**
      * @notice Updates a seller
@@ -101,6 +115,15 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @return buyer - the buyer details. See {BosonTypes.Buyer}
      */
     function getBuyer(uint256 _buyerId) external view returns (bool exists, BosonTypes.Buyer memory buyer);
+
+    /**
+     * @notice Gets the details about a dispute resolver.
+     *
+     * @param _disputeResolverId - the id of the resolver to check
+     * @return exists - the resolver was found
+     * @return disputeResolver - the resolver details. See {BosonTypes.DisputeResolver}
+     */
+    function getDisputeResolver(uint256 _disputeResolverId) external view returns (bool exists, BosonTypes.DisputeResolver memory disputeResolver);
 
     /**
      * @notice Gets the next account Id that can be assigned to an account.

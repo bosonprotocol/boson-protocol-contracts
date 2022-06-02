@@ -10,7 +10,7 @@ const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 describe("Offer", function () {
   // Suite-wide scope
   let offer, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let accounts, oneMonth, oneWeek;
+  let accounts;
   let id,
     sellerId,
     price,
@@ -18,11 +18,7 @@ describe("Offer", function () {
     protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
-    validFromDate,
-    validUntilDate,
-    redeemableFromDate,
-    fulfillmentPeriodDuration,
-    voucherValidDuration,
+    disputeResolverId,
     exchangeToken,
     metadataUri,
     offerChecksum,
@@ -35,10 +31,6 @@ describe("Offer", function () {
     // Get a list of accounts
     accounts = await ethers.getSigners();
 
-    // Some periods in milliseconds
-    oneWeek = 604800 * 1000; //  7 days in milliseconds
-    oneMonth = 2678400 * 1000; // 31 days in milliseconds
-
     // Required constructor params
     id = sellerId = "0";
     price = ethers.utils.parseUnits("1.5", "ether").toString();
@@ -46,12 +38,8 @@ describe("Offer", function () {
     protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
     buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
     quantityAvailable = "1";
-    validFromDate = ethers.BigNumber.from(Date.now()).toString(); // valid from now
-    validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // until 6 months
-    redeemableFromDate = ethers.BigNumber.from(Date.now() + oneWeek).toString(); // redeemable in 1 week
-    fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
-    voucherValidDuration = oneMonth.toString(); // offers valid for one month
     exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
+    disputeResolverId = "1"; // random valid address
     offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
     metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
     voided = false;
@@ -68,16 +56,24 @@ describe("Offer", function () {
         protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
-        validFromDate,
-        validUntilDate,
-        redeemableFromDate,
-        fulfillmentPeriodDuration,
-        voucherValidDuration,
         exchangeToken,
+        disputeResolverId,
         metadataUri,
         offerChecksum,
         voided
       );
+      expect(offer.idIsValid()).is.true;
+      expect(offer.sellerIdIsValid()).is.true;
+      expect(offer.priceIsValid()).is.true;
+      expect(offer.sellerDepositIsValid()).is.true;
+      expect(offer.protocolFeeIsValid()).is.true;
+      expect(offer.buyerCancelPenaltyIsValid()).is.true;
+      expect(offer.quantityAvailableIsValid()).is.true;
+      expect(offer.exchangeTokenIsValid()).is.true;
+      expect(offer.disputeResolverIdIsValid()).is.true;
+      expect(offer.metadataUriIsValid()).is.true;
+      expect(offer.offerChecksumIsValid()).is.true;
+      expect(offer.voidedIsValid()).is.true;
       expect(offer.isValid()).is.true;
     });
   });
@@ -93,12 +89,8 @@ describe("Offer", function () {
         protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
-        validFromDate,
-        validUntilDate,
-        redeemableFromDate,
-        fulfillmentPeriodDuration,
-        voucherValidDuration,
         exchangeToken,
+        disputeResolverId,
         metadataUri,
         offerChecksum,
         voided
@@ -268,141 +260,6 @@ describe("Offer", function () {
       expect(offer.isValid()).is.true;
     });
 
-    it("Always present, validFromDate must be the string representation of a BigNumber", async function () {
-      // Invalid field value
-      offer.validFromDate = "zedzdeadbaby";
-      expect(offer.validFromDateIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.validFromDate = new Date();
-      expect(offer.validFromDateIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.validFromDate = 12;
-      expect(offer.validFromDateIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Valid field value
-      offer.validFromDate = "0";
-      expect(offer.validFromDateIsValid()).is.true;
-      expect(offer.isValid()).is.true;
-
-      // Valid field value
-      offer.validFromDate = "126";
-      expect(offer.validFromDateIsValid()).is.true;
-      expect(offer.isValid()).is.true;
-    });
-
-    it("Always present, validUntilDate must be the string representation of a BigNumber", async function () {
-      // Invalid field value
-      offer.validUntilDate = "zedzdeadbaby";
-      expect(offer.validUntilDateIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.validUntilDate = new Date();
-      expect(offer.validUntilDateIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.validUntilDate = 12;
-      expect(offer.validUntilDateIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Valid field value
-      offer.validUntilDate = "0";
-      expect(offer.validUntilDateIsValid()).is.true;
-      expect(offer.isValid()).is.true;
-
-      // Valid field value
-      offer.validUntilDate = "126";
-      expect(offer.validUntilDateIsValid()).is.true;
-      expect(offer.isValid()).is.true;
-    });
-
-    it("Always present, redeemableFromDate must be the string representation of a BigNumber", async function () {
-      // Invalid field value
-      offer.redeemableFromDate = "zedzdeadbaby";
-      expect(offer.redeemableFromDateIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.redeemableFromDate = new Date();
-      expect(offer.redeemableFromDateIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.redeemableFromDate = 12;
-      expect(offer.redeemableFromDateIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Valid field value
-      offer.redeemableFromDate = "0";
-      expect(offer.redeemableFromDateIsValid()).is.true;
-      expect(offer.isValid()).is.true;
-
-      // Valid field value
-      offer.redeemableFromDate = "126";
-      expect(offer.redeemableFromDateIsValid()).is.true;
-      expect(offer.isValid()).is.true;
-    });
-
-    it("Always present, voucherValidDuration must be the string representation of a BigNumber", async function () {
-      // Invalid field value
-      offer.voucherValidDuration = "zedzdeadbaby";
-      expect(offer.voucherValidDurationIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.voucherValidDuration = new Date();
-      expect(offer.voucherValidDurationIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.voucherValidDuration = 12;
-      expect(offer.voucherValidDurationIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Valid field value
-      offer.voucherValidDuration = "0";
-      expect(offer.voucherValidDurationIsValid()).is.true;
-      expect(offer.isValid()).is.true;
-
-      // Valid field value
-      offer.voucherValidDuration = "126";
-      expect(offer.voucherValidDurationIsValid()).is.true;
-      expect(offer.isValid()).is.true;
-    });
-
-    it("Always present, fulfillmentPeriodDuration must be the string representation of a BigNumber", async function () {
-      // Invalid field value
-      offer.fulfillmentPeriodDuration = "zedzdeadbaby";
-      expect(offer.fulfillmentPeriodDurationIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.fulfillmentPeriodDuration = new Date();
-      expect(offer.fulfillmentPeriodDurationIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.fulfillmentPeriodDuration = 12;
-      expect(offer.fulfillmentPeriodDurationIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Valid field value
-      offer.fulfillmentPeriodDuration = "0";
-      expect(offer.fulfillmentPeriodDurationIsValid()).is.true;
-      expect(offer.isValid()).is.true;
-
-      // Valid field value
-      offer.fulfillmentPeriodDuration = "126";
-      expect(offer.fulfillmentPeriodDurationIsValid()).is.true;
-      expect(offer.isValid()).is.true;
-    });
-
     it("Always present, sellerId must be the string representation of a BigNumber", async function () {
       // Invalid field value
       offer.sellerId = "zedzdeadbaby";
@@ -449,6 +306,33 @@ describe("Offer", function () {
       // Valid field value
       offer.exchangeToken = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
       expect(offer.exchangeTokenIsValid()).is.true;
+      expect(offer.isValid()).is.true;
+    });
+
+    it("Always present, disputeResolverId must be the string representation of a BigNumber", async function () {
+      // Invalid field value
+      offer.disputeResolverId = "zedzdeadbaby";
+      expect(offer.disputeResolverIdIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Invalid field value
+      offer.disputeResolverId = new Date();
+      expect(offer.disputeResolverIdIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Invalid field value
+      offer.disputeResolverId = 12;
+      expect(offer.disputeResolverIdIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Valid field value
+      offer.disputeResolverId = "0";
+      expect(offer.disputeResolverIdIsValid()).is.true;
+      expect(offer.isValid()).is.true;
+
+      // Valid field value
+      offer.disputeResolverId = "126";
+      expect(offer.disputeResolverIdIsValid()).is.true;
       expect(offer.isValid()).is.true;
     });
 
@@ -523,12 +407,8 @@ describe("Offer", function () {
         protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
-        validFromDate,
-        validUntilDate,
-        redeemableFromDate,
-        fulfillmentPeriodDuration,
-        voucherValidDuration,
         exchangeToken,
+        disputeResolverId,
         metadataUri,
         offerChecksum,
         voided
@@ -544,12 +424,8 @@ describe("Offer", function () {
         protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
-        validFromDate,
-        validUntilDate,
-        redeemableFromDate,
-        fulfillmentPeriodDuration,
-        voucherValidDuration,
         exchangeToken,
+        disputeResolverId,
         metadataUri,
         offerChecksum,
         voided,
@@ -579,12 +455,8 @@ describe("Offer", function () {
           offer.protocolFee,
           offer.buyerCancelPenalty,
           offer.quantityAvailable,
-          offer.validFromDate,
-          offer.validUntilDate,
-          offer.redeemableFromDate,
-          offer.fulfillmentPeriodDuration,
-          offer.voucherValidDuration,
           offer.exchangeToken,
+          offer.disputeResolverId,
           offer.metadataUri,
           offer.offerChecksum,
           offer.voided,

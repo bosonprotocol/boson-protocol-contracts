@@ -6,6 +6,9 @@ const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
 const Offer = require("../../scripts/domain/Offer");
+const OfferDates = require("../../scripts/domain/OfferDates");
+const OfferDurations = require("../../scripts/domain/OfferDurations");
+const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -24,6 +27,7 @@ describe("IBosonAccountHandler", function () {
   let erc165, protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, fundsHandler, gasLimit;
   let seller, sellerStruct, active, seller2, seller2Struct, id2;
   let buyer, buyerStruct, buyer2, buyer2Struct;
+  let disputeResolver, disputeResolverStruct;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
   let oneMonth, oneWeek, blockNumber, block, protocolFeePrecentage;
@@ -35,16 +39,14 @@ describe("IBosonAccountHandler", function () {
     protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
-    validFromDate,
-    validUntilDate,
-    redeemableFromDate,
-    fulfillmentPeriodDuration,
-    voucherValidDuration,
     exchangeToken,
+    disputeResolverId,
     metadataUri,
-    metadataHash,
+    offerChecksum,
     voided,
     offer;
+  let validFrom, validUntil, redeemableFrom, redeemableUntil, offerDates;
+  let fulfillmentPeriod, voucherValid, disputeValid, offerDurations;
 
   before(async function () {
     // get interface Ids
@@ -746,7 +748,7 @@ describe("IBosonAccountHandler", function () {
   // All supported Buyer methods
   context("📋 Buyer Methods", async function () {
     beforeEach(async function () {
-      // The first seller id
+      // The first buyer id
       nextAccountId = "1";
       invalidAccountId = "666";
 
@@ -1023,6 +1025,14 @@ describe("IBosonAccountHandler", function () {
           [exists, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(operator.address);
           expect(exists).is.true;
 
+          // Create a valid dispute resolver
+          active = true;
+          disputeResolver = new DisputeResolver(id.add(1).toString(), other1.address, active);
+          expect(disputeResolver.isValid()).is.true;
+
+          // Register the dispute resolver
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+
           // Create an offer to commit to
           oneWeek = 604800 * 1000; //  7 days in milliseconds
           oneMonth = 2678400 * 1000; // 31 days in milliseconds
@@ -1037,41 +1047,52 @@ describe("IBosonAccountHandler", function () {
           protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
           buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
           quantityAvailable = "1";
-          validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-          validUntilDate = ethers.BigNumber.from(block.timestamp)
-            .add(oneMonth * 6)
-            .toString(); // until 6 months
-          redeemableFromDate = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-          fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
-          voucherValidDuration = oneMonth.toString(); // offers valid for one month
           exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-          metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-          metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
+          disputeResolverId = disputeResolver.id;
+          offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+          metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
           voided = false;
 
           // Create a valid offer entity
           offer = new Offer(
-            offerId.toString(),
+            id.toString(),
             sellerId.toString(),
             price,
             sellerDeposit,
             protocolFee,
             buyerCancelPenalty,
             quantityAvailable,
-            validFromDate,
-            validUntilDate,
-            redeemableFromDate,
-            fulfillmentPeriodDuration,
-            voucherValidDuration,
             exchangeToken,
+            disputeResolverId,
             metadataUri,
-            metadataHash,
+            offerChecksum,
             voided
           );
           expect(offer.isValid()).is.true;
 
+          // Required constructor params
+          validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
+          validUntil = ethers.BigNumber.from(block.timestamp)
+            .add(oneMonth * 6)
+            .toString(); // until 6 months
+          redeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+          redeemableUntil = "0"; // vouchers don't have fixed expiration date
+
+          // Create a valid offerDates, then set fields in tests directly
+          offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+          expect(offerDates.isValid()).is.true;
+
+          // Required constructor params
+          fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
+          voucherValid = oneMonth.toString(); // offers valid for one month
+          disputeValid = oneWeek.toString(); // dispute is valid for one month
+
+          // Create a valid offerDurations, then set fields in tests directly
+          offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+          expect(offerDurations.isValid()).is.true;
+
           // Create the offer
-          await offerHandler.connect(operator).createOffer(offer);
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
           // Deposit seller funds so the commit will succeed
           await fundsHandler
@@ -1180,6 +1201,136 @@ describe("IBosonAccountHandler", function () {
 
         // Validate
         expect(buyer.isValid()).to.be.true;
+      });
+    });
+  });
+
+  // All supported Dispute Resolver methods
+  context("📋 Dispute Resolver Methods", async function () {
+    beforeEach(async function () {
+      // The first dispute resolver id
+      nextAccountId = "1";
+      invalidAccountId = "666";
+
+      // Required constructor params
+      id = "1"; // argument sent to contract for createDisputeResolver will be ignored
+
+      active = true;
+
+      // Create a valid dispute resolver, then set fields in tests directly
+      disputeResolver = new DisputeResolver(id, other1.address, active);
+      expect(disputeResolver.isValid()).is.true;
+
+      // How that dispute resolver looks as a returned struct
+      disputeResolverStruct = disputeResolver.toStruct();
+    });
+
+    context("👉 createDisputeResolver()", async function () {
+      it("should emit a ResolverCreated event", async function () {
+        // Create a dispute resolver, testing for the event
+        await expect(accountHandler.connect(rando).createDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverCreated")
+          .withArgs(disputeResolver.id, disputeResolverStruct);
+      });
+
+      it("should update state", async function () {
+        // Create a dispute resolver
+        await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+
+        // Get the dispute resolver as a struct
+        [, disputeResolverStruct] = await accountHandler.connect(rando).getDisputeResolver(id);
+
+        // Parse into entity
+        let returnedResolver = DisputeResolver.fromStruct(disputeResolverStruct);
+
+        // Returned values should match the input in createDisputeResolver
+        for ([key, value] of Object.entries(disputeResolver)) {
+          expect(JSON.stringify(returnedResolver[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should ignore any provided id and assign the next available", async function () {
+        disputeResolver.id = "444";
+
+        // Create a dispute resolver, testing for the event
+        await expect(accountHandler.connect(rando).createDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverCreated")
+          .withArgs(nextAccountId, disputeResolverStruct);
+
+        // wrong dispute resolver id should not exist
+        [exists] = await accountHandler.connect(rando).getDisputeResolver(disputeResolver.id);
+        expect(exists).to.be.false;
+
+        // next dispute resolver id should exist
+        [exists] = await accountHandler.connect(rando).getDisputeResolver(nextAccountId);
+        expect(exists).to.be.true;
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("active is false", async function () {
+          disputeResolver.active = false;
+
+          // Attempt to Create a DisputeResolver, expecting revert
+          await expect(accountHandler.connect(rando).createDisputeResolver(disputeResolver)).to.revertedWith(
+            RevertReasons.MUST_BE_ACTIVE
+          );
+        });
+
+        it("addresses are the zero address", async function () {
+          disputeResolver.wallet = ethers.constants.AddressZero;
+
+          // Attempt to Create a DisputeResolver, expecting revert
+          await expect(accountHandler.connect(rando).createDisputeResolver(disputeResolver)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
+        });
+
+        it("wallet address is not unique to this buyerId", async function () {
+          // Create a dispute resolver
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+
+          // Attempt to create another dispute resolver with same wallet address
+          await expect(accountHandler.connect(rando).createDisputeResolver(disputeResolver)).to.revertedWith(
+            RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
+          );
+        });
+      });
+    });
+
+    context("👉 getDisputeResolver()", async function () {
+      beforeEach(async function () {
+        // Create a dispute resolver
+        await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+
+        // id of the current dispute resolver and increment nextAccountId
+        id = nextAccountId++;
+      });
+
+      it("should return true for exists if dispute resolver is found", async function () {
+        // Get the exists flag
+        [exists] = await accountHandler.connect(rando).getDisputeResolver(id);
+
+        // Validate
+        expect(exists).to.be.true;
+      });
+
+      it("should return false for exists if dispute resolver is not found", async function () {
+        // Get the exists flag
+        [exists] = await accountHandler.connect(rando).getDisputeResolver(invalidAccountId);
+
+        // Validate
+        expect(exists).to.be.false;
+      });
+
+      it("should return the details of the dispute resolver as a struct if found", async function () {
+        // Get the dispute resolver as a struct
+        [, disputeResolverStruct] = await accountHandler.connect(rando).getDisputeResolver(id);
+
+        // Parse into entity
+        disputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
+
+        // Validate
+        expect(disputeResolver.isValid()).to.be.true;
       });
     });
   });
