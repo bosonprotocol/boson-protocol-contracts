@@ -183,7 +183,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         bool exists;
         Buyer storage buyer;
 
-        //Check Buyer exists in sellers mapping
+        //Check Buyer exists in buyers mapping
         (exists, buyer) = fetchBuyer(_buyer.id);
 
         //Buyer must already exist
@@ -212,6 +212,53 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         
     }
+
+    /**
+     * @notice Updates a dispute resolver. All fields should be filled, even those staying the same.
+     *
+     * Emits a DisputeResolverUpdated event if successful.
+     *
+     * Reverts if:
+     * - Caller is not the wallet address associated with the dipute resolver account
+     * - Wallet address is zero address
+     * - Address is not unique to this dispute resolver
+     * - Dispute resolver does not exist
+     *
+     * @param _disputeResolver - the fully populated buydispute resolver struct
+     */
+    function updateDisputeResolver(DisputeResolver memory _disputeResolver) 
+    external
+    override
+    {
+        //Check for zero address
+        require(_disputeResolver.wallet != address(0), INVALID_ADDRESS);
+
+        bool exists;
+        DisputeResolver storage disputeResolver;
+        
+        //Check Dispute Resolver exists in  disputeResolvers mapping
+        (exists, disputeResolver) = fetchDisputeResolver(_disputeResolver.id);
+
+        //Dispute Resolver  must already exist
+        require(exists, NO_SUCH_DISPUTE_RESOLVER);
+
+        //Check that msg.sender is the wallet address for this dispute resolver
+        require(disputeResolver.wallet  == msg.sender, NOT_DISPUTE_RESOLVER_WALLET); 
+
+        //check that the wallet address is unique to one dispute resolverId if new
+        require(protocolStorage().disputeResolverIdByWallet[_disputeResolver.wallet] == 0 || 
+                protocolStorage().disputeResolverIdByWallet[_disputeResolver.wallet] == _disputeResolver.id, DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
+       
+        //Delete current mappings
+        delete protocolStorage().disputeResolverIdByWallet[msg.sender];
+
+        storeDisputeResolver(_disputeResolver);
+        
+        // Notify watchers of state change
+        emit DisputeResolverUpdated(_disputeResolver.id, _disputeResolver);
+
+    }
+
   
     /**
      * @notice Gets the details about a seller.
@@ -345,7 +392,5 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         //Map the dispute resolver's wallet address to the dispute resolver Id.
         protocolStorage().disputeResolverIdByWallet[_disputeResolver.wallet] = _disputeResolver.id;
     }
-
-   
 
 }
