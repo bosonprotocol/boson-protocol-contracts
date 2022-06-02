@@ -83,6 +83,18 @@ describe("Offer", function () {
         offerChecksum,
         voided
       );
+      expect(offer.idIsValid()).is.true;
+      expect(offer.sellerIdIsValid()).is.true;
+      expect(offer.priceIsValid()).is.true;
+      expect(offer.sellerDepositIsValid()).is.true;
+      expect(offer.protocolFeeIsValid()).is.true;
+      expect(offer.buyerCancelPenaltyIsValid()).is.true;
+      expect(offer.quantityAvailableIsValid()).is.true;
+      expect(offer.exchangeTokenIsValid()).is.true;
+      expect(offer.disputeResolverIsValid()).is.true;
+      expect(offer.metadataUriIsValid()).is.true;
+      expect(offer.offerChecksumIsValid()).is.true;
+      expect(offer.voidedIsValid()).is.true;
       expect(offer.isValid()).is.true;
     });
 

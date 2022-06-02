@@ -374,6 +374,91 @@ describe("IBosonOfferHandler", function () {
             RevertReasons.OFFER_MUST_BE_ACTIVE
           );
         });
+
+        it("Both voucher expiration date and voucher expiraton period are defined", async function () {
+          // Set both redeemableUntil and voucherValid
+          offerDates.redeemableUntil = (Number(offerDates.redeemableFrom) + oneMonth).toString();
+          offerDurations.voucherValid = oneMonth.toString();
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.AMBIGOUS_VOUCHER_EXPIRY
+          );
+        });
+
+        it("Neither of voucher expiration date and voucher expiraton period are defined", async function () {
+          // Set both redeemableUntil and voucherValid to "0"
+          offerDates.redeemableUntil = "0";
+          offerDurations.voucherValid = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.AMBIGOUS_VOUCHER_EXPIRY
+          );
+        });
+
+        it("Voucher redeemable period is fixed, but it ends before it starts", async function () {
+          // Set both redeemableUntil that is less than redeemableFrom
+          offerDates.redeemableUntil = (Number(offerDates.redeemableFrom) - 10).toString();
+          offerDurations.voucherValid = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.REDEMPTION_PERIOD_INVALID
+          );
+        });
+
+        it("Voucher redeemable period is fixed, but it ends before offer expires", async function () {
+          // Set both redeemableUntil that is more than redeemableFrom but less than validUntil
+          offerDates.redeemableFrom = "0";
+          offerDates.redeemableUntil = (Number(offerDates.validUntil) - 10).toString();
+          offerDurations.voucherValid = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.REDEMPTION_PERIOD_INVALID
+          );
+        });
+
+        it("Fulfillment period is set to zero", async function () {
+          // Set fulfilment period to 0
+          offerDurations.fulfillmentPeriod = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.INVALID_FULFILLMENT_PERIOD
+          );
+        });
+
+        it("Dispute duration is set to zero", async function () {
+          // Set dispute duration period to 0
+          offerDurations.disputeValid = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.INVALID_DISPUTE_DURATION
+          );
+        });
+
+        it("Available quantity is set to zero", async function () {
+          // Set available quantity to 0
+          offer.quantityAvailable = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.INVALID_QUANTITY_AVAILABLE
+          );
+        });
+
+        it("Dispute resolver wallet is not registered", async function () {
+          // Set some address that is not registered as a dispute resolver
+          offer.disputeResolver = rando.address;
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.INVALID_DISPUTE_RESOLVER
+          );
+        });
       });
     });
 
@@ -981,8 +1066,115 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
         });
 
-        it("Number of dispute valid duration does not match the number of offers", async function () {
-          // Make dispute valid durations longer
+        it("For some offer, both voucher expiration date and voucher expiraton period are defined", async function () {
+          // Set both redeemableUntil and voucherValid
+          offerDatesList[2].redeemableUntil = ethers.BigNumber.from(offerDatesList[2].redeemableFrom)
+            .add(oneMonth)
+            .toString();
+          offerDurationsList[2].voucherValid = oneMonth.toString();
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+        });
+
+        it("For some offer, neither of voucher expiration date and voucher expiraton period are defined", async function () {
+          // Set both redeemableUntil and voucherValid to "0"
+          offerDatesList[1].redeemableUntil = "0";
+          offerDurationsList[1].voucherValid = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+        });
+
+        it("For some offer, voucher redeemable period is fixed, but it ends before it starts", async function () {
+          // Set both redeemableUntil that is less than redeemableFrom
+          offerDatesList[0].redeemableUntil = ethers.BigNumber.from(offerDatesList[0].redeemableFrom)
+            .sub(10)
+            .toString();
+          offerDurationsList[0].voucherValid = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
+        });
+
+        it("For some offer, voucher redeemable period is fixed, but it ends before offer expires", async function () {
+          // Set both redeemableUntil that is more than redeemableFrom but less than validUntil
+          offerDatesList[2].redeemableFrom = "0";
+          offerDatesList[2].redeemableUntil = (Number(offerDatesList[2].validUntil) - 10).toString();
+          offerDurationsList[2].voucherValid = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
+        });
+
+        it("For some offer, fulfillment period is set to zero", async function () {
+          // Set fulfilment period to 0
+          offerDurationsList[1].fulfillmentPeriod = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
+        });
+
+        it("For some offer, dispute duration is set to zero", async function () {
+          // Set dispute duration period to 0
+          offerDurationsList[0].disputeValid = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
+        });
+
+        it("For some offer, available quantity is set to zero", async function () {
+          // Set available quantity to 0
+          offer.quantityAvailable = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.INVALID_QUANTITY_AVAILABLE);
+        });
+
+        it("For some offer, dispute resolver wallet is not registered", async function () {
+          // Set some address that is not registered as a dispute resolver
+          offer.disputeResolver = rando.address;
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("Number of dispute dates does not match the number of offers", async function () {
+          // Make dispute dates longer
+          offerDatesList.push(new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil));
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
+
+          // Make dispute dates shorter
+          offerDatesList = offerDatesList.slice(0, -2);
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
+        });
+
+        it("Number of dispute durations does not match the number of offers", async function () {
+          // Make dispute durations longer
           offerDurationsList.push(new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid));
 
           // Attempt to Create an offer, expecting revert
@@ -990,7 +1182,7 @@ describe("IBosonOfferHandler", function () {
             offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
           ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
 
-          // Make dispute valid durations shorter
+          // Make dispute durations shorter
           offerDurationsList = offerDurationsList.slice(0, -2);
 
           // Attempt to Create an offer, expecting revert

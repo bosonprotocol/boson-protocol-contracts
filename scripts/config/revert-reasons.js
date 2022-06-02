@@ -26,7 +26,12 @@ exports.RevertReasons = {
   OFFER_NOT_UPDATEABLE: "Offer not updateable",
   OFFER_MUST_BE_UNIQUE: "Offer must be unique to a group",
   EXCHANGE_FOR_OFFER_EXISTS: "Exchange for offer exists",
+  AMBIGOUS_VOUCHER_EXPIRY: "Exactly one of redeemableUntil and voucherValid must be non zero",
+  REDEMPTION_PERIOD_INVALID: "Redemption period invalid",
+  INVALID_FULFILLMENT_PERIOD: "Invalid fulfillemnt period",
   INVALID_DISPUTE_DURATION: "Invalid dispute duration",
+  INVALID_DISPUTE_RESOLVER: "Invalid dispute resolver",
+  INVALID_QUANTITY_AVAILABLE: "Invalid quantity available",
 
   // Group related
   NO_SUCH_GROUP: "No such offer",
