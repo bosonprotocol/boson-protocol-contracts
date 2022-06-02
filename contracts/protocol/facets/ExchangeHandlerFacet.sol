@@ -547,17 +547,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, TwinBase {
             // Get the twin Ids in the bundle
             uint256[] storage twinIds = bundle.twinIds;
 
+            // Get seller account
+            (,Seller storage seller) = fetchSeller(bundle.sellerId);
+
             // Visit the twins
             for (uint256 j = 0; j < twinIds.length; j++) {
 
                 // Get the twin
                 (,Twin storage twin) = fetchTwin(twinIds[j]);
-
-                // Get the twin token contract
-                ITwinToken token = ITwinToken(twin.tokenAddress);
-
-                // Get seller account
-                (,Seller storage seller) = fetchSeller(twin.sellerId);
 
                 // Transfer the token from the seller's operator to the buyer
                 // N.B. Using call here so as to normalize the revert reason
