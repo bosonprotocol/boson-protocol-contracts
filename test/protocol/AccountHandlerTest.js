@@ -1344,7 +1344,7 @@ describe("IBosonAccountHandler", function () {
           .withArgs(disputeResolver.id, disputeResolverStruct);
       });
 
-      it("should update state of all fields exceipt Id", async function () {
+      it("should update state of all fields except Id", async function () {
         disputeResolver.wallet = other2.address;
         disputeResolver.active = false;
         expect(disputeResolver.isValid()).is.true;
@@ -1425,7 +1425,7 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should update the correct dispute resolver", async function () {
-        // Confgiure another dispute resolver
+        // Configure another dispute resolver
         id2 = nextAccountId++;
         disputeResolver2 = new DisputeResolver(id2.toString(), other3.address, active);
         expect(disputeResolver2.isValid()).is.true;
