@@ -364,6 +364,7 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(disputeValid).toString();
       });
 
       it("should emit a DisputeRetracted event", async function () {
@@ -383,20 +384,20 @@ describe("IBosonDisputeHandler", function () {
         finalizedDate = block.timestamp.toString();
 
         dispute = new Dispute(exchange.id, complaint, DisputeState.Retracted, new Resolution("0"));
-        expectedDisputeDates = new DisputeDates(disputedDate, "0", finalizedDate, "0");
+        disputeDates = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
 
         // Get the dispute as a struct
-        [, disputeStruct, disputeDates] = await disputeHandler.connect(rando).getDispute(exchange.id);
+        [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
         // Parse into entities
         let returnedDispute = Dispute.fromStruct(disputeStruct);
-        const returnedDisputeDates = DisputeDates.fromStruct(disputeDates);
+        const returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
 
         // Returned values should match the input in createSeller
         for (const [key, value] of Object.entries(dispute)) {
           expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
         }
-        for (const [key, value] of Object.entries(expectedDisputeDates)) {
+        for (const [key, value] of Object.entries(disputeDates)) {
           expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
         }
 

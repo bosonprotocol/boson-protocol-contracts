@@ -104,7 +104,8 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);
 
         // update dispute and exchange
-        fetchDisputeDates(_exchangeId)[DisputeDate.Finalized] = block.timestamp;
+        (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
+        disputeDates.finalized = block.timestamp;
         dispute.state = DisputeState.Retracted;
         exchange.finalizedDate = block.timestamp;
 
