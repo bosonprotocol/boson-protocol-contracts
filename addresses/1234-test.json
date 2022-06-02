@@ -5,27 +5,27 @@
   "contracts": [
     {
       "name": "AccessController",
-      "address": "0xF481196A05aF5Cf33fA73E7355a3d5744e39Df38",
+      "address": "0xdBF2daCa2062792EDAB93451E81F1cC9CecCFc95",
       "args": []
     },
     {
       "name": "DiamondLoupeFacet",
-      "address": "0x4492e4FC2B5B42B8d84B85333e46d05E7F65EE35",
+      "address": "0xC356daAeeB1175C5bcc983109Ef6238a7b1dB00A",
       "args": []
     },
     {
       "name": "DiamondCutFacet",
-      "address": "0x68F989F49f65259C550E33Db532fC4437A11ca94",
+      "address": "0x1d07f8dF17756F6912ef5EEb08312Acfbc313071",
       "args": []
     },
     {
       "name": "ProtocolDiamond",
-      "address": "0xbC8508fBFBe5B034364E7241c459c6bD30c4fbC0",
+      "address": "0x38bA3B172b5a47060716467D234c79A0E157ff1c",
       "args": [
-        "0xF481196A05aF5Cf33fA73E7355a3d5744e39Df38",
+        "0xdBF2daCa2062792EDAB93451E81F1cC9CecCFc95",
         [
           [
-            "0x4492e4FC2B5B42B8d84B85333e46d05E7F65EE35",
+            "0xC356daAeeB1175C5bcc983109Ef6238a7b1dB00A",
             0,
             [
               "0xcdffacc6",
@@ -35,7 +35,7 @@
             ]
           ],
           [
-            "0x68F989F49f65259C550E33Db532fC4437A11ca94",
+            "0x1d07f8dF17756F6912ef5EEb08312Acfbc313071",
             0,
             [
               "0x1f931c1c"
@@ -51,66 +51,66 @@
     },
     {
       "name": "ConfigHandlerFacet",
-      "address": "0xD550a291b601179b26c7A21CCdD09805B393655B",
+      "address": "0x45F00143b495122f24674AC326756C9fC097e267",
       "args": []
     },
     {
       "name": "DisputeHandlerFacet",
-      "address": "0xd5B8312FB443FC3aeb0Bd348a168e6137715a564",
+      "address": "0xef18Cd25d6ef0575BaA10d80BDB0475Edc98d3E4",
       "args": []
     },
     {
       "name": "ExchangeHandlerFacet",
-      "address": "0xF2936c71A87f32A753b9A6E0b66CcD51AF6b8766",
+      "address": "0xC3ec927dC953D1EcD741FEc15cCe1ada38AF6991",
       "args": []
     },
     {
       "name": "FundsHandlerFacet",
-      "address": "0x17540f86439B0E6113b20BF672E946711c8B56C3",
+      "address": "0x13021555929D52cE24037b5c9C5c0d14F2674D11",
       "args": []
     },
     {
       "name": "OfferHandlerFacet",
-      "address": "0xbe2121d4C01a7236957cC4c61ED5031C21d1c796",
+      "address": "0xc8E4ac0fc2B03428A3A458a3BD36D3b70Bbe9414",
       "args": []
     },
     {
       "name": "TwinHandlerFacet",
-      "address": "0x137f6dBf10DF6c0D3d1F566382aBCd4CAb503637",
+      "address": "0x7ED9F77F91486425c2082785865d1B24a8a8429a",
       "args": []
     },
     {
       "name": "BundleHandlerFacet",
-      "address": "0x3e216Ee461c1dDB9898d299681fca1Da61E783f0",
+      "address": "0x6190193dbAaF8A4844CF9E93473C01DC5837D0b7",
       "args": []
     },
     {
       "name": "AccountHandlerFacet",
-      "address": "0xb67A4b4Af123D06324E67a07e76c8ffDc4210c52",
+      "address": "0xCae9e6e6F8daFbcedF631cf8F7C8B7FB28cef68d",
       "args": []
     },
     {
       "name": "GroupHandlerFacet",
-      "address": "0x986c09A7263709A3991A3C0B3Bb47ac4B2f0C5AC",
+      "address": "0x95233e6F140D3A1Db0Ae5aaD611dB954231966B4",
       "args": []
     },
     {
       "name": "OrchestrationHandlerFacet",
-      "address": "0xe367E472C6e51CDE21339c38bFffFAe9B833e81c",
+      "address": "0x4467386416948d763913d1BB918E86C91f5B35E9",
       "args": []
     },
     {
       "name": "BosonVoucher Logic",
-      "address": "0xAFF9D5C4f11d6BFCb4bab641a32D4aC275Dc2429",
+      "address": "0x5c8682c84b5BED89a333C4B9c6CE6E636b87ECd0",
       "args": []
     },
     {
       "name": "BosonVoucher Proxy",
-      "address": "0x91B1f9A21840f9585A59393eAB13477Ce91CBbf4",
+      "address": "0x84dab71782E551C3E77F0B561F082acF2bD03B68",
       "args": [
-        "0xF481196A05aF5Cf33fA73E7355a3d5744e39Df38",
-        "0xbC8508fBFBe5B034364E7241c459c6bD30c4fbC0",
-        "0xAFF9D5C4f11d6BFCb4bab641a32D4aC275Dc2429"
+        "0xdBF2daCa2062792EDAB93451E81F1cC9CecCFc95",
+        "0x38bA3B172b5a47060716467D234c79A0E157ff1c",
+        "0x5c8682c84b5BED89a333C4B9c6CE6E636b87ECd0"
       ]
     }
   ]
