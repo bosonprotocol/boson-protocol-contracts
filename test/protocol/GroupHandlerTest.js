@@ -37,7 +37,7 @@ describe("IBosonGroupHandler", function () {
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
-    disputeResolverAddress,
+    disputeResolverId,
     metadataUri,
     offerChecksum,
     voided;
@@ -160,7 +160,7 @@ describe("IBosonGroupHandler", function () {
         buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
         quantityAvailable = `${(i + 1) * 2}`;
         exchangeToken = ethers.constants.AddressZero.toString();
-        disputeResolverAddress = disputeResolver.wallet;
+        disputeResolverId = "2";
         offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
         metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
         voided = false;
@@ -175,7 +175,7 @@ describe("IBosonGroupHandler", function () {
           buyerCancelPenalty,
           quantityAvailable,
           exchangeToken,
-          disputeResolverAddress,
+          disputeResolverId,
           metadataUri,
           offerChecksum,
           voided

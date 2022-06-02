@@ -105,7 +105,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         require(_offer.quantityAvailable > 0, INVALID_QUANTITY_AVAILABLE);
 
         // specified resolver must be registered
-        require(protocolStorage().disputeResolverIdByWallet[_offer.disputeResolver] != 0, INVALID_DISPUTE_RESOLVER);
+        (bool exists,) = fetchDisputeResolver(_offer.disputeResolverId);
+        require(exists, INVALID_DISPUTE_RESOLVER);
 
         // Calculate and set the protocol fee
         uint256 protocolFee = protocolStorage().protocolFeePercentage*(_offer.price + _offer.sellerDeposit)/10000;
@@ -128,7 +129,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.protocolFee = _offer.protocolFee;
         offer.buyerCancelPenalty = _offer.buyerCancelPenalty;
         offer.quantityAvailable = _offer.quantityAvailable;
-        offer.disputeResolver = _offer.disputeResolver;
+        offer.disputeResolverId = _offer.disputeResolverId;
         offer.exchangeToken = _offer.exchangeToken;
         offer.metadataUri = _offer.metadataUri;
         offer.offerChecksum = _offer.offerChecksum;

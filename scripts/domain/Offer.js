@@ -17,7 +17,7 @@ class Offer {
             uint256 buyerCancelPenalty;
             uint256 quantityAvailable;
             address exchangeToken;
-            address disputeResolver;
+            uint256 disputeResolverId;
             string metadataUri;
             string offerChecksum;
             bool voided;
@@ -33,7 +33,7 @@ class Offer {
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
-    disputeResolver,
+    disputeResolverId,
     metadataUri,
     offerChecksum,
     voided
@@ -46,7 +46,7 @@ class Offer {
     this.buyerCancelPenalty = buyerCancelPenalty;
     this.quantityAvailable = quantityAvailable;
     this.exchangeToken = exchangeToken;
-    this.disputeResolver = disputeResolver;
+    this.disputeResolverId = disputeResolverId;
     this.metadataUri = metadataUri;
     this.offerChecksum = offerChecksum;
     this.voided = voided;
@@ -67,7 +67,7 @@ class Offer {
       buyerCancelPenalty,
       quantityAvailable,
       exchangeToken,
-      disputeResolver,
+      disputeResolverId,
       metadataUri,
       offerChecksum,
       voided,
@@ -82,7 +82,7 @@ class Offer {
       buyerCancelPenalty,
       quantityAvailable,
       exchangeToken,
-      disputeResolver,
+      disputeResolverId,
       metadataUri,
       offerChecksum,
       voided
@@ -103,7 +103,7 @@ class Offer {
       buyerCancelPenalty,
       quantityAvailable,
       exchangeToken,
-      disputeResolver,
+      disputeResolverId,
       metadataUri,
       offerChecksum,
       voided;
@@ -118,7 +118,7 @@ class Offer {
       buyerCancelPenalty,
       quantityAvailable,
       exchangeToken,
-      disputeResolver,
+      disputeResolverId,
       metadataUri,
       offerChecksum,
       voided,
@@ -133,7 +133,7 @@ class Offer {
       buyerCancelPenalty: buyerCancelPenalty.toString(),
       quantityAvailable: quantityAvailable.toString(),
       exchangeToken,
-      disputeResolver,
+      disputeResolverId: disputeResolverId.toString(),
       metadataUri,
       offerChecksum,
       voided,
@@ -170,7 +170,7 @@ class Offer {
       this.buyerCancelPenalty,
       this.quantityAvailable,
       this.exchangeToken,
-      this.disputeResolver,
+      this.disputeResolverId,
       this.metadataUri,
       this.offerChecksum,
       this.voided,
@@ -300,17 +300,17 @@ class Offer {
   }
 
   /**
-   * Is this Offer instance's disputeResolver field valid?
-   * Must be a eip55 compliant Ethereum address
+   * Is this Offer instance's disputeResolverId field valid?
+   * Must be a string representation of a big number
    * Use "0x000.." for chain base currency, e.g., ETH
    *
    * @returns {boolean}
    */
-  disputeResolverIsValid() {
+  disputeResolverIdIsValid() {
     let valid = false;
-    let { disputeResolver } = this;
+    let { disputeResolverId } = this;
     try {
-      valid = eip55.verify(eip55.encode(disputeResolver));
+      valid = typeof disputeResolverId === "string" && typeof ethers.BigNumber.from(disputeResolverId) === "object";
     } catch (e) {}
     return valid;
   }
@@ -372,7 +372,7 @@ class Offer {
       this.buyerCancelPenaltyIsValid() &&
       this.quantityAvailableIsValid() &&
       this.exchangeTokenIsValid() &&
-      this.disputeResolverIsValid() &&
+      this.disputeResolverIdIsValid() &&
       this.metadataUriIsValid() &&
       this.offerChecksumIsValid() &&
       this.voidedIsValid()

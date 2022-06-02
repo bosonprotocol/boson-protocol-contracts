@@ -35,7 +35,7 @@ describe("IBosonOfferHandler", function () {
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
-    disputeResolverAddress,
+    disputeResolverId,
     metadataUri,
     offerChecksum,
     voided;
@@ -173,7 +173,7 @@ describe("IBosonOfferHandler", function () {
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-      disputeResolverAddress = disputeResolver.wallet;
+      disputeResolverId = "2";
       offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
       metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
       voided = false;
@@ -188,7 +188,7 @@ describe("IBosonOfferHandler", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
-        disputeResolverAddress,
+        disputeResolverId,
         metadataUri,
         offerChecksum,
         voided
@@ -239,7 +239,7 @@ describe("IBosonOfferHandler", function () {
         await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
@@ -452,7 +452,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Dispute resolver wallet is not registered", async function () {
           // Set some address that is not registered as a dispute resolver
-          offer.disputeResolver = rando.address;
+          offer.disputeResolverId = "16";
 
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
@@ -840,7 +840,7 @@ describe("IBosonOfferHandler", function () {
         protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
         quantityAvailable = `${(i + 1) * 2}`;
         exchangeToken = ethers.constants.AddressZero.toString();
-        disputeResolverAddress = disputeResolver.wallet;
+        disputeResolverId = "2";
         offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
         metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
         voided = false;
@@ -855,7 +855,7 @@ describe("IBosonOfferHandler", function () {
           buyerCancelPenalty,
           quantityAvailable,
           exchangeToken,
-          disputeResolverAddress,
+          disputeResolverId,
           metadataUri,
           offerChecksum,
           voided
@@ -1137,7 +1137,7 @@ describe("IBosonOfferHandler", function () {
 
         it("For some offer, available quantity is set to zero", async function () {
           // Set available quantity to 0
-          offer.quantityAvailable = "0";
+          offers[2].quantityAvailable = "0";
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -1147,7 +1147,7 @@ describe("IBosonOfferHandler", function () {
 
         it("For some offer, dispute resolver wallet is not registered", async function () {
           // Set some address that is not registered as a dispute resolver
-          offer.disputeResolver = rando.address;
+          offers[1].disputeResolveId = "16";
 
           // Attempt to Create an offer, expecting revert
           await expect(

@@ -18,7 +18,7 @@ describe("Offer", function () {
     protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
-    disputeResolver,
+    disputeResolverId,
     exchangeToken,
     metadataUri,
     offerChecksum,
@@ -39,7 +39,7 @@ describe("Offer", function () {
     buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
     quantityAvailable = "1";
     exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-    disputeResolver = "0x5b757B075C7973B7e2fc57b0347E9D1CFCB172a9"; // random valid address
+    disputeResolverId = "1"; // random valid address
     offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
     metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
     voided = false;
@@ -57,11 +57,23 @@ describe("Offer", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
-        disputeResolver,
+        disputeResolverId,
         metadataUri,
         offerChecksum,
         voided
       );
+      expect(offer.idIsValid()).is.true;
+      expect(offer.sellerIdIsValid()).is.true;
+      expect(offer.priceIsValid()).is.true;
+      expect(offer.sellerDepositIsValid()).is.true;
+      expect(offer.protocolFeeIsValid()).is.true;
+      expect(offer.buyerCancelPenaltyIsValid()).is.true;
+      expect(offer.quantityAvailableIsValid()).is.true;
+      expect(offer.exchangeTokenIsValid()).is.true;
+      expect(offer.disputeResolverIdIsValid()).is.true;
+      expect(offer.metadataUriIsValid()).is.true;
+      expect(offer.offerChecksumIsValid()).is.true;
+      expect(offer.voidedIsValid()).is.true;
       expect(offer.isValid()).is.true;
     });
   });
@@ -78,23 +90,11 @@ describe("Offer", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
-        disputeResolver,
+        disputeResolverId,
         metadataUri,
         offerChecksum,
         voided
       );
-      expect(offer.idIsValid()).is.true;
-      expect(offer.sellerIdIsValid()).is.true;
-      expect(offer.priceIsValid()).is.true;
-      expect(offer.sellerDepositIsValid()).is.true;
-      expect(offer.protocolFeeIsValid()).is.true;
-      expect(offer.buyerCancelPenaltyIsValid()).is.true;
-      expect(offer.quantityAvailableIsValid()).is.true;
-      expect(offer.exchangeTokenIsValid()).is.true;
-      expect(offer.disputeResolverIsValid()).is.true;
-      expect(offer.metadataUriIsValid()).is.true;
-      expect(offer.offerChecksumIsValid()).is.true;
-      expect(offer.voidedIsValid()).is.true;
       expect(offer.isValid()).is.true;
     });
 
@@ -309,25 +309,30 @@ describe("Offer", function () {
       expect(offer.isValid()).is.true;
     });
 
-    it("Always present, disputeResolver must be a string representation of an EIP-55 compliant address", async function () {
+    it("Always present, disputeResolverId must be the string representation of a BigNumber", async function () {
       // Invalid field value
-      offer.disputeResolver = "0xASFADF";
-      expect(offer.disputeResolverIsValid()).is.false;
+      offer.disputeResolverId = "zedzdeadbaby";
+      expect(offer.disputeResolverIdIsValid()).is.false;
       expect(offer.isValid()).is.false;
 
       // Invalid field value
-      offer.disputeResolver = "zedzdeadbaby";
-      expect(offer.disputeResolverIsValid()).is.false;
+      offer.disputeResolverId = new Date();
+      expect(offer.disputeResolverIdIsValid()).is.false;
+      expect(offer.isValid()).is.false;
+
+      // Invalid field value
+      offer.disputeResolverId = 12;
+      expect(offer.disputeResolverIdIsValid()).is.false;
       expect(offer.isValid()).is.false;
 
       // Valid field value
-      offer.disputeResolver = accounts[0].address;
-      expect(offer.disputeResolverIsValid()).is.true;
+      offer.disputeResolverId = "0";
+      expect(offer.disputeResolverIdIsValid()).is.true;
       expect(offer.isValid()).is.true;
 
       // Valid field value
-      offer.disputeResolver = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
-      expect(offer.disputeResolverIsValid()).is.true;
+      offer.disputeResolverId = "126";
+      expect(offer.disputeResolverIdIsValid()).is.true;
       expect(offer.isValid()).is.true;
     });
 
@@ -403,7 +408,7 @@ describe("Offer", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
-        disputeResolver,
+        disputeResolverId,
         metadataUri,
         offerChecksum,
         voided
@@ -420,7 +425,7 @@ describe("Offer", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
-        disputeResolver,
+        disputeResolverId,
         metadataUri,
         offerChecksum,
         voided,
@@ -451,7 +456,7 @@ describe("Offer", function () {
           offer.buyerCancelPenalty,
           offer.quantityAvailable,
           offer.exchangeToken,
-          offer.disputeResolver,
+          offer.disputeResolverId,
           offer.metadataUri,
           offer.offerChecksum,
           offer.voided,

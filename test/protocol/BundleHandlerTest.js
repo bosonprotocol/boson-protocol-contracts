@@ -62,7 +62,7 @@ describe("IBosonBundleHandler", function () {
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
-    disputeResolverAddress,
+    disputeResolverId,
     metadataUri,
     offerChecksum,
     voided,
@@ -219,7 +219,7 @@ describe("IBosonBundleHandler", function () {
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
         exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-        disputeResolverAddress = disputeResolver.wallet;
+        disputeResolverId = "2";
         offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
         metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
         voided = false;
@@ -234,7 +234,7 @@ describe("IBosonBundleHandler", function () {
           buyerCancelPenalty,
           quantityAvailable,
           exchangeToken,
-          disputeResolverAddress,
+          disputeResolverId,
           metadataUri,
           offerChecksum,
           voided

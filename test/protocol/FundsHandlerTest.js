@@ -48,7 +48,7 @@ describe("IBosonFundsHandler", function () {
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
-    disputeResolverAddress,
+    disputeResolverId,
     metadataUri,
     offerChecksum,
     voided;
@@ -359,7 +359,7 @@ describe("IBosonFundsHandler", function () {
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "2";
         exchangeToken = mockToken.address; // Mock token addres
-        disputeResolverAddress = disputeResolver.wallet;
+        disputeResolverId = "2";
         offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
         metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
         voided = false;
@@ -374,7 +374,7 @@ describe("IBosonFundsHandler", function () {
           buyerCancelPenalty,
           quantityAvailable,
           exchangeToken,
-          disputeResolverAddress,
+          disputeResolverId,
           metadataUri,
           offerChecksum,
           voided
@@ -1220,7 +1220,7 @@ describe("IBosonFundsHandler", function () {
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "2";
       exchangeToken = mockToken.address; // MockToken address
-      disputeResolverAddress = disputeResolver.wallet;
+      disputeResolverId = "2";
       offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
       metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
       voided = false;
@@ -1235,7 +1235,7 @@ describe("IBosonFundsHandler", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
-        disputeResolverAddress,
+        disputeResolverId,
         metadataUri,
         offerChecksum,
         voided

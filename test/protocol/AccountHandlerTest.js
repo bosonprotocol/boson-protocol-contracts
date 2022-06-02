@@ -40,7 +40,7 @@ describe("IBosonAccountHandler", function () {
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
-    disputeResolverAddress,
+    disputeResolverId,
     metadataUri,
     offerChecksum,
     voided,
@@ -1027,7 +1027,7 @@ describe("IBosonAccountHandler", function () {
 
           // Create a valid dispute resolver
           active = true;
-          disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+          disputeResolver = new DisputeResolver(id.add(1).toString(), other1.address, active);
           expect(disputeResolver.isValid()).is.true;
 
           // Register the dispute resolver
@@ -1048,7 +1048,7 @@ describe("IBosonAccountHandler", function () {
           buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
           quantityAvailable = "1";
           exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-          disputeResolverAddress = disputeResolver.wallet;
+          disputeResolverId = disputeResolver.id;
           offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
           metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
           voided = false;
@@ -1063,7 +1063,7 @@ describe("IBosonAccountHandler", function () {
             buyerCancelPenalty,
             quantityAvailable,
             exchangeToken,
-            disputeResolverAddress,
+            disputeResolverId,
             metadataUri,
             offerChecksum,
             voided
