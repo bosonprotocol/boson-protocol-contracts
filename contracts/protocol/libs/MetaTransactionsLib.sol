@@ -9,7 +9,7 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
  * @dev Provides the domain seperator and chain id.
  */
 library MetaTransactionsLib {
-    bytes32 internal constant EIP712_DOMAIN_TYPEHASH = keccak256(bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"));
+    bytes32 internal constant EIP712_DOMAIN_TYPEHASH = keccak256(bytes("EIP712Domain(string name,string version,address verifyingContract,bytes32 salt)"));
 
     /**
      * @notice Get the domain separator
@@ -19,7 +19,7 @@ library MetaTransactionsLib {
      */
     function domainSeparator(string memory _name, string memory _version) internal view returns (bytes32) {
         return keccak256(
-            abi.encode(EIP712_DOMAIN_TYPEHASH, keccak256(bytes(_name)), keccak256(bytes(_version)), getChainID(), address(this))
+            abi.encode(EIP712_DOMAIN_TYPEHASH, keccak256(bytes(_name)), keccak256(bytes(_version)), address(this), getChainID())
         );
     }
 
