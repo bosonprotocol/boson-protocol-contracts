@@ -1147,7 +1147,7 @@ describe("IBosonOfferHandler", function () {
 
         it("For some offer, dispute resolver wallet is not registered", async function () {
           // Set some address that is not registered as a dispute resolver
-          offers[1].disputeResolveId = "16";
+          offers[1].disputeResolverId = "16";
 
           // Attempt to Create an offer, expecting revert
           await expect(

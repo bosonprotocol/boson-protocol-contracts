@@ -57,7 +57,7 @@ describe("IBosonDisputeHandler", function () {
   let protocolFeePrecentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
-  let dispute, disputedDate, complaint, disputeStruct;
+  let dispute, disputedDate, complaint, disputeStruct, timeout;
   let disputeDates, disputeDatesStruct;
   let exists, response;
   let disputeResolver, active;
@@ -280,10 +280,11 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(disputeValid).toString();
 
         // expected values
         dispute = new Dispute(exchange.id, complaint, DisputeState.Resolving, new Resolution("0"));
-        disputeDates = new DisputeDates(disputedDate, "0", "0", "0");
+        disputeDates = new DisputeDates(disputedDate, "0", "0", timeout);
 
         // Get the dispute as a struct
         [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
@@ -363,10 +364,11 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(disputeValid).toString();
 
         // Expected value for dispute
         dispute = new Dispute(exchange.id, complaint, DisputeState.Resolving, new Resolution("0"));
-        disputeDates = new DisputeDates(disputedDate, "0", "0", "0");
+        disputeDates = new DisputeDates(disputedDate, "0", "0", timeout);
       });
 
       it("should return true for exists if exchange id is valid", async function () {
