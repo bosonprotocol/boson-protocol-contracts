@@ -9,7 +9,7 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
  * @dev Provides the domain seperator and chain id.
  */
 library MetaTransactionsLib {
-    bytes32 internal constant EIP712_DOMAIN_TYPEHASH = keccak256(bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"));
+    bytes32 internal constant EIP712_DOMAIN_TYPEHASH = keccak256(bytes("EIP712Domain(string name,string version,bytes32 salt,address verifyingContract)"));
 
     /**
      * @notice Get the domain separator
