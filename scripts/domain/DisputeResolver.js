@@ -2,13 +2,13 @@ const ethers = require("ethers");
 const eip55 = require("eip55");
 
 /**
- * Boson Protocol Domain Entity: Resolver
+ * Boson Protocol Domain Entity: DisputeResolver
  *
- * See: {BosonTypes.Resolver}
+ * See: {BosonTypes.DisputeResolver}
  */
-class Resolver {
+class DisputeResolver {
   /*
-        struct Resolver {
+        struct DisputeResolver {
             uint256 id;
             address payable wallet;
             bool active;
@@ -22,17 +22,17 @@ class Resolver {
   }
 
   /**
-   * Get a new Resolver instance from a pojo representation
+   * Get a new DisputeResolver instance from a pojo representation
    * @param o
-   * @returns {Resolver}
+   * @returns {DisputeResolver}
    */
   static fromObject(o) {
     const { id, wallet, active } = o;
-    return new Resolver(id, wallet, active);
+    return new DisputeResolver(id, wallet, active);
   }
 
   /**
-   * Get a new Resolver instance from a returned struct representation
+   * Get a new DisputeResolver instance from a returned struct representation
    * @param struct
    * @returns {*}
    */
@@ -42,7 +42,7 @@ class Resolver {
     // destructure struct
     [id, wallet, active] = struct;
 
-    return Resolver.fromObject({
+    return DisputeResolver.fromObject({
       id: id.toString(),
       wallet,
       active,
@@ -50,7 +50,7 @@ class Resolver {
   }
 
   /**
-   * Get a database representation of this Resolver instance
+   * Get a database representation of this DisputeResolver instance
    * @returns {object}
    */
   toObject() {
@@ -58,7 +58,7 @@ class Resolver {
   }
 
   /**
-   * Get a string representation of this Resolver instance
+   * Get a string representation of this DisputeResolver instance
    * @returns {string}
    */
   toString() {
@@ -66,7 +66,7 @@ class Resolver {
   }
 
   /**
-   * Get a struct representation of this Resolver instance
+   * Get a struct representation of this DisputeResolver instance
    * @returns {string}
    */
   toStruct() {
@@ -74,15 +74,15 @@ class Resolver {
   }
 
   /**
-   * Clone this Resolver
-   * @returns {Resolver}
+   * Clone this DisputeResolver
+   * @returns {DisputeResolver}
    */
   clone() {
-    return Resolver.fromObject(this.toObject());
+    return DisputeResolver.fromObject(this.toObject());
   }
 
   /**
-   * Is this Resolver instance's id field valid?
+   * Is this DisputeResolver instance's id field valid?
    * Must be a string representation of a big number
    * @returns {boolean}
    */
@@ -96,7 +96,7 @@ class Resolver {
   }
 
   /**
-   * Is this Resolver instance's wallet field valid?
+   * Is this DisputeResolver instance's wallet field valid?
    * Must be a eip55 compliant Ethereum address
    * @returns {boolean}
    */
@@ -110,7 +110,7 @@ class Resolver {
   }
 
   /**
-   * Is this Resolver instance's active field valid?
+   * Is this DisputeResolver instance's active field valid?
    * @returns {boolean}
    */
   activeIsValid() {
@@ -123,7 +123,7 @@ class Resolver {
   }
 
   /**
-   * Is this Resolver instance valid?
+   * Is this DisputeResolver instance valid?
    * @returns {boolean}
    */
   isValid() {
@@ -132,4 +132,4 @@ class Resolver {
 }
 
 // Export
-module.exports = Resolver;
+module.exports = DisputeResolver;

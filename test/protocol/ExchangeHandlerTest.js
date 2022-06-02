@@ -6,8 +6,11 @@ const Role = require("../../scripts/domain/Role");
 const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
 const Offer = require("../../scripts/domain/Offer");
+const OfferDates = require("../../scripts/domain/OfferDates");
+const OfferDurations = require("../../scripts/domain/OfferDurations");
 const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
+const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -28,7 +31,7 @@ const {
 describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, game, fauxClient;
+  let accounts, deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, other1, game, fauxClient;
   let erc165,
     protocolDiamond,
     accessController,
@@ -46,17 +49,17 @@ describe("IBosonExchangeHandler", function () {
     protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
-    validFromDate,
-    redeemableFromDate,
-    fulfillmentPeriodDuration,
-    voucherValidDuration,
     exchangeToken,
+    disputeResolverId,
     metadataUri,
-    metadataHash,
+    offerChecksum,
     voided;
+  let validFrom, validUntil, redeemableFrom, redeemableUntil, offerDates;
+  let fulfillmentPeriod, voucherValid, disputeValid, offerDurations;
   let protocolFeePrecentage;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state, exchangeStruct, response, exists, buyerStruct;
+  let disputeResolver, active;
 
   before(async function () {
     // get interface Ids
@@ -74,7 +77,7 @@ describe("IBosonExchangeHandler", function () {
     buyer = accounts[5];
     rando = accounts[6];
     newOwner = accounts[7];
-    game = accounts[8]; // the MR Game that is allowed to push the Dispute into final states
+    other1 = game = accounts[8]; // the MR Game that is allowed to push the Dispute into final states
     fauxClient = accounts[9];
 
     // Deploy the Protocol Diamond
@@ -157,7 +160,20 @@ describe("IBosonExchangeHandler", function () {
     beforeEach(async function () {
       // Initial ids for all the things
       id = offerId = sellerId = "1";
-      buyerId = "2"; // created after seller
+      buyerId = "3"; // created after seller and dispute resolver
+
+      // Create a valid seller
+      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
+      expect(seller.isValid()).is.true;
+      await accountHandler.connect(admin).createSeller(seller);
+
+      // Create a valid dispute resolver
+      active = true;
+      disputeResolver = new DisputeResolver(id, other1.address, active);
+      expect(disputeResolver.isValid()).is.true;
+
+      // Register the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
 
       // Create an offer to commit to
       oneWeek = 604800 * 1000; //  7 days in milliseconds
@@ -173,22 +189,11 @@ describe("IBosonExchangeHandler", function () {
       protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
-      validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-      validUntilDate = ethers.BigNumber.from(block.timestamp)
-        .add(oneMonth * 6)
-        .toString(); // until 6 months
-      redeemableFromDate = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-      fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
-      voucherValidDuration = oneMonth.toString(); // offers valid for one month
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-      metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-      metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
+      disputeResolverId = "2";
+      offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+      metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
       voided = false;
-
-      // Create a valid seller
-      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
-      expect(seller.isValid()).is.true;
-      await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid offer entity
       offer = new Offer(
@@ -199,20 +204,36 @@ describe("IBosonExchangeHandler", function () {
         protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
-        validFromDate,
-        validUntilDate,
-        redeemableFromDate,
-        fulfillmentPeriodDuration,
-        voucherValidDuration,
         exchangeToken,
+        disputeResolverId,
         metadataUri,
-        metadataHash,
+        offerChecksum,
         voided
       );
       expect(offer.isValid()).is.true;
 
+      // Required constructor params
+      validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
+      validUntil = ethers.BigNumber.from(block.timestamp)
+        .add(oneMonth * 6)
+        .toString(); // until 6 months
+      redeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+      redeemableUntil = "0"; // vouchers don't have fixed expiration date
+
+      // Create a valid offerDates, then set fields in tests directly
+      offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+
+      // Required constructor params
+      fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
+      voucherValid = oneMonth.toString(); // offers valid for one month
+      disputeValid = oneWeek.toString(); // dispute is valid for one month
+
+      // Create a valid offerDurations, then set fields in tests directly
+      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+      expect(offerDurations.isValid()).is.true;
+
       // Create the offer
-      await offerHandler.connect(operator).createOffer(offer);
+      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
       // Required voucher constructor params
       committedDate = "0";
@@ -249,7 +270,7 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
 
         // Get the struct
         exchangeStruct = exchange.toStruct();
@@ -317,15 +338,15 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
 
         // Get the struct
         exchangeStruct = exchange.toStruct();
       });
 
       it("should emit an ExchangeCompleted event when buyer calls", async function () {
-        // Set time forward to the offer's redeemableFromDate
-        await setNextBlockTimestamp(Number(redeemableFromDate));
+        // Set time forward to the offer's redeemableFrom
+        await setNextBlockTimestamp(Number(redeemableFrom));
 
         // Redeem the voucher
         await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -337,8 +358,8 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("should update state", async function () {
-        // Set time forward to the offer's redeemableFromDate
-        await setNextBlockTimestamp(Number(redeemableFromDate));
+        // Set time forward to the offer's redeemableFrom
+        await setNextBlockTimestamp(Number(redeemableFrom));
 
         // Redeem the voucher
         await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -354,8 +375,8 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("should emit an ExchangeCompleted event if operator calls after fulfillment period", async function () {
-        // Set time forward to the offer's redeemableFromDate
-        await setNextBlockTimestamp(Number(redeemableFromDate));
+        // Set time forward to the offer's redeemableFrom
+        await setNextBlockTimestamp(Number(redeemableFrom));
 
         // Redeem the voucher
         await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -365,7 +386,7 @@ describe("IBosonExchangeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
 
         // Set time forward to run out the fulfillment period
-        newTime = Number((block.timestamp + Number(fulfillmentPeriodDuration) + 1).toString().substring(0, 11));
+        newTime = Number((block.timestamp + Number(fulfillmentPeriod) + 1).toString().substring(0, 11));
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
@@ -404,8 +425,8 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("caller is not buyer or seller's operator", async function () {
-          // Set time forward to the offer's redeemableFromDate
-          await setNextBlockTimestamp(Number(redeemableFromDate));
+          // Set time forward to the offer's redeemableFrom
+          await setNextBlockTimestamp(Number(redeemableFrom));
 
           // Redeem the voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -417,8 +438,8 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("caller is seller's operator and offer fulfillment period has not elapsed", async function () {
-          // Set time forward to the offer's redeemableFromDate
-          await setNextBlockTimestamp(Number(redeemableFromDate));
+          // Set time forward to the offer's redeemableFrom
+          await setNextBlockTimestamp(Number(redeemableFrom));
 
           // Redeem the voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -444,7 +465,7 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
 
         // Get the struct
         exchangeStruct = exchange.toStruct();
@@ -518,7 +539,7 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
 
         // Get the struct
         exchangeStruct = exchange.toStruct();
@@ -602,7 +623,7 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
 
         // Get the struct
         exchangeStruct = exchange.toStruct();
@@ -610,7 +631,7 @@ describe("IBosonExchangeHandler", function () {
 
       it("should emit an VoucherExpired event when anyone calls and voucher has expired", async function () {
         // Set time forward past the voucher's validUntilDate
-        await setNextBlockTimestamp(Number(redeemableFromDate) + Number(voucherValidDuration) + Number(oneWeek));
+        await setNextBlockTimestamp(Number(redeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
         // Expire the voucher, expecting event
         await expect(exchangeHandler.connect(rando).expireVoucher(exchange.id))
@@ -620,7 +641,7 @@ describe("IBosonExchangeHandler", function () {
 
       it("should update state when anyone calls and voucher has expired", async function () {
         // Set time forward past the voucher's validUntilDate
-        await setNextBlockTimestamp(Number(redeemableFromDate) + Number(voucherValidDuration) + Number(oneWeek));
+        await setNextBlockTimestamp(Number(redeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
         // Expire the voucher
         await exchangeHandler.connect(rando).expireVoucher(exchange.id);
@@ -634,7 +655,7 @@ describe("IBosonExchangeHandler", function () {
 
       it("should update voucher expired flag when anyone calls and voucher has expired", async function () {
         // Set time forward past the voucher's validUntilDate
-        await setNextBlockTimestamp(Number(redeemableFromDate) + Number(voucherValidDuration) + Number(oneWeek));
+        await setNextBlockTimestamp(Number(redeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
         // Expire the voucher
         await exchangeHandler.connect(rando).expireVoucher(exchange.id);
@@ -660,7 +681,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("exchange id is invalid", async function () {
           // Set time forward past the voucher's validUntilDate
-          await setNextBlockTimestamp(Number(redeemableFromDate) + Number(voucherValidDuration) + Number(oneWeek));
+          await setNextBlockTimestamp(Number(redeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
           // An invalid exchange id
           id = "666";
@@ -673,7 +694,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("exchange is not in committed state", async function () {
           // Set time forward past the voucher's validUntilDate
-          await setNextBlockTimestamp(Number(redeemableFromDate) + Number(voucherValidDuration) + Number(oneWeek));
+          await setNextBlockTimestamp(Number(redeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
           // Revoke the voucher
           await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
@@ -706,14 +727,14 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
         // Get the struct
         exchangeStruct = exchange.toStruct();
       });
 
       it("should emit a VoucherRedeemed event when buyer calls", async function () {
-        // Set time forward to the offer's redeemableFromDate
-        await setNextBlockTimestamp(Number(redeemableFromDate));
+        // Set time forward to the offer's redeemableFrom
+        await setNextBlockTimestamp(Number(redeemableFrom));
 
         // Redeem the voucher, expecting event
         await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
@@ -722,8 +743,8 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("should update state when buyer calls", async function () {
-        // Set time forward to the offer's redeemableFromDate
-        await setNextBlockTimestamp(Number(redeemableFromDate));
+        // Set time forward to the offer's redeemableFrom
+        await setNextBlockTimestamp(Number(redeemableFrom));
 
         // Redeem the voucher
         await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -741,7 +762,7 @@ describe("IBosonExchangeHandler", function () {
          * - Exchange does not exist
          * - Exchange is not in committed state
          * - Caller does not own voucher
-         * - Current time is prior to offer.redeemableFromDate
+         * - Current time is prior to offer.redeemableFrom
          * - Current time is after exchange.voucher.validUntilDate
          */
 
@@ -772,7 +793,7 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
-        it("current time is prior to offer's redeemableFromDate", async function () {
+        it("current time is prior to offer's redeemableFrom", async function () {
           // Attempt to redeem the voucher, expecting revert
           await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
             RevertReasons.VOUCHER_NOT_REDEEMABLE
@@ -781,7 +802,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("current time is after to voucher's validUntilDate", async function () {
           // Set time forward past the voucher's validUntilDate
-          await setNextBlockTimestamp(Number(redeemableFromDate) + Number(voucherValidDuration) + Number(oneWeek));
+          await setNextBlockTimestamp(Number(redeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
           // Attempt to redeem the voucher, expecting revert
           await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
@@ -804,7 +825,7 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
 
         // Get the struct
         exchangeStruct = exchange.toStruct();
@@ -943,7 +964,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("Voucher has expired", async function () {
           // Set time forward past the voucher's validUntilDate
-          await setNextBlockTimestamp(Number(redeemableFromDate) + Number(voucherValidDuration) + Number(oneWeek));
+          await setNextBlockTimestamp(Number(redeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(id, newOwner.address)).to.revertedWith(
@@ -986,8 +1007,8 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("should return false if exchange is in Redeemed state", async function () {
-          // Set time forward to the offer's redeemableFromDate
-          await setNextBlockTimestamp(Number(redeemableFromDate));
+          // Set time forward to the offer's redeemableFrom
+          await setNextBlockTimestamp(Number(redeemableFrom));
 
           // Redeem voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -1000,8 +1021,8 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("should return true if exchange is in Completed state", async function () {
-          // Set time forward to the offer's redeemableFromDate
-          await setNextBlockTimestamp(Number(redeemableFromDate));
+          // Set time forward to the offer's redeemableFrom
+          await setNextBlockTimestamp(Number(redeemableFrom));
 
           // Redeem voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -1011,9 +1032,7 @@ describe("IBosonExchangeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
 
           // Set time forward to run out the fulfillment period
-          newTime = Number(
-            (Number(redeemableFromDate) + Number(fulfillmentPeriodDuration) + 1).toString().substring(0, 11)
-          );
+          newTime = Number((Number(redeemableFrom) + Number(fulfillmentPeriod) + 1).toString().substring(0, 11));
           await setNextBlockTimestamp(newTime);
 
           // Complete exchange
@@ -1051,8 +1070,8 @@ describe("IBosonExchangeHandler", function () {
 
       context("👎 disputed exchange", async function () {
         beforeEach(async function () {
-          // Set time forward to the offer's redeemableFromDate
-          await setNextBlockTimestamp(Number(redeemableFromDate));
+          // Set time forward to the offer's redeemableFrom
+          await setNextBlockTimestamp(Number(redeemableFrom));
 
           // Redeem voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -1144,7 +1163,7 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
 
         // Get the struct
         exchangeStruct = exchange.toStruct();
@@ -1188,7 +1207,7 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
 
         // Get the struct
         exchangeStruct = exchange.toStruct();

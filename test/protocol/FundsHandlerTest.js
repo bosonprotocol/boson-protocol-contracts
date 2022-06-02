@@ -5,8 +5,11 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
+const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const Offer = require("../../scripts/domain/Offer");
+const OfferDates = require("../../scripts/domain/OfferDates");
+const OfferDurations = require("../../scripts/domain/OfferDurations");
 
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -23,7 +26,7 @@ const { setNextBlockTimestamp, calculateProtocolFee, getEvent } = require("../..
 describe("IBosonFundsHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury, feeCollector;
+  let accounts, deployer, rando, operator, admin, clerk, treasury, feeCollector, other1;
   let erc165,
     protocolDiamond,
     accessController,
@@ -35,23 +38,22 @@ describe("IBosonFundsHandler", function () {
     bosonVoucher;
   let support, oneMonth, oneWeek;
   let seller, active;
-  let id, buyer, offerToken, offerNative, offerId, sellerId;
+  let id, buyer, offerToken, offerNative, sellerId;
   let mockToken, bosonToken;
   let depositAmount;
-  let price,
+  let offerId,
+    price,
     sellerDeposit,
     protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
-    validFromDate,
-    validUntilDate,
-    redeemableFromDate,
-    fulfillmentPeriodDuration,
-    voucherValidDuration,
     exchangeToken,
+    disputeResolverId,
     metadataUri,
-    metadataHash,
+    offerChecksum,
     voided;
+  let validFrom, validUntil, redeemableFrom, redeemableUntil, offerDates;
+  let fulfillmentPeriod, voucherValid, disputeValid, offerDurations;
   let protocolFeePrecentage;
   let block, blockNumber;
   let protocolId, exchangeId, buyerId, sellerPayoff, buyerPayoff;
@@ -64,6 +66,7 @@ describe("IBosonFundsHandler", function () {
   let disputeId, buyerPercentage;
   let tokenListSeller, tokenListBuyer, tokenAmountsSeller, tokenAmountsBuyer, tokenList, tokenAmounts;
   let tx, txReceipt, txCost, event;
+  let disputeResolver;
 
   before(async function () {
     // get interface Ids
@@ -81,6 +84,7 @@ describe("IBosonFundsHandler", function () {
     rando = accounts[5];
     buyer = accounts[6];
     feeCollector = accounts[7];
+    other1 = accounts[8];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -329,8 +333,16 @@ describe("IBosonFundsHandler", function () {
     context("💸 withdraw", async function () {
       beforeEach(async function () {
         // Initial ids for all the things
-        id = offerId = sellerId = exchangeId = "1";
-        buyerId = "2";
+        id = sellerId = exchangeId = "1";
+        buyerId = "3"; // created after a seller and a dispute resolver
+
+        // Create a valid dispute resolver
+        active = true;
+        disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+        expect(disputeResolver.isValid()).is.true;
+
+        // Register the dispute resolver
+        await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
 
         // Create an offer to commit to
         oneWeek = 604800 * 1000; //  7 days in milliseconds
@@ -346,35 +358,25 @@ describe("IBosonFundsHandler", function () {
         protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "2";
-        validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-        validUntilDate = ethers.BigNumber.from(block.timestamp)
-          .add(oneMonth * 6)
-          .toString(); // until 6 months
-        redeemableFromDate = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-        fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
-        voucherValidDuration = oneMonth.toString(); // offers valid for one month
-        exchangeToken = mockToken.address; // Zero addy ~ chain base currency
-        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
+        exchangeToken = mockToken.address; // Mock token addres
+        disputeResolverId = "2";
+        offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+        metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
         voided = false;
 
         // Create a valid offer entity
         offerToken = new Offer(
-          offerId,
+          id,
           sellerId,
           price,
           sellerDeposit,
           protocolFee,
           buyerCancelPenalty,
           quantityAvailable,
-          validFromDate,
-          validUntilDate,
-          redeemableFromDate,
-          fulfillmentPeriodDuration,
-          voucherValidDuration,
           exchangeToken,
+          disputeResolverId,
           metadataUri,
-          metadataHash,
+          offerChecksum,
           voided
         );
         expect(offerToken.isValid()).is.true;
@@ -384,9 +386,28 @@ describe("IBosonFundsHandler", function () {
         offerNative.exchangeToken = ethers.constants.AddressZero;
         expect(offerNative.isValid()).is.true;
 
+        // Required constructor params
+        validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
+        validUntil = ethers.BigNumber.from(block.timestamp)
+          .add(oneMonth * 6)
+          .toString(); // until 6 months
+        redeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+        redeemableUntil = "0"; // vouchers don't have fixed expiration date
+
+        // Create a valid offerDates, then set fields in tests directly
+        offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+
+        // Required constructor params
+        fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
+        voucherValid = oneMonth.toString(); // offers valid for one month
+        disputeValid = oneWeek.toString(); // dispute is valid for one month
+
+        // Create a valid offerDurations, then set fields in tests directly
+        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+
         // Create both offers
-        await offerHandler.connect(operator).createOffer(offerToken);
-        await offerHandler.connect(operator).createOffer(offerNative);
+        await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations);
+        await offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations);
 
         // top up seller's and buyer's account
         await mockToken.mint(operator.address, sellerDeposit);
@@ -1169,7 +1190,20 @@ describe("IBosonFundsHandler", function () {
   context("📋 FundsLib  Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
-      id = offerId = sellerId = "1";
+      offerId = id = sellerId = "1";
+
+      // Create a valid seller
+      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
+      expect(seller.isValid()).is.true;
+      await accountHandler.connect(admin).createSeller(seller);
+
+      // Create a valid dispute resolver
+      active = true;
+      disputeResolver = new DisputeResolver(id, other1.address, active);
+      expect(disputeResolver.isValid()).is.true;
+
+      // Register the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
 
       // Create an offer to commit to
       oneWeek = 604800 * 1000; //  7 days in milliseconds
@@ -1185,22 +1219,11 @@ describe("IBosonFundsHandler", function () {
       protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "2";
-      validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-      validUntilDate = ethers.BigNumber.from(block.timestamp)
-        .add(oneMonth * 6)
-        .toString(); // until 6 months
-      redeemableFromDate = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-      fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
-      voucherValidDuration = oneMonth.toString(); // offers valid for one month
-      exchangeToken = mockToken.address; // Zero addy ~ chain base currency
-      metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-      metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
+      exchangeToken = mockToken.address; // MockToken address
+      disputeResolverId = "2";
+      offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+      metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
       voided = false;
-
-      // Create a valid seller
-      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
-      expect(seller.isValid()).is.true;
-      await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid offer entity
       offerToken = new Offer(
@@ -1211,14 +1234,10 @@ describe("IBosonFundsHandler", function () {
         protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
-        validFromDate,
-        validUntilDate,
-        redeemableFromDate,
-        fulfillmentPeriodDuration,
-        voucherValidDuration,
         exchangeToken,
+        disputeResolverId,
         metadataUri,
-        metadataHash,
+        offerChecksum,
         voided
       );
       expect(offerToken.isValid()).is.true;
@@ -1228,9 +1247,30 @@ describe("IBosonFundsHandler", function () {
       offerNative.exchangeToken = ethers.constants.AddressZero;
       expect(offerNative.isValid()).is.true;
 
+      // Required constructor params
+      validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
+      validUntil = ethers.BigNumber.from(block.timestamp)
+        .add(oneMonth * 6)
+        .toString(); // until 6 months
+      redeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+      redeemableUntil = "0"; // vouchers don't have fixed expiration date
+
+      // Create a valid offerDates, then set fields in tests directly
+      offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+      expect(offerDates.isValid()).is.true;
+
+      // Required constructor params
+      fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
+      voucherValid = oneMonth.toString(); // offers valid for one month
+      disputeValid = oneWeek.toString(); // dispute is valid for one month
+
+      // Create a valid offerDurations, then set fields in tests directly
+      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+      expect(offerDurations.isValid()).is.true;
+
       // Create both offers
-      await offerHandler.connect(operator).createOffer(offerToken);
-      await offerHandler.connect(operator).createOffer(offerNative);
+      await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations);
+      await offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations);
 
       // top up seller's and buyer's account
       await mockToken.mint(operator.address, `${2 * sellerDeposit}`);
@@ -1251,7 +1291,7 @@ describe("IBosonFundsHandler", function () {
 
     context("👉 encumberFunds()", async function () {
       it("should emit a FundsEncumbered event", async function () {
-        let buyerId = "2"; // 1: seller, 2: buyer
+        let buyerId = "3"; // 1: seller, 2: disputeResolver, 3: buyer
 
         // Commit to an offer with erc20 token, test for FundsEncumbered event
         await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id))
@@ -1354,7 +1394,7 @@ describe("IBosonFundsHandler", function () {
       });
 
       it("when someone else deposits on buyer's behalf, callers funds are transferred", async function () {
-        let randoBuyerId = "2"; // 1: seller, 2: rando
+        let randoBuyerId = "3"; // 1: seller, 2: disputeResolver, 3: rando
         // buyer will commit to an offer on rando's behalf
         // get token balance before the commit
         const buyerTokenBalanceBefore = await mockToken.balanceOf(buyer.address);
@@ -1436,7 +1476,7 @@ describe("IBosonFundsHandler", function () {
           // create an offer with a bad token contrat
           offerToken.exchangeToken = bosonToken.address;
           offerToken.id = "3";
-          await offerHandler.connect(operator).createOffer(offerToken);
+          await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations);
 
           // Attempt to commit to an offer, expecting revert
           await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
@@ -1448,7 +1488,7 @@ describe("IBosonFundsHandler", function () {
           // create an offer with a bad token contrat
           offerToken.exchangeToken = admin.address;
           offerToken.id = "3";
-          await offerHandler.connect(operator).createOffer(offerToken);
+          await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations);
 
           // Attempt to commit to an offer, expecting revert
           await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
@@ -1479,7 +1519,7 @@ describe("IBosonFundsHandler", function () {
           // create an offer with token with higher seller deposit
           offerToken.sellerDeposit = ethers.BigNumber.from(offerToken.sellerDeposit).mul("4");
           offerToken.id = "3";
-          await offerHandler.connect(operator).createOffer(offerToken);
+          await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations);
 
           // Attempt to commit to an offer, expecting revert
           await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
@@ -1489,7 +1529,7 @@ describe("IBosonFundsHandler", function () {
           // create an offer with native currency with higher seller deposit
           offerNative.sellerDeposit = ethers.BigNumber.from(offerNative.sellerDeposit).mul("4");
           offerNative.id = "4";
-          await offerHandler.connect(operator).createOffer(offerNative);
+          await offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations);
 
           // Attempt to commit to an offer, expecting revert
           await expect(
@@ -1504,7 +1544,8 @@ describe("IBosonFundsHandler", function () {
         // ids
         protocolId = "0";
         sellerId = "1";
-        buyerId = "2";
+        // disputeResolverId = "2";
+        buyerId = "3";
         exchangeId = "1";
 
         // commit to offer
@@ -1513,8 +1554,8 @@ describe("IBosonFundsHandler", function () {
 
       context("Final state COMPLETED", async function () {
         beforeEach(async function () {
-          // Set time forward to the offer's redeemableFromDate
-          await setNextBlockTimestamp(Number(redeemableFromDate));
+          // Set time forward to the offer's redeemableFrom
+          await setNextBlockTimestamp(Number(redeemableFrom));
 
           // succesfully redeem exchange
           await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -1755,8 +1796,8 @@ describe("IBosonFundsHandler", function () {
 
       context.skip("Final state DISPUTED", async function () {
         beforeEach(async function () {
-          // Set time forward to the offer's redeemableFromDate
-          await setNextBlockTimestamp(Number(redeemableFromDate));
+          // Set time forward to the offer's redeemableFrom
+          await setNextBlockTimestamp(Number(redeemableFrom));
 
           // succesfully redeem exchange
           await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -1987,8 +2028,8 @@ describe("IBosonFundsHandler", function () {
         });
 
         it("Protocol fee for existing exchanges should be the same as at the offer creation", async function () {
-          // Set time forward to the offer's redeemableFromDate
-          await setNextBlockTimestamp(Number(redeemableFromDate));
+          // Set time forward to the offer's redeemableFrom
+          await setNextBlockTimestamp(Number(redeemableFrom));
 
           // succesfully redeem exchange
           await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -2012,8 +2053,8 @@ describe("IBosonFundsHandler", function () {
           event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
           exchangeId = event.exchangeId.toString();
 
-          // Set time forward to the offer's redeemableFromDate
-          await setNextBlockTimestamp(Number(redeemableFromDate));
+          // Set time forward to the offer's redeemableFrom
+          await setNextBlockTimestamp(Number(redeemableFrom));
 
           // succesfully redeem exchange
           await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
