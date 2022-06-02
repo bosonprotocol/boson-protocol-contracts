@@ -5,6 +5,7 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
+const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
@@ -25,7 +26,7 @@ const { setNextBlockTimestamp, calculateProtocolFee, getEvent } = require("../..
 describe("IBosonFundsHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury, feeCollector;
+  let accounts, deployer, rando, operator, admin, clerk, treasury, feeCollector, other1;
   let erc165,
     protocolDiamond,
     accessController,
@@ -40,13 +41,14 @@ describe("IBosonFundsHandler", function () {
   let id, buyer, offerToken, offerNative, sellerId;
   let mockToken, bosonToken;
   let depositAmount;
-  let price,
+  let offerId,
+    price,
     sellerDeposit,
     protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
-    disputeResolver,
+    disputeResolverAddress,
     metadataUri,
     offerChecksum,
     voided;
@@ -64,6 +66,7 @@ describe("IBosonFundsHandler", function () {
   let disputeId, buyerPercentage;
   let tokenListSeller, tokenListBuyer, tokenAmountsSeller, tokenAmountsBuyer, tokenList, tokenAmounts;
   let tx, txReceipt, txCost, event;
+  let disputeResolver;
 
   before(async function () {
     // get interface Ids
@@ -81,6 +84,7 @@ describe("IBosonFundsHandler", function () {
     rando = accounts[5];
     buyer = accounts[6];
     feeCollector = accounts[7];
+    other1 = accounts[8];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -330,7 +334,15 @@ describe("IBosonFundsHandler", function () {
       beforeEach(async function () {
         // Initial ids for all the things
         id = sellerId = exchangeId = "1";
-        buyerId = "2";
+        buyerId = "3"; // created after a seller and a dispute resolver
+
+        // Create a valid dispute resolver
+        active = true;
+        disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+        expect(disputeResolver.isValid()).is.true;
+
+        // Register the dispute resolver
+        await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
 
         // Create an offer to commit to
         oneWeek = 604800 * 1000; //  7 days in milliseconds
@@ -347,7 +359,7 @@ describe("IBosonFundsHandler", function () {
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "2";
         exchangeToken = mockToken.address; // Mock token addres
-        disputeResolver = accounts[0].address;
+        disputeResolverAddress = disputeResolver.wallet;
         offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
         metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
         voided = false;
@@ -362,7 +374,7 @@ describe("IBosonFundsHandler", function () {
           buyerCancelPenalty,
           quantityAvailable,
           exchangeToken,
-          disputeResolver,
+          disputeResolverAddress,
           metadataUri,
           offerChecksum,
           voided
@@ -1178,7 +1190,20 @@ describe("IBosonFundsHandler", function () {
   context("📋 FundsLib  Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
-      id = sellerId = "1";
+      offerId = id = sellerId = "1";
+
+      // Create a valid seller
+      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
+      expect(seller.isValid()).is.true;
+      await accountHandler.connect(admin).createSeller(seller);
+
+      // Create a valid dispute resolver
+      active = true;
+      disputeResolver = new DisputeResolver(id, other1.address, active);
+      expect(disputeResolver.isValid()).is.true;
+
+      // Register the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
 
       // Create an offer to commit to
       oneWeek = 604800 * 1000; //  7 days in milliseconds
@@ -1195,19 +1220,14 @@ describe("IBosonFundsHandler", function () {
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "2";
       exchangeToken = mockToken.address; // MockToken address
-      disputeResolver = accounts[0].address;
+      disputeResolverAddress = disputeResolver.wallet;
       offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
       metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
       voided = false;
 
-      // Create a valid seller
-      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
-      expect(seller.isValid()).is.true;
-      await accountHandler.connect(admin).createSeller(seller);
-
       // Create a valid offer entity
       offerToken = new Offer(
-        id,
+        offerId,
         sellerId,
         price,
         sellerDeposit,
@@ -1215,7 +1235,7 @@ describe("IBosonFundsHandler", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
-        disputeResolver,
+        disputeResolverAddress,
         metadataUri,
         offerChecksum,
         voided
@@ -1271,7 +1291,7 @@ describe("IBosonFundsHandler", function () {
 
     context("👉 encumberFunds()", async function () {
       it("should emit a FundsEncumbered event", async function () {
-        let buyerId = "2"; // 1: seller, 2: buyer
+        let buyerId = "3"; // 1: seller, 2: disputeResolver, 3: buyer
 
         // Commit to an offer with erc20 token, test for FundsEncumbered event
         await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id))
@@ -1374,7 +1394,7 @@ describe("IBosonFundsHandler", function () {
       });
 
       it("when someone else deposits on buyer's behalf, callers funds are transferred", async function () {
-        let randoBuyerId = "2"; // 1: seller, 2: rando
+        let randoBuyerId = "3"; // 1: seller, 2: disputeResolver, 3: rando
         // buyer will commit to an offer on rando's behalf
         // get token balance before the commit
         const buyerTokenBalanceBefore = await mockToken.balanceOf(buyer.address);
@@ -1524,7 +1544,8 @@ describe("IBosonFundsHandler", function () {
         // ids
         protocolId = "0";
         sellerId = "1";
-        buyerId = "2";
+        // disputeResolverId = "2";
+        buyerId = "3";
         exchangeId = "1";
 
         // commit to offer

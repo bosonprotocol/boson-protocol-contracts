@@ -35,8 +35,12 @@ interface IBosonDisputeHandler is IBosonDisputeEvents {
      * @param _exchangeId - the id of the exchange to check
      * @return exists - true if the dispute exists
      * @return dispute - the dispute details. See {BosonTypes.Dispute}
+     * @return disputeDates - the dispute dates details {BosonTypes.DisputeDates}
      */
-    function getDispute(uint256 _exchangeId) external view returns(bool exists, BosonTypes.Dispute memory dispute);
+    function getDispute(uint256 _exchangeId)
+    external
+    view
+    returns(bool exists, BosonTypes.Dispute memory dispute, BosonTypes.DisputeDates memory disputeDates);
        
     /**
      * @notice Gets the state of a given dispute.

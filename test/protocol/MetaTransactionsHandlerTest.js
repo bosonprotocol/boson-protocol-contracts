@@ -12,6 +12,7 @@ const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
+const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Twin = require("../../scripts/domain/Twin");
 const Voucher = require("../../scripts/domain/Voucher");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -33,7 +34,7 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 describe("IBosonMetaTransactionsHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, buyer, admin;
+  let accounts, deployer, rando, operator, buyer, admin, other1;
   let erc165,
     protocolDiamond,
     accessController,
@@ -64,7 +65,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
-    disputeResolver,
+    disputeResolverAddress,
     metadataUri,
     offerChecksum,
     voided,
@@ -76,6 +77,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
   let twin, supplyAvailable, tokenId, supplyIds, tokenAddress, success;
+  let disputeResolver, active;
 
   before(async function () {
     // get interface Ids
@@ -90,6 +92,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     buyer = accounts[3];
     rando = accounts[4];
     admin = accounts[5];
+    other1 = accounts[6];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -359,7 +362,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
       });
 
-      context("👉 msg.sender is replaced with msgSender", async function () {
+      context("👉 msg.sender is replaced with msgSender()", async function () {
         context("TwinHandler", async function () {
           beforeEach(async function () {
             // Create the seller
@@ -590,6 +593,19 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Initial ids for all the things
         id = offerId = sellerId = "1";
 
+        // Create a valid seller
+        seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
+        expect(seller.isValid()).is.true;
+        await accountHandler.connect(operator).createSeller(seller);
+
+        // Create a valid dispute resolver
+        active = true;
+        disputeResolver = new DisputeResolver(id, other1.address, active);
+        expect(disputeResolver.isValid()).is.true;
+
+        // Register the dispute resolver
+        await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+
         // Create an offer to commit to
         oneWeek = 604800 * 1000; //  7 days in milliseconds
         oneMonth = 2678400 * 1000; // 31 days in milliseconds
@@ -605,19 +621,14 @@ describe("IBosonMetaTransactionsHandler", function () {
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
         exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-        disputeResolver = accounts[0].address;
+        disputeResolverAddress = disputeResolver.wallet;
         offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
         metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
         voided = false;
 
-        // Create a valid seller
-        seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
-        expect(seller.isValid()).is.true;
-        await accountHandler.connect(operator).createSeller(seller);
-
         // Create a valid offer entity
         offer = new Offer(
-          id,
+          offerId,
           sellerId,
           price,
           sellerDeposit,
@@ -625,7 +636,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           buyerCancelPenalty,
           quantityAvailable,
           exchangeToken,
-          disputeResolver,
+          disputeResolverAddress,
           metadataUri,
           offerChecksum,
           voided
@@ -799,7 +810,20 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Initial ids for all the things
         id = offerId = sellerId = "1";
-        buyerId = "2"; // created after seller
+        buyerId = "3"; // created after seller and dispute resolver
+
+        // Create a valid seller
+        seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
+        expect(seller.isValid()).is.true;
+        await accountHandler.connect(operator).createSeller(seller);
+
+        // Create a valid dispute resolver
+        active = true;
+        disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+        expect(disputeResolver.isValid()).is.true;
+
+        // Register the dispute resolver
+        await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
 
         // Create an offer to commit to
         oneWeek = 604800 * 1000; //  7 days in milliseconds
@@ -816,15 +840,10 @@ describe("IBosonMetaTransactionsHandler", function () {
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
         exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-        disputeResolver = accounts[0].address;
+        disputeResolverAddress = disputeResolver.wallet;
         offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
         metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
         voided = false;
-
-        // Create a valid seller
-        seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
-        expect(seller.isValid()).is.true;
-        await accountHandler.connect(operator).createSeller(seller);
 
         // Create a valid offer entity
         offer = new Offer(
@@ -836,7 +855,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           buyerCancelPenalty,
           quantityAvailable,
           exchangeToken,
-          disputeResolver,
+          disputeResolverAddress,
           metadataUri,
           offerChecksum,
           voided

@@ -5,6 +5,7 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
+const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
 const Offer = require("../../scripts/domain/Offer");
@@ -25,7 +26,7 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 describe("IBosonBundleHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury, buyer;
+  let accounts, deployer, rando, operator, admin, clerk, treasury, buyer, other1;
   let erc165,
     protocolDiamond,
     accessController,
@@ -61,7 +62,7 @@ describe("IBosonBundleHandler", function () {
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
-    disputeResolver,
+    disputeResolverAddress,
     metadataUri,
     offerChecksum,
     voided,
@@ -69,6 +70,7 @@ describe("IBosonBundleHandler", function () {
   let validFrom, validUntil, redeemableFrom, redeemableUntil, offerDates;
   let fulfillmentPeriod, voucherValid, disputeValid, offerDurations;
   let protocolFeePrecentage;
+  let disputeResolver;
 
   before(async function () {
     // get interface Ids
@@ -85,6 +87,7 @@ describe("IBosonBundleHandler", function () {
     treasury = accounts[4];
     rando = accounts[5];
     buyer = accounts[6];
+    other1 = accounts[7];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -174,6 +177,14 @@ describe("IBosonBundleHandler", function () {
       expect(seller.isValid()).is.true;
       await accountHandler.connect(admin).createSeller(seller);
 
+      // Create a valid dispute resolver
+      active = true;
+      disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+      expect(disputeResolver.isValid()).is.true;
+
+      // Register the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+
       // create 5 twins
       for (let i = 0; i < 5; i++) {
         // Required constructor params for Twin
@@ -208,7 +219,7 @@ describe("IBosonBundleHandler", function () {
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
         exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-        disputeResolver = accounts[0].address;
+        disputeResolverAddress = disputeResolver.wallet;
         offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
         metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
         voided = false;
@@ -223,7 +234,7 @@ describe("IBosonBundleHandler", function () {
           buyerCancelPenalty,
           quantityAvailable,
           exchangeToken,
-          disputeResolver,
+          disputeResolverAddress,
           metadataUri,
           offerChecksum,
           voided

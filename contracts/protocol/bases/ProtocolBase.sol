@@ -5,7 +5,6 @@ import {ProtocolLib} from "../libs/ProtocolLib.sol";
 import {DiamondLib} from "../../diamond/DiamondLib.sol";
 import {BosonTypes} from "../../domain/BosonTypes.sol";
 import {BosonConstants} from "../../domain/BosonConstants.sol";
-import {MetaTransactionsLib} from "../libs/MetaTransactionsLib.sol";
 
 /**
  * @title ProtocolBase
@@ -165,7 +164,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the seller exists
      * @return seller - the seller details. See {BosonTypes.Seller}
      */
-    function fetchSeller(uint256 _sellerId) internal view returns (bool exists, BosonTypes.Seller storage seller) {
+    function fetchSeller(uint256 _sellerId) internal view returns (bool exists, Seller storage seller) {
         // Get the seller's slot
         seller = protocolStorage().sellers[_sellerId];
 
@@ -181,11 +180,26 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return buyer - the buyer details. See {BosonTypes.Buyer}
      */
     function fetchBuyer(uint256 _buyerId) internal view returns (bool exists, BosonTypes.Buyer storage buyer) {
-        // Get the buyer's's slot
+        // Get the buyer's slot
         buyer = protocolStorage().buyers[_buyerId];
 
         // Determine existence
         exists = (_buyerId > 0 && buyer.id == _buyerId);
+    }
+
+    /**
+     * @notice Fetches a given dispute resolver from storage by id
+     *
+     * @param _disputeResolverId - the id of the dispute resolver
+     * @return exists - whether the dispute resolver exists
+     * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
+     */
+    function fetchDisputeResolver(uint256 _disputeResolverId) internal view returns (bool exists, BosonTypes.DisputeResolver storage disputeResolver) {
+        // Get the dispute resolver's slot
+        disputeResolver = protocolStorage().disputeResolvers[_disputeResolverId];
+
+        // Determine existence
+        exists = (_disputeResolverId > 0 && disputeResolver.id == _disputeResolverId);
     }
 
     /**
@@ -195,7 +209,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the offer exists
      * @return offer - the offer details. See {BosonTypes.Offer}
      */
-    function fetchOffer(uint256 _offerId) internal view returns (bool exists, BosonTypes.Offer storage offer) {
+    function fetchOffer(uint256 _offerId) internal view returns (bool exists, Offer storage offer) {
         // Get the offer's slot
         offer = protocolStorage().offers[_offerId];
 
@@ -232,7 +246,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the group exists
      * @return group - the group details. See {BosonTypes.Group}
      */
-    function fetchGroup(uint256 _groupId) internal view returns (bool exists, BosonTypes.Group storage group) {
+    function fetchGroup(uint256 _groupId) internal view returns (bool exists, Group storage group) {
         // Get the group's slot
         group = protocolStorage().groups[_groupId];
 
@@ -250,7 +264,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     function fetchExchange(uint256 _exchangeId)
         internal
         view
-        returns (bool exists, BosonTypes.Exchange storage exchange)
+        returns (bool exists, Exchange storage exchange)
     {
         // Get the exchange's slot
         exchange = protocolStorage().exchanges[_exchangeId];
@@ -269,13 +283,33 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     function fetchDispute(uint256 _exchangeId)
     internal
     view
-    returns (bool exists, BosonTypes.Dispute storage dispute)
+    returns (bool exists, Dispute storage dispute)
     {
         // Get the dispute's slot
         dispute = protocolStorage().disputes[_exchangeId];
 
         // Determine existence
         exists = (_exchangeId > 0 && dispute.exchangeId == _exchangeId);
+    
+    }
+
+    /**
+     * @notice Fetches a dispute dates from storage by exchange id
+     *
+     * @param _exchangeId - the id of the exchange associated with the dispute
+     * @return exists - whether the dispute exists
+     * @return disputeDates - the dispute dates details. {Bosontype.disputeDates}
+     */
+    function fetchDisputeDates(uint256 _exchangeId)
+    internal
+    view
+    returns (bool exists, DisputeDates storage disputeDates)
+    {
+        // Get the disputeDates's slot
+        disputeDates = protocolStorage().disputeDates[_exchangeId];
+
+        // Determine existence
+        exists = disputeDates.disputed > 0;
     }
 
     /**
@@ -285,10 +319,10 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the twin exists
      * @return twin - the twin details. See {BosonTypes.Twin}
      */
-    function fetchTwin(uint256 _twinId) internal view returns (bool exists, BosonTypes.Twin storage twin) {
+    function fetchTwin(uint256 _twinId) internal view returns (bool exists, Twin storage twin) {
         // Get the twin's slot
         twin = protocolStorage().twins[_twinId];
-
+ 
         // Determine existence
         exists = (_twinId > 0 && twin.id == _twinId);
     }
@@ -300,7 +334,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the bundle exists
      * @return bundle - the bundle details. See {BosonTypes.Bundle}
      */
-    function fetchBundle(uint256 _bundleId) internal view returns (bool exists, BosonTypes.Bundle storage bundle) {
+    function fetchBundle(uint256 _bundleId) internal view returns (bool exists, Bundle storage bundle) {
         // Get the bundle's slot
         bundle = protocolStorage().bundles[_bundleId];
 
@@ -395,12 +429,9 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     internal
     view
     {
-        // Get sender of the transaction
-        address msgSender = MetaTransactionsLib.getCaller();
-
         // Get the caller's buyer account id
         uint256 buyerId;
-        (, buyerId) = getBuyerIdByWallet(msgSender);
+        (, buyerId) = getBuyerIdByWallet(msgSender());
 
         // Must be the buyer associated with the exchange (which is always voucher holder)
         require(buyerId == _currentBuyer, NOT_VOUCHER_HOLDER);
@@ -431,5 +462,26 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
 
         // Make sure the exchange is in expected state
         require(exchange.state == _expectedState, INVALID_STATE);
+    }
+
+    /**
+     * @notice Get the current sender address from storage.
+     */
+    function getCurrentSenderAddress() internal view returns (address) {
+        return ProtocolLib.protocolMetaTxInfo().currentSenderAddress;
+    }
+
+    /**
+     * @notice Returns the current sender address.
+     */
+    function msgSender() internal view returns (address) {
+        bool isItAMetaTransaction = ProtocolLib.protocolMetaTxInfo().isMetaTransaction;
+
+        // Get sender from the storage if this is a meta transaction
+        if (isItAMetaTransaction) {
+            return getCurrentSenderAddress();
+        } else {
+            return msg.sender;
+        }
     }
 }

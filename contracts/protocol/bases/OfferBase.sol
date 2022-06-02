@@ -104,8 +104,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // quantity must be greater than zero
         require(_offer.quantityAvailable > 0, INVALID_QUANTITY_AVAILABLE);
 
-        // specified resolver must be registered // TODO: add when dispute resolver implemented
-        // require(protocolStorage().disputeResolverIdByWallet[_offer.disputeResolver] != 0, INVALID_DISPUTE_RESOLVER);
+        // specified resolver must be registered
+        require(protocolStorage().disputeResolverIdByWallet[_offer.disputeResolver] != 0, INVALID_DISPUTE_RESOLVER);
 
         // Calculate and set the protocol fee
         uint256 protocolFee = protocolStorage().protocolFeePercentage*(_offer.price + _offer.sellerDeposit)/10000;

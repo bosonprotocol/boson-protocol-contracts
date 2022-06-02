@@ -44,10 +44,14 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Exchange) exchanges;
         // exchange id => dispute
         mapping(uint256 => BosonTypes.Dispute) disputes;
+        // exchange id => dispute dates
+        mapping(uint256 => BosonTypes.DisputeDates ) disputeDates;
         // seller id => seller
         mapping(uint256 => BosonTypes.Seller) sellers;
         // buyer id => buyer
         mapping(uint256 => BosonTypes.Buyer) buyers;
+        // buyer id => dispute resolver
+        mapping(uint256 => BosonTypes.DisputeResolver) disputeResolvers;
         // group id => group
         mapping(uint256 => BosonTypes.Group) groups;
         // bundle id => bundle
@@ -70,6 +74,8 @@ library ProtocolLib {
         mapping(address => uint256) sellerIdByClerk;
         //buyer wallet address => buyerId
         mapping(address => uint256) buyerIdByWallet;
+        //dispute resolver wallet address => disputeResolverId
+        mapping(address => uint256) disputeResolverIdByWallet;
         // seller/buyer id => token address => amount
         mapping(uint256 => mapping(address => uint256)) availableFunds;
         // seller/buyer id => all tokens with balance > 0

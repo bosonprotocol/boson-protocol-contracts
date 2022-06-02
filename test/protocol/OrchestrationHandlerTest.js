@@ -5,6 +5,7 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
+const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
@@ -43,6 +44,7 @@ describe("IBosonOrchestrationHandler", function () {
   let offer, nextOfferId, oneMonth, oneWeek, support, exists;
   let nextAccountId;
   let seller, sellerStruct, active;
+  let disputeResolver;
   let id,
     sellerId,
     price,
@@ -51,7 +53,7 @@ describe("IBosonOrchestrationHandler", function () {
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
-    disputeResolver,
+    disputeResolverAddress,
     metadataUri,
     offerChecksum,
     voided;
@@ -158,13 +160,20 @@ describe("IBosonOrchestrationHandler", function () {
   context("📋 Orchestration Handler Methods", async function () {
     beforeEach(async function () {
       // The first seller id
-      nextAccountId = "1";
+      nextAccountId = "2";
 
       // Required constructor params
-      id = "1"; // argument sent to contract for createSeller will be ignored
+      id = "1"; // dispute resolver gets id "1"
 
+      // Create a valid dispute resolver
       active = true;
+      disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+      expect(disputeResolver.isValid()).is.true;
 
+      // Register the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+
+      id = "2"; // argument sent to contract for createSeller will be ignored
       // Create a valid seller, then set fields in tests directly
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
@@ -180,21 +189,21 @@ describe("IBosonOrchestrationHandler", function () {
       nextOfferId = "1";
 
       // Required constructor params
-      id = sellerId = "1"; // argument sent to contract for createOffer will be ignored
+      id = sellerId = "2"; // argument sent to contract for createOffer will be ignored
       price = ethers.utils.parseUnits("1.5", "ether").toString();
       sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
       protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-      disputeResolver = accounts[0].address;
+      disputeResolverAddress = disputeResolver.wallet;
       offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
       metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
       voided = false;
 
       // Create a valid offer, then set fields in tests directly
       offer = new Offer(
-        id,
+        nextOfferId,
         sellerId,
         price,
         sellerDeposit,
@@ -202,7 +211,7 @@ describe("IBosonOrchestrationHandler", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
-        disputeResolver,
+        disputeResolverAddress,
         metadataUri,
         offerChecksum,
         voided
@@ -266,7 +275,7 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
@@ -458,7 +467,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Required constructor params for Group
         id = nextGroupId;
-        sellerId = "1";
+        sellerId = "2"; // "1" is dispute resolver
         offerIds = ["1"];
 
         condition = new Condition(method, tokenAddress, tokenId, threshold);
@@ -507,7 +516,7 @@ describe("IBosonOrchestrationHandler", function () {
           .createOfferWithCondition(offer, offerDates, offerDurations, condition);
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
@@ -716,7 +725,7 @@ describe("IBosonOrchestrationHandler", function () {
         for (let i = 0; i < 3; i++) {
           // Required constructor params
           id = `${i + 1}`; // argument sent to contract for createGroup will be ignored
-          sellerId = "1";
+          sellerId = "2"; // "1" is dispute resolver
           price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
           sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
           protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
@@ -737,11 +746,12 @@ describe("IBosonOrchestrationHandler", function () {
             buyerCancelPenalty,
             quantityAvailable,
             exchangeToken,
-            disputeResolver,
+            disputeResolverAddress,
             metadataUri,
             offerChecksum,
             voided
           );
+          console.log(offer);
           expect(offer.isValid()).is.true;
 
           // Required constructor params
@@ -778,7 +788,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Required constructor params for Group
         id = nextGroupId;
-        sellerId = "1";
+        sellerId = "2"; // "1" is dispute resolver;
         offerIds = ["1", "3"];
 
         condition = new Condition(method, tokenAddress, tokenId, threshold);
@@ -1090,7 +1100,7 @@ describe("IBosonOrchestrationHandler", function () {
           .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin);
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
@@ -1356,7 +1366,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Required constructor params for Group
         id = nextGroupId;
-        sellerId = "1";
+        sellerId = "2"; // "1" is dispute resolver;
         offerIds = ["1"];
 
         condition = new Condition(method, tokenAddress, tokenId, threshold);
@@ -1459,7 +1469,7 @@ describe("IBosonOrchestrationHandler", function () {
           .createOfferWithConditionAndTwinAndBundle(offer, offerDates, offerDurations, condition, twin);
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
@@ -1638,7 +1648,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Required constructor params for Group
         id = nextGroupId;
-        sellerId = "1";
+        sellerId = "2"; // "1" is dispute resolver;
         offerIds = ["1"];
 
         condition = new Condition(method, tokenAddress, tokenId, threshold);
@@ -1686,7 +1696,7 @@ describe("IBosonOrchestrationHandler", function () {
           .createSellerAndOfferWithCondition(seller, offer, offerDates, offerDurations, condition);
 
         // Get the seller as a struct
-        [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
+        [, sellerStruct] = await accountHandler.connect(rando).getSeller(seller.id);
 
         // Parse into entity
         let returnedSeller = Seller.fromStruct(sellerStruct);
@@ -1697,7 +1707,7 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
@@ -1840,7 +1850,7 @@ describe("IBosonOrchestrationHandler", function () {
           .createSellerAndOfferAndTwinWithBundle(seller, offer, offerDates, offerDurations, twin);
 
         // Get the seller as a struct
-        [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
+        [, sellerStruct] = await accountHandler.connect(rando).getSeller(seller.id);
 
         // Parse into entity
         let returnedSeller = Seller.fromStruct(sellerStruct);
@@ -1851,7 +1861,7 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
@@ -1955,7 +1965,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Required constructor params for Group
         id = nextGroupId;
-        sellerId = "1";
+        sellerId = "2"; // "1" is dispute resolver;
         offerIds = ["1"];
 
         condition = new Condition(method, tokenAddress, tokenId, threshold);
@@ -2071,7 +2081,7 @@ describe("IBosonOrchestrationHandler", function () {
           );
 
         // Get the seller as a struct
-        [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
+        [, sellerStruct] = await accountHandler.connect(rando).getSeller(seller.id);
 
         // Parse into entity
         let returnedSeller = Seller.fromStruct(sellerStruct);
@@ -2082,7 +2092,7 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);

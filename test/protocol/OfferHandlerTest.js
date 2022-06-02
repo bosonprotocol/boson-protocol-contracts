@@ -5,6 +5,7 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
+const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
@@ -22,7 +23,7 @@ const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 describe("IBosonOfferHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury;
+  let accounts, deployer, rando, operator, admin, clerk, treasury, other1;
   let erc165, protocolDiamond, accessController, accountHandler, offerHandler, bosonVoucher, offerStruct, key, value;
   let offer, nextOfferId, invalidOfferId, oneMonth, oneWeek, support, expected, exists;
   let seller, active;
@@ -34,7 +35,7 @@ describe("IBosonOfferHandler", function () {
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
-    disputeResolver,
+    disputeResolverAddress,
     metadataUri,
     offerChecksum,
     voided;
@@ -55,6 +56,7 @@ describe("IBosonOfferHandler", function () {
     offerDurationsList;
   let protocolFeePrecentage;
   let block, blockNumber;
+  let disputeResolver;
 
   before(async function () {
     // get interface Ids
@@ -70,6 +72,7 @@ describe("IBosonOfferHandler", function () {
     clerk = accounts[3];
     treasury = accounts[4];
     rando = accounts[5];
+    other1 = accounts[6];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -142,6 +145,14 @@ describe("IBosonOfferHandler", function () {
 
       await accountHandler.connect(admin).createSeller(seller);
 
+      // Create a valid dispute resolver
+      active = true;
+      disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+      expect(disputeResolver.isValid()).is.true;
+
+      // Register the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+
       // Some periods in milliseconds
       oneWeek = 604800 * 1000; //  7 days in milliseconds
       oneMonth = 2678400 * 1000; // 31 days in milliseconds
@@ -162,7 +173,7 @@ describe("IBosonOfferHandler", function () {
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-      disputeResolver = accounts[0].address;
+      disputeResolverAddress = disputeResolver.wallet;
       offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
       metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
       voided = false;
@@ -177,7 +188,7 @@ describe("IBosonOfferHandler", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
-        disputeResolver,
+        disputeResolverAddress,
         metadataUri,
         offerChecksum,
         voided
@@ -714,6 +725,14 @@ describe("IBosonOfferHandler", function () {
 
       await accountHandler.connect(admin).createSeller(seller);
 
+      // Create a valid dispute resolver
+      active = true;
+      disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+      expect(disputeResolver.isValid()).is.true;
+
+      // Register the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+
       // Some periods in milliseconds
       oneWeek = 604800 * 1000; //  7 days in milliseconds
       oneMonth = 2678400 * 1000; // 31 days in milliseconds
@@ -736,7 +755,7 @@ describe("IBosonOfferHandler", function () {
         protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
         quantityAvailable = `${(i + 1) * 2}`;
         exchangeToken = ethers.constants.AddressZero.toString();
-        disputeResolver = accounts[0].address;
+        disputeResolverAddress = disputeResolver.wallet;
         offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
         metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
         voided = false;
@@ -751,7 +770,7 @@ describe("IBosonOfferHandler", function () {
           buyerCancelPenalty,
           quantityAvailable,
           exchangeToken,
-          disputeResolver,
+          disputeResolverAddress,
           metadataUri,
           offerChecksum,
           voided

@@ -10,6 +10,7 @@ const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
 const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
+const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -30,7 +31,7 @@ const {
 describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, game, fauxClient;
+  let accounts, deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, other1, game, fauxClient;
   let erc165,
     protocolDiamond,
     accessController,
@@ -49,7 +50,7 @@ describe("IBosonExchangeHandler", function () {
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
-    disputeResolver,
+    disputeResolverAddress,
     metadataUri,
     offerChecksum,
     voided;
@@ -58,6 +59,7 @@ describe("IBosonExchangeHandler", function () {
   let protocolFeePrecentage;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state, exchangeStruct, response, exists, buyerStruct;
+  let disputeResolver, active;
 
   before(async function () {
     // get interface Ids
@@ -75,7 +77,7 @@ describe("IBosonExchangeHandler", function () {
     buyer = accounts[5];
     rando = accounts[6];
     newOwner = accounts[7];
-    game = accounts[8]; // the MR Game that is allowed to push the Dispute into final states
+    other1 = game = accounts[8]; // the MR Game that is allowed to push the Dispute into final states
     fauxClient = accounts[9];
 
     // Deploy the Protocol Diamond
@@ -158,7 +160,20 @@ describe("IBosonExchangeHandler", function () {
     beforeEach(async function () {
       // Initial ids for all the things
       id = offerId = sellerId = "1";
-      buyerId = "2"; // created after seller
+      buyerId = "3"; // created after seller and dispute resolver
+
+      // Create a valid seller
+      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
+      expect(seller.isValid()).is.true;
+      await accountHandler.connect(admin).createSeller(seller);
+
+      // Create a valid dispute resolver
+      active = true;
+      disputeResolver = new DisputeResolver(id, other1.address, active);
+      expect(disputeResolver.isValid()).is.true;
+
+      // Register the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
 
       // Create an offer to commit to
       oneWeek = 604800 * 1000; //  7 days in milliseconds
@@ -175,19 +190,14 @@ describe("IBosonExchangeHandler", function () {
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-      disputeResolver = accounts[0].address;
+      disputeResolverAddress = disputeResolver.wallet;
       offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
       metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
       voided = false;
 
-      // Create a valid seller
-      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
-      expect(seller.isValid()).is.true;
-      await accountHandler.connect(admin).createSeller(seller);
-
       // Create a valid offer entity
       offer = new Offer(
-        id,
+        offerId,
         sellerId,
         price,
         sellerDeposit,
@@ -195,7 +205,7 @@ describe("IBosonExchangeHandler", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
-        disputeResolver,
+        disputeResolverAddress,
         metadataUri,
         offerChecksum,
         voided

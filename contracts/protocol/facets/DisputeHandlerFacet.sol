@@ -61,9 +61,13 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // Set the initial values
         dispute.exchangeId = _exchangeId;
-        dispute.disputedDate = block.timestamp;
         dispute.complaint = _complaint;
         dispute.state = DisputeState.Resolving;
+
+        // Fetch the disputeDates
+        (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
+        disputeDates.disputed = block.timestamp;
+        // disputeDates.timeout = block.timestamp + offerDurations[exchange.offerId].voucherValid; // TODO add calculation once disputeValidDuration is added
         
         // Get the offer, which will exist if the exchange does
         (, Offer storage offer) = fetchOffer(exchange.offerId);
@@ -78,13 +82,17 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @param _exchangeId - the id of the exchange to check
      * @return exists - true if the dispute exists
      * @return dispute - the dispute details. See {BosonTypes.Dispute}
+     * @return disputeDates - the dispute dates details {BosonTypes.DisputeDates}
      */
     function getDispute(uint256 _exchangeId)
     external
     view
     override
-    returns(bool exists, Dispute memory dispute) {
-        return fetchDispute(_exchangeId);
+    returns(bool exists, Dispute memory dispute, DisputeDates memory disputeDates) {
+        (exists, dispute) = fetchDispute(_exchangeId);
+        if (exists) {
+            (, disputeDates) = fetchDisputeDates(_exchangeId);
+        }
     }
 
     /**

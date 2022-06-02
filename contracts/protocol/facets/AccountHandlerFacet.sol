@@ -7,7 +7,6 @@ import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import "hardhat/console.sol";
 
 contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
@@ -72,11 +71,46 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         _buyer.id = buyerId;
         storeBuyer(_buyer);
 
-       
         //Notify watchers of state change
         emit BuyerCreated(_buyer.id, _buyer);
 
     }
+
+    /**
+     * @notice Creates a Dispute Resolver
+     *
+     * Emits a DisputeResolverCreated event if successful.
+     *
+     * Reverts if:
+     * - Wallet address is zero address
+     * - Active is not true
+     * - Wallet address is not unique to this dispute resolver
+     *
+     * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
+     */
+    function createDisputeResolver(DisputeResolver memory _disputeResolver)
+    external
+    override
+    {
+        //Check for zero address
+        require(_disputeResolver.wallet != address(0), INVALID_ADDRESS);
+
+        //Check active is not set to false
+        require(_disputeResolver.active, MUST_BE_ACTIVE);
+
+        // Get the next account Id and increment the counter
+        uint256 disputeResolverId = protocolCounters().nextAccountId++;
+
+        //check that the wallet address is unique to one buyer Id
+        require(protocolStorage().disputeResolverIdByWallet[_disputeResolver.wallet] == 0, DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
+
+        _disputeResolver.id = disputeResolverId;
+        storeDisputeResolver(_disputeResolver);
+
+        //Notify watchers of state change
+        emit DisputeResolverCreated(_disputeResolver.id, _disputeResolver);
+    }
+
 
      /**
      * @notice Updates a seller. All fields should be filled, even those staying the same.
@@ -243,6 +277,22 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
+     * @notice Gets the details about a dispute resolver.
+     *
+     * @param _disputeResolverId - the id of the rdispute esolver to check
+     * @return exists - the dispute resolver was found
+     * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
+     */
+    function getDisputeResolver(uint256 _disputeResolverId) 
+    external
+    override
+    view returns (bool exists, DisputeResolver memory disputeResolver) 
+    {
+        return fetchDisputeResolver(_disputeResolverId);
+    }
+
+
+    /**
      * @notice Gets the next account Id that can be assigned to an account.
      *
      * @return nextAccountId - the account Id
@@ -256,13 +306,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
-     * @notice Validates buyer struct and stores it to storage
+     * @notice Stores buyer struct in storage
      *
-     * Reverts if:
-     * - Wallet address is zero address
-     * - Wallet address is not unique to this buyer
-     *
-     * @param _buyer - the fully populated struct with seller id set
+     * @param _buyer - the fully populated struct with buyer id set
      */
    
     function storeBuyer(Buyer memory _buyer) internal 
@@ -277,6 +323,27 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         //Map the buyer's wallet address to the buyerId.
         protocolStorage().buyerIdByWallet[_buyer.wallet] = _buyer.id;
+    }
+
+
+    /**
+     * @notice Stores DisputeResolver struct in storage
+     *
+     * @param _disputeResolver - the fully populated struct with dispute resolver id set
+     */
+   
+    function storeDisputeResolver(DisputeResolver memory _disputeResolver) internal 
+    {
+        // Get storage location for dispute resolver
+        (,DisputeResolver storage disputeResolver) = fetchDisputeResolver(_disputeResolver.id);
+
+        // Set dispute resolver props individually since memory structs can't be copied to storage
+        disputeResolver.id = _disputeResolver.id;
+        disputeResolver.wallet = _disputeResolver.wallet;
+        disputeResolver.active = _disputeResolver.active;
+
+        //Map the dispute resolver's wallet address to the dispute resolver Id.
+        protocolStorage().disputeResolverIdByWallet[_disputeResolver.wallet] = _disputeResolver.id;
     }
 
    
