@@ -57,16 +57,6 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256",
-              "name": "disputedDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "finalizedDate",
-              "type": "uint256"
-            },
-            {
               "internalType": "string",
               "name": "complaint",
               "type": "string"
@@ -91,6 +81,33 @@
           ],
           "internalType": "struct BosonTypes.Dispute",
           "name": "dispute",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "disputed",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "escalated",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "finalized",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timeout",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.DisputeDates",
+          "name": "disputeDates",
           "type": "tuple"
         }
       ],
