@@ -124,11 +124,12 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     function resolveDispute(uint256 _exchangeId, Resolution calldata _resolution, bytes32 _sigR,
         bytes32 _sigS,
         uint8 _sigV) external override {
-        // make sure the dispute not expired already
-        require(block.timestamp <= fetchDisputeDates(_exchangeId)[DisputeDate.Timeout], DISPUTE_HAS_EXPIRED);
-
         // Get the exchange, should be in dispute state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+
+        // make sure the dispute not expired already
+        (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
+        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
 
         // Fetch the offer to get the info who the seller is
         (, Offer storage offer) = fetchOffer(exchange.offerId);
@@ -157,7 +158,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         }
 
         // verify that the signature belongs to the expectedSigner
-        require(verify(expectedSigner, hashResolution(_exchangeId, _resolution), _sigR, _sigS, _sigV), INVALID_SIGNATURE);
+        require(verify(expectedSigner, hashResolution(_exchangeId, _resolution), _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
 
         // finalize the dispute
         finalizeDispute(_exchangeId, exchange, DisputeState.Resolved);
@@ -176,7 +177,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // update dispute and exchange
         (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
         disputeDates.finalized = block.timestamp;
-        dispute.state = DisputeState.Retracted;
+        dispute.state = _targetState;
         _exchange.finalizedDate = block.timestamp;
 
         // Release the funds

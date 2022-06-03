@@ -101,4 +101,5 @@ exports.RevertReasons = {
 
   // Dispute related
   COMPLAINT_MISSING: "Complaint missing",
+  DISPUTE_HAS_EXPIRED: "Dispute has expired",
 };
