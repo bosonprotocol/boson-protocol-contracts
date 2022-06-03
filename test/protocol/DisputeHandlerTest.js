@@ -672,6 +672,16 @@ describe("IBosonDisputeHandler", function () {
           ));
         });
 
+        it("Specified buyer percent exceeds 100%", async function () {
+          // Set buyer percent above 100%
+          resolution = new Resolution("12000"); // 120%
+
+          // Attempt to resolve the dispute, expecting revert
+          await expect(
+            disputeHandler.connect(operator).resolveDispute(exchange.id, resolution, r, s, v)
+          ).to.revertedWith(RevertReasons.INVALID_BUYER_PERCENT);
+        });
+
         it("Dispute has expired", async function () {
           // Set time forward to the dispute expiration date
           await setNextBlockTimestamp(Number(timeout));
@@ -751,6 +761,16 @@ describe("IBosonDisputeHandler", function () {
           await expect(disputeHandler.connect(buyer).resolveDispute(exchange.id, resolution, r, s, v)).to.revertedWith(
             RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH
           );
+        });
+
+        it("signature resolution does not match input resolution ", async function () {
+          // Set different buyer percentage
+          resolution = new Resolution((Number(resolution.buyerPercent) + 1000).toString()); // add 10%
+
+          // Attempt to resolve the dispute, expecting revert
+          await expect(
+            disputeHandler.connect(operator).resolveDispute(exchange.id, resolution, r, s, v)
+          ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         });
 
         it("signature has invalid field", async function () {

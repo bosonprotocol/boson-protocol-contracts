@@ -49,6 +49,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @notice Resolve a dispute by providing the information about the split. Callable by the buyer or seller, but they must provide the resolution signed by the other party
      *
      * Reverts if:
+     * - specified buyer percent exceeds 100%
      * - dispute has expired
      * - exchange does not exist
      * - exchange is not in the disputed state

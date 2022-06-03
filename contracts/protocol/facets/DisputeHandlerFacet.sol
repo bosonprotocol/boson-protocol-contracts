@@ -108,6 +108,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @notice Resolve a dispute by providing the information about the split. Callable by the buyer or seller, but they must provide the resolution signed by the other party
      *
      * Reverts if:
+     * - specified buyer percent exceeds 100%
      * - dispute has expired
      * - exchange does not exist
      * - exchange is not in the disputed state
@@ -124,6 +125,9 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     function resolveDispute(uint256 _exchangeId, Resolution calldata _resolution, bytes32 _sigR,
         bytes32 _sigS,
         uint8 _sigV) external override {
+        // buyer should get at most 100%
+        require(_resolution.buyerPercent <= 10000, INVALID_BUYER_PERCENT);
+
         // Get the exchange, should be in dispute state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 

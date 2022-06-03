@@ -112,6 +112,7 @@ contract BosonConstants {
     // Revert Reasons: Dispute related
     string internal constant COMPLAINT_MISSING = "Complaint missing";
     string internal constant DISPUTE_HAS_EXPIRED = "Dispute has expired";
+    string internal constant INVALID_BUYER_PERCENT = "Invalid buyer percent";
 }
 
 // TODO: Refactor to use file level constants throughout or use custom Errors
