@@ -35,7 +35,8 @@ describe("IBosonFundsHandler", function () {
     exchangeHandler,
     offerHandler,
     configHandler,
-    bosonVoucher;
+    bosonVoucher,
+    disputeHandler;
   let support, oneMonth, oneWeek;
   let seller, active;
   let id, buyer, offerToken, offerNative, sellerId;
@@ -1794,13 +1795,22 @@ describe("IBosonFundsHandler", function () {
         });
       });
 
-      context.skip("Final state DISPUTED", async function () {
+      context("Final state DISPUTED", async function () {
         beforeEach(async function () {
+          // Cut the protocol handler facets into the Diamond
+          await deployProtocolHandlerFacets(protocolDiamond, ["DisputeHandlerFacet"]);
+
+          // Cast Diamond to IBosonDisputeHandler
+          disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
+
           // Set time forward to the offer's redeemableFrom
           await setNextBlockTimestamp(Number(redeemableFrom));
 
           // succesfully redeem exchange
           await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+          // raise the dispute
+          await disputeHandler.connect(buyer).raiseDispute(exchangeId, "Wrong size");
         });
 
         context("Final state DISPUTED - RETRACTED", async function () {
@@ -1818,7 +1828,7 @@ describe("IBosonFundsHandler", function () {
 
           it("should emit a FundsReleased event", async function () {
             // Retract from the dispute, expecting event
-            await expect(exchangeHandler.connect(buyer).retractDispute(disputeId))
+            await expect(disputeHandler.connect(buyer).retractDispute(exchangeId))
               .to.emit(exchangeHandler, "FundsReleased")
               .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
               .to.emit(exchangeHandler, "FundsReleased")
@@ -1845,7 +1855,7 @@ describe("IBosonFundsHandler", function () {
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
 
             // Retract from the dispute, so the funds are released
-            await exchangeHandler.connect(buyer).retractDispute(disputeId);
+            await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
             // Available funds should be increased for
             // buyer: 0
@@ -1866,7 +1876,7 @@ describe("IBosonFundsHandler", function () {
           });
         });
 
-        context("Final state DISPUTED - RESOLVED", async function () {
+        context.skip("Final state DISPUTED - RESOLVED", async function () {
           beforeEach(async function () {
             buyerPercentage = 5566; // 55.66%
 
@@ -1936,7 +1946,7 @@ describe("IBosonFundsHandler", function () {
           });
         });
 
-        context("Final state DISPUTED - DECIDED", async function () {
+        context.skip("Final state DISPUTED - DECIDED", async function () {
           beforeEach(async function () {
             buyerPercentage = 5566; // 55.66%
 
