@@ -1885,7 +1885,7 @@ describe("IBosonFundsHandler", function () {
 
         context("Final state DISPUTED - RESOLVED", async function () {
           beforeEach(async function () {
-            buyerPercent = 5566; // 55.66%
+            buyerPercent = "5566"; // 55.66%
 
             // expected payoffs
             // buyer: 0
@@ -1982,7 +1982,7 @@ describe("IBosonFundsHandler", function () {
 
         context.skip("Final state DISPUTED - DECIDED", async function () {
           beforeEach(async function () {
-            buyerPercent = 5566; // 55.66%
+            buyerPercent = "5566"; // 55.66%
 
             // expected payoffs
             // buyer: 0
