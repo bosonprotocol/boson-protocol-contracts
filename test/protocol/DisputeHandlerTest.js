@@ -390,10 +390,10 @@ describe("IBosonDisputeHandler", function () {
         [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
         // Parse into entities
-        let returnedDispute = Dispute.fromStruct(disputeStruct);
+        const returnedDispute = Dispute.fromStruct(disputeStruct);
         const returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
 
-        // Returned values should match the input in createSeller
+        // Returned values should match expected dispute and dispute dates
         for (const [key, value] of Object.entries(dispute)) {
           expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
         }
@@ -404,7 +404,7 @@ describe("IBosonDisputeHandler", function () {
         // Get the dispute state
         [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchange.id);
 
-        // It should match DisputeState.Resolving
+        // It should match DisputeState.Retracted
         assert.equal(response, DisputeState.Retracted, "Dispute state is incorrect");
 
         // exchange should also be finalized
