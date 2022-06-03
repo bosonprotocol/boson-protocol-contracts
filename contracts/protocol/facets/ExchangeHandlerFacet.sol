@@ -101,7 +101,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         exchange.voucher.committedDate = block.timestamp;
 
         // Store the time the voucher expires // TODO: implement the start and and based on new requirements 
-        uint256 startDate = (block.timestamp >= offerDates.redeemableFrom) ? block.timestamp : offerDates.redeemableFrom;
+        uint256 startDate = (block.timestamp >= offerDates.voucherRedeemableFrom) ? block.timestamp : offerDates.voucherRedeemableFrom;
         exchange.voucher.validUntilDate = startDate + fetchOfferDurations(_offerId).voucherValid;
 
         // Map the offerId to the exchangeId as one-to-many
@@ -278,7 +278,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Caller does not own voucher
-     * - Current time is prior to offer.redeemableFromDate
+     * - Current time is prior to offer.voucherRedeemableFromDate
      * - Current time is after exchange.voucher.validUntilDate
      *
      * Emits
@@ -299,7 +299,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
 
         // Make sure the voucher is redeemable
         require(
-            block.timestamp >= fetchOfferDates(offerId).redeemableFrom &&
+            block.timestamp >= fetchOfferDates(offerId).voucherRedeemableFrom &&
             block.timestamp <= exchange.voucher.validUntilDate,
             VOUCHER_NOT_REDEEMABLE
         );

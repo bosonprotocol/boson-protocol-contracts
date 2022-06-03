@@ -67,8 +67,8 @@ describe("IBosonBundleHandler", function () {
     offerChecksum,
     voided,
     invalidOfferId;
-  let validFrom, validUntil, redeemableFrom, redeemableUntil, offerDates;
-  let fulfillmentPeriod, voucherValid, disputeValid, offerDurations;
+  let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
+  let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
   let protocolFeePrecentage;
   let disputeResolver;
 
@@ -248,19 +248,19 @@ describe("IBosonBundleHandler", function () {
         validUntil = ethers.BigNumber.from(block.timestamp)
           .add(oneMonth * 6)
           .toString(); // until 6 months
-        redeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-        redeemableUntil = "0"; // vouchers don't have fixed expiration date
+        voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+        voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
 
         // Create a valid offerDates, then set fields in tests directly
-        offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+        offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
 
         // Required constructor params
         fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
         voucherValid = oneMonth.toString(); // offers valid for one month
-        disputeValid = oneWeek.toString(); // dispute is valid for one month
+        resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
 
         // Create a valid offerDurations, then set fields in tests directly
-        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
 
         await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
       }

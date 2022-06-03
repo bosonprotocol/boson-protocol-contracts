@@ -41,15 +41,15 @@ describe("IBosonOfferHandler", function () {
     voided;
   let validFrom,
     validUntil,
-    redeemableFrom,
-    redeemableUntil,
+    voucherRedeemableFrom,
+    voucherRedeemableUntil,
     offerDates,
     offerDatesStruct,
     offerDatesStructs,
     offerDatesList;
   let fulfillmentPeriod,
     voucherValid,
-    disputeValid,
+    resolutionPeriod,
     offerDurations,
     offerDurationsStruct,
     offerDurationsStructs,
@@ -203,11 +203,11 @@ describe("IBosonOfferHandler", function () {
       validUntil = ethers.BigNumber.from(block.timestamp)
         .add(oneMonth * 6)
         .toString(); // until 6 months
-      redeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-      redeemableUntil = "0"; // vouchers don't have fixed expiration date
+      voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+      voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
 
       // Create a valid offerDates, then set fields in tests directly
-      offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+      offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
       expect(offerDates.isValid()).is.true;
 
       // How that offer looks as a returned struct
@@ -216,10 +216,10 @@ describe("IBosonOfferHandler", function () {
       // Required constructor params
       fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
       voucherValid = oneMonth.toString(); // offers valid for one month
-      disputeValid = oneWeek.toString(); // dispute is valid for one month
+      resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
 
       // Create a valid offerDurations, then set fields in tests directly
-      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
       expect(offerDurations.isValid()).is.true;
 
       // How that offer looks as a returned struct
@@ -376,8 +376,8 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("Both voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both redeemableUntil and voucherValid
-          offerDates.redeemableUntil = (Number(offerDates.redeemableFrom) + oneMonth).toString();
+          // Set both voucherRedeemableUntil and voucherValid
+          offerDates.voucherRedeemableUntil = (Number(offerDates.voucherRedeemableFrom) + oneMonth).toString();
           offerDurations.voucherValid = oneMonth.toString();
 
           // Attempt to Create an offer, expecting revert
@@ -387,8 +387,8 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("Neither of voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both redeemableUntil and voucherValid to "0"
-          offerDates.redeemableUntil = "0";
+          // Set both voucherRedeemableUntil and voucherValid to "0"
+          offerDates.voucherRedeemableUntil = "0";
           offerDurations.voucherValid = "0";
 
           // Attempt to Create an offer, expecting revert
@@ -398,8 +398,8 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("Voucher redeemable period is fixed, but it ends before it starts", async function () {
-          // Set both redeemableUntil that is less than redeemableFrom
-          offerDates.redeemableUntil = (Number(offerDates.redeemableFrom) - 10).toString();
+          // Set both voucherRedeemableUntil that is less than voucherRedeemableFrom
+          offerDates.voucherRedeemableUntil = (Number(offerDates.voucherRedeemableFrom) - 10).toString();
           offerDurations.voucherValid = "0";
 
           // Attempt to Create an offer, expecting revert
@@ -409,9 +409,9 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("Voucher redeemable period is fixed, but it ends before offer expires", async function () {
-          // Set both redeemableUntil that is more than redeemableFrom but less than validUntil
-          offerDates.redeemableFrom = "0";
-          offerDates.redeemableUntil = (Number(offerDates.validUntil) - 10).toString();
+          // Set both voucherRedeemableUntil that is more than voucherRedeemableFrom but less than validUntil
+          offerDates.voucherRedeemableFrom = "0";
+          offerDates.voucherRedeemableUntil = (Number(offerDates.validUntil) - 10).toString();
           offerDurations.voucherValid = "0";
 
           // Attempt to Create an offer, expecting revert
@@ -430,9 +430,9 @@ describe("IBosonOfferHandler", function () {
           );
         });
 
-        it("Dispute duration is set to zero", async function () {
+        it("Resolution period is set to zero", async function () {
           // Set dispute duration period to 0
-          offerDurations.disputeValid = "0";
+          offerDurations.resolutionPeriod = "0";
 
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
@@ -868,11 +868,11 @@ describe("IBosonOfferHandler", function () {
         // Required constructor params
         validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
         validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
-        redeemableFrom = ethers.BigNumber.from(validUntil + oneWeek).toString();
-        redeemableUntil = "0"; // vouchers don't have fixed expiration date
+        voucherRedeemableFrom = ethers.BigNumber.from(validUntil + oneWeek).toString();
+        voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
 
         // Create a valid offerDates, then set fields in tests directly
-        offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+        offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
         expect(offerDates.isValid()).is.true;
 
         // How that offer looks as a returned struct
@@ -882,10 +882,10 @@ describe("IBosonOfferHandler", function () {
         // Required constructor params
         fulfillmentPeriod = `${(i + 1) * oneMonth}`;
         voucherValid = `${(i + 1) * oneMonth}`;
-        disputeValid = `${(i + 1) * oneWeek}`;
+        resolutionPeriod = `${(i + 1) * oneWeek}`;
 
         // Create a valid offerDurations, then set fields in tests directly
-        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
         expect(offerDurations.isValid()).is.true;
 
         offerDurationsList.push(offerDurations);
@@ -1058,7 +1058,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Dispute valid duration is 0 for some offer", async function () {
           // Set dispute valid duration to 0
-          offerDurationsList[2].disputeValid = "0";
+          offerDurationsList[2].resolutionPeriod = "0";
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -1067,8 +1067,8 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("For some offer, both voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both redeemableUntil and voucherValid
-          offerDatesList[2].redeemableUntil = ethers.BigNumber.from(offerDatesList[2].redeemableFrom)
+          // Set both voucherRedeemableUntil and voucherValid
+          offerDatesList[2].voucherRedeemableUntil = ethers.BigNumber.from(offerDatesList[2].voucherRedeemableFrom)
             .add(oneMonth)
             .toString();
           offerDurationsList[2].voucherValid = oneMonth.toString();
@@ -1080,8 +1080,8 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("For some offer, neither of voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both redeemableUntil and voucherValid to "0"
-          offerDatesList[1].redeemableUntil = "0";
+          // Set both voucherRedeemableUntil and voucherValid to "0"
+          offerDatesList[1].voucherRedeemableUntil = "0";
           offerDurationsList[1].voucherValid = "0";
 
           // Attempt to Create an offer, expecting revert
@@ -1091,8 +1091,8 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("For some offer, voucher redeemable period is fixed, but it ends before it starts", async function () {
-          // Set both redeemableUntil that is less than redeemableFrom
-          offerDatesList[0].redeemableUntil = ethers.BigNumber.from(offerDatesList[0].redeemableFrom)
+          // Set both voucherRedeemableUntil that is less than voucherRedeemableFrom
+          offerDatesList[0].voucherRedeemableUntil = ethers.BigNumber.from(offerDatesList[0].voucherRedeemableFrom)
             .sub(10)
             .toString();
           offerDurationsList[0].voucherValid = "0";
@@ -1104,9 +1104,9 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("For some offer, voucher redeemable period is fixed, but it ends before offer expires", async function () {
-          // Set both redeemableUntil that is more than redeemableFrom but less than validUntil
-          offerDatesList[2].redeemableFrom = "0";
-          offerDatesList[2].redeemableUntil = (Number(offerDatesList[2].validUntil) - 10).toString();
+          // Set both voucherRedeemableUntil that is more than voucherRedeemableFrom but less than validUntil
+          offerDatesList[2].voucherRedeemableFrom = "0";
+          offerDatesList[2].voucherRedeemableUntil = (Number(offerDatesList[2].validUntil) - 10).toString();
           offerDurationsList[2].voucherValid = "0";
 
           // Attempt to Create an offer, expecting revert
@@ -1127,7 +1127,7 @@ describe("IBosonOfferHandler", function () {
 
         it("For some offer, dispute duration is set to zero", async function () {
           // Set dispute duration period to 0
-          offerDurationsList[0].disputeValid = "0";
+          offerDurationsList[0].resolutionPeriod = "0";
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -1157,7 +1157,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Number of dispute dates does not match the number of offers", async function () {
           // Make dispute dates longer
-          offerDatesList.push(new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil));
+          offerDatesList.push(new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil));
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -1175,7 +1175,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Number of dispute durations does not match the number of offers", async function () {
           // Make dispute durations longer
-          offerDurationsList.push(new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid));
+          offerDurationsList.push(new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod));
 
           // Attempt to Create an offer, expecting revert
           await expect(

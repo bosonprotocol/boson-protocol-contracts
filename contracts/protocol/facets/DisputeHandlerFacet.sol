@@ -67,7 +67,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Fetch the disputeDates
         (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
         disputeDates.disputed = block.timestamp;
-        disputeDates.timeout = block.timestamp + fetchOfferDurations(exchange.offerId).disputeValid;
+        disputeDates.timeout = block.timestamp + fetchOfferDurations(exchange.offerId).resolutionPeriod;
         
         // Get the offer, which will exist if the exchange does
         (, Offer storage offer) = fetchOffer(exchange.offerId);
