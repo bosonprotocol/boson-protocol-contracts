@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {BosonTypes} from "../../domain/BosonTypes.sol";
 import {IBosonDisputeEvents} from "../events/IBosonDisputeEvents.sol";
+import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
 
 /**
  * @title IBosonDisputeHandler
@@ -11,7 +12,7 @@ import {IBosonDisputeEvents} from "../events/IBosonDisputeEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0x374702cd
  */
-interface IBosonDisputeHandler is IBosonDisputeEvents {
+interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
 
     /**
      * @notice Raise a dispute

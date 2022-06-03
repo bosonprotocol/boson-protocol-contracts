@@ -160,6 +160,10 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // verify that the signature belongs to the expectedSigner
         require(verify(expectedSigner, hashResolution(_exchangeId, _resolution), _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
 
+        // store the resolution information
+        (, Dispute storage dispute) = fetchDispute(_exchangeId);
+        dispute.resolution = _resolution;
+
         // finalize the dispute
         finalizeDispute(_exchangeId, exchange, DisputeState.Resolved);
 

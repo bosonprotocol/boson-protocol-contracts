@@ -67,7 +67,7 @@ describe("IBosonDisputeHandler", function () {
   let exists, response;
   let disputeResolver, active;
   let buyerPercent, resolution;
-  let resolutionType, customTransactionType, message, r, s, v;
+  let resolutionType, customSignatureType, message, r, s, v;
 
   before(async function () {
     // get interface Ids
@@ -498,7 +498,7 @@ describe("IBosonDisputeHandler", function () {
           { name: "buyerPercent", type: "uint256" },
         ];
 
-        customTransactionType = {
+        customSignatureType = {
           Resolution: resolutionType,
         };
 
@@ -513,7 +513,7 @@ describe("IBosonDisputeHandler", function () {
           // Collect the signature components
           ({ r, s, v } = await prepareDataSignatureParameters(
             operator, // When buyer is the caller, seller should be the signer.
-            customTransactionType,
+            customSignatureType,
             "Resolution",
             message,
             disputeHandler.address
@@ -589,7 +589,7 @@ describe("IBosonDisputeHandler", function () {
           // Collect the signature components
           ({ r, s, v } = await prepareDataSignatureParameters(
             buyer, // When seller is the caller, buyer should be the signer.
-            customTransactionType,
+            customSignatureType,
             "Resolution",
             message,
             disputeHandler.address
@@ -665,7 +665,7 @@ describe("IBosonDisputeHandler", function () {
           // Collect the signature components
           ({ r, s, v } = await prepareDataSignatureParameters(
             buyer, // When seller is the caller, buyer should be the signer.
-            customTransactionType,
+            customSignatureType,
             "Resolution",
             message,
             disputeHandler.address
@@ -736,7 +736,7 @@ describe("IBosonDisputeHandler", function () {
           // Collect the signature components
           ({ r, s, v } = await prepareDataSignatureParameters(
             rando,
-            customTransactionType,
+            customSignatureType,
             "Resolution",
             message,
             disputeHandler.address
