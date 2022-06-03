@@ -1829,12 +1829,11 @@ describe("IBosonFundsHandler", function () {
           it("should emit a FundsReleased event", async function () {
             // Retract from the dispute, expecting event
             await expect(disputeHandler.connect(buyer).retractDispute(exchangeId))
-              .to.emit(exchangeHandler, "FundsReleased")
+              .to.emit(disputeHandler, "ExchangeFee")
+              .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee)
+              .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
-              .to.emit(exchangeHandler, "FundsReleased")
-              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff)
-              .to.emit(exchangeHandler, "ExchangeFee")
-              .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee);
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff);
           });
 
           it("should update state", async function () {
