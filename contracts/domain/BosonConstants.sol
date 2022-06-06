@@ -105,7 +105,6 @@ contract BosonConstants {
     string internal constant FUNCTION_CALL_NOT_SUCCESSFUL = "Function call not successful";
     string internal constant INVALID_FUNCTION_SIGNATURE =
         "functionSignature can not be of executeMetaTransaction method";
-    string internal constant INVALID_SIGNATURE = "Invalid signature";
     string internal constant SIGNER_AND_SIGNATURE_DO_NOT_MATCH = "Signer and signature do not match";
     string internal constant INVALID_FUNCTION_NAME = "Invalid function name";
 
@@ -121,3 +120,4 @@ string constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
 string constant INSUFFICIENT_VALUE_SENT = "Insufficient value sent";
 string constant INSUFFICIENT_AVAILABLE_FUNDS = "Insufficient available funds";
 string constant NATIVE_NOT_ALLOWED = "Transfer of native currency not allowed";
+string constant INVALID_SIGNATURE = "Invalid signature";

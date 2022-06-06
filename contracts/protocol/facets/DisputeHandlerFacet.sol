@@ -4,8 +4,8 @@ pragma solidity ^0.8.0;
 import {IBosonDisputeHandler} from "../../interfaces/handlers/IBosonDisputeHandler.sol";
 import {DiamondLib} from "../../diamond/DiamondLib.sol";
 import {ProtocolBase} from "../bases/ProtocolBase.sol";
-import {ProtocolLib} from "../libs/ProtocolLib.sol";
 import {FundsLib} from "../libs/FundsLib.sol";
+import {EIP712Lib} from "../libs/EIP712Lib.sol";
 
 /**
  * @title DisputeHandlerFacet
@@ -13,6 +13,7 @@ import {FundsLib} from "../libs/FundsLib.sol";
  * @notice Handles disputes associated with exchanges within the protocol
  */
 contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
+    bytes32 private constant RESOLUTION_TYPEHASH = keccak256(bytes("Resolution(uint256 exchangeId,uint256 buyerPercent)")); // needed for verification during the resolveDispute
 
     /**
      * @notice Facet Initializer
@@ -162,7 +163,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         }
 
         // verify that the signature belongs to the expectedSigner
-        require(verify(expectedSigner, hashResolution(_exchangeId, _resolution), _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+        require(EIP712Lib.verify(expectedSigner, hashResolution(_exchangeId, _resolution), _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
 
         // finalize the dispute
         finalizeDispute(_exchangeId, exchange, DisputeState.Resolved, _resolution);
@@ -171,6 +172,19 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         emit DisputeResolved(_exchangeId, _resolution, msg.sender);
     }
 
+    /**
+     * @notice Transition dispute to a "finalized" state
+     *
+     * Target state must be Retracted, Resolved, or Decided.
+     * Sets finalized date for exchange and dispute, store the resolution if exists and releases the funds
+     *
+     * Reverts if the current dispute state is not resolving or escalated.
+     *
+     * @param _exchangeId  - exchange id to resolve dispute
+     * @param _exchange - pointer to exchange storage slot
+     * @param _targetState - target final state
+     * @param _resolution - resolution struct with the information about the split.
+     */
     function finalizeDispute(uint256 _exchangeId, Exchange storage _exchange, DisputeState _targetState, Resolution memory _resolution) internal {
          // Fetch the dispute
         (, Dispute storage dispute) = fetchDispute(_exchangeId);
@@ -193,10 +207,8 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         FundsLib.releaseFunds(_exchangeId);
     }
 
-    bytes32 private constant RESOLUTION_TYPEHASH = keccak256(bytes("Resolution(uint256 exchangeId,uint256 buyerPercent)"));
-
     /**
-     * @notice Returns hashed resolution information
+     * @notice Returns hashed resolution information. Needed for the verfication in resolveDispute.
      *
      * @param _exchangeId - if of the exchange for which dispute was resolved
      * @param _resolution - resolution struct with the information about the split
@@ -210,53 +222,6 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
                     _resolution.buyerPercent
                 )
             );
-    }
-
-    // TODO refactor this out and make shared library with metatransactions
-    /**
-     * @notice Recovers the Signer from the Signature components.
-     *
-     * Reverts if:
-     * - signer is a zero address
-     *
-     * @param _user  - the sender of the transaction.
-     * @param _hashedMetaTx - hashed meta transaction.
-     * @param _sigR - r part of the signer's signature.
-     * @param _sigS - s part of the signer's signature.
-     * @param _sigV - v part of the signer's signature.
-     */
-    function verify(
-        address _user,
-        bytes32 _hashedMetaTx,
-        bytes32 _sigR,
-        bytes32 _sigS,
-        uint8 _sigV
-    ) internal view returns (bool) {
-        address signer = ecrecover(toTypedMessageHash(_hashedMetaTx), _sigV, _sigR, _sigS);
-        require(signer != address(0), INVALID_SIGNATURE);
-        return signer == _user;
-    }
-
-    // TODO refactor this out and make shared library with metatransactions
-    /**
-     * @notice Get the domain separator.
-     */
-    function getDomainSeparator() private view returns (bytes32) {
-        return protocolMetaTxInfo().domainSeparator;
-    }
-
-    // TODO refactor this out and make shared library with metatransactions
-    /**
-     * @dev Accept message hash and returns hash message in EIP712 compatible form
-     * So that it can be used to recover signer from signature signed using EIP712 formatted data
-     * https://eips.ethereum.org/EIPS/eip-712
-     * "\\x19" makes the encoding deterministic
-     * "\\x01" is the version byte to make it compatible to EIP-191
-     *
-     * @param _messageHash  - the message hash.
-     */
-    function toTypedMessageHash(bytes32 _messageHash) internal view returns (bytes32) {
-        return keccak256(abi.encodePacked("\x19\x01", getDomainSeparator(), _messageHash));
     }
 
     /**

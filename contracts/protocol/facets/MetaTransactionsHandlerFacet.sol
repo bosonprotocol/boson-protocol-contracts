@@ -5,6 +5,7 @@ import { IBosonMetaTransactionsHandler } from "../../interfaces/handlers/IBosonM
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
+import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
 /**
  * @title MetaTransactionsHandlerFacet
@@ -41,26 +42,6 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         assembly {
             _outBytes4 := mload(add(_inBytes, 32))
         }
-    }
-
-    /**
-     * @notice Get the domain separator.
-     */
-    function getDomainSeparator() private view returns (bytes32) {
-        return protocolMetaTxInfo().domainSeparator;
-    }
-
-    /**
-     * @dev Accept message hash and returns hash message in EIP712 compatible form
-     * So that it can be used to recover signer from signature signed using EIP712 formatted data
-     * https://eips.ethereum.org/EIPS/eip-712
-     * "\\x19" makes the encoding deterministic
-     * "\\x01" is the version byte to make it compatible to EIP-191
-     *
-     * @param _messageHash  - the message hash.
-     */
-    function toTypedMessageHash(bytes32 _messageHash) internal view returns (bytes32) {
-        return keccak256(abi.encodePacked("\x19\x01", getDomainSeparator(), _messageHash));
     }
 
     /**
@@ -180,30 +161,6 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     }
 
     /**
-     * @notice Recovers the Signer from the Signature components.
-     *
-     * Reverts if:
-     * - signer is a zero address
-     *
-     * @param _user  - the sender of the transaction.
-     * @param _hashedMetaTx - hashed meta transaction.
-     * @param _sigR - r part of the signer's signature.
-     * @param _sigS - s part of the signer's signature.
-     * @param _sigV - v part of the signer's signature.
-     */
-    function verify(
-        address _user,
-        bytes32 _hashedMetaTx,
-        bytes32 _sigR,
-        bytes32 _sigS,
-        uint8 _sigV
-    ) internal view returns (bool) {
-        address signer = ecrecover(toTypedMessageHash(_hashedMetaTx), _sigV, _sigR, _sigS);
-        require(signer != address(0), INVALID_SIGNATURE);
-        return signer == _user;
-    }
-
-    /**
      * @notice Sets the current transaction sender.
      *
      * @param _signerAddress - Address of the transaction signer.
@@ -288,7 +245,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             functionSignature: _functionSignature
         });
         require(
-            verify(_userAddress, hashMetaTransaction(metaTx), _sigR, _sigS, _sigV),
+            EIP712Lib.verify(_userAddress, hashMetaTransaction(metaTx), _sigR, _sigS, _sigV),
             SIGNER_AND_SIGNATURE_DO_NOT_MATCH
         );
 
@@ -334,7 +291,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             offerDetails: _offerDetails
         });
         require(
-            verify(_userAddress, hashMetaTxCommitToOffer(metaTx), _sigR, _sigS, _sigV),
+            EIP712Lib.verify(_userAddress, hashMetaTxCommitToOffer(metaTx), _sigR, _sigS, _sigV),
             SIGNER_AND_SIGNATURE_DO_NOT_MATCH
         );
 
@@ -379,7 +336,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             exchangeDetails: _exchangeDetails
         });
         require(
-            verify(_userAddress, hashMetaTxExchangeDetails(metaTx), _sigR, _sigS, _sigV),
+            EIP712Lib.verify(_userAddress, hashMetaTxExchangeDetails(metaTx), _sigR, _sigS, _sigV),
             SIGNER_AND_SIGNATURE_DO_NOT_MATCH
         );
 
@@ -424,7 +381,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             exchangeDetails: _exchangeDetails
         });
         require(
-            verify(_userAddress, hashMetaTxExchangeDetails(metaTx), _sigR, _sigS, _sigV),
+            EIP712Lib.verify(_userAddress, hashMetaTxExchangeDetails(metaTx), _sigR, _sigS, _sigV),
             SIGNER_AND_SIGNATURE_DO_NOT_MATCH
         );
 
@@ -469,7 +426,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             exchangeDetails: _exchangeDetails
         });
         require(
-            verify(_userAddress, hashMetaTxExchangeDetails(metaTx), _sigR, _sigS, _sigV),
+            EIP712Lib.verify(_userAddress, hashMetaTxExchangeDetails(metaTx), _sigR, _sigS, _sigV),
             SIGNER_AND_SIGNATURE_DO_NOT_MATCH
         );
 
