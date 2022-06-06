@@ -98,11 +98,51 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Make sure the caller is buyer associated with the exchange  // {MR: only by game}
         checkBuyer(exchange.buyerId);
 
+        // Fetch the dispute
+        (, Dispute storage dispute) = fetchDispute(_exchangeId);
+
+        // Make sure the dispute is in the resolving or escalated state
+        require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);
+
         // Finalize the dispute
-        finalizeDispute(_exchangeId, exchange, DisputeState.Retracted, Resolution(0));
+        finalizeDispute(_exchangeId, exchange, dispute, DisputeState.Retracted, Resolution(0));
 
         // Notify watchers of state change
         emit DisputeRetracted(_exchangeId, msg.sender);
+    }
+
+    /**
+     * @notice Expire the dispute and release the funds
+     *
+     * Emits an DisputeExpired event if successful.
+     *
+     * Reverts if:
+     * - exchange does not exist
+     * - exchange is not in a disputed state
+     * - dispute is still valid
+     * - dispute is in some state other than resolving
+     *
+     * @param _exchangeId - the id of the associated exchange
+     */
+    function expireDispute(uint256 _exchangeId) external override {
+        // Get the exchange, should be in dispute state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+
+        // make sure the dispute not expired already
+        (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
+        require(block.timestamp >= disputeDates.timeout, DISPUTE_STILL_VALID);
+
+        // Fetch the dispute
+        (, Dispute storage dispute) = fetchDispute(_exchangeId);
+
+        // Make sure the dispute is in the resolving or escalated state
+        require(dispute.state == DisputeState.Resolving, INVALID_STATE);
+
+        // Finalize the dispute
+        finalizeDispute(_exchangeId, exchange, dispute, DisputeState.Retracted, Resolution(0));
+
+        // Notify watchers of state change
+        emit DisputeExpired(_exchangeId, msg.sender);
     }
 
     /**
@@ -167,8 +207,14 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // verify that the signature belongs to the expectedSigner
         require(EIP712Lib.verify(expectedSigner, hashResolution(_exchangeId, _resolution), _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
 
+        // Fetch the dispute
+        (, Dispute storage dispute) = fetchDispute(_exchangeId);
+
+        // Make sure the dispute is in the resolving or escalated state
+        require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);
+
         // finalize the dispute
-        finalizeDispute(_exchangeId, exchange, DisputeState.Resolved, _resolution);
+        finalizeDispute(_exchangeId, exchange, dispute, DisputeState.Resolved, _resolution);
 
         // Notify watchers of state change
         emit DisputeResolved(_exchangeId, _resolution, msg.sender);
@@ -187,22 +233,16 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @param _targetState - target final state
      * @param _resolution - resolution struct with the information about the split.
      */
-    function finalizeDispute(uint256 _exchangeId, Exchange storage _exchange, DisputeState _targetState, Resolution memory _resolution) internal {
-         // Fetch the dispute
-        (, Dispute storage dispute) = fetchDispute(_exchangeId);
-
-        // Make sure the dispute is in the resolving or escalated state
-        require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);
-
+    function finalizeDispute(uint256 _exchangeId, Exchange storage _exchange, Dispute storage _dispute, DisputeState _targetState, Resolution memory _resolution) internal {
         // update dispute and exchange
         (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
         disputeDates.finalized = block.timestamp;
-        dispute.state = _targetState;
+        _dispute.state = _targetState;
         _exchange.finalizedDate = block.timestamp;
 
         // store the resolution if it exists
         if (_targetState == DisputeState.Resolved) {
-            dispute.resolution = _resolution;
+            _dispute.resolution = _resolution;
         }
 
         // Release the funds
