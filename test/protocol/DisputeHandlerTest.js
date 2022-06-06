@@ -536,7 +536,7 @@ describe("IBosonDisputeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
           finalizedDate = block.timestamp.toString();
 
-          dispute = new Dispute(exchange.id, complaint, DisputeState.Resolved, new Resolution("0"));
+          dispute = new Dispute(exchange.id, complaint, DisputeState.Resolved, resolution);
           disputeDates = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
 
           // Get the dispute as a struct
@@ -612,7 +612,7 @@ describe("IBosonDisputeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
           finalizedDate = block.timestamp.toString();
 
-          dispute = new Dispute(exchange.id, complaint, DisputeState.Resolved, new Resolution("0"));
+          dispute = new Dispute(exchange.id, complaint, DisputeState.Resolved, resolution);
           disputeDates = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
 
           // Get the dispute as a struct

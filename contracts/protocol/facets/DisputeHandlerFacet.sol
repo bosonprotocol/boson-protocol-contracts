@@ -98,7 +98,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         checkBuyer(exchange.buyerId);
 
         // Finalize the dispute
-        finalizeDispute(_exchangeId, exchange, DisputeState.Retracted);
+        finalizeDispute(_exchangeId, exchange, DisputeState.Retracted, Resolution(0));
 
         // Notify watchers of state change
         emit DisputeRetracted(_exchangeId, msg.sender);
@@ -164,18 +164,14 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // verify that the signature belongs to the expectedSigner
         require(verify(expectedSigner, hashResolution(_exchangeId, _resolution), _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
 
-        // store the resolution information
-        (, Dispute storage dispute) = fetchDispute(_exchangeId);
-        dispute.resolution = _resolution;
-
         // finalize the dispute
-        finalizeDispute(_exchangeId, exchange, DisputeState.Resolved);
+        finalizeDispute(_exchangeId, exchange, DisputeState.Resolved, _resolution);
 
         // Notify watchers of state change
         emit DisputeResolved(_exchangeId, _resolution, msg.sender);
     }
 
-    function finalizeDispute(uint256 _exchangeId, Exchange storage _exchange, DisputeState _targetState) internal {
+    function finalizeDispute(uint256 _exchangeId, Exchange storage _exchange, DisputeState _targetState, Resolution memory _resolution) internal {
          // Fetch the dispute
         (, Dispute storage dispute) = fetchDispute(_exchangeId);
 
@@ -187,6 +183,11 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         disputeDates.finalized = block.timestamp;
         dispute.state = _targetState;
         _exchange.finalizedDate = block.timestamp;
+
+        // store the resolution if it exists
+        if (_targetState == DisputeState.Resolved) {
+            dispute.resolution = _resolution;
+        }
 
         // Release the funds
         FundsLib.releaseFunds(_exchangeId);
