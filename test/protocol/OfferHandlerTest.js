@@ -382,7 +382,7 @@ describe("IBosonOfferHandler", function () {
 
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
-            RevertReasons.AMBIGOUS_VOUCHER_EXPIRY
+            RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY
           );
         });
 
@@ -393,7 +393,7 @@ describe("IBosonOfferHandler", function () {
 
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
-            RevertReasons.AMBIGOUS_VOUCHER_EXPIRY
+            RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY
           );
         });
 
@@ -1076,7 +1076,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("For some offer, neither of voucher expiration date and voucher expiraton period are defined", async function () {
@@ -1087,7 +1087,7 @@ describe("IBosonOfferHandler", function () {
           // Attempt to Create an offer, expecting revert
           await expect(
             offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("For some offer, voucher redeemable period is fixed, but it ends before it starts", async function () {

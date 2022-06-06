@@ -448,7 +448,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Neither of voucher expiration date and voucher expiraton period are defined", async function () {
@@ -459,7 +459,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Voucher redeemable period is fixed, but it ends before it starts", async function () {
@@ -743,7 +743,7 @@ describe("IBosonOrchestrationHandler", function () {
             orchestrationHandler
               .connect(operator)
               .createOfferWithCondition(offer, offerDates, offerDurations, condition)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Neither of voucher expiration date and voucher expiraton period are defined", async function () {
@@ -756,7 +756,7 @@ describe("IBosonOrchestrationHandler", function () {
             orchestrationHandler
               .connect(operator)
               .createOfferWithCondition(offer, offerDates, offerDurations, condition)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Voucher redeemable period is fixed, but it ends before it starts", async function () {
@@ -1150,7 +1150,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Neither of voucher expiration date and voucher expiraton period are defined", async function () {
@@ -1161,7 +1161,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Voucher redeemable period is fixed, but it ends before it starts", async function () {
@@ -1532,7 +1532,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Neither of voucher expiration date and voucher expiraton period are defined", async function () {
@@ -1543,7 +1543,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Voucher redeemable period is fixed, but it ends before it starts", async function () {

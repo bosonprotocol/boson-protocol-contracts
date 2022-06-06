@@ -53,7 +53,7 @@ contract BosonConstants {
     string internal constant OFFER_NOT_AVAILABLE = "Offer is not yet available";
     string internal constant OFFER_SOLD_OUT = "Offer has sold out";
     string internal constant EXCHANGE_FOR_OFFER_EXISTS = "Exchange for offer exists";
-    string internal constant AMBIGOUS_VOUCHER_EXPIRY =
+    string internal constant AMBIGUOUS_VOUCHER_EXPIRY =
         "Exactly one of voucherRedeemableUntil and voucherValid must be non zero";
     string internal constant REDEMPTION_PERIOD_INVALID = "Redemption period invalid";
     string internal constant INVALID_FULFILLMENT_PERIOD = "Invalid fulfillemnt period";
