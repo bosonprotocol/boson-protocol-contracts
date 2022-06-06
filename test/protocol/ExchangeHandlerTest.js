@@ -853,20 +853,7 @@ describe("IBosonExchangeHandler", function () {
           await bundleHandler.connect(operator).createBundle(bundle.toStruct());
 
           // Commit to offer
-          tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-          // Get the block timestamp of the confirmed tx
-          blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
-
-          // Update the committed date in the expected exchange struct with the block timestamp of the tx
-          exchange.voucher.committedDate = block.timestamp.toString();
-
-          // Update the validUntilDate date in the expected exchange struct
-          exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration);
-
-          // Get the struct
-          exchangeStruct = exchange.toStruct();
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
           // Set time forward to the offer's redeemableFromDate
           await setNextBlockTimestamp(Number(redeemableFromDate));
@@ -906,20 +893,7 @@ describe("IBosonExchangeHandler", function () {
           await bundleHandler.connect(operator).createBundle(bundle.toStruct());
 
           // Commit to offer
-          tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-          // Get the block timestamp of the confirmed tx
-          blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
-
-          // Update the committed date in the expected exchange struct with the block timestamp of the tx
-          exchange.voucher.committedDate = block.timestamp.toString();
-
-          // Update the validUntilDate date in the expected exchange struct
-          exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration);
-
-          // Get the struct
-          exchangeStruct = exchange.toStruct();
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
           // Set time forward to the offer's redeemableFromDate
           await setNextBlockTimestamp(Number(redeemableFromDate));
@@ -959,20 +933,7 @@ describe("IBosonExchangeHandler", function () {
           await bundleHandler.connect(operator).createBundle(bundle.toStruct());
 
           // Commit to offer
-          tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-          // Get the block timestamp of the confirmed tx
-          blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
-
-          // Update the committed date in the expected exchange struct with the block timestamp of the tx
-          exchange.voucher.committedDate = block.timestamp.toString();
-
-          // Update the validUntilDate date in the expected exchange struct
-          exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration);
-
-          // Get the struct
-          exchangeStruct = exchange.toStruct();
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
           // Set time forward to the offer's redeemableFromDate
           await setNextBlockTimestamp(Number(redeemableFromDate));
@@ -990,6 +951,18 @@ describe("IBosonExchangeHandler", function () {
           balance = await foreign1155.balanceOf(buyer.address, "1");
           expect(balance).to.equal(1);
         });
+
+        context("💔 Revert Reasons", async function () {
+          it("unable to transfer the twin", async function () {
+            // Remove the approval for the protocal to transfer the seller's tokens
+            await foreign1155.connect(operator).setApprovalForAll(protocolDiamond.address, false);
+
+            // Attempt to redeem the voucher, expecting revert
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
+              RevertReasons.TWIN_TRANSFER_FAILED
+            );
+          });
+        });
       });
 
       context("📦 Offer bundled with mixed twins", async function () {
@@ -1000,20 +973,7 @@ describe("IBosonExchangeHandler", function () {
           await bundleHandler.connect(operator).createBundle(bundle.toStruct());
 
           // Commit to offer
-          tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-          // Get the block timestamp of the confirmed tx
-          blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
-
-          // Update the committed date in the expected exchange struct with the block timestamp of the tx
-          exchange.voucher.committedDate = block.timestamp.toString();
-
-          // Update the validUntilDate date in the expected exchange struct
-          exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFromDate, voucherValidDuration);
-
-          // Get the struct
-          exchangeStruct = exchange.toStruct();
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
           // Set time forward to the offer's redeemableFromDate
           await setNextBlockTimestamp(Number(redeemableFromDate));
@@ -1046,6 +1006,38 @@ describe("IBosonExchangeHandler", function () {
           // Check the buyer's balance of the ERC1155
           balance = await foreign1155.balanceOf(buyer.address, "1");
           expect(balance).to.equal(1);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("unable to transfer the ERC20 twin", async function () {
+            // Remove the approval for the protocal to transfer the seller's tokens
+            await foreign20.connect(operator).approve(protocolDiamond.address, "0");
+
+            // Attempt to redeem the voucher, expecting revert
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
+              RevertReasons.TWIN_TRANSFER_FAILED
+            );
+          });
+
+          it("unable to transfer the ERC721 twin", async function () {
+            // Remove the approval for the protocal to transfer the seller's tokens
+            await foreign721.connect(operator).setApprovalForAll(protocolDiamond.address, false);
+
+            // Attempt to redeem the voucher, expecting revert
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
+              RevertReasons.TWIN_TRANSFER_FAILED
+            );
+          });
+
+          it("unable to transfer the ERC1155 twin", async function () {
+            // Remove the approval for the protocal to transfer the seller's tokens
+            await foreign1155.connect(operator).setApprovalForAll(protocolDiamond.address, false);
+
+            // Attempt to redeem the voucher, expecting revert
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
+              RevertReasons.TWIN_TRANSFER_FAILED
+            );
+          });
         });
       });
     });

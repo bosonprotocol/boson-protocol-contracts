@@ -32,7 +32,7 @@ contract BosonTypes {
 
     enum TokenType {
         FungibleToken,
-        NonfungibleToken,
+        NonFungibleToken,
         MultiToken
     } // ERC20, ERC721, ERC1155
 

@@ -6,7 +6,6 @@ import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHan
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
-import { TwinBase } from "../bases/TwinBase.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import { MetaTransactionsLib } from "../libs/MetaTransactionsLib.sol";
@@ -16,7 +15,7 @@ import { MetaTransactionsLib } from "../libs/MetaTransactionsLib.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol
  */
-contract ExchangeHandlerFacet is IBosonExchangeHandler, TwinBase {
+contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
 
     /**
      * @notice Facet Initializer
@@ -319,11 +318,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, TwinBase {
         // Burn the voucher
         burnVoucher(_exchangeId);
 
-        // Notify watchers of state change
-        emit VoucherRedeemed(exchange.offerId, _exchangeId, msg.sender);
-
         // Transfer any bundled twins to buyer
         transferTwins(exchange);
+
+        // Notify watchers of state change
+        emit VoucherRedeemed(exchange.offerId, _exchangeId, msg.sender);
     }
 
     /**
@@ -551,10 +550,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, TwinBase {
             (,Seller storage seller) = fetchSeller(bundle.sellerId);
 
             // Visit the twins
-            for (uint256 j = 0; j < twinIds.length; j++) {
+            for (uint256 i = 0; i < twinIds.length; i++) {
 
                 // Get the twin
-                (,Twin storage twin) = fetchTwin(twinIds[j]);
+                (,Twin storage twin) = fetchTwin(twinIds[i]);
 
                 // Transfer the token from the seller's operator to the buyer
                 // N.B. Using call here so as to normalize the revert reason
@@ -570,7 +569,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, TwinBase {
                             1
                         )
                     );
-                } else if (twin.tokenType == TokenType.NonfungibleToken) {
+                } else if (twin.tokenType == TokenType.NonFungibleToken) {
                     uint256 supply = twin.supplyIds.length;
                     if (supply >= 1) {
                         // Get the next token from the supply list
