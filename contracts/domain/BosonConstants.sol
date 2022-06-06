@@ -112,6 +112,7 @@ contract BosonConstants {
     string internal constant COMPLAINT_MISSING = "Complaint missing";
     string internal constant DISPUTE_HAS_EXPIRED = "Dispute has expired";
     string internal constant INVALID_BUYER_PERCENT = "Invalid buyer percent";
+    string internal constant DISPUTE_STILL_VALID = "Dispute still valid";
 }
 
 // TODO: Refactor to use file level constants throughout or use custom Errors
