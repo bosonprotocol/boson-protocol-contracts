@@ -86,7 +86,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - caller is not the buyer for the given exchange id
-     * - dispute is in some state other than resolving
+     * - dispute is in some state other than resolving or escalated
      *
      * @param _exchangeId - the id of the associated exchange
      */

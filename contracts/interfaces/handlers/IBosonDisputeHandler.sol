@@ -10,7 +10,7 @@ import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles disputes associated with exchanges within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xbc2a7fd4
+ * The ERC-165 identifier for this interface is: 0xd9dc2340
  */
 interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
 
@@ -39,7 +39,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - caller is not the buyer for the given exchange id
-     * - dispute is in some state other than resolving
+     * - dispute is in some state other than resolving or escalated
      *
      * @param _exchangeId - the id of the associated exchange
      */
