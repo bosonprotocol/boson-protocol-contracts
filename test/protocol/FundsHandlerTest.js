@@ -1797,6 +1797,11 @@ describe("IBosonFundsHandler", function () {
 
       context("Final state DISPUTED", async function () {
         beforeEach(async function () {
+          await deployProtocolHandlerFacets(protocolDiamond, ["DisputeHandlerFacet"]);
+
+          // Cast Diamond to IBosonDisputeHandler
+          disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
+
           // Set time forward to the offer's voucherRedeemableFrom
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
