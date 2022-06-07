@@ -31,12 +31,11 @@ contract BosonTypes {
         Decided
     }
 
-    enum DisputeDate {
-        Disputed,
-        Escalated,
-        Finalized,
-        Timeout
-    }
+    enum TokenType {
+        FungibleToken,
+        NonFungibleToken,
+        MultiToken
+    } // ERC20, ERC721, ERC1155
 
     struct Seller {
         uint256 id;
@@ -77,14 +76,14 @@ contract BosonTypes {
     struct OfferDates {
         uint256 validFrom;
         uint256 validUntil;
-        uint256 redeemableFrom;
-        uint256 redeemableUntil;
+        uint256 voucherRedeemableFrom;
+        uint256 voucherRedeemableUntil;
     }
 
     struct OfferDurations {
         uint256 fulfillmentPeriod;
         uint256 voucherValid;
-        uint256 disputeValid;
+        uint256 resolutionPeriod;
     }
 
     struct Group {
@@ -148,6 +147,7 @@ contract BosonTypes {
         uint256[] supplyIds; // ERC-721
         uint256 tokenId; // ERC-1155
         address tokenAddress; // all
+        TokenType tokenType;
     }
 
     struct Bundle {

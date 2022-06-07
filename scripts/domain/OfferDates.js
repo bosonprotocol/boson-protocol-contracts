@@ -10,16 +10,16 @@ class OfferDates {
         struct OfferDates {
             uint256 validFrom;
             uint256 validUntil;
-            uint256 redeemableFrom;
-            uint256 redeemableUntil;
+            uint256 voucherRedeemableFrom;
+            uint256 voucherRedeemableUntil;
         }
     */
 
-  constructor(validFrom, validUntil, redeemableFrom, redeemableUntil) {
+  constructor(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil) {
     this.validFrom = validFrom;
     this.validUntil = validUntil;
-    this.redeemableFrom = redeemableFrom;
-    this.redeemableUntil = redeemableUntil;
+    this.voucherRedeemableFrom = voucherRedeemableFrom;
+    this.voucherRedeemableUntil = voucherRedeemableUntil;
   }
 
   /**
@@ -28,9 +28,9 @@ class OfferDates {
    * @returns {OfferDates}
    */
   static fromObject(o) {
-    const { validFrom, validUntil, redeemableFrom, redeemableUntil } = o;
+    const { validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil } = o;
 
-    return new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+    return new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
   }
 
   /**
@@ -39,16 +39,16 @@ class OfferDates {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let validFrom, validUntil, redeemableFrom, redeemableUntil;
+    let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil;
 
     // destructure struct
-    [validFrom, validUntil, redeemableFrom, redeemableUntil] = struct;
+    [validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil] = struct;
 
     return OfferDates.fromObject({
       validFrom: validFrom.toString(),
       validUntil: validUntil.toString(),
-      redeemableFrom: redeemableFrom.toString(),
-      redeemableUntil: redeemableUntil.toString(),
+      voucherRedeemableFrom: voucherRedeemableFrom.toString(),
+      voucherRedeemableUntil: voucherRedeemableUntil.toString(),
     });
   }
 
@@ -73,7 +73,7 @@ class OfferDates {
    * @returns {string}
    */
   toStruct() {
-    return [this.validFrom, this.validUntil, this.redeemableFrom, this.redeemableUntil];
+    return [this.validFrom, this.validUntil, this.voucherRedeemableFrom, this.voucherRedeemableUntil];
   }
 
   /**
@@ -115,31 +115,33 @@ class OfferDates {
   }
 
   /**
-   * Is this OfferDates instance's redeemableFrom field valid?
+   * Is this OfferDates instance's voucherRedeemableFrom field valid?
    * Must be a string representation of a big number
    * TODO: make sure it's time within a reasonable range?
    * @returns {boolean}
    */
-  redeemableFromIsValid() {
+  voucherRedeemableFromIsValid() {
     let valid = false;
-    let { redeemableFrom } = this;
+    let { voucherRedeemableFrom } = this;
     try {
-      valid = typeof redeemableFrom === "string" && typeof ethers.BigNumber.from(redeemableFrom) === "object";
+      valid =
+        typeof voucherRedeemableFrom === "string" && typeof ethers.BigNumber.from(voucherRedeemableFrom) === "object";
     } catch (e) {}
     return valid;
   }
 
   /**
-   * Is this OfferDates instance's redeemableUntil field valid?
+   * Is this OfferDates instance's voucherRedeemableUntil field valid?
    * Must be a string representation of a big number
    * TODO: make sure it's time within a reasonable range?
    * @returns {boolean}
    */
-  redeemableUntilIsValid() {
+  voucherRedeemableUntilIsValid() {
     let valid = false;
-    let { redeemableUntil } = this;
+    let { voucherRedeemableUntil } = this;
     try {
-      valid = typeof redeemableUntil === "string" && typeof ethers.BigNumber.from(redeemableUntil) === "object";
+      valid =
+        typeof voucherRedeemableUntil === "string" && typeof ethers.BigNumber.from(voucherRedeemableUntil) === "object";
     } catch (e) {}
     return valid;
   }
@@ -152,8 +154,8 @@ class OfferDates {
     return (
       this.validFromIsValid() &&
       this.validUntilIsValid() &&
-      this.redeemableFromIsValid() &&
-      this.redeemableUntilIsValid()
+      this.voucherRedeemableFromIsValid() &&
+      this.voucherRedeemableUntilIsValid()
     );
   }
 }

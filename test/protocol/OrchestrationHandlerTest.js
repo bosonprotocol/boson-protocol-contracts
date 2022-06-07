@@ -13,6 +13,7 @@ const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const Twin = require("../../scripts/domain/Twin");
+const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -57,13 +58,13 @@ describe("IBosonOrchestrationHandler", function () {
     metadataUri,
     offerChecksum,
     voided;
-  let validFrom, validUntil, redeemableFrom, redeemableUntil, offerDates, offerDatesStruct;
-  let fulfillmentPeriod, voucherValid, disputeValid, offerDurations, offerDurationsStruct;
+  let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates, offerDatesStruct;
+  let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations, offerDurationsStruct;
   let protocolFeePrecentage;
   let group, groupStruct, nextGroupId;
   let method, tokenAddress, tokenId, threshold;
   let offerIds, condition;
-  let twin, twinStruct, twinIds, nextTwinId;
+  let twin, twinStruct, twinIds, nextTwinId, tokenType;
   let bundle, bundleStruct, bundleId, nextBundleId;
   let bosonToken, supplyAvailable, supplyIds;
   let foreign721, foreign1155, fallbackError;
@@ -224,11 +225,11 @@ describe("IBosonOrchestrationHandler", function () {
       // Required constructor params
       validFrom = ethers.BigNumber.from(Date.now()).toString(); // valid from now
       validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // until 6 months
-      redeemableFrom = ethers.BigNumber.from(Date.now() + oneWeek).toString(); // redeemable in 1 week
-      redeemableUntil = "0"; // vouchers don't have fixed expiration date
+      voucherRedeemableFrom = ethers.BigNumber.from(Date.now() + oneWeek).toString(); // redeemable in 1 week
+      voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
 
       // Create a valid offerDates, then set fields in tests directly
-      offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+      offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
       expect(offerDates.isValid()).is.true;
 
       // How that offer looks as a returned struct
@@ -237,10 +238,10 @@ describe("IBosonOrchestrationHandler", function () {
       // Required constructor params
       fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
       voucherValid = oneMonth.toString(); // offers valid for one month
-      disputeValid = oneWeek.toString(); // dispute is valid for one month
+      resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
 
       // Create a valid offerDurations, then set fields in tests directly
-      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
       expect(offerDurations.isValid()).is.true;
 
       // How that offer looks as a returned struct
@@ -441,30 +442,30 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Both voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both redeemableUntil and voucherValid
-          offerDates.redeemableUntil = (Number(offerDates.redeemableFrom) + oneMonth).toString();
+          // Set both voucherRedeemableUntil and voucherValid
+          offerDates.voucherRedeemableUntil = (Number(offerDates.voucherRedeemableFrom) + oneMonth).toString();
           offerDurations.voucherValid = oneMonth.toString();
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Neither of voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both redeemableUntil and voucherValid to "0"
-          offerDates.redeemableUntil = "0";
+          // Set both voucherRedeemableUntil and voucherValid to "0"
+          offerDates.voucherRedeemableUntil = "0";
           offerDurations.voucherValid = "0";
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Voucher redeemable period is fixed, but it ends before it starts", async function () {
-          // Set both redeemableUntil that is less than redeemableFrom
-          offerDates.redeemableUntil = (Number(offerDates.redeemableFrom) - 10).toString();
+          // Set both voucherRedeemableUntil that is less than voucherRedeemableFrom
+          offerDates.voucherRedeemableUntil = (Number(offerDates.voucherRedeemableFrom) - 10).toString();
           offerDurations.voucherValid = "0";
 
           // Attempt to create a seller and an offer, expecting revert
@@ -474,9 +475,9 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Voucher redeemable period is fixed, but it ends before offer expires", async function () {
-          // Set both redeemableUntil that is more than redeemableFrom but less than validUntil
-          offerDates.redeemableFrom = "0";
-          offerDates.redeemableUntil = (Number(offerDates.validUntil) - 10).toString();
+          // Set both voucherRedeemableUntil that is more than voucherRedeemableFrom but less than validUntil
+          offerDates.voucherRedeemableFrom = "0";
+          offerDates.voucherRedeemableUntil = (Number(offerDates.validUntil) - 10).toString();
           offerDurations.voucherValid = "0";
 
           // Attempt to create a seller and an offer, expecting revert
@@ -495,9 +496,9 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
         });
 
-        it("Dispute duration is set to zero", async function () {
+        it("Resolution period is set to zero", async function () {
           // Set dispute duration period to 0
-          offerDurations.disputeValid = "0";
+          offerDurations.resolutionPeriod = "0";
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -734,8 +735,8 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Both voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both redeemableUntil and voucherValid
-          offerDates.redeemableUntil = (Number(offerDates.redeemableFrom) + oneMonth).toString();
+          // Set both voucherRedeemableUntil and voucherValid
+          offerDates.voucherRedeemableUntil = (Number(offerDates.voucherRedeemableFrom) + oneMonth).toString();
           offerDurations.voucherValid = oneMonth.toString();
 
           // Attempt to create an offer with condition, expecting revert
@@ -743,12 +744,12 @@ describe("IBosonOrchestrationHandler", function () {
             orchestrationHandler
               .connect(operator)
               .createOfferWithCondition(offer, offerDates, offerDurations, condition)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Neither of voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both redeemableUntil and voucherValid to "0"
-          offerDates.redeemableUntil = "0";
+          // Set both voucherRedeemableUntil and voucherValid to "0"
+          offerDates.voucherRedeemableUntil = "0";
           offerDurations.voucherValid = "0";
 
           // Attempt to create an offer with condition, expecting revert
@@ -756,12 +757,12 @@ describe("IBosonOrchestrationHandler", function () {
             orchestrationHandler
               .connect(operator)
               .createOfferWithCondition(offer, offerDates, offerDurations, condition)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Voucher redeemable period is fixed, but it ends before it starts", async function () {
-          // Set both redeemableUntil that is less than redeemableFrom
-          offerDates.redeemableUntil = (Number(offerDates.redeemableFrom) - 10).toString();
+          // Set both voucherRedeemableUntil that is less than voucherRedeemableFrom
+          offerDates.voucherRedeemableUntil = (Number(offerDates.voucherRedeemableFrom) - 10).toString();
           offerDurations.voucherValid = "0";
 
           // Attempt to create an offer with condition, expecting revert
@@ -773,9 +774,9 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Voucher redeemable period is fixed, but it ends before offer expires", async function () {
-          // Set both redeemableUntil that is more than redeemableFrom but less than validUntil
-          offerDates.redeemableFrom = "0";
-          offerDates.redeemableUntil = (Number(offerDates.validUntil) - 10).toString();
+          // Set both voucherRedeemableUntil that is more than voucherRedeemableFrom but less than validUntil
+          offerDates.voucherRedeemableFrom = "0";
+          offerDates.voucherRedeemableUntil = (Number(offerDates.validUntil) - 10).toString();
           offerDurations.voucherValid = "0";
 
           // Attempt to create an offer with condition, expecting revert
@@ -798,9 +799,9 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
         });
 
-        it("Dispute duration is set to zero", async function () {
+        it("Resolution period is set to zero", async function () {
           // Set dispute duration period to 0
-          offerDurations.disputeValid = "0";
+          offerDurations.resolutionPeriod = "0";
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
@@ -921,20 +922,20 @@ describe("IBosonOrchestrationHandler", function () {
           // Required constructor params
           validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
           validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
-          redeemableFrom = ethers.BigNumber.from(validUntil + oneWeek).toString();
-          redeemableUntil = "0"; // vouchers don't have fixed expiration date
+          voucherRedeemableFrom = ethers.BigNumber.from(validUntil + oneWeek).toString();
+          voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
 
           // Create a valid offerDates, then set fields in tests directly
-          offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+          offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
           expect(offerDates.isValid()).is.true;
 
           // Required constructor params
           fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
           voucherValid = oneMonth.toString(); // offers valid for one month
-          disputeValid = oneWeek.toString(); // dispute is valid for one month
+          resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
 
           // Create a valid offerDurations, then set fields in tests directly
-          offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+          offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
           expect(offerDurations.isValid()).is.true;
 
           await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
@@ -1141,30 +1142,34 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Both voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both redeemableUntil and voucherValid
-          offerDates.redeemableUntil = ethers.BigNumber.from(offerDates.redeemableFrom).add(oneMonth).toString();
+          // Set both voucherRedeemableUntil and voucherValid
+          offerDates.voucherRedeemableUntil = ethers.BigNumber.from(offerDates.voucherRedeemableFrom)
+            .add(oneMonth)
+            .toString();
           offerDurations.voucherValid = oneMonth.toString();
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Neither of voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both redeemableUntil and voucherValid to "0"
-          offerDates.redeemableUntil = "0";
+          // Set both voucherRedeemableUntil and voucherValid to "0"
+          offerDates.voucherRedeemableUntil = "0";
           offerDurations.voucherValid = "0";
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Voucher redeemable period is fixed, but it ends before it starts", async function () {
-          // Set both redeemableUntil that is less than redeemableFrom
-          offerDates.redeemableUntil = ethers.BigNumber.from(offerDates.redeemableFrom).sub(10).toString();
+          // Set both voucherRedeemableUntil that is less than voucherRedeemableFrom
+          offerDates.voucherRedeemableUntil = ethers.BigNumber.from(offerDates.voucherRedeemableFrom)
+            .sub(10)
+            .toString();
           offerDurations.voucherValid = "0";
 
           // Attempt to create an offer and add it to the group, expecting revert
@@ -1174,9 +1179,9 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Voucher redeemable period is fixed, but it ends before offer expires", async function () {
-          // Set both redeemableUntil that is more than redeemableFrom but less than validUntil
-          offerDates.redeemableFrom = "0";
-          offerDates.redeemableUntil = (Number(offerDates.validUntil) - 10).toString();
+          // Set both voucherRedeemableUntil that is more than voucherRedeemableFrom but less than validUntil
+          offerDates.voucherRedeemableFrom = "0";
+          offerDates.voucherRedeemableUntil = (Number(offerDates.validUntil) - 10).toString();
           offerDurations.voucherValid = "0";
 
           // Attempt to create an offer and add it to the group, expecting revert
@@ -1195,9 +1200,9 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
         });
 
-        it("Dispute duration is set to zero", async function () {
+        it("Resolution period is set to zero", async function () {
           // Set dispute duration period to 0
-          offerDurations.disputeValid = "0";
+          offerDurations.resolutionPeriod = "0";
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
@@ -1277,12 +1282,13 @@ describe("IBosonOrchestrationHandler", function () {
         // Required constructor params for Twin
         id = nextTwinId = "1";
         supplyAvailable = "1000";
-        tokenId = "2048";
-        supplyIds = ["3", "4"];
+        tokenId = "0";
+        supplyIds = [];
         tokenAddress = bosonToken.address;
+        tokenType = TokenType.FungibleToken;
 
         // Create a valid twin.
-        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
 
         // How that twin looks as a returned struct
         twinStruct = twin.toStruct();
@@ -1521,30 +1527,30 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Both voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both redeemableUntil and voucherValid
-          offerDates.redeemableUntil = (Number(offerDates.redeemableFrom) + oneMonth).toString();
+          // Set both voucherRedeemableUntil and voucherValid
+          offerDates.voucherRedeemableUntil = (Number(offerDates.voucherRedeemableFrom) + oneMonth).toString();
           offerDurations.voucherValid = oneMonth.toString();
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Neither of voucher expiration date and voucher expiraton period are defined", async function () {
-          // Set both redeemableUntil and voucherValid to "0"
-          offerDates.redeemableUntil = "0";
+          // Set both voucherRedeemableUntil and voucherValid to "0"
+          offerDates.voucherRedeemableUntil = "0";
           offerDurations.voucherValid = "0";
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
-          ).to.revertedWith(RevertReasons.AMBIGOUS_VOUCHER_EXPIRY);
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
         it("Voucher redeemable period is fixed, but it ends before it starts", async function () {
-          // Set both redeemableUntil that is less than redeemableFrom
-          offerDates.redeemableUntil = (Number(offerDates.redeemableFrom) - 10).toString();
+          // Set both voucherRedeemableUntil that is less than voucherRedeemableFrom
+          offerDates.voucherRedeemableUntil = (Number(offerDates.voucherRedeemableFrom) - 10).toString();
           offerDurations.voucherValid = "0";
 
           // Attempt to create an offer, twin and bundle, expecting revert
@@ -1554,9 +1560,9 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Voucher redeemable period is fixed, but it ends before offer expires", async function () {
-          // Set both redeemableUntil that is more than redeemableFrom but less than validUntil
-          offerDates.redeemableFrom = "0";
-          offerDates.redeemableUntil = (Number(offerDates.validUntil) - 10).toString();
+          // Set both voucherRedeemableUntil that is more than voucherRedeemableFrom but less than validUntil
+          offerDates.voucherRedeemableFrom = "0";
+          offerDates.voucherRedeemableUntil = (Number(offerDates.validUntil) - 10).toString();
           offerDurations.voucherValid = "0";
 
           // Attempt to create an offer, twin and bundle, expecting revert
@@ -1575,9 +1581,9 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
         });
 
-        it("Dispute duration is set to zero", async function () {
+        it("Resolution period is set to zero", async function () {
           // Set dispute duration period to 0
-          offerDurations.disputeValid = "0";
+          offerDurations.resolutionPeriod = "0";
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
@@ -1608,6 +1614,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("should revert if protocol is not approved to transfer the ERC20 token", async function () {
           //ERC20 token address
           twin.tokenAddress = bosonToken.address;
+          tokenType = TokenType.FungibleToken;
 
           await expect(
             orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
@@ -1711,12 +1718,13 @@ describe("IBosonOrchestrationHandler", function () {
         // Required constructor params for Twin
         id = nextTwinId = "1";
         supplyAvailable = "1000";
-        tokenId = "2048";
-        supplyIds = ["3", "4"];
+        tokenId = "0";
+        supplyIds = [];
         tokenAddress = bosonToken.address;
+        tokenType = TokenType.FungibleToken;
 
         // Create a valid twin.
-        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
 
         // How that twin looks as a returned struct
         twinStruct = twin.toStruct();
@@ -2103,12 +2111,13 @@ describe("IBosonOrchestrationHandler", function () {
         // Required constructor params for Twin
         id = nextTwinId = "1";
         supplyAvailable = "1000";
-        tokenId = "2048";
-        supplyIds = ["3", "4"];
+        tokenId = "0";
+        supplyIds = [];
         tokenAddress = bosonToken.address;
+        tokenType = TokenType.FungibleToken;
 
         // Create a valid twin.
-        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
 
         // How that twin looks as a returned struct
         twinStruct = twin.toStruct();
@@ -2310,12 +2319,13 @@ describe("IBosonOrchestrationHandler", function () {
         // Required constructor params for Twin
         id = nextTwinId = "1";
         supplyAvailable = "1000";
-        tokenId = "2048";
-        supplyIds = ["3", "4"];
+        tokenId = "0";
+        supplyIds = [];
         tokenAddress = bosonToken.address;
+        tokenType = TokenType.FungibleToken;
 
         // Create a valid twin.
-        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
 
         // How that twin looks as a returned struct
         twinStruct = twin.toStruct();

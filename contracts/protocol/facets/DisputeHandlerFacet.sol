@@ -69,7 +69,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Fetch the disputeDates
         (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
         disputeDates.disputed = block.timestamp;
-        disputeDates.timeout = block.timestamp + fetchOfferDurations(exchange.offerId).disputeValid;
+        disputeDates.timeout = block.timestamp + fetchOfferDurations(exchange.offerId).resolutionPeriod;
         
         // Get the offer, which will exist if the exchange does
         (, Offer storage offer) = fetchOffer(exchange.offerId);
@@ -87,7 +87,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - caller is not the buyer for the given exchange id
-     * - dispute is in some state other than resolving
+     * - dispute is in some state other than resolving or escalated
      *
      * @param _exchangeId - the id of the associated exchange
      */

@@ -57,11 +57,11 @@ describe("IBosonDisputeHandler", function () {
     metadataUri,
     offerChecksum,
     voided;
-  let validFrom, validUntil, redeemableFrom, redeemableUntil, offerDates;
-  let fulfillmentPeriod, voucherValid, disputeValid, offerDurations;
+  let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
+  let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
   let protocolFeePrecentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
-  let exchange, exchangeStruct, finalizedDate, state;
+  let exchange, finalizedDate, state;
   let dispute, disputedDate, complaint, disputeStruct, timeout;
   let disputeDates, disputeDatesStruct;
   let exists, response;
@@ -224,19 +224,19 @@ describe("IBosonDisputeHandler", function () {
       validUntil = ethers.BigNumber.from(block.timestamp)
         .add(oneMonth * 6)
         .toString(); // until 6 months
-      redeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-      redeemableUntil = "0"; // vouchers don't have fixed expiration date
+      voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+      voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
 
       // Create a valid offerDates, then set fields in tests directly
-      offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+      offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
 
       // Required constructor params
       fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
       voucherValid = oneMonth.toString(); // offers valid for one month
-      disputeValid = oneWeek.toString(); // dispute is valid for one month
+      resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
 
       // Create a valid offerDurations, then set fields in tests directly
-      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
 
       // Create the offer
       await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
@@ -262,8 +262,8 @@ describe("IBosonDisputeHandler", function () {
       // Commit to offer, creating a new exchange
       await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
-      // Set time forward to the offer's redeemableFrom
-      await setNextBlockTimestamp(Number(redeemableFrom));
+      // Set time forward to the offer's voucherRedeemableFrom
+      await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
       // Redeem voucher
       await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -288,7 +288,7 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
-        timeout = ethers.BigNumber.from(disputedDate).add(disputeValid).toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
 
         // expected values
         dispute = new Dispute(exchange.id, complaint, DisputeState.Resolving, new Resolution("0"));
@@ -330,7 +330,7 @@ describe("IBosonDisputeHandler", function () {
 
         it("exchange is not in a redeemed state - completed", async function () {
           // Set time forward to run out the fulfillment period
-          newTime = Number((redeemableFrom + Number(fulfillmentPeriod) + 1).toString().substring(0, 11));
+          newTime = Number((voucherRedeemableFrom + Number(fulfillmentPeriod) + 1).toString().substring(0, 11));
           await setNextBlockTimestamp(newTime);
 
           // Complete exchange
@@ -372,7 +372,7 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
-        timeout = ethers.BigNumber.from(disputedDate).add(disputeValid).toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
       });
 
       it("should emit a DisputeRetracted event", async function () {
@@ -398,10 +398,10 @@ describe("IBosonDisputeHandler", function () {
         [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
         // Parse into entities
-        let returnedDispute = Dispute.fromStruct(disputeStruct);
+        const returnedDispute = Dispute.fromStruct(disputeStruct);
         const returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
 
-        // Returned values should match the input in createSeller
+        // Returned values should match expected dispute and dispute dates
         for (const [key, value] of Object.entries(dispute)) {
           expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
         }
@@ -412,12 +412,12 @@ describe("IBosonDisputeHandler", function () {
         // Get the dispute state
         [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchange.id);
 
-        // It should match DisputeState.Resolving
+        // It should match DisputeState.Retracted
         assert.equal(response, DisputeState.Retracted, "Dispute state is incorrect");
 
         // exchange should also be finalized
         // Get the dispute as a struct
-        [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+        const [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
 
         // Parse into entity
         let returnedExchange = Exchange.fromStruct(exchangeStruct);
@@ -857,7 +857,7 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
-        timeout = ethers.BigNumber.from(disputedDate).add(disputeValid).toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
 
         // Expected value for dispute
         dispute = new Dispute(exchange.id, complaint, DisputeState.Resolving, new Resolution("0"));

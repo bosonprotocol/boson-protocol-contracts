@@ -10,7 +10,7 @@ describe("OfferDates", function () {
   // Suite-wide scope
   let offerDates, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
   let oneMonth, oneWeek;
-  let validFrom, validUntil, redeemableFrom, redeemableUntil;
+  let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil;
 
   beforeEach(async function () {
     // Some periods in milliseconds
@@ -20,18 +20,18 @@ describe("OfferDates", function () {
     // Required constructor params
     validFrom = ethers.BigNumber.from(Date.now()).toString(); // valid from now
     validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // until 6 months
-    redeemableFrom = ethers.BigNumber.from(Date.now() + oneWeek).toString(); // redeemable in 1 week
-    redeemableUntil = ethers.BigNumber.from(Date.now() + oneWeek * 3).toString(); // redeemable for 2 weeks
+    voucherRedeemableFrom = ethers.BigNumber.from(Date.now() + oneWeek).toString(); // redeemable in 1 week
+    voucherRedeemableUntil = ethers.BigNumber.from(Date.now() + oneWeek * 3).toString(); // redeemable for 2 weeks
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated OfferDates instance", async function () {
       // Create a valid offerDates, then set fields in tests directly
-      offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+      offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
       expect(offerDates.validFromIsValid()).is.true;
       expect(offerDates.validUntilIsValid()).is.true;
-      expect(offerDates.redeemableFromIsValid()).is.true;
-      expect(offerDates.redeemableUntilIsValid()).is.true;
+      expect(offerDates.voucherRedeemableFromIsValid()).is.true;
+      expect(offerDates.voucherRedeemableUntilIsValid()).is.true;
       expect(offerDates.isValid()).is.true;
     });
   });
@@ -39,7 +39,7 @@ describe("OfferDates", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid offerDates, then set fields in tests directly
-      offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+      offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
       expect(offerDates.isValid()).is.true;
     });
 
@@ -97,57 +97,57 @@ describe("OfferDates", function () {
       expect(offerDates.isValid()).is.true;
     });
 
-    it("Always present, redeemableFrom must be the string representation of a BigNumber", async function () {
+    it("Always present, voucherRedeemableFrom must be the string representation of a BigNumber", async function () {
       // Invalid field value
-      offerDates.redeemableFrom = "zedzdeadbaby";
-      expect(offerDates.redeemableFromIsValid()).is.false;
+      offerDates.voucherRedeemableFrom = "zedzdeadbaby";
+      expect(offerDates.voucherRedeemableFromIsValid()).is.false;
       expect(offerDates.isValid()).is.false;
 
       // Invalid field value
-      offerDates.redeemableFrom = new Date();
-      expect(offerDates.redeemableFromIsValid()).is.false;
+      offerDates.voucherRedeemableFrom = new Date();
+      expect(offerDates.voucherRedeemableFromIsValid()).is.false;
       expect(offerDates.isValid()).is.false;
 
       // Invalid field value
-      offerDates.redeemableFrom = 12;
-      expect(offerDates.redeemableFromIsValid()).is.false;
+      offerDates.voucherRedeemableFrom = 12;
+      expect(offerDates.voucherRedeemableFromIsValid()).is.false;
       expect(offerDates.isValid()).is.false;
 
       // Valid field value
-      offerDates.redeemableFrom = "0";
-      expect(offerDates.redeemableFromIsValid()).is.true;
+      offerDates.voucherRedeemableFrom = "0";
+      expect(offerDates.voucherRedeemableFromIsValid()).is.true;
       expect(offerDates.isValid()).is.true;
 
       // Valid field value
-      offerDates.redeemableFrom = "126";
-      expect(offerDates.redeemableFromIsValid()).is.true;
+      offerDates.voucherRedeemableFrom = "126";
+      expect(offerDates.voucherRedeemableFromIsValid()).is.true;
       expect(offerDates.isValid()).is.true;
     });
 
-    it("Always present, redeemableUntil must be the string representation of a BigNumber", async function () {
+    it("Always present, voucherRedeemableUntil must be the string representation of a BigNumber", async function () {
       // Invalid field value
-      offerDates.redeemableUntil = "zedzdeadbaby";
-      expect(offerDates.redeemableUntilIsValid()).is.false;
+      offerDates.voucherRedeemableUntil = "zedzdeadbaby";
+      expect(offerDates.voucherRedeemableUntilIsValid()).is.false;
       expect(offerDates.isValid()).is.false;
 
       // Invalid field value
-      offerDates.redeemableUntil = new Date();
-      expect(offerDates.redeemableUntilIsValid()).is.false;
+      offerDates.voucherRedeemableUntil = new Date();
+      expect(offerDates.voucherRedeemableUntilIsValid()).is.false;
       expect(offerDates.isValid()).is.false;
 
       // Invalid field value
-      offerDates.redeemableUntil = 12;
-      expect(offerDates.redeemableUntilIsValid()).is.false;
+      offerDates.voucherRedeemableUntil = 12;
+      expect(offerDates.voucherRedeemableUntilIsValid()).is.false;
       expect(offerDates.isValid()).is.false;
 
       // Valid field value
-      offerDates.redeemableUntil = "0";
-      expect(offerDates.redeemableUntilIsValid()).is.true;
+      offerDates.voucherRedeemableUntil = "0";
+      expect(offerDates.voucherRedeemableUntilIsValid()).is.true;
       expect(offerDates.isValid()).is.true;
 
       // Valid field value
-      offerDates.redeemableUntil = "126";
-      expect(offerDates.redeemableUntilIsValid()).is.true;
+      offerDates.voucherRedeemableUntil = "126";
+      expect(offerDates.voucherRedeemableUntilIsValid()).is.true;
       expect(offerDates.isValid()).is.true;
     });
   });
@@ -155,15 +155,15 @@ describe("OfferDates", function () {
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid offerDates, then set fields in tests directly
-      offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+      offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
       expect(offerDates.isValid()).is.true;
 
       // Create plain object
       object = {
         validFrom,
         validUntil,
-        redeemableFrom,
-        redeemableUntil,
+        voucherRedeemableFrom,
+        voucherRedeemableUntil,
       };
     });
 
@@ -182,7 +182,12 @@ describe("OfferDates", function () {
       });
 
       it("OfferDates.fromStruct() should return a OfferDates instance with the same values as the given struct", async function () {
-        struct = [offerDates.validFrom, offerDates.validUntil, offerDates.redeemableFrom, offerDates.redeemableUntil];
+        struct = [
+          offerDates.validFrom,
+          offerDates.validUntil,
+          offerDates.voucherRedeemableFrom,
+          offerDates.voucherRedeemableUntil,
+        ];
 
         // Get struct
         offerDates = OfferDates.fromStruct(struct);

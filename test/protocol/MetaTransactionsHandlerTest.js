@@ -14,6 +14,7 @@ const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Twin = require("../../scripts/domain/Twin");
+const TokenType = require("../../scripts/domain/TokenType");
 const Voucher = require("../../scripts/domain/Voucher");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -71,13 +72,13 @@ describe("IBosonMetaTransactionsHandler", function () {
     voided,
     oneMonth,
     oneWeek;
-  let validFrom, validUntil, redeemableFrom, redeemableUntil, offerDates;
-  let fulfillmentPeriod, voucherValid, disputeValid, offerDurations;
+  let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
+  let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
   let protocolFeePrecentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
-  let twin, supplyAvailable, tokenId, supplyIds, tokenAddress, success;
   let disputeResolver, active;
+  let twin, supplyAvailable, tokenId, supplyIds, tokenAddress, tokenType, success;
 
   before(async function () {
     // get interface Ids
@@ -374,9 +375,10 @@ describe("IBosonMetaTransactionsHandler", function () {
             tokenId = "4096";
             supplyIds = ["1", "2"];
             tokenAddress = bosonToken.address;
+            tokenType = TokenType.FungibleToken;
 
             // Create a valid twin, then set fields in tests directly
-            twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+            twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
             expect(twin.isValid()).is.true;
 
             // Approving the twinHandler contract to transfer seller's tokens
@@ -648,19 +650,19 @@ describe("IBosonMetaTransactionsHandler", function () {
         validUntil = ethers.BigNumber.from(block.timestamp)
           .add(oneMonth * 6)
           .toString(); // until 6 months
-        redeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-        redeemableUntil = "0"; // vouchers don't have fixed expiration date
+        voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+        voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
 
         // Create a valid offerDates, then set fields in tests directly
-        offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+        offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
 
         // Required constructor params
         fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
         voucherValid = oneMonth.toString(); // offers valid for one month
-        disputeValid = oneWeek.toString(); // dispute is valid for one month
+        resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
 
         // Create a valid offerDurations, then set fields in tests directly
-        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
 
         // Create the offer
         await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
@@ -867,20 +869,20 @@ describe("IBosonMetaTransactionsHandler", function () {
         validUntil = ethers.BigNumber.from(block.timestamp)
           .add(oneMonth * 6)
           .toString(); // until 6 months
-        redeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-        redeemableUntil = "0"; // vouchers don't have fixed expiration date
+        voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+        voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
 
         // Create a valid offerDates, then set fields in tests directly
-        offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+        offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
         expect(offerDates.isValid()).is.true;
 
         // Required constructor params
         fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
         voucherValid = oneMonth.toString(); // offers valid for one month
-        disputeValid = oneWeek.toString(); // dispute is valid for one month
+        resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
 
         // Create a valid offerDurations, then set fields in tests directly
-        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
         expect(offerDurations.isValid()).is.true;
 
         // Create the offer
@@ -1045,8 +1047,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.exchangeDetails = validExchangeDetails;
           message.from = buyer.address;
 
-          // Set time forward to the offer's redeemableFrom
-          await setNextBlockTimestamp(Number(redeemableFrom));
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
         });
 
         it("Should emit MetaTransactionExecuted event", async () => {
@@ -1153,8 +1155,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.exchangeDetails = validExchangeDetails;
           message.from = buyer.address;
 
-          // Set time forward to the offer's redeemableFrom
-          await setNextBlockTimestamp(Number(redeemableFrom));
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
           // Redeem the voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
