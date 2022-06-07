@@ -333,3 +333,70 @@ Boson Protocol V2 Contract Suite Deployer
 📋 Verifying on test env BosonVoucher Logic
 
 📋 Verifying on test env BosonVoucher Proxy
+Downloading compiler 0.8.9
+Compiled 94 Solidity files successfully
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: test
+📅 Tue Jun 07 2022 09:01:22 GMT+0000 (Coordinated Universal Time)
+🔱 Deployer account:  0xd3aE0500e21008c89CA4746be7522340C67F5730
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0xF2fAAa37Fd5712b0336A41dFC52481c6E040Ae0d
+✅ DiamondLoupeFacet deployed to: 0x12DA5AdC740ba32acc105b2Be942624b6904512B
+✅ DiamondCutFacet deployed to: 0x2dFc3275B0Ba79Bfee5FDA6DabE5C7aB4F253811
+✅ ProtocolDiamond deployed to: 0x82c4B09b8aAb9364A3B215B1a246530413876eeB
+
+💎 Deploying and initializing protocol facets...
+✅ ConfigHandlerFacet deployed to: 0xa6ab519b9af0780B555f6c8397d138aDB4150D23
+✅ DisputeHandlerFacet deployed to: 0x0888104f4dE235900769C4E9b364CB2EdF0A8a7A
+✅ ExchangeHandlerFacet deployed to: 0x810D7Eb84674dbCe03799283543F45Ef1d5c4483
+✅ FundsHandlerFacet deployed to: 0x4243065355e1970fB609a982b5Fb5C6679f73721
+✅ OfferHandlerFacet deployed to: 0xC590096bfE50DcE95609ae4Af0ddf08b226d9d3C
+✅ TwinHandlerFacet deployed to: 0x931E822b4bba9461ffdE109917092d842db68965
+✅ BundleHandlerFacet deployed to: 0xc05963598c97B28f34E2262b9b13E89d53A9d6B7
+✅ AccountHandlerFacet deployed to: 0x3086A62915dcfeeB2263bb609E47cf5D2e29FC80
+✅ GroupHandlerFacet deployed to: 0xaa808154F0419e23aca2F0323644c0Cd1c779d3d
+✅ OrchestrationHandlerFacet deployed to: 0x15379Fb73d65c136Ce95a3E567EfF38Db5b48C05
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0x479a0C9858a01bb9ada4AA1192C07A9371f7C10D
+✅ BosonVoucher Proxy deployed to: 0xe30DC505Eb0d1E10426e0311a9556F34c04c5687
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+
+📋 Verifying on test env AccessController
+
+📋 Verifying on test env DiamondLoupeFacet
+
+📋 Verifying on test env DiamondCutFacet
+
+📋 Verifying on test env ProtocolDiamond
+
+📋 Verifying on test env ConfigHandlerFacet
+
+📋 Verifying on test env DisputeHandlerFacet
+
+📋 Verifying on test env ExchangeHandlerFacet
+
+📋 Verifying on test env FundsHandlerFacet
+
+📋 Verifying on test env OfferHandlerFacet
+
+📋 Verifying on test env TwinHandlerFacet
+
+📋 Verifying on test env BundleHandlerFacet
+
+📋 Verifying on test env AccountHandlerFacet
+
+📋 Verifying on test env GroupHandlerFacet
+
+📋 Verifying on test env OrchestrationHandlerFacet
+
+📋 Verifying on test env BosonVoucher Logic
+
+📋 Verifying on test env BosonVoucher Proxy

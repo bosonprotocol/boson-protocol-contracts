@@ -49,6 +49,11 @@
               "internalType": "address",
               "name": "tokenAddress",
               "type": "address"
+            },
+            {
+              "internalType": "enum BosonTypes.TokenType",
+              "name": "tokenType",
+              "type": "uint8"
             }
           ],
           "indexed": false,
