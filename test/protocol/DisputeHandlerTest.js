@@ -56,7 +56,7 @@ describe("IBosonDisputeHandler", function () {
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
   let protocolFeePrecentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
-  let exchange, exchangeStruct, finalizedDate, state;
+  let exchange, finalizedDate, state;
   let dispute, disputedDate, complaint, disputeStruct, timeout;
   let disputeDates, disputeDatesStruct;
   let exists, response;
@@ -364,7 +364,7 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
-        timeout = ethers.BigNumber.from(disputedDate).add(disputeValid).toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
       });
 
       it("should emit a DisputeRetracted event", async function () {
@@ -409,7 +409,7 @@ describe("IBosonDisputeHandler", function () {
 
         // exchange should also be finalized
         // Get the dispute as a struct
-        [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+        const [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
 
         // Parse into entity
         let returnedExchange = Exchange.fromStruct(exchangeStruct);
