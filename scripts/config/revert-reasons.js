@@ -50,10 +50,13 @@ exports.RevertReasons = {
   NOT_BUYER_WALLET: "Not buyer's wallet address",
   NO_SUCH_BUYER: "No such buyer",
   WALLET_OWNS_VOUCHERS: "Wallet address owns vouchers",
+  NOT_DISPUTE_RESOLVER_WALLET: "Not dispute resolver's wallet address",
+  NO_SUCH_DISPUTE_RESOLVER: "No such dispute resolver",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",
   NO_TRANSFER_APPROVED: "No transfer approved",
+  TWIN_TRANSFER_FAILED: "Twin could not be transferred",
   UNSUPPORTED_TOKEN: "Unsupported token",
   TWIN_HAS_BUNDLES: "Twin has bundles",
 

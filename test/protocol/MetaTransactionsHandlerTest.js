@@ -14,6 +14,7 @@ const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Twin = require("../../scripts/domain/Twin");
+const TokenType = require("../../scripts/domain/TokenType");
 const Voucher = require("../../scripts/domain/Voucher");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -76,8 +77,8 @@ describe("IBosonMetaTransactionsHandler", function () {
   let protocolFeePrecentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
-  let twin, supplyAvailable, tokenId, supplyIds, tokenAddress, success;
   let disputeResolver, active;
+  let twin, supplyAvailable, tokenId, supplyIds, tokenAddress, tokenType, success;
 
   before(async function () {
     // get interface Ids
@@ -374,9 +375,10 @@ describe("IBosonMetaTransactionsHandler", function () {
             tokenId = "4096";
             supplyIds = ["1", "2"];
             tokenAddress = bosonToken.address;
+            tokenType = TokenType.FungibleToken;
 
             // Create a valid twin, then set fields in tests directly
-            twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+            twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
             expect(twin.isValid()).is.true;
 
             // Approving the twinHandler contract to transfer seller's tokens

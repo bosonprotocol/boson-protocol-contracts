@@ -7,6 +7,7 @@ const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Twin = require("../../scripts/domain/Twin");
+const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
@@ -52,7 +53,7 @@ describe("IBosonBundleHandler", function () {
   let offerHandler, bundleHandlerFacet_Factory;
   let seller, active;
   let bundleStruct;
-  let twinIdsToAdd, twinIdsToRemove, offerIdsToAdd, offerIdsToRemove;
+  let twinIdsToAdd, twinIdsToRemove, offerIdsToAdd, offerIdsToRemove, tokenType;
   let bundle, bundleId, bundleIds, offerIds, twinId, twinIds, nextBundleId, invalidBundleId, bundleInstance;
   let offer, oneMonth, oneWeek, exists, expected, blockNumber, block;
   let offerId,
@@ -190,12 +191,13 @@ describe("IBosonBundleHandler", function () {
         // Required constructor params for Twin
         id = sellerId = "1";
         supplyAvailable = "1000";
-        tokenId = "2048";
-        supplyIds = ["3", "4"];
+        tokenId = "0";
+        supplyIds = [];
         tokenAddress = bosonToken.address;
+        tokenType = TokenType.FungibleToken;
 
         // Create a valid twin.
-        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
         expect(twin.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens

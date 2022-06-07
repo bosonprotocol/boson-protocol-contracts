@@ -29,6 +29,7 @@ contract BosonConstants {
     string internal constant NOT_BUYER_OR_SELLER = "Not buyer or seller";
     string internal constant NOT_VOUCHER_HOLDER = "Not current voucher holder";
     string internal constant NOT_BUYER_WALLET = "Not buyer's wallet address";
+    string internal constant NOT_DISPUTE_RESOLVER_WALLET = "Not dispute resolver's wallet address";
 
     // Revert Reasons: Account-related
     string internal constant NO_SUCH_SELLER = "No such seller";
@@ -39,6 +40,7 @@ contract BosonConstants {
         "Dispute Resolver address cannot be assigned to another dispute resolver Id";
     string internal constant NO_SUCH_BUYER = "No such buyer";
     string internal constant WALLET_OWNS_VOUCHERS = "Wallet address owns vouchers";
+    string internal constant NO_SUCH_DISPUTE_RESOLVER = "No such dispute resolver";
 
     // Revert Reasons: Offer related
     string internal constant NO_SUCH_OFFER = "No such offer";
@@ -78,6 +80,7 @@ contract BosonConstants {
     // Revert Reasons: Twin related
     string internal constant NO_SUCH_TWIN = "No such twin";
     string internal constant NO_TRANSFER_APPROVED = "No transfer approved";
+    string internal constant TWIN_TRANSFER_FAILED = "Twin could not be transferred";
     string internal constant UNSUPPORTED_TOKEN = "Unsupported token";
     string internal constant TWIN_HAS_BUNDLES = "Twin has bundles";
 
