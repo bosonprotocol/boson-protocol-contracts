@@ -175,6 +175,45 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     }
 
     /**
+     * @notice Puts the dispute into escalated state
+     *
+     * Emits an DisputeEscalated event if successful.
+     *
+     * Reverts if:
+     * - exchange does not exist
+     * - exchange is not in a disputed state
+     * - caller is not the buyer
+     * - dispute is already expired
+     * - dispute is not in a resolving state
+     *
+     * @param _exchangeId - the id of the associated exchange
+     */
+    function escalateDispute(uint256 _exchangeId) external override {
+        // Get the exchange, should be in dispute state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+
+        // Make sure the caller is buyer associated with the exchange
+        checkBuyer(exchange.buyerId);
+
+        // make sure the dispute not expired already
+        (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
+        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
+
+        // Make sure the dispute is in the resolving or escalated state
+        (, Dispute storage dispute) = fetchDispute(_exchangeId);        
+        require(dispute.state == DisputeState.Resolving, INVALID_STATE);
+
+        // store the time of escalation
+        disputeDates.escalated = block.timestamp;
+
+        // Finalize the dispute
+        dispute.state = DisputeState.Escalated;
+
+        // Notify watchers of state change
+        emit DisputeEscalated(_exchangeId, msg.sender);
+    }
+
+    /**
      * @notice Transition dispute to a "finalized" state
      *
      * Target state must be Retracted, Resolved, or Decided.

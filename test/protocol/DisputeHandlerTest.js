@@ -62,7 +62,7 @@ describe("IBosonDisputeHandler", function () {
   let protocolFeePrecentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, exchangeStruct, finalizedDate, state;
-  let dispute, disputedDate, complaint, disputeStruct, timeout;
+  let dispute, disputedDate, escalatedDate, complaint, disputeStruct, timeout;
   let disputeDates, disputeDatesStruct;
   let exists, response;
   let disputeResolver, active;
@@ -844,6 +844,114 @@ describe("IBosonDisputeHandler", function () {
           await expect(
             disputeHandler.connect(operator).resolveDispute(exchange.id, resolution, r, s, v)
           ).to.revertedWith(RevertReasons.INVALID_STATE);
+        });
+      });
+    });
+
+    context("👉 escalateDispute()", async function () {
+      beforeEach(async function () {
+        // Raise a dispute
+        tx = await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+
+        // Get the block timestamp of the confirmed tx and set disputedDate
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+        disputedDate = block.timestamp.toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(disputeValid).toString();
+      });
+
+      it("should emit a DisputeEscalated event", async function () {
+        // Escalate the dispute, testing for the event
+        await expect(disputeHandler.connect(buyer).escalateDispute(exchange.id))
+          .to.emit(disputeHandler, "DisputeEscalated")
+          .withArgs(exchange.id, buyer.address);
+      });
+
+      it("should update state", async function () {
+        // Escalate the dispute
+        tx = await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
+        // Get the block timestamp of the confirmed tx and set escalatedDate
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+        escalatedDate = block.timestamp.toString();
+
+        dispute = new Dispute(exchange.id, complaint, DisputeState.Escalated, new Resolution("0"));
+        disputeDates = new DisputeDates(disputedDate, escalatedDate, "0", timeout);
+
+        // Get the dispute as a struct
+        [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
+
+        // Parse into entities
+        let returnedDispute = Dispute.fromStruct(disputeStruct);
+        const returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
+
+        // Returned values should match the expected dispute and dispute dates
+        for (const [key, value] of Object.entries(dispute)) {
+          expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
+        }
+        for (const [key, value] of Object.entries(disputeDates)) {
+          expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Get the dispute state
+        [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchange.id);
+
+        // It should match DisputeState.Escalated
+        assert.equal(response, DisputeState.Escalated, "Dispute state is incorrect");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Exchange does not exist", async function () {
+          // An invalid exchange id
+          const exchangeId = "666";
+
+          // Attempt to escalate the dispute, expecting revert
+          await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
+            RevertReasons.NO_SUCH_EXCHANGE
+          );
+        });
+
+        it("Exchange is not in a disputed state", async function () {
+          exchange.id++;
+
+          // Commit to offer, creating a new exchange
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Attempt to escalate the dispute, expecting revert
+          await expect(disputeHandler.connect(buyer).escalateDispute(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE
+          );
+        });
+
+        it("Caller is not the buyer for the given exchange id", async function () {
+          // Attempt to retract the dispute, expecting revert
+          await expect(disputeHandler.connect(rando).escalateDispute(exchange.id)).to.revertedWith(
+            RevertReasons.NOT_VOUCHER_HOLDER
+          );
+        });
+
+        it("Dispute has expired", async function () {
+          // Set time forward past the dispute resolution period
+          await setNextBlockTimestamp(Number(timeout) + oneWeek);
+
+          // Attempt to escalate the dispute, expecting revert
+          await expect(disputeHandler.connect(buyer).escalateDispute(exchange.id)).to.revertedWith(
+            RevertReasons.DISPUTE_HAS_EXPIRED
+          );
+        });
+
+        it("Dispute is in some state other than resolving", async function () {
+          // Set time forward past the dispute resoltion period
+          await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+
+          // Retract the dispute, put it into RETRACTED state
+          await disputeHandler.connect(buyer).retractDispute(exchange.id);
+
+          // Attempt to escalate the dispute, expecting revert
+          await expect(disputeHandler.connect(rando).expireDispute(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE
+          );
         });
       });
     });
