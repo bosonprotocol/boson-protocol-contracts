@@ -1284,7 +1284,7 @@ describe("IBosonExchangeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
 
           // Set time forward to run out the fulfillment period
-          newTime = Number((Number(voucherRedeemableFrom) + Number(fulfillmentPeriod) + 1).toString().substring(0, 11));
+          newTime = ethers.BigNumber.from(voucherRedeemableFrom).add(fulfillmentPeriod).add(1).toNumber();
           await setNextBlockTimestamp(newTime);
 
           // Complete exchange

@@ -61,7 +61,7 @@ describe("IBosonDisputeHandler", function () {
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
   let protocolFeePrecentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
-  let exchange, finalizedDate, state;
+  let exchange, exchangeStruct, finalizedDate, state;
   let dispute, disputedDate, complaint, disputeStruct, timeout;
   let disputeDates, disputeDatesStruct;
   let exists, response;
@@ -417,7 +417,7 @@ describe("IBosonDisputeHandler", function () {
 
         // exchange should also be finalized
         // Get the dispute as a struct
-        const [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+        [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
 
         // Parse into entity
         let returnedExchange = Exchange.fromStruct(exchangeStruct);
@@ -487,7 +487,7 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
-        timeout = ethers.BigNumber.from(disputedDate).add(disputeValid).toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
 
         buyerPercent = "1234";
         resolution = new Resolution(buyerPercent);
