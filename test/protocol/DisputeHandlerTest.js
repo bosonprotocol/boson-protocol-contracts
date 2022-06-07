@@ -582,6 +582,29 @@ describe("IBosonDisputeHandler", function () {
             .to.emit(disputeHandler, "DisputeResolved")
             .withArgs(exchange.id, resolution.toStruct(), buyer.address);
         });
+
+        it.skip("Dispute can be mutualy resolved even if it's in escalated state", async function () {
+          // escalate dispute
+          await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
+          // Resolve the dispute, testing for the event
+          await expect(disputeHandler.connect(buyer).resolveDispute(exchange.id, resolution, r, s, v))
+            .to.emit(disputeHandler, "DisputeResolved")
+            .withArgs(exchange.id, resolution.toStruct(), buyer.address);
+        });
+
+        it.skip("Dispute can be mutualy resolved even if it's in escalated state and past the resolution period", async function () {
+          // escalate dispute
+          await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
+          // Set time forward to the dispute expiration date
+          await setNextBlockTimestamp(Number(timeout) + oneWeek);
+
+          // Resolve the dispute, testing for the event
+          await expect(disputeHandler.connect(buyer).resolveDispute(exchange.id, resolution, r, s, v))
+            .to.emit(disputeHandler, "DisputeResolved")
+            .withArgs(exchange.id, resolution.toStruct(), buyer.address);
+        });
       });
 
       context("👉 seller is the caller", async function () {
@@ -652,6 +675,29 @@ describe("IBosonDisputeHandler", function () {
           buyer = new Buyer(id, operator.address, active);
           expect(buyer.isValid()).is.true;
           await accountHandler.connect(operator).createBuyer(buyer);
+
+          // Resolve the dispute, testing for the event
+          await expect(disputeHandler.connect(operator).resolveDispute(exchange.id, resolution, r, s, v))
+            .to.emit(disputeHandler, "DisputeResolved")
+            .withArgs(exchange.id, resolution.toStruct(), operator.address);
+        });
+
+        it.skip("Dispute can be mutualy resolved even if it's in escalated state", async function () {
+          // escalate dispute
+          await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
+          // Resolve the dispute, testing for the event
+          await expect(disputeHandler.connect(operator).resolveDispute(exchange.id, resolution, r, s, v))
+            .to.emit(disputeHandler, "DisputeResolved")
+            .withArgs(exchange.id, resolution.toStruct(), operator.address);
+        });
+
+        it.skip("Dispute can be mutualy resolved even if it's in escalated state and past the resolution period", async function () {
+          // escalate dispute
+          await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
+          // Set time forward to the dispute expiration date
+          await setNextBlockTimestamp(Number(timeout) + oneWeek);
 
           // Resolve the dispute, testing for the event
           await expect(disputeHandler.connect(operator).resolveDispute(exchange.id, resolution, r, s, v))

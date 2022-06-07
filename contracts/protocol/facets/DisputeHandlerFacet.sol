@@ -132,9 +132,9 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Get the exchange, should be in dispute state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
-        // make sure the dispute not expired already
+        // make sure the dispute not expired already or it is in the escalated state
         (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
-        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
+        require(block.timestamp <= disputeDates.timeout || disputeDates.escalated > 0, DISPUTE_HAS_EXPIRED);
 
         // Fetch the offer to get the info who the seller is
         (, Offer storage offer) = fetchOffer(exchange.offerId);
