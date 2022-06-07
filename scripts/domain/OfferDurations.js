@@ -10,14 +10,14 @@ class OfferDurations {
     struct OfferDurations {
         uint256 fulfillmentPeriod;
         uint256 voucherValid;
-        uint256 disputeValid;
+        uint256 resolutionPeriod;
     }
   */
 
-  constructor(fulfillmentPeriod, voucherValid, disputeValid) {
+  constructor(fulfillmentPeriod, voucherValid, resolutionPeriod) {
     this.voucherValid = voucherValid;
     this.fulfillmentPeriod = fulfillmentPeriod;
-    this.disputeValid = disputeValid;
+    this.resolutionPeriod = resolutionPeriod;
   }
 
   /**
@@ -26,9 +26,9 @@ class OfferDurations {
    * @returns {OfferDurations}
    */
   static fromObject(o) {
-    const { fulfillmentPeriod, voucherValid, disputeValid } = o;
+    const { fulfillmentPeriod, voucherValid, resolutionPeriod } = o;
 
-    return new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+    return new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
   }
 
   /**
@@ -37,15 +37,15 @@ class OfferDurations {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let fulfillmentPeriod, voucherValid, disputeValid;
+    let fulfillmentPeriod, voucherValid, resolutionPeriod;
 
     // destructure struct
-    [fulfillmentPeriod, voucherValid, disputeValid] = struct;
+    [fulfillmentPeriod, voucherValid, resolutionPeriod] = struct;
 
     return OfferDurations.fromObject({
       fulfillmentPeriod: fulfillmentPeriod.toString(),
       voucherValid: voucherValid.toString(),
-      disputeValid: disputeValid.toString(),
+      resolutionPeriod: resolutionPeriod.toString(),
     });
   }
 
@@ -70,7 +70,7 @@ class OfferDurations {
    * @returns {string}
    */
   toStruct() {
-    return [this.fulfillmentPeriod, this.voucherValid, this.disputeValid];
+    return [this.fulfillmentPeriod, this.voucherValid, this.resolutionPeriod];
   }
 
   /**
@@ -111,16 +111,16 @@ class OfferDurations {
   }
 
   /**
-   * Is this OfferDurations instance's disputeValid field valid?
+   * Is this OfferDurations instance's resolutionPeriod field valid?
    * Must be a string representation of a big number
    * TODO: make sure it's time within a reasonable range?
    * @returns {boolean}
    */
-  disputeValidIsValid() {
+  resolutionPeriodIsValid() {
     let valid = false;
-    let { disputeValid } = this;
+    let { resolutionPeriod } = this;
     try {
-      valid = typeof disputeValid === "string" && typeof ethers.BigNumber.from(disputeValid) === "object";
+      valid = typeof resolutionPeriod === "string" && typeof ethers.BigNumber.from(resolutionPeriod) === "object";
     } catch (e) {}
     return valid;
   }
@@ -130,7 +130,7 @@ class OfferDurations {
    * @returns {boolean}
    */
   isValid() {
-    return this.fulfillmentPeriodIsValid() && this.voucherValidIsValid() && this.disputeValidIsValid();
+    return this.fulfillmentPeriodIsValid() && this.voucherValidIsValid() && this.resolutionPeriodIsValid();
   }
 }
 

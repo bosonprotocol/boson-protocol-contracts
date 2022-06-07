@@ -35,7 +35,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Fulfillment period is set to zero
-     *   - Dispute duration is set to zero
+     *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered
@@ -64,7 +64,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Fulfillment period is set to zero
-     *   - Dispute duration is set to zero
+     *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered
@@ -99,7 +99,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Fulfillment period is set to zero
-     *   - Dispute duration is set to zero
+     *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered
@@ -136,7 +136,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Fulfillment period is set to zero
-     *   - Dispute duration is set to zero
+     *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered
@@ -172,7 +172,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Fulfillment period is set to zero
-     *   - Dispute duration is set to zero
+     *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered
@@ -216,7 +216,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Fulfillment period is set to zero
-     *   - Dispute duration is set to zero
+     *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered
@@ -258,7 +258,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Fulfillment period is set to zero
-     *   - Dispute duration is set to zero
+     *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered
@@ -301,7 +301,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
      *   - Fulfillment period is set to zero
-     *   - Dispute duration is set to zero
+     *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered

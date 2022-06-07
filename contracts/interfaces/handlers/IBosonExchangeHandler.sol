@@ -108,7 +108,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Caller does not own voucher
-     * - Current time is prior to offer.redeemableFromDate
+     * - Current time is prior to offer.voucherRedeemableFromDate
      * - Current time is after exchange.voucher.validUntilDate
      *
      * Emits

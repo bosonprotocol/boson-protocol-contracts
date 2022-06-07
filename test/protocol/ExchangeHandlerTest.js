@@ -1,3 +1,4 @@
+const { gasLimit } = require("../../environments");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect, assert } = require("chai");
@@ -11,6 +12,9 @@ const OfferDurations = require("../../scripts/domain/OfferDurations");
 const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
+const TokenType = require("../../scripts/domain/TokenType");
+const Twin = require("../../scripts/domain/Twin");
+const Bundle = require("../../scripts/domain/Bundle");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -18,6 +22,7 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
+const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   getEvent,
   setNextBlockTimestamp,
@@ -39,8 +44,10 @@ describe("IBosonExchangeHandler", function () {
     exchangeHandler,
     offerHandler,
     fundsHandler,
-    disputeHandler;
-  let bosonVoucher, gasLimit;
+    disputeHandler,
+    twinHandler,
+    bundleHandler;
+  let bosonVoucher;
   let id, buyerId, offer, offerId, seller, sellerId, nextExchangeId, nextAccountId;
   let block, blockNumber, tx, txReceipt, event, clients;
   let support, oneMonth, oneWeek, newTime;
@@ -54,12 +61,14 @@ describe("IBosonExchangeHandler", function () {
     metadataUri,
     offerChecksum,
     voided;
-  let validFrom, validUntil, redeemableFrom, redeemableUntil, offerDates;
-  let fulfillmentPeriod, voucherValid, disputeValid, offerDurations;
+  let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
+  let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
   let protocolFeePrecentage;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state, exchangeStruct, response, exists, buyerStruct;
   let disputeResolver, active;
+  let foreign20, foreign721, foreign1155;
+  let twin20, twin721, twin1155, twinIds, bundle, balance, owner;
 
   before(async function () {
     // get interface Ids
@@ -96,6 +105,8 @@ describe("IBosonExchangeHandler", function () {
       "OfferHandlerFacet",
       "FundsHandlerFacet",
       "DisputeHandlerFacet",
+      "TwinHandlerFacet",
+      "BundleHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -113,11 +124,11 @@ describe("IBosonExchangeHandler", function () {
       "0x0000000000000000000000000000000000000000",
       bosonVoucher.address,
       protocolFeePrecentage,
-      "0",
-      "0",
-      "0",
-      "0",
-      "0",
+      "100",
+      "100",
+      "100",
+      "100",
+      "100",
     ];
 
     // Deploy the Config facet, initializing the protocol config
@@ -140,6 +151,15 @@ describe("IBosonExchangeHandler", function () {
 
     // Cast Diamond to IBosonDisputeHandler
     disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
+
+    // Cast Diamond to ITwinHandler
+    twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBundleHandler
+    bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
+
+    // Deploy the mock tokens
+    [foreign20, foreign721, foreign1155] = await deployMockTokens(gasLimit, ["Foreign20", "Foreign721", "Foreign1155"]);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -217,19 +237,19 @@ describe("IBosonExchangeHandler", function () {
       validUntil = ethers.BigNumber.from(block.timestamp)
         .add(oneMonth * 6)
         .toString(); // until 6 months
-      redeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-      redeemableUntil = "0"; // vouchers don't have fixed expiration date
+      voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+      voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
 
       // Create a valid offerDates, then set fields in tests directly
-      offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+      offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
 
       // Required constructor params
       fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
       voucherValid = oneMonth.toString(); // offers valid for one month
-      disputeValid = oneWeek.toString(); // dispute is valid for one month
+      resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
 
       // Create a valid offerDurations, then set fields in tests directly
-      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
@@ -270,7 +290,7 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // Get the struct
         exchangeStruct = exchange.toStruct();
@@ -338,15 +358,15 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // Get the struct
         exchangeStruct = exchange.toStruct();
       });
 
       it("should emit an ExchangeCompleted event when buyer calls", async function () {
-        // Set time forward to the offer's redeemableFrom
-        await setNextBlockTimestamp(Number(redeemableFrom));
+        // Set time forward to the offer's voucherRedeemableFrom
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
         // Redeem the voucher
         await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -358,8 +378,8 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("should update state", async function () {
-        // Set time forward to the offer's redeemableFrom
-        await setNextBlockTimestamp(Number(redeemableFrom));
+        // Set time forward to the offer's voucherRedeemableFrom
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
         // Redeem the voucher
         await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -375,8 +395,8 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("should emit an ExchangeCompleted event if operator calls after fulfillment period", async function () {
-        // Set time forward to the offer's redeemableFrom
-        await setNextBlockTimestamp(Number(redeemableFrom));
+        // Set time forward to the offer's voucherRedeemableFrom
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
         // Redeem the voucher
         await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -425,8 +445,8 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("caller is not buyer or seller's operator", async function () {
-          // Set time forward to the offer's redeemableFrom
-          await setNextBlockTimestamp(Number(redeemableFrom));
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
           // Redeem the voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -438,8 +458,8 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("caller is seller's operator and offer fulfillment period has not elapsed", async function () {
-          // Set time forward to the offer's redeemableFrom
-          await setNextBlockTimestamp(Number(redeemableFrom));
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
           // Redeem the voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -465,7 +485,7 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // Get the struct
         exchangeStruct = exchange.toStruct();
@@ -539,7 +559,7 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // Get the struct
         exchangeStruct = exchange.toStruct();
@@ -623,7 +643,7 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // Get the struct
         exchangeStruct = exchange.toStruct();
@@ -631,7 +651,7 @@ describe("IBosonExchangeHandler", function () {
 
       it("should emit an VoucherExpired event when anyone calls and voucher has expired", async function () {
         // Set time forward past the voucher's validUntilDate
-        await setNextBlockTimestamp(Number(redeemableFrom) + Number(voucherValid) + Number(oneWeek));
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
         // Expire the voucher, expecting event
         await expect(exchangeHandler.connect(rando).expireVoucher(exchange.id))
@@ -641,7 +661,7 @@ describe("IBosonExchangeHandler", function () {
 
       it("should update state when anyone calls and voucher has expired", async function () {
         // Set time forward past the voucher's validUntilDate
-        await setNextBlockTimestamp(Number(redeemableFrom) + Number(voucherValid) + Number(oneWeek));
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
         // Expire the voucher
         await exchangeHandler.connect(rando).expireVoucher(exchange.id);
@@ -655,7 +675,7 @@ describe("IBosonExchangeHandler", function () {
 
       it("should update voucher expired flag when anyone calls and voucher has expired", async function () {
         // Set time forward past the voucher's validUntilDate
-        await setNextBlockTimestamp(Number(redeemableFrom) + Number(voucherValid) + Number(oneWeek));
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
         // Expire the voucher
         await exchangeHandler.connect(rando).expireVoucher(exchange.id);
@@ -681,7 +701,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("exchange id is invalid", async function () {
           // Set time forward past the voucher's validUntilDate
-          await setNextBlockTimestamp(Number(redeemableFrom) + Number(voucherValid) + Number(oneWeek));
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
           // An invalid exchange id
           id = "666";
@@ -694,7 +714,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("exchange is not in committed state", async function () {
           // Set time forward past the voucher's validUntilDate
-          await setNextBlockTimestamp(Number(redeemableFrom) + Number(voucherValid) + Number(oneWeek));
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
           // Revoke the voucher
           await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
@@ -727,14 +747,14 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
         // Get the struct
         exchangeStruct = exchange.toStruct();
       });
 
       it("should emit a VoucherRedeemed event when buyer calls", async function () {
-        // Set time forward to the offer's redeemableFrom
-        await setNextBlockTimestamp(Number(redeemableFrom));
+        // Set time forward to the offer's voucherRedeemableFrom
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
         // Redeem the voucher, expecting event
         await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
@@ -742,9 +762,9 @@ describe("IBosonExchangeHandler", function () {
           .withArgs(offerId, exchange.id, buyer.address);
       });
 
-      it("should update state when buyer calls", async function () {
-        // Set time forward to the offer's redeemableFrom
-        await setNextBlockTimestamp(Number(redeemableFrom));
+      it("should update state", async function () {
+        // Set time forward to the offer's voucherRedeemableFrom
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
         // Redeem the voucher
         await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -762,7 +782,7 @@ describe("IBosonExchangeHandler", function () {
          * - Exchange does not exist
          * - Exchange is not in committed state
          * - Caller does not own voucher
-         * - Current time is prior to offer.redeemableFrom
+         * - Current time is prior to offer.voucherRedeemableFrom
          * - Current time is after exchange.voucher.validUntilDate
          */
 
@@ -793,7 +813,7 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
-        it("current time is prior to offer's redeemableFrom", async function () {
+        it("current time is prior to offer's voucherRedeemableFrom", async function () {
           // Attempt to redeem the voucher, expecting revert
           await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
             RevertReasons.VOUCHER_NOT_REDEEMABLE
@@ -802,12 +822,242 @@ describe("IBosonExchangeHandler", function () {
 
         it("current time is after to voucher's validUntilDate", async function () {
           // Set time forward past the voucher's validUntilDate
-          await setNextBlockTimestamp(Number(redeemableFrom) + Number(voucherValid) + Number(oneWeek));
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
           // Attempt to redeem the voucher, expecting revert
           await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
             RevertReasons.VOUCHER_NOT_REDEEMABLE
           );
+        });
+      });
+    });
+
+    context("👉 redeemVoucher() with bundle", async function () {
+      beforeEach(async function () {
+        // Mint some tokens to be bundled
+        await foreign20.connect(operator).mint(operator.address, "500");
+        await foreign721.connect(operator).mint("1");
+        await foreign1155.connect(operator).mint("1", "500");
+
+        // Approve the protocol diamond to transfer seller's tokens
+        await foreign20.connect(operator).approve(protocolDiamond.address, "1");
+        await foreign721.connect(operator).setApprovalForAll(protocolDiamond.address, true);
+        await foreign1155.connect(operator).setApprovalForAll(protocolDiamond.address, true);
+
+        // Create an ERC20 twin
+        twin20 = new Twin("1", sellerId, "500", [], "0", foreign20.address, TokenType.FungibleToken);
+        expect(twin20.isValid()).is.true;
+
+        // Create an ERC721 twin
+        twin721 = new Twin("2", sellerId, "0", ["1"], "0", foreign721.address, TokenType.NonFungibleToken);
+        expect(twin721.isValid()).is.true;
+
+        // Create an ERC1155 twin
+        twin1155 = new Twin("3", sellerId, "500", [], "1", foreign1155.address, TokenType.MultiToken);
+        expect(twin1155.isValid()).is.true;
+
+        // All the twin ids (for mixed bundle)
+        twinIds = [twin20.id, twin721.id, twin1155.id];
+
+        // Create twins
+        await twinHandler.connect(operator).createTwin(twin20.toStruct());
+        await twinHandler.connect(operator).createTwin(twin721.toStruct());
+        await twinHandler.connect(operator).createTwin(twin1155.toStruct());
+      });
+
+      context("📦 Offer bundled with ERC20 twin", async function () {
+        beforeEach(async function () {
+          // Create a new bundle
+          bundle = new Bundle("1", sellerId, [offerId], [twin20.id]);
+          expect(bundle.isValid()).is.true;
+          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+
+          // Commit to offer
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+        });
+
+        it("should transfer the twin", async function () {
+          // Check the buyer's balance of the ERC20
+          balance = await foreign20.balanceOf(buyer.address);
+          expect(balance).to.equal(0);
+
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Check the buyer's balance of the ERC20
+          balance = await foreign20.balanceOf(buyer.address);
+          expect(balance).to.equal(1);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("unable to transfer the twin", async function () {
+            // Remove the approval for the protocal to transfer the seller's tokens
+            await foreign20.connect(operator).approve(protocolDiamond.address, "0");
+
+            // Attempt to redeem the voucher, expecting revert
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
+              RevertReasons.TWIN_TRANSFER_FAILED
+            );
+          });
+        });
+      });
+
+      context("📦 Offer bundled with ERC721 twin", async function () {
+        beforeEach(async function () {
+          // Create a new bundle
+          bundle = new Bundle("1", sellerId, [offerId], [twin721.id]);
+          expect(bundle.isValid()).is.true;
+          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+
+          // Commit to offer
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+        });
+
+        it("should transfer the twin", async function () {
+          // Check the operator owns the ERC721
+          owner = await foreign721.ownerOf("1");
+          expect(owner).to.equal(operator.address);
+
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Check the buyer owns the ERC721
+          owner = await foreign721.ownerOf("1");
+          expect(owner).to.equal(buyer.address);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("unable to transfer the twin", async function () {
+            // Remove the approval for the protocal to transfer the seller's tokens
+            await foreign721.connect(operator).setApprovalForAll(protocolDiamond.address, false);
+
+            // Attempt to redeem the voucher, expecting revert
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
+              RevertReasons.TWIN_TRANSFER_FAILED
+            );
+          });
+        });
+      });
+
+      context("📦 Offer bundled with ERC1155 twin", async function () {
+        beforeEach(async function () {
+          // Create a new bundle
+          bundle = new Bundle("1", sellerId, [offerId], [twin1155.id]);
+          expect(bundle.isValid()).is.true;
+          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+
+          // Commit to offer
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+        });
+
+        it("should transfer the twin", async function () {
+          // Check the buyer's balance of the ERC1155
+          balance = await foreign1155.balanceOf(buyer.address, "1");
+          expect(balance).to.equal(0);
+
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Check the buyer's balance of the ERC1155
+          balance = await foreign1155.balanceOf(buyer.address, "1");
+          expect(balance).to.equal(1);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("unable to transfer the twin", async function () {
+            // Remove the approval for the protocal to transfer the seller's tokens
+            await foreign1155.connect(operator).setApprovalForAll(protocolDiamond.address, false);
+
+            // Attempt to redeem the voucher, expecting revert
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
+              RevertReasons.TWIN_TRANSFER_FAILED
+            );
+          });
+        });
+      });
+
+      context("📦 Offer bundled with mixed twins", async function () {
+        beforeEach(async function () {
+          // Create a new bundle
+          bundle = new Bundle("1", sellerId, [offerId], twinIds);
+          expect(bundle.isValid()).is.true;
+          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+
+          // Commit to offer
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+        });
+
+        it("should transfer the twins", async function () {
+          // Check the buyer's balance of the ERC20
+          balance = await foreign20.balanceOf(buyer.address);
+          expect(balance).to.equal(0);
+
+          // Check the operator owns the ERC721
+          owner = await foreign721.ownerOf("1");
+          expect(owner).to.equal(operator.address);
+
+          // Check the buyer's balance of the ERC1155
+          balance = await foreign1155.balanceOf(buyer.address, "1");
+          expect(balance).to.equal(0);
+
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Check the buyer's balance of the ERC20
+          balance = await foreign20.balanceOf(buyer.address);
+          expect(balance).to.equal(1);
+
+          // Check the buyer owns the ERC721
+          owner = await foreign721.ownerOf("1");
+          expect(owner).to.equal(buyer.address);
+
+          // Check the buyer's balance of the ERC1155
+          balance = await foreign1155.balanceOf(buyer.address, "1");
+          expect(balance).to.equal(1);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("unable to transfer the ERC20 twin", async function () {
+            // Remove the approval for the protocal to transfer the seller's tokens
+            await foreign20.connect(operator).approve(protocolDiamond.address, "0");
+
+            // Attempt to redeem the voucher, expecting revert
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
+              RevertReasons.TWIN_TRANSFER_FAILED
+            );
+          });
+
+          it("unable to transfer the ERC721 twin", async function () {
+            // Remove the approval for the protocal to transfer the seller's tokens
+            await foreign721.connect(operator).setApprovalForAll(protocolDiamond.address, false);
+
+            // Attempt to redeem the voucher, expecting revert
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
+              RevertReasons.TWIN_TRANSFER_FAILED
+            );
+          });
+
+          it("unable to transfer the ERC1155 twin", async function () {
+            // Remove the approval for the protocal to transfer the seller's tokens
+            await foreign1155.connect(operator).setApprovalForAll(protocolDiamond.address, false);
+
+            // Attempt to redeem the voucher, expecting revert
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
+              RevertReasons.TWIN_TRANSFER_FAILED
+            );
+          });
         });
       });
     });
@@ -825,7 +1075,7 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // Get the struct
         exchangeStruct = exchange.toStruct();
@@ -964,7 +1214,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("Voucher has expired", async function () {
           // Set time forward past the voucher's validUntilDate
-          await setNextBlockTimestamp(Number(redeemableFrom) + Number(voucherValid) + Number(oneWeek));
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(id, newOwner.address)).to.revertedWith(
@@ -1007,8 +1257,8 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("should return false if exchange is in Redeemed state", async function () {
-          // Set time forward to the offer's redeemableFrom
-          await setNextBlockTimestamp(Number(redeemableFrom));
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
           // Redeem voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -1021,8 +1271,8 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("should return true if exchange is in Completed state", async function () {
-          // Set time forward to the offer's redeemableFrom
-          await setNextBlockTimestamp(Number(redeemableFrom));
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
           // Redeem voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -1032,7 +1282,7 @@ describe("IBosonExchangeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
 
           // Set time forward to run out the fulfillment period
-          newTime = Number((Number(redeemableFrom) + Number(fulfillmentPeriod) + 1).toString().substring(0, 11));
+          newTime = Number((Number(voucherRedeemableFrom) + Number(fulfillmentPeriod) + 1).toString().substring(0, 11));
           await setNextBlockTimestamp(newTime);
 
           // Complete exchange
@@ -1070,8 +1320,8 @@ describe("IBosonExchangeHandler", function () {
 
       context("👎 disputed exchange", async function () {
         beforeEach(async function () {
-          // Set time forward to the offer's redeemableFrom
-          await setNextBlockTimestamp(Number(redeemableFrom));
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
           // Redeem voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -1163,7 +1413,7 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // Get the struct
         exchangeStruct = exchange.toStruct();
@@ -1207,7 +1457,7 @@ describe("IBosonExchangeHandler", function () {
         exchange.voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, redeemableFrom, voucherValid);
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // Get the struct
         exchangeStruct = exchange.toStruct();

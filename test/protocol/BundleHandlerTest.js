@@ -7,6 +7,7 @@ const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Twin = require("../../scripts/domain/Twin");
+const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
@@ -52,7 +53,7 @@ describe("IBosonBundleHandler", function () {
   let offerHandler, bundleHandlerFacet_Factory;
   let seller, active;
   let bundleStruct;
-  let twinIdsToAdd, twinIdsToRemove, offerIdsToAdd, offerIdsToRemove;
+  let twinIdsToAdd, twinIdsToRemove, offerIdsToAdd, offerIdsToRemove, tokenType;
   let bundle, bundleId, bundleIds, offerIds, twinId, twinIds, nextBundleId, invalidBundleId, bundleInstance;
   let offer, oneMonth, oneWeek, exists, expected, blockNumber, block;
   let offerId,
@@ -67,8 +68,8 @@ describe("IBosonBundleHandler", function () {
     offerChecksum,
     voided,
     invalidOfferId;
-  let validFrom, validUntil, redeemableFrom, redeemableUntil, offerDates;
-  let fulfillmentPeriod, voucherValid, disputeValid, offerDurations;
+  let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
+  let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
   let protocolFeePrecentage;
   let disputeResolver;
 
@@ -190,12 +191,13 @@ describe("IBosonBundleHandler", function () {
         // Required constructor params for Twin
         id = sellerId = "1";
         supplyAvailable = "1000";
-        tokenId = "2048";
-        supplyIds = ["3", "4"];
+        tokenId = "0";
+        supplyIds = [];
         tokenAddress = bosonToken.address;
+        tokenType = TokenType.FungibleToken;
 
         // Create a valid twin.
-        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
         expect(twin.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens
@@ -248,19 +250,19 @@ describe("IBosonBundleHandler", function () {
         validUntil = ethers.BigNumber.from(block.timestamp)
           .add(oneMonth * 6)
           .toString(); // until 6 months
-        redeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-        redeemableUntil = "0"; // vouchers don't have fixed expiration date
+        voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+        voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
 
         // Create a valid offerDates, then set fields in tests directly
-        offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+        offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
 
         // Required constructor params
         fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
         voucherValid = oneMonth.toString(); // offers valid for one month
-        disputeValid = oneWeek.toString(); // dispute is valid for one month
+        resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
 
         // Create a valid offerDurations, then set fields in tests directly
-        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
 
         await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
       }

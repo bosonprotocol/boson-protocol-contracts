@@ -27,7 +27,7 @@ describe("IBosonAccountHandler", function () {
   let erc165, protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, fundsHandler, gasLimit;
   let seller, sellerStruct, active, seller2, seller2Struct, id2;
   let buyer, buyerStruct, buyer2, buyer2Struct;
-  let disputeResolver, disputeResolverStruct;
+  let disputeResolver, disputeResolverStruct, disputeResolver2, disputeResolver2Struct;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
   let oneMonth, oneWeek, blockNumber, block, protocolFeePrecentage;
@@ -45,8 +45,8 @@ describe("IBosonAccountHandler", function () {
     offerChecksum,
     voided,
     offer;
-  let validFrom, validUntil, redeemableFrom, redeemableUntil, offerDates;
-  let fulfillmentPeriod, voucherValid, disputeValid, offerDurations;
+  let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
+  let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
 
   before(async function () {
     // get interface Ids
@@ -1075,20 +1075,20 @@ describe("IBosonAccountHandler", function () {
           validUntil = ethers.BigNumber.from(block.timestamp)
             .add(oneMonth * 6)
             .toString(); // until 6 months
-          redeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-          redeemableUntil = "0"; // vouchers don't have fixed expiration date
+          voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+          voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
 
           // Create a valid offerDates, then set fields in tests directly
-          offerDates = new OfferDates(validFrom, validUntil, redeemableFrom, redeemableUntil);
+          offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
           expect(offerDates.isValid()).is.true;
 
           // Required constructor params
           fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
           voucherValid = oneMonth.toString(); // offers valid for one month
-          disputeValid = oneWeek.toString(); // dispute is valid for one month
+          resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
 
           // Create a valid offerDurations, then set fields in tests directly
-          offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, disputeValid);
+          offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
           expect(offerDurations.isValid()).is.true;
 
           // Create the offer
@@ -1331,6 +1331,241 @@ describe("IBosonAccountHandler", function () {
 
         // Validate
         expect(disputeResolver.isValid()).to.be.true;
+      });
+    });
+
+    context("👉 updateDisputeResolver()", async function () {
+      beforeEach(async function () {
+        // Create a dispute resolver
+        await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+
+        // id of the current dispute resolver and increment nextAccountId
+        id = nextAccountId++;
+      });
+
+      it("should emit a DisputeResolverUpdated event with correct values if values change", async function () {
+        disputeResolver.wallet = other2.address;
+        disputeResolver.active = false;
+        expect(disputeResolver.isValid()).is.true;
+
+        disputeResolverStruct = disputeResolver.toStruct();
+
+        //Update a dispute resolver, testing for the event
+        await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverUpdated")
+          .withArgs(disputeResolver.id, disputeResolverStruct);
+      });
+
+      it("should emit a DisputeResolverUpdated event with correct values if values stay the same", async function () {
+        //Update a dispute resolver, testing for the event
+        await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverUpdated")
+          .withArgs(disputeResolver.id, disputeResolverStruct);
+      });
+
+      it("should update state of all fields except Id", async function () {
+        disputeResolver.wallet = other2.address;
+        disputeResolver.active = false;
+        expect(disputeResolver.isValid()).is.true;
+
+        disputeResolverStruct = disputeResolver.toStruct();
+
+        // Update disupte resolver
+        await accountHandler.connect(other1).updateDisputeResolver(disputeResolver);
+
+        // Get the disupte resolver as a struct
+        [, disputeResolverStruct] = await accountHandler.connect(rando).getDisputeResolver(disputeResolver.id);
+
+        // Parse into entity
+        let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
+
+        // Returned values should match the input in updateDisputeResolver
+        for ([key, value] of Object.entries(disputeResolver)) {
+          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update state correctly if values are the same", async function () {
+        // Update disupte resolver
+        await accountHandler.connect(other1).updateDisputeResolver(disputeResolver);
+
+        // Get the disupte resolver as a struct
+        [, disputeResolverStruct] = await accountHandler.connect(rando).getDisputeResolver(disputeResolver.id);
+
+        // Parse into entity
+        let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
+
+        // Returned values should match the input in updateDisputeResolver
+        for ([key, value] of Object.entries(disputeResolver)) {
+          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update only active flag", async function () {
+        disputeResolver.active = false;
+        expect(disputeResolver.isValid()).is.true;
+
+        disputeResolverStruct = disputeResolver.toStruct();
+
+        // Update disupte resolver
+        await accountHandler.connect(other1).updateDisputeResolver(disputeResolver);
+
+        // Get the disupte resolver as a struct
+        [, disputeResolverStruct] = await accountHandler.connect(rando).getDisputeResolver(disputeResolver.id);
+
+        // Parse into entity
+        let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
+
+        // Returned values should match the input in updateDisputeResolver
+        for ([key, value] of Object.entries(disputeResolver)) {
+          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update only wallet address", async function () {
+        disputeResolver.wallet = other2.address;
+        expect(disputeResolver.isValid()).is.true;
+
+        disputeResolverStruct = disputeResolver.toStruct();
+
+        // Update disupte resolver
+        await accountHandler.connect(other1).updateDisputeResolver(disputeResolver);
+
+        // Get the disupte resolver as a struct
+        [, disputeResolverStruct] = await accountHandler.connect(rando).getDisputeResolver(disputeResolver.id);
+
+        // Parse into entity
+        let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
+
+        // Returned values should match the input in updateDisputeResolver
+        for ([key, value] of Object.entries(disputeResolver)) {
+          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update the correct dispute resolver", async function () {
+        // Configure another dispute resolver
+        id2 = nextAccountId++;
+        disputeResolver2 = new DisputeResolver(id2.toString(), other3.address, active);
+        expect(disputeResolver2.isValid()).is.true;
+
+        disputeResolver2Struct = disputeResolver2.toStruct();
+
+        //Create disputeResolver2 testing, for the event
+        await expect(accountHandler.connect(rando).createDisputeResolver(disputeResolver2))
+          .to.emit(accountHandler, "DisputeResolverCreated")
+          .withArgs(disputeResolver2.id, disputeResolver2Struct);
+
+        //Update first dispute resolver values
+        disputeResolver.wallet = other2.address;
+        disputeResolver.active = false;
+        expect(disputeResolver.isValid()).is.true;
+
+        disputeResolverStruct = disputeResolver.toStruct();
+
+        // Update the first dispute resolver
+        await accountHandler.connect(other1).updateDisputeResolver(disputeResolver);
+
+        // Get the first disupte resolver as a struct
+        [, disputeResolverStruct] = await accountHandler.connect(rando).getDisputeResolver(disputeResolver.id);
+
+        // Parse into entity
+        let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
+
+        // Returned values should match the input in updateDisputeResolver
+        for ([key, value] of Object.entries(disputeResolver)) {
+          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
+        }
+
+        //Check dispute resolver 2 hasn't been changed
+        [, disputeResolver2Struct] = await accountHandler.connect(rando).getDisputeResolver(disputeResolver2.id);
+
+        // Parse into entity
+        let returnedDisputeResolver2 = DisputeResolver.fromStruct(disputeResolver2Struct);
+
+        //returnedDisputeResolver2 should still contain original values
+        for ([key, value] of Object.entries(disputeResolver2)) {
+          expect(JSON.stringify(returnedDisputeResolver2[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should be able to only update second time with new wallet address", async function () {
+        disputeResolver.wallet = other2.address;
+        disputeResolverStruct = disputeResolver.toStruct();
+
+        //Update dispute resolver, testing for the event
+        await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverUpdated")
+          .withArgs(disputeResolver.id, disputeResolverStruct);
+
+        disputeResolver.wallet = other3.address;
+        disputeResolverStruct = disputeResolver.toStruct();
+
+        //Update dispute resolver, testing for the event
+        await expect(accountHandler.connect(other2).updateDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverUpdated")
+          .withArgs(disputeResolver.id, disputeResolverStruct);
+
+        // Attempt to update the dispute resolver with original wallet address, expecting revert
+        await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          RevertReasons.NOT_DISPUTE_RESOLVER_WALLET
+        );
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Dispute resolver does not exist", async function () {
+          // Set invalid id
+          disputeResolver.id = "444";
+
+          // Attempt to update the dispute resolver, expecting revert
+          await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver)).to.revertedWith(
+            RevertReasons.NO_SUCH_DISPUTE_RESOLVER
+          );
+
+          // Set invalid id
+          disputeResolver.id = "0";
+
+          // Attempt to update the dispute resolver, expecting revert
+          await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver)).to.revertedWith(
+            RevertReasons.NO_SUCH_DISPUTE_RESOLVER
+          );
+        });
+
+        it("Caller is not dispute resolver wallet address", async function () {
+          // Attempt to update the disputer resolver, expecting revert
+          await expect(accountHandler.connect(other2).updateDisputeResolver(disputeResolver)).to.revertedWith(
+            RevertReasons.NOT_DISPUTE_RESOLVER_WALLET
+          );
+        });
+
+        it("wallet address is the zero address", async function () {
+          disputeResolver.wallet = ethers.constants.AddressZero;
+
+          // Attempt to update the disputer resolver, expecting revert
+          await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
+        });
+
+        it("wallet address is not unique to this dispute resolver Id", async function () {
+          id = await accountHandler.connect(rando).getNextAccountId();
+
+          disputeResolver2 = new DisputeResolver(id.toString(), other2.address, active);
+          disputeResolver2Struct = disputeResolver2.toStruct();
+
+          //Create second dispute resolver, testing for the event
+          await expect(accountHandler.connect(rando).createDisputeResolver(disputeResolver2))
+            .to.emit(accountHandler, "DisputeResolverCreated")
+            .withArgs(disputeResolver2.id, disputeResolver2Struct);
+
+          //Set wallet address value to be same as first dispute resolver created in Dispute Resolver Methods beforeEach
+          disputeResolver2.wallet = other1.address; //already being used by dispute resolver 1
+
+          // Attempt to update dispute resolver 2 with non-unique wallet address, expecting revert
+          await expect(accountHandler.connect(other2).createDisputeResolver(disputeResolver2)).to.revertedWith(
+            RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
+          );
+        });
       });
     });
   });

@@ -26,7 +26,7 @@ exports.RevertReasons = {
   OFFER_NOT_UPDATEABLE: "Offer not updateable",
   OFFER_MUST_BE_UNIQUE: "Offer must be unique to a group",
   EXCHANGE_FOR_OFFER_EXISTS: "Exchange for offer exists",
-  AMBIGOUS_VOUCHER_EXPIRY: "Exactly one of redeemableUntil and voucherValid must be non zero",
+  AMBIGUOUS_VOUCHER_EXPIRY: "Exactly one of voucherRedeemableUntil and voucherValid must be non zero",
   REDEMPTION_PERIOD_INVALID: "Redemption period invalid",
   INVALID_FULFILLMENT_PERIOD: "Invalid fulfillemnt period",
   INVALID_DISPUTE_DURATION: "Invalid dispute duration",
@@ -50,10 +50,13 @@ exports.RevertReasons = {
   NOT_BUYER_WALLET: "Not buyer's wallet address",
   NO_SUCH_BUYER: "No such buyer",
   WALLET_OWNS_VOUCHERS: "Wallet address owns vouchers",
+  NOT_DISPUTE_RESOLVER_WALLET: "Not dispute resolver's wallet address",
+  NO_SUCH_DISPUTE_RESOLVER: "No such dispute resolver",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",
   NO_TRANSFER_APPROVED: "No transfer approved",
+  TWIN_TRANSFER_FAILED: "Twin could not be transferred",
   UNSUPPORTED_TOKEN: "Unsupported token",
   TWIN_HAS_BUNDLES: "Twin has bundles",
 
