@@ -5,7 +5,10 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
+const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Offer = require("../../scripts/domain/Offer");
+const OfferDates = require("../../scripts/domain/OfferDates");
+const OfferDurations = require("../../scripts/domain/OfferDurations");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -20,7 +23,7 @@ const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 describe("IBosonOfferHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury;
+  let accounts, deployer, rando, operator, admin, clerk, treasury, other1;
   let erc165, protocolDiamond, accessController, accountHandler, offerHandler, bosonVoucher, offerStruct, key, value;
   let offer, nextOfferId, invalidOfferId, oneMonth, oneWeek, support, expected, exists;
   let seller, active;
@@ -31,17 +34,29 @@ describe("IBosonOfferHandler", function () {
     protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
-    validFromDate,
-    validUntilDate,
-    redeemableFromDate,
-    fulfillmentPeriodDuration,
-    voucherValidDuration,
     exchangeToken,
+    disputeResolverId,
     metadataUri,
     offerChecksum,
     voided;
+  let validFrom,
+    validUntil,
+    voucherRedeemableFrom,
+    voucherRedeemableUntil,
+    offerDates,
+    offerDatesStruct,
+    offerDatesStructs,
+    offerDatesList;
+  let fulfillmentPeriod,
+    voucherValid,
+    resolutionPeriod,
+    offerDurations,
+    offerDurationsStruct,
+    offerDurationsStructs,
+    offerDurationsList;
   let protocolFeePrecentage;
   let block, blockNumber;
+  let disputeResolver;
 
   before(async function () {
     // get interface Ids
@@ -57,6 +72,7 @@ describe("IBosonOfferHandler", function () {
     clerk = accounts[3];
     treasury = accounts[4];
     rando = accounts[5];
+    other1 = accounts[6];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -129,6 +145,14 @@ describe("IBosonOfferHandler", function () {
 
       await accountHandler.connect(admin).createSeller(seller);
 
+      // Create a valid dispute resolver
+      active = true;
+      disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+      expect(disputeResolver.isValid()).is.true;
+
+      // Register the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+
       // Some periods in milliseconds
       oneWeek = 604800 * 1000; //  7 days in milliseconds
       oneMonth = 2678400 * 1000; // 31 days in milliseconds
@@ -148,14 +172,8 @@ describe("IBosonOfferHandler", function () {
       protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage); // will be ignored, but set the correct value here for the tests
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
-      validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-      validUntilDate = ethers.BigNumber.from(block.timestamp)
-        .add(oneMonth * 6)
-        .toString(); // until 6 months
-      redeemableFromDate = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-      fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
-      voucherValidDuration = oneMonth.toString(); // offers valid for one month
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
+      disputeResolverId = "2";
       offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
       metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
       voided = false;
@@ -169,12 +187,8 @@ describe("IBosonOfferHandler", function () {
         protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
-        validFromDate,
-        validUntilDate,
-        redeemableFromDate,
-        fulfillmentPeriodDuration,
-        voucherValidDuration,
         exchangeToken,
+        disputeResolverId,
         metadataUri,
         offerChecksum,
         voided
@@ -183,29 +197,64 @@ describe("IBosonOfferHandler", function () {
 
       // How that offer looks as a returned struct
       offerStruct = offer.toStruct();
+
+      // Required constructor params
+      validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
+      validUntil = ethers.BigNumber.from(block.timestamp)
+        .add(oneMonth * 6)
+        .toString(); // until 6 months
+      voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+      voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
+
+      // Create a valid offerDates, then set fields in tests directly
+      offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
+      expect(offerDates.isValid()).is.true;
+
+      // How that offer looks as a returned struct
+      offerDatesStruct = offerDates.toStruct();
+
+      // Required constructor params
+      fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
+      voucherValid = oneMonth.toString(); // offers valid for one month
+      resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
+
+      // Create a valid offerDurations, then set fields in tests directly
+      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
+      expect(offerDurations.isValid()).is.true;
+
+      // How that offer looks as a returned struct
+      offerDurationsStruct = offerDurations.toStruct();
     });
 
     context("👉 createOffer()", async function () {
       it("should emit an OfferCreated event", async function () {
         // Create an offer, testing for the event
-        await expect(offerHandler.connect(operator).createOffer(offer))
+        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct);
+          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
       });
 
       it("should update state", async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
         // Get the offer as a struct
-        [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
 
-        // Parse into entity
+        // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
+        let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+        let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
 
         // Returned values should match the input in createOffer
         for ([key, value] of Object.entries(offer)) {
           expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(offerDates)) {
+          expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(offerDurations)) {
+          expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
         }
       });
 
@@ -213,9 +262,9 @@ describe("IBosonOfferHandler", function () {
         offer.id = "444";
 
         // Create an offer, testing for the event
-        await expect(offerHandler.connect(operator).createOffer(offer))
+        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct);
+          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
 
         // wrong offer id should not exist
         [exists] = await offerHandler.connect(rando).getOffer(offer.id);
@@ -231,9 +280,9 @@ describe("IBosonOfferHandler", function () {
         offer.sellerId = "123";
 
         // Create an offer, testing for the event
-        await expect(offerHandler.connect(operator).createOffer(offer))
+        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
       });
 
       it("should ignore any provided protocol fee and calculate the correct one", async function () {
@@ -241,9 +290,9 @@ describe("IBosonOfferHandler", function () {
         offer.protocolFee = "999";
 
         // Create an offer, testing for the event
-        await expect(offerHandler.connect(operator).createOffer(offer))
+        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
       });
 
       it("after the protocol fee changes, new offers should have the new fee", async function () {
@@ -258,34 +307,36 @@ describe("IBosonOfferHandler", function () {
         offer.protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
 
         // Create a new offer
-        await expect(offerHandler.connect(operator).createOffer(offer))
+        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offer.toStruct());
+          .withArgs(nextOfferId, offer.sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct);
       });
 
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(rando).createOffer(offer)).to.revertedWith(RevertReasons.NOT_OPERATOR);
+          await expect(offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
         });
 
         it("Valid from date is greater than valid until date", async function () {
           // Reverse the from and until dates
-          offer.validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
-          offer.validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
+          offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
+          offerDates.validUntil = ethers.BigNumber.from(Date.now()).toString(); // now
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
         });
 
         it("Valid until date is not in the future", async function () {
           // Set until date in the past
-          offer.validUntilDate = ethers.BigNumber.from(offer.validFromDate - (oneMonth / 1000) * 6).toString(); // 6 months ago
+          offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom - (oneMonth / 1000) * 6).toString(); // 6 months ago
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
         });
@@ -299,7 +350,7 @@ describe("IBosonOfferHandler", function () {
           offer.sellerDeposit = threshold.sub("10").toString();
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
             RevertReasons.OFFER_DEPOSIT_INVALID
           );
         });
@@ -309,7 +360,7 @@ describe("IBosonOfferHandler", function () {
           offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).sub(offer.protocolFee).add("10").toString();
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
             RevertReasons.OFFER_PENALTY_INVALID
           );
         });
@@ -319,8 +370,93 @@ describe("IBosonOfferHandler", function () {
           offer.voided = true;
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer)).to.revertedWith(
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
             RevertReasons.OFFER_MUST_BE_ACTIVE
+          );
+        });
+
+        it("Both voucher expiration date and voucher expiraton period are defined", async function () {
+          // Set both voucherRedeemableUntil and voucherValid
+          offerDates.voucherRedeemableUntil = (Number(offerDates.voucherRedeemableFrom) + oneMonth).toString();
+          offerDurations.voucherValid = oneMonth.toString();
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY
+          );
+        });
+
+        it("Neither of voucher expiration date and voucher expiraton period are defined", async function () {
+          // Set both voucherRedeemableUntil and voucherValid to "0"
+          offerDates.voucherRedeemableUntil = "0";
+          offerDurations.voucherValid = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY
+          );
+        });
+
+        it("Voucher redeemable period is fixed, but it ends before it starts", async function () {
+          // Set both voucherRedeemableUntil that is less than voucherRedeemableFrom
+          offerDates.voucherRedeemableUntil = (Number(offerDates.voucherRedeemableFrom) - 10).toString();
+          offerDurations.voucherValid = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.REDEMPTION_PERIOD_INVALID
+          );
+        });
+
+        it("Voucher redeemable period is fixed, but it ends before offer expires", async function () {
+          // Set both voucherRedeemableUntil that is more than voucherRedeemableFrom but less than validUntil
+          offerDates.voucherRedeemableFrom = "0";
+          offerDates.voucherRedeemableUntil = (Number(offerDates.validUntil) - 10).toString();
+          offerDurations.voucherValid = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.REDEMPTION_PERIOD_INVALID
+          );
+        });
+
+        it("Fulfillment period is set to zero", async function () {
+          // Set fulfilment period to 0
+          offerDurations.fulfillmentPeriod = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.INVALID_FULFILLMENT_PERIOD
+          );
+        });
+
+        it("Resolution period is set to zero", async function () {
+          // Set dispute duration period to 0
+          offerDurations.resolutionPeriod = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.INVALID_DISPUTE_DURATION
+          );
+        });
+
+        it("Available quantity is set to zero", async function () {
+          // Set available quantity to 0
+          offer.quantityAvailable = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.INVALID_QUANTITY_AVAILABLE
+          );
+        });
+
+        it("Dispute resolver wallet is not registered", async function () {
+          // Set some address that is not registered as a dispute resolver
+          offer.disputeResolverId = "16";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.INVALID_DISPUTE_RESOLVER
           );
         });
       });
@@ -329,7 +465,7 @@ describe("IBosonOfferHandler", function () {
     context("👉 voidOffer()", async function () {
       beforeEach(async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
         // id of the current offer and increment nextOfferId
         id = nextOfferId++;
@@ -410,36 +546,36 @@ describe("IBosonOfferHandler", function () {
     context("👉 extendOffer()", async function () {
       beforeEach(async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
         // id of the current offer and increment nextOfferId
         id = nextOfferId++;
 
         // update the values
-        offer.validUntilDate = ethers.BigNumber.from(offer.validUntilDate).add("10000").toString();
+        offerDates.validUntil = ethers.BigNumber.from(offerDates.validUntil).add("10000").toString();
         offerStruct = offer.toStruct();
       });
 
       it("should emit an OfferExtended event", async function () {
         // Extend the valid until date, testing for the event
-        await expect(offerHandler.connect(operator).extendOffer(offer.id, offer.validUntilDate))
+        await expect(offerHandler.connect(operator).extendOffer(offer.id, offerDates.validUntil))
           .to.emit(offerHandler, "OfferExtended")
-          .withArgs(id, offer.sellerId, offer.validUntilDate);
+          .withArgs(id, offer.sellerId, offerDates.validUntil);
       });
 
       it("should update state", async function () {
         // Update an offer
-        await offerHandler.connect(operator).extendOffer(offer.id, offer.validUntilDate);
+        await offerHandler.connect(operator).extendOffer(offer.id, offerDates.validUntil);
 
         // Get the offer as a struct
-        [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct] = await offerHandler.connect(rando).getOffer(offer.id);
 
         // Parse into entity
-        let returnedOffer = Offer.fromStruct(offerStruct);
+        let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
 
         // Returned values should match the input in createOffer
-        for ([key, value] of Object.entries(offer)) {
-          expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+        for ([key, value] of Object.entries(offerDates)) {
+          expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
         }
       });
 
@@ -449,7 +585,7 @@ describe("IBosonOfferHandler", function () {
           id = "444";
 
           // Attempt to void the offer, expecting revert
-          await expect(offerHandler.connect(operator).extendOffer(id, offer.validUntilDate)).to.revertedWith(
+          await expect(offerHandler.connect(operator).extendOffer(id, offerDates.validUntil)).to.revertedWith(
             RevertReasons.NO_SUCH_OFFER
           );
 
@@ -457,7 +593,7 @@ describe("IBosonOfferHandler", function () {
           id = "0";
 
           // Attempt to void the offer, expecting revert
-          await expect(offerHandler.connect(operator).extendOffer(id, offer.validUntilDate)).to.revertedWith(
+          await expect(offerHandler.connect(operator).extendOffer(id, offerDates.validUntil)).to.revertedWith(
             RevertReasons.NO_SUCH_OFFER
           );
         });
@@ -465,7 +601,7 @@ describe("IBosonOfferHandler", function () {
         it("Caller is not seller", async function () {
           // caller is not the operator of any seller
           // Attempt to update the offer, expecting revert
-          await expect(offerHandler.connect(rando).extendOffer(id, offer.validUntilDate)).to.revertedWith(
+          await expect(offerHandler.connect(rando).extendOffer(id, offerDates.validUntil)).to.revertedWith(
             RevertReasons.NOT_OPERATOR
           );
 
@@ -475,7 +611,7 @@ describe("IBosonOfferHandler", function () {
           await accountHandler.connect(rando).createSeller(seller);
 
           // Attempt to update the offer, expecting revert
-          await expect(offerHandler.connect(rando).extendOffer(id, offer.validUntilDate)).to.revertedWith(
+          await expect(offerHandler.connect(rando).extendOffer(id, offerDates.validUntil)).to.revertedWith(
             RevertReasons.NOT_OPERATOR
           );
         });
@@ -485,34 +621,34 @@ describe("IBosonOfferHandler", function () {
           await offerHandler.connect(operator).voidOffer(id);
 
           // Attempt to update an offer, expecting revert
-          await expect(offerHandler.connect(operator).extendOffer(offer.id, offer.validUntilDate)).to.revertedWith(
+          await expect(offerHandler.connect(operator).extendOffer(offer.id, offerDates.validUntil)).to.revertedWith(
             RevertReasons.OFFER_HAS_BEEN_VOIDED
           );
         });
 
         it("New valid until date is lower than the existing valid until date", async function () {
           // Make the valid until date the same as the existing offer
-          offer.validUntilDate = ethers.BigNumber.from(offer.validUntilDate).sub("10000").toString();
+          offerDates.validUntil = ethers.BigNumber.from(offerDates.validUntil).sub("10000").toString();
 
-          await expect(offerHandler.connect(operator).extendOffer(offer.id, offer.validUntilDate)).to.revertedWith(
+          await expect(offerHandler.connect(operator).extendOffer(offer.id, offerDates.validUntil)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
 
           // Make new the valid until date less than existing one
-          offer.validUntilDate = ethers.BigNumber.from(offer.validUntilDate).sub("1").toString();
+          offerDates.validUntil = ethers.BigNumber.from(offerDates.validUntil).sub("1").toString();
 
           // Attempt to update an offer, expecting revert
-          await expect(offerHandler.connect(operator).extendOffer(offer.id, offer.validUntilDate)).to.revertedWith(
+          await expect(offerHandler.connect(operator).extendOffer(offer.id, offerDates.validUntil)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
         });
 
         it("Valid until date is not in the future", async function () {
           // Set until date in the past
-          offer.validUntilDate = ethers.BigNumber.from(offer.validFromDate - (oneMonth / 1000) * 6).toString(); // 6 months ago
+          offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom - (oneMonth / 1000) * 6).toString(); // 6 months ago
 
           // Attempt to update an offer, expecting revert
-          await expect(offerHandler.connect(operator).extendOffer(offer.id, offer.validUntilDate)).to.revertedWith(
+          await expect(offerHandler.connect(operator).extendOffer(offer.id, offerDates.validUntil)).to.revertedWith(
             RevertReasons.OFFER_PERIOD_INVALID
           );
         });
@@ -522,7 +658,7 @@ describe("IBosonOfferHandler", function () {
     context("👉 getOffer()", async function () {
       beforeEach(async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
         // id of the current offer and increment nextOfferId
         id = nextOfferId++;
@@ -546,20 +682,24 @@ describe("IBosonOfferHandler", function () {
 
       it("should return the details of the offer as a struct if found", async function () {
         // Get the offer as a struct
-        [, offerStruct] = await offerHandler.connect(rando).getOffer(id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(id);
 
-        // Parse into entity
+        // Parse into entities
         offer = Offer.fromStruct(offerStruct);
+        offerDates = OfferDates.fromStruct(offerDatesStruct);
+        offerDurations = OfferDurations.fromStruct(offerDurationsStruct);
 
         // Validate
         expect(offer.isValid()).to.be.true;
+        expect(offerDates.isValid()).to.be.true;
+        expect(offerDurations.isValid()).to.be.true;
       });
     });
 
     context("👉 getNextOfferId()", async function () {
       beforeEach(async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
         // id of the current offer and increment nextOfferId
         id = nextOfferId++;
@@ -578,7 +718,7 @@ describe("IBosonOfferHandler", function () {
 
       it("should be incremented after an offer is created", async function () {
         // Create another offer
-        await offerHandler.connect(operator).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
         // What we expect the next offer id to be
         expected = ++nextOfferId;
@@ -611,7 +751,7 @@ describe("IBosonOfferHandler", function () {
     context("👉 isOfferVoided()", async function () {
       beforeEach(async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOffer(offer);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
         // id of the current offer and increment nextOfferId
         id = nextOfferId++;
@@ -670,6 +810,14 @@ describe("IBosonOfferHandler", function () {
 
       await accountHandler.connect(admin).createSeller(seller);
 
+      // Create a valid dispute resolver
+      active = true;
+      disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+      expect(disputeResolver.isValid()).is.true;
+
+      // Register the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+
       // Some periods in milliseconds
       oneWeek = 604800 * 1000; //  7 days in milliseconds
       oneMonth = 2678400 * 1000; // 31 days in milliseconds
@@ -677,6 +825,11 @@ describe("IBosonOfferHandler", function () {
       // create 5 offers
       offers = [];
       offerStructs = [];
+      offerDatesList = [];
+      offerDatesStructs = [];
+      offerDurationsList = [];
+      offerDurationsStructs = [];
+
       for (let i = 0; i < 5; i++) {
         // Required constructor params
         id = `${i + 1}`;
@@ -685,13 +838,9 @@ describe("IBosonOfferHandler", function () {
         sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
         buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
         protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
-        quantityAvailable = `${i * 2}`;
-        validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
-        validUntilDate = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
-        redeemableFromDate = ethers.BigNumber.from(validUntilDate + oneWeek).toString();
-        fulfillmentPeriodDuration = oneMonth.toString();
-        voucherValidDuration = oneMonth.toString();
+        quantityAvailable = `${(i + 1) * 2}`;
         exchangeToken = ethers.constants.AddressZero.toString();
+        disputeResolverId = "2";
         offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
         metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
         voided = false;
@@ -705,12 +854,8 @@ describe("IBosonOfferHandler", function () {
           protocolFee,
           buyerCancelPenalty,
           quantityAvailable,
-          validFromDate,
-          validUntilDate,
-          redeemableFromDate,
-          fulfillmentPeriodDuration,
-          voucherValidDuration,
           exchangeToken,
+          disputeResolverId,
           metadataUri,
           offerChecksum,
           voided
@@ -719,35 +864,71 @@ describe("IBosonOfferHandler", function () {
 
         offers.push(offer);
         offerStructs.push(offer.toStruct());
+
+        // Required constructor params
+        validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
+        validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
+        voucherRedeemableFrom = ethers.BigNumber.from(validUntil + oneWeek).toString();
+        voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
+
+        // Create a valid offerDates, then set fields in tests directly
+        offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
+        expect(offerDates.isValid()).is.true;
+
+        // How that offer looks as a returned struct
+        offerDatesList.push(offerDates);
+        offerDatesStructs.push(offerDates.toStruct());
+
+        // Required constructor params
+        fulfillmentPeriod = `${(i + 1) * oneMonth}`;
+        voucherValid = `${(i + 1) * oneMonth}`;
+        resolutionPeriod = `${(i + 1) * oneWeek}`;
+
+        // Create a valid offerDurations, then set fields in tests directly
+        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
+        expect(offerDurations.isValid()).is.true;
+
+        offerDurationsList.push(offerDurations);
+        offerDurationsStructs.push(offerDurations.toStruct());
       }
     });
 
     context("👉 createOfferBatch()", async function () {
-      it("should emit an OfferCreated event for all offers", async function () {
+      it("should emit an OfferCreated events for all offers", async function () {
         // Create an offer, testing for the event
-        await expect(offerHandler.connect(operator).createOfferBatch(offers))
+        await expect(offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs("1", offer.sellerId, offerStructs[0])
-          .withArgs("2", offer.sellerId, offerStructs[1])
-          .withArgs("3", offer.sellerId, offerStructs[2])
-          .withArgs("4", offer.sellerId, offerStructs[3])
-          .withArgs("5", offer.sellerId, offerStructs[4]);
+          .withArgs("1", offer.sellerId, offerStructs[0], offerDatesStructs[0], offerDurationsStructs[0])
+          .withArgs("2", offer.sellerId, offerStructs[1], offerDatesStructs[1], offerDurationsStructs[1])
+          .withArgs("3", offer.sellerId, offerStructs[2], offerDatesStructs[2], offerDurationsStructs[2])
+          .withArgs("4", offer.sellerId, offerStructs[3], offerDatesStructs[3], offerDurationsStructs[3])
+          .withArgs("5", offer.sellerId, offerStructs[4], offerDatesStructs[4], offerDurationsStructs[4]);
       });
 
       it("should update state", async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOfferBatch(offers);
+        await offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList);
 
         for (let i = 0; i < 5; i++) {
           // Get the offer as a struct
-          [, offerStruct] = await offerHandler.connect(rando).getOffer(`${i + 1}`);
+          [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler
+            .connect(rando)
+            .getOffer(`${i + 1}`);
 
-          // Parse into entity
+          // Parse into entities
           let returnedOffer = Offer.fromStruct(offerStruct);
+          let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
+          let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
 
-          // Returned values should match the input in createOffer
+          // Returned values should match the input in createOfferBatch
           for ([key, value] of Object.entries(offers[i])) {
             expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDatesList[i])) {
+            expect(JSON.stringify(returnedOfferDates[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(offerDurationsList[i])) {
+            expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
           }
         }
       });
@@ -760,13 +941,13 @@ describe("IBosonOfferHandler", function () {
         offers[4].id = "888";
 
         // Create an offer, testing for the event
-        await expect(offerHandler.connect(operator).createOfferBatch(offers))
+        await expect(offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs("1", offer.sellerId, offerStructs[0])
-          .withArgs("2", offer.sellerId, offerStructs[1])
-          .withArgs("3", offer.sellerId, offerStructs[2])
-          .withArgs("4", offer.sellerId, offerStructs[3])
-          .withArgs("5", offer.sellerId, offerStructs[4]);
+          .withArgs("1", offer.sellerId, offerStructs[0], offerDatesStructs[0], offerDurationsStructs[0])
+          .withArgs("2", offer.sellerId, offerStructs[1], offerDatesStructs[1], offerDurationsStructs[1])
+          .withArgs("3", offer.sellerId, offerStructs[2], offerDatesStructs[2], offerDurationsStructs[2])
+          .withArgs("4", offer.sellerId, offerStructs[3], offerDatesStructs[3], offerDurationsStructs[3])
+          .withArgs("5", offer.sellerId, offerStructs[4], offerDatesStructs[4], offerDurationsStructs[4]);
 
         for (let i = 0; i < 5; i++) {
           // wrong offer id should not exist
@@ -788,42 +969,44 @@ describe("IBosonOfferHandler", function () {
         offers[4].sellerId = "567";
 
         // Create an offer, testing for the event
-        await expect(offerHandler.connect(operator).createOfferBatch(offers))
+        await expect(offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs("1", sellerId, offerStructs[0])
-          .withArgs("2", sellerId, offerStructs[1])
-          .withArgs("3", sellerId, offerStructs[2])
-          .withArgs("4", sellerId, offerStructs[3])
-          .withArgs("5", sellerId, offerStructs[4]);
+          .withArgs("1", sellerId, offerStructs[0], offerDatesStructs[0], offerDurationsStructs[0])
+          .withArgs("2", sellerId, offerStructs[1], offerDatesStructs[1], offerDurationsStructs[1])
+          .withArgs("3", sellerId, offerStructs[2], offerDatesStructs[2], offerDurationsStructs[2])
+          .withArgs("4", sellerId, offerStructs[3], offerDatesStructs[3], offerDurationsStructs[3])
+          .withArgs("5", sellerId, offerStructs[4], offerDatesStructs[4], offerDurationsStructs[4]);
       });
 
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(rando).createOfferBatch(offers)).to.revertedWith(
-            RevertReasons.NOT_OPERATOR
-          );
+          await expect(
+            offerHandler.connect(rando).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
         it("Valid from date is greater than valid until date in some offer", async function () {
           // Reverse the from and until dates
-          offers[4].validFromDate = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
-          offers[4].validUntilDate = ethers.BigNumber.from(Date.now()).toString(); // now
+          offerDatesList[4].validFrom = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
+          offerDatesList[4].validUntil = ethers.BigNumber.from(Date.now()).toString(); // now
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
-            RevertReasons.OFFER_PERIOD_INVALID
-          );
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
         it("Valid until date is not in the future in some offer", async function () {
           // Set until date in the past
-          offer.validUntilDate = ethers.BigNumber.from(offer.validFromDate - (oneMonth / 1000) * 6).toString(); // 6 months ago
+          offerDatesList[0].validUntil = ethers.BigNumber.from(
+            offerDatesList[0].validFrom - (oneMonth / 1000) * 6
+          ).toString(); // 6 months ago
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
-            RevertReasons.OFFER_PERIOD_INVALID
-          );
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
         it("Seller deposit is less than protocol fee", async function () {
@@ -835,9 +1018,9 @@ describe("IBosonOfferHandler", function () {
           offers[0].sellerDeposit = threshold.sub("10").toString();
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
-            RevertReasons.OFFER_DEPOSIT_INVALID
-          );
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.OFFER_DEPOSIT_INVALID);
         });
 
         it("Sum of buyer cancel penalty and protocol fee is greater than price", async function () {
@@ -848,9 +1031,9 @@ describe("IBosonOfferHandler", function () {
             .toString();
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
-            RevertReasons.OFFER_PENALTY_INVALID
-          );
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
         });
 
         it("No offer cannot be voided at the time of the creation", async function () {
@@ -858,9 +1041,9 @@ describe("IBosonOfferHandler", function () {
           offers[1].voided = true;
 
           // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
-            RevertReasons.OFFER_MUST_BE_ACTIVE
-          );
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
         it("Creating too many offers", async function () {
@@ -868,9 +1051,144 @@ describe("IBosonOfferHandler", function () {
           offers = new Array(101).fill(offer);
 
           // Attempt to create the offers, expecting revert
-          await expect(offerHandler.connect(operator).createOfferBatch(offers)).to.revertedWith(
-            RevertReasons.TOO_MANY_OFFERS
-          );
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.TOO_MANY_OFFERS);
+        });
+
+        it("Dispute valid duration is 0 for some offer", async function () {
+          // Set dispute valid duration to 0
+          offerDurationsList[2].resolutionPeriod = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
+        });
+
+        it("For some offer, both voucher expiration date and voucher expiraton period are defined", async function () {
+          // Set both voucherRedeemableUntil and voucherValid
+          offerDatesList[2].voucherRedeemableUntil = ethers.BigNumber.from(offerDatesList[2].voucherRedeemableFrom)
+            .add(oneMonth)
+            .toString();
+          offerDurationsList[2].voucherValid = oneMonth.toString();
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
+        });
+
+        it("For some offer, neither of voucher expiration date and voucher expiraton period are defined", async function () {
+          // Set both voucherRedeemableUntil and voucherValid to "0"
+          offerDatesList[1].voucherRedeemableUntil = "0";
+          offerDurationsList[1].voucherValid = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
+        });
+
+        it("For some offer, voucher redeemable period is fixed, but it ends before it starts", async function () {
+          // Set both voucherRedeemableUntil that is less than voucherRedeemableFrom
+          offerDatesList[0].voucherRedeemableUntil = ethers.BigNumber.from(offerDatesList[0].voucherRedeemableFrom)
+            .sub(10)
+            .toString();
+          offerDurationsList[0].voucherValid = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
+        });
+
+        it("For some offer, voucher redeemable period is fixed, but it ends before offer expires", async function () {
+          // Set both voucherRedeemableUntil that is more than voucherRedeemableFrom but less than validUntil
+          offerDatesList[2].voucherRedeemableFrom = "0";
+          offerDatesList[2].voucherRedeemableUntil = (Number(offerDatesList[2].validUntil) - 10).toString();
+          offerDurationsList[2].voucherValid = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
+        });
+
+        it("For some offer, fulfillment period is set to zero", async function () {
+          // Set fulfilment period to 0
+          offerDurationsList[1].fulfillmentPeriod = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
+        });
+
+        it("For some offer, dispute duration is set to zero", async function () {
+          // Set dispute duration period to 0
+          offerDurationsList[0].resolutionPeriod = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
+        });
+
+        it("For some offer, available quantity is set to zero", async function () {
+          // Set available quantity to 0
+          offers[2].quantityAvailable = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.INVALID_QUANTITY_AVAILABLE);
+        });
+
+        it("For some offer, dispute resolver wallet is not registered", async function () {
+          // Set some address that is not registered as a dispute resolver
+          offers[1].disputeResolverId = "16";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("Number of dispute dates does not match the number of offers", async function () {
+          // Make dispute dates longer
+          offerDatesList.push(new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil));
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
+
+          // Make dispute dates shorter
+          offerDatesList = offerDatesList.slice(0, -2);
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
+        });
+
+        it("Number of dispute durations does not match the number of offers", async function () {
+          // Make dispute durations longer
+          offerDurationsList.push(new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod));
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
+
+          // Make dispute durations shorter
+          offerDurationsList = offerDurationsList.slice(0, -2);
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
         });
       });
     });
@@ -879,7 +1197,7 @@ describe("IBosonOfferHandler", function () {
       let offersToVoid;
       beforeEach(async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOfferBatch(offers);
+        await offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList);
 
         offersToVoid = ["1", "3", "5"];
       });
@@ -991,10 +1309,10 @@ describe("IBosonOfferHandler", function () {
       let offersToExtend, newValidUntilDate;
       beforeEach(async function () {
         // Create an offer
-        await offerHandler.connect(operator).createOfferBatch(offers);
+        await offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList);
 
         offersToExtend = ["1", "3", "5"];
-        newValidUntilDate = ethers.BigNumber.from(offers[4].validUntilDate).add("10000").toString(); // offer "5" has the highest validUntilDate so we need to set something greater
+        newValidUntilDate = ethers.BigNumber.from(offerDatesList[4].validUntil).add("10000").toString(); // offer "5" has the highest validUntilDate so we need to set something greater
 
         for (const offerToExtend of offersToExtend) {
           let i = offerToExtend - 1;
@@ -1023,8 +1341,8 @@ describe("IBosonOfferHandler", function () {
 
         for (const id of offersToExtend) {
           // validUntilDate field should be updated
-          [, offerStruct] = await offerHandler.getOffer(id);
-          expect(offerStruct.validUntilDate).is.equal(newValidUntilDate);
+          [, , offerDatesStruct] = await offerHandler.getOffer(id);
+          expect(offerDatesStruct.validUntil).is.equal(newValidUntilDate);
         }
       });
 
@@ -1093,7 +1411,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Valid until date is not in the future", async function () {
           // Set until date in the past
-          newValidUntilDate = ethers.BigNumber.from(offers[0].validFromDate - (oneMonth / 1000) * 6).toString(); // 6 months ago
+          newValidUntilDate = ethers.BigNumber.from(offerDatesList[0].validFrom - (oneMonth / 1000) * 6).toString(); // 6 months ago
 
           // Attempt to extend the offer, expecting revert
           await expect(

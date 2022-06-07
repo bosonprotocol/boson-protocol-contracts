@@ -66,15 +66,24 @@ contract BosonTypes {
         uint256 protocolFee;
         uint256 buyerCancelPenalty;
         uint256 quantityAvailable;
-        uint256 validFromDate;
-        uint256 validUntilDate;
-        uint256 redeemableFromDate;
-        uint256 fulfillmentPeriodDuration;
-        uint256 voucherValidDuration;
         address exchangeToken;
+        uint256 disputeResolverId;
         string metadataUri;
         string offerChecksum;
         bool voided;
+    }
+
+    struct OfferDates {
+        uint256 validFrom;
+        uint256 validUntil;
+        uint256 voucherRedeemableFrom;
+        uint256 voucherRedeemableUntil;
+    }
+
+    struct OfferDurations {
+        uint256 fulfillmentPeriod;
+        uint256 voucherValid;
+        uint256 resolutionPeriod;
     }
 
     struct Group {

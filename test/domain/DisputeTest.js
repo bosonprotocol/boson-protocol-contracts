@@ -161,7 +161,6 @@ describe("Dispute", function () {
 
         // Key values all match
         for ([key, value] of Object.entries(dispute)) {
-          console.log(JSON.stringify(promoted[key]), JSON.stringify(value));
           expect(JSON.stringify(promoted[key]) === JSON.stringify(value)).is.true;
         }
       });

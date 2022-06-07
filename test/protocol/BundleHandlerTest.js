@@ -5,10 +5,13 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
+const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Twin = require("../../scripts/domain/Twin");
 const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
 const Offer = require("../../scripts/domain/Offer");
+const OfferDates = require("../../scripts/domain/OfferDates");
+const OfferDurations = require("../../scripts/domain/OfferDurations");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -24,7 +27,7 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 describe("IBosonBundleHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury, buyer;
+  let accounts, deployer, rando, operator, admin, clerk, treasury, buyer, other1;
   let erc165,
     protocolDiamond,
     accessController,
@@ -59,17 +62,16 @@ describe("IBosonBundleHandler", function () {
     protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
-    validFromDate,
-    validUntilDate,
-    redeemableFromDate,
-    fulfillmentPeriodDuration,
-    voucherValidDuration,
     exchangeToken,
+    disputeResolverId,
     metadataUri,
     offerChecksum,
     voided,
     invalidOfferId;
+  let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
+  let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
   let protocolFeePrecentage;
+  let disputeResolver;
 
   before(async function () {
     // get interface Ids
@@ -86,6 +88,7 @@ describe("IBosonBundleHandler", function () {
     treasury = accounts[4];
     rando = accounts[5];
     buyer = accounts[6];
+    other1 = accounts[7];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -175,6 +178,14 @@ describe("IBosonBundleHandler", function () {
       expect(seller.isValid()).is.true;
       await accountHandler.connect(admin).createSeller(seller);
 
+      // Create a valid dispute resolver
+      active = true;
+      disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+      expect(disputeResolver.isValid()).is.true;
+
+      // Register the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+
       // create 5 twins
       for (let i = 0; i < 5; i++) {
         // Required constructor params for Twin
@@ -196,12 +207,12 @@ describe("IBosonBundleHandler", function () {
         await twinHandler.connect(operator).createTwin(twin);
       }
 
+      // Some periods in milliseconds
+      oneWeek = 604800 * 1000; //  7 days in milliseconds
+      oneMonth = 2678400 * 1000; // 31 days in milliseconds
+
       // create 5 offers
       for (let i = 0; i < 5; i++) {
-        // Some periods in milliseconds
-        oneWeek = 604800 * 1000; //  7 days in milliseconds
-        oneMonth = 2678400 * 1000; // 31 days in milliseconds
-
         // Required constructor params
         offerId = sellerId = "1"; // argument sent to contract for createOffer will be ignored
         price = ethers.utils.parseUnits("1.5", "ether").toString();
@@ -209,43 +220,51 @@ describe("IBosonBundleHandler", function () {
         protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
-        blockNumber = await ethers.provider.getBlockNumber();
-        block = await ethers.provider.getBlock(blockNumber);
-        validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-        validUntilDate = ethers.BigNumber.from(block.timestamp)
-          .add(oneMonth * 6)
-          .toString(); // until 6 months
-        redeemableFromDate = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-        fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
-        voucherValidDuration = oneMonth.toString(); // offers valid for one month
         exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
+        disputeResolverId = "2";
         offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
         metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
         voided = false;
 
         // Create a valid offer.
         offer = new Offer(
-          offerId,
+          id,
           sellerId,
           price,
           sellerDeposit,
           protocolFee,
           buyerCancelPenalty,
           quantityAvailable,
-          validFromDate,
-          validUntilDate,
-          redeemableFromDate,
-          fulfillmentPeriodDuration,
-          voucherValidDuration,
           exchangeToken,
+          disputeResolverId,
           metadataUri,
           offerChecksum,
           voided
         );
-
         expect(offer.isValid()).is.true;
 
-        await offerHandler.connect(operator).createOffer(offer);
+        // Required constructor params
+        blockNumber = await ethers.provider.getBlockNumber();
+        block = await ethers.provider.getBlock(blockNumber);
+        validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
+        validUntil = ethers.BigNumber.from(block.timestamp)
+          .add(oneMonth * 6)
+          .toString(); // until 6 months
+        voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+        voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
+
+        // Create a valid offerDates, then set fields in tests directly
+        offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
+
+        // Required constructor params
+        fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
+        voucherValid = oneMonth.toString(); // offers valid for one month
+        resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
+
+        // Create a valid offerDurations, then set fields in tests directly
+        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
+
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
       }
 
       // The first bundle id
@@ -408,7 +427,7 @@ describe("IBosonBundleHandler", function () {
         let expectedNewOfferId = "6";
         seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
         await accountHandler.connect(rando).createSeller(seller);
-        const tx = await offerHandler.connect(rando).createOffer(offer); // creates an offer with id 6
+        const tx = await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations); // creates an offer with id 6
         const txReceipt = await tx.wait();
         const event = getEvent(txReceipt, offerHandler, "OfferCreated");
         assert.equal(event.offerId.toString(), expectedNewOfferId, "Offer Id is not 6");
@@ -1127,7 +1146,7 @@ describe("IBosonBundleHandler", function () {
           let expectedNewOfferId = "6";
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           await accountHandler.connect(rando).createSeller(seller);
-          const tx = await offerHandler.connect(rando).createOffer(offer); // creates an offer with id 6
+          const tx = await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations); // creates an offer with id 6
           const txReceipt = await tx.wait();
           const event = getEvent(txReceipt, offerHandler, "OfferCreated");
           assert.equal(event.offerId.toString(), expectedNewOfferId, "Offer Id is not 6");
@@ -1312,7 +1331,7 @@ describe("IBosonBundleHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_NOT_IN_BUNDLE);
 
           // create an offer and add it to another bundle
-          await offerHandler.connect(operator).createOffer(offer);
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
           bundle.offerIds = ["6"];
           await bundleHandler.connect(operator).createBundle(bundle);
 

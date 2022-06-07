@@ -45,8 +45,7 @@ abstract contract ClientBase is BosonTypes, BosonConstants {
     {
         ClientLib.ProxyStorage memory ps = ClientLib.proxyStorage();
         (, Exchange memory exchange) = IBosonExchangeHandler(ps.protocolDiamond).getExchange(_exchangeId);
-        return IBosonOfferHandler(ps.protocolDiamond).getOffer(exchange.offerId);
-
+        (exists, offer, , ) = IBosonOfferHandler(ps.protocolDiamond).getOffer(exchange.offerId);
     }
 
     /**

@@ -9,7 +9,7 @@ import {IBosonOfferEvents} from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xc0a5d49f
+ * The ERC-165 identifier for this interface is: 0xf411945f
  */
 interface IBosonOfferHandler is IBosonOfferEvents {
 
@@ -22,31 +22,53 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Caller is not an operator
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
+     * - Both voucher expiration date and voucher expiraton period are defined
+     * - Neither of voucher expiration date and voucher expiraton period are defined
+     * - Voucher redeemable period is fixed, but it ends before it starts
+     * - Voucher redeemable period is fixed, but it ends before offer expires
+     * - Fulfillment period is set to zero
+     * - Resolution period is set to zero
      * - Voided is set to true
+     * - Available quantity is set to zero
+     * - Dispute resolver wallet is not registered
      * - Seller deposit is less than protocol fee
      * - Sum of buyer cancel penalty and protocol fee is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to 0x0
+     * @param _offerDates - the fully populated offer dates struct
+     * @param _offerDurations - the fully populated offer durations struct
      */
-    function createOffer(BosonTypes.Offer memory _offer) external;
+    function createOffer(BosonTypes.Offer memory _offer, BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations) external;
 
     /**
      * @notice Creates a batch of offers.
      *
      * Emits an OfferCreated event for every offer if successful.
      *
-     * Reverts if, for any offer:
-     * - Caller is not an operator
+     * Reverts if:
      * - Number of offers exceeds maximum allowed number per batch
-     * - Valid from date is greater than valid until date
-     * - Valid until date is not in the future
-     * - Voided is set to true
-     * - Seller deposit is less than protocol fee
-     * - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - Number of elements in offers, offerDates and offerDurations do not match
+     * - for any offer:
+     *   - Caller is not an operator
+     *   - Valid from date is greater than valid until date
+     *   - Valid until date is not in the future
+     *   - Both voucher expiration date and voucher expiraton period are defined
+     *   - Neither of voucher expiration date and voucher expiraton period are defined
+     *   - Voucher redeemable period is fixed, but it ends before it starts
+     *   - Voucher redeemable period is fixed, but it ends before offer expires
+     *   - Fulfillment period is set to zero
+     *   - Resolution period is set to zero
+     *   - Voided is set to true
+     *   - Available quantity is set to zero
+     *   - Dispute resolver wallet is not registered
+     *   - Seller deposit is less than protocol fee
+     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      *
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
+     * @param _offerDates - the array of fully populated offer dates structs
+     * @param _offerDurations - the array of fully populated offer durations structs
      */
-    function createOfferBatch(BosonTypes.Offer[] calldata _offers) external;
+    function createOfferBatch(BosonTypes.Offer[] calldata _offers, BosonTypes.OfferDates[] calldata _offerDates, BosonTypes.OfferDurations[] calldata _offerDurations) external;
 
     /**
      * @notice Voids a given offer
@@ -123,8 +145,10 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @param _offerId - the id of the offer to check
      * @return exists - the offer was found
      * @return offer - the offer details. See {BosonTypes.Offer}
+     * @return offerDates - the offer dates details. See {BosonTypes.OfferDates}
+     * @return offerDurations - the offer durations details. See {BosonTypes.OfferDurations}
      */
-    function getOffer(uint256 _offerId) external view returns (bool exists, BosonTypes.Offer memory offer);
+    function getOffer(uint256 _offerId) external view returns (bool exists, BosonTypes.Offer memory offer, BosonTypes.OfferDates calldata offerDates, BosonTypes.OfferDurations calldata offerDurations);
 
     /**
      * @notice Gets the next offer id.

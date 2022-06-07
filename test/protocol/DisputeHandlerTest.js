@@ -6,7 +6,10 @@ const Role = require("../../scripts/domain/Role");
 const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
 const Offer = require("../../scripts/domain/Offer");
+const OfferDates = require("../../scripts/domain/OfferDates");
+const OfferDurations = require("../../scripts/domain/OfferDurations");
 const Seller = require("../../scripts/domain/Seller");
+const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const Dispute = require("../../scripts/domain/Dispute");
 const DisputeState = require("../../scripts/domain/DisputeState");
@@ -26,7 +29,7 @@ const { setNextBlockTimestamp, calculateProtocolFee } = require("../../scripts/u
 describe("IBosonDisputeHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, operator, admin, clerk, treasury, rando, buyer;
+  let accounts, deployer, operator, admin, clerk, treasury, rando, buyer, other1;
   let erc165,
     protocolDiamond,
     accessController,
@@ -44,20 +47,20 @@ describe("IBosonDisputeHandler", function () {
     protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
-    validFromDate,
-    redeemableFromDate,
-    fulfillmentPeriodDuration,
-    voucherValidDuration,
     exchangeToken,
+    disputeResolverId,
     metadataUri,
-    metadataHash,
+    offerChecksum,
     voided;
+  let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
+  let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
   let protocolFeePrecentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
-  let dispute, disputedDate, complaint, disputeStruct;
+  let dispute, disputedDate, complaint, disputeStruct, timeout;
   let disputeDates, disputeDatesStruct;
   let exists, response;
+  let disputeResolver, active;
 
   before(async function () {
     // get interface Ids
@@ -74,6 +77,7 @@ describe("IBosonDisputeHandler", function () {
     treasury = accounts[4];
     buyer = accounts[5];
     rando = accounts[6];
+    other1 = accounts[7];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -155,7 +159,20 @@ describe("IBosonDisputeHandler", function () {
     beforeEach(async function () {
       // Initial ids for all the things
       id = offerId = sellerId = "1";
-      buyerId = "2"; // created after seller
+      buyerId = "3"; // created after seller and dispute resolver
+
+      // Create a valid seller
+      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
+      expect(seller.isValid()).is.true;
+      await accountHandler.connect(admin).createSeller(seller);
+
+      // Create a valid dispute resolver
+      active = true;
+      disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+      expect(disputeResolver.isValid()).is.true;
+
+      // Register the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
 
       // Create an offer to commit to
       oneWeek = 604800 * 1000; //  7 days in milliseconds
@@ -171,46 +188,50 @@ describe("IBosonDisputeHandler", function () {
       protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "2";
-      validFromDate = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-      validUntilDate = ethers.BigNumber.from(block.timestamp)
-        .add(oneMonth * 6)
-        .toString(); // until 6 months
-      redeemableFromDate = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-      fulfillmentPeriodDuration = oneMonth.toString(); // fulfillment period is one month
-      voucherValidDuration = oneMonth.toString(); // offers valid for one month
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-      metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-      metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
+      disputeResolverId = "2";
+      offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+      metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
       voided = false;
-
-      // Create a valid seller
-      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
-      expect(seller.isValid()).is.true;
-      await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid offer entity
       offer = new Offer(
-        offerId,
+        id,
         sellerId,
         price,
         sellerDeposit,
         protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
-        validFromDate,
-        validUntilDate,
-        redeemableFromDate,
-        fulfillmentPeriodDuration,
-        voucherValidDuration,
         exchangeToken,
+        disputeResolverId,
         metadataUri,
-        metadataHash,
+        offerChecksum,
         voided
       );
       expect(offer.isValid()).is.true;
 
+      // Required constructor params
+      validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
+      validUntil = ethers.BigNumber.from(block.timestamp)
+        .add(oneMonth * 6)
+        .toString(); // until 6 months
+      voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+      voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
+
+      // Create a valid offerDates, then set fields in tests directly
+      offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
+
+      // Required constructor params
+      fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
+      voucherValid = oneMonth.toString(); // offers valid for one month
+      resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
+
+      // Create a valid offerDurations, then set fields in tests directly
+      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
+
       // Create the offer
-      await offerHandler.connect(operator).createOffer(offer);
+      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
       // Required voucher constructor params
       committedDate = "0";
@@ -233,8 +254,8 @@ describe("IBosonDisputeHandler", function () {
       // Commit to offer, creating a new exchange
       await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
-      // Set time forward to the offer's redeemableFromDate
-      await setNextBlockTimestamp(Number(redeemableFromDate));
+      // Set time forward to the offer's voucherRedeemableFrom
+      await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
       // Redeem voucher
       await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -259,10 +280,11 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
 
         // expected values
         dispute = new Dispute(exchange.id, complaint, DisputeState.Resolving, new Resolution("0"));
-        disputeDates = new DisputeDates(disputedDate, "0", "0", "0");
+        disputeDates = new DisputeDates(disputedDate, "0", "0", timeout);
 
         // Get the dispute as a struct
         [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
@@ -300,7 +322,7 @@ describe("IBosonDisputeHandler", function () {
 
         it("exchange is not in a redeemed state - completed", async function () {
           // Set time forward to run out the fulfillment period
-          newTime = Number((redeemableFromDate + Number(fulfillmentPeriodDuration) + 1).toString().substring(0, 11));
+          newTime = Number((voucherRedeemableFrom + Number(fulfillmentPeriod) + 1).toString().substring(0, 11));
           await setNextBlockTimestamp(newTime);
 
           // Complete exchange
@@ -342,10 +364,11 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
 
         // Expected value for dispute
         dispute = new Dispute(exchange.id, complaint, DisputeState.Resolving, new Resolution("0"));
-        disputeDates = new DisputeDates(disputedDate, "0", "0", "0");
+        disputeDates = new DisputeDates(disputedDate, "0", "0", timeout);
       });
 
       it("should return true for exists if exchange id is valid", async function () {
