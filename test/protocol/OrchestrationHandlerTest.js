@@ -10,6 +10,7 @@ const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const Twin = require("../../scripts/domain/Twin");
+const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -61,7 +62,7 @@ describe("IBosonOrchestrationHandler", function () {
   let group, groupStruct, nextGroupId;
   let method, tokenAddress, tokenId, threshold;
   let offerIds, condition;
-  let twin, twinStruct, twinIds, nextTwinId;
+  let twin, twinStruct, twinIds, nextTwinId, tokenType;
   let bundle, bundleStruct, bundleId, nextBundleId;
   let bosonToken, supplyAvailable, supplyIds;
   let foreign721, foreign1155, fallbackError;
@@ -921,12 +922,13 @@ describe("IBosonOrchestrationHandler", function () {
         // Required constructor params for Twin
         id = nextTwinId = "1";
         supplyAvailable = "1000";
-        tokenId = "2048";
-        supplyIds = ["3", "4"];
+        tokenId = "0";
+        supplyIds = [];
         tokenAddress = bosonToken.address;
+        tokenType = TokenType.FungibleToken;
 
         // Create a valid twin.
-        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
 
         // How that twin looks as a returned struct
         twinStruct = twin.toStruct();
@@ -1160,6 +1162,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("should revert if protocol is not approved to transfer the ERC20 token", async function () {
           //ERC20 token address
           twin.tokenAddress = bosonToken.address;
+          tokenType = TokenType.FungibleToken;
 
           await expect(
             orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, twin)
@@ -1257,12 +1260,13 @@ describe("IBosonOrchestrationHandler", function () {
         // Required constructor params for Twin
         id = nextTwinId = "1";
         supplyAvailable = "1000";
-        tokenId = "2048";
-        supplyIds = ["3", "4"];
+        tokenId = "0";
+        supplyIds = [];
         tokenAddress = bosonToken.address;
+        tokenType = TokenType.FungibleToken;
 
         // Create a valid twin.
-        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
 
         // How that twin looks as a returned struct
         twinStruct = twin.toStruct();
@@ -1662,12 +1666,13 @@ describe("IBosonOrchestrationHandler", function () {
         // Required constructor params for Twin
         id = nextTwinId = "1";
         supplyAvailable = "1000";
-        tokenId = "2048";
-        supplyIds = ["3", "4"];
+        tokenId = "0";
+        supplyIds = [];
         tokenAddress = bosonToken.address;
+        tokenType = TokenType.FungibleToken;
 
         // Create a valid twin.
-        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
 
         // How that twin looks as a returned struct
         twinStruct = twin.toStruct();
@@ -1883,12 +1888,13 @@ describe("IBosonOrchestrationHandler", function () {
         // Required constructor params for Twin
         id = nextTwinId = "1";
         supplyAvailable = "1000";
-        tokenId = "2048";
-        supplyIds = ["3", "4"];
+        tokenId = "0";
+        supplyIds = [];
         tokenAddress = bosonToken.address;
+        tokenType = TokenType.FungibleToken;
 
         // Create a valid twin.
-        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
 
         // How that twin looks as a returned struct
         twinStruct = twin.toStruct();

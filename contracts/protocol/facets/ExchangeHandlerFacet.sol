@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
+import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
@@ -313,6 +314,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         // Burn the voucher
         burnVoucher(_exchangeId);
 
+        // Transfer any bundled twins to buyer
+        transferTwins(exchange);
+
         // Notify watchers of state change
         emit VoucherRedeemed(exchange.offerId, _exchangeId, msg.sender);
     }
@@ -515,4 +519,85 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         bosonVoucher.burnVoucher(_exchangeId);
     }
 
+    /**
+     * @notice Transfer bundled twins associated with an exchange to the buyer
+     *
+     * Reverts if
+     * - a twin transfer fails
+     *
+     * @param _exchange - the exchange
+     */
+    function transferTwins(Exchange storage _exchange)
+    internal
+    {
+        // See if there is an associated bundle
+        (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
+
+        // Transfer the twins
+        if (exists) {
+
+            // Get storage location for bundle
+            (, Bundle storage bundle) = fetchBundle(bundleId);
+
+            // Get the twin Ids in the bundle
+            uint256[] storage twinIds = bundle.twinIds;
+
+            // Get seller account
+            (,Seller storage seller) = fetchSeller(bundle.sellerId);
+
+            // Visit the twins
+            for (uint256 i = 0; i < twinIds.length; i++) {
+
+                // Get the twin
+                (,Twin storage twin) = fetchTwin(twinIds[i]);
+
+                // Transfer the token from the seller's operator to the buyer
+                // N.B. Using call here so as to normalize the revert reason
+                bool success;
+                bytes memory result;
+                if (twin.tokenType == TokenType.FungibleToken) {
+                    // ERC-20 style transfer
+                    (success, result) = twin.tokenAddress.call(
+                        abi.encodeWithSignature(
+                            "transferFrom(address,address,uint256)",
+                            seller.operator,
+                            msg.sender,
+                            1
+                        )
+                    );
+                } else if (twin.tokenType == TokenType.NonFungibleToken) {
+                    uint256 supply = twin.supplyIds.length;
+                    if (supply >= 1) {
+                        // Get the next token from the supply list
+                        uint256 tokenId = twin.supplyIds[supply-1];
+                        twin.supplyIds.pop();
+
+                        // ERC-721 style transfer
+                        (success, result) = twin.tokenAddress.call(
+                            abi.encodeWithSignature(
+                                "safeTransferFrom(address,address,uint256,bytes)",
+                                seller.operator,
+                                msg.sender,
+                                tokenId,
+                                ""
+                            )
+                        );
+                    }
+                } else if (twin.tokenType == TokenType.MultiToken){
+                    // ERC-1155 style transfer
+                    (success, result) = twin.tokenAddress.call(
+                            abi.encodeWithSignature(
+                            "safeTransferFrom(address,address,uint256,uint256,bytes)",
+                            seller.operator,
+                            msg.sender,
+                            twin.tokenId,
+                            1,
+                            ""
+                        )
+                    );
+                }
+                require(success, TWIN_TRANSFER_FAILED);
+            }
+        }
+    }
 }

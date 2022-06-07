@@ -31,6 +31,12 @@ contract BosonTypes {
         Decided
     }
 
+    enum TokenType {
+        FungibleToken,
+        NonFungibleToken,
+        MultiToken
+    } // ERC20, ERC721, ERC1155
+
     struct Seller {
         uint256 id;
         address operator;
@@ -132,6 +138,7 @@ contract BosonTypes {
         uint256[] supplyIds; // ERC-721
         uint256 tokenId; // ERC-1155
         address tokenAddress; // all
+        TokenType tokenType;
     }
 
     struct Bundle {

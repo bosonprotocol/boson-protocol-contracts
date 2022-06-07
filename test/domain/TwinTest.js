@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const Twin = require("../../scripts/domain/Twin.js");
+const TokenType = require("../../scripts/domain/TokenType.js");
 
 /**
  *  Test the Twin domain entity
@@ -9,7 +10,7 @@ const Twin = require("../../scripts/domain/Twin.js");
 describe("Twin", function () {
   // Suite-wide scope
   let twin, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let accounts, id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress;
+  let accounts, id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType;
 
   beforeEach(async function () {
     // Get a list of accounts
@@ -19,20 +20,22 @@ describe("Twin", function () {
     id = "1000";
     sellerId = "12";
     supplyAvailable = "500";
-    tokenId = "4096";
-    supplyIds = ["1", "2"];
+    tokenId = "0";
+    supplyIds = [];
     tokenAddress = accounts[0].address;
+    tokenType = TokenType.FungibleToken;
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated Twin instance", async function () {
-      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
       expect(twin.idIsValid()).is.true;
       expect(twin.sellerIdIsValid()).is.true;
       expect(twin.supplyAvailableIsValid()).is.true;
       expect(twin.supplyIdsIsValid()).is.true;
       expect(twin.tokenIdIsValid()).is.true;
       expect(twin.tokenAddressIsValid()).is.true;
+      expect(twin.tokenTypeIsValid()).is.true;
       expect(twin.isValid()).is.true;
     });
   });
@@ -40,7 +43,7 @@ describe("Twin", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid twin, then set fields in tests directly
-      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
       expect(twin.isValid()).is.true;
     });
 
@@ -200,12 +203,54 @@ describe("Twin", function () {
       expect(twin.tokenAddressIsValid()).is.true;
       expect(twin.isValid()).is.true;
     });
+
+    it("Always present, tokenType must be a valid TokenType", async function () {
+      // Invalid field value
+      twin.tokenType = "zedzdeadbaby";
+      expect(twin.tokenTypeIsValid()).is.false;
+      expect(twin.isValid()).is.false;
+
+      // Invalid field value
+      twin.tokenType = new Date();
+      expect(twin.tokenTypeIsValid()).is.false;
+      expect(twin.isValid()).is.false;
+
+      // Invalid field value
+      twin.tokenType = 12;
+      expect(twin.tokenTypeIsValid()).is.false;
+      expect(twin.isValid()).is.false;
+
+      // Invalid field value
+      twin.tokenType = "0";
+      expect(twin.tokenTypeIsValid()).is.false;
+      expect(twin.isValid()).is.false;
+
+      // Invalid field value
+      twin.tokenType = "126";
+      expect(twin.tokenTypeIsValid()).is.false;
+      expect(twin.isValid()).is.false;
+
+      // Valid field value
+      twin.tokenType = TokenType.FungibleToken;
+      expect(twin.tokenTypeIsValid()).is.true;
+      expect(twin.isValid()).is.true;
+
+      // Valid field value
+      twin.tokenType = TokenType.NonFungibleToken;
+      expect(twin.tokenTypeIsValid()).is.true;
+      expect(twin.isValid()).is.true;
+
+      // Valid field value
+      twin.tokenType = TokenType.MultiToken;
+      expect(twin.tokenTypeIsValid()).is.true;
+      expect(twin.isValid()).is.true;
+    });
   });
 
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid twin, then set fields in tests directly
-      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress);
+      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
       expect(twin.isValid()).is.true;
 
       // Get plain object
@@ -216,10 +261,11 @@ describe("Twin", function () {
         supplyIds,
         tokenId,
         tokenAddress,
+        tokenType,
       };
 
       // Struct representation
-      struct = [id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress];
+      struct = [id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType];
     });
 
     context("👉 Static", async function () {
