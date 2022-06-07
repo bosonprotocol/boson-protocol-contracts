@@ -451,34 +451,14 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256",
-              "name": "validFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "validUntilDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "redeemableFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "fulfillmentPeriodDuration",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "voucherValidDuration",
-              "type": "uint256"
-            },
-            {
               "internalType": "address",
               "name": "exchangeToken",
               "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "disputeResolverId",
+              "type": "uint256"
             },
             {
               "internalType": "string",
@@ -499,6 +479,57 @@
           "indexed": false,
           "internalType": "struct BosonTypes.Offer",
           "name": "offer",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "validFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntil",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableUntil",
+              "type": "uint256"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.OfferDates",
+          "name": "offerDates",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "fulfillmentPeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherValid",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "resolutionPeriod",
+              "type": "uint256"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.OfferDurations",
+          "name": "offerDurations",
           "type": "tuple"
         }
       ],
@@ -772,34 +803,14 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256",
-              "name": "validFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "validUntilDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "redeemableFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "fulfillmentPeriodDuration",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "voucherValidDuration",
-              "type": "uint256"
-            },
-            {
               "internalType": "address",
               "name": "exchangeToken",
               "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "disputeResolverId",
+              "type": "uint256"
             },
             {
               "internalType": "string",
@@ -819,6 +830,55 @@
           ],
           "internalType": "struct BosonTypes.Offer",
           "name": "_offer",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "validFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntil",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableUntil",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.OfferDates",
+          "name": "_offerDates",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "fulfillmentPeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherValid",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "resolutionPeriod",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.OfferDurations",
+          "name": "_offerDurations",
           "type": "tuple"
         },
         {
@@ -872,34 +932,14 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256",
-              "name": "validFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "validUntilDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "redeemableFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "fulfillmentPeriodDuration",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "voucherValidDuration",
-              "type": "uint256"
-            },
-            {
               "internalType": "address",
               "name": "exchangeToken",
               "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "disputeResolverId",
+              "type": "uint256"
             },
             {
               "internalType": "string",
@@ -919,6 +959,55 @@
           ],
           "internalType": "struct BosonTypes.Offer",
           "name": "_offer",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "validFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntil",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableUntil",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.OfferDates",
+          "name": "_offerDates",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "fulfillmentPeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherValid",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "resolutionPeriod",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.OfferDurations",
+          "name": "_offerDurations",
           "type": "tuple"
         },
         {
@@ -1009,34 +1098,14 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256",
-              "name": "validFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "validUntilDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "redeemableFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "fulfillmentPeriodDuration",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "voucherValidDuration",
-              "type": "uint256"
-            },
-            {
               "internalType": "address",
               "name": "exchangeToken",
               "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "disputeResolverId",
+              "type": "uint256"
             },
             {
               "internalType": "string",
@@ -1056,6 +1125,55 @@
           ],
           "internalType": "struct BosonTypes.Offer",
           "name": "_offer",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "validFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntil",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableUntil",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.OfferDates",
+          "name": "_offerDates",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "fulfillmentPeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherValid",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "resolutionPeriod",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.OfferDurations",
+          "name": "_offerDurations",
           "type": "tuple"
         },
         {
@@ -1131,34 +1249,14 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256",
-              "name": "validFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "validUntilDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "redeemableFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "fulfillmentPeriodDuration",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "voucherValidDuration",
-              "type": "uint256"
-            },
-            {
               "internalType": "address",
               "name": "exchangeToken",
               "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "disputeResolverId",
+              "type": "uint256"
             },
             {
               "internalType": "string",
@@ -1178,6 +1276,55 @@
           ],
           "internalType": "struct BosonTypes.Offer",
           "name": "_offer",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "validFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntil",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableUntil",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.OfferDates",
+          "name": "_offerDates",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "fulfillmentPeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherValid",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "resolutionPeriod",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.OfferDurations",
+          "name": "_offerDurations",
           "type": "tuple"
         },
         {
@@ -1332,34 +1479,14 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256",
-              "name": "validFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "validUntilDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "redeemableFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "fulfillmentPeriodDuration",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "voucherValidDuration",
-              "type": "uint256"
-            },
-            {
               "internalType": "address",
               "name": "exchangeToken",
               "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "disputeResolverId",
+              "type": "uint256"
             },
             {
               "internalType": "string",
@@ -1379,6 +1506,55 @@
           ],
           "internalType": "struct BosonTypes.Offer",
           "name": "_offer",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "validFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntil",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableUntil",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.OfferDates",
+          "name": "_offerDates",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "fulfillmentPeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherValid",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "resolutionPeriod",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.OfferDurations",
+          "name": "_offerDurations",
           "type": "tuple"
         }
       ],
@@ -1464,34 +1640,14 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256",
-              "name": "validFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "validUntilDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "redeemableFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "fulfillmentPeriodDuration",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "voucherValidDuration",
-              "type": "uint256"
-            },
-            {
               "internalType": "address",
               "name": "exchangeToken",
               "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "disputeResolverId",
+              "type": "uint256"
             },
             {
               "internalType": "string",
@@ -1511,6 +1667,55 @@
           ],
           "internalType": "struct BosonTypes.Offer",
           "name": "_offer",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "validFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntil",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableUntil",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.OfferDates",
+          "name": "_offerDates",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "fulfillmentPeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherValid",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "resolutionPeriod",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.OfferDurations",
+          "name": "_offerDurations",
           "type": "tuple"
         },
         {
@@ -1638,34 +1843,14 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256",
-              "name": "validFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "validUntilDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "redeemableFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "fulfillmentPeriodDuration",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "voucherValidDuration",
-              "type": "uint256"
-            },
-            {
               "internalType": "address",
               "name": "exchangeToken",
               "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "disputeResolverId",
+              "type": "uint256"
             },
             {
               "internalType": "string",
@@ -1685,6 +1870,55 @@
           ],
           "internalType": "struct BosonTypes.Offer",
           "name": "_offer",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "validFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntil",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableUntil",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.OfferDates",
+          "name": "_offerDates",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "fulfillmentPeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherValid",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "resolutionPeriod",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.OfferDurations",
+          "name": "_offerDurations",
           "type": "tuple"
         },
         {
@@ -1797,34 +2031,14 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256",
-              "name": "validFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "validUntilDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "redeemableFromDate",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "fulfillmentPeriodDuration",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "voucherValidDuration",
-              "type": "uint256"
-            },
-            {
               "internalType": "address",
               "name": "exchangeToken",
               "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "disputeResolverId",
+              "type": "uint256"
             },
             {
               "internalType": "string",
@@ -1844,6 +2058,55 @@
           ],
           "internalType": "struct BosonTypes.Offer",
           "name": "_offer",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "validFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntil",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableFrom",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherRedeemableUntil",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.OfferDates",
+          "name": "_offerDates",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "fulfillmentPeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "voucherValid",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "resolutionPeriod",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.OfferDurations",
+          "name": "_offerDurations",
           "type": "tuple"
         },
         {
