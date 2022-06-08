@@ -28,9 +28,11 @@ async function deployProtocolConfigFacet(diamond, config, gasLimit) {
   const configInterface = new ethers.utils.Interface([`function ${configInitFunction}`]);
   const configCallData = configInterface.encodeFunctionData("initialize", config);
   const configHandlerCut = getFacetAddCut(configHandlerFacet, [configInitFunction]);
-  await cutFacet.diamondCut([configHandlerCut], configHandlerFacet.address, configCallData, { gasLimit });
-
-  return [configHandlerFacet];
+  const diamondCut = await cutFacet.diamondCut([configHandlerCut], configHandlerFacet.address, configCallData, {
+    gasLimit,
+  });
+  // Return the cut transaction to test the events emitted by the initializer function
+  return { facets: [configHandlerFacet], cutTransaction: diamondCut };
 }
 
 if (require.main === module) {
