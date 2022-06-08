@@ -264,6 +264,52 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     }
 
     /**
+     * @notice Decide a dispute by providing the information about the split. Callable by the dispute resolver, specified in the offer
+     *
+     * Emits a DisputeDecided event if successful.
+     *
+     * Reverts if:
+     * - specified buyer percent exceeds 100%
+     * - exchange does not exist
+     * - exchange is not in the disputed state
+     * - caller is not the dispute resolver for this dispute
+     * - dispute state is not escalated
+     *
+     * @param _exchangeId  - exchange id to resolve dispute
+     * @param _resolution - resolution struct with the information about the split.
+     */
+    function decideDispute(uint256 _exchangeId, Resolution calldata _resolution) external override {
+        // buyer should get at most 100%
+        require(_resolution.buyerPercent <= 10000, INVALID_BUYER_PERCENT);
+
+        // Get the exchange, should be in dispute state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+
+        // make sure the dispute not expired already or it is in the escalated state
+        (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
+        require(block.timestamp <= disputeDates.timeout || disputeDates.escalated > 0, DISPUTE_HAS_EXPIRED);
+
+        // Fetch the offer to get the info who the seller is
+        (, Offer storage offer) = fetchOffer(exchange.offerId);
+
+        // get dispute resolver id to check if caller is the dispute resolver
+        uint256 disputeResolverId = protocolStorage().disputeResolverIdByWallet[msg.sender];
+        require(disputeResolverId == offer.disputeResolverId, NOT_DISPUTE_RESOLVER_WALLET);
+
+        // Fetch the dispute
+        (, Dispute storage dispute) = fetchDispute(_exchangeId);
+
+        // Make sure the dispute is in the escalated state
+        require(dispute.state == DisputeState.Escalated, INVALID_STATE);
+
+        // finalize the dispute
+        finalizeDispute(_exchangeId, exchange, dispute, DisputeState.Decided, _resolution);
+
+        // Notify watchers of state change
+        emit DisputeDecided(_exchangeId, _resolution, msg.sender);
+    }
+
+    /**
      * @notice Transition dispute to a "finalized" state
      *
      * Target state must be Retracted, Resolved, or Decided.
@@ -285,7 +331,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         _exchange.finalizedDate = block.timestamp;
 
         // store the resolution if it exists
-        if (_targetState == DisputeState.Resolved) {
+        if (_targetState == DisputeState.Resolved || _targetState == DisputeState.Decided) {
             _dispute.resolution = _resolution;
         }
 

@@ -101,6 +101,23 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
     function escalateDispute(uint256 _exchangeId) external;
 
     /**
+     * @notice Decide a dispute by providing the information about the split. Callable by the dispute resolver, specified in the offer
+     *
+     * Emits a DisputeDecided event if successful.
+     *
+     * Reverts if:
+     * - specified buyer percent exceeds 100%
+     * - exchange does not exist
+     * - exchange is not in the disputed state
+     * - caller is not the dispute resolver for this dispute
+     * - dispute state is not escalated
+     *
+     * @param _exchangeId  - exchange id to resolve dispute
+     * @param _resolution - resolution struct with the information about the split.
+     */
+    function decideDispute(uint256 _exchangeId, BosonTypes.Resolution calldata _resolution) external;
+
+    /**
      * @notice Gets the details about a given dispute.
      *
      * @param _exchangeId - the id of the exchange to check
