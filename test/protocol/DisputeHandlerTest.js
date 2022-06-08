@@ -1480,7 +1480,7 @@ describe("IBosonDisputeHandler", function () {
       context("disputed exchange", async function () {
         beforeEach(async function () {
           // Raise a dispute
-          tx = await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+          await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
         });
 
         it("should return false if dispute is in Resolving state", async function () {
@@ -1543,9 +1543,15 @@ describe("IBosonDisputeHandler", function () {
           assert.equal(response, true, "Incorrectly reports unfinalized state");
         });
 
-        it.skip("should return true if dispute is in Decided state", async function () {
+        it("should return true if dispute is in Decided state", async function () {
+          buyerPercent = "1234";
+          resolution = new Resolution(buyerPercent);
+
+          // Escalate dispute
+          await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
           // Retract dispute
-          await disputeHandler.connect(buyer).decideDispute(exchange.id);
+          await disputeHandler.connect(disputeResolver).decideDispute(exchange.id, resolution);
 
           // Dispute in decided state, ask if exchange is finalized
           [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchange.id);
