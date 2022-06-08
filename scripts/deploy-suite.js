@@ -78,15 +78,16 @@ function getConfig() {
 function getNoArgFacetNames(){
 
     return [
+        "AccountHandlerFacet",
+        "BundleHandlerFacet",
         "DisputeHandlerFacet",
         "ExchangeHandlerFacet",
         "FundsHandlerFacet",
-        "OfferHandlerFacet",
-        "TwinHandlerFacet",
-        "BundleHandlerFacet",
-        "AccountHandlerFacet",
         "GroupHandlerFacet",
-        "OrchestrationHandlerFacet"
+        "MetaTransactionsHandlerFacet",
+        "OfferHandlerFacet",
+        "OrchestrationHandlerFacet",
+        "TwinHandlerFacet"
     ];
 
 }

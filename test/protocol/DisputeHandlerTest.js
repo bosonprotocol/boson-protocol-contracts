@@ -466,7 +466,7 @@ describe("IBosonDisputeHandler", function () {
           );
         });
 
-        it("Dispute is in some state other than resolving", async function () {
+        it("Dispute is in some state other than resolving or escalated", async function () {
           // Retract the dispute, put it into RETRACTED state
           await disputeHandler.connect(buyer).retractDispute(exchange.id);
 

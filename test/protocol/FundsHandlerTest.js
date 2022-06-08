@@ -1881,7 +1881,7 @@ describe("IBosonFundsHandler", function () {
           });
         });
 
-        context("Final state DISPUTED - RESOLVED", async function () {
+        context.skip("Final state DISPUTED - RESOLVED", async function () {
           beforeEach(async function () {
             buyerPercent = "5566"; // 55.66%
 
