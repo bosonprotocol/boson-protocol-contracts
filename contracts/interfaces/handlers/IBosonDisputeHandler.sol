@@ -17,7 +17,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
     /**
      * @notice Raise a dispute
      *
-     * Emits an DisputeRaised event if successful.
+     * Emits a DisputeRaised event if successful.
      *
      * Reverts if:
      * - caller does not hold a voucher for the given exchange id
@@ -33,7 +33,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
     /**
      * @notice Retract the dispute and release the funds
      *
-     * Emits an DisputeRetracted event if successful.
+     * Emits a DisputeRetracted event if successful.
      *
      * Reverts if:
      * - exchange does not exist
@@ -48,12 +48,14 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      /**
      * @notice Resolve a dispute by providing the information about the split. Callable by the buyer or seller, but they must provide the resolution signed by the other party
      *
+     * Emits a DisputeResolved event if successful.
+     *
      * Reverts if:
      * - specified buyer percent exceeds 100%
      * - dispute has expired
      * - exchange does not exist
      * - exchange is not in the disputed state
-     * - callers is neither the seller or the buyer
+     * - caller is neither the seller or the buyer
      * - signature does not belong to the address of the other party
      * - dispute state is neither resolving or escalated
      *

@@ -561,7 +561,7 @@ describe("IBosonDisputeHandler", function () {
           assert.equal(response, DisputeState.Resolved, "Dispute state is incorrect");
 
           // exchange should also be finalized
-          // Get the dispute as a struct
+          // Get the exchange as a struct
           [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
 
           // Parse into entity
@@ -660,7 +660,7 @@ describe("IBosonDisputeHandler", function () {
           assert.equal(response, DisputeState.Resolved, "Dispute state is incorrect");
 
           // exchange should also be finalized
-          // Get the dispute as a struct
+          // Get the exchange as a struct
           [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
 
           // Parse into entity
@@ -760,7 +760,7 @@ describe("IBosonDisputeHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_STATE);
         });
 
-        it("Callers is neither the seller or the buyer for the given exchange id", async function () {
+        it("Caller is neither the seller or the buyer for the given exchange id", async function () {
           // Wallet without any account
           // Attempt to resolve the dispute, expecting revert
           await expect(disputeHandler.connect(rando).resolveDispute(exchange.id, resolution, r, s, v)).to.revertedWith(
