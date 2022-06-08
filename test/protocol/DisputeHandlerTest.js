@@ -487,7 +487,7 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
-        timeout = ethers.BigNumber.from(disputedDate).add(disputeValid).toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
       });
 
       it("should emit a DisputeExpired event", async function () {
@@ -585,7 +585,7 @@ describe("IBosonDisputeHandler", function () {
           await disputeHandler.connect(buyer).escalateDispute(exchange.id);
 
           // Set time forward past the dispute resoltion period
-          await setNextBlockTimestamp(Number(timeout) + Number(oneWeek))
+          await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
           // Attempt to expire the dispute, expecting revert
           await expect(disputeHandler.connect(rando).expireDispute(exchange.id)).to.revertedWith(
@@ -987,7 +987,7 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
-        timeout = ethers.BigNumber.from(disputedDate).add(disputeValid).toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
       });
 
       it("should emit a DisputeEscalated event", async function () {
