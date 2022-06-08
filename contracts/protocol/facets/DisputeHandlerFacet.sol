@@ -27,7 +27,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     /**
      * @notice Raise a dispute
      *
-     * Emits an DisputeRaised event if successful.
+     * Emits a DisputeRaised event if successful.
      *
      * Reverts if:
      * - caller does not hold a voucher for the given exchange id
@@ -80,7 +80,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     /**
      * @notice Retract the dispute and release the funds
      *
-     * Emits an DisputeRetracted event if successful.
+     * Emits a DisputeRetracted event if successful.
      *
      * Reverts if:
      * - exchange does not exist

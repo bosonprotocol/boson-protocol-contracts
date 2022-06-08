@@ -408,7 +408,7 @@ describe("IBosonDisputeHandler", function () {
         assert.equal(response, DisputeState.Retracted, "Dispute state is incorrect");
 
         // exchange should also be finalized
-        // Get the dispute as a struct
+        // Get the exchange as a struct
         const [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
 
         // Parse into entity
@@ -458,7 +458,7 @@ describe("IBosonDisputeHandler", function () {
           );
         });
 
-        it("Dispute is in some state other than resolving", async function () {
+        it("Dispute is in some state other than resolving or escalated", async function () {
           // Retract the dispute, put it into RETRACTED state
           await disputeHandler.connect(buyer).retractDispute(exchange.id);
 
