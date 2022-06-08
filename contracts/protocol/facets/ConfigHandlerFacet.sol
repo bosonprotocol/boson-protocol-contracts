@@ -5,7 +5,7 @@ import { IBosonConfigHandler } from  "../../interfaces/handlers/IBosonConfigHand
 import { DiamondLib } from  "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from  "../bases/ProtocolBase.sol";
 import { ProtocolLib } from  "../libs/ProtocolLib.sol";
-import { MetaTransactionsLib } from "../libs/MetaTransactionsLib.sol";
+import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
 /**
  * @title ConfigHandlerFacet
@@ -62,7 +62,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
 
         // Initialize protocol meta-transaction config params
         ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
-        pmti.domainSeparator = MetaTransactionsLib.domainSeparator("BosonProtocolDiamond", "V1");
+        pmti.domainSeparator = EIP712Lib.domainSeparator("BosonProtocolDiamond", "V1");
     }
 
     /**

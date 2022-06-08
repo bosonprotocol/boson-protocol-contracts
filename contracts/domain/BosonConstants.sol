@@ -108,12 +108,13 @@ contract BosonConstants {
     string internal constant FUNCTION_CALL_NOT_SUCCESSFUL = "Function call not successful";
     string internal constant INVALID_FUNCTION_SIGNATURE =
         "functionSignature can not be of executeMetaTransaction method";
-    string internal constant INVALID_SIGNATURE = "Invalid signature";
     string internal constant SIGNER_AND_SIGNATURE_DO_NOT_MATCH = "Signer and signature do not match";
     string internal constant INVALID_FUNCTION_NAME = "Invalid function name";
 
     // Revert Reasons: Dispute related
     string internal constant COMPLAINT_MISSING = "Complaint missing";
+    string internal constant DISPUTE_HAS_EXPIRED = "Dispute has expired";
+    string internal constant INVALID_BUYER_PERCENT = "Invalid buyer percent";
 }
 
 // TODO: Refactor to use file level constants throughout or use custom Errors
@@ -122,3 +123,4 @@ string constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
 string constant INSUFFICIENT_VALUE_SENT = "Insufficient value sent";
 string constant INSUFFICIENT_AVAILABLE_FUNDS = "Insufficient available funds";
 string constant NATIVE_NOT_ALLOWED = "Transfer of native currency not allowed";
+string constant INVALID_SIGNATURE = "Invalid signature";

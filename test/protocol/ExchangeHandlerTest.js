@@ -16,6 +16,7 @@ const TokenType = require("../../scripts/domain/TokenType");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
+const Resolution = require("../../scripts/domain/Resolution");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -28,6 +29,7 @@ const {
   setNextBlockTimestamp,
   calculateVoucherExpiry,
   calculateProtocolFee,
+  prepareDataSignatureParameters,
 } = require("../../scripts/util/test-utils.js");
 
 /**
@@ -1349,10 +1351,37 @@ describe("IBosonExchangeHandler", function () {
           assert.equal(response, true, "Incorrectly reports unfinalized state");
         });
 
-        // TODO Include this test when DisputeHandlerFacet.resolveDispute works
-        it.skip("should return true if exchange has a dispute in Resolved state", async function () {
+        it("should return true if exchange has a dispute in Resolved state", async function () {
+          const buyerPercent = "5566"; // 55.66%
+
+          const resolution = new Resolution(buyerPercent);
+
+          // Set the message Type, needed for signature
+          const resolutionType = [
+            { name: "exchangeId", type: "uint256" },
+            { name: "buyerPercent", type: "uint256" },
+          ];
+
+          const customSignatureType = {
+            Resolution: resolutionType,
+          };
+
+          const message = {
+            exchangeId: exchange.id,
+            buyerPercent: resolution.buyerPercent,
+          };
+
+          // Collect the signature components
+          const { r, s, v } = await prepareDataSignatureParameters(
+            buyer, // Operator is the caller, seller should be the signer.
+            customSignatureType,
+            "Resolution",
+            message,
+            disputeHandler.address
+          );
+
           // Resolve Dispute
-          [exists, response] = await disputeHandler.connect(game).resolveDispute(exchange.id);
+          await disputeHandler.connect(operator).resolveDispute(exchange.id, resolution, r, s, v);
 
           // Now in Resolved state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
