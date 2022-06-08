@@ -46,19 +46,6 @@ describe("IBosonConfigHandler", function () {
     maxOffersPerBatch = 100;
     maxTokensPerWithdrawal = 100;
 
-    const protocolConfig = [
-      token.address,
-      treasury.address,
-      voucher.address,
-      protocolFee,
-      maxOffersPerGroup,
-      maxTwinsPerBundle,
-      maxOffersPerBundle,
-      maxOffersPerBatch,
-      maxTokensPerWithdrawal,
-    ];
-    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
-
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
 
@@ -66,210 +53,276 @@ describe("IBosonConfigHandler", function () {
     configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
   });
 
-  // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
-  context("📋 Interfaces", async function () {
-    context("👉 supportsInterface()", async function () {
-      it("should indicate support for IBosonConfigHandler interface", async function () {
-        // Current interfaceId for IBosonConfigHandler
-        support = await erc165.supportsInterface(InterfaceIds.IBosonConfigHandler);
+  describe("Deploy tests", async function () {
+    context("📋 Initializer", async function () {
+      it("should initialize the config handler and emit set events", async function () {
+        const protocolConfig = [
+          token.address,
+          treasury.address,
+          voucher.address,
+          protocolFee,
+          maxOffersPerGroup,
+          maxTwinsPerBundle,
+          maxOffersPerBundle,
+          maxOffersPerBatch,
+          maxTokensPerWithdrawal,
+        ];
 
-        // Test
-        await expect(support, "IBosonConfigHandler interface not supported").is.true;
-      });
-    });
-  });
+        const { cutTransaction } = await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
-  // All supported methods
-  context("📋 Setters", async function () {
-    context("👉 setMaxOffersPerGroup()", async function () {
-      beforeEach(async function () {
-        // set new value for max offers per group
-        maxOffersPerGroup = 150;
-      });
-
-      it("should emit a MaxOffersPerGroupChanged event", async function () {
-        // Set new max offer per group, testing for the event
-        await expect(configHandler.connect(deployer).setMaxOffersPerGroup(maxOffersPerGroup))
+        await expect(cutTransaction)
+          .to.emit(configHandler, "TokenAddressChanged")
+          .withArgs(token.address, deployer.address);
+        await expect(cutTransaction)
+          .to.emit(configHandler, "TreasuryAddressChanged")
+          .withArgs(treasury.address, deployer.address);
+        await expect(cutTransaction)
+          .to.emit(configHandler, "VoucherAddressChanged")
+          .withArgs(voucher.address, deployer.address);
+        await expect(cutTransaction)
+          .to.emit(configHandler, "ProtocolFeePercentageChanged")
+          .withArgs(protocolFee, deployer.address);
+        await expect(cutTransaction)
           .to.emit(configHandler, "MaxOffersPerGroupChanged")
           .withArgs(maxOffersPerGroup, deployer.address);
-      });
-
-      it("should update state", async function () {
-        // Set new max offer per group,
-        await configHandler.connect(deployer).setMaxOffersPerGroup(maxOffersPerGroup);
-
-        // Verify that new value is stored
-        expect(await configHandler.connect(rando).getMaxOffersPerGroup()).to.equal(maxOffersPerGroup);
-      });
-
-      context("💔 Revert Reasons", async function () {
-        it("caller is not the admin", async function () {
-          // Attempt to set new max offer per group, expecting revert
-          await expect(configHandler.connect(rando).setMaxOffersPerGroup(maxOffersPerGroup)).to.revertedWith(
-            RevertReasons.ACCESS_DENIED
-          );
-        });
-      });
-    });
-    context("👉 setMaxTwinsPerBundle()", async function () {
-      beforeEach(async function () {
-        // set new value for max twins per bundle
-        maxTwinsPerBundle = 150;
-      });
-
-      it("should emit a MaxTwinsPerBundleChanged event", async function () {
-        // Set new max twin per bundle, testing for the event
-        await expect(configHandler.connect(deployer).setMaxTwinsPerBundle(maxTwinsPerBundle))
+        await expect(cutTransaction)
           .to.emit(configHandler, "MaxTwinsPerBundleChanged")
           .withArgs(maxTwinsPerBundle, deployer.address);
-      });
-
-      it("should update state", async function () {
-        // Set new max twin per bundle,
-        await configHandler.connect(deployer).setMaxTwinsPerBundle(maxTwinsPerBundle);
-
-        // Verify that new value is stored
-        expect(await configHandler.connect(rando).getMaxTwinsPerBundle()).to.equal(maxTwinsPerBundle);
-      });
-
-      context("💔 Revert Reasons", async function () {
-        it("caller is not the admin", async function () {
-          // Attempt to set new max twin per bundle, expecting revert
-          await expect(configHandler.connect(rando).setMaxTwinsPerBundle(maxTwinsPerBundle)).to.revertedWith(
-            RevertReasons.ACCESS_DENIED
-          );
-        });
-      });
-    });
-    context("👉 setMaxOffersPerBundle()", async function () {
-      beforeEach(async function () {
-        // set new value for max offers per bundle
-        maxOffersPerBundle = 150;
-      });
-
-      it("should emit a MaxOffersPerBundleChanged event", async function () {
-        // Set new max offer per bundle, testing for the event
-        await expect(configHandler.connect(deployer).setMaxOffersPerBundle(maxOffersPerBundle))
+        await expect(cutTransaction)
           .to.emit(configHandler, "MaxOffersPerBundleChanged")
           .withArgs(maxOffersPerBundle, deployer.address);
-      });
-
-      it("should update state", async function () {
-        // Set new max offer per bundle,
-        await configHandler.connect(deployer).setMaxOffersPerBundle(maxOffersPerBundle);
-
-        // Verify that new value is stored
-        expect(await configHandler.connect(rando).getMaxOffersPerBundle()).to.equal(maxOffersPerBundle);
-      });
-
-      context("💔 Revert Reasons", async function () {
-        it("caller is not the admin", async function () {
-          // Attempt to set new max offer per bundle, expecting revert
-          await expect(configHandler.connect(rando).setMaxOffersPerBundle(maxOffersPerBundle)).to.revertedWith(
-            RevertReasons.ACCESS_DENIED
-          );
-        });
-      });
-    });
-
-    context("👉 setMaxOffersPerBatch()", async function () {
-      beforeEach(async function () {
-        // set new value for max offers per batch
-        maxOffersPerBatch = 135;
-      });
-
-      it("should emit a MaxOffersPerBatchChanged event", async function () {
-        // Set new max offer per batch, testing for the event
-        await expect(configHandler.connect(deployer).setMaxOffersPerBatch(maxOffersPerBatch))
+        await expect(cutTransaction)
           .to.emit(configHandler, "MaxOffersPerBatchChanged")
           .withArgs(maxOffersPerBatch, deployer.address);
-      });
-
-      it("should update state", async function () {
-        // Set new max offer per batch,
-        await configHandler.connect(deployer).setMaxOffersPerBatch(maxOffersPerBatch);
-
-        // Verify that new value is stored
-        expect(await configHandler.connect(rando).getMaxOffersPerBatch()).to.equal(maxOffersPerBatch);
-      });
-
-      context("💔 Revert Reasons", async function () {
-        it("caller is not the admin", async function () {
-          // Attempt to set new max offer per batch, expecting revert
-          await expect(configHandler.connect(rando).setMaxOffersPerBatch(maxOffersPerBatch)).to.revertedWith(
-            RevertReasons.ACCESS_DENIED
-          );
-        });
-      });
-    });
-
-    context("👉 setMaxTokensPerWithdrawal()", async function () {
-      beforeEach(async function () {
-        // set new value for max tokens per withdrawal
-        maxTokensPerWithdrawal = 598;
-      });
-
-      it("should emit a MaxTokensPerWithdrawalChanged event", async function () {
-        // Set new max tokens per withdrawal, testing for the event
-        await expect(configHandler.connect(deployer).setMaxTokensPerWithdrawal(maxTokensPerWithdrawal))
+        await expect(cutTransaction)
           .to.emit(configHandler, "MaxTokensPerWithdrawalChanged")
           .withArgs(maxTokensPerWithdrawal, deployer.address);
       });
-
-      it("should update state", async function () {
-        // Set new max offer tokens per withdrawal
-        await configHandler.connect(deployer).setMaxTokensPerWithdrawal(maxTokensPerWithdrawal);
-
-        // Verify that new value is stored
-        expect(await configHandler.connect(rando).getMaxTokensPerWithdrawal()).to.equal(maxTokensPerWithdrawal);
-      });
-
-      context("💔 Revert Reasons", async function () {
-        it("caller is not the admin", async function () {
-          // Attempt to set new tokens per withdrawal, expecting revert
-          await expect(configHandler.connect(rando).setMaxTokensPerWithdrawal(maxTokensPerWithdrawal)).to.revertedWith(
-            RevertReasons.ACCESS_DENIED
-          );
-        });
-      });
     });
   });
 
-  context("📋 Getters", async function () {
-    // here we test only that after the deployments getters show correct values
-    // otherwise getters are tested in the "should update state" test of setters
-
-    it("Initial values are correct", async function () {
-      // Verify that initial values matches those in constructor
-      expect(await configHandler.connect(rando).getTreasuryAddress()).to.equal(
+  describe("After deploy tests", async function () {
+    beforeEach(async function () {
+      const protocolConfig = [
+        token.address,
         treasury.address,
-        "Invalid treasury address"
-      );
-      expect(await configHandler.connect(rando).getTokenAddress()).to.equal(token.address, "Invalid token address");
-      expect(await configHandler.connect(rando).getProtocolFeePercentage()).to.equal(
+        voucher.address,
         protocolFee,
-        "Invalid protocol fee"
-      );
-      expect(await configHandler.connect(rando).getMaxOffersPerGroup()).to.equal(
         maxOffersPerGroup,
-        "Invalid max offers per group"
-      );
-      expect(await configHandler.connect(rando).getMaxTwinsPerBundle()).to.equal(
         maxTwinsPerBundle,
-        "Invalid max twins per bundle"
-      );
-      expect(await configHandler.connect(rando).getMaxOffersPerBundle()).to.equal(
         maxOffersPerBundle,
-        "Invalid max offers per bundle"
-      );
-      expect(await configHandler.connect(rando).getMaxOffersPerBatch()).to.equal(
         maxOffersPerBatch,
-        "Invalid max offers per batch"
-      );
-      expect(await configHandler.connect(rando).getMaxTokensPerWithdrawal()).to.equal(
         maxTokensPerWithdrawal,
-        "Invalid max tokens per withdrawal"
-      );
+      ];
+
+      await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+    });
+
+    // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
+    context("📋 Interfaces", async function () {
+      context("👉 supportsInterface()", async function () {
+        it("should indicate support for IBosonConfigHandler interface", async function () {
+          // Current interfaceId for IBosonConfigHandler
+          support = await erc165.supportsInterface(InterfaceIds.IBosonConfigHandler);
+
+          // Test
+          await expect(support, "IBosonConfigHandler interface not supported").is.true;
+        });
+      });
+    });
+
+    // All supported methods
+    context("📋 Setters", async function () {
+      context("👉 setMaxOffersPerGroup()", async function () {
+        beforeEach(async function () {
+          // set new value for max offers per group
+          maxOffersPerGroup = 150;
+        });
+
+        it("should emit a MaxOffersPerGroupChanged event", async function () {
+          // Set new max offer per group, testing for the event
+          await expect(configHandler.connect(deployer).setMaxOffersPerGroup(maxOffersPerGroup))
+            .to.emit(configHandler, "MaxOffersPerGroupChanged")
+            .withArgs(maxOffersPerGroup, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new max offer per group,
+          await configHandler.connect(deployer).setMaxOffersPerGroup(maxOffersPerGroup);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxOffersPerGroup()).to.equal(maxOffersPerGroup);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new max offer per group, expecting revert
+            await expect(configHandler.connect(rando).setMaxOffersPerGroup(maxOffersPerGroup)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
+          });
+        });
+      });
+      context("👉 setMaxTwinsPerBundle()", async function () {
+        beforeEach(async function () {
+          // set new value for max twins per bundle
+          maxTwinsPerBundle = 150;
+        });
+
+        it("should emit a MaxTwinsPerBundleChanged event", async function () {
+          // Set new max twin per bundle, testing for the event
+          await expect(configHandler.connect(deployer).setMaxTwinsPerBundle(maxTwinsPerBundle))
+            .to.emit(configHandler, "MaxTwinsPerBundleChanged")
+            .withArgs(maxTwinsPerBundle, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new max twin per bundle,
+          await configHandler.connect(deployer).setMaxTwinsPerBundle(maxTwinsPerBundle);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxTwinsPerBundle()).to.equal(maxTwinsPerBundle);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new max twin per bundle, expecting revert
+            await expect(configHandler.connect(rando).setMaxTwinsPerBundle(maxTwinsPerBundle)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
+          });
+        });
+      });
+      context("👉 setMaxOffersPerBundle()", async function () {
+        beforeEach(async function () {
+          // set new value for max offers per bundle
+          maxOffersPerBundle = 150;
+        });
+
+        it("should emit a MaxOffersPerBundleChanged event", async function () {
+          // Set new max offer per bundle, testing for the event
+          await expect(configHandler.connect(deployer).setMaxOffersPerBundle(maxOffersPerBundle))
+            .to.emit(configHandler, "MaxOffersPerBundleChanged")
+            .withArgs(maxOffersPerBundle, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new max offer per bundle,
+          await configHandler.connect(deployer).setMaxOffersPerBundle(maxOffersPerBundle);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxOffersPerBundle()).to.equal(maxOffersPerBundle);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new max offer per bundle, expecting revert
+            await expect(configHandler.connect(rando).setMaxOffersPerBundle(maxOffersPerBundle)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
+          });
+        });
+      });
+
+      context("👉 setMaxOffersPerBatch()", async function () {
+        beforeEach(async function () {
+          // set new value for max offers per batch
+          maxOffersPerBatch = 135;
+        });
+
+        it("should emit a MaxOffersPerBatchChanged event", async function () {
+          // Set new max offer per batch, testing for the event
+          await expect(configHandler.connect(deployer).setMaxOffersPerBatch(maxOffersPerBatch))
+            .to.emit(configHandler, "MaxOffersPerBatchChanged")
+            .withArgs(maxOffersPerBatch, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new max offer per batch,
+          await configHandler.connect(deployer).setMaxOffersPerBatch(maxOffersPerBatch);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxOffersPerBatch()).to.equal(maxOffersPerBatch);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new max offer per batch, expecting revert
+            await expect(configHandler.connect(rando).setMaxOffersPerBatch(maxOffersPerBatch)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
+          });
+        });
+      });
+
+      context("👉 setMaxTokensPerWithdrawal()", async function () {
+        beforeEach(async function () {
+          // set new value for max tokens per withdrawal
+          maxTokensPerWithdrawal = 598;
+        });
+
+        it("should emit a MaxTokensPerWithdrawalChanged event", async function () {
+          // Set new max tokens per withdrawal, testing for the event
+          await expect(configHandler.connect(deployer).setMaxTokensPerWithdrawal(maxTokensPerWithdrawal))
+            .to.emit(configHandler, "MaxTokensPerWithdrawalChanged")
+            .withArgs(maxTokensPerWithdrawal, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new max offer tokens per withdrawal
+          await configHandler.connect(deployer).setMaxTokensPerWithdrawal(maxTokensPerWithdrawal);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxTokensPerWithdrawal()).to.equal(maxTokensPerWithdrawal);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new tokens per withdrawal, expecting revert
+            await expect(
+              configHandler.connect(rando).setMaxTokensPerWithdrawal(maxTokensPerWithdrawal)
+            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          });
+        });
+      });
+    });
+
+    context("📋 Getters", async function () {
+      // here we test only that after the deployments getters show correct values
+      // otherwise getters are tested in the "should update state" test of setters
+
+      it("Initial values are correct", async function () {
+        // Verify that initial values matches those in constructor
+        expect(await configHandler.connect(rando).getTreasuryAddress()).to.equal(
+          treasury.address,
+          "Invalid treasury address"
+        );
+        expect(await configHandler.connect(rando).getTokenAddress()).to.equal(token.address, "Invalid token address");
+        expect(await configHandler.connect(rando).getProtocolFeePercentage()).to.equal(
+          protocolFee,
+          "Invalid protocol fee"
+        );
+        expect(await configHandler.connect(rando).getMaxOffersPerGroup()).to.equal(
+          maxOffersPerGroup,
+          "Invalid max offers per group"
+        );
+        expect(await configHandler.connect(rando).getMaxTwinsPerBundle()).to.equal(
+          maxTwinsPerBundle,
+          "Invalid max twins per bundle"
+        );
+        expect(await configHandler.connect(rando).getMaxOffersPerBundle()).to.equal(
+          maxOffersPerBundle,
+          "Invalid max offers per bundle"
+        );
+        expect(await configHandler.connect(rando).getMaxOffersPerBatch()).to.equal(
+          maxOffersPerBatch,
+          "Invalid max offers per batch"
+        );
+        expect(await configHandler.connect(rando).getMaxTokensPerWithdrawal()).to.equal(
+          maxTokensPerWithdrawal,
+          "Invalid max tokens per withdrawal"
+        );
+      });
     });
   });
 });
