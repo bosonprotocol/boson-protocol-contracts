@@ -1012,9 +1012,36 @@ describe("IBosonDisputeHandler", function () {
           assert.equal(response, true, "Incorrectly reports unfinalized state");
         });
 
-        it.skip("should return true if dispute is in Resolved state", async function () {
+        it("should return true if dispute is in Resolved state", async function () {
+          buyerPercent = "1234";
+          resolution = new Resolution(buyerPercent);
+
+          // Set the message Type, needed for signature
+          resolutionType = [
+            { name: "exchangeId", type: "uint256" },
+            { name: "buyerPercent", type: "uint256" },
+          ];
+
+          customSignatureType = {
+            Resolution: resolutionType,
+          };
+
+          message = {
+            exchangeId: exchange.id,
+            buyerPercent: resolution.buyerPercent,
+          };
+
+          // Collect the signature components
+          ({ r, s, v } = await prepareDataSignatureParameters(
+            buyer, // When seller is the caller, buyer should be the signer.
+            customSignatureType,
+            "Resolution",
+            message,
+            disputeHandler.address
+          ));
+
           // Retract dispute
-          await disputeHandler.connect(buyer).resolveDispute(exchange.id);
+          await disputeHandler.connect(operator).resolveDispute(exchange.id, resolution, r, s, v);
 
           // Dispute in resolved state, ask if exchange is finalized
           [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchange.id);
