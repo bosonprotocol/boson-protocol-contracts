@@ -112,12 +112,12 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      *
      * Reverts if:
      * - specified buyer percent exceeds 100%
-     * - dispute has expired
+     * - dispute has expired (resolution period has ended and dispute was not escalated)
      * - exchange does not exist
      * - exchange is not in the disputed state
-     * - caller is neither the seller or the buyer
+     * - caller is neither the seller nor the buyer
      * - signature does not belong to the address of the other party
-     * - dispute state is neither resolving or escalated
+     * - dispute state is neither resolving nor escalated
      *
      * @param _exchangeId  - exchange id to resolve dispute
      * @param _resolution - resolution struct with the information about the split.
