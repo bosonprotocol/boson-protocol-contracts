@@ -487,7 +487,7 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
-        timeout = ethers.BigNumber.from(disputedDate).add(disputeValid).toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
       });
 
       it("should emit a DisputeExpired event", async function () {
@@ -617,7 +617,7 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
-        timeout = ethers.BigNumber.from(disputedDate).add(disputeValid).toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
       });
 
       it("should emit a DisputeExpired event", async function () {

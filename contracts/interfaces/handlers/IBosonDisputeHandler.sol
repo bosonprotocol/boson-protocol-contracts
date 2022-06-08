@@ -48,7 +48,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
     /**
      * @notice Expire the dispute and release the funds
      *
-     * Emits an DisputeExpired event if successful.
+     * Emits a DisputeExpired event if successful.
      *
      * Reverts if:
      * - exchange does not exist
