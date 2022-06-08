@@ -5,6 +5,7 @@ import {IBosonDisputeHandler} from "../../interfaces/handlers/IBosonDisputeHandl
 import {DiamondLib} from "../../diamond/DiamondLib.sol";
 import {ProtocolBase} from "../bases/ProtocolBase.sol";
 import {ProtocolLib} from "../libs/ProtocolLib.sol";
+import {FundsLib} from "../libs/FundsLib.sol";
 
 /**
  * @title DisputeHandlerFacet
@@ -26,7 +27,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     /**
      * @notice Raise a dispute
      *
-     * Emits an DisputeRaised event if successful.
+     * Emits a DisputeRaised event if successful.
      *
      * Reverts if:
      * - caller does not hold a voucher for the given exchange id
@@ -74,6 +75,45 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // Notify watchers of state change
         emit DisputeRaised(_exchangeId, exchange.buyerId, offer.sellerId, _complaint);
+    }
+
+    /**
+     * @notice Retract the dispute and release the funds
+     *
+     * Emits a DisputeRetracted event if successful.
+     *
+     * Reverts if:
+     * - exchange does not exist
+     * - exchange is not in a disputed state
+     * - caller is not the buyer for the given exchange id
+     * - dispute is in some state other than resolving or escalated
+     *
+     * @param _exchangeId - the id of the associated exchange
+     */
+    function retractDispute(uint256 _exchangeId) external override {
+        // Get the exchange, should be in dispute state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+
+        // Make sure the caller is buyer associated with the exchange  // {MR: only by game}
+        checkBuyer(exchange.buyerId);
+
+        // Fetch the dispute
+        (, Dispute storage dispute) = fetchDispute(_exchangeId);
+
+        // Make sure the dispute is in the resolving state
+        require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);
+
+        // update dispute and exchange
+        (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
+        disputeDates.finalized = block.timestamp;
+        dispute.state = DisputeState.Retracted;
+        exchange.finalizedDate = block.timestamp;
+
+        // Release the funds
+        FundsLib.releaseFunds(_exchangeId);
+
+        // Notify watchers of state change
+        emit DisputeRetracted(_exchangeId, msg.sender);
     }
 
     /**

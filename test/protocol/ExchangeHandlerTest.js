@@ -1282,7 +1282,7 @@ describe("IBosonExchangeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
 
           // Set time forward to run out the fulfillment period
-          newTime = Number((Number(voucherRedeemableFrom) + Number(fulfillmentPeriod) + 1).toString().substring(0, 11));
+          newTime = ethers.BigNumber.from(voucherRedeemableFrom).add(fulfillmentPeriod).add(1).toNumber();
           await setNextBlockTimestamp(newTime);
 
           // Complete exchange
@@ -1338,10 +1338,9 @@ describe("IBosonExchangeHandler", function () {
           assert.equal(response, false, "Incorrectly reports unfinalized state");
         });
 
-        // TODO Include this test when DisputeHandlerFacet.retractDispute works
-        it.skip("should return true if exchange has a dispute in Retracted state", async function () {
+        it("should return true if exchange has a dispute in Retracted state", async function () {
           // Retract Dispute
-          [exists, response] = await disputeHandler.connect(buyer).retractDispute(exchange.id);
+          await disputeHandler.connect(buyer).retractDispute(exchange.id);
 
           // Now in Retracted state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);

@@ -3,20 +3,21 @@ pragma solidity ^0.8.0;
 
 import {BosonTypes} from "../../domain/BosonTypes.sol";
 import {IBosonDisputeEvents} from "../events/IBosonDisputeEvents.sol";
+import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
 
 /**
  * @title IBosonDisputeHandler
  *
  * @notice Handles disputes associated with exchanges within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xbc2a7fd4
+ * The ERC-165 identifier for this interface is: 0xd9dc2340
  */
-interface IBosonDisputeHandler is IBosonDisputeEvents {
+interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
 
     /**
      * @notice Raise a dispute
      *
-     * Emits an DisputeRaised event if successful.
+     * Emits a DisputeRaised event if successful.
      *
      * Reverts if:
      * - caller does not hold a voucher for the given exchange id
@@ -28,6 +29,21 @@ interface IBosonDisputeHandler is IBosonDisputeEvents {
      * @param _complaint - the buyer's complaint description
      */
     function raiseDispute(uint256 _exchangeId, string calldata _complaint) external;
+
+    /**
+     * @notice Retract the dispute and release the funds
+     *
+     * Emits a DisputeRetracted event if successful.
+     *
+     * Reverts if:
+     * - exchange does not exist
+     * - exchange is not in a disputed state
+     * - caller is not the buyer for the given exchange id
+     * - dispute is in some state other than resolving or escalated
+     *
+     * @param _exchangeId - the id of the associated exchange
+     */
+    function retractDispute(uint256 _exchangeId) external;
 
     /**
      * @notice Gets the details about a given dispute.
