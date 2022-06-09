@@ -416,7 +416,7 @@ describe("IBosonDisputeHandler", function () {
         assert.equal(response, DisputeState.Retracted, "Dispute state is incorrect");
 
         // exchange should also be finalized
-        // Get the dispute as a struct
+        // Get the exchange as a struct
         [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
 
         // Parse into entity
@@ -537,7 +537,7 @@ describe("IBosonDisputeHandler", function () {
         assert.equal(response, DisputeState.Retracted, "Dispute state is incorrect");
 
         // exchange should also be finalized
-        // Get the dispute as a struct
+        // Get the exchange as a struct
         [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
 
         // Parse into entity
@@ -571,9 +571,6 @@ describe("IBosonDisputeHandler", function () {
         });
 
         it("Dispute has not expired yet", async function () {
-          // Set time forward past the dispute resolution period
-          await setNextBlockTimestamp(Number(timeout) - 10);
-
           // Attempt to expire the dispute, expecting revert
           await expect(disputeHandler.connect(rando).expireDispute(exchange.id)).to.revertedWith(
             RevertReasons.DISPUTE_STILL_VALID
