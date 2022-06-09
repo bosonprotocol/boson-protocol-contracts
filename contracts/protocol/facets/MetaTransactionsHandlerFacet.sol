@@ -156,8 +156,45 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     function hashFundDetails(MetaTxFundDetails memory _fundDetails) internal pure returns (bytes32) {
         return
             keccak256(
-                abi.encode(FUND_DETAILS_TYPEHASH, _fundDetails.entityId, _fundDetails.tokenList, _fundDetails.tokenAmounts)
+                abi.encode(
+                    FUND_DETAILS_TYPEHASH,
+                    _fundDetails.entityId,
+                    hashTokenListArray(_fundDetails.tokenList),
+                    hashTokenAmountsArray(_fundDetails.tokenAmounts)
+                )
             );
+    }
+
+    /**
+     * @notice Returns hashed representation of the tokenList array.
+     *
+     * @param _tokenList - the _tokenList array.
+     */
+    function hashTokenListArray(address[] memory _tokenList) internal pure returns (bytes32) {
+        bytes memory encoded;
+        for (uint i = 0; i < _tokenList.length; i++) {
+            encoded = bytes.concat(
+                encoded,
+                abi.encode(_tokenList[i])
+            );
+        }
+        return keccak256(encoded);
+    }
+
+    /**
+     * @notice Returns hashed representation of the tokenAmounts array.
+     *
+     * @param _tokenAmounts - the _tokenAmounts array.
+     */
+    function hashTokenAmountsArray(uint256[] memory _tokenAmounts) internal pure returns (bytes32) {
+        bytes memory encoded;
+        for (uint i = 0; i < _tokenAmounts.length; i++) {
+            encoded = bytes.concat(
+                encoded,
+                abi.encode(_tokenAmounts[i])
+            );
+        }
+        return keccak256(encoded);
     }
 
     /**
