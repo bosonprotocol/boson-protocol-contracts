@@ -1,5 +1,4 @@
 const ethers = require("ethers");
-const Resolution = require("./Resolution");
 
 /**
  * Boson Protocol Domain Entity: Dispute
@@ -12,15 +11,15 @@ class Dispute {
         uint256 exchangeId;
         string complaint;
         DisputeState state;
-        Resolution resolution;
+        uint256 buyerPercent;
     }
     */
 
-  constructor(exchangeId, complaint, state, resolution) {
+  constructor(exchangeId, complaint, state, buyerPercent) {
     this.exchangeId = exchangeId;
     this.complaint = complaint;
     this.state = state;
-    this.resolution = resolution;
+    this.buyerPercent = buyerPercent;
   }
 
   /**
@@ -29,9 +28,8 @@ class Dispute {
    * @returns {Dispute}
    */
   static fromObject(o) {
-    const { exchangeId, complaint, state, resolution } = o;
-    const r = Resolution.fromObject(resolution);
-    return new Dispute(exchangeId, complaint, state, r);
+    const { exchangeId, complaint, state, buyerPercent } = o;
+    return new Dispute(exchangeId, complaint, state, buyerPercent);
   }
 
   /**
@@ -40,16 +38,16 @@ class Dispute {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let exchangeId, complaint, state, resolution;
+    let exchangeId, complaint, state, buyerPercent;
 
     // destructure struct
-    [exchangeId, complaint, state, resolution] = struct;
+    [exchangeId, complaint, state, buyerPercent] = struct;
 
     return Dispute.fromObject({
       exchangeId: exchangeId.toString(),
       complaint,
       state,
-      resolution: Resolution.fromStruct(resolution).toObject(),
+      resolution: buyerPercent.toString(),
     });
   }
 
@@ -74,7 +72,7 @@ class Dispute {
    * @returns {string}
    */
   toStruct() {
-    return [this.exchangeId, this.complaint, this.state, this.resolution.toStruct()];
+    return [this.exchangeId, this.complaint, this.state, this.buyerPercent];
   }
 
   /**
@@ -128,15 +126,15 @@ class Dispute {
   }
 
   /**
-   * Is this Dispute instance's resolution field valid?
+   * Is this Dispute instance's buyerPercent field valid?
    * Must be an array of numbers
    * @returns {boolean}
    */
-  resolutionIsValid() {
+  buyerPercentIsValid() {
     let valid = false;
-    let { resolution } = this;
+    let { buyerPercent } = this;
     try {
-      valid = typeof resolution === "object" && resolution.constructor.name === "Resolution" && resolution.isValid();
+      valid = typeof buyerPercent === "string" && typeof ethers.BigNumber.from(buyerPercent) === "object";
     } catch (e) {}
     return valid;
   }
@@ -146,7 +144,7 @@ class Dispute {
    * @returns {boolean}
    */
   isValid() {
-    return this.exchangeIdIsValid() && this.complaintIsValid() && this.stateIsValid() && this.resolutionIsValid();
+    return this.exchangeIdIsValid() && this.complaintIsValid() && this.stateIsValid() && this.buyerPercentIsValid();
   }
 }
 

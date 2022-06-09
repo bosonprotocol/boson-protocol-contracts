@@ -120,7 +120,7 @@ contract BosonTypes {
         uint256 exchangeId;
         string complaint;
         DisputeState state;
-        Resolution resolution;
+        uint256 buyerPercent;
     }
 
     struct DisputeDates {
@@ -128,10 +128,6 @@ contract BosonTypes {
         uint256 escalated;
         uint256 finalized;
         uint256 timeout;
-    }
-
-    struct Resolution {
-        uint256 buyerPercent;
     }
 
     struct Receipt {
