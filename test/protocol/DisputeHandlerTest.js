@@ -581,11 +581,11 @@ describe("IBosonDisputeHandler", function () {
         });
 
         it("Dispute is in escalated state", async function () {
-          // Set time forward past the dispute resolution period
-          await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
-
           // Escalate a dispute
           await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
+          // Set time forward past the dispute resolution period
+          await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
           // Attempt to expire the dispute, expecting revert
           await expect(disputeHandler.connect(rando).expireDispute(exchange.id)).to.revertedWith(

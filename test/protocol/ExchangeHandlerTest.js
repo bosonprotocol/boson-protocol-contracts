@@ -1390,6 +1390,17 @@ describe("IBosonExchangeHandler", function () {
           assert.equal(response, true, "Incorrectly reports unfinalized state");
         });
 
+        it("should return false if exchange has a dispute in Escalated state", async function () {
+          // Escalate the dispute
+          await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
+          // In Escalated state, ask if exchange is finalized
+          [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
+
+          // It should be finalized
+          assert.equal(response, false, "Incorrectly reports unfinalized state");
+        });
+
         // TODO Include this test when DisputeHandlerFacet.decideDispute works
         it.skip("should return true if exchange has a dispute in Decided state", async function () {
           // Decide Dispute
