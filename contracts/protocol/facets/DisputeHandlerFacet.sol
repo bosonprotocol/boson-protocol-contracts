@@ -223,7 +223,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     /**
      * @notice Puts the dispute into escalated state
      *
-     * Emits an DisputeEscalated event if successful.
+     * Emits a DisputeEscalated event if successful.
      *
      * Reverts if:
      * - exchange does not exist
