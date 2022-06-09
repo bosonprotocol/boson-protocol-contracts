@@ -153,9 +153,9 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * - dispute has expired
      * - exchange does not exist
      * - exchange is not in the disputed state
-     * - callers is neither the seller or the buyer
+     * - caller is neither the seller nor the buyer
      * - signature does not belong to the address of the other party
-     * - dispute state is neither resolving or escalated
+     * - dispute state is neither resolving nor escalated
      *
      * @param _exchangeId  - exchange id to resolve dispute
      * @param _resolution - resolution struct with the information about the split.
