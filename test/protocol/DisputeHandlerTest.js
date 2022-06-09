@@ -491,7 +491,7 @@ describe("IBosonDisputeHandler", function () {
       });
 
       it("should emit a DisputeExpired event", async function () {
-        // Set time forward past the dispute resoltion period
+        // Set time forward past the dispute resolution period
         await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
         // Expire the dispute, testing for the event
@@ -501,7 +501,7 @@ describe("IBosonDisputeHandler", function () {
       });
 
       it("should update state", async function () {
-        // Set time forward past the dispute resoltion period
+        // Set time forward past the dispute resolution period
         await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
         // Expire the dispute
@@ -522,7 +522,7 @@ describe("IBosonDisputeHandler", function () {
         let returnedDispute = Dispute.fromStruct(disputeStruct);
         const returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
 
-        // Returned values should match the input in createSeller
+        // Returned values should match the expected dispute and dispute dates
         for (const [key, value] of Object.entries(dispute)) {
           expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
         }
@@ -533,7 +533,7 @@ describe("IBosonDisputeHandler", function () {
         // Get the dispute state
         [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchange.id);
 
-        // It should match DisputeState.Resolving
+        // It should match DisputeState.Retracted
         assert.equal(response, DisputeState.Retracted, "Dispute state is incorrect");
 
         // exchange should also be finalized
@@ -571,7 +571,7 @@ describe("IBosonDisputeHandler", function () {
         });
 
         it("Dispute has not expired yet", async function () {
-          // Set time forward past the dispute resoltion period
+          // Set time forward past the dispute resolution period
           await setNextBlockTimestamp(Number(timeout) - 10);
 
           // Attempt to expire the dispute, expecting revert
@@ -581,11 +581,11 @@ describe("IBosonDisputeHandler", function () {
         });
 
         it("Dispute is in escalated state", async function () {
+          // Set time forward past the dispute resolution period
+          await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+
           // Escalate a dispute
           await disputeHandler.connect(buyer).escalateDispute(exchange.id);
-
-          // Set time forward past the dispute resoltion period
-          await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
           // Attempt to expire the dispute, expecting revert
           await expect(disputeHandler.connect(rando).expireDispute(exchange.id)).to.revertedWith(
@@ -594,7 +594,7 @@ describe("IBosonDisputeHandler", function () {
         });
 
         it("Dispute is in some state other than resolving", async function () {
-          // Set time forward past the dispute resoltion period
+          // Set time forward past the dispute resolution period
           await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
           // Retract the dispute, put it into RETRACTED state
