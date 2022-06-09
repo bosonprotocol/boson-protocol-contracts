@@ -41,17 +41,16 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         DiamondLib.addSupportedInterface(type(IBosonConfigHandler).interfaceId);
 
         // Initialize protocol config params
-        ProtocolLib.ProtocolStorage storage ps = protocolStorage();
-        ps.tokenAddress = _tokenAddress;
-        ps.treasuryAddress = _treasuryAddress;
-        ps.voucherAddress = _voucherAddress;
-        ps.protocolFeePercentage = _protocolFeePercentage;
-        ps.maxOffersPerGroup = _maxOffersPerGroup;
-        ps.maxTwinsPerBundle = _maxTwinsPerBundle;
-        ps.maxOffersPerBundle = _maxOffersPerBundle;
-        ps.maxOffersPerBatch = _maxOffersPerBatch;
-        ps.maxTokensPerWithdrawal = _maxTokensPerWithdrawal;
-
+        setTokenAddress(_tokenAddress);
+        setTreasuryAddress(_treasuryAddress);
+        setVoucherAddress(_voucherAddress);
+        setProtocolFeePercentage(_protocolFeePercentage);
+        setMaxOffersPerGroup(_maxOffersPerGroup);
+        setMaxTwinsPerBundle(_maxTwinsPerBundle);
+        setMaxOffersPerBundle(_maxOffersPerBundle);
+        setMaxOffersPerBatch(_maxOffersPerBatch);
+        setMaxTokensPerWithdrawal(_maxTokensPerWithdrawal);
+        
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
         pc.nextAccountId = 1;
@@ -74,7 +73,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _tokenAddress - the address of the token contract
      */
     function setTokenAddress(address payable _tokenAddress)
-    external
+    public
     override
     onlyRole(ADMIN)
     {
@@ -102,7 +101,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _treasuryAddress - the address of the multi-sig wallet
      */
     function setTreasuryAddress(address payable _treasuryAddress)
-    external
+    public
     override
     onlyRole(ADMIN)
     {
@@ -130,7 +129,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _voucherAddress - the address of the nft contract (proxy)
      */
     function setVoucherAddress(address _voucherAddress)
-    external
+    public
     override
     onlyRole(ADMIN)
     {
@@ -160,7 +159,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * e.g, 1.75% = 175, 100% = 10000
      */
     function setProtocolFeePercentage(uint16 _protocolFeePercentage)
-    external
+    public
     override
     onlyRole(ADMIN)
     {
@@ -196,7 +195,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _maxOffersPerGroup - the maximum length of {BosonTypes.Group.offerIds}
      */
     function setMaxOffersPerGroup(uint16 _maxOffersPerGroup)
-    external
+    public
     override
     onlyRole(ADMIN)
     {
@@ -224,7 +223,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _maxTwinsPerBundle - the maximum length of {BosonTypes.Bundle.twinIds}
      */
     function setMaxTwinsPerBundle(uint16 _maxTwinsPerBundle)
-    external
+    public
     override
     onlyRole(ADMIN)
     {
@@ -252,7 +251,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _maxOffersPerBundle - the maximum length of {BosonTypes.Bundle.offerIds}
      */
     function setMaxOffersPerBundle(uint16 _maxOffersPerBundle)
-    external
+    public
     override
     onlyRole(ADMIN)
     {
@@ -280,7 +279,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Offer[]}
      */
     function setMaxOffersPerBatch(uint16 _maxOffersPerBatch)
-    external
+    public
     override
     onlyRole(ADMIN)
     {
@@ -308,7 +307,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _maxTokensPerWithdrawal - the maximum length of token list when calling {FundsHandlerFacet.withdraw}
      */
     function setMaxTokensPerWithdrawal(uint16 _maxTokensPerWithdrawal)
-    external
+    public
     override
     onlyRole(ADMIN)
     {

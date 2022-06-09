@@ -33,6 +33,25 @@
       ],
       "name": "DisputeRaised",
       "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "exchangeId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "retractedBy",
+          "type": "address"
+        }
+      ],
+      "name": "DisputeRetracted",
+      "type": "event"
     }
   ],
   "bytecode": "0x",

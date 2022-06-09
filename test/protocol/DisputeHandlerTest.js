@@ -466,7 +466,7 @@ describe("IBosonDisputeHandler", function () {
           );
         });
 
-        it("Dispute is in some state other than resolving", async function () {
+        it("Dispute is in some state other than resolving or escalated", async function () {
           // Retract the dispute, put it into RETRACTED state
           await disputeHandler.connect(buyer).retractDispute(exchange.id);
 
@@ -537,7 +537,7 @@ describe("IBosonDisputeHandler", function () {
         assert.equal(response, DisputeState.Retracted, "Dispute state is incorrect");
 
         // exchange should also be finalized
-        // Get the dispute as a struct
+        // Get the exchange as a struct
         [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
 
         // Parse into entity
@@ -821,7 +821,7 @@ describe("IBosonDisputeHandler", function () {
           assert.equal(response, DisputeState.Resolved, "Dispute state is incorrect");
 
           // exchange should also be finalized
-          // Get the dispute as a struct
+          // Get the exchange as a struct
           [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
 
           // Parse into entity
@@ -920,7 +920,7 @@ describe("IBosonDisputeHandler", function () {
           assert.equal(response, DisputeState.Resolved, "Dispute state is incorrect");
 
           // exchange should also be finalized
-          // Get the dispute as a struct
+          // Get the exchange as a struct
           [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
 
           // Parse into entity
@@ -1020,7 +1020,7 @@ describe("IBosonDisputeHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_STATE);
         });
 
-        it("Callers is neither the seller or the buyer for the given exchange id", async function () {
+        it("Caller is neither the seller or the buyer for the given exchange id", async function () {
           // Wallet without any account
           // Attempt to resolve the dispute, expecting revert
           await expect(disputeHandler.connect(rando).resolveDispute(exchange.id, resolution, r, s, v)).to.revertedWith(
