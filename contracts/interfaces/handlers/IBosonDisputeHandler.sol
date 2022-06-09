@@ -44,6 +44,21 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @param _exchangeId - the id of the associated exchange
      */
     function retractDispute(uint256 _exchangeId) external;
+    
+    /**
+     * @notice Expire the dispute and release the funds
+     *
+     * Emits a DisputeExpired event if successful.
+     *
+     * Reverts if:
+     * - exchange does not exist
+     * - exchange is not in a disputed state
+     * - dispute is still valid
+     * - dispute is in some state other than resolving
+     *
+     * @param _exchangeId - the id of the associated exchange
+     */
+    function expireDispute(uint256 _exchangeId) external;
 
      /**
      * @notice Resolve a dispute by providing the information about the split. Callable by the buyer or seller, but they must provide the resolution signed by the other party

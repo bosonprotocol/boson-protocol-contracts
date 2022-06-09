@@ -416,7 +416,7 @@ describe("IBosonDisputeHandler", function () {
         assert.equal(response, DisputeState.Retracted, "Dispute state is incorrect");
 
         // exchange should also be finalized
-        // Get the dispute as a struct
+        // Get the exchange as a struct
         [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
 
         // Parse into entity
@@ -472,6 +472,133 @@ describe("IBosonDisputeHandler", function () {
 
           // Attempt to retract the dispute, expecting revert
           await expect(disputeHandler.connect(buyer).retractDispute(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE
+          );
+        });
+      });
+    });
+
+    context("👉 expireDispute()", async function () {
+      beforeEach(async function () {
+        // Raise a dispute
+        tx = await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+
+        // Get the block timestamp of the confirmed tx and set disputedDate
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+        disputedDate = block.timestamp.toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+      });
+
+      it("should emit a DisputeExpired event", async function () {
+        // Set time forward past the dispute resolution period
+        await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+
+        // Expire the dispute, testing for the event
+        await expect(disputeHandler.connect(rando).expireDispute(exchange.id))
+          .to.emit(disputeHandler, "DisputeExpired")
+          .withArgs(exchange.id, rando.address);
+      });
+
+      it("should update state", async function () {
+        // Set time forward past the dispute resolution period
+        await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+
+        // Expire the dispute
+        tx = await disputeHandler.connect(rando).expireDispute(exchange.id);
+
+        // Get the block timestamp of the confirmed tx and set finalizedDate
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+        finalizedDate = block.timestamp.toString();
+
+        dispute = new Dispute(exchange.id, complaint, DisputeState.Retracted, new Resolution("0"));
+        disputeDates = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
+
+        // Get the dispute as a struct
+        [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
+
+        // Parse into entities
+        let returnedDispute = Dispute.fromStruct(disputeStruct);
+        const returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
+
+        // Returned values should match the expected dispute and dispute dates
+        for (const [key, value] of Object.entries(dispute)) {
+          expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
+        }
+        for (const [key, value] of Object.entries(disputeDates)) {
+          expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Get the dispute state
+        [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchange.id);
+
+        // It should match DisputeState.Retracted
+        assert.equal(response, DisputeState.Retracted, "Dispute state is incorrect");
+
+        // exchange should also be finalized
+        // Get the exchange as a struct
+        [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+
+        // Parse into entity
+        let returnedExchange = Exchange.fromStruct(exchangeStruct);
+
+        // FinalizeDate should be set correctly
+        assert.equal(returnedExchange.finalizedDate, finalizedDate, "Exchange finalizeDate is incorect");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Exchange does not exist", async function () {
+          // An invalid exchange id
+          const exchangeId = "666";
+
+          // Attempt to expire the dispute, expecting revert
+          await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWith(
+            RevertReasons.NO_SUCH_EXCHANGE
+          );
+        });
+
+        it("Exchange is not in a disputed state", async function () {
+          exchange.id++;
+
+          // Commit to offer, creating a new exchange
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Attempt to expire the dispute, expecting revert
+          await expect(disputeHandler.connect(rando).expireDispute(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE
+          );
+        });
+
+        it("Dispute has not expired yet", async function () {
+          // Attempt to expire the dispute, expecting revert
+          await expect(disputeHandler.connect(rando).expireDispute(exchange.id)).to.revertedWith(
+            RevertReasons.DISPUTE_STILL_VALID
+          );
+        });
+
+        it.skip("Dispute is in escalated state", async function () {
+          // Set time forward past the dispute resolution period
+          await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+
+          // Escalate a dispute
+          await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
+          // Attempt to expire the dispute, expecting revert
+          await expect(disputeHandler.connect(rando).expireDispute(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE
+          );
+        });
+
+        it("Dispute is in some state other than resolving", async function () {
+          // Set time forward past the dispute resolution period
+          await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+
+          // Retract the dispute, put it into RETRACTED state
+          await disputeHandler.connect(buyer).retractDispute(exchange.id);
+
+          // Attempt to expire the dispute, expecting revert
+          await expect(disputeHandler.connect(rando).expireDispute(exchange.id)).to.revertedWith(
             RevertReasons.INVALID_STATE
           );
         });
