@@ -140,7 +140,7 @@ async function main() {
         config.maxOffersPerBatch,
         config.maxTokensPerWithdrawal
     ];
-    [configHandlerFacet] = await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+    const { facets: [configHandlerFacet] } = await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
     deploymentComplete('ConfigHandlerFacet', configHandlerFacet.address, [], contracts);
 
     // Deploy and cut facets
