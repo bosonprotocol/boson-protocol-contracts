@@ -92,7 +92,9 @@ describe("IBosonMetaTransactionsHandler", function () {
     buyerBalanceAfter,
     buyerAvailableFunds,
     buyerBalanceBefore,
-    expectedBuyerAvailableFunds;
+    expectedBuyerAvailableFunds,
+    tokenListBuyer,
+    tokenAmountsBuyer;
 
   before(async function () {
     // get interface Ids
@@ -1379,12 +1381,17 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // deposit to seller's pool
         await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, sellerDeposit);
+        await fundsHandler.connect(operator).depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, {
+          value: sellerDeposit,
+        });
 
         // commit to both offers
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: offerNative.price });
 
         // cancel the voucher, so both seller and buyer have something to withdraw
         await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
+        await exchangeHandler.connect(buyer).cancelVoucher(++exchangeId); // canceling the voucher in the native currency
 
         // expected payoffs - they are the same for token and native currency
         // buyer: price - buyerCancelPenalty - protocolFee
@@ -1394,7 +1401,9 @@ describe("IBosonMetaTransactionsHandler", function () {
           .toString();
 
         // prepare the MetaTxFundDetails struct
-        validFundDetails = new MetaTxFundDetails(buyerId, [mockToken.address], [buyerPayoff]);
+        tokenListBuyer = [mockToken.address, ethers.constants.AddressZero];
+        tokenAmountsBuyer = [buyerPayoff, buyerPayoff];
+        validFundDetails = new MetaTxFundDetails(buyerId, tokenListBuyer, tokenAmountsBuyer);
         expect(validFundDetails.isValid()).is.true;
 
         // Prepare the message
@@ -1433,7 +1442,10 @@ describe("IBosonMetaTransactionsHandler", function () {
         buyerBalanceBefore = await mockToken.balanceOf(buyer.address);
 
         // Chain state should match the expected available funds before the withdrawal
-        expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff)]);
+        expectedBuyerAvailableFunds = new FundsList([
+          new Funds(mockToken.address, "Foreign20", buyerPayoff),
+          new Funds(ethers.constants.AddressZero, "Native currency", buyerPayoff),
+        ]);
         expect(buyerAvailableFunds).to.eql(
           expectedBuyerAvailableFunds,
           "Buyer available funds mismatch before withdrawal"
@@ -1477,8 +1489,8 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
 
       it("does not modify revert reasons", async function () {
-        // Set token address to Zero
-        validFundDetails = new MetaTxFundDetails(buyerId, [ethers.constants.AddressZero], [buyerPayoff]);
+        // Set token address to boson token
+        validFundDetails = new MetaTxFundDetails(buyerId, [bosonToken.address], [buyerPayoff]);
         expect(validFundDetails.isValid()).is.true;
 
         // Prepare the message
