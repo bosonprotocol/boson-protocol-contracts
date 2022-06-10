@@ -30,7 +30,7 @@ describe("IBosonAccountHandler", function () {
   let disputeResolver, disputeResolverStruct, disputeResolver2, disputeResolver2Struct;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
-  let oneMonth, oneWeek, blockNumber, block, protocolFeePrecentage;
+  let oneMonth, oneWeek, blockNumber, block, protocolFeePercentage;
   let bosonVoucher, clients;
   let offerId,
     sellerId,

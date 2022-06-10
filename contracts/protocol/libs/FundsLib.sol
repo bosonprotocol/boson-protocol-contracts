@@ -30,7 +30,7 @@ library FundsLib {
      * @param _offerId - id of the offer with the details
      */
     function encumberFunds(uint256 _offerId, uint256 _buyerId) internal {
-        // Load protocol mappings storage
+        // Load protocol entities storage
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
 
         // fetch offer to get the exchange token, price and seller 
@@ -68,7 +68,7 @@ library FundsLib {
      * @param _exchangeId - exchange id
      */
     function releaseFunds(uint256 _exchangeId) internal {
-        // Load protocol mappings storage
+        // Load protocol entities storage
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
 
         // Get the exchange and its state

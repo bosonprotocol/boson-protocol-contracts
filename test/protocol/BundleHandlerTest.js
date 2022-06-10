@@ -70,7 +70,7 @@ describe("IBosonBundleHandler", function () {
     invalidOfferId;
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
-  let protocolFeePrecentage;
+  let protocolFeePercentage;
   let disputeResolver;
 
   before(async function () {
@@ -114,8 +114,8 @@ describe("IBosonBundleHandler", function () {
     [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
     [bosonVoucher] = clients;
 
-    // set protocolFeePrecentage
-    protocolFeePrecentage = "200"; // 2 %
+    // set protocolFeePercentage
+    protocolFeePercentage = "200"; // 2 %
 
     // Add config Handler, so twin id starts at 1
     const protocolConfig = [
@@ -225,7 +225,7 @@ describe("IBosonBundleHandler", function () {
         offerId = sellerId = "1"; // argument sent to contract for createOffer will be ignored
         price = ethers.utils.parseUnits("1.5", "ether").toString();
         sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
         exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency

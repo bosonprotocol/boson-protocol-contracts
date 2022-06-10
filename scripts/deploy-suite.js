@@ -48,7 +48,7 @@ function getConfig() {
     mainnet: '0x4a25E18076DDcFd646ED14ABC07286c2A4c1256A',
     ropsten: '0x0000000000000000000000000000000000000000',
     hardhat: '0x0000000000000000000000000000000000000000',
-    test: '0x0000000000000000000000000000000000000000"
+    test: '0x0000000000000000000000000000000000000000'
   };
 
   // Voucher contract address
@@ -59,17 +59,21 @@ function getConfig() {
     test: '0x0000000000000000000000000000000000000000'
   };
 
-  return {
+  return [{
     tokenAddress: TOKEN[network],
     treasuryAddress: TREASURY[network],
-    voucherAddress: VOUCHER[network],
-    feePercentage,
+    voucherAddress: VOUCHER[network]
+    }, {
     maxOffersPerGroup,
     maxTwinsPerBundle,
     maxOffersPerBundle,
     maxOffersPerBatch,
     maxTokensPerWithdrawal
-  };
+    }, 
+    {
+      protocolFeePercentage: feePercentage,
+    }
+  ];
 }
 
 /**
@@ -129,24 +133,7 @@ async function main() {
   await accessController.grantRole(Role.UPGRADER, deployer);
 
   // Cut the ConfigHandlerFacet facet into the Diamond
-  const protocolConfig = [
-    {
-      treasuryAddress: config.treasuryAddress,
-      tokenAddress: config.tokenAddress,
-      voucherAddress: config.voucherAddress,
-    },
-    {
-      maxOffersPerGroup: config.maxOffersPerGroup,
-      maxOffersPerBundle: config.maxOffersPerBundle,
-      maxTwinsPerBundle: config.maxTwinsPerBundle,
-      maxOffersPerBatch: config.maxOffersPerBatch,
-      maxTokensPerWithdrawal: config.maxTokensPerWithdrawal,
-    },
-    {
-      protocolFeePercentage: config.feePercentage,
-    },
-  ];
-  const { facets: [configHandlerFacet] } = await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+  const { facets: [configHandlerFacet] } = await deployProtocolConfigFacet(protocolDiamond, config, gasLimit);
     deploymentComplete('ConfigHandlerFacet', configHandlerFacet.address, [], contracts);
     
   // Deploy and cut facets

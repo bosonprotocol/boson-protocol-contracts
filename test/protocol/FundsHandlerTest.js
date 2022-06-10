@@ -61,7 +61,7 @@ describe("IBosonFundsHandler", function () {
     voided;
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
-  let protocolFeePrecentage;
+  let protocolFeePercentage;
   let block, blockNumber;
   let protocolId, exchangeId, buyerId, sellerPayoff, buyerPayoff;
   let sellersAvailableFunds,
@@ -116,8 +116,8 @@ describe("IBosonFundsHandler", function () {
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
     [, , [bosonVoucher]] = await deployProtocolClients(protocolClientArgs, gasLimit);
 
-    // set protocolFeePrecentage
-    protocolFeePrecentage = "200"; // 2 %
+    // set protocolFeePercentage
+    protocolFeePercentage = "200"; // 2 %
 
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
@@ -374,7 +374,7 @@ describe("IBosonFundsHandler", function () {
         // Required constructor params
         price = ethers.utils.parseUnits("1.5", "ether").toString();
         sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "2";
         exchangeToken = mockToken.address; // Mock token addres
@@ -1235,7 +1235,7 @@ describe("IBosonFundsHandler", function () {
       // Required constructor params
       price = ethers.utils.parseUnits("1.5", "ether").toString();
       sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "2";
       exchangeToken = mockToken.address; // MockToken address
@@ -2146,8 +2146,8 @@ describe("IBosonFundsHandler", function () {
             .toString();
 
           // set the new procol fee
-          protocolFeePrecentage = "300"; // 3%
-          await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePrecentage);
+          protocolFeePercentage = "300"; // 3%
+          await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
         });
 
         it("Protocol fee for existing exchanges should be the same as at the offer creation", async function () {

@@ -59,7 +59,7 @@ describe("IBosonDisputeHandler", function () {
     voided;
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
-  let protocolFeePrecentage;
+  let protocolFeePercentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, exchangeStruct, finalizedDate, state;
   let dispute, disputedDate, complaint, disputeStruct, timeout;
@@ -111,7 +111,7 @@ describe("IBosonDisputeHandler", function () {
     [bosonVoucher] = clients;
     await accessController.grantRole(Role.CLIENT, bosonVoucher.address);
 
-    // set protocolFeePrecentage
+    // set protocolFeePercentage
     protocolFeePercentage = "200"; // 2 %
 
     // Add config Handler, so ids start at 1, and so voucher address can be found

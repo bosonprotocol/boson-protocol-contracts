@@ -112,27 +112,27 @@ describe("IBosonConfigHandler", function () {
 
   describe("After deploy tests", async function () {
     beforeEach(async function () {
-    // Add config Handler, so twin id starts at 1
-    const protocolConfig = [
-      // Protocol addresses
-      {
-        treasuryAddress: treasury.address,
-        tokenAddress: token.address,
-        voucherAddress: voucher.address,
-      },
-      // Protocol limits
-      {
-        maxOffersPerGroup,
-        maxTwinsPerBundle,
-        maxOffersPerBundle,
-        maxOffersPerBatch,
-        maxTokensPerWithdrawal,
-      },
-      // Protocol fees
-      {
-        protocolFeePercentage: protocolFee,
-      },
-    ];
+      // Add config Handler, so twin id starts at 1
+      const protocolConfig = [
+        // Protocol addresses
+        {
+          treasuryAddress: treasury.address,
+          tokenAddress: token.address,
+          voucherAddress: voucher.address,
+        },
+        // Protocol limits
+        {
+          maxOffersPerGroup,
+          maxTwinsPerBundle,
+          maxOffersPerBundle,
+          maxOffersPerBatch,
+          maxTokensPerWithdrawal,
+        },
+        // Protocol fees
+        {
+          protocolFeePercentage: protocolFee,
+        },
+      ];
       await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
     });
 

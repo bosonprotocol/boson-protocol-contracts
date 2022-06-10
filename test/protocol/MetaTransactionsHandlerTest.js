@@ -76,7 +76,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     oneWeek;
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
-  let protocolFeePrecentage;
+  let protocolFeePercentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
   let disputeResolver, active;
@@ -137,8 +137,8 @@ describe("IBosonMetaTransactionsHandler", function () {
     [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
     [bosonVoucher] = clients;
 
-    // set protocolFeePrecentage
-    protocolFeePrecentage = "200"; // 2 %
+    // set protocolFeePercentage
+    protocolFeePercentage = "200"; // 2 %
 
     // Add config Handler
     const protocolConfig = [
@@ -646,7 +646,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Required constructor params
         price = ethers.utils.parseUnits("1.5", "ether").toString();
         sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
         exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
@@ -865,7 +865,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Required constructor params
         price = ethers.utils.parseUnits("1.5", "ether").toString();
         sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
         exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency

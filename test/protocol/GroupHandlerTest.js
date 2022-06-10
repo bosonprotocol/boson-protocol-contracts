@@ -43,7 +43,7 @@ describe("IBosonGroupHandler", function () {
     voided;
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
-  let protocolFeePrecentage;
+  let protocolFeePercentage;
   let group, nextGroupId, invalidGroupId;
   let offerIds, condition;
   let groupHandlerFacet_Factory;
@@ -79,8 +79,8 @@ describe("IBosonGroupHandler", function () {
     await deployProtocolHandlerFacets(protocolDiamond, ["OfferHandlerFacet"]);
     await deployProtocolHandlerFacets(protocolDiamond, ["GroupHandlerFacet"]);
 
-    // set protocolFeePrecentage
-    protocolFeePrecentage = "200"; // 2 %
+    // set protocolFeePercentage
+    protocolFeePercentage = "200"; // 2 %
 
     // Add config Handler, so ids starts at 1
     const protocolConfig = [
@@ -165,7 +165,7 @@ describe("IBosonGroupHandler", function () {
         id = sellerId = "1"; // argument sent to contract for createGroup will be ignored
         price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
         sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
-        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
         buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
         quantityAvailable = `${(i + 1) * 2}`;
         exchangeToken = ethers.constants.AddressZero.toString();

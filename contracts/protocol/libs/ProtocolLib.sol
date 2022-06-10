@@ -48,7 +48,7 @@ library ProtocolLib {
         uint16 protocolFeePercentage; // 1.75% = 175, 100% = 10000
     }
 
-    // Protocol Entities storage
+    // Protocol entities storage
     struct ProtocolEntities {
         // offer id => offer
         mapping(uint256 => BosonTypes.Offer) offers;
@@ -76,7 +76,7 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Twin) twins;
     }
 
-    // Protocol Lookups storage
+    // Protocol lookups storage
     struct ProtocolLookups {
         // offer id => exchange ids
         mapping(uint256 => uint256[]) exchangeIdsByOffer;
@@ -139,7 +139,7 @@ library ProtocolLib {
     /**
      * @dev Get the protocol addresses slot
      *
-     * @return pa protocol addresses slot
+     * @return pa the protocol addresses slot
      */
     function protocolAddresses() internal pure returns (ProtocolAddresses storage pa) {
         bytes32 position = PROTOCOL_ADDRESSES_POSITION;
@@ -151,7 +151,7 @@ library ProtocolLib {
     /**
      * @dev Get the protocol limits slot
      *
-     * @return pl protocol limits slot
+     * @return pl the protocol limits slot
      */
     function protocolLimits() internal pure returns (ProtocolLimits storage pl) {
         bytes32 position = PROTOCOL_LIMITS_POSITION;
@@ -163,7 +163,7 @@ library ProtocolLib {
     /**
      * @dev Get the protocol entities slot
      *
-     * @return pe protocol entities slot
+     * @return pe the protocol entities slot
      */
     function protocolEntities() internal pure returns (ProtocolEntities storage pe) {
         bytes32 position = PROTOCOL_ENTITIES_POSITION;
@@ -175,7 +175,7 @@ library ProtocolLib {
     /**
      * @dev Get the protocol lookups slot
      *
-     * @return pl protocol lookups slot
+     * @return pl the protocol lookups slot
      */
     function protocolLookups() internal pure returns (ProtocolLookups storage pl) {
         bytes32 position = PROTOCOL_LOOKUPS_POSITION; 
@@ -187,7 +187,7 @@ library ProtocolLib {
     /**
      * @dev Get the protocol fees slot
      *
-     * @return pf protocol fees slot
+     * @return pf the protocol fees slot
      */
     function protocolFees() internal pure returns (ProtocolFees storage pf) {
         bytes32 position = PROTOCOL_FEES_POSITION;
@@ -199,7 +199,7 @@ library ProtocolLib {
     /**
      * @dev Get the protocol counters slot
      *
-     * @return pc protocol counters slot
+     * @return pc the protocol counters slot
      */
     function protocolCounters() internal pure returns (ProtocolCounters storage pc) {
         bytes32 position = PROTOCOL_COUNTERS_POSITION;
