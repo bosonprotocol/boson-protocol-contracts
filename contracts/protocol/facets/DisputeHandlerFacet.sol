@@ -153,13 +153,13 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         require(_newDisputeTimeout > disputeDates.timeout, INVALID_DISPUTE_TIMEOUT);
 
         // Dispute must be in a resolving state
-        require(dispute.state == DisputeState.Resolved, INVALID_STATE);
+        require(dispute.state == DisputeState.Resolving, INVALID_STATE);
 
         // Update the timeout
         disputeDates.timeout = _newDisputeTimeout;
 
         // Notify watchers of state change
-        emit DisputeTimeoutExtened(_exchangeId, _newDisputeTimeout, msg.sender);
+        emit DisputeTimeoutExtended(_exchangeId, _newDisputeTimeout, msg.sender);
     }
 
     /**

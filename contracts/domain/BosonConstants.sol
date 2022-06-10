@@ -62,7 +62,6 @@ contract BosonConstants {
     string internal constant INVALID_DISPUTE_DURATION = "Invalid dispute duration";
     string internal constant INVALID_DISPUTE_RESOLVER = "Invalid dispute resolver";
     string internal constant INVALID_QUANTITY_AVAILABLE = "Invalid quantity available";
-    string internal constant INVALID_DISPUTE_TIMEOUT = "Invalid dispute timeout";
 
     // Revert Reasons: Group related
     string internal constant NO_SUCH_GROUP = "No such offer";
@@ -117,6 +116,7 @@ contract BosonConstants {
     string internal constant DISPUTE_HAS_EXPIRED = "Dispute has expired";
     string internal constant INVALID_BUYER_PERCENT = "Invalid buyer percent";
     string internal constant DISPUTE_STILL_VALID = "Dispute still valid";
+    string internal constant INVALID_DISPUTE_TIMEOUT = "Invalid dispute timeout";
 }
 
 // TODO: Refactor to use file level constants throughout or use custom Errors
