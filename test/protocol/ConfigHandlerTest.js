@@ -57,15 +57,24 @@ describe("IBosonConfigHandler", function () {
     context("📋 Initializer", async function () {
       it("should initialize the config handler and emit set events", async function () {
         const protocolConfig = [
-          token.address,
-          treasury.address,
-          voucher.address,
-          protocolFee,
-          maxOffersPerGroup,
-          maxTwinsPerBundle,
-          maxOffersPerBundle,
-          maxOffersPerBatch,
-          maxTokensPerWithdrawal,
+          // Protocol addresses
+          {
+            tokenAddress: token.address,
+            treasuryAddress: treasury.address,
+            voucherAddress: voucher.address,
+          },
+          // Protocol limits
+          {
+            maxOffersPerGroup,
+            maxTwinsPerBundle,
+            maxOffersPerBundle,
+            maxOffersPerBatch,
+            maxTokensPerWithdrawal,
+          },
+          //Protocol fees
+          {
+            protocolFeePercentage: protocolFee,
+          },
         ];
 
         const { cutTransaction } = await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
@@ -103,18 +112,27 @@ describe("IBosonConfigHandler", function () {
 
   describe("After deploy tests", async function () {
     beforeEach(async function () {
-      const protocolConfig = [
-        token.address,
-        treasury.address,
-        voucher.address,
-        protocolFee,
+    // Add config Handler, so twin id starts at 1
+    const protocolConfig = [
+      // Protocol addresses
+      {
+        treasuryAddress: treasury.address,
+        tokenAddress: token.address,
+        voucherAddress: voucher.address,
+      },
+      // Protocol limits
+      {
         maxOffersPerGroup,
         maxTwinsPerBundle,
         maxOffersPerBundle,
         maxOffersPerBatch,
         maxTokensPerWithdrawal,
-      ];
-
+      },
+      // Protocol fees
+      {
+        protocolFeePercentage: protocolFee,
+      },
+    ];
       await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
     });
 

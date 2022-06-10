@@ -142,15 +142,24 @@ describe("IBosonMetaTransactionsHandler", function () {
 
     // Add config Handler
     const protocolConfig = [
-      "0x0000000000000000000000000000000000000000",
-      "0x0000000000000000000000000000000000000000",
-      bosonVoucher.address,
-      protocolFeePrecentage,
-      "100",
-      "100",
-      "100",
-      "100",
-      "100",
+      // Protocol addresses
+      {
+        treasuryAddress: "0x0000000000000000000000000000000000000000",
+        tokenAddress: "0x0000000000000000000000000000000000000000",
+        voucherAddress: bosonVoucher.address,
+      },
+      // Protocol limits
+      {
+        maxOffersPerGroup: 100,
+        maxTwinsPerBundle: 100,
+        maxOffersPerBundle: 100,
+        maxOffersPerBatch: 100,
+        maxTokensPerWithdrawal: 100,
+      },
+      // Protocol fees
+      {
+        protocolFeePercentage,
+      },
     ];
 
     // Deploy the Config facet, initializing the protocol config
