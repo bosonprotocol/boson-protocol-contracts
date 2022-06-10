@@ -1525,7 +1525,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           buyerBalanceAfter = await mockToken.balanceOf(buyer.address);
 
           // Chain state should match the expected available funds after the withdrawal
-          // Since all tokens are withdrawn, token should be removed from the list
+          // Since all tokens are withdrawn, funds list should be empty.
           expectedBuyerAvailableFunds = new FundsList([]);
           expect(buyerAvailableFunds).to.eql(
             expectedBuyerAvailableFunds,
