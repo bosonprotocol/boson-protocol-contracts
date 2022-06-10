@@ -10,7 +10,7 @@ import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles disputes associated with exchanges within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x374702cd
+ * The ERC-165 identifier for this interface is: 0xdea63846
  */
 interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
 
@@ -44,6 +44,25 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @param _exchangeId - the id of the associated exchange
      */
     function retractDispute(uint256 _exchangeId) external;
+
+    /**
+     * @notice Extend the dispute timeout, allowing more time for mutual resolution.
+     * As a consequnece also buyer gets more time to escalate the dispute
+     *
+     * Emits a DisputeTimeoutExtened event if successful.
+     *
+     * Reverts if:
+     * - exchange does not exist
+     * - exchange is not in a disputed state
+     * - caller is not the seller
+     * - dispute has expired already
+     * - new dispute timeout is before the current dispute timeout
+     * - dispute is in some state other than resolving
+     *
+     * @param _exchangeId - the id of the associated exchange
+     * @param _newDisputeTimeout - new date when resolution period ends
+     */
+    function extendDisputeTimeout(uint256 _exchangeId, uint256 _newDisputeTimeout) external;
     
     /**
      * @notice Expire the dispute and release the funds
@@ -105,6 +124,18 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @return state - the dispute state. See {BosonTypes.DisputeState}
      */
     function getDisputeState(uint256 _exchangeId) external view returns(bool exists, BosonTypes.DisputeState state);
+
+    /**
+     * @notice Gets the timeout of a given dispute.
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return exists - true if the dispute exists
+     * @return timeout - the end of resolution period
+     */
+    function getDisputeTimeout(uint256 _exchangeId)
+    external
+    view
+    returns(bool exists, uint256 timeout);
 
     /**
      * @notice Is the given dispute in a finalized state?
