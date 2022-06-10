@@ -87,6 +87,11 @@ describe("MetaTxFundDetails", function () {
       metaTxFundDetails.tokenList = [accounts[0].address];
       expect(metaTxFundDetails.tokenListIsValid()).is.true;
       expect(metaTxFundDetails.isValid()).is.true;
+
+      // Valid field value
+      metaTxFundDetails.tokenList = [];
+      expect(metaTxFundDetails.tokenListIsValid()).is.true;
+      expect(metaTxFundDetails.isValid()).is.true;
     });
 
     it("Always present, tokenAmounts must be the array containing string representation of a BigNumber", async function () {
@@ -112,6 +117,11 @@ describe("MetaTxFundDetails", function () {
 
       // Valid field value
       metaTxFundDetails.tokenAmounts = ["126"];
+      expect(metaTxFundDetails.tokenAmountsIsValid()).is.true;
+      expect(metaTxFundDetails.isValid()).is.true;
+
+      // Valid field value
+      metaTxFundDetails.tokenAmounts = [];
       expect(metaTxFundDetails.tokenAmountsIsValid()).is.true;
       expect(metaTxFundDetails.isValid()).is.true;
     });

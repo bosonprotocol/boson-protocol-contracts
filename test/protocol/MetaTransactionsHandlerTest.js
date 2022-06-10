@@ -1402,7 +1402,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // prepare the MetaTxFundDetails struct
         tokenListBuyer = [mockToken.address, ethers.constants.AddressZero];
-        tokenAmountsBuyer = [buyerPayoff, buyerPayoff];
+        tokenAmountsBuyer = [buyerPayoff, ethers.BigNumber.from(buyerPayoff).div("2").toString()];
         validFundDetails = new MetaTxFundDetails(buyerId, tokenListBuyer, tokenAmountsBuyer);
         expect(validFundDetails.isValid()).is.true;
 
@@ -1436,56 +1436,110 @@ describe("IBosonMetaTransactionsHandler", function () {
         };
       });
 
-      it("Should emit MetaTransactionExecuted event", async () => {
-        // Read on chain state
-        buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-        buyerBalanceBefore = await mockToken.balanceOf(buyer.address);
+      context("Should emit MetaTransactionExecuted event", async () => {
+        beforeEach(async function () {
+          // Read on chain state
+          buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
+          buyerBalanceBefore = await mockToken.balanceOf(buyer.address);
 
-        // Chain state should match the expected available funds before the withdrawal
-        expectedBuyerAvailableFunds = new FundsList([
-          new Funds(mockToken.address, "Foreign20", buyerPayoff),
-          new Funds(ethers.constants.AddressZero, "Native currency", buyerPayoff),
-        ]);
-        expect(buyerAvailableFunds).to.eql(
-          expectedBuyerAvailableFunds,
-          "Buyer available funds mismatch before withdrawal"
-        );
+          // Chain state should match the expected available funds before the withdrawal
+          expectedBuyerAvailableFunds = new FundsList([
+            new Funds(mockToken.address, "Foreign20", buyerPayoff),
+            new Funds(ethers.constants.AddressZero, "Native currency", buyerPayoff),
+          ]);
+          expect(buyerAvailableFunds).to.eql(
+            expectedBuyerAvailableFunds,
+            "Buyer available funds mismatch before withdrawal"
+          );
+        });
 
-        // Collect the signature components
-        let { r, s, v } = await prepareDataSignatureParameters(
-          buyer,
-          customTransactionType,
-          "MetaTxFund",
-          message,
-          metaTransactionsHandler.address
-        );
+        it("Withdraws multiple tokens", async () => {
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionType,
+            "MetaTxFund",
+            message,
+            metaTransactionsHandler.address
+          );
 
-        // Withdraw funds. Send a meta transaction, check for event.
-        await expect(
-          metaTransactionsHandler.executeMetaTxWithdrawFunds(buyer.address, validFundDetails, nonce, r, s, v)
-        )
-          .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-          .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+          // Withdraw funds. Send a meta transaction, check for event.
+          await expect(
+            metaTransactionsHandler.executeMetaTxWithdrawFunds(buyer.address, validFundDetails, nonce, r, s, v)
+          )
+            .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+            .withArgs(buyer.address, deployer.address, message.functionName, nonce);
 
-        // Read on chain state
-        buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-        buyerBalanceAfter = await mockToken.balanceOf(buyer.address);
+          // Read on chain state
+          buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
+          buyerBalanceAfter = await mockToken.balanceOf(buyer.address);
 
-        // Chain state should match the expected available funds after the withdrawal
-        // Since all tokens are withdrawn, token should be removed from the list
-        expectedBuyerAvailableFunds = new FundsList([]);
-        expect(buyerAvailableFunds).to.eql(
-          expectedBuyerAvailableFunds,
-          "Buyer available funds mismatch after withdrawal"
-        );
+          // Chain state should match the expected available funds after the withdrawal
+          // Since all tokens are withdrawn, token should be removed from the list
+          expectedBuyerAvailableFunds = new FundsList([
+            new Funds(
+              ethers.constants.AddressZero,
+              "Native currency",
+              ethers.BigNumber.from(buyerPayoff).div("2").toString()
+            ),
+          ]);
+          expect(buyerAvailableFunds).to.eql(
+            expectedBuyerAvailableFunds,
+            "Buyer available funds mismatch after withdrawal"
+          );
 
-        // Token balance is increased for the buyer payoff
-        expect(buyerBalanceAfter).to.eql(buyerBalanceBefore.add(buyerPayoff), "Buyer token balance mismatch");
+          // Token balance is increased for the buyer payoff
+          expect(buyerBalanceAfter).to.eql(buyerBalanceBefore.add(buyerPayoff), "Buyer token balance mismatch");
 
-        // Verify that nonce is used. Expect true.
-        let expectedResult = true;
-        result = await metaTransactionsHandler.connect(buyer).isUsedNonce(nonce);
-        assert.equal(result, expectedResult, "Nonce is unused");
+          // Verify that nonce is used. Expect true.
+          let expectedResult = true;
+          result = await metaTransactionsHandler.connect(buyer).isUsedNonce(nonce);
+          assert.equal(result, expectedResult, "Nonce is unused");
+        });
+
+        it("withdraws all the tokens when we use empty tokenList and tokenAmounts arrays", async () => {
+          validFundDetails = new MetaTxFundDetails(buyerId, [], []);
+          expect(validFundDetails.isValid()).is.true;
+
+          // Prepare the message
+          message.fundDetails = validFundDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionType,
+            "MetaTxFund",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Withdraw funds. Send a meta transaction, check for event.
+          await expect(
+            metaTransactionsHandler.executeMetaTxWithdrawFunds(buyer.address, validFundDetails, nonce, r, s, v)
+          )
+            .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+            .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+
+          // Read on chain state
+          buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
+          buyerBalanceAfter = await mockToken.balanceOf(buyer.address);
+
+          // Chain state should match the expected available funds after the withdrawal
+          // Since all tokens are withdrawn, token should be removed from the list
+          expectedBuyerAvailableFunds = new FundsList([]);
+          expect(buyerAvailableFunds).to.eql(
+            expectedBuyerAvailableFunds,
+            "Buyer available funds mismatch after withdrawal"
+          );
+
+          // Token balance is increased for the buyer payoff
+          expect(buyerBalanceAfter).to.eql(buyerBalanceBefore.add(buyerPayoff), "Buyer token balance mismatch");
+
+          // Verify that nonce is used. Expect true.
+          let expectedResult = true;
+          result = await metaTransactionsHandler.connect(buyer).isUsedNonce(nonce);
+          assert.equal(result, expectedResult, "Nonce is unused");
+        });
       });
 
       it("does not modify revert reasons", async function () {

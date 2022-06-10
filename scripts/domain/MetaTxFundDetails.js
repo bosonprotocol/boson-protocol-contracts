@@ -17,8 +17,8 @@ class MetaTxFundDetails {
 
   constructor(entityId, tokenList, tokenAmounts) {
     this.entityId = entityId;
-    this.tokenList = tokenList;
-    this.tokenAmounts = tokenAmounts;
+    this.tokenList = tokenList || [];
+    this.tokenAmounts = tokenAmounts || [];
   }
 
   /**
@@ -45,8 +45,8 @@ class MetaTxFundDetails {
 
     return MetaTxFundDetails.fromObject({
       entityId: entityId.toString(),
-      tokenList: tokenList,
-      tokenAmounts: tokenAmounts.map((amount) => amount.toString()),
+      tokenList: tokenList ? tokenList : [],
+      tokenAmounts: tokenAmounts ? tokenAmounts.map((amount) => amount.toString()) : [],
     });
   }
 
@@ -98,38 +98,31 @@ class MetaTxFundDetails {
 
   /**
    * Is this MetaTxFundDetails instance's tokenList field valid?
-   * Must be an array of numbers
+   * Must be an array, and if members are present, they must be a eip55 compliant Ethereum address.
    * @returns {boolean}
    */
   tokenListIsValid() {
     let valid = false;
     let { tokenList } = this;
+    let validateMembers = (ok, tokenAddress) => ok && eip55.verify(eip55.encode(tokenAddress));
     try {
-      const tokenListIsArray = Array.isArray(tokenList);
-      if (tokenListIsArray) {
-        tokenList.forEach((tokenAddress) => {
-          valid = eip55.verify(eip55.encode(tokenAddress));
-        });
-      }
+      valid = Array.isArray(tokenList) && (tokenList.length === 0 || tokenList.reduce(validateMembers, true));
     } catch (e) {}
     return valid;
   }
 
   /**
    * Is this MetaTxFundDetails instance's tokenAmounts field valid?
-   * Must be an array of numbers
+   * Must be an array, and if members are present, they must be string representations of BigNumbers
    * @returns {boolean}
    */
   tokenAmountsIsValid() {
     let valid = false;
     let { tokenAmounts } = this;
+    let validateMembers = (ok, tokenAmount) =>
+      ok && typeof tokenAmount === "string" && typeof ethers.BigNumber.from(tokenAmount) === "object";
     try {
-      const tokenAmountsIsArray = Array.isArray(tokenAmounts);
-      if (tokenAmountsIsArray) {
-        tokenAmounts.forEach((amount) => {
-          valid = typeof amount === "string" && typeof ethers.BigNumber.from(amount) === "object";
-        });
-      }
+      valid = Array.isArray(tokenAmounts) && (tokenAmounts.length === 0 || tokenAmounts.reduce(validateMembers, true));
     } catch (e) {}
     return valid;
   }
