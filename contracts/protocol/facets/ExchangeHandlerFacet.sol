@@ -94,7 +94,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
 
         // Create and store a new exchange
         uint256 exchangeId = protocolCounters().nextExchangeId++;
-        Exchange storage exchange = protocolStorage().exchanges[exchangeId];
+        Exchange storage exchange = protocolEntities().exchanges[exchangeId];
         exchange.id = exchangeId;
         exchange.offerId = _offerId;
         exchange.buyerId = buyerId;
@@ -106,13 +106,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         exchange.voucher.validUntilDate = startDate + fetchOfferDurations(_offerId).voucherValid;
 
         // Map the offerId to the exchangeId as one-to-many
-        protocolStorage().exchangeIdsByOffer[_offerId].push(exchangeId);
+        protocolLookups().exchangeIdsByOffer[_offerId].push(exchangeId);
 
         // Decrement offer's quantity available
         offer.quantityAvailable--;
 
         // Issue voucher
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolStorage().voucherAddress);
+        IBosonVoucher bosonVoucher = IBosonVoucher(protocolAddresses().voucherAddress);
         bosonVoucher.issueVoucher(exchangeId, buyer);
 
         // Notify watchers of state change
@@ -515,7 +515,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     function burnVoucher(uint256 _exchangeId)
     internal
     {
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolStorage().voucherAddress);
+        IBosonVoucher bosonVoucher = IBosonVoucher(protocolAddresses().voucherAddress);
         bosonVoucher.burnVoucher(_exchangeId);
     }
 

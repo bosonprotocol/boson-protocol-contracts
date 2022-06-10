@@ -47,12 +47,48 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
-     * @dev Get the Protocol Storage slot
+     * @dev Get the Protocol Addresses slot
      *
-     * @return ps the Protocol Storage slot
+     * @return pa the Protocol Addresses slot
      */
-    function protocolStorage() internal pure returns (ProtocolLib.ProtocolStorage storage ps) {
-        ps = ProtocolLib.protocolStorage();
+    function protocolAddresses() internal pure returns (ProtocolLib.ProtocolAddresses storage pa) {
+        pa = ProtocolLib.protocolAddresses();
+    }
+
+    /**
+     * @dev Get the Protocol Limits slot
+     *
+     * @return pl the Protocol Limits slot
+     */
+    function protocolLimits() internal pure returns (ProtocolLib.ProtocolLimits storage pl) {
+        pl = ProtocolLib.protocolLimits();
+    }
+
+    /**
+     * @dev Get the Protocol Entities slot
+     *
+     * @return pm the Protocol Entities slot
+     */
+    function protocolEntities() internal pure returns (ProtocolLib.ProtocolEntities storage pm) {
+        pm = ProtocolLib.protocolEntities();
+    }
+
+    /**
+     * @dev Get the Protocol Lookups slot
+     *
+     * @return pl the Protocol Lookups slot
+     */
+    function protocolLookups() internal pure returns (ProtocolLib.ProtocolLookups storage pl) {
+        pl = ProtocolLib.protocolLookups();
+    }
+
+     /**
+     * @dev Get the Protocol Fees slot
+     *
+     * @return pf the Protocol Fees slot
+     */
+    function protocolFees() internal pure returns (ProtocolLib.ProtocolFees storage pf) {
+        pf = ProtocolLib.protocolFees();
     }
 
     /**
@@ -91,7 +127,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function getSellerIdByOperator(address _operator) internal view returns (bool exists, uint256 sellerId) {
         // Get the seller Id
-        sellerId = protocolStorage().sellerIdByOperator[_operator];
+        sellerId = protocolLookups().sellerIdByOperator[_operator];
 
         // Determine existence
         exists = (sellerId > 0);
@@ -106,7 +142,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function getSellerIdByAdmin(address _admin) internal view returns (bool exists, uint256 sellerId) {
         // Get the seller Id
-        sellerId = protocolStorage().sellerIdByAdmin[_admin];
+        sellerId = protocolLookups().sellerIdByAdmin[_admin];
 
         // Determine existence
         exists = (sellerId > 0);
@@ -121,7 +157,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function getSellerIdByClerk(address _clerk) internal view returns (bool exists, uint256 sellerId) {
         // Get the seller Id
-        sellerId = protocolStorage().sellerIdByClerk[_clerk];
+        sellerId = protocolLookups().sellerIdByClerk[_clerk];
 
         // Determine existence
         exists = (sellerId > 0);
@@ -136,7 +172,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function getBuyerIdByWallet(address _wallet) internal view returns (bool exists, uint256 buyerId) {
         // Get the buyer Id
-        buyerId = protocolStorage().buyerIdByWallet[_wallet];
+        buyerId = protocolLookups().buyerIdByWallet[_wallet];
 
         // Determine existence
         exists = (buyerId > 0);
@@ -151,7 +187,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function getGroupIdByOffer(uint256 _offerId) internal view returns (bool exists, uint256 groupId) {
         // Get the group Id
-        groupId = protocolStorage().groupIdByOffer[_offerId];
+        groupId = protocolLookups().groupIdByOffer[_offerId];
 
         // Determine existence
         exists = (groupId > 0);
@@ -166,7 +202,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function fetchSeller(uint256 _sellerId) internal view returns (bool exists, Seller storage seller) {
         // Get the seller's slot
-        seller = protocolStorage().sellers[_sellerId];
+        seller = protocolEntities().sellers[_sellerId];
 
         // Determine existence
         exists = (_sellerId > 0 && seller.id == _sellerId);
@@ -181,7 +217,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function fetchBuyer(uint256 _buyerId) internal view returns (bool exists, BosonTypes.Buyer storage buyer) {
         // Get the buyer's slot
-        buyer = protocolStorage().buyers[_buyerId];
+        buyer = protocolEntities().buyers[_buyerId];
 
         // Determine existence
         exists = (_buyerId > 0 && buyer.id == _buyerId);
@@ -196,7 +232,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function fetchDisputeResolver(uint256 _disputeResolverId) internal view returns (bool exists, BosonTypes.DisputeResolver storage disputeResolver) {
         // Get the dispute resolver's slot
-        disputeResolver = protocolStorage().disputeResolvers[_disputeResolverId];
+        disputeResolver = protocolEntities().disputeResolvers[_disputeResolverId];
 
         // Determine existence
         exists = (_disputeResolverId > 0 && disputeResolver.id == _disputeResolverId);
@@ -211,7 +247,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function fetchOffer(uint256 _offerId) internal view returns (bool exists, Offer storage offer) {
         // Get the offer's slot
-        offer = protocolStorage().offers[_offerId];
+        offer = protocolEntities().offers[_offerId];
 
         // Determine existence
         exists = (_offerId > 0 && offer.id == _offerId);
@@ -225,7 +261,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function fetchOfferDates(uint256 _offerId) internal view returns (BosonTypes.OfferDates storage offerDates) {
         // Get the offerDates's slot
-        offerDates = protocolStorage().offerDates[_offerId];
+        offerDates = protocolEntities().offerDates[_offerId];
     }
 
     /**
@@ -236,7 +272,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function fetchOfferDurations(uint256 _offerId) internal view returns (BosonTypes.OfferDurations storage offerDurations) {
         // Get the offer's slot
-        offerDurations = protocolStorage().offerDurations[_offerId];
+        offerDurations = protocolEntities().offerDurations[_offerId];
     }
 
     /**
@@ -248,7 +284,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function fetchGroup(uint256 _groupId) internal view returns (bool exists, Group storage group) {
         // Get the group's slot
-        group = protocolStorage().groups[_groupId];
+        group = protocolEntities().groups[_groupId];
 
         // Determine existence
         exists = (_groupId > 0 && group.id == _groupId);
@@ -267,7 +303,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
         returns (bool exists, Exchange storage exchange)
     {
         // Get the exchange's slot
-        exchange = protocolStorage().exchanges[_exchangeId];
+        exchange = protocolEntities().exchanges[_exchangeId];
 
         // Determine existence
         exists = (_exchangeId > 0 && exchange.id == _exchangeId);
@@ -286,7 +322,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     returns (bool exists, Dispute storage dispute)
     {
         // Get the dispute's slot
-        dispute = protocolStorage().disputes[_exchangeId];
+        dispute = protocolEntities().disputes[_exchangeId];
 
         // Determine existence
         exists = (_exchangeId > 0 && dispute.exchangeId == _exchangeId);
@@ -306,7 +342,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     returns (bool exists, DisputeDates storage disputeDates)
     {
         // Get the disputeDates's slot
-        disputeDates = protocolStorage().disputeDates[_exchangeId];
+        disputeDates = protocolEntities().disputeDates[_exchangeId];
 
         // Determine existence
         exists = disputeDates.disputed > 0;
@@ -321,7 +357,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function fetchTwin(uint256 _twinId) internal view returns (bool exists, Twin storage twin) {
         // Get the twin's slot
-        twin = protocolStorage().twins[_twinId];
+        twin = protocolEntities().twins[_twinId];
  
         // Determine existence
         exists = (_twinId > 0 && twin.id == _twinId);
@@ -336,7 +372,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function fetchBundle(uint256 _bundleId) internal view returns (bool exists, Bundle storage bundle) {
         // Get the bundle's slot
-        bundle = protocolStorage().bundles[_bundleId];
+        bundle = protocolEntities().bundles[_bundleId];
 
         // Determine existence
         exists = (_bundleId > 0 && bundle.id == _bundleId);
@@ -381,7 +417,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function fetchBundleIdByOffer(uint256 _offerId) internal view returns (bool exists, uint256 bundleId) {
         // Get the bundle Id
-        bundleId = protocolStorage().bundleIdByOffer[_offerId];
+        bundleId = protocolLookups().bundleIdByOffer[_offerId];
 
         // Determine existence
         exists = (bundleId > 0);
@@ -396,7 +432,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function fetchBundleIdsByTwin(uint256 _twinId) internal view returns (bool exists, uint256[] memory bundleIds) {
         // Get the bundle Ids
-        bundleIds = protocolStorage().bundleIdsByTwin[_twinId];
+        bundleIds = protocolLookups().bundleIdsByTwin[_twinId];
 
         // Determine existence
         exists = (bundleIds.length > 0);
@@ -411,7 +447,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function getExchangeIdsByOffer(uint256 _offerId) internal view returns (bool exists, uint256[] memory exchangeIds) {
         // Get the exchange Ids
-        exchangeIds = protocolStorage().exchangeIdsByOffer[_offerId];
+        exchangeIds = protocolLookups().exchangeIdsByOffer[_offerId];
 
         // Determine existence
         exists = (exchangeIds.length > 0);
