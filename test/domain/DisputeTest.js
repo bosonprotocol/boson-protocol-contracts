@@ -24,7 +24,7 @@ describe("Dispute", function () {
       expect(dispute.exchangeIdIsValid()).is.true;
       expect(dispute.complaintIsValid()).is.true;
       expect(dispute.stateIsValid()).is.true;
-      expect(dispute.buyerPercentdIsValid()).is.true;
+      expect(dispute.buyerPercentIsValid()).is.true;
       expect(dispute.isValid()).is.true;
     });
   });

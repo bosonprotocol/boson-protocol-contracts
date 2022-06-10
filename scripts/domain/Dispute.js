@@ -47,7 +47,7 @@ class Dispute {
       exchangeId: exchangeId.toString(),
       complaint,
       state,
-      resolution: buyerPercent.toString(),
+      buyerPercent: buyerPercent.toString(),
     });
   }
 
