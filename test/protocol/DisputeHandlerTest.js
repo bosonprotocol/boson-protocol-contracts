@@ -582,9 +582,6 @@ describe("IBosonDisputeHandler", function () {
           // Escalate a dispute
           await disputeHandler.connect(buyer).escalateDispute(exchange.id);
 
-          // Set time forward past the dispute resolution period
-          await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
-
           // Attempt to expire the dispute, expecting revert
           await expect(disputeHandler.connect(rando).expireDispute(exchange.id)).to.revertedWith(
             RevertReasons.INVALID_STATE
@@ -592,9 +589,6 @@ describe("IBosonDisputeHandler", function () {
         });
 
         it("Dispute is in some state other than resolving", async function () {
-          // Set time forward past the dispute resolution period
-          await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
-
           // Retract the dispute, put it into RETRACTED state
           await disputeHandler.connect(buyer).retractDispute(exchange.id);
 
@@ -1070,14 +1064,11 @@ describe("IBosonDisputeHandler", function () {
         });
 
         it("Dispute is in some state other than resolving", async function () {
-          // Set time forward past the dispute resoltion period
-          await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
-
           // Retract the dispute, put it into RETRACTED state
           await disputeHandler.connect(buyer).retractDispute(exchange.id);
 
           // Attempt to escalate the dispute, expecting revert
-          await expect(disputeHandler.connect(rando).expireDispute(exchange.id)).to.revertedWith(
+          await expect(disputeHandler.connect(buyer).escalateDispute(exchange.id)).to.revertedWith(
             RevertReasons.INVALID_STATE
           );
         });

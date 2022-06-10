@@ -129,12 +129,12 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // Fetch the dispute and dispute dates
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
- 
-        // make sure the dispute not expired already
-        require(block.timestamp >= disputeDates.timeout, DISPUTE_STILL_VALID);      
-
+        
         // Make sure the dispute is in the resolving or escalated state
         require(dispute.state == DisputeState.Resolving, INVALID_STATE);
+
+        // make sure the dispute not expired already
+        require(block.timestamp >= disputeDates.timeout, DISPUTE_STILL_VALID);      
 
         // Finalize the dispute
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Retracted, Resolution(0));
@@ -247,13 +247,13 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // make sure the dispute not expired already        
         require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
 
-        // Make sure the dispute is in the resolving or escalated state             
+        // Make sure the dispute is in the resolving state             
         require(dispute.state == DisputeState.Resolving, INVALID_STATE);
 
         // store the time of escalation
         disputeDates.escalated = block.timestamp;
 
-        // Finalize the dispute
+        // Set the dispute state
         dispute.state = DisputeState.Escalated;
 
         // fetch offer to get info about dispute resolver id
