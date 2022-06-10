@@ -14,6 +14,7 @@ const OfferDurations = require("../../scripts/domain/OfferDurations");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
+const DisputeState = require("../../scripts/domain/DisputeState");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const Twin = require("../../scripts/domain/Twin");
 const TokenType = require("../../scripts/domain/TokenType");
@@ -43,6 +44,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     accessController,
     accountHandler,
     fundsHandler,
+    disputeHandler,
     exchangeHandler,
     offerHandler,
     twinHandler,
@@ -129,6 +131,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
       "TwinHandlerFacet",
+      "DisputeHandlerFacet",
       "MetaTransactionsHandlerFacet",
     ]);
 
@@ -182,6 +185,9 @@ describe("IBosonMetaTransactionsHandler", function () {
 
     // Cast Diamond to ITwinHandler
     twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonDisputeHandler
+    disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
 
     // Cast Diamond to IBosonMetaTransactionsHandler
     metaTransactionsHandler = await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamond.address);
@@ -1287,6 +1293,127 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Execute meta transaction, expecting revert.
             await expect(
               metaTransactionsHandler.executeMetaTxCompleteExchange(buyer.address, validExchangeDetails, nonce, r, s, v)
+            ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+          });
+        });
+      });
+
+      context("👉 executeMetaTxRetractDispute()", async function () {
+        beforeEach(async function () {
+          // Prepare the message
+          message.functionName = "retractDispute(uint256)";
+          message.exchangeDetails = validExchangeDetails;
+          message.from = buyer.address;
+
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Set the dispute reason
+          let complaint = "Tastes weird";
+          await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+        });
+
+        it("Should emit MetaTransactionExecuted event", async () => {
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionType,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // send a meta transaction, check for event
+          await expect(
+            metaTransactionsHandler.executeMetaTxRetractDispute(buyer.address, validExchangeDetails, nonce, r, s, v)
+          )
+            .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+            .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+
+          // Get the dispute state
+          let response;
+          [, response] = await disputeHandler.connect(rando).getDisputeState(exchange.id);
+          // It should match DisputeState.Retracted
+          assert.equal(response, DisputeState.Retracted, "Dispute state is incorrect");
+
+          // Verify that nonce is used. Expect true.
+          let expectedResult = true;
+          result = await metaTransactionsHandler.connect(buyer).isUsedNonce(nonce);
+          assert.equal(result, expectedResult, "Nonce is unused");
+        });
+
+        it("does not modify revert reasons", async function () {
+          // An invalid exchange id
+          id = "666";
+
+          // prepare the MetaTxExchangeDetails struct
+          validExchangeDetails = new MetaTxExchangeDetails(id);
+          expect(validExchangeDetails.isValid()).is.true;
+
+          // Prepare the message
+          message.exchangeDetails = validExchangeDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionType,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Execute meta transaction, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTxRetractDispute(buyer.address, validExchangeDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("Should fail when replay transaction", async function () {
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              buyer,
+              customTransactionType,
+              "MetaTxExchange",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute the meta transaction.
+            await metaTransactionsHandler.executeMetaTxRetractDispute(
+              buyer.address,
+              validExchangeDetails,
+              nonce,
+              r,
+              s,
+              v
+            );
+
+            // Execute meta transaction again with the same nonce, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTxRetractDispute(buyer.address, validExchangeDetails, nonce, r, s, v)
+            ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+          });
+
+          it("Should fail when Signer and Signature do not match", async function () {
+            // Prepare the message
+            message.from = rando.address;
+
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              rando, // Different user, not buyer.
+              customTransactionType,
+              "MetaTxExchange",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTxRetractDispute(buyer.address, validExchangeDetails, nonce, r, s, v)
             ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
           });
         });
