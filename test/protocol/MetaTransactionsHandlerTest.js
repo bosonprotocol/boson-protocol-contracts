@@ -6,6 +6,7 @@ const { gasLimit } = require("../../environments");
 const Exchange = require("../../scripts/domain/Exchange");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const MetaTxExchangeDetails = require("../../scripts/domain/MetaTxExchangeDetails");
+const MetaTxFundDetails = require("../../scripts/domain/MetaTxFundDetails");
 const MetaTxOfferDetails = require("../../scripts/domain/MetaTxOfferDetails");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
@@ -13,6 +14,7 @@ const OfferDurations = require("../../scripts/domain/OfferDurations");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
+const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const Twin = require("../../scripts/domain/Twin");
 const TokenType = require("../../scripts/domain/TokenType");
 const Voucher = require("../../scripts/domain/Voucher");
@@ -35,7 +37,7 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 describe("IBosonMetaTransactionsHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, buyer, admin, other1;
+  let accounts, deployer, rando, operator, buyer, admin, clerk, treasury, other1;
   let erc165,
     protocolDiamond,
     accessController,
@@ -79,6 +81,18 @@ describe("IBosonMetaTransactionsHandler", function () {
   let exchange, finalizedDate, state;
   let disputeResolver, active;
   let twin, supplyAvailable, tokenId, supplyIds, tokenAddress, tokenType, success;
+  let exchangeId,
+    mockToken,
+    buyerPayoff,
+    offerToken,
+    offerNative,
+    metaTxFundType,
+    fundType,
+    validFundDetails,
+    buyerBalanceAfter,
+    buyerAvailableFunds,
+    buyerBalanceBefore,
+    expectedBuyerAvailableFunds;
 
   before(async function () {
     // get interface Ids
@@ -93,7 +107,9 @@ describe("IBosonMetaTransactionsHandler", function () {
     buyer = accounts[3];
     rando = accounts[4];
     admin = accounts[5];
-    other1 = accounts[6];
+    clerk = accounts[6];
+    treasury = accounts[7];
+    other1 = accounts[8];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -160,7 +176,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     metaTransactionsHandler = await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamond.address);
 
     // Deploy the mock tokens
-    [bosonToken] = await deployMockTokens(gasLimit);
+    [bosonToken, mockToken] = await deployMockTokens(gasLimit, ["BosonToken", "Foreign20"]);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -1262,6 +1278,264 @@ describe("IBosonMetaTransactionsHandler", function () {
               metaTransactionsHandler.executeMetaTxCompleteExchange(buyer.address, validExchangeDetails, nonce, r, s, v)
             ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
           });
+        });
+      });
+    });
+
+    context("👉 executeMetaTxWithdrawFunds()", async function () {
+      beforeEach(async function () {
+        // Set a random nonce
+        nonce = parseInt(ethers.utils.randomBytes(8));
+
+        // Initial ids for all the things
+        id = sellerId = exchangeId = "1";
+        buyerId = "3"; // created after a seller and a dispute resolver
+        active = true;
+
+        // Create a valid seller
+        seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
+        expect(seller.isValid()).is.true;
+        await accountHandler.connect(operator).createSeller(seller);
+
+        // Create a valid dispute resolver
+        disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+        expect(disputeResolver.isValid()).is.true;
+
+        // Register the dispute resolver
+        await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+
+        // Create an offer to commit to
+        oneWeek = 604800 * 1000; //  7 days in milliseconds
+        oneMonth = 2678400 * 1000; // 31 days in milliseconds
+
+        // Get the current block info
+        blockNumber = await ethers.provider.getBlockNumber();
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Required constructor params
+        price = ethers.utils.parseUnits("1.5", "ether").toString();
+        sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
+        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+        buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
+        quantityAvailable = "2";
+        exchangeToken = mockToken.address; // Mock token addres
+        disputeResolverId = "2";
+        offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+        metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
+        voided = false;
+
+        // Create a valid offer entity
+        offerToken = new Offer(
+          id,
+          sellerId,
+          price,
+          sellerDeposit,
+          protocolFee,
+          buyerCancelPenalty,
+          quantityAvailable,
+          exchangeToken,
+          disputeResolverId,
+          metadataUri,
+          offerChecksum,
+          voided
+        );
+        expect(offerToken.isValid()).is.true;
+
+        offerNative = offerToken.clone();
+        offerNative.id = "2";
+        offerNative.exchangeToken = ethers.constants.AddressZero;
+        expect(offerNative.isValid()).is.true;
+
+        // Required constructor params
+        validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
+        validUntil = ethers.BigNumber.from(block.timestamp)
+          .add(oneMonth * 6)
+          .toString(); // until 6 months
+        voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+        voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
+
+        // Create a valid offerDates, then set fields in tests directly
+        offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
+
+        // Required constructor params
+        fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
+        voucherValid = oneMonth.toString(); // offers valid for one month
+        resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
+
+        // Create a valid offerDurations, then set fields in tests directly
+        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
+
+        // Create both offers
+        await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations);
+        await offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations);
+
+        // top up seller's and buyer's account
+        await mockToken.mint(operator.address, sellerDeposit);
+        await mockToken.mint(buyer.address, price);
+
+        // approve protocol to transfer the tokens
+        await mockToken.connect(operator).approve(protocolDiamond.address, sellerDeposit);
+        await mockToken.connect(buyer).approve(protocolDiamond.address, price);
+
+        // deposit to seller's pool
+        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, sellerDeposit);
+
+        // commit to both offers
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+
+        // cancel the voucher, so both seller and buyer have something to withdraw
+        await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
+
+        // expected payoffs - they are the same for token and native currency
+        // buyer: price - buyerCancelPenalty - protocolFee
+        buyerPayoff = ethers.BigNumber.from(offerToken.price)
+          .sub(offerToken.buyerCancelPenalty)
+          .sub(offerToken.protocolFee)
+          .toString();
+
+        // prepare the MetaTxFundDetails struct
+        validFundDetails = new MetaTxFundDetails(buyerId, [mockToken.address], [buyerPayoff]);
+        expect(validFundDetails.isValid()).is.true;
+
+        // Prepare the message
+        message = {};
+        message.nonce = parseInt(nonce);
+        message.contractAddress = fundsHandler.address;
+        message.functionName = "withdrawFunds(uint256,address[],uint256[])";
+        message.fundDetails = validFundDetails;
+        message.from = buyer.address;
+
+        // Set the fund Type
+        fundType = [
+          { name: "entityId", type: "uint256" },
+          { name: "tokenList", type: "address[]" },
+          { name: "tokenAmounts", type: "uint256[]" },
+        ];
+
+        // Set the message Type
+        metaTxFundType = [
+          { name: "nonce", type: "uint256" },
+          { name: "from", type: "address" },
+          { name: "contractAddress", type: "address" },
+          { name: "functionName", type: "string" },
+          { name: "fundDetails", type: "MetaTxFundDetails" },
+        ];
+
+        customTransactionType = {
+          MetaTxFund: metaTxFundType,
+          MetaTxFundDetails: fundType,
+        };
+      });
+
+      it("Should emit MetaTransactionExecuted event", async () => {
+        // Read on chain state
+        buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
+        buyerBalanceBefore = await mockToken.balanceOf(buyer.address);
+
+        // Chain state should match the expected available funds before the withdrawal
+        expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff)]);
+        expect(buyerAvailableFunds).to.eql(
+          expectedBuyerAvailableFunds,
+          "Buyer available funds mismatch before withdrawal"
+        );
+
+        // Collect the signature components
+        let { r, s, v } = await prepareDataSignatureParameters(
+          buyer,
+          customTransactionType,
+          "MetaTxFund",
+          message,
+          metaTransactionsHandler.address
+        );
+
+        // Withdraw funds. Send a meta transaction, check for event.
+        await expect(
+          metaTransactionsHandler.executeMetaTxWithdrawFunds(buyer.address, validFundDetails, nonce, r, s, v)
+        )
+          .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+          .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+
+        // Read on chain state
+        buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
+        buyerBalanceAfter = await mockToken.balanceOf(buyer.address);
+
+        // Chain state should match the expected available funds after the withdrawal
+        // Since all tokens are withdrawn, token should be removed from the list
+        expectedBuyerAvailableFunds = new FundsList([]);
+        expect(buyerAvailableFunds).to.eql(
+          expectedBuyerAvailableFunds,
+          "Buyer available funds mismatch after withdrawal"
+        );
+
+        // Token balance is increased for the buyer payoff
+        expect(buyerBalanceAfter).to.eql(buyerBalanceBefore.add(buyerPayoff), "Buyer token balance mismatch");
+
+        // Verify that nonce is used. Expect true.
+        let expectedResult = true;
+        result = await metaTransactionsHandler.connect(buyer).isUsedNonce(nonce);
+        assert.equal(result, expectedResult, "Nonce is unused");
+      });
+
+      it("does not modify revert reasons", async function () {
+        // Set token address to Zero
+        validFundDetails = new MetaTxFundDetails(buyerId, [ethers.constants.AddressZero], [buyerPayoff]);
+        expect(validFundDetails.isValid()).is.true;
+
+        // Prepare the message
+        message.fundDetails = validFundDetails;
+
+        // Collect the signature components
+        let { r, s, v } = await prepareDataSignatureParameters(
+          buyer,
+          customTransactionType,
+          "MetaTxFund",
+          message,
+          metaTransactionsHandler.address
+        );
+
+        // Execute meta transaction, expecting revert.
+        await expect(
+          metaTransactionsHandler.executeMetaTxWithdrawFunds(buyer.address, validFundDetails, nonce, r, s, v)
+        ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Should fail when replay transaction", async function () {
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionType,
+            "MetaTxFund",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Execute the meta transaction.
+          await metaTransactionsHandler.executeMetaTxWithdrawFunds(buyer.address, validFundDetails, nonce, r, s, v);
+
+          // Execute meta transaction again with the same nonce, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTxWithdrawFunds(buyer.address, validFundDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+        });
+
+        it("Should fail when Signer and Signature do not match", async function () {
+          // Prepare the message
+          message.from = rando.address;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            rando, // Different user, not buyer.
+            customTransactionType,
+            "MetaTxFund",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Execute meta transaction, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTxWithdrawFunds(buyer.address, validFundDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         });
       });
     });

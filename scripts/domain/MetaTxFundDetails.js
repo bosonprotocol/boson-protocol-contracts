@@ -44,9 +44,9 @@ class MetaTxFundDetails {
     [entityId, tokenList, tokenAmounts] = struct;
 
     return MetaTxFundDetails.fromObject({
-        entityId: entityId.toString(),
-        tokenList: tokenList,
-        tokenAmounts: tokenAmounts.map((amount) => amount.toString()),
+      entityId: entityId.toString(),
+      tokenList: tokenList,
+      tokenAmounts: tokenAmounts.map((amount) => amount.toString()),
     });
   }
 

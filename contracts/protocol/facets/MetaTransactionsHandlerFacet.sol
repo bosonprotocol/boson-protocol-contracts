@@ -545,7 +545,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             fundDetails: _fundDetails
         });
         require(
-            verify(_userAddress, hashMetaTxFundDetails(metaTx), _sigR, _sigS, _sigV),
+            EIP712Lib.verify(_userAddress, hashMetaTxFundDetails(metaTx), _sigR, _sigS, _sigV),
             SIGNER_AND_SIGNATURE_DO_NOT_MATCH
         );
 

@@ -88,7 +88,7 @@ describe("MetaTxFundDetails", function () {
       expect(metaTxFundDetails.tokenListIsValid()).is.true;
       expect(metaTxFundDetails.isValid()).is.true;
     });
-    
+
     it("Always present, tokenAmounts must be the array containing string representation of a BigNumber", async function () {
       // Invalid field value
       metaTxFundDetails.tokenAmounts = "zedzdeadbaby";
