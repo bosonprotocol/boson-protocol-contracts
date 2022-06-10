@@ -62,7 +62,7 @@ describe("MetaTxFundDetails", function () {
       expect(metaTxFundDetails.isValid()).is.true;
     });
 
-    it("Always present, tokenList must be the array containing string representation of a BigNumber", async function () {
+    it("Always present, tokenList must be the array of valid etherum addresses", async function () {
       // Invalid field value
       metaTxFundDetails.tokenList = "zedzdeadbaby";
       expect(metaTxFundDetails.tokenListIsValid()).is.false;
@@ -107,6 +107,11 @@ describe("MetaTxFundDetails", function () {
 
       // Invalid field value
       metaTxFundDetails.tokenAmounts = 12;
+      expect(metaTxFundDetails.tokenAmountsIsValid()).is.false;
+      expect(metaTxFundDetails.isValid()).is.false;
+
+      // Invalid field value
+      metaTxFundDetails.tokenAmounts = [12, undefined, "12"];
       expect(metaTxFundDetails.tokenAmountsIsValid()).is.false;
       expect(metaTxFundDetails.isValid()).is.false;
 
