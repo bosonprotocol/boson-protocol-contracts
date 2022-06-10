@@ -68,6 +68,7 @@ describe("IBosonDisputeHandler", function () {
   let disputeResolver, active;
   let buyerPercent, resolution;
   let resolutionType, customSignatureType, message, r, s, v;
+  let returnedDispute, returnedDisputeDates;
 
   before(async function () {
     // get interface Ids
@@ -298,8 +299,8 @@ describe("IBosonDisputeHandler", function () {
         [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
         // Parse into entity
-        const returnedDispute = Dispute.fromStruct(disputeStruct);
-        const returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
+        returnedDispute = Dispute.fromStruct(disputeStruct);
+        returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
 
         // Returned values should match expected dispute data
         for (const [key, value] of Object.entries(dispute)) {
@@ -398,8 +399,8 @@ describe("IBosonDisputeHandler", function () {
         [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
         // Parse into entities
-        const returnedDispute = Dispute.fromStruct(disputeStruct);
-        const returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
+        returnedDispute = Dispute.fromStruct(disputeStruct);
+        returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
 
         // Returned values should match expected dispute and dispute dates
         for (const [key, value] of Object.entries(dispute)) {
@@ -519,8 +520,8 @@ describe("IBosonDisputeHandler", function () {
         [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
         // Parse into entities
-        let returnedDispute = Dispute.fromStruct(disputeStruct);
-        const returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
+        returnedDispute = Dispute.fromStruct(disputeStruct);
+        returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
 
         // Returned values should match the expected dispute and dispute dates
         for (const [key, value] of Object.entries(dispute)) {
@@ -670,8 +671,8 @@ describe("IBosonDisputeHandler", function () {
           [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
           // Parse into entities
-          const returnedDispute = Dispute.fromStruct(disputeStruct);
-          const returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
+          returnedDispute = Dispute.fromStruct(disputeStruct);
+          returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
 
           // Returned values should match the expected dispute and dispute dates
           for (const [key, value] of Object.entries(dispute)) {
@@ -769,8 +770,8 @@ describe("IBosonDisputeHandler", function () {
           [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
           // Parse into entities
-          const returnedDispute = Dispute.fromStruct(disputeStruct);
-          const returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
+          returnedDispute = Dispute.fromStruct(disputeStruct);
+          returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
 
           // Returned values should match the expected dispute and dispute dates
           for (const [key, value] of Object.entries(dispute)) {
@@ -991,7 +992,7 @@ describe("IBosonDisputeHandler", function () {
         // Escalate the dispute, testing for the event
         await expect(disputeHandler.connect(buyer).escalateDispute(exchange.id))
           .to.emit(disputeHandler, "DisputeEscalated")
-          .withArgs(exchange.id, buyer.address);
+          .withArgs(exchange.id, offer.disputeResolverId, buyer.address);
       });
 
       it("should update state", async function () {
@@ -1010,8 +1011,8 @@ describe("IBosonDisputeHandler", function () {
         [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
 
         // Parse into entities
-        let returnedDispute = Dispute.fromStruct(disputeStruct);
-        const returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
+        returnedDispute = Dispute.fromStruct(disputeStruct);
+        returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
 
         // Returned values should match the expected dispute and dispute dates
         for (const [key, value] of Object.entries(dispute)) {
@@ -1154,8 +1155,8 @@ describe("IBosonDisputeHandler", function () {
         disputeDates = new DisputeDates("0", "0", "0", "0");
 
         // Parse into entity
-        const returnedDispute = Dispute.fromStruct(disputeStruct);
-        const returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
+        returnedDispute = Dispute.fromStruct(disputeStruct);
+        returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
 
         // Returned values should match expected dispute data
         for (const [key, value] of Object.entries(dispute)) {
