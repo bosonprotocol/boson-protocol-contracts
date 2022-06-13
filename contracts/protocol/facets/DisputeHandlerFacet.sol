@@ -58,16 +58,15 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Set the exhange state to disputed
         exchange.state = ExchangeState.Disputed;
 
-        // Fetch the dispute
-        (, Dispute storage dispute) = fetchDispute(_exchangeId);
+        // Fetch the dispute and dispute dates
+        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
 
         // Set the initial values
         dispute.exchangeId = _exchangeId;
         dispute.complaint = _complaint;
         dispute.state = DisputeState.Resolving;
 
-        // Fetch the disputeDates
-        (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
+        // Update the disputeDates
         disputeDates.disputed = block.timestamp;
         disputeDates.timeout = block.timestamp + fetchOfferDurations(exchange.offerId).resolutionPeriod;
         
@@ -99,13 +98,13 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         checkBuyer(exchange.buyerId);
 
         // Fetch the dispute
-        (, Dispute storage dispute) = fetchDispute(_exchangeId);
+        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
 
         // Make sure the dispute is in the resolving or escalated state
         require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);
 
         // Finalize the dispute
-        finalizeDispute(_exchangeId, exchange, dispute, DisputeState.Retracted, Resolution(0));
+        finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Retracted, Resolution(0));
 
         // Notify watchers of state change
         emit DisputeRetracted(_exchangeId, msg.sender);
@@ -143,8 +142,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         require(seller.operator == msg.sender, NOT_OPERATOR);
 
         // Fetch the dispute, it exists if exchange is in Disputed state
-        (, Dispute storage dispute) = fetchDispute(_exchangeId);
-        (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
+        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
 
         // If expired already, it cannot be extended
         require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
@@ -179,18 +177,17 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Get the exchange, should be in dispute state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
-        // make sure the dispute not expired already
-        (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
-        require(block.timestamp >= disputeDates.timeout, DISPUTE_STILL_VALID);
-
-        // Fetch the dispute
-        (, Dispute storage dispute) = fetchDispute(_exchangeId);
-
+        // Fetch the dispute and dispute dates
+        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
+        
         // Make sure the dispute is in the resolving or escalated state
         require(dispute.state == DisputeState.Resolving, INVALID_STATE);
 
+        // make sure the dispute not expired already
+        require(block.timestamp >= disputeDates.timeout, DISPUTE_STILL_VALID);      
+
         // Finalize the dispute
-        finalizeDispute(_exchangeId, exchange, dispute, DisputeState.Retracted, Resolution(0));
+        finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Retracted, Resolution(0));
 
         // Notify watchers of state change
         emit DisputeExpired(_exchangeId, msg.sender);
@@ -225,50 +222,95 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Get the exchange, should be in dispute state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
+        // Fetch teh dispute and dispute dates
+        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId); 
+
         // make sure the dispute not expired already or it is in the escalated state
-        (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
         require(block.timestamp <= disputeDates.timeout || disputeDates.escalated > 0, DISPUTE_HAS_EXPIRED);
 
-        // Fetch the offer to get the info who the seller is
-        (, Offer storage offer) = fetchOffer(exchange.offerId);
+        // wrap the code in a separate block to avoid stack too deep error 
+        { 
+            // Fetch the offer to get the info who the seller is
+            (, Offer storage offer) = fetchOffer(exchange.offerId);
 
-        // get seller id to check if caller is the seller
-        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);     
+            // get seller id to check if caller is the seller
+            (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);     
 
-        // variable to store who the expected signer is
-        address expectedSigner;
+            // variable to store who the expected signer is
+            address expectedSigner;
 
-        // find out if the caller is the seller or the buyer, and which address should be the signer
-        if (exists && offer.sellerId == sellerId) {
-            // caller is the seller
-            // get the buyer's address, which should be the signer of the resolution
-            (, Buyer storage buyer) = fetchBuyer(exchange.buyerId);
-            expectedSigner = buyer.wallet;
-        } else {
-            uint256 buyerId;
-            (exists, buyerId) = getBuyerIdByWallet(msg.sender);
-            require(exists && buyerId == exchange.buyerId, NOT_BUYER_OR_SELLER);
-            
-            // caller is the buyer
-            // get the seller's address, which should be the signer of the resolution         
-            (, Seller storage seller) = fetchSeller(offer.sellerId);
-            expectedSigner = seller.operator;
+            // find out if the caller is the seller or the buyer, and which address should be the signer
+            if (exists && offer.sellerId == sellerId) {
+                // caller is the seller
+                // get the buyer's address, which should be the signer of the resolution
+                (, Buyer storage buyer) = fetchBuyer(exchange.buyerId);
+                expectedSigner = buyer.wallet;
+            } else {
+                uint256 buyerId;
+                (exists, buyerId) = getBuyerIdByWallet(msg.sender);
+                require(exists && buyerId == exchange.buyerId, NOT_BUYER_OR_SELLER);
+                
+                // caller is the buyer
+                // get the seller's address, which should be the signer of the resolution         
+                (, Seller storage seller) = fetchSeller(offer.sellerId);
+                expectedSigner = seller.operator;
+            }
+
+            // verify that the signature belongs to the expectedSigner
+            require(EIP712Lib.verify(expectedSigner, hashResolution(_exchangeId, _resolution), _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         }
-
-        // verify that the signature belongs to the expectedSigner
-        require(EIP712Lib.verify(expectedSigner, hashResolution(_exchangeId, _resolution), _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
-
-        // Fetch the dispute
-        (, Dispute storage dispute) = fetchDispute(_exchangeId);
 
         // Make sure the dispute is in the resolving or escalated state
         require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);
 
         // finalize the dispute
-        finalizeDispute(_exchangeId, exchange, dispute, DisputeState.Resolved, _resolution);
+        finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Resolved, _resolution);
 
         // Notify watchers of state change
         emit DisputeResolved(_exchangeId, _resolution, msg.sender);
+    }
+
+    /**
+     * @notice Puts the dispute into escalated state
+     *
+     * Emits a DisputeEscalated event if successful.
+     *
+     * Reverts if:
+     * - exchange does not exist
+     * - exchange is not in a disputed state
+     * - caller is not the buyer
+     * - dispute is already expired
+     * - dispute is not in a resolving state
+     *
+     * @param _exchangeId - the id of the associated exchange
+     */
+    function escalateDispute(uint256 _exchangeId) external override {
+        // Get the exchange, should be in dispute state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+
+        // Make sure the caller is buyer associated with the exchange
+        checkBuyer(exchange.buyerId);
+
+        // Fetch teh dispute and dispute dates
+        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);   
+        
+        // make sure the dispute not expired already        
+        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
+
+        // Make sure the dispute is in the resolving state             
+        require(dispute.state == DisputeState.Resolving, INVALID_STATE);
+
+        // store the time of escalation
+        disputeDates.escalated = block.timestamp;
+
+        // Set the dispute state
+        dispute.state = DisputeState.Escalated;
+
+        // fetch offer to get info about dispute resolver id
+        (, Offer storage offer) = fetchOffer(exchange.offerId);
+
+        // Notify watchers of state change
+        emit DisputeEscalated(_exchangeId, offer.disputeResolverId, msg.sender);
     }
 
     /**
@@ -281,13 +323,14 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      *
      * @param _exchangeId  - exchange id to resolve dispute
      * @param _exchange - pointer to exchange storage slot
+     * @param _dispute - pointer to dispute storage slot
+     * @param _disputeDates - pointer to disputeDates storage slot
      * @param _targetState - target final state
      * @param _resolution - resolution struct with the information about the split.
      */
-    function finalizeDispute(uint256 _exchangeId, Exchange storage _exchange, Dispute storage _dispute, DisputeState _targetState, Resolution memory _resolution) internal {
+    function finalizeDispute(uint256 _exchangeId, Exchange storage _exchange, Dispute storage _dispute, DisputeDates storage _disputeDates, DisputeState _targetState, Resolution memory _resolution) internal {
         // update dispute and exchange
-        (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
-        disputeDates.finalized = block.timestamp;
+        _disputeDates.finalized = block.timestamp;
         _dispute.state = _targetState;
         _exchange.finalizedDate = block.timestamp;
 
@@ -330,10 +373,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     view
     override
     returns(bool exists, Dispute memory dispute, DisputeDates memory disputeDates) {
-        (exists, dispute) = fetchDispute(_exchangeId);
-        if (exists) {
-            (, disputeDates) = fetchDisputeDates(_exchangeId);
-        }
+        return fetchDispute(_exchangeId);
     }
 
     /**
@@ -349,7 +389,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     override
     returns(bool exists, DisputeState state) {
         Dispute storage dispute;
-        (exists, dispute) = fetchDispute(_exchangeId);
+        (exists, dispute, ) = fetchDispute(_exchangeId);
         if (exists) state = dispute.state;
     }
 
@@ -366,7 +406,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
     override
     returns(bool exists, uint256 timeout) {
         DisputeDates storage disputeDates;
-        (exists, disputeDates) = fetchDisputeDates(_exchangeId);
+        (exists, , disputeDates) = fetchDispute(_exchangeId);
         if (exists) timeout = disputeDates.timeout;
     }
 
@@ -388,7 +428,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         Dispute storage dispute;
 
         // Get the dispute
-        (exists, dispute) = fetchDispute(_exchangeId);
+        (exists, dispute, ) = fetchDispute(_exchangeId);
 
         // if exists, set isFinalized to true if state is a valid finalized state
         if (exists) {

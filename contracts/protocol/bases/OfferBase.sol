@@ -121,7 +121,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         require(exists, INVALID_DISPUTE_RESOLVER);
 
         // Calculate and set the protocol fee
-        uint256 protocolFee = protocolStorage().protocolFeePercentage*(_offer.price + _offer.sellerDeposit)/10000;
+        uint256 protocolFee = protocolFees().protocolFeePercentage*(_offer.price + _offer.sellerDeposit)/10000;
         _offer.protocolFee = protocolFee;
         
         // condition for succesfull payout when exchange final state is revoked        

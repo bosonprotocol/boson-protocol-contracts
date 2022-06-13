@@ -104,6 +104,22 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
         uint8 _sigV) external;
 
     /**
+     * @notice Puts the dispute into escalated state
+     *
+     * Emits a DisputeEscalated event if successful.
+     *
+     * Reverts if:
+     * - exchange does not exist
+     * - exchange is not in a disputed state
+     * - caller is not the buyer
+     * - dispute is already expired
+     * - dispute is not in a resolving state
+     *
+     * @param _exchangeId - the id of the associated exchange
+     */
+    function escalateDispute(uint256 _exchangeId) external;
+
+    /**
      * @notice Gets the details about a given dispute.
      *
      * @param _exchangeId - the id of the exchange to check

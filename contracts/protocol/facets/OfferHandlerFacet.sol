@@ -93,7 +93,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     override
     {
         // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_offers.length <= protocolStorage().maxOffersPerBatch, TOO_MANY_OFFERS);
+        require(_offers.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
         // number of offer dates structs and offer durations structs must match the number of offers
         require(_offers.length == _offerDates.length, ARRAY_LENGTH_MISMATCH);
         require(_offers.length == _offerDurations.length, ARRAY_LENGTH_MISMATCH);
@@ -157,7 +157,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     override
     {
         // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_offerIds.length <= protocolStorage().maxOffersPerBatch, TOO_MANY_OFFERS);
+        require(_offerIds.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
         for (uint i = 0; i < _offerIds.length; i++) { 
             voidOffer(_offerIds[i]);
         }
@@ -215,7 +215,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      */
     function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external {
         // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_offerIds.length <= protocolStorage().maxOffersPerBatch, TOO_MANY_OFFERS);
+        require(_offerIds.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
         for (uint i = 0; i < _offerIds.length; i++) { 
             extendOffer(_offerIds[i], _validUntilDate);
         }

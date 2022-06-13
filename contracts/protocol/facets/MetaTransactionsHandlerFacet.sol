@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import { IBosonMetaTransactionsHandler } from "../../interfaces/handlers/IBosonMetaTransactionsHandler.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
+import { IBosonFundsHandler } from "../../interfaces/handlers/IBosonFundsHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
@@ -19,11 +20,14 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     bytes32 private constant META_TX_COMMIT_TO_OFFER_TYPEHASH = keccak256("MetaTxCommitToOffer(uint256 nonce,address from,address contractAddress,string functionName,MetaTxOfferDetails offerDetails)MetaTxOfferDetails(address buyer,uint256 offerId)");
     bytes32 private constant EXCHANGE_DETAILS_TYPEHASH = keccak256("MetaTxExchangeDetails(uint256 exchangeId)");
     bytes32 private constant META_TX_EXCHANGE_TYPEHASH = keccak256("MetaTxExchange(uint256 nonce,address from,address contractAddress,string functionName,MetaTxExchangeDetails exchangeDetails)MetaTxExchangeDetails(uint256 exchangeId)");
+    bytes32 private constant FUND_DETAILS_TYPEHASH = keccak256("MetaTxFundDetails(uint256 entityId,address[] tokenList,uint256[] tokenAmounts)");
+    bytes32 private constant META_TX_FUNDS_TYPEHASH = keccak256("MetaTxFund(uint256 nonce,address from,address contractAddress,string functionName,MetaTxFundDetails fundDetails)MetaTxFundDetails(uint256 entityId,address[] tokenList,uint256[] tokenAmounts)");
     // Function names
     string private constant COMMIT_TO_OFFER = "commitToOffer(address,uint256)";
     string private constant CANCEL_VOUCHER = "cancelVoucher(uint256)";
     string private constant REDEEM_VOUCHER = "redeemVoucher(uint256)";
     string private constant COMPLETE_EXCHANGE = "completeExchange(uint256)";
+    string private constant WITHDRAW_FUNDS = "withdrawFunds(uint256,address[],uint256[])";
 
     /**
      * @notice Facet Initializer
@@ -102,6 +106,25 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     }
 
     /**
+     * @notice Returns hashed meta transaction for withdraw funds.
+     *
+     * @param _metaTx  - BosonTypes.MetaTxFund struct.
+     */
+    function hashMetaTxFundDetails(MetaTxFund memory _metaTx) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    META_TX_FUNDS_TYPEHASH,
+                    _metaTx.nonce,
+                    _metaTx.from,
+                    _metaTx.contractAddress,
+                    keccak256(bytes(_metaTx.functionName)),
+                    hashFundDetails(_metaTx.fundDetails)
+                )
+            );
+    }
+
+    /**
      * @notice Returns hashed representation of the offer struct.
      *
      * @param _offerDetails - the BosonTypes.MetaTxOfferDetails struct.
@@ -122,6 +145,23 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         return
             keccak256(
                 abi.encode(EXCHANGE_DETAILS_TYPEHASH, _exchangeDetails.exchangeId)
+            );
+    }
+
+    /**
+     * @notice Returns hashed representation of the fund details struct.
+     *
+     * @param _fundDetails - the BosonTypes.MetaTxFundDetails struct.
+     */
+    function hashFundDetails(MetaTxFundDetails memory _fundDetails) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    FUND_DETAILS_TYPEHASH,
+                    _fundDetails.entityId,
+                    keccak256(abi.encodePacked(_fundDetails.tokenList)),
+                    keccak256(abi.encodePacked(_fundDetails.tokenAmounts))
+                )
             );
     }
 
@@ -431,5 +471,52 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         );
 
         return executeTx(_userAddress, COMPLETE_EXCHANGE, functionSignature, _nonce);
+    }
+
+    /**
+     * @notice Handles the incoming meta transaction for Withdraw Funds.
+     *
+     * Reverts if:
+     * - nonce is already used by another transaction.
+     * - sender does not match the recovered signer.
+     * - any code executed in the signed transaction reverts.
+     *
+     * @param _userAddress - the sender of the transaction.
+     * @param _fundDetails - the fully populated BosonTypes.MetaTxFundDetails struct.
+     * @param _nonce - the nonce value of the transaction.
+     * @param _sigR - r part of the signer's signature.
+     * @param _sigS - s part of the signer's signature.
+     * @param _sigV - v part of the signer's signature.
+     */
+    function executeMetaTxWithdrawFunds(
+        address _userAddress,
+        MetaTxFundDetails calldata _fundDetails,
+        uint256 _nonce,
+        bytes32 _sigR,
+        bytes32 _sigS,
+        uint8 _sigV
+    ) public override returns (bytes memory) {
+        bytes4 functionSelector = IBosonFundsHandler.withdrawFunds.selector;
+        bytes memory functionSignature = abi.encodeWithSelector(
+            functionSelector,
+            _fundDetails.entityId,
+            _fundDetails.tokenList,
+            _fundDetails.tokenAmounts
+        );
+        validateTx(WITHDRAW_FUNDS, functionSignature, _nonce);
+
+        MetaTxFund memory metaTx = MetaTxFund({
+            nonce: _nonce,
+            from: _userAddress,
+            contractAddress: address(this),
+            functionName: WITHDRAW_FUNDS,
+            fundDetails: _fundDetails
+        });
+        require(
+            EIP712Lib.verify(_userAddress, hashMetaTxFundDetails(metaTx), _sigR, _sigS, _sigV),
+            SIGNER_AND_SIGNATURE_DO_NOT_MATCH
+        );
+
+        return executeTx(_userAddress, WITHDRAW_FUNDS, functionSignature, _nonce);
     }
 }
