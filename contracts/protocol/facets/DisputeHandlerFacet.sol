@@ -293,7 +293,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // get dispute resolver id to check if caller is the dispute resolver
-        uint256 disputeResolverId = protocolStorage().disputeResolverIdByWallet[msg.sender];
+        uint256 disputeResolverId = protocolLookups().disputeResolverIdByWallet[msg.sender];
         require(disputeResolverId == offer.disputeResolverId, NOT_DISPUTE_RESOLVER_WALLET);
 
         // Fetch the dispute
