@@ -285,8 +285,13 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Get the exchange, should be in dispute state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
+        // Fetch teh dispute and dispute dates
+        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId); 
+
+        // Make sure the dispute is in the escalated state
+        require(dispute.state == DisputeState.Escalated, INVALID_STATE);
+
         // make sure the dispute not expired already or it is in the escalated state
-        (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
         require(block.timestamp <= disputeDates.timeout || disputeDates.escalated > 0, DISPUTE_HAS_EXPIRED);
 
         // Fetch the offer to get the info who the seller is
@@ -296,14 +301,8 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         uint256 disputeResolverId = protocolLookups().disputeResolverIdByWallet[msg.sender];
         require(disputeResolverId == offer.disputeResolverId, NOT_DISPUTE_RESOLVER_WALLET);
 
-        // Fetch the dispute
-        (, Dispute storage dispute) = fetchDispute(_exchangeId);
-
-        // Make sure the dispute is in the escalated state
-        require(dispute.state == DisputeState.Escalated, INVALID_STATE);
-
         // finalize the dispute
-        finalizeDispute(_exchangeId, exchange, dispute, DisputeState.Decided, _resolution);
+        finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Decided, _resolution);
 
         // Notify watchers of state change
         emit DisputeDecided(_exchangeId, _resolution, msg.sender);
