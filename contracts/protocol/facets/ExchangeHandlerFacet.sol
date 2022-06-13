@@ -395,7 +395,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         if (exchange.state == ExchangeState.Disputed) {
             // Get the dispute
             Dispute storage dispute;
-            (, dispute) = fetchDispute(_exchangeId);
+            (, dispute, ) = fetchDispute(_exchangeId);
 
             // Check for finalized dispute state
             isFinalized = (
