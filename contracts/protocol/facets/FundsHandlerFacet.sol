@@ -117,13 +117,13 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         address payable destinationAddress;
 
         // first check if the caller is a buyer
-        (bool exists, uint callerId) = getBuyerIdByWallet(msg.sender);
+        (bool exists, uint callerId) = getBuyerIdByWallet(msgSender());
         if(exists && callerId == _entityId) {
             // caller is a buyer
-           destinationAddress = payable(msg.sender);
+           destinationAddress = payable(msgSender());
         } else {
             // check if the caller is a clerk
-            (exists, callerId) = getSellerIdByClerk(msg.sender);
+            (exists, callerId) = getSellerIdByClerk(msgSender());
             if(exists && callerId == _entityId) {
                 // caller is a clerk. In this case funds are transferred to the treasury address
                 (, Seller storage seller) = fetchSeller(callerId);
