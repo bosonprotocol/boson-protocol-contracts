@@ -14,6 +14,31 @@
         },
         {
           "indexed": true,
+          "internalType": "uint256",
+          "name": "disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "escalatedBy",
+          "type": "address"
+        }
+      ],
+      "name": "DisputeEscalated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "exchangeId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
           "internalType": "address",
           "name": "expiredBy",
           "type": "address"
@@ -215,6 +240,19 @@
       ],
       "name": "FundsWithdrawn",
       "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_exchangeId",
+          "type": "uint256"
+        }
+      ],
+      "name": "escalateDispute",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
     },
     {
       "inputs": [
