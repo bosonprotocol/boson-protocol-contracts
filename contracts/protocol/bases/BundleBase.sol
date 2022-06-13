@@ -11,7 +11,6 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
  * @dev Provides methods for bundle creation that can be shared accross facets
  */
 contract BundleBase is ProtocolBase, IBosonBundleEvents {
-
     /**
      * @notice Creates a Bundle.
      *
@@ -30,20 +29,16 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
-    function createBundleInternal(
-        Bundle memory _bundle
-    )
-    internal
-    {
+    function createBundleInternal(Bundle memory _bundle) internal {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
         require(exists, NOT_OPERATOR);
 
         // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_bundle.offerIds.length <= protocolStorage().maxOffersPerBundle, TOO_MANY_OFFERS);
+        require(_bundle.offerIds.length <= protocolLimits().maxOffersPerBundle, TOO_MANY_OFFERS);
 
         // limit maximum number of twins to avoid running into block gas limit in a loop
-        require(_bundle.twinIds.length <= protocolStorage().maxTwinsPerBundle, TOO_MANY_TWINS);
+        require(_bundle.twinIds.length <= protocolLimits().maxTwinsPerBundle, TOO_MANY_TWINS);
 
         // Get the next bundle and increment the counter
         uint256 bundleId = protocolCounters().nextBundleId++;
@@ -60,7 +55,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             require(!exchangeIdsForOfferExists, EXCHANGE_FOR_OFFER_EXISTS);
 
             // Add to bundleIdByOffer mapping
-            protocolStorage().bundleIdByOffer[_bundle.offerIds[i]] = bundleId;
+            protocolLookups().bundleIdByOffer[_bundle.offerIds[i]] = bundleId;
         }
 
         for (uint i = 0; i < _bundle.twinIds.length; i++) {
@@ -76,7 +71,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             }
 
             // Push to bundleIdsByTwin mapping
-            protocolStorage().bundleIdsByTwin[_bundle.twinIds[i]].push(bundleId);
+            protocolLookups().bundleIdsByTwin[_bundle.twinIds[i]].push(bundleId);
         }
 
         // Get storage location for bundle
@@ -101,7 +96,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
      *
      *  @param _twinId - the id of the twin to check
      */
-    function getValidTwin(uint256 _twinId) internal view returns (Twin storage twin){
+    function getValidTwin(uint256 _twinId) internal view returns (Twin storage twin) {
         bool exists;
         // Get twin
         (exists, twin) = fetchTwin(_twinId);
@@ -115,5 +110,4 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         // Caller's seller id must match twin seller id
         require(sellerId == twin.sellerId, NOT_OPERATOR);
     }
-
 }

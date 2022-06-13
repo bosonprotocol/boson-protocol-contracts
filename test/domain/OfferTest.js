@@ -23,10 +23,10 @@ describe("Offer", function () {
     metadataUri,
     offerChecksum,
     voided;
-  let protocolFeePrecentage;
+  let protocolFeePercentage;
 
   beforeEach(async function () {
-    protocolFeePrecentage = "200"; // 2 %
+    protocolFeePercentage = "200"; // 2 %
 
     // Get a list of accounts
     accounts = await ethers.getSigners();
@@ -35,7 +35,7 @@ describe("Offer", function () {
     id = sellerId = "0";
     price = ethers.utils.parseUnits("1.5", "ether").toString();
     sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-    protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+    protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
     buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
     quantityAvailable = "1";
     exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency

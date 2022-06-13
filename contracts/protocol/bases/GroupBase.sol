@@ -36,7 +36,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         require(exists, NOT_OPERATOR);
         
         // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_group.offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
+        require(_group.offerIds.length <= protocolLimits().maxOffersPerGroup, TOO_MANY_OFFERS);
         
         // condition must be valid
         require(validateCondition(_group.condition), INVALID_CONDITION_PARAMETERS);
@@ -53,7 +53,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
             require(!exist, OFFER_MUST_BE_UNIQUE);
 
             // add to groupIdByOffer mapping
-            protocolStorage().groupIdByOffer[_group.offerIds[i]] = groupId;
+            protocolLookups().groupIdByOffer[_group.offerIds[i]] = groupId;
         }
        
         // Get storage location for group
@@ -132,7 +132,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
             require(!exist, OFFER_MUST_BE_UNIQUE);
 
             // add to groupIdByOffer mapping
-            protocolStorage().groupIdByOffer[offerId] = _groupId;
+            protocolLookups().groupIdByOffer[offerId] = _groupId;
 
             // add to group struct
             group.offerIds.push(offerId);
@@ -163,7 +163,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         require(_offerIds.length != 0, NOTHING_UPDATED);
 
         // limit maximum number of offers to avoid running into block gas limit in a loop
-        require(_offerIds.length <= protocolStorage().maxOffersPerGroup, TOO_MANY_OFFERS);
+        require(_offerIds.length <= protocolLimits().maxOffersPerGroup, TOO_MANY_OFFERS);
 
         // Get storage location for group
         bool exists;

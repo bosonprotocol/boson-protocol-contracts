@@ -30,12 +30,12 @@ library FundsLib {
      * @param _offerId - id of the offer with the details
      */
     function encumberFunds(uint256 _offerId, uint256 _buyerId) internal {
-        // Load protocol storage
-        ProtocolLib.ProtocolStorage storage ps = ProtocolLib.protocolStorage();
+        // Load protocol entities storage
+        ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
 
         // fetch offer to get the exchange token, price and seller 
         // this will be called only from commitToOffer so we expect that exchange actually exist
-        BosonTypes.Offer storage offer = ps.offers[_offerId];
+        BosonTypes.Offer storage offer = pe.offers[_offerId];
         address exchangeToken = offer.exchangeToken;
         uint256 price = offer.price;
 
@@ -68,17 +68,17 @@ library FundsLib {
      * @param _exchangeId - exchange id
      */
     function releaseFunds(uint256 _exchangeId) internal {
-        // Load protocol storage
-        ProtocolLib.ProtocolStorage storage ps = ProtocolLib.protocolStorage();
+        // Load protocol entities storage
+        ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
 
         // Get the exchange and its state
         // Since this should be called only from certain functions from exchangeHandler and disputeHandler
         // exhange must exist and be in a completed state, so that's not checked explicitly
-        BosonTypes.Exchange storage exchange = ps.exchanges[_exchangeId];
+        BosonTypes.Exchange storage exchange = pe.exchanges[_exchangeId];
         BosonTypes.ExchangeState exchangeState = exchange.state;
 
         // Get offer from storage to get the details about sellerDeposit, price, sellerId, exchangeToken and buyerCancelPenalty
-        BosonTypes.Offer storage offer = ps.offers[exchange.offerId];
+        BosonTypes.Offer storage offer = pe.offers[exchange.offerId];
         uint256 sellerDeposit = offer.sellerDeposit;
         uint256 price = offer.price;
 
@@ -108,7 +108,7 @@ library FundsLib {
         } else  {
             // DISPUTED
             // get the information about the dispute, which must exist
-            BosonTypes.Dispute storage dispute = ps.disputes[_exchangeId];
+            BosonTypes.Dispute storage dispute = pe.disputes[_exchangeId];
             BosonTypes.DisputeState disputeState = dispute.state;
 
             if (disputeState == BosonTypes.DisputeState.Retracted) {
@@ -198,15 +198,15 @@ library FundsLib {
      */
 
     function increaseAvailableFunds(uint256 _entityId, address _tokenAddress, uint256 _amount) internal {
-        ProtocolLib.ProtocolStorage storage ps = ProtocolLib.protocolStorage();
+        ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
 
         // if the current amount of token is 0, the token address must be added to the token list
-        if (ps.availableFunds[_entityId][_tokenAddress] == 0) {
-            ps.tokenList[_entityId].push(_tokenAddress);
+        if (pl.availableFunds[_entityId][_tokenAddress] == 0) {
+            pl.tokenList[_entityId].push(_tokenAddress);
         }
 
         // update the available funds
-        ps.availableFunds[_entityId][_tokenAddress] += _amount;
+        pl.availableFunds[_entityId][_tokenAddress] += _amount;
     }
 
     /**
@@ -220,22 +220,22 @@ library FundsLib {
      * @param _amount - amount to be taken away
      */
     function decreaseAvailableFunds(uint256 _entityId, address _tokenAddress, uint256 _amount) internal {
-        ProtocolLib.ProtocolStorage storage ps = ProtocolLib.protocolStorage();
+        ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
 
         // get available fnds from storage
-        uint256 availableFunds = ps.availableFunds[_entityId][_tokenAddress];
+        uint256 availableFunds = pl.availableFunds[_entityId][_tokenAddress];
 
         // make sure that seller has enough funds in the pool and reduce the available funds
         require(availableFunds >= _amount, INSUFFICIENT_AVAILABLE_FUNDS);
-        ps.availableFunds[_entityId][_tokenAddress] = availableFunds - _amount;
+        pl.availableFunds[_entityId][_tokenAddress] = availableFunds - _amount;
 
         // if availableFunds are totally emptied, the token address is removed from the seller's tokenList
         if (availableFunds == _amount) {
-            uint len = ps.tokenList[_entityId].length;
+            uint len = pl.tokenList[_entityId].length;
             for (uint i = 0; i < len; i++) {
-                if (ps.tokenList[_entityId][i] == _tokenAddress) {
-                    ps.tokenList[_entityId][i] = ps.tokenList[_entityId][len-1];
-                    ps.tokenList[_entityId].pop();
+                if (pl.tokenList[_entityId][i] == _tokenAddress) {
+                    pl.tokenList[_entityId][i] = pl.tokenList[_entityId][len-1];
+                    pl.tokenList[_entityId].pop();
                     break;
                 }
             }

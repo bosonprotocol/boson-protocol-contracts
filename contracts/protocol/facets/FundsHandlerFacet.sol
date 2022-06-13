@@ -70,7 +70,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      */
     function getAvailableFunds(uint256 _entityId) external view override returns (Funds[] memory availableFunds) {
         // get list of token addresses for the entity
-        address[] memory tokenList = protocolStorage().tokenList[_entityId];
+        address[] memory tokenList = protocolLookups().tokenList[_entityId];
         availableFunds = new Funds[](tokenList.length);
 
         for (uint i = 0; i < tokenList.length; i++) {
@@ -90,7 +90,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             }
 
             // retrieve available amount from the stroage
-            uint availableAmount = protocolStorage().availableFunds[_entityId][tokenAddress];
+            uint availableAmount = protocolLookups().availableFunds[_entityId][tokenAddress];
 
             // add entry to the return variable
             availableFunds[i] = Funds(tokenAddress, tokenName, availableAmount);
@@ -178,7 +178,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         require(_tokenList.length == _tokenAmounts.length, TOKEN_AMOUNT_MISMATCH);
 
         // limit maximum number of tokens to avoid running into block gas limit in a loop
-        uint maxTokensPerWithdrawal = protocolStorage().maxTokensPerWithdrawal;
+        uint maxTokensPerWithdrawal = protocolLimits().maxTokensPerWithdrawal;
         require(_tokenList.length <= maxTokensPerWithdrawal, TOO_MANY_TOKENS);
 
         // two possible options: withdraw all, or withdraw only specified tokens and amounts
@@ -186,7 +186,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             // withdraw everything
             
             // get list of all user's tokens
-            address[] memory tokenList = protocolStorage().tokenList[_entityId];
+            address[] memory tokenList = protocolLookups().tokenList[_entityId];
 
             // make sure that at least something will be withdrawn
             require(tokenList.length != 0, NOTHING_TO_WITHDRAW);
@@ -196,7 +196,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
 
             for (uint i = 0; i < len; i++) {
                 // get available fnds from storage
-                uint256 availableFunds = protocolStorage().availableFunds[_entityId][tokenList[i]];
+                uint256 availableFunds = protocolLookups().availableFunds[_entityId][tokenList[i]];
                 FundsLib.transferFundsFromProtocol(_entityId, tokenList[i], _destinationAddress, availableFunds); 
             }
         } else {
