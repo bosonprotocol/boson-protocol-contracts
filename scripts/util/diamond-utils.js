@@ -42,9 +42,9 @@ function getSelector(func) {
 
 // used with getSelectors to remove selectors from an array of selectors
 // functionNames argument is an array of function signatures
-function remove(functionNames) {
+function remove(functionNamesOrSignature) {
   const selectors = this.filter((v) => {
-    for (const functionName of functionNames) {
+    for (const functionName of functionNamesOrSignature) {
       if (v === this.contract.interface.getSighash(functionName)) {
         return false;
       }

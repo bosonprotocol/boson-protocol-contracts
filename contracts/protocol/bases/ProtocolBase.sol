@@ -67,10 +67,10 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     /**
      * @dev Get the Protocol Entities slot
      *
-     * @return pm the Protocol Entities slot
+     * @return pe the Protocol Entities slot
      */
-    function protocolEntities() internal pure returns (ProtocolLib.ProtocolEntities storage pm) {
-        pm = ProtocolLib.protocolEntities();
+    function protocolEntities() internal pure returns (ProtocolLib.ProtocolEntities storage pe) {
+        pe = ProtocolLib.protocolEntities();
     }
 
     /**
