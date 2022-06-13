@@ -15,7 +15,12 @@ describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
   let accounts, deployer, rando, token, treasury, voucher;
-  let protocolFeePercentage, maxOffersPerGroup, maxTwinsPerBundle, maxOffersPerBundle, maxOffersPerBatch, maxTokensPerWithdrawal;
+  let protocolFeePercentage,
+    maxOffersPerGroup,
+    maxTwinsPerBundle,
+    maxOffersPerBundle,
+    maxOffersPerBatch,
+    maxTokensPerWithdrawal;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
 
   before(async function () {
@@ -73,7 +78,7 @@ describe("IBosonConfigHandler", function () {
           },
           //Protocol fees
           {
-            protocolFeePercentage
+            protocolFeePercentage,
           },
         ];
 
@@ -305,11 +310,11 @@ describe("IBosonConfigHandler", function () {
           });
         });
       });
-      
+
       context("👉 setTokenAddress()", async function () {
         beforeEach(async function () {
           // set new value for token address
-          token = accounts[5]
+          token = accounts[5];
         });
 
         it("should emit a TokenAddressChanged event", async function () {
@@ -330,9 +335,9 @@ describe("IBosonConfigHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new token address, expecting revert
-            await expect(
-              configHandler.connect(rando).setTokenAddress(token.address)
-            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+            await expect(configHandler.connect(rando).setTokenAddress(token.address)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
           });
         });
       });
@@ -340,7 +345,7 @@ describe("IBosonConfigHandler", function () {
       context("👉 setTreasuryAddress()", async function () {
         beforeEach(async function () {
           // set new value for treasury address
-          treasury = accounts[5]
+          treasury = accounts[5];
         });
 
         it("should emit a TreasuryAddressChanged event", async function () {
@@ -361,9 +366,9 @@ describe("IBosonConfigHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new treasury address, expecting revert
-            await expect(
-              configHandler.connect(rando).setTreasuryAddress(treasury.address)
-            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+            await expect(configHandler.connect(rando).setTreasuryAddress(treasury.address)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
           });
         });
       });
@@ -371,7 +376,7 @@ describe("IBosonConfigHandler", function () {
       context("👉 setVoucherAddress()", async function () {
         beforeEach(async function () {
           // set new value for treasury address
-          voucher = accounts[5]
+          voucher = accounts[5];
         });
 
         it("should emit a VoucherAddressChanged event", async function () {
@@ -392,9 +397,9 @@ describe("IBosonConfigHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new voucher address, expecting revert
-            await expect(
-              configHandler.connect(rando).setVoucherAddress(voucher.address)
-            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+            await expect(configHandler.connect(rando).setVoucherAddress(voucher.address)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
           });
         });
       });
@@ -402,7 +407,7 @@ describe("IBosonConfigHandler", function () {
       context("👉 setProtocolFeePercentage()", async function () {
         beforeEach(async function () {
           // set new value for treasury address
-          protocolFeePercentage = 200  
+          protocolFeePercentage = 200;
         });
 
         it("should emit a ProtocolFeePercentageChanged event", async function () {
@@ -423,9 +428,9 @@ describe("IBosonConfigHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new voucher address, expecting revert
-            await expect(
-              configHandler.connect(rando).setProtocolFeePercentage(protocolFeePercentage)
-            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+            await expect(configHandler.connect(rando).setProtocolFeePercentage(protocolFeePercentage)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
           });
         });
       });
@@ -442,7 +447,10 @@ describe("IBosonConfigHandler", function () {
           "Invalid treasury address"
         );
         expect(await configHandler.connect(rando).getTokenAddress()).to.equal(token.address, "Invalid token address");
-        expect(await configHandler.connect(rando).getVoucherAddress()).to.equal(voucher.address, "Invalid voucher address");
+        expect(await configHandler.connect(rando).getVoucherAddress()).to.equal(
+          voucher.address,
+          "Invalid voucher address"
+        );
         expect(await configHandler.connect(rando).getProtocolFeePercentage()).to.equal(
           protocolFeePercentage,
           "Invalid protocol fee"
