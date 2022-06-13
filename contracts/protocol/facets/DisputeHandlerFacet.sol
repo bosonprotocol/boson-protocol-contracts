@@ -35,6 +35,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * - exchange does not exist
      * - exchange is not in a redeemed state
      * - the complaint is blank
+     * - fulfillment period has elapsed already
      *
      * @param _exchangeId - the id of the associated exchange
      * @param _complaint - the buyer's complaint description
@@ -52,6 +53,10 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Get the exchange, should be in redeemed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
 
+        // Make sure the fulfillment period has elapsed
+        uint256 elapsed = block.timestamp - exchange.voucher.redeemedDate;
+        require(elapsed < fetchOfferDurations(exchange.offerId).fulfillmentPeriod, FULFILLMENT_PERIOD_HAS_ELAPSED);
+
         // Make sure the caller is buyer associated with the exchange
         checkBuyer(exchange.buyerId);
 
@@ -60,7 +65,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // Fetch the dispute
         (, Dispute storage dispute) = fetchDispute(_exchangeId);
-
+    
         // Set the initial values
         dispute.exchangeId = _exchangeId;
         dispute.complaint = _complaint;
@@ -128,7 +133,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Get the exchange, should be in dispute state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
-        // make sure the dispute not expired already
+        // make sure the resolution period is over
         (, DisputeDates storage disputeDates) = fetchDisputeDates(_exchangeId);
         require(block.timestamp >= disputeDates.timeout, DISPUTE_STILL_VALID);
 

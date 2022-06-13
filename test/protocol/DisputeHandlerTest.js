@@ -360,6 +360,20 @@ describe("IBosonDisputeHandler", function () {
             RevertReasons.COMPLAINT_MISSING
           );
         });
+
+        it("The fulfilment period has already elapsed", async function () {
+          // Get the redemption date
+          [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+          const voucherRedeemedDate = exchangeStruct.voucher.redeemedDate;
+
+          // Set time forward past the dispute resolution period
+          await setNextBlockTimestamp(voucherRedeemedDate.add(fulfillmentPeriod).add(1).toNumber());
+
+          // Attempt to raise a dispute, expecting revert
+          await expect(disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint)).to.revertedWith(
+            RevertReasons.FULFILLMENT_PERIOD_HAS_ELAPSED
+          );
+        });
       });
     });
 

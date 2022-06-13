@@ -24,6 +24,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * - exchange does not exist
      * - exchange is not in a redeemed state
      * - the complaint is blank
+     * - fulfillment period has elapsed already
      * 
      * @param _exchangeId - the id of the associated offer
      * @param _complaint - the buyer's complaint description
