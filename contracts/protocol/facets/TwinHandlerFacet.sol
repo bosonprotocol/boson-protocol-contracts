@@ -100,7 +100,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         require(!bundlesForTwinExist, TWIN_HAS_BUNDLES);
 
         // delete struct
-        delete protocolStorage().twins[_twinId];
+        delete protocolEntities().twins[_twinId];
 
         emit TwinDeleted(_twinId, twin.sellerId);
     }

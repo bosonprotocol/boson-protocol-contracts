@@ -60,7 +60,7 @@ describe("IBosonOrchestrationHandler", function () {
     voided;
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates, offerDatesStruct;
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations, offerDurationsStruct;
-  let protocolFeePrecentage;
+  let protocolFeePercentage;
   let group, groupStruct, nextGroupId;
   let method, tokenAddress, tokenId, threshold;
   let offerIds, condition;
@@ -102,20 +102,29 @@ describe("IBosonOrchestrationHandler", function () {
       "OrchestrationHandlerFacet",
     ]);
 
-    // set protocolFeePrecentage
-    protocolFeePrecentage = "200"; // 2 %
+    // set protocolFeePercentage
+    protocolFeePercentage = "200"; // 2 %
 
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
-      "0x0000000000000000000000000000000000000000",
-      "0x0000000000000000000000000000000000000000",
-      "0x0000000000000000000000000000000000000000",
-      protocolFeePrecentage,
-      "100",
-      "100",
-      "100",
-      "100",
-      "100",
+      // Protocol addresses
+      {
+        treasuryAddress: "0x0000000000000000000000000000000000000000",
+        tokenAddress: "0x0000000000000000000000000000000000000000",
+        voucherAddress: "0x0000000000000000000000000000000000000000",
+      },
+      // Protocol limits
+      {
+        maxOffersPerGroup: 100,
+        maxTwinsPerBundle: 100,
+        maxOffersPerBundle: 100,
+        maxOffersPerBatch: 100,
+        maxTokensPerWithdrawal: 100,
+      },
+      // Protocol fees
+      {
+        protocolFeePercentage,
+      },
     ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
@@ -193,7 +202,7 @@ describe("IBosonOrchestrationHandler", function () {
       id = sellerId = "2"; // argument sent to contract for createOffer will be ignored
       price = ethers.utils.parseUnits("1.5", "ether").toString();
       sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
@@ -893,7 +902,7 @@ describe("IBosonOrchestrationHandler", function () {
           sellerId = "2"; // "1" is dispute resolver
           price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
           sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
-          protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+          protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
           buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
           quantityAvailable = `${(i + 1) * 2}`;
           exchangeToken = ethers.constants.AddressZero.toString();
