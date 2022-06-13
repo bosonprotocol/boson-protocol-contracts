@@ -311,7 +311,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         message.nonce = parseInt(nonce);
       });
 
-      it("Should emit MetaTransactionExecuted event", async () => {
+      it("Should emit MetaTransactionExecuted event and update state", async () => {
         // Prepare the function signature for the facet function.
         functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
 
@@ -723,7 +723,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
       });
 
-      it("Should emit MetaTransactionExecuted event", async () => {
+      it("Should emit MetaTransactionExecuted event and update state", async () => {
         // Collect the signature components
         let { r, s, v } = await prepareDataSignatureParameters(
           buyer,
@@ -961,7 +961,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.from = buyer.address;
         });
 
-        it("Should emit MetaTransactionExecuted event", async () => {
+        it("Should emit MetaTransactionExecuted event and update state", async () => {
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             buyer,
@@ -1069,7 +1069,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
         });
 
-        it("Should emit MetaTransactionExecuted event", async () => {
+        it("Should emit MetaTransactionExecuted event and update state", async () => {
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             buyer,
@@ -1180,7 +1180,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
         });
 
-        it("Should emit MetaTransactionExecuted event", async () => {
+        it("Should emit MetaTransactionExecuted event and update state", async () => {
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             buyer,
@@ -1436,7 +1436,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         };
       });
 
-      context("Should emit MetaTransactionExecuted event", async () => {
+      context("Should emit MetaTransactionExecuted event and update state", async () => {
         beforeEach(async function () {
           // Read on chain state
           buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
