@@ -78,12 +78,15 @@ describe("IBosonTwinHandler", function () {
       "BundleHandlerFacet",
     ]);
 
+    // Deploy the boson token
+    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+
     // Add config Handler, so twin id starts at 1
     const protocolConfig = [
       // Protocol addresses
       {
         treasuryAddress: "0x0000000000000000000000000000000000000000",
-        tokenAddress: "0x0000000000000000000000000000000000000000",
+        tokenAddress: bosonToken.address,
         voucherAddress: "0x0000000000000000000000000000000000000000",
       },
       // Protocol limits

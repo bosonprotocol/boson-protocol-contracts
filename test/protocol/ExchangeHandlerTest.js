@@ -49,7 +49,7 @@ describe("IBosonExchangeHandler", function () {
     disputeHandler,
     twinHandler,
     bundleHandler;
-  let bosonVoucher;
+  let bosonVoucher, bosonToken;
   let id, buyerId, offer, offerId, seller, sellerId, nextExchangeId, nextAccountId;
   let block, blockNumber, tx, txReceipt, event, clients;
   let support, oneMonth, oneWeek, newTime;
@@ -117,6 +117,9 @@ describe("IBosonExchangeHandler", function () {
     [bosonVoucher] = clients;
     await accessController.grantRole(Role.CLIENT, bosonVoucher.address);
 
+    // Deploy the boson token
+    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+
     // set protocolFeePercentage
     protocolFeePercentage = "200"; // 2 %
 
@@ -125,7 +128,7 @@ describe("IBosonExchangeHandler", function () {
       // Protocol addresses
       {
         treasuryAddress: "0x0000000000000000000000000000000000000000",
-        tokenAddress: "0x0000000000000000000000000000000000000000",
+        tokenAddress: bosonToken.address,
         voucherAddress: bosonVoucher.address,
       },
       // Protocol limits
@@ -217,7 +220,7 @@ describe("IBosonExchangeHandler", function () {
       // Required constructor params
       price = ethers.utils.parseUnits("1.5", "ether").toString();
       sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
+      protocolFee = calculateProtocolFee(price, protocolFeePercentage);
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
