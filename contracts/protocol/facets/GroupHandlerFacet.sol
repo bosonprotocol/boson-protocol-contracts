@@ -110,7 +110,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
             require(_groupId == groupId, OFFER_NOT_IN_GROUP);
 
             // remove groupIdByOffer mapping
-            delete protocolStorage().groupIdByOffer[offerId];
+            delete protocolLookups().groupIdByOffer[offerId];
 
             // remove from the group struct
             uint256 offerIdsLength = group.offerIds.length;

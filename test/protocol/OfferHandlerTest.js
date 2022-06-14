@@ -54,7 +54,7 @@ describe("IBosonOfferHandler", function () {
     offerDurationsStruct,
     offerDurationsStructs,
     offerDurationsList;
-  let protocolFeePrecentage;
+  let protocolFeePercentage;
   let block, blockNumber;
   let disputeResolver;
 
@@ -90,21 +90,31 @@ describe("IBosonOfferHandler", function () {
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
     [, , [bosonVoucher]] = await deployProtocolClients(protocolClientArgs, gasLimit);
 
-    // set protocolFeePrecentage
-    protocolFeePrecentage = "200"; // 2 %
+    // set protocolFeePercentage
+    protocolFeePercentage = "200"; // 2 %
 
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
-      "0x0000000000000000000000000000000000000000",
-      "0x0000000000000000000000000000000000000000",
-      bosonVoucher.address,
-      protocolFeePrecentage,
-      "100",
-      "100",
-      "100",
-      "100",
-      "100",
+      // Protocol addresses
+      {
+        treasuryAddress: "0x0000000000000000000000000000000000000000",
+        tokenAddress: "0x0000000000000000000000000000000000000000",
+        voucherAddress: bosonVoucher.address,
+      },
+      // Protocol limits
+      {
+        maxOffersPerGroup: 100,
+        maxTwinsPerBundle: 100,
+        maxOffersPerBundle: 100,
+        maxOffersPerBatch: 100,
+        maxTokensPerWithdrawal: 100,
+      },
+      // Protocol fees
+      {
+        protocolFeePercentage,
+      },
     ];
+
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
     // Cast Diamond to IERC165
@@ -169,7 +179,7 @@ describe("IBosonOfferHandler", function () {
       id = sellerId = "1"; // argument sent to contract for createOffer will be ignored
       price = ethers.utils.parseUnits("1.5", "ether").toString();
       sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage); // will be ignored, but set the correct value here for the tests
+      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage); // will be ignored, but set the correct value here for the tests
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
@@ -300,11 +310,11 @@ describe("IBosonOfferHandler", function () {
         const configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
         // set the new procol fee
-        protocolFeePrecentage = "300"; // 3%
-        await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePrecentage);
+        protocolFeePercentage = "300"; // 3%
+        await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
 
         offer.id = await offerHandler.getNextOfferId();
-        offer.protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+        offer.protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
 
         // Create a new offer
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
@@ -345,8 +355,8 @@ describe("IBosonOfferHandler", function () {
           // Set buyer deposit less than the protocol fee
           // First calculate the threshold where sellerDeposit == protocolFee and then reduce it for some number
           let threshold = ethers.BigNumber.from(offer.price)
-            .mul(protocolFeePrecentage)
-            .div(ethers.BigNumber.from("10000").sub(protocolFeePrecentage));
+            .mul(protocolFeePercentage)
+            .div(ethers.BigNumber.from("10000").sub(protocolFeePercentage));
           offer.sellerDeposit = threshold.sub("10").toString();
 
           // Attempt to Create an offer, expecting revert
@@ -837,7 +847,7 @@ describe("IBosonOfferHandler", function () {
         price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
         sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
         buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
-        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
         quantityAvailable = `${(i + 1) * 2}`;
         exchangeToken = ethers.constants.AddressZero.toString();
         disputeResolverId = "2";
@@ -1013,8 +1023,8 @@ describe("IBosonOfferHandler", function () {
           // Set buyer deposit less than the protocol fee
           // First calculate the threshold where sellerDeposit == protocolFee and then reduce it for some number
           let threshold = ethers.BigNumber.from(offers[0].price)
-            .mul(protocolFeePrecentage)
-            .div(ethers.BigNumber.from("10000").sub(protocolFeePrecentage));
+            .mul(protocolFeePercentage)
+            .div(ethers.BigNumber.from("10000").sub(protocolFeePercentage));
           offers[0].sellerDeposit = threshold.sub("10").toString();
 
           // Attempt to Create an offer, expecting revert

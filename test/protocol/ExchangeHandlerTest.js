@@ -65,7 +65,7 @@ describe("IBosonExchangeHandler", function () {
     voided;
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
-  let protocolFeePrecentage;
+  let protocolFeePercentage;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state, exchangeStruct, response, exists, buyerStruct;
   let disputeResolver, active;
@@ -117,20 +117,29 @@ describe("IBosonExchangeHandler", function () {
     [bosonVoucher] = clients;
     await accessController.grantRole(Role.CLIENT, bosonVoucher.address);
 
-    // set protocolFeePrecentage
-    protocolFeePrecentage = "200"; // 2 %
+    // set protocolFeePercentage
+    protocolFeePercentage = "200"; // 2 %
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
-      "0x0000000000000000000000000000000000000000",
-      "0x0000000000000000000000000000000000000000",
-      bosonVoucher.address,
-      protocolFeePrecentage,
-      "100",
-      "100",
-      "100",
-      "100",
-      "100",
+      // Protocol addresses
+      {
+        treasuryAddress: "0x0000000000000000000000000000000000000000",
+        tokenAddress: "0x0000000000000000000000000000000000000000",
+        voucherAddress: bosonVoucher.address,
+      },
+      // Protocol limits
+      {
+        maxOffersPerGroup: 100,
+        maxTwinsPerBundle: 100,
+        maxOffersPerBundle: 100,
+        maxOffersPerBatch: 100,
+        maxTokensPerWithdrawal: 100,
+      },
+      // Protocol fees
+      {
+        protocolFeePercentage,
+      },
     ];
 
     // Deploy the Config facet, initializing the protocol config
@@ -208,7 +217,7 @@ describe("IBosonExchangeHandler", function () {
       // Required constructor params
       price = ethers.utils.parseUnits("1.5", "ether").toString();
       sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePrecentage);
+      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency

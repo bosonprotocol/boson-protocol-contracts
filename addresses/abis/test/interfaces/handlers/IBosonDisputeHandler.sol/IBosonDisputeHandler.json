@@ -15,6 +15,50 @@
         {
           "indexed": true,
           "internalType": "uint256",
+          "name": "disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "escalatedBy",
+          "type": "address"
+        }
+      ],
+      "name": "DisputeEscalated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "exchangeId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "expiredBy",
+          "type": "address"
+        }
+      ],
+      "name": "DisputeExpired",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "exchangeId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint256",
           "name": "buyerId",
           "type": "uint256"
         },
@@ -32,6 +76,38 @@
         }
       ],
       "name": "DisputeRaised",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "exchangeId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "buyerPercent",
+              "type": "uint256"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.Resolution",
+          "name": "resolution",
+          "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "resolvedBy",
+          "type": "address"
+        }
+      ],
+      "name": "DisputeResolved",
       "type": "event"
     },
     {
@@ -164,6 +240,32 @@
       ],
       "name": "FundsWithdrawn",
       "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_exchangeId",
+          "type": "uint256"
+        }
+      ],
+      "name": "escalateDispute",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_exchangeId",
+          "type": "uint256"
+        }
+      ],
+      "name": "expireDispute",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
     },
     {
       "inputs": [
@@ -307,6 +409,46 @@
         }
       ],
       "name": "raiseDispute",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_exchangeId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "buyerPercent",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.Resolution",
+          "name": "_resolution",
+          "type": "tuple"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_sigR",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_sigS",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint8",
+          "name": "_sigV",
+          "type": "uint8"
+        }
+      ],
+      "name": "resolveDispute",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

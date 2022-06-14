@@ -295,6 +295,118 @@
     {
       "inputs": [
         {
+          "internalType": "address",
+          "name": "_userAddress",
+          "type": "address"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "exchangeId",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.MetaTxExchangeDetails",
+          "name": "_exchangeDetails",
+          "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_nonce",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_sigR",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_sigS",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint8",
+          "name": "_sigV",
+          "type": "uint8"
+        }
+      ],
+      "name": "executeMetaTxRetractDispute",
+      "outputs": [
+        {
+          "internalType": "bytes",
+          "name": "",
+          "type": "bytes"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_userAddress",
+          "type": "address"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "entityId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address[]",
+              "name": "tokenList",
+              "type": "address[]"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "tokenAmounts",
+              "type": "uint256[]"
+            }
+          ],
+          "internalType": "struct BosonTypes.MetaTxFundDetails",
+          "name": "_fundDetails",
+          "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_nonce",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_sigR",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_sigS",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint8",
+          "name": "_sigV",
+          "type": "uint8"
+        }
+      ],
+      "name": "executeMetaTxWithdrawFunds",
+      "outputs": [
+        {
+          "internalType": "bytes",
+          "name": "",
+          "type": "bytes"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "uint256",
           "name": "_nonce",
           "type": "uint256"

@@ -17,22 +17,14 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Facet Initializer
      *
-     * @param _tokenAddress - address of Boson Token (ERC-20) contract
-     * @param _treasuryAddress - address of Boson Protocol DAO multi-sig wallet
-     * @param _voucherAddress - address of Boson Protocol Voucher NFT contract
-     * @param _protocolFeePercentage - percentage that will be taken as a fee from the net of a Boson Protocol exchange (after royalties)
-     * @param _maxOffersPerGroup - the maximum number of offers that a group can contain
+     * @param _addresses - struct of Boson Protocol addresses (Boson Token (ERC-20) contract, treasury, and Voucher contract)
+     * @param _limits - struct with Boson Protocol limits
+     * @param _fees - struct of Boson Protocol fees
      */
     function initialize(
-        address payable _tokenAddress,
-        address payable _treasuryAddress,
-        address _voucherAddress,
-        uint16 _protocolFeePercentage,
-        uint16 _maxOffersPerGroup,
-        uint16 _maxTwinsPerBundle,
-        uint16 _maxOffersPerBundle,
-        uint16 _maxOffersPerBatch,
-        uint16 _maxTokensPerWithdrawal
+        ProtocolLib.ProtocolAddresses calldata _addresses,
+        ProtocolLib.ProtocolLimits calldata _limits,
+        ProtocolLib.ProtocolFees calldata _fees
     )
     public
     onlyUnInitialized(type(IBosonConfigHandler).interfaceId)
@@ -41,15 +33,15 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         DiamondLib.addSupportedInterface(type(IBosonConfigHandler).interfaceId);
 
         // Initialize protocol config params
-        setTokenAddress(_tokenAddress);
-        setTreasuryAddress(_treasuryAddress);
-        setVoucherAddress(_voucherAddress);
-        setProtocolFeePercentage(_protocolFeePercentage);
-        setMaxOffersPerGroup(_maxOffersPerGroup);
-        setMaxTwinsPerBundle(_maxTwinsPerBundle);
-        setMaxOffersPerBundle(_maxOffersPerBundle);
-        setMaxOffersPerBatch(_maxOffersPerBatch);
-        setMaxTokensPerWithdrawal(_maxTokensPerWithdrawal);
+        setTokenAddress(_addresses.tokenAddress);
+        setTreasuryAddress(_addresses.treasuryAddress);
+        setVoucherAddress(_addresses.voucherAddress);
+        setProtocolFeePercentage(_fees.protocolFeePercentage);
+        setMaxOffersPerGroup(_limits.maxOffersPerGroup);
+        setMaxTwinsPerBundle(_limits.maxTwinsPerBundle);
+        setMaxOffersPerBundle(_limits.maxOffersPerBundle);
+        setMaxOffersPerBatch(_limits.maxOffersPerBatch);
+        setMaxTokensPerWithdrawal(_limits.maxTokensPerWithdrawal);
         
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -77,7 +69,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     override
     onlyRole(ADMIN)
     {
-        protocolStorage().tokenAddress = _tokenAddress;
+        protocolAddresses().tokenAddress = _tokenAddress;
         emit TokenAddressChanged(_tokenAddress, msg.sender);
     }
 
@@ -90,7 +82,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     view
     returns (address payable)
     {
-        return protocolStorage().tokenAddress;
+        return protocolAddresses().tokenAddress;
     }
 
     /**
@@ -105,7 +97,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     override
     onlyRole(ADMIN)
     {
-        protocolStorage().treasuryAddress = _treasuryAddress;
+        protocolAddresses().treasuryAddress = _treasuryAddress;
         emit TreasuryAddressChanged(_treasuryAddress, msg.sender);
     }
 
@@ -118,7 +110,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     view
     returns (address payable)
     {
-        return protocolStorage().treasuryAddress;
+        return protocolAddresses().treasuryAddress;
     }
 
     /**
@@ -133,7 +125,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     override
     onlyRole(ADMIN)
     {
-        protocolStorage().voucherAddress = _voucherAddress;
+        protocolAddresses().voucherAddress = _voucherAddress;
         emit VoucherAddressChanged(_voucherAddress, msg.sender);
     }
 
@@ -146,7 +138,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     view
     returns (address)
     {
-        return protocolStorage().voucherAddress;
+        return protocolAddresses().voucherAddress;
     }
 
     /**
@@ -168,7 +160,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
             "Percentage representation must be between 1 and 10000");
 
         // Store fee percentage
-        protocolStorage().protocolFeePercentage = _protocolFeePercentage;
+        protocolFees().protocolFeePercentage = _protocolFeePercentage;
 
         // Notify watchers of state change
         emit ProtocolFeePercentageChanged(_protocolFeePercentage, msg.sender);
@@ -183,7 +175,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     view
     returns (uint16)
     {
-        return protocolStorage().protocolFeePercentage;
+        return protocolFees().protocolFeePercentage;
     }
 
 
@@ -199,7 +191,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     override
     onlyRole(ADMIN)
     {
-        protocolStorage().maxOffersPerGroup = _maxOffersPerGroup;
+        protocolLimits().maxOffersPerGroup = _maxOffersPerGroup;
         emit MaxOffersPerGroupChanged(_maxOffersPerGroup, msg.sender);
     }
 
@@ -212,7 +204,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     view
     returns (uint16)
     {
-        return protocolStorage().maxOffersPerGroup;
+        return protocolLimits().maxOffersPerGroup;
     }
 
      /**
@@ -227,7 +219,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     override
     onlyRole(ADMIN)
     {
-        protocolStorage().maxTwinsPerBundle = _maxTwinsPerBundle;
+        protocolLimits().maxTwinsPerBundle = _maxTwinsPerBundle;
         emit MaxTwinsPerBundleChanged(_maxTwinsPerBundle, msg.sender);
     }
 
@@ -240,7 +232,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     view
     returns (uint16)
     {
-        return protocolStorage().maxTwinsPerBundle;
+        return protocolLimits().maxTwinsPerBundle;
     }
 
     /**
@@ -255,7 +247,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     override
     onlyRole(ADMIN)
     {
-        protocolStorage().maxOffersPerBundle = _maxOffersPerBundle;
+        protocolLimits().maxOffersPerBundle = _maxOffersPerBundle;
         emit MaxOffersPerBundleChanged(_maxOffersPerBundle, msg.sender);
     }
 
@@ -268,7 +260,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     view
     returns (uint16)
     {
-        return protocolStorage().maxOffersPerBundle;
+        return protocolLimits().maxOffersPerBundle;
     }
 
      /**
@@ -283,7 +275,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     override
     onlyRole(ADMIN)
     {
-        protocolStorage().maxOffersPerBatch = _maxOffersPerBatch;
+        protocolLimits().maxOffersPerBatch = _maxOffersPerBatch;
         emit MaxOffersPerBatchChanged(_maxOffersPerBatch, msg.sender);
     }
 
@@ -296,7 +288,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     view
     returns (uint16)
     {
-        return protocolStorage().maxOffersPerBatch;
+        return protocolLimits().maxOffersPerBatch;
     }
     
     /**
@@ -311,7 +303,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     override
     onlyRole(ADMIN)
     {
-        protocolStorage().maxTokensPerWithdrawal = _maxTokensPerWithdrawal;
+        protocolLimits().maxTokensPerWithdrawal = _maxTokensPerWithdrawal;
         emit MaxTokensPerWithdrawalChanged(_maxTokensPerWithdrawal, msg.sender);
     }
 
@@ -324,6 +316,6 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     view
     returns (uint16)
     {
-        return protocolStorage().maxTokensPerWithdrawal;
+        return protocolLimits().maxTokensPerWithdrawal;
     }
 }

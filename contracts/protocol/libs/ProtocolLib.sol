@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {BosonTypes} from "../../domain/BosonTypes.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
 
 /**
  * @title ProtocolLib
@@ -9,21 +9,27 @@ import {BosonTypes} from "../../domain/BosonTypes.sol";
  * @dev Provides access to the Protocol Storage, Counters, and Initializer slots for Facets
  */
 library ProtocolLib {
-    bytes32 internal constant PROTOCOL_STORAGE_POSITION = keccak256("boson.protocol.storage");
+    bytes32 internal constant PROTOCOL_ADDRESSES_POSITION = keccak256("boson.protocol.addresses");
+    bytes32 internal constant PROTOCOL_LIMITS_POSITION = keccak256("boson.protocol.limits");
+    bytes32 internal constant PROTOCOL_ENTITIES_POSITION = keccak256("boson.protocol.entities");
+    bytes32 internal constant PROTOCOL_LOOKUPS_POSITION = keccak256("boson.protocol.lookups");
+    bytes32 internal constant PROTOCOL_FEES_POSITION = keccak256("boson.protocol.fees");
     bytes32 internal constant PROTOCOL_COUNTERS_POSITION = keccak256("boson.protocol.counters");
     bytes32 internal constant PROTOCOL_INITIALIZERS_POSITION = keccak256("boson.protocol.initializers");
     bytes32 internal constant PROTOCOL_META_TX_POSITION = keccak256("boson.protocol.metaTransactionsStorage");
 
-    // Shared storage for all protocol facets
-    struct ProtocolStorage {
+    // Protocol addresses storage
+    struct ProtocolAddresses {
         // Address of the Boson Protocol treasury
         address payable treasuryAddress;
         // Address of the Boson Token (ERC-20 contract)
         address payable tokenAddress;
         // Address of the Boson Protocol Voucher proxy
         address voucherAddress;
-        // Percentage that will be taken as a fee from the net of a Boson Protocol exchange
-        uint16 protocolFeePercentage; // 1.75% = 175, 100% = 10000
+    }
+
+    // Protocol limits storage
+    struct ProtocolLimits {
         // limit how many offers can be added to the group
         uint16 maxOffersPerGroup;
         // limit how many offers can be added to the bundle
@@ -34,6 +40,16 @@ library ProtocolLib {
         uint16 maxOffersPerBatch;
         // limit how many different tokens can be withdrawn in a single transaction
         uint16 maxTokensPerWithdrawal;
+    }
+
+    // Protocol fees storage
+    struct ProtocolFees {
+        // Percentage that will be taken as a fee from the net of a Boson Protocol exchange
+        uint16 protocolFeePercentage; // 1.75% = 175, 100% = 10000
+    }
+
+    // Protocol entities storage
+    struct ProtocolEntities {
         // offer id => offer
         mapping(uint256 => BosonTypes.Offer) offers;
         // offer id => offer dates
@@ -45,7 +61,7 @@ library ProtocolLib {
         // exchange id => dispute
         mapping(uint256 => BosonTypes.Dispute) disputes;
         // exchange id => dispute dates
-        mapping(uint256 => BosonTypes.DisputeDates ) disputeDates;
+        mapping(uint256 => BosonTypes.DisputeDates) disputeDates;
         // seller id => seller
         mapping(uint256 => BosonTypes.Seller) sellers;
         // buyer id => buyer
@@ -58,6 +74,10 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Bundle) bundles;
         // twin id => twin
         mapping(uint256 => BosonTypes.Twin) twins;
+    }
+
+    // Protocol lookups storage
+    struct ProtocolLookups {
         // offer id => exchange ids
         mapping(uint256 => uint256[]) exchangeIdsByOffer;
         // offer id => bundle id
@@ -121,21 +141,69 @@ library ProtocolLib {
     }
 
     /**
-     * @dev Get the protocol storage slot
+     * @dev Get the protocol addresses slot
      *
-     * @return ps the the protocol storage slot
+     * @return pa the protocol addresses slot
      */
-    function protocolStorage() internal pure returns (ProtocolStorage storage ps) {
-        bytes32 position = PROTOCOL_STORAGE_POSITION;
+    function protocolAddresses() internal pure returns (ProtocolAddresses storage pa) {
+        bytes32 position = PROTOCOL_ADDRESSES_POSITION;
         assembly {
-            ps.slot := position
+            pa.slot := position
+        }
+    }
+
+    /**
+     * @dev Get the protocol limits slot
+     *
+     * @return pl the protocol limits slot
+     */
+    function protocolLimits() internal pure returns (ProtocolLimits storage pl) {
+        bytes32 position = PROTOCOL_LIMITS_POSITION;
+        assembly {
+            pl.slot := position
+        }
+    }
+
+    /**
+     * @dev Get the protocol entities slot
+     *
+     * @return pe the protocol entities slot
+     */
+    function protocolEntities() internal pure returns (ProtocolEntities storage pe) {
+        bytes32 position = PROTOCOL_ENTITIES_POSITION;
+        assembly {
+            pe.slot := position
+        }
+    }
+
+    /**
+     * @dev Get the protocol lookups slot
+     *
+     * @return pl the protocol lookups slot
+     */
+    function protocolLookups() internal pure returns (ProtocolLookups storage pl) {
+        bytes32 position = PROTOCOL_LOOKUPS_POSITION; 
+        assembly {
+            pl.slot := position
+        }
+    }
+
+    /**
+     * @dev Get the protocol fees slot
+     *
+     * @return pf the protocol fees slot
+     */
+    function protocolFees() internal pure returns (ProtocolFees storage pf) {
+        bytes32 position = PROTOCOL_FEES_POSITION;
+        assembly {
+            pf.slot := position
         }
     }
 
     /**
      * @dev Get the protocol counters slot
      *
-     * @return pc the the protocol counters slot
+     * @return pc the protocol counters slot
      */
     function protocolCounters() internal pure returns (ProtocolCounters storage pc) {
         bytes32 position = PROTOCOL_COUNTERS_POSITION;

@@ -66,7 +66,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         uint256 buyerId = protocolCounters().nextAccountId++;
 
         //check that the wallet address is unique to one buyer Id
-        require(protocolStorage().buyerIdByWallet[_buyer.wallet] == 0, BUYER_ADDRESS_MUST_BE_UNIQUE);
+        require(protocolLookups().buyerIdByWallet[_buyer.wallet] == 0, BUYER_ADDRESS_MUST_BE_UNIQUE);
 
         _buyer.id = buyerId;
         storeBuyer(_buyer);
@@ -106,9 +106,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         uint256 disputeResolverId = protocolCounters().nextAccountId++;
 
          //check that the addresses are unique to one dispute resolver Id
-        require(protocolStorage().disputeResolverIdByOperator[_disputeResolver.operator] == 0 &&
-                protocolStorage().disputeResolverIdByAdmin[_disputeResolver.admin] == 0 &&
-                protocolStorage().disputeResolverIdByClerk[_disputeResolver.clerk] ==0, DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
+        require(protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] == 0 &&
+                protocolLookups().disputeResolverIdByAdmin[_disputeResolver.admin] == 0 &&
+                protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] ==0, DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
 
         _disputeResolver.id = disputeResolverId;
         storeDisputeResolver(_disputeResolver);
@@ -148,16 +148,16 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         require(seller.admin  == msg.sender, NOT_ADMIN); 
 
         //Check that the addresses are unique to one seller Id -- not used or are used by this seller id. Checking this seller id is necessary because one or more addresses may not change
-        require((protocolStorage().sellerIdByOperator[_seller.operator] == 0 || protocolStorage().sellerIdByOperator[_seller.operator] == _seller.id) && 
-                (protocolStorage().sellerIdByAdmin[_seller.admin] == 0 || protocolStorage().sellerIdByAdmin[_seller.admin]  == _seller.id) && 
-                (protocolStorage().sellerIdByClerk[_seller.clerk] == 0 || protocolStorage().sellerIdByClerk[_seller.clerk]  == _seller.id),  
+        require((protocolLookups().sellerIdByOperator[_seller.operator] == 0 || protocolLookups().sellerIdByOperator[_seller.operator] == _seller.id) && 
+                (protocolLookups().sellerIdByAdmin[_seller.admin] == 0 || protocolLookups().sellerIdByAdmin[_seller.admin]  == _seller.id) && 
+                (protocolLookups().sellerIdByClerk[_seller.clerk] == 0 || protocolLookups().sellerIdByClerk[_seller.clerk]  == _seller.id),  
                 SELLER_ADDRESS_MUST_BE_UNIQUE);
 
    
         //Delete current mappings
-        delete protocolStorage().sellerIdByOperator[_seller.operator];
-        delete protocolStorage().sellerIdByAdmin[_seller.admin];
-        delete protocolStorage().sellerIdByClerk[_seller.clerk];
+        delete protocolLookups().sellerIdByOperator[_seller.operator];
+        delete protocolLookups().sellerIdByAdmin[_seller.admin];
+        delete protocolLookups().sellerIdByClerk[_seller.clerk];
    
         storeSeller(_seller);
 
@@ -200,16 +200,16 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         //Check that current wallet address does not own any vouchers, if changing wallet address
         if(buyer.wallet != _buyer.wallet) {
-            IBosonVoucher bosonVoucher = IBosonVoucher(protocolStorage().voucherAddress);
+            IBosonVoucher bosonVoucher = IBosonVoucher(protocolAddresses().voucherAddress);
             require(bosonVoucher.balanceOf(buyer.wallet) == 0, WALLET_OWNS_VOUCHERS);
         }
       
         //check that the wallet address is unique to one buyer Id if new
-        require(protocolStorage().buyerIdByWallet[_buyer.wallet] == 0 || 
-                protocolStorage().buyerIdByWallet[_buyer.wallet] == _buyer.id, BUYER_ADDRESS_MUST_BE_UNIQUE);
+        require(protocolLookups().buyerIdByWallet[_buyer.wallet] == 0 || 
+                protocolLookups().buyerIdByWallet[_buyer.wallet] == _buyer.id, BUYER_ADDRESS_MUST_BE_UNIQUE);
        
         //Delete current mappings
-        delete protocolStorage().buyerIdByWallet[msg.sender];
+        delete protocolLookups().buyerIdByWallet[msg.sender];
 
         storeBuyer(_buyer);
         
@@ -256,15 +256,15 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         require(disputeResolver.admin  == msg.sender, NOT_ADMIN); 
 
         //check that the addresses are unique to one dispute resolverId if new
-        require((protocolStorage().disputeResolverIdByOperator[_disputeResolver.operator] == 0 || protocolStorage().disputeResolverIdByOperator[_disputeResolver.operator] == _disputeResolver.id) &&
-                (protocolStorage().disputeResolverIdByAdmin[_disputeResolver.admin] == 0 || protocolStorage().disputeResolverIdByAdmin[_disputeResolver.admin] == _disputeResolver.id) &&
-                (protocolStorage().disputeResolverIdByClerk[_disputeResolver.clerk] == 0 || protocolStorage().disputeResolverIdByClerk[_disputeResolver.clerk] == _disputeResolver.id), 
+        require((protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] == 0 || protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] == _disputeResolver.id) &&
+                (protocolLookups().disputeResolverIdByAdmin[_disputeResolver.admin] == 0 || protocolLookups().disputeResolverIdByAdmin[_disputeResolver.admin] == _disputeResolver.id) &&
+                (protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] == 0 || protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] == _disputeResolver.id), 
                 DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
        
         //Delete current mappings
-        delete protocolStorage().disputeResolverIdByOperator[disputeResolver.operator];
-        delete protocolStorage().disputeResolverIdByAdmin[disputeResolver.admin];
-        delete protocolStorage().disputeResolverIdByClerk[disputeResolver.clerk];
+        delete protocolLookups().disputeResolverIdByOperator[disputeResolver.operator];
+        delete protocolLookups().disputeResolverIdByAdmin[disputeResolver.admin];
+        delete protocolLookups().disputeResolverIdByClerk[disputeResolver.clerk];
 
         storeDisputeResolver(_disputeResolver);
         
@@ -383,7 +383,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         buyer.active = _buyer.active;
 
         //Map the buyer's wallet address to the buyerId.
-        protocolStorage().buyerIdByWallet[_buyer.wallet] = _buyer.id;
+        protocolLookups().buyerIdByWallet[_buyer.wallet] = _buyer.id;
     }
 
 
@@ -412,9 +412,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         disputeResolver.active = _disputeResolver.active;
 
         //Map the dispute resolver's addresses to the dispute resolver Id.
-        protocolStorage().disputeResolverIdByOperator[_disputeResolver.operator] = _disputeResolver.id;
-        protocolStorage().disputeResolverIdByAdmin[_disputeResolver.admin] = _disputeResolver.id;
-        protocolStorage().disputeResolverIdByClerk[_disputeResolver.clerk] = _disputeResolver.id;
+        protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] = _disputeResolver.id;
+        protocolLookups().disputeResolverIdByAdmin[_disputeResolver.admin] = _disputeResolver.id;
+        protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] = _disputeResolver.id;
     }
 
 }

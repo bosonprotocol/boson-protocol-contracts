@@ -120,7 +120,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             }
 
             // add to bundleIdsByTwin mapping
-            protocolStorage().bundleIdsByTwin[twinId].push(_bundleId);
+            protocolLookups().bundleIdsByTwin[twinId].push(_bundleId);
 
             // add to bundle struct
             bundle.twinIds.push(twinId);
@@ -169,8 +169,8 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             for (uint j = 0; j < bundleIds.length; j++) {
                 if (bundleIds[j] == _bundleId) {
                     foundMatchingBundle = true;
-                    protocolStorage().bundleIdsByTwin[twinId][j] = bundleIds[bundleIds.length - 1];
-                    protocolStorage().bundleIdsByTwin[twinId].pop();
+                    protocolLookups().bundleIdsByTwin[twinId][j] = bundleIds[bundleIds.length - 1];
+                    protocolLookups().bundleIdsByTwin[twinId].pop();
                     break;
                 }
             }
@@ -213,10 +213,10 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
 
         if (_attribute == BundleUpdateAttribute.TWIN) {
             // limit maximum number of twins to avoid running into block gas limit in a loop
-            require(_ids.length <= protocolStorage().maxTwinsPerBundle, TOO_MANY_TWINS);
+            require(_ids.length <= protocolLimits().maxTwinsPerBundle, TOO_MANY_TWINS);
         } else if (_attribute == BundleUpdateAttribute.OFFER) {
             // limit maximum number of offers to avoid running into block gas limit in a loop
-            require(_ids.length <= protocolStorage().maxOffersPerBundle, TOO_MANY_OFFERS);
+            require(_ids.length <= protocolLimits().maxOffersPerBundle, TOO_MANY_OFFERS);
         }
 
         // Get storage location for bundle
@@ -274,7 +274,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             require(!exists, BUNDLE_OFFER_MUST_BE_UNIQUE);
 
             // add to bundleIdByOffer mapping
-            protocolStorage().bundleIdByOffer[offerId] = _bundleId;
+            protocolLookups().bundleIdByOffer[offerId] = _bundleId;
 
             // add to bundle struct
             bundle.offerIds.push(offerId);
@@ -322,7 +322,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             require(!exchangeIdsForOfferExists, EXCHANGE_FOR_OFFER_EXISTS);
 
             // remove bundleIdByOffer mapping
-            delete protocolStorage().bundleIdByOffer[offerId];
+            delete protocolLookups().bundleIdByOffer[offerId];
 
             // remove from the bundle struct
             uint256 offerIdsLength = bundle.offerIds.length;
@@ -368,7 +368,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         // delete from bundleIdByOffer mapping
         uint256[] memory offerIds = bundle.offerIds;
         for (uint256 i = 0; i < offerIds.length; i++) {
-            delete protocolStorage().bundleIdByOffer[offerIds[i]];
+            delete protocolLookups().bundleIdByOffer[offerIds[i]];
         }
 
         // delete from bundleIdsByTwin mapping
@@ -386,9 +386,9 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
                 for (uint k = 0; k < bundleIdsLength; k++) {
 
                     // If bundleId is found in the array, then pop it.
-                    if (protocolStorage().bundleIdsByTwin[twinId][k] == _bundleId) {
-                        protocolStorage().bundleIdsByTwin[twinId][k] = protocolStorage().bundleIdsByTwin[twinId][bundleIdsLength - 1];
-                        protocolStorage().bundleIdsByTwin[twinId].pop();
+                    if (protocolLookups().bundleIdsByTwin[twinId][k] == _bundleId) {
+                        protocolLookups().bundleIdsByTwin[twinId][k] = protocolLookups().bundleIdsByTwin[twinId][bundleIdsLength - 1];
+                        protocolLookups().bundleIdsByTwin[twinId].pop();
                         break;
                     }
                 }
@@ -396,7 +396,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         }
 
         // delete from bundles mapping
-        delete protocolStorage().bundles[_bundleId];
+        delete protocolEntities().bundles[_bundleId];
 
         emit BundleDeleted(_bundleId, bundle.sellerId);
     }

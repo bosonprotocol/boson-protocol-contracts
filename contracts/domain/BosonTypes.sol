@@ -206,4 +206,18 @@ contract BosonTypes {
     struct MetaTxExchangeDetails {
         uint256 exchangeId;
     }
+
+    struct MetaTxFund {
+        uint256 nonce;
+        address from;
+        address contractAddress;
+        string functionName;
+        MetaTxFundDetails fundDetails;
+    }
+
+    struct MetaTxFundDetails {
+        uint256 entityId;
+        address[] tokenList;
+        uint256[] tokenAmounts;
+    }
 }

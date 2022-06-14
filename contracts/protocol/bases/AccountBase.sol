@@ -11,7 +11,6 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
  * @dev Provides methods for seller creation that can be shared accross facets
  */
 contract AccountBase is ProtocolBase, IBosonAccountEvents {
-
     /**
      * @notice Creates a seller
      *
@@ -32,17 +31,18 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         uint256 sellerId = protocolCounters().nextAccountId++;
 
         //check that the addresses are unique to one seller Id
-        require(protocolStorage().sellerIdByOperator[_seller.operator] == 0 && 
-                protocolStorage().sellerIdByAdmin[_seller.admin] == 0 && 
-                protocolStorage().sellerIdByClerk[_seller.clerk] == 0,  
-                SELLER_ADDRESS_MUST_BE_UNIQUE);
+        require(
+            protocolLookups().sellerIdByOperator[_seller.operator] == 0 &&
+                protocolLookups().sellerIdByAdmin[_seller.admin] == 0 &&
+                protocolLookups().sellerIdByClerk[_seller.clerk] == 0,
+            SELLER_ADDRESS_MUST_BE_UNIQUE
+        );
 
         _seller.id = sellerId;
         storeSeller(_seller);
 
         // Notify watchers of state change
         emit SellerCreated(sellerId, _seller);
-
     }
 
     /**
@@ -54,18 +54,19 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
      *
      * @param _seller - the fully populated struct with seller id set
      */
-   
-    function storeSeller(Seller memory _seller) internal 
-    {
+
+    function storeSeller(Seller memory _seller) internal {
         //Check for zero address
-        require(_seller.admin != address(0) &&  
-                _seller.operator != address(0) && 
-                _seller.clerk != address(0) && 
-                _seller.treasury != address(0), 
-                INVALID_ADDRESS);
+        require(
+            _seller.admin != address(0) &&
+                _seller.operator != address(0) &&
+                _seller.clerk != address(0) &&
+                _seller.treasury != address(0),
+            INVALID_ADDRESS
+        );
 
         // Get storage location for seller
-        (,Seller storage seller) = fetchSeller(_seller.id);
+        (, Seller storage seller) = fetchSeller(_seller.id);
 
         // Set seller props individually since memory structs can't be copied to storage
         seller.id = _seller.id;
@@ -76,9 +77,8 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         seller.active = _seller.active;
 
         //Map the seller's addresses to the seller Id. It's not necessary to map the treasury address, as it only receives funds
-        protocolStorage().sellerIdByOperator[_seller.operator] = _seller.id;
-        protocolStorage().sellerIdByAdmin[_seller.admin] = _seller.id;
-        protocolStorage().sellerIdByClerk[_seller.clerk] = _seller.id;
-       
+        protocolLookups().sellerIdByOperator[_seller.operator] = _seller.id;
+        protocolLookups().sellerIdByAdmin[_seller.admin] = _seller.id;
+        protocolLookups().sellerIdByClerk[_seller.clerk] = _seller.id;
     }
 }
