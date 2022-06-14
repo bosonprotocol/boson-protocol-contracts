@@ -52,8 +52,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Addresses are not unique to this dispute resolver
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
+     * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currence
      */
-    function createDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver) external;
+    function createDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver, BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees) external;
 
     /**
      * @notice Updates a seller
@@ -98,8 +99,10 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Dispute resolver does not exist
      *
      * @param _disputeResolver - the fully populated buydispute resolver struct
+     * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency
+     * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency
      */
-    function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver) external;
+    function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver, BosonTypes.DisputeResolverFee[] memory _disputeResolverFees) external;
 
     /**
      * @notice Gets the details about a seller.
@@ -137,8 +140,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _disputeResolverId - the id of the resolver to check
      * @return exists - the resolver was found
      * @return disputeResolver - the resolver details. See {BosonTypes.DisputeResolver}
+     * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      */
-    function getDisputeResolver(uint256 _disputeResolverId) external view returns (bool exists, BosonTypes.DisputeResolver memory disputeResolver);
+    function getDisputeResolver(uint256 _disputeResolverId) external view returns (bool exists, BosonTypes.DisputeResolver memory disputeResolver, BosonTypes.DisputeResolverFee[] memory disputeResolverFees);
 
     /**
      * @notice Gets the next account Id that can be assigned to an account.

@@ -66,8 +66,10 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Seller) sellers;
         // buyer id => buyer
         mapping(uint256 => BosonTypes.Buyer) buyers;
-        // buyer id => dispute resolver
+        // dispute resolver id => dispute resolver
         mapping(uint256 => BosonTypes.DisputeResolver) disputeResolvers;
+        // dispute resolver id => dispute resolver fee array
+        mapping(uint256 => BosonTypes.DisputeResolverFee[]) disputeResolverFees;
         // group id => group
         mapping(uint256 => BosonTypes.Group) groups;
         // bundle id => bundle

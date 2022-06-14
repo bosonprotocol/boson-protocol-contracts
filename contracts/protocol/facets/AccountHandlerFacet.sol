@@ -87,8 +87,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - Addresses are not unique to this dispute resolver
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
+     * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency
      */
-    function createDisputeResolver(DisputeResolver memory _disputeResolver)
+    function createDisputeResolver(DisputeResolver memory _disputeResolver,  DisputeResolverFee[] memory _disputeResolverFees)
     external
     override
     {
@@ -111,10 +112,10 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
                 protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] ==0, DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
 
         _disputeResolver.id = disputeResolverId;
-        storeDisputeResolver(_disputeResolver);
+        storeDisputeResolver(_disputeResolver, _disputeResolverFees);
 
         //Notify watchers of state change
-        emit DisputeResolverCreated(_disputeResolver.id, _disputeResolver);
+        emit DisputeResolverCreated(_disputeResolver.id, _disputeResolver, _disputeResolverFees);
     }
 
 
@@ -231,8 +232,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - Dispute resolver does not exist
      *
      * @param _disputeResolver - the fully populated buydispute resolver struct
+     * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency
      */
-    function updateDisputeResolver(DisputeResolver memory _disputeResolver) 
+    function updateDisputeResolver(DisputeResolver memory _disputeResolver, DisputeResolverFee[] memory _disputeResolverFees)
     external
     override
     {
@@ -245,10 +247,11 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         bool exists;
         DisputeResolver storage disputeResolver;
+        DisputeResolverFee[] storage disputeResolverFees;
         
-        //Check Dispute Resolver exists in  disputeResolvers mapping
-        (exists, disputeResolver) = fetchDisputeResolver(_disputeResolver.id);
-
+        //Check Dispute Resolver and Dispute Resolver Fees from  disputeResolvers and disputeResolverFees mappings
+        (exists, disputeResolver, disputeResolverFees) = fetchDisputeResolver(_disputeResolver.id);
+       
         //Dispute Resolver  must already exist
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
 
@@ -266,10 +269,10 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         delete protocolLookups().disputeResolverIdByAdmin[disputeResolver.admin];
         delete protocolLookups().disputeResolverIdByClerk[disputeResolver.clerk];
 
-        storeDisputeResolver(_disputeResolver);
+        storeDisputeResolver(_disputeResolver, _disputeResolverFees);
         
         // Notify watchers of state change
-        emit DisputeResolverUpdated(_disputeResolver.id, _disputeResolver);
+        emit DisputeResolverUpdated(_disputeResolver.id, _disputeResolver, _disputeResolverFees);
 
     }
 
@@ -343,11 +346,12 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * @param _disputeResolverId - the id of the rdispute esolver to check
      * @return exists - the dispute resolver was found
      * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
+     * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      */
     function getDisputeResolver(uint256 _disputeResolverId) 
     external
     override
-    view returns (bool exists, DisputeResolver memory disputeResolver) 
+    view returns (bool exists, DisputeResolver memory disputeResolver, DisputeResolverFee[] memory disputeResolverFees) 
     {
         return fetchDisputeResolver(_disputeResolverId);
     }
@@ -391,15 +395,16 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * @notice Stores DisputeResolver struct in storage
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set
+     * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency
      */
    
-    function storeDisputeResolver(DisputeResolver memory _disputeResolver) internal 
+    function storeDisputeResolver(DisputeResolver memory _disputeResolver, DisputeResolverFee[] memory _disputeResolverFees) internal 
     {
         // escalation period must be greater than zero
         require(_disputeResolver.escalationPeriod > 0, INVALID_ESCALATION_PERIOD);
 
         // Get storage location for dispute resolver
-        (,DisputeResolver storage disputeResolver) = fetchDisputeResolver(_disputeResolver.id);
+        (,DisputeResolver storage disputeResolver, DisputeResolverFee[] storage disputeResolverFees) = fetchDisputeResolver(_disputeResolver.id);
 
         // Set dispute resolver props individually since memory structs can't be copied to storage
         disputeResolver.id = _disputeResolver.id;

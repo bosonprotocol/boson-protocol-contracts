@@ -229,10 +229,14 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @param _disputeResolverId - the id of the dispute resolver
      * @return exists - whether the dispute resolver exists
      * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
+     * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      */
-    function fetchDisputeResolver(uint256 _disputeResolverId) internal view returns (bool exists, BosonTypes.DisputeResolver storage disputeResolver) {
+    function fetchDisputeResolver(uint256 _disputeResolverId) internal view returns (bool exists, BosonTypes.DisputeResolver storage disputeResolver, BosonTypes.DisputeResolverFee[] storage disputeResolverFees) {
         // Get the dispute resolver's slot
         disputeResolver = protocolEntities().disputeResolvers[_disputeResolverId];
+
+        //Get dispute resolver's fee list slot
+        disputeResolverFees = protocolEntities().disputeResolverFees[_disputeResolverId];
 
         // Determine existence
         exists = (_disputeResolverId > 0 && disputeResolver.id == _disputeResolverId);

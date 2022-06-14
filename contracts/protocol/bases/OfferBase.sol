@@ -117,7 +117,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         require(_offer.quantityAvailable > 0, INVALID_QUANTITY_AVAILABLE);
 
         // specified resolver must be registered
-        (bool exists,) = fetchDisputeResolver(_offer.disputeResolverId);
+        (bool exists,,) = fetchDisputeResolver(_offer.disputeResolverId);
         require(exists, INVALID_DISPUTE_RESOLVER);
 
         // Calculate and set the protocol fee
