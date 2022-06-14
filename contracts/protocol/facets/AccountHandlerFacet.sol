@@ -56,24 +56,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     external
     override
     {
-        //Check for zero address
-        require(_buyer.wallet != address(0), INVALID_ADDRESS);
-
-        //Check active is not set to false
-        require(_buyer.active, MUST_BE_ACTIVE);
-
-        // Get the next account Id and increment the counter
-        uint256 buyerId = protocolCounters().nextAccountId++;
-
-        //check that the wallet address is unique to one buyer Id
-        require(protocolLookups().buyerIdByWallet[_buyer.wallet] == 0, BUYER_ADDRESS_MUST_BE_UNIQUE);
-
-        _buyer.id = buyerId;
-        storeBuyer(_buyer);
-
-        //Notify watchers of state change
-        emit BuyerCreated(_buyer.id, _buyer);
-
+        createBuyerInternal(_buyer);
     }
 
     /**
@@ -351,27 +334,6 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     returns(uint256 nextAccountId) {
         nextAccountId = protocolCounters().nextAccountId;
     }
-
-    /**
-     * @notice Stores buyer struct in storage
-     *
-     * @param _buyer - the fully populated struct with buyer id set
-     */
-   
-    function storeBuyer(Buyer memory _buyer) internal 
-    {
-        // Get storage location for buyer
-        (,Buyer storage buyer) = fetchBuyer(_buyer.id);
-
-        // Set buyer props individually since memory structs can't be copied to storage
-        buyer.id = _buyer.id;
-        buyer.wallet = _buyer.wallet;
-        buyer.active = _buyer.active;
-
-        //Map the buyer's wallet address to the buyerId.
-        protocolLookups().buyerIdByWallet[_buyer.wallet] = _buyer.id;
-    }
-
 
     /**
      * @notice Stores DisputeResolver struct in storage

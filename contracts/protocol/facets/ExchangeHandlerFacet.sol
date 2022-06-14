@@ -7,6 +7,7 @@ import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
+import { AccountBase } from "../bases/AccountBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 
 /**
@@ -14,7 +15,7 @@ import { FundsLib } from "../libs/FundsLib.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol
  */
-contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
+contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase, AccountBase {
 
     /**
      * @notice Facet Initializer
@@ -74,30 +75,18 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         require(block.timestamp < offerDates.validUntil, OFFER_HAS_EXPIRED);
         require(offer.quantityAvailable > 0, OFFER_SOLD_OUT);
 
-        // Find or create the account associated with the specified buyer address
-        uint256 buyerId;
-        Buyer storage buyer;
-        (exists, buyerId) = getBuyerIdByWallet(_buyer);
-        if (exists) {
-            // Fetch the existing buyer account
-            (,buyer) = fetchBuyer(buyerId);
-
-            // Make sure buyer account is active
-            require(buyer.active, MUST_BE_ACTIVE);
-        } else {
-            // create the buyer account
-            (buyerId, buyer) = createBuyerInternal(_buyer);
-        }
+        // Fetch or create buyer
+        Buyer storage buyer = getValidBuyer(_buyer);
 
         // Encumber funds before creating the exchange
-        FundsLib.encumberFunds(_offerId, buyerId);
+        FundsLib.encumberFunds(_offerId, buyer.id);
 
         // Create and store a new exchange
         uint256 exchangeId = protocolCounters().nextExchangeId++;
         Exchange storage exchange = protocolEntities().exchanges[exchangeId];
         exchange.id = exchangeId;
         exchange.offerId = _offerId;
-        exchange.buyerId = buyerId;
+        exchange.buyerId = buyer.id;
         exchange.state = ExchangeState.Committed;
         exchange.voucher.committedDate = block.timestamp;
 
@@ -116,7 +105,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         bosonVoucher.issueVoucher(exchangeId, buyer);
 
         // Notify watchers of state change
-        emit BuyerCommitted(_offerId, buyerId, exchangeId, exchange);
+        emit BuyerCommitted(_offerId, buyer.id, exchangeId, exchange);
     }
 
     /**
@@ -345,27 +334,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
         // Make sure that the voucher is still valid
         require(block.timestamp <= exchange.voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
 
-        // Get the caller's buyer account id
-        bool buyerExists;
-        uint256 buyerId;
-        Buyer storage buyer;
-        (buyerExists, buyerId) = getBuyerIdByWallet(_newBuyer);
-
-        // New buyer either has an account or needs one
-        if (buyerExists) {
-            // Make sure the new buyer's existing account is active
-            (, buyer) = fetchBuyer(buyerId);
-            require(buyer.active, MUST_BE_ACTIVE);
-        } else {
-            // Create buyer account for new owner
-            (buyerId,) = createBuyerInternal(_newBuyer);
-        }
+        // Fetch or create buyer
+        Buyer storage buyer = getValidBuyer(_newBuyer);
 
         // Update buyer id for the exchange
-        exchange.buyerId = buyerId;
+        exchange.buyerId = buyer.id;
 
         // Notify watchers of state change
-        emit VoucherTransferred(exchange.offerId, _exchangeId, buyerId);
+        emit VoucherTransferred(exchange.offerId, _exchangeId, buyer.id);
     }
 
     /**
@@ -455,27 +431,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
     view
     returns (uint256 nextExchangeId) {
         nextExchangeId = protocolCounters().nextExchangeId;
-    }
-
-    /**
-     * @notice Create a buyer account when needed
-     *
-     * @param _buyer - the address of the buyer
-     * @return buyerId - the new Buyer id
-     * @return buyer - the new Buyer struct
-     */
-    function createBuyerInternal(address payable _buyer)
-    internal
-    returns (uint256 buyerId, Buyer storage buyer)
-    {
-        // get the id that will be assigned
-        buyerId = protocolCounters().nextAccountId;
-
-        // create the buyer (id is ignored)
-        IBosonAccountHandler(address(this)).createBuyer(Buyer(0, _buyer, true));
-
-        // fetch the buyer account
-        (, buyer) = fetchBuyer(buyerId);
     }
 
     /**
@@ -599,5 +554,25 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase {
                 require(success, TWIN_TRANSFER_FAILED);
             }
         }
+    }
+
+    function getValidBuyer(address payable _buyer) internal returns(Buyer storage buyer){
+        // Find or create the account associated with the specified buyer address
+        uint256 buyerId;
+        bool exists;
+        (exists, buyerId) = getBuyerIdByWallet(_buyer);
+
+        if (!exists) {
+            // Create the buyer account
+            Buyer memory newBuyer = Buyer(0, _buyer, true);
+            createBuyerInternal(newBuyer);
+            buyerId = newBuyer.id;
+        }
+
+        // Fetch the existing buyer account
+        (,buyer) = fetchBuyer(buyerId);
+
+        // Make sure buyer account is active
+        require(buyer.active, MUST_BE_ACTIVE);
     }
 }
