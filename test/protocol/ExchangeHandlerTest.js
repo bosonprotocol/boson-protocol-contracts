@@ -384,7 +384,7 @@ describe("IBosonExchangeHandler", function () {
         // Complete the exchange, expecting event
         await expect(exchangeHandler.connect(buyer).completeExchange(exchange.id))
           .to.emit(exchangeHandler, "ExchangeCompleted")
-          .withArgs(offerId, buyerId, exchange.id);
+          .withArgs(offerId, buyerId, exchange.id, buyer.address);
       });
 
       it("should update state", async function () {
@@ -422,7 +422,7 @@ describe("IBosonExchangeHandler", function () {
         // Complete exchange
         await expect(exchangeHandler.connect(operator).completeExchange(exchange.id))
           .to.emit(exchangeHandler, "ExchangeCompleted")
-          .withArgs(offerId, buyerId, exchange.id);
+          .withArgs(offerId, buyerId, exchange.id, operator.address);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -1101,7 +1101,7 @@ describe("IBosonExchangeHandler", function () {
         // Call onVoucherTransferred, expecting event
         await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(exchange.id, newOwner.address))
           .to.emit(exchangeHandler, "VoucherTransferred")
-          .withArgs(offerId, exchange.id, nextAccountId);
+          .withArgs(offerId, exchange.id, nextAccountId, fauxClient.address);
       });
 
       it("should update exchange when new buyer (with existing, active account) is passed", async function () {

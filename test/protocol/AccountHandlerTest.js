@@ -170,7 +170,7 @@ describe("IBosonAccountHandler", function () {
         // Create a seller, testing for the event
         await expect(accountHandler.connect(admin).createSeller(seller))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct);
+          .withArgs(seller.id, sellerStruct, admin.address);
       });
 
       it("should update state", async function () {
@@ -195,7 +195,7 @@ describe("IBosonAccountHandler", function () {
         // Create a seller, testing for the event
         await expect(accountHandler.connect(admin).createSeller(seller))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(nextAccountId, sellerStruct);
+          .withArgs(nextAccountId, sellerStruct, admin.address);
 
         // wrong seller id should not exist
         [exists] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -218,7 +218,7 @@ describe("IBosonAccountHandler", function () {
         // Create a seller, testing for the event
         await expect(accountHandler.connect(admin).createSeller(seller))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(nextAccountId, sellerStruct);
+          .withArgs(nextAccountId, sellerStruct, admin.address);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -446,14 +446,14 @@ describe("IBosonAccountHandler", function () {
         // Update a seller, testing for the event
         await expect(accountHandler.connect(admin).updateSeller(seller))
           .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, sellerStruct);
+          .withArgs(seller.id, sellerStruct, admin.address);
       });
 
       it("should emit a SellerUpdated event with correct values if values stay the same", async function () {
         // Update a seller, testing for the event
         await expect(accountHandler.connect(admin).updateSeller(seller))
           .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, sellerStruct);
+          .withArgs(seller.id, sellerStruct, admin.address);
       });
 
       it("should update state of all fields exceipt Id", async function () {
@@ -547,7 +547,7 @@ describe("IBosonAccountHandler", function () {
         //Create seller2, testing for the event
         await expect(accountHandler.connect(rando).createSeller(seller2))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller2.id, seller2Struct);
+          .withArgs(seller2.id, seller2Struct, rando.address);
 
         //Update first seller
         seller.operator = rando.address;
@@ -591,7 +591,7 @@ describe("IBosonAccountHandler", function () {
         // Update a seller, testing for the event
         await expect(accountHandler.connect(admin).updateSeller(seller))
           .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, sellerStruct);
+          .withArgs(seller.id, sellerStruct, admin.address);
 
         seller.admin = other3.address;
         sellerStruct = seller.toStruct();
@@ -599,7 +599,7 @@ describe("IBosonAccountHandler", function () {
         // Update a seller, testing for the event
         await expect(accountHandler.connect(other2).updateSeller(seller))
           .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, sellerStruct);
+          .withArgs(seller.id, sellerStruct, other2.address);
 
         // Attempt to update the seller with original admin address, expecting revert
         await expect(accountHandler.connect(admin).updateSeller(seller)).to.revertedWith(RevertReasons.NOT_ADMIN);
@@ -667,7 +667,7 @@ describe("IBosonAccountHandler", function () {
           //Create second seller
           await expect(accountHandler.connect(rando).createSeller(seller))
             .to.emit(accountHandler, "SellerCreated")
-            .withArgs(nextAccountId, sellerStruct);
+            .withArgs(nextAccountId, sellerStruct, rando.address);
 
           //Set operator address value to be same as first seller created in Seller Methods beforeEach
           seller.operator = operator.address; //already being used by seller 1
@@ -779,7 +779,7 @@ describe("IBosonAccountHandler", function () {
         // Create a buyer, testing for the event
         await expect(accountHandler.connect(rando).createBuyer(buyer))
           .to.emit(accountHandler, "BuyerCreated")
-          .withArgs(buyer.id, buyerStruct);
+          .withArgs(buyer.id, buyerStruct, rando.address);
       });
 
       it("should update state", async function () {
@@ -804,7 +804,7 @@ describe("IBosonAccountHandler", function () {
         // Create a buyer, testing for the event
         await expect(accountHandler.connect(rando).createBuyer(buyer))
           .to.emit(accountHandler, "BuyerCreated")
-          .withArgs(nextAccountId, buyerStruct);
+          .withArgs(nextAccountId, buyerStruct, rando.address);
 
         // wrong buyer id should not exist
         [exists] = await accountHandler.connect(rando).getBuyer(buyer.id);
@@ -861,14 +861,14 @@ describe("IBosonAccountHandler", function () {
         //Update a buyer, testing for the event
         await expect(accountHandler.connect(other1).updateBuyer(buyer))
           .to.emit(accountHandler, "BuyerUpdated")
-          .withArgs(buyer.id, buyerStruct);
+          .withArgs(buyer.id, buyerStruct, other1.address);
       });
 
       it("should emit a BuyerUpdated event with correct values if values stay the same", async function () {
         //Update a buyer, testing for the event
         await expect(accountHandler.connect(other1).updateBuyer(buyer))
           .to.emit(accountHandler, "BuyerUpdated")
-          .withArgs(buyer.id, buyerStruct);
+          .withArgs(buyer.id, buyerStruct, other1.address);
       });
 
       it("should update state of all fields exceipt Id", async function () {
@@ -962,7 +962,7 @@ describe("IBosonAccountHandler", function () {
         //Create buyer2, testing for the event
         await expect(accountHandler.connect(rando).createBuyer(buyer2))
           .to.emit(accountHandler, "BuyerCreated")
-          .withArgs(buyer2.id, buyer2Struct);
+          .withArgs(buyer2.id, buyer2Struct, rando.address);
 
         //Update first buyer
         buyer.wallet = other2.address;
@@ -1004,7 +1004,7 @@ describe("IBosonAccountHandler", function () {
         // Update buyer, testing for the event
         await expect(accountHandler.connect(other1).updateBuyer(buyer))
           .to.emit(accountHandler, "BuyerUpdated")
-          .withArgs(buyer.id, buyerStruct);
+          .withArgs(buyer.id, buyerStruct, other1.address);
 
         buyer.wallet = other3.address;
         buyerStruct = buyer.toStruct();
@@ -1012,7 +1012,7 @@ describe("IBosonAccountHandler", function () {
         // Update buyer, testing for the event
         await expect(accountHandler.connect(other2).updateBuyer(buyer))
           .to.emit(accountHandler, "BuyerUpdated")
-          .withArgs(buyer.id, buyerStruct);
+          .withArgs(buyer.id, buyerStruct, other2.address);
 
         // Attempt to update the buyer with original wallet address, expecting revert
         await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NOT_BUYER_WALLET);
@@ -1154,7 +1154,7 @@ describe("IBosonAccountHandler", function () {
           //Create second buyer, testing for the event
           await expect(accountHandler.connect(rando).createBuyer(buyer2))
             .to.emit(accountHandler, "BuyerCreated")
-            .withArgs(buyer2.id, buyer2Struct);
+            .withArgs(buyer2.id, buyer2Struct, rando.address);
 
           //Set wallet address value to be same as first buyer created in Buyer Methods beforeEach
           buyer2.wallet = other1.address; //already being used by buyer 1
@@ -1239,7 +1239,7 @@ describe("IBosonAccountHandler", function () {
         // Create a dispute resolver, testing for the event
         await expect(accountHandler.connect(rando).createDisputeResolver(disputeResolver))
           .to.emit(accountHandler, "DisputeResolverCreated")
-          .withArgs(disputeResolver.id, disputeResolverStruct);
+          .withArgs(disputeResolver.id, disputeResolverStruct, rando.address);
       });
 
       it("should update state", async function () {
@@ -1264,7 +1264,7 @@ describe("IBosonAccountHandler", function () {
         // Create a dispute resolver, testing for the event
         await expect(accountHandler.connect(rando).createDisputeResolver(disputeResolver))
           .to.emit(accountHandler, "DisputeResolverCreated")
-          .withArgs(nextAccountId, disputeResolverStruct);
+          .withArgs(nextAccountId, disputeResolverStruct, rando.address);
 
         // wrong dispute resolver id should not exist
         [exists] = await accountHandler.connect(rando).getDisputeResolver(disputeResolver.id);
@@ -1362,14 +1362,14 @@ describe("IBosonAccountHandler", function () {
         //Update a dispute resolver, testing for the event
         await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver))
           .to.emit(accountHandler, "DisputeResolverUpdated")
-          .withArgs(disputeResolver.id, disputeResolverStruct);
+          .withArgs(disputeResolver.id, disputeResolverStruct, other1.address);
       });
 
       it("should emit a DisputeResolverUpdated event with correct values if values stay the same", async function () {
         //Update a dispute resolver, testing for the event
         await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver))
           .to.emit(accountHandler, "DisputeResolverUpdated")
-          .withArgs(disputeResolver.id, disputeResolverStruct);
+          .withArgs(disputeResolver.id, disputeResolverStruct, other1.address);
       });
 
       it("should update state of all fields except Id", async function () {
@@ -1463,7 +1463,7 @@ describe("IBosonAccountHandler", function () {
         //Create disputeResolver2 testing, for the event
         await expect(accountHandler.connect(rando).createDisputeResolver(disputeResolver2))
           .to.emit(accountHandler, "DisputeResolverCreated")
-          .withArgs(disputeResolver2.id, disputeResolver2Struct);
+          .withArgs(disputeResolver2.id, disputeResolver2Struct, rando.address);
 
         //Update first dispute resolver values
         disputeResolver.wallet = other2.address;
@@ -1505,7 +1505,7 @@ describe("IBosonAccountHandler", function () {
         //Update dispute resolver, testing for the event
         await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver))
           .to.emit(accountHandler, "DisputeResolverUpdated")
-          .withArgs(disputeResolver.id, disputeResolverStruct);
+          .withArgs(disputeResolver.id, disputeResolverStruct, other1.address);
 
         disputeResolver.wallet = other3.address;
         disputeResolverStruct = disputeResolver.toStruct();
@@ -1513,7 +1513,7 @@ describe("IBosonAccountHandler", function () {
         //Update dispute resolver, testing for the event
         await expect(accountHandler.connect(other2).updateDisputeResolver(disputeResolver))
           .to.emit(accountHandler, "DisputeResolverUpdated")
-          .withArgs(disputeResolver.id, disputeResolverStruct);
+          .withArgs(disputeResolver.id, disputeResolverStruct, other2.address);
 
         // Attempt to update the dispute resolver with original wallet address, expecting revert
         await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver)).to.revertedWith(
@@ -1565,7 +1565,7 @@ describe("IBosonAccountHandler", function () {
           //Create second dispute resolver, testing for the event
           await expect(accountHandler.connect(rando).createDisputeResolver(disputeResolver2))
             .to.emit(accountHandler, "DisputeResolverCreated")
-            .withArgs(disputeResolver2.id, disputeResolver2Struct);
+            .withArgs(disputeResolver2.id, disputeResolver2Struct, rando.address);
 
           //Set wallet address value to be same as first dispute resolver created in Dispute Resolver Methods beforeEach
           disputeResolver2.wallet = other1.address; //already being used by dispute resolver 1
