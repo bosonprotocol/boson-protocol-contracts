@@ -1316,7 +1316,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
         });
 
-        it("Should emit MetaTransactionExecuted event", async () => {
+        it("Should emit MetaTransactionExecuted event and update state", async () => {
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             buyer,
