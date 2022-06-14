@@ -108,4 +108,5 @@ exports.RevertReasons = {
   DISPUTE_HAS_EXPIRED: "Dispute has expired",
   INVALID_BUYER_PERCENT: "Invalid buyer percent",
   DISPUTE_STILL_VALID: "Dispute still valid",
+  INVALID_DISPUTE_TIMEOUT: "Invalid dispute timeout",
 };
