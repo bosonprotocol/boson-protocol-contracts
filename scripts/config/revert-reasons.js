@@ -109,4 +109,7 @@ exports.RevertReasons = {
   INVALID_BUYER_PERCENT: "Invalid buyer percent",
   DISPUTE_STILL_VALID: "Dispute still valid",
   INVALID_DISPUTE_TIMEOUT: "Invalid dispute timeout",
+
+  // Config related
+  PERCENTAGE_OUTSIDE_RANGE: "Percentage representation must be between 1 and 10000",
 };

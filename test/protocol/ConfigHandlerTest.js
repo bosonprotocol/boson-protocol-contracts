@@ -438,7 +438,7 @@ describe("IBosonConfigHandler", function () {
             protocolFeePercentage = 0;
             await expect(
               configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage)
-            ).to.revertedWith("Percentage representation must be between 1 and 10000");
+            ).to.revertedWith(RevertReasons.PERCENTAGE_OUTSIDE_RANGE);
           });
 
           it("protocolFeePercentage higher than the allowed range", async function () {
@@ -446,7 +446,7 @@ describe("IBosonConfigHandler", function () {
             protocolFeePercentage = 10001;
             await expect(
               configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage)
-            ).to.revertedWith("Percentage representation must be between 1 and 10000");
+            ).to.revertedWith(RevertReasons.PERCENTAGE_OUTSIDE_RANGE);
           });
         });
       });
