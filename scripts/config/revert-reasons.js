@@ -104,6 +104,7 @@ exports.RevertReasons = {
 
   // Dispute related
   COMPLAINT_MISSING: "Complaint missing",
+  FULFILLMENT_PERIOD_HAS_ELAPSED: "Fulfillment period has already elapsed",
   DISPUTE_HAS_EXPIRED: "Dispute has expired",
   INVALID_BUYER_PERCENT: "Invalid buyer percent",
   DISPUTE_STILL_VALID: "Dispute still valid",
