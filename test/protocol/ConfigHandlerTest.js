@@ -407,7 +407,7 @@ describe("IBosonConfigHandler", function () {
       context("👉 setProtocolFeePercentage()", async function () {
         beforeEach(async function () {
           // set new value for treasury address
-          protocolFeePercentage = 200;
+          protocolFeePercentage = 10000;
         });
 
         it("should emit a ProtocolFeePercentageChanged event", async function () {
@@ -431,6 +431,22 @@ describe("IBosonConfigHandler", function () {
             await expect(configHandler.connect(rando).setProtocolFeePercentage(protocolFeePercentage)).to.revertedWith(
               RevertReasons.ACCESS_DENIED
             );
+          });
+
+          it("protocolFeePercentage lower than the allowed range", async function () {
+            // Attempt to set new voucher address, expecting revert
+            protocolFeePercentage = 0;
+            await expect(
+              configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage)
+            ).to.revertedWith("Percentage representation must be between 1 and 10000");
+          });
+
+          it("protocolFeePercentage higher than the allowed range", async function () {
+            // Attempt to set new voucher address, expecting revert
+            protocolFeePercentage = 10001;
+            await expect(
+              configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage)
+            ).to.revertedWith("Percentage representation must be between 1 and 10000");
           });
         });
       });
