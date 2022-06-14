@@ -91,7 +91,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         storeDisputeResolver(_disputeResolver);
 
         //Notify watchers of state change
-        emit DisputeResolverCreated(_disputeResolver.id, _disputeResolver);
+        emit DisputeResolverCreated(_disputeResolver.id, _disputeResolver, msgSender());
     }
 
 
@@ -139,7 +139,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         storeSeller(_seller);
 
         // Notify watchers of state change
-        emit SellerUpdated(_seller.id, _seller);
+        emit SellerUpdated(_seller.id, _seller, msgSender());
     }
 
     /**
@@ -191,7 +191,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         storeBuyer(_buyer);
         
         // Notify watchers of state change
-        emit BuyerUpdated(_buyer.id, _buyer);
+        emit BuyerUpdated(_buyer.id, _buyer, msgSender());
 
         
     }
@@ -238,7 +238,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         storeDisputeResolver(_disputeResolver);
         
         // Notify watchers of state change
-        emit DisputeResolverUpdated(_disputeResolver.id, _disputeResolver);
+        emit DisputeResolverUpdated(_disputeResolver.id, _disputeResolver, msgSender());
 
     }
 

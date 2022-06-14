@@ -50,7 +50,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         storeOffer(_offer, _offerDates, _offerDurations);
 
         // Notify watchers of state change
-        emit OfferCreated(offerId, sellerId, _offer, _offerDates, _offerDurations);
+        emit OfferCreated(offerId, sellerId, _offer, _offerDates, _offerDurations, msgSender());
     }
 
     /**

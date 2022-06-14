@@ -104,7 +104,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         bosonVoucher.issueVoucher(exchangeId, buyer);
 
         // Notify watchers of state change
-        emit BuyerCommitted(_offerId, buyerId, exchangeId, exchange);
+        emit BuyerCommitted(_offerId, buyerId, exchangeId, exchange, msgSender());
     }
 
     /**
@@ -155,7 +155,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         finalizeExchange(exchange, ExchangeState.Completed);
 
         // Notify watchers of state change
-        emit ExchangeCompleted(offerId, exchange.buyerId, exchange.id);
+        emit ExchangeCompleted(offerId, exchange.buyerId, exchange.id, msgSender());
     }
 
     /**
@@ -194,7 +194,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         finalizeExchange(exchange, ExchangeState.Revoked);
 
         // Notify watchers of state change
-        emit VoucherRevoked(offer.id, _exchangeId, msg.sender);
+        emit VoucherRevoked(offer.id, _exchangeId, msgSender());
     }
 
     /**
@@ -224,7 +224,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         finalizeExchange(exchange, ExchangeState.Canceled);
 
         // Notify watchers of state change
-        emit VoucherCanceled(exchange.offerId, _exchangeId, msg.sender);
+        emit VoucherCanceled(exchange.offerId, _exchangeId, msgSender());
     }
 
     /**
@@ -257,7 +257,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         exchange.voucher.expired = true;
 
         // Notify watchers of state change
-        emit VoucherExpired(exchange.offerId, _exchangeId, msg.sender);
+        emit VoucherExpired(exchange.offerId, _exchangeId, msgSender());
     }
 
     /**
@@ -306,7 +306,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         transferTwins(exchange);
 
         // Notify watchers of state change
-        emit VoucherRedeemed(offerId, _exchangeId, msg.sender);
+        emit VoucherRedeemed(offerId, _exchangeId, msgSender());
     }
 
     /**
@@ -340,7 +340,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         exchange.buyerId = buyerId;
 
         // Notify watchers of state change
-        emit VoucherTransferred(exchange.offerId, _exchangeId, buyerId);
+        emit VoucherTransferred(exchange.offerId, _exchangeId, buyerId, msgSender());
     }
 
     /**

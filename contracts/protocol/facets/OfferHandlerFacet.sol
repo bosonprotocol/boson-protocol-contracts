@@ -131,7 +131,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         offer.voided = true;
 
         // Notify listeners of state change
-        emit OfferVoided(_offerId, offer.sellerId);
+        emit OfferVoided(_offerId, offer.sellerId, msgSender());
 
     }
 
@@ -195,7 +195,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         offerDates.validUntil = _validUntilDate;
 
         // Notify watchers of state change
-        emit OfferExtended(_offerId, offer.sellerId, _validUntilDate);
+        emit OfferExtended(_offerId, offer.sellerId, _validUntilDate, msgSender());
     }
 
     /**
