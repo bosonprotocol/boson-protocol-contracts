@@ -15,7 +15,7 @@ describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
   let accounts, deployer, rando, token, treasury, voucher;
-  let protocolFee, maxOffersPerGroup, maxTwinsPerBundle, maxOffersPerBundle, maxOffersPerBatch, maxTokensPerWithdrawal;
+  let protocolFee, maxOffersPerGroup, maxTwinsPerBundle, maxOffersPerBundle, maxOffersPerBatch, maxTokensPerWithdrawal, maxFeesPerDisputeResolver;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
 
   before(async function () {
@@ -45,6 +45,7 @@ describe("IBosonConfigHandler", function () {
     maxOffersPerBundle = 100;
     maxOffersPerBatch = 100;
     maxTokensPerWithdrawal = 100;
+    maxFeesPerDisputeResolver = 100;
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
@@ -70,6 +71,7 @@ describe("IBosonConfigHandler", function () {
             maxOffersPerBundle,
             maxOffersPerBatch,
             maxTokensPerWithdrawal,
+            maxFeesPerDisputeResolver
           },
           //Protocol fees
           {

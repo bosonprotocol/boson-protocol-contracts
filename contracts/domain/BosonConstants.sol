@@ -41,6 +41,7 @@ contract BosonConstants {
     string internal constant WALLET_OWNS_VOUCHERS = "Wallet address owns vouchers";
     string internal constant NO_SUCH_DISPUTE_RESOLVER = "No such dispute resolver";
     string internal constant INVALID_ESCALATION_PERIOD = "Invalid escalation period";
+    string internal constant TOO_MANY_DISPUTE_RESOLVER_FEES = "Exceeds maximum dispute resolver fees in a single transaction";
 
     // Revert Reasons: Offer related
     string internal constant NO_SUCH_OFFER = "No such offer";

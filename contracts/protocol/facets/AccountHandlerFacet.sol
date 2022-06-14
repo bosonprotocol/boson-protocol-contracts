@@ -109,7 +109,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
          //check that the addresses are unique to one dispute resolver Id
         require(protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] == 0 &&
                 protocolLookups().disputeResolverIdByAdmin[_disputeResolver.admin] == 0 &&
-                protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] ==0, DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
+                protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] == 0, DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
 
         _disputeResolver.id = disputeResolverId;
         storeDisputeResolver(_disputeResolver, _disputeResolverFees);
@@ -402,6 +402,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     {
         // escalation period must be greater than zero
         require(_disputeResolver.escalationPeriod > 0, INVALID_ESCALATION_PERIOD);
+
+        // limit maximum number of dispure resolver fees to avoid running into block gas limit in a loop
+        require(_disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, TOO_MANY_DISPUTE_RESOLVER_FEES);
 
         // Get storage location for dispute resolver
         (,DisputeResolver storage disputeResolver, DisputeResolverFee[] storage disputeResolverFees) = fetchDisputeResolver(_disputeResolver.id);

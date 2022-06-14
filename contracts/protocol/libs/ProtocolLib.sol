@@ -40,6 +40,8 @@ library ProtocolLib {
         uint16 maxOffersPerBatch;
         // limit how many different tokens can be withdrawn in a single transaction
         uint16 maxTokensPerWithdrawal;
+        // limit how many dispute resolver fee structs can be processed in a single transaction
+        uint16 maxFeesPerDisputeResolver;
     }
 
     // Protocol fees storage

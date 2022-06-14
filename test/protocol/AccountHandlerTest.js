@@ -108,6 +108,7 @@ describe("IBosonAccountHandler", function () {
         maxOffersPerBundle: 0,
         maxOffersPerBatch: 0,
         maxTokensPerWithdrawal: 0,
+        maxFeesPerDisputeResolver: 100,
       },
       // Protocol fees
       {

@@ -141,4 +141,20 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Get the maximum tokens per withdrawal
      */
     function getMaxTokensPerWithdrawal() external view returns (uint16);
+
+    /**
+     * @notice Sets the maximum number of dispute resolver fee structs that can be processed in a single transaction
+     *
+     * Emits a MaxFeesPerDisputeResolverChanged event.
+     *
+     * @param _maxFeesPerDisputeResolver - the maximum length of dispute resolver fees list when calling {AccountHandlerFacet.createDisputeResolver} or {AccountHandlerFacet.updateDisputeResolver}
+     */
+    function setMaxFeesPerDisputeResolver(uint16 _maxFeesPerDisputeResolver) external;
+
+   
+    /**
+     * @notice Get the maximum number of dispute resolver fee structs that can be processed in a single transaction
+     */
+    function getMaxFeesPerDisputeResolver() external view returns (uint16);
+   
 }

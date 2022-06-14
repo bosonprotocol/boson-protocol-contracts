@@ -42,6 +42,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxOffersPerBundle(_limits.maxOffersPerBundle);
         setMaxOffersPerBatch(_limits.maxOffersPerBatch);
         setMaxTokensPerWithdrawal(_limits.maxTokensPerWithdrawal);
+        setMaxFeesPerDisputeResolver(_limits.maxFeesPerDisputeResolver);
         
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -317,5 +318,33 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     returns (uint16)
     {
         return protocolLimits().maxTokensPerWithdrawal;
+    }
+
+    /**
+     * @notice Sets the maximum number of dispute resolver fee structs that can be processed in a single transaction
+     *
+     * Emits a MaxFeesPerDisputeResolverChanged event.
+     *
+     * @param _maxFeesPerDisputeResolver - the maximum length of dispute resolver fees list when calling {AccountHandlerFacet.createDisputeResolver} or {AccountHandlerFacet.updateDisputeResolver}
+     */
+    function setMaxFeesPerDisputeResolver(uint16 _maxFeesPerDisputeResolver)
+    public
+    override
+    onlyRole(ADMIN)
+    {
+        protocolLimits().maxFeesPerDisputeResolver = _maxFeesPerDisputeResolver;
+        emit MaxFeesPerDisputeResolverChanged(_maxFeesPerDisputeResolver, msg.sender);
+    }
+
+   
+    /**
+     * @notice Get the maximum number of dispute resolver fee structs that can be processed in a single transaction
+     */
+    function getMaxFeesPerDisputeResolver() 
+    external 
+    override
+    view returns (uint16)
+    {
+        return protocolLimits().maxFeesPerDisputeResolver;
     }
 }
