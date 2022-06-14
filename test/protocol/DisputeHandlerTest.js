@@ -532,7 +532,7 @@ describe("IBosonDisputeHandler", function () {
           expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
         }
 
-        // Get the dispute state
+        // Get the dispute timeout
         [exists, response] = await disputeHandler.connect(rando).getDisputeTimeout(exchange.id);
 
         // It should match newDisputeTimeout

@@ -129,7 +129,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      */
     function extendDisputeTimeout(uint256 _exchangeId, uint256 _newDisputeTimeout) external override {
         // Verify that the caller is the seller. Get exchange -> get offer id -> get seller id -> get operator address and compare to msg.sender
-        // Get the exchange, should be in redeemed state
+        // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Get the offer, assume it exist if exchange exist
@@ -144,14 +144,14 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Fetch the dispute, it exists if exchange is in Disputed state
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
 
+        // Dispute must be in a resolving state
+        require(dispute.state == DisputeState.Resolving, INVALID_STATE);
+        
         // If expired already, it cannot be extended
         require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
 
         // New dispute timout should be after the current dispute timeout
         require(_newDisputeTimeout > disputeDates.timeout, INVALID_DISPUTE_TIMEOUT);
-
-        // Dispute must be in a resolving state
-        require(dispute.state == DisputeState.Resolving, INVALID_STATE);
 
         // Update the timeout
         disputeDates.timeout = _newDisputeTimeout;
