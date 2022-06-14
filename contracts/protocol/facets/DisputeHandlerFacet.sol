@@ -35,6 +35,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * - exchange does not exist
      * - exchange is not in a redeemed state
      * - the complaint is blank
+     * - fulfillment period has elapsed already
      *
      * @param _exchangeId - the id of the associated exchange
      * @param _complaint - the buyer's complaint description
@@ -51,6 +52,10 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // Get the exchange, should be in redeemed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
+
+        // Make sure the fulfillment period has elapsed
+        uint256 elapsed = block.timestamp - exchange.voucher.redeemedDate;
+        require(elapsed < fetchOfferDurations(exchange.offerId).fulfillmentPeriod, FULFILLMENT_PERIOD_HAS_ELAPSED);
 
         // Make sure the caller is buyer associated with the exchange
         checkBuyer(exchange.buyerId);
@@ -108,6 +113,56 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // Notify watchers of state change
         emit DisputeRetracted(_exchangeId, msg.sender);
+    }
+    
+    /**
+     * @notice Extend the dispute timeout, allowing more time for mutual resolution.
+     * As a consequnece also buyer gets more time to escalate the dispute
+     *
+     * Emits a DisputeTimeoutExtened event if successful.
+     *
+     * Reverts if:
+     * - exchange does not exist
+     * - exchange is not in a disputed state
+     * - caller is not the seller
+     * - dispute has expired already
+     * - new dispute timeout is before the current dispute timeout
+     * - dispute is in some state other than resolving
+     *
+     * @param _exchangeId - the id of the associated exchange
+     * @param _newDisputeTimeout - new date when resolution period ends
+     */
+    function extendDisputeTimeout(uint256 _exchangeId, uint256 _newDisputeTimeout) external override {
+        // Verify that the caller is the seller. Get exchange -> get offer id -> get seller id -> get operator address and compare to msg.sender
+        // Get the exchange, should be in disputed state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+
+        // Get the offer, assume it exist if exchange exist
+        (, Offer storage offer) = fetchOffer(exchange.offerId);
+
+        // Get seller, we assume seller exists if offer exists
+        (,Seller storage seller) = fetchSeller(offer.sellerId);
+
+        // Caller must be seller's operator address
+        require(seller.operator == msg.sender, NOT_OPERATOR);
+
+        // Fetch the dispute, it exists if exchange is in Disputed state
+        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
+
+        // Dispute must be in a resolving state
+        require(dispute.state == DisputeState.Resolving, INVALID_STATE);
+        
+        // If expired already, it cannot be extended
+        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
+
+        // New dispute timout should be after the current dispute timeout
+        require(_newDisputeTimeout > disputeDates.timeout, INVALID_DISPUTE_TIMEOUT);
+
+        // Update the timeout
+        disputeDates.timeout = _newDisputeTimeout;
+
+        // Notify watchers of state change
+        emit DisputeTimeoutExtended(_exchangeId, _newDisputeTimeout, msg.sender);
     }
 
     /**
@@ -383,6 +438,23 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         Dispute storage dispute;
         (exists, dispute, ) = fetchDispute(_exchangeId);
         if (exists) state = dispute.state;
+    }
+
+    /**
+     * @notice Gets the timeout of a given dispute.
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return exists - true if the dispute exists
+     * @return timeout - the end of resolution period
+     */
+    function getDisputeTimeout(uint256 _exchangeId)
+    external
+    view
+    override
+    returns(bool exists, uint256 timeout) {
+        DisputeDates storage disputeDates;
+        (exists, , disputeDates) = fetchDispute(_exchangeId);
+        if (exists) timeout = disputeDates.timeout;
     }
 
     /**

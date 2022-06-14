@@ -14,5 +14,6 @@ interface IBosonDisputeEvents {
     event DisputeResolved(uint256 indexed exchangeId, BosonTypes.Resolution resolution, address indexed resolvedBy);
     event DisputeExpired(uint256 indexed exchangeId, address indexed expiredBy);
     event DisputeDecided(uint256 indexed exchangeId, BosonTypes.Resolution resolution, address indexed decidedBy);
+    event DisputeTimeoutExtended(uint256 indexed exchangeId, uint256 newDisputeTimeout, address indexed extendedBy);
     event DisputeEscalated(uint256 indexed exchangeId, uint256 indexed disputeResolverId, address indexed escalatedBy);    
 }
