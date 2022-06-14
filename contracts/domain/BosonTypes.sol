@@ -54,8 +54,19 @@ contract BosonTypes {
 
     struct DisputeResolver {
         uint256 id;
-        address payable wallet;
+        uint256 escalationPeriod;
+        address operator;
+        address admin;
+        address clerk;
+        address payable treasury;
+        string metadataUri;
         bool active;
+    }
+
+    struct DisputeResolverFee {
+        address tokenAddress;
+        string tokenName;
+        uint256 feeAmount;
     }
 
     struct Offer {

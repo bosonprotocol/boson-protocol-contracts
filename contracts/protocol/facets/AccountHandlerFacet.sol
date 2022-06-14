@@ -82,9 +82,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * Emits a DisputeResolverCreated event if successful.
      *
      * Reverts if:
-     * - Wallet address is zero address
+     * - Address values are zero address
      * - Active is not true
-     * - Wallet address is not unique to this dispute resolver
+     * - Addresses are not unique to this dispute resolver
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
      */
@@ -93,7 +93,11 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     override
     {
         //Check for zero address
-        require(_disputeResolver.wallet != address(0), INVALID_ADDRESS);
+        require(_disputeResolver.admin != address(0) &&  
+                _disputeResolver.operator != address(0) && 
+                _disputeResolver.clerk != address(0) && 
+                _disputeResolver.treasury != address(0), 
+                INVALID_ADDRESS);
 
         //Check active is not set to false
         require(_disputeResolver.active, MUST_BE_ACTIVE);
@@ -101,8 +105,10 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         // Get the next account Id and increment the counter
         uint256 disputeResolverId = protocolCounters().nextAccountId++;
 
-        //check that the wallet address is unique to one buyer Id
-        require(protocolStorage().disputeResolverIdByWallet[_disputeResolver.wallet] == 0, DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
+         //check that the addresses are unique to one dispute resolver Id
+        require(protocolStorage().disputeResolverIdByOperator[_disputeResolver.operator] == 0 &&
+                protocolStorage().disputeResolverIdByAdmin[_disputeResolver.admin] == 0 &&
+                protocolStorage().disputeResolverIdByClerk[_disputeResolver.clerk] ==0, DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
 
         _disputeResolver.id = disputeResolverId;
         storeDisputeResolver(_disputeResolver);
@@ -231,7 +237,11 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     override
     {
         //Check for zero address
-        require(_disputeResolver.wallet != address(0), INVALID_ADDRESS);
+        require(_disputeResolver.admin != address(0) &&  
+                _disputeResolver.operator != address(0) && 
+                _disputeResolver.clerk != address(0) && 
+                _disputeResolver.treasury != address(0), 
+                INVALID_ADDRESS);
 
         bool exists;
         DisputeResolver storage disputeResolver;
@@ -242,15 +252,19 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         //Dispute Resolver  must already exist
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
 
-        //Check that msg.sender is the wallet address for this dispute resolver
-        require(disputeResolver.wallet  == msg.sender, NOT_DISPUTE_RESOLVER_WALLET); 
+        //Check that msg.sender is the admin address for this dispute resolver
+        require(disputeResolver.admin  == msg.sender, NOT_ADMIN); 
 
-        //check that the wallet address is unique to one dispute resolverId if new
-        require(protocolStorage().disputeResolverIdByWallet[_disputeResolver.wallet] == 0 || 
-                protocolStorage().disputeResolverIdByWallet[_disputeResolver.wallet] == _disputeResolver.id, DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
+        //check that the addresses are unique to one dispute resolverId if new
+        require((protocolStorage().disputeResolverIdByOperator[_disputeResolver.operator] == 0 || protocolStorage().disputeResolverIdByOperator[_disputeResolver.operator] == _disputeResolver.id) &&
+                (protocolStorage().disputeResolverIdByAdmin[_disputeResolver.admin] == 0 || protocolStorage().disputeResolverIdByAdmin[_disputeResolver.admin] == _disputeResolver.id) &&
+                (protocolStorage().disputeResolverIdByClerk[_disputeResolver.clerk] == 0 || protocolStorage().disputeResolverIdByClerk[_disputeResolver.clerk] == _disputeResolver.id), 
+                DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
        
         //Delete current mappings
-        delete protocolStorage().disputeResolverIdByWallet[msg.sender];
+        delete protocolStorage().disputeResolverIdByOperator[disputeResolver.operator];
+        delete protocolStorage().disputeResolverIdByAdmin[disputeResolver.admin];
+        delete protocolStorage().disputeResolverIdByClerk[disputeResolver.clerk];
 
         storeDisputeResolver(_disputeResolver);
         
@@ -381,16 +395,26 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
    
     function storeDisputeResolver(DisputeResolver memory _disputeResolver) internal 
     {
+        // escalation period must be greater than zero
+        require(_disputeResolver.escalationPeriod > 0, INVALID_ESCALATION_PERIOD);
+
         // Get storage location for dispute resolver
         (,DisputeResolver storage disputeResolver) = fetchDisputeResolver(_disputeResolver.id);
 
         // Set dispute resolver props individually since memory structs can't be copied to storage
         disputeResolver.id = _disputeResolver.id;
-        disputeResolver.wallet = _disputeResolver.wallet;
+        disputeResolver.escalationPeriod = _disputeResolver.escalationPeriod;
+        disputeResolver.operator = _disputeResolver.operator;
+        disputeResolver.admin = _disputeResolver.admin;
+        disputeResolver.clerk = _disputeResolver.clerk;
+        disputeResolver.treasury = _disputeResolver.treasury;
+        disputeResolver.metadataUri = _disputeResolver.metadataUri;
         disputeResolver.active = _disputeResolver.active;
 
-        //Map the dispute resolver's wallet address to the dispute resolver Id.
-        protocolStorage().disputeResolverIdByWallet[_disputeResolver.wallet] = _disputeResolver.id;
+        //Map the dispute resolver's addresses to the dispute resolver Id.
+        protocolStorage().disputeResolverIdByOperator[_disputeResolver.operator] = _disputeResolver.id;
+        protocolStorage().disputeResolverIdByAdmin[_disputeResolver.admin] = _disputeResolver.id;
+        protocolStorage().disputeResolverIdByClerk[_disputeResolver.clerk] = _disputeResolver.id;
     }
 
 }

@@ -104,10 +104,10 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             require(_offerDurations.voucherValid > 0, AMBIGUOUS_VOUCHER_EXPIRY);
         }
 
-        // fulfillment period must be grater than zero
+        // fulfillment period must be greater than zero
         require(_offerDurations.fulfillmentPeriod > 0, INVALID_FULFILLMENT_PERIOD);
 
-        // dispute duration must be grater than zero
+        // dispute duration must be greater than zero
         require(_offerDurations.resolutionPeriod > 0, INVALID_DISPUTE_DURATION);
 
         // when creating offer, it cannot be set to voided

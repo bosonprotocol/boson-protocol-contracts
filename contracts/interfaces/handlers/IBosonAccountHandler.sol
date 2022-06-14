@@ -47,9 +47,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a DisputeResolverCreated event if successful.
      *
      * Reverts if:
-     * - Wallet address is zero address
+     * - Address values are zero address
      * - Active is not true
-     * - Wallet address is not unique to this dispute resolver
+     * - Addresses are not unique to this dispute resolver
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
      */

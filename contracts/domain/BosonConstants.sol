@@ -25,11 +25,10 @@ contract BosonConstants {
     // Revert Reasons: Access related
     string internal constant ACCESS_DENIED = "Access denied, caller doesn't have role";
     string internal constant NOT_OPERATOR = "Not seller's operator";
-    string internal constant NOT_ADMIN = "Not seller's admin";
+    string internal constant NOT_ADMIN = "Not admin";
     string internal constant NOT_BUYER_OR_SELLER = "Not buyer or seller";
     string internal constant NOT_VOUCHER_HOLDER = "Not current voucher holder";
     string internal constant NOT_BUYER_WALLET = "Not buyer's wallet address";
-    string internal constant NOT_DISPUTE_RESOLVER_WALLET = "Not dispute resolver's wallet address";
 
     // Revert Reasons: Account-related
     string internal constant NO_SUCH_SELLER = "No such seller";
@@ -41,6 +40,7 @@ contract BosonConstants {
     string internal constant NO_SUCH_BUYER = "No such buyer";
     string internal constant WALLET_OWNS_VOUCHERS = "Wallet address owns vouchers";
     string internal constant NO_SUCH_DISPUTE_RESOLVER = "No such dispute resolver";
+    string internal constant INVALID_ESCALATION_PERIOD = "Invalid escalation period";
 
     // Revert Reasons: Offer related
     string internal constant NO_SUCH_OFFER = "No such offer";

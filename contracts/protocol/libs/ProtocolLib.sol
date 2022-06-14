@@ -74,8 +74,12 @@ library ProtocolLib {
         mapping(address => uint256) sellerIdByClerk;
         //buyer wallet address => buyerId
         mapping(address => uint256) buyerIdByWallet;
-        //dispute resolver wallet address => disputeResolverId
-        mapping(address => uint256) disputeResolverIdByWallet;
+        //dispute resolver operator address => disputeResolverId
+        mapping(address => uint256) disputeResolverIdByOperator;
+        //dispute resolver admin address => disputeResolverId
+        mapping(address => uint256) disputeResolverIdByAdmin;
+        //dispute resolver clerk address => disputeResolverId
+        mapping(address => uint256) disputeResolverIdByClerk;
         // seller/buyer id => token address => amount
         mapping(uint256 => mapping(address => uint256)) availableFunds;
         // seller/buyer id => all tokens with balance > 0
