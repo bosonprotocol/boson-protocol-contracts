@@ -6,7 +6,6 @@ import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHan
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
-import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 
@@ -15,7 +14,7 @@ import { FundsLib } from "../libs/FundsLib.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol
  */
-contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase, AccountBase {
+contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
 
     /**
      * @notice Facet Initializer
@@ -76,17 +75,17 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase, AccountBas
         require(offer.quantityAvailable > 0, OFFER_SOLD_OUT);
 
         // Fetch or create buyer
-        Buyer storage buyer = getValidBuyer(_buyer);
+        (uint256 buyerId, Buyer storage buyer) = getValidBuyer(_buyer);
 
         // Encumber funds before creating the exchange
-        FundsLib.encumberFunds(_offerId, buyer.id);
+        FundsLib.encumberFunds(_offerId, buyerId);
 
         // Create and store a new exchange
         uint256 exchangeId = protocolCounters().nextExchangeId++;
         Exchange storage exchange = protocolEntities().exchanges[exchangeId];
         exchange.id = exchangeId;
         exchange.offerId = _offerId;
-        exchange.buyerId = buyer.id;
+        exchange.buyerId = buyerId;
         exchange.state = ExchangeState.Committed;
         exchange.voucher.committedDate = block.timestamp;
 
@@ -105,7 +104,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase, AccountBas
         bosonVoucher.issueVoucher(exchangeId, buyer);
 
         // Notify watchers of state change
-        emit BuyerCommitted(_offerId, buyer.id, exchangeId, exchange);
+        emit BuyerCommitted(_offerId, buyerId, exchangeId, exchange);
     }
 
     /**
@@ -335,13 +334,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase, AccountBas
         require(block.timestamp <= exchange.voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
 
         // Fetch or create buyer
-        Buyer storage buyer = getValidBuyer(_newBuyer);
+        (uint256 buyerId, Buyer storage buyer) = getValidBuyer(_newBuyer);
 
         // Update buyer id for the exchange
-        exchange.buyerId = buyer.id;
+        exchange.buyerId = buyerId;
 
         // Notify watchers of state change
-        emit VoucherTransferred(exchange.offerId, _exchangeId, buyer.id);
+        emit VoucherTransferred(exchange.offerId, _exchangeId, buyerId);
     }
 
     /**
@@ -556,9 +555,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, ProtocolBase, AccountBas
         }
     }
 
-    function getValidBuyer(address payable _buyer) internal returns(Buyer storage buyer){
+    function getValidBuyer(address payable _buyer) internal returns(uint256 buyerId, Buyer storage buyer){
         // Find or create the account associated with the specified buyer address
-        uint256 buyerId;
         bool exists;
         (exists, buyerId) = getBuyerIdByWallet(_buyer);
 
