@@ -156,7 +156,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         // Make sure percentage is between 1 - 10000
-        require(_protocolFeePercentage > 0 && _protocolFeePercentage <= 10000,
+        require(_protocolFeePercentage >= 0 && _protocolFeePercentage <= 10000,
             "Percentage representation must be between 1 and 10000");
 
         // Store fee percentage

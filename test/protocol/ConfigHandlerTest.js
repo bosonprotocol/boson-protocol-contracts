@@ -433,14 +433,6 @@ describe("IBosonConfigHandler", function () {
             );
           });
 
-          it("protocolFeePercentage lower than the allowed range", async function () {
-            // Attempt to set new voucher address, expecting revert
-            protocolFeePercentage = 0;
-            await expect(
-              configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage)
-            ).to.revertedWith(RevertReasons.PERCENTAGE_OUTSIDE_RANGE);
-          });
-
           it("protocolFeePercentage higher than the allowed range", async function () {
             // Attempt to set new voucher address, expecting revert
             protocolFeePercentage = 10001;
