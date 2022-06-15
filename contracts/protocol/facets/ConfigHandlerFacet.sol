@@ -37,11 +37,13 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setTreasuryAddress(_addresses.treasuryAddress);
         setVoucherAddress(_addresses.voucherAddress);
         setProtocolFeePercentage(_fees.protocolFeePercentage);
+        setProtocolFeeFlatBoson(_fees.protocolFeeFlatBoson);
         setMaxOffersPerGroup(_limits.maxOffersPerGroup);
         setMaxTwinsPerBundle(_limits.maxTwinsPerBundle);
         setMaxOffersPerBundle(_limits.maxOffersPerBundle);
         setMaxOffersPerBatch(_limits.maxOffersPerBatch);
         setMaxTokensPerWithdrawal(_limits.maxTokensPerWithdrawal);
+        
         
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -143,7 +145,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
 
     /**
      * @notice Sets the protocol fee percentage.
-     * Emits a FeePercentageChanged event.
+     *
+     * Emits a ProtocolFeePercentageChanged event.
      *
      * @param _protocolFeePercentage - the percentage that will be taken as a fee from the net of a Boson Protocol sale or auction (after royalties)
      *
@@ -177,7 +180,39 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     {
         return protocolFees().protocolFeePercentage;
     }
+    
 
+     /**
+     * @notice Sets the flat protocol fee for exchnges in $BOSON.
+     *
+     * Emits a ProtocolFeeFlatBosonChanged event.
+     *
+     * @param _protocolFeeFlatBoson - Flat fee taken for exchages in $BOSON
+     *
+     */
+    function setProtocolFeeFlatBoson(uint256 _protocolFeeFlatBoson)
+    public
+    override
+    onlyRole(ADMIN)
+    {
+        // Store fee percentage
+        protocolFees().protocolFeeFlatBoson = _protocolFeeFlatBoson;
+
+        // Notify watchers of state change
+        emit ProtocolFeeFlatBosonChanged(_protocolFeeFlatBoson, msg.sender);
+    }
+
+    /**
+     * @notice Get the protocol fee percentage
+     */
+    function getProtocolFeeFlatBoson()
+    external
+    override
+    view
+    returns (uint256)
+    {
+        return protocolFees().protocolFeeFlatBoson;
+    }
 
      /**
      * @notice Sets the maximum numbers of offers that can be added to a group in a single transaction

@@ -15,7 +15,13 @@ describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
   let accounts, deployer, rando, token, treasury, voucher;
-  let protocolFee, maxOffersPerGroup, maxTwinsPerBundle, maxOffersPerBundle, maxOffersPerBatch, maxTokensPerWithdrawal;
+  let protocolFeePercentage,
+    protocolFeeFlatBoson,
+    maxOffersPerGroup,
+    maxTwinsPerBundle,
+    maxOffersPerBundle,
+    maxOffersPerBatch,
+    maxTokensPerWithdrawal;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
 
   before(async function () {
@@ -39,7 +45,8 @@ describe("IBosonConfigHandler", function () {
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
     // Set protocol config
-    protocolFee = 12;
+    protocolFeePercentage = 12;
+    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
     maxOffersPerGroup = 100;
     maxTwinsPerBundle = 100;
     maxOffersPerBundle = 100;
@@ -73,7 +80,8 @@ describe("IBosonConfigHandler", function () {
           },
           //Protocol fees
           {
-            protocolFeePercentage: protocolFee,
+            protocolFeePercentage,
+            protocolFeeFlatBoson,
           },
         ];
 
@@ -90,7 +98,10 @@ describe("IBosonConfigHandler", function () {
           .withArgs(voucher.address, deployer.address);
         await expect(cutTransaction)
           .to.emit(configHandler, "ProtocolFeePercentageChanged")
-          .withArgs(protocolFee, deployer.address);
+          .withArgs(protocolFeePercentage, deployer.address);
+        await expect(cutTransaction)
+          .to.emit(configHandler, "ProtocolFeeFlatBosonChanged")
+          .withArgs(protocolFeeFlatBoson, deployer.address);
         await expect(cutTransaction)
           .to.emit(configHandler, "MaxOffersPerGroupChanged")
           .withArgs(maxOffersPerGroup, deployer.address);
@@ -130,7 +141,8 @@ describe("IBosonConfigHandler", function () {
         },
         // Protocol fees
         {
-          protocolFeePercentage: protocolFee,
+          protocolFeePercentage,
+          protocolFeeFlatBoson,
         },
       ];
       await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
@@ -303,6 +315,37 @@ describe("IBosonConfigHandler", function () {
           });
         });
       });
+
+      context("👉 setProtocolFeeFlatBoson()", async function () {
+        beforeEach(async function () {
+          // set new value for flat boson protocol fee
+          protocolFeeFlatBoson = ethers.utils.parseUnits("0.02", "ether").toString();
+        });
+
+        it("should emit a ProtocolFeeFlatBosonChanged event", async function () {
+          // Set new flat boson protocol feel, testing for the event
+          await expect(configHandler.connect(deployer).setProtocolFeeFlatBoson(protocolFeeFlatBoson))
+            .to.emit(configHandler, "ProtocolFeeFlatBosonChanged")
+            .withArgs(protocolFeeFlatBoson, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set flat boson protocol fee
+          await configHandler.connect(deployer).setProtocolFeeFlatBoson(protocolFeeFlatBoson);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getProtocolFeeFlatBoson()).to.equal(protocolFeeFlatBoson);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set flat boson protocol feel, expecting revert
+            await expect(configHandler.connect(rando).setProtocolFeeFlatBoson(protocolFeeFlatBoson)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
+          });
+        });
+      });
     });
 
     context("📋 Getters", async function () {
@@ -317,8 +360,12 @@ describe("IBosonConfigHandler", function () {
         );
         expect(await configHandler.connect(rando).getTokenAddress()).to.equal(token.address, "Invalid token address");
         expect(await configHandler.connect(rando).getProtocolFeePercentage()).to.equal(
-          protocolFee,
-          "Invalid protocol fee"
+          protocolFeePercentage,
+          "Invalid protocol fee percentage"
+        );
+        expect(await configHandler.connect(rando).getProtocolFeeFlatBoson()).to.equal(
+          protocolFeeFlatBoson,
+          "Invalid flat boson fee"
         );
         expect(await configHandler.connect(rando).getMaxOffersPerGroup()).to.equal(
           maxOffersPerGroup,

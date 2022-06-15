@@ -9,7 +9,7 @@ import {IBosonConfigEvents} from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x41e75f1e
+ * The ERC-165 identifier for this interface is: 0x2fe070b5
  */
 interface IBosonConfigHandler is IBosonConfigEvents {
 
@@ -71,6 +71,21 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Get the protocol fee percentage
      */
     function getProtocolFeePercentage() external view returns (uint16);
+
+     /**
+     * @notice Sets the flat protocol fee for exchnges in $BOSON.
+     *
+     * Emits a ProtocolFeeFlatBosonChanged event.
+     *
+     * @param _protocolFeeFlatBoson - Flat fee taken for exchages in $BOSON
+     *
+     */
+    function setProtocolFeeFlatBoson(uint256 _protocolFeeFlatBoson) external;
+
+    /**
+     * @notice Get the flat protocol fee for exchanges in $BOSON
+     */
+    function getProtocolFeeFlatBoson() external view returns (uint256);
 
     /**
      * @notice Sets the maximum number of offers that can be created in a single transaction
