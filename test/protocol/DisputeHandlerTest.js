@@ -62,7 +62,7 @@ describe("IBosonDisputeHandler", function () {
   let protocolFeePercentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, exchangeStruct, finalizedDate, state;
-  let dispute, disputedDate, escalatedDate, complaint, disputeStruct, timeout;
+  let dispute, disputedDate, escalatedDate, complaint, disputeStruct, timeout, newDisputeTimeout;
   let disputeDates, disputeDatesStruct;
   let exists, response;
   let disputeResolver, active;
@@ -370,6 +370,20 @@ describe("IBosonDisputeHandler", function () {
             RevertReasons.COMPLAINT_MISSING
           );
         });
+
+        it("The fulfilment period has already elapsed", async function () {
+          // Get the redemption date
+          [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+          const voucherRedeemedDate = exchangeStruct.voucher.redeemedDate;
+
+          // Set time forward past the dispute resolution period
+          await setNextBlockTimestamp(voucherRedeemedDate.add(fulfillmentPeriod).add(1).toNumber());
+
+          // Attempt to raise a dispute, expecting revert
+          await expect(disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint)).to.revertedWith(
+            RevertReasons.FULFILLMENT_PERIOD_HAS_ELAPSED
+          );
+        });
       });
     });
 
@@ -488,6 +502,134 @@ describe("IBosonDisputeHandler", function () {
       });
     });
 
+    context("👉 extendDisputeTimeout()", async function () {
+      beforeEach(async function () {
+        // Raise a dispute
+        tx = await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+
+        // Get the block timestamp of the confirmed tx and set disputedDate
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+        disputedDate = block.timestamp.toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+
+        // extend timeout for a month
+        newDisputeTimeout = ethers.BigNumber.from(timeout).add(oneMonth).toString();
+      });
+
+      it("should emit a DisputeTimeoutExtended event", async function () {
+        // Extend the dispute timeout, testing for the event
+        await expect(disputeHandler.connect(operator).extendDisputeTimeout(exchange.id, newDisputeTimeout))
+          .to.emit(disputeHandler, "DisputeTimeoutExtended")
+          .withArgs(exchange.id, newDisputeTimeout, operator.address);
+      });
+
+      it("should update state", async function () {
+        // Extend the dispute timeout
+        await disputeHandler.connect(operator).extendDisputeTimeout(exchange.id, newDisputeTimeout);
+
+        dispute = new Dispute(exchange.id, complaint, DisputeState.Resolving, new Resolution("0"));
+        disputeDates = new DisputeDates(disputedDate, "0", "0", newDisputeTimeout);
+
+        // Get the dispute as a struct
+        [, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchange.id);
+
+        // Parse into entities
+        returnedDispute = Dispute.fromStruct(disputeStruct);
+        returnedDisputeDates = DisputeDates.fromStruct(disputeDatesStruct);
+
+        // Returned values should match the expected dispute and dispute dates
+        for (const [key, value] of Object.entries(dispute)) {
+          expect(JSON.stringify(returnedDispute[key]) === JSON.stringify(value)).is.true;
+        }
+        for (const [key, value] of Object.entries(disputeDates)) {
+          expect(JSON.stringify(returnedDisputeDates[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Get the dispute timeout
+        [exists, response] = await disputeHandler.connect(rando).getDisputeTimeout(exchange.id);
+
+        // It should match newDisputeTimeout
+        assert.equal(response, newDisputeTimeout, "Dispute timeout is incorrect");
+      });
+
+      it("dispute timeout can be extended multiple times", async function () {
+        // Extend the dispute timeout
+        await disputeHandler.connect(operator).extendDisputeTimeout(exchange.id, newDisputeTimeout);
+
+        // not strictly necessary, but it shows that we can extend event if we are past original timeout
+        await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+
+        // extend for another week
+        newDisputeTimeout = ethers.BigNumber.from(newDisputeTimeout).add(oneWeek).toString();
+
+        // Extend the dispute timeout, testing for the event
+        await expect(disputeHandler.connect(operator).extendDisputeTimeout(exchange.id, newDisputeTimeout))
+          .to.emit(disputeHandler, "DisputeTimeoutExtended")
+          .withArgs(exchange.id, newDisputeTimeout, operator.address);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Exchange does not exist", async function () {
+          // An invalid exchange id
+          const exchangeId = "666";
+
+          // Attempt to extend the dispute timeout, expecting revert
+          await expect(
+            disputeHandler.connect(operator).extendDisputeTimeout(exchangeId, newDisputeTimeout)
+          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+        });
+
+        it("Exchange is not in a disputed state", async function () {
+          exchange.id++;
+
+          // Commit to offer, creating a new exchange
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Attempt to extend the dispute timeout, expecting revert
+          await expect(
+            disputeHandler.connect(operator).extendDisputeTimeout(exchange.id, newDisputeTimeout)
+          ).to.revertedWith(RevertReasons.INVALID_STATE);
+        });
+
+        it("Caller is not the seller", async function () {
+          // Attempt to extend the dispute timeout, expecting revert
+          await expect(
+            disputeHandler.connect(rando).extendDisputeTimeout(exchange.id, newDisputeTimeout)
+          ).to.revertedWith(RevertReasons.NOT_OPERATOR);
+        });
+
+        it("Dispute has expired already", async function () {
+          // Set time forward past the dispute resolution period
+          await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+
+          // Attempt to extend the dispute timeout, expecting revert
+          await expect(
+            disputeHandler.connect(operator).extendDisputeTimeout(exchange.id, newDisputeTimeout)
+          ).to.revertedWith(RevertReasons.DISPUTE_HAS_EXPIRED);
+        });
+
+        it("new dispute timeout is before the current dispute timeout", async function () {
+          newDisputeTimeout = ethers.BigNumber.from(timeout).sub(oneWeek).toString();
+
+          // Attempt to extend the dispute timeout, expecting revert
+          await expect(
+            disputeHandler.connect(operator).extendDisputeTimeout(exchange.id, newDisputeTimeout)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_TIMEOUT);
+        });
+
+        it("Dispute is in some state other than resolving", async function () {
+          // Retract the dispute, put it into RETRACTED state
+          await disputeHandler.connect(buyer).retractDispute(exchange.id);
+
+          // Attempt to expire the dispute, expecting revert
+          await expect(
+            disputeHandler.connect(operator).extendDisputeTimeout(exchange.id, newDisputeTimeout)
+          ).to.revertedWith(RevertReasons.INVALID_STATE);
+        });
+      });
+    });
+
     context("👉 expireDispute()", async function () {
       beforeEach(async function () {
         // Raise a dispute
@@ -581,6 +723,21 @@ describe("IBosonDisputeHandler", function () {
         });
 
         it("Dispute has not expired yet", async function () {
+          // Attempt to expire the dispute, expecting revert
+          await expect(disputeHandler.connect(rando).expireDispute(exchange.id)).to.revertedWith(
+            RevertReasons.DISPUTE_STILL_VALID
+          );
+        });
+
+        it("Dispute timeout has been extended", async function () {
+          // Extend the dispute timeout
+          await disputeHandler
+            .connect(operator)
+            .extendDisputeTimeout(exchange.id, Number(timeout) + 2 * Number(oneWeek));
+
+          // put past original timeout where normally it would not revert
+          await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+
           // Attempt to expire the dispute, expecting revert
           await expect(disputeHandler.connect(rando).expireDispute(exchange.id)).to.revertedWith(
             RevertReasons.DISPUTE_STILL_VALID
@@ -736,6 +893,21 @@ describe("IBosonDisputeHandler", function () {
             .to.emit(disputeHandler, "DisputeResolved")
             .withArgs(exchange.id, resolution.toStruct(), buyer.address);
         });
+
+        it("Dispute can be mutualy resolved if it's past original timeout, but it was extended", async function () {
+          // Extend the dispute timeout
+          await disputeHandler
+            .connect(operator)
+            .extendDisputeTimeout(exchange.id, Number(timeout) + 2 * Number(oneWeek));
+
+          // put past original timeout where normally it would not revert
+          await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+
+          // Resolve the dispute, testing for the event
+          await expect(disputeHandler.connect(buyer).resolveDispute(exchange.id, resolution, r, s, v))
+            .to.emit(disputeHandler, "DisputeResolved")
+            .withArgs(exchange.id, resolution.toStruct(), buyer.address);
+        });
       });
 
       context("👉 seller is the caller", async function () {
@@ -829,6 +1001,21 @@ describe("IBosonDisputeHandler", function () {
 
           // Set time forward to the dispute expiration date
           await setNextBlockTimestamp(Number(timeout) + oneWeek);
+
+          // Resolve the dispute, testing for the event
+          await expect(disputeHandler.connect(operator).resolveDispute(exchange.id, resolution, r, s, v))
+            .to.emit(disputeHandler, "DisputeResolved")
+            .withArgs(exchange.id, resolution.toStruct(), operator.address);
+        });
+
+        it("Dispute can be mutualy resolved if it's past original timeout, but it was extended", async function () {
+          // Extend the dispute timeout
+          await disputeHandler
+            .connect(operator)
+            .extendDisputeTimeout(exchange.id, Number(timeout) + 2 * Number(oneWeek));
+
+          // put past original timeout where normally it would not revert
+          await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
           // Resolve the dispute, testing for the event
           await expect(disputeHandler.connect(operator).resolveDispute(exchange.id, resolution, r, s, v))
@@ -1199,6 +1386,43 @@ describe("IBosonDisputeHandler", function () {
 
         // It should match DisputeState.Resolving
         assert.equal(response, DisputeState.Resolving, "Dispute state is incorrect");
+      });
+    });
+
+    context("👉 getDisputeTimeout()", async function () {
+      beforeEach(async function () {
+        // Raise a dispute
+        tx = await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+
+        // Get the block timestamp of the confirmed tx and set disputedDate
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+        disputedDate = block.timestamp.toString();
+        timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+      });
+
+      it("should return true for exists if exchange id is valid", async function () {
+        // Get the dispute state
+        [exists, response] = await disputeHandler.connect(rando).getDisputeTimeout(exchange.id);
+
+        // Test existence flag
+        expect(exists).to.be.true;
+      });
+
+      it("should return false for exists if exchange id is not valid", async function () {
+        // Attempt to get the dispute state for invalid dispute
+        [exists, response] = await disputeHandler.connect(rando).getDisputeTimeout(exchange.id + 10);
+
+        // Test existence flag
+        expect(exists).to.be.false;
+      });
+
+      it("should return the expected dispute timeout if exchange id is valid", async function () {
+        // Get the dispute timeout
+        [exists, response] = await disputeHandler.connect(rando).getDisputeTimeout(exchange.id);
+
+        // It should match DisputeState.Resolving
+        assert.equal(response, timeout, "Dispute timeout is incorrect");
       });
     });
 

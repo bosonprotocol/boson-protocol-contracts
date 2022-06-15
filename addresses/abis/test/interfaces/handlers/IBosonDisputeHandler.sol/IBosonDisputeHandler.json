@@ -139,6 +139,31 @@
           "type": "uint256"
         },
         {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "newDisputeTimeout",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "extendedBy",
+          "type": "address"
+        }
+      ],
+      "name": "DisputeTimeoutExtended",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "exchangeId",
+          "type": "uint256"
+        },
+        {
           "indexed": true,
           "internalType": "address",
           "name": "exchangeToken",
@@ -273,6 +298,24 @@
           "internalType": "uint256",
           "name": "_exchangeId",
           "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_newDisputeTimeout",
+          "type": "uint256"
+        }
+      ],
+      "name": "extendDisputeTimeout",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_exchangeId",
+          "type": "uint256"
         }
       ],
       "name": "getDispute",
@@ -366,6 +409,30 @@
           "internalType": "enum BosonTypes.DisputeState",
           "name": "state",
           "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_exchangeId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getDisputeTimeout",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "exists",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timeout",
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
