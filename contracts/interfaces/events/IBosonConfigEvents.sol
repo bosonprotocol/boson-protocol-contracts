@@ -13,7 +13,7 @@ interface IBosonConfigEvents {
     event TokenAddressChanged(address indexed tokenAddress, address indexed changedBy);
     event TreasuryAddressChanged(address indexed treasuryAddress, address indexed changedBy);
     event ProtocolFeePercentageChanged(uint16 feePercentage, address indexed changedBy);
-    event ProtocolFeeFlatBosonChanged(uint256 feeFlatBoson, address indexed changedBy);
+    event ProtocolFeeFlatBosonChanged(uint256 feeFlatBoson, address indexed executedBy);
     event MaxOffersPerGroupChanged(uint16 maxOffersPerGroup, address indexed changedBy);
     event MaxOffersPerBatchChanged(uint16 maxOffersPerBatch, address indexed changedBy);
     event MaxTwinsPerBundleChanged(uint16 maxTwinsPerBundle, address indexed changedBy);

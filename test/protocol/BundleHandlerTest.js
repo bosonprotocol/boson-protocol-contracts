@@ -70,7 +70,7 @@ describe("IBosonBundleHandler", function () {
     invalidOfferId;
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
-  let protocolFeePercentage;
+  let protocolFeePercentage, protocolFeeFlatBoson;
   let disputeResolver;
 
   before(async function () {
@@ -117,8 +117,9 @@ describe("IBosonBundleHandler", function () {
     // Deploy the boson token
     [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
 
-    // set protocolFeePercentage
+    // set protocolFees
     protocolFeePercentage = "200"; // 2 %
+    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
 
     // Add config Handler, so twin id starts at 1
     const protocolConfig = [
@@ -138,7 +139,8 @@ describe("IBosonBundleHandler", function () {
       },
       // Protocol fees
       {
-        protocolFeePercentage,
+        percentage: protocolFeePercentage,
+        flatBoson: protocolFeeFlatBoson,
       },
     ];
     // Deploy the Config facet, initializing the protocol config

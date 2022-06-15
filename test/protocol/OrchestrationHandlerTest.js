@@ -60,7 +60,7 @@ describe("IBosonOrchestrationHandler", function () {
     voided;
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates, offerDatesStruct;
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations, offerDurationsStruct;
-  let protocolFeePercentage;
+  let protocolFeePercentage, protocolFeeFlatBoson;
   let group, groupStruct, nextGroupId;
   let method, tokenAddress, tokenId, threshold;
   let offerIds, condition;
@@ -105,8 +105,9 @@ describe("IBosonOrchestrationHandler", function () {
     // Deploy the boson token
     [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
 
-    // set protocolFeePercentage
+    // set protocolFees
     protocolFeePercentage = "200"; // 2 %
+    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
 
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
@@ -126,7 +127,8 @@ describe("IBosonOrchestrationHandler", function () {
       },
       // Protocol fees
       {
-        protocolFeePercentage,
+        percentage: protocolFeePercentage,
+        flatBoson: protocolFeeFlatBoson,
       },
     ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);

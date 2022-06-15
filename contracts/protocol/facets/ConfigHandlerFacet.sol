@@ -36,8 +36,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setTokenAddress(_addresses.tokenAddress);
         setTreasuryAddress(_addresses.treasuryAddress);
         setVoucherAddress(_addresses.voucherAddress);
-        setProtocolFeePercentage(_fees.protocolFeePercentage);
-        setProtocolFeeFlatBoson(_fees.protocolFeeFlatBoson);
+        setProtocolFeePercentage(_fees.percentage);
+        setProtocolFeeFlatBoson(_fees.flatBoson);
         setMaxOffersPerGroup(_limits.maxOffersPerGroup);
         setMaxTwinsPerBundle(_limits.maxTwinsPerBundle);
         setMaxOffersPerBundle(_limits.maxOffersPerBundle);
@@ -163,7 +163,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
             "Percentage representation must be between 1 and 10000");
 
         // Store fee percentage
-        protocolFees().protocolFeePercentage = _protocolFeePercentage;
+        protocolFees().percentage = _protocolFeePercentage;
 
         // Notify watchers of state change
         emit ProtocolFeePercentageChanged(_protocolFeePercentage, msg.sender);
@@ -178,7 +178,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     view
     returns (uint16)
     {
-        return protocolFees().protocolFeePercentage;
+        return protocolFees().percentage;
     }
     
 
@@ -196,7 +196,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         // Store fee percentage
-        protocolFees().protocolFeeFlatBoson = _protocolFeeFlatBoson;
+        protocolFees().flatBoson = _protocolFeeFlatBoson;
 
         // Notify watchers of state change
         emit ProtocolFeeFlatBosonChanged(_protocolFeeFlatBoson, msg.sender);
@@ -211,7 +211,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     view
     returns (uint256)
     {
-        return protocolFees().protocolFeeFlatBoson;
+        return protocolFees().flatBoson;
     }
 
      /**

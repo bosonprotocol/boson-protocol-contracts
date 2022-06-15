@@ -30,7 +30,8 @@ describe("IBosonAccountHandler", function () {
   let disputeResolver, disputeResolverStruct, disputeResolver2, disputeResolver2Struct;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
-  let oneMonth, oneWeek, blockNumber, block, protocolFeePercentage;
+  let oneMonth, oneWeek, blockNumber, block;
+  let protocolFeePercentage, protocolFeeFlatBoson;
   let bosonVoucher, clients;
   let offerId,
     sellerId,
@@ -90,8 +91,9 @@ describe("IBosonAccountHandler", function () {
     [bosonVoucher] = clients;
     await accessController.grantRole(Role.CLIENT, bosonVoucher.address);
 
-    // set protocolFeePercentage
+    // set protocolFees
     protocolFeePercentage = "200"; // 2 %
+    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
@@ -111,7 +113,8 @@ describe("IBosonAccountHandler", function () {
       },
       // Protocol fees
       {
-        protocolFeePercentage,
+        percentage: protocolFeePercentage,
+        flatBoson: protocolFeeFlatBoson,
       },
     ];
 

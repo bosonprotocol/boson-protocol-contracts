@@ -60,7 +60,7 @@ describe("IBosonDisputeHandler", function () {
     voided;
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
-  let protocolFeePercentage;
+  let protocolFeePercentage, protocolFeeFlatBoson;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, exchangeStruct, finalizedDate, state;
   let dispute, disputedDate, escalatedDate, complaint, disputeStruct, timeout, newDisputeTimeout;
@@ -116,8 +116,9 @@ describe("IBosonDisputeHandler", function () {
     // Deploy the boson token
     [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
 
-    // set protocolFeePercentage
+    // set protocolFees
     protocolFeePercentage = "200"; // 2 %
+    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
@@ -137,7 +138,8 @@ describe("IBosonDisputeHandler", function () {
       },
       // Protocol fees
       {
-        protocolFeePercentage,
+        percentage: protocolFeePercentage,
+        flatBoson: protocolFeeFlatBoson,
       },
     ];
 

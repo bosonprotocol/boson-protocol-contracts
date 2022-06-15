@@ -64,7 +64,7 @@ describe("IBosonOfferHandler", function () {
     offerDurationsStruct,
     offerDurationsStructs,
     offerDurationsList;
-  let protocolFeePercentage;
+  let protocolFeePercentage, protocolFeeFlatBoson;
   let block, blockNumber;
   let disputeResolver;
 
@@ -103,8 +103,9 @@ describe("IBosonOfferHandler", function () {
     // Deploy the boson token
     [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
 
-    // set protocolFeePercentage
+    // set protocolFees
     protocolFeePercentage = "200"; // 2 %
+    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
 
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
@@ -124,7 +125,8 @@ describe("IBosonOfferHandler", function () {
       },
       // Protocol fees
       {
-        protocolFeePercentage,
+        percentage: protocolFeePercentage,
+        flatBoson: protocolFeeFlatBoson,
       },
     ];
 
@@ -328,6 +330,18 @@ describe("IBosonOfferHandler", function () {
 
         offer.id = await offerHandler.getNextOfferId();
         offer.protocolFee = calculateProtocolFee(price, protocolFeePercentage);
+
+        // Create a new offer
+        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(nextOfferId, offer.sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct);
+      });
+
+      it("If exchange token is $BOSON, fee should be flat boson fee", async function () {
+        // Prepare an offer with $BOSON as exchange token
+        offer.id = await offerHandler.getNextOfferId();
+        offer.exchangeToken = bosonToken.address;
+        offer.protocolFee = protocolFeeFlatBoson;
 
         // Create a new offer
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))

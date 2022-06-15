@@ -81,6 +81,10 @@ describe("IBosonTwinHandler", function () {
     // Deploy the boson token
     [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
 
+    // set protocolFees
+    protocolFeePercentage = "200"; // 2 %
+    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+
     // Add config Handler, so twin id starts at 1
     const protocolConfig = [
       // Protocol addresses
@@ -99,7 +103,8 @@ describe("IBosonTwinHandler", function () {
       },
       // Protocol fees
       {
-        protocolFeePercentage: 1,
+        percentage: protocolFeePercentage,
+        flatBoson: protocolFeeFlatBoson,
       },
     ];
     // Deploy the Config facet, initializing the protocol config

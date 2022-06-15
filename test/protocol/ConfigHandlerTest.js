@@ -80,8 +80,8 @@ describe("IBosonConfigHandler", function () {
           },
           //Protocol fees
           {
-            protocolFeePercentage,
-            protocolFeeFlatBoson,
+            percentage: protocolFeePercentage,
+            flatBoson: protocolFeeFlatBoson,
           },
         ];
 
@@ -141,8 +141,8 @@ describe("IBosonConfigHandler", function () {
         },
         // Protocol fees
         {
-          protocolFeePercentage,
-          protocolFeeFlatBoson,
+          percentage: protocolFeePercentage,
+          flatBoson: protocolFeeFlatBoson,
         },
       ];
       await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
