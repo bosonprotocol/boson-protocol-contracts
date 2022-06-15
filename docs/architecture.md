@@ -1,5 +1,5 @@
 # Boson Protocol V2
-## [Intro](../README.md) | [Setup](setup.md) | [Tasks](tasks.md) | Architecture | [Domain Model](domain.md)
+## [Intro](../README.md) | [Setup](setup.md) | [Tasks](tasks.md) | Architecture | [Domain Model](domain.md) | [State Machines](state-machines.md)
 
 ## Contract Architecture
 The V2 architecture takes a completely different approach versus V1. Considering new requirements and lessons learned, this version is geared to give us:
