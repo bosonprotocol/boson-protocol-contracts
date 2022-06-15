@@ -386,6 +386,18 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct);
       });
 
+      it("Should allow creation of an offer with unlimited supply", async function () {
+        // Prepare an absolute zero offer
+        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+
+        // Create a seller and an offer, testing for the event
+        await expect(
+          orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct);
+      });
+
       context("💔 Revert Reasons", async function () {
         it("active is false", async function () {
           seller.active = false;
@@ -766,6 +778,18 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         offer.disputeResolverId = "0";
+
+        // Create an offer with condition, testing for the events
+        await expect(
+          orchestrationHandler.connect(operator).createOfferWithCondition(offer, offerDates, offerDurations, condition)
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct);
+      });
+
+      it("Should allow creation of an offer with unlimited supply", async function () {
+        // Prepare an absolute zero offer
+        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
 
         // Create an offer with condition, testing for the events
         await expect(
@@ -1241,6 +1265,18 @@ describe("IBosonOrchestrationHandler", function () {
           .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct);
       });
 
+      it("Should allow creation of an offer with unlimited supply", async function () {
+        // Prepare an absolute zero offer
+        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+
+        // Create an offer, add it to the group, testing for the events
+        await expect(
+          orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct);
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to create an offer and add it to the group, expecting revert
@@ -1657,6 +1693,18 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         offer.disputeResolverId = "0";
+
+        // Create an offer, a twin and a bundle, testing for the events
+        await expect(
+          orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct);
+      });
+
+      it("Should allow creation of an offer with unlimited supply", async function () {
+        // Prepare an absolute zero offer
+        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
@@ -2181,6 +2229,20 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         offer.disputeResolverId = "0";
+
+        // Create an offer with condition, twin and bundle testing for the events
+        await expect(
+          orchestrationHandler
+            .connect(operator)
+            .createOfferWithConditionAndTwinAndBundle(offer, offerDates, offerDurations, condition, twin)
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct);
+      });
+
+      it("Should allow creation of an offer with unlimited supply", async function () {
+        // Prepare an absolute zero offer
+        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
 
         // Create an offer with condition, twin and bundle testing for the events
         await expect(

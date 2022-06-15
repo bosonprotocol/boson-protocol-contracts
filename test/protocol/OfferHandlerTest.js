@@ -359,6 +359,16 @@ describe("IBosonOfferHandler", function () {
           .withArgs(nextOfferId, offer.sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct);
       });
 
+      it("Should allow creation of an offer with unlimited supply", async function () {
+        // Prepare an absolute zero offer
+        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+
+        // Create a new offer
+        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(nextOfferId, offer.sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct);
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
@@ -937,9 +947,10 @@ describe("IBosonOfferHandler", function () {
       }
 
       // change some offers to test different cases
-      // offer with boson as an exchange token
+      // offer with boson as an exchange token and unlimited supply
       offers[2].exchangeToken = bosonToken.address;
       offers[2].protocolFee = protocolFeeFlatBoson;
+      offers[2].quantityAvailable = ethers.constants.MaxUint256.toString();
       offerStructs[2] = offers[2].toStruct();
 
       // absolute zero offer
