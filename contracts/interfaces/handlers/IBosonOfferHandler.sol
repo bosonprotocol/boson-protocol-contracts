@@ -30,7 +30,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Resolution period is set to zero
      * - Voided is set to true
      * - Available quantity is set to zero
-     * - Dispute resolver wallet is not registered
+     * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      * - Sum of buyer cancel penalty and protocol fee is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to 0x0
@@ -59,7 +59,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
-     *   - Dispute resolver wallet is not registered
+     *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
      *
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false

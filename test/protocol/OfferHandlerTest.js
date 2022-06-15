@@ -339,9 +339,19 @@ describe("IBosonOfferHandler", function () {
 
       it("If exchange token is $BOSON, fee should be flat boson fee", async function () {
         // Prepare an offer with $BOSON as exchange token
-        offer.id = await offerHandler.getNextOfferId();
         offer.exchangeToken = bosonToken.address;
         offer.protocolFee = protocolFeeFlatBoson;
+
+        // Create a new offer
+        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(nextOfferId, offer.sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct);
+      });
+
+      it("For absolute zero offers, dispute resolver can be unspecified", async function () {
+        // Prepare an absolute zero offer
+        offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
+        offer.disputeResolverId = "0";
 
         // Create a new offer
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
@@ -475,6 +485,17 @@ describe("IBosonOfferHandler", function () {
 
         it("Dispute resolver wallet is not registered", async function () {
           // Set some address that is not registered as a dispute resolver
+          offer.disputeResolverId = "16";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.INVALID_DISPUTE_RESOLVER
+          );
+        });
+
+        it("For absolute zero offer, specified dispute resolver is not registered", async function () {
+          // Prepare an absolute zero offer, but specify dispute resolver
+          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
           offer.disputeResolverId = "16";
 
           // Attempt to Create an offer, expecting revert
@@ -914,6 +935,17 @@ describe("IBosonOfferHandler", function () {
         offerDurationsList.push(offerDurations);
         offerDurationsStructs.push(offerDurations.toStruct());
       }
+
+      // change some offers to test different cases
+      // offer with boson as an exchange token
+      offers[2].exchangeToken = bosonToken.address;
+      offers[2].protocolFee = protocolFeeFlatBoson;
+      offerStructs[2] = offers[2].toStruct();
+
+      // absolute zero offer
+      offers[4].price = offers[4].sellerDeposit = offers[4].buyerCancelPenalty = offers[4].protocolFee = "0";
+      offers[4].disputeResolverId = "0";
+      offerStructs[4] = offers[4].toStruct();
     });
 
     context("👉 createOfferBatch()", async function () {
@@ -1034,7 +1066,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Sum of buyer cancel penalty and protocol fee is greater than price", async function () {
           // Set buyer cancel penalty higher than offer price minus protocolFee
-          offers[0].buyerCancelPenalty = ethers.BigNumber.from(offer.price)
+          offers[0].buyerCancelPenalty = ethers.BigNumber.from(offers[0].price)
             .add(offers[0].protocolFee)
             .add("10")
             .toString();
@@ -1157,6 +1189,17 @@ describe("IBosonOfferHandler", function () {
         it("For some offer, dispute resolver wallet is not registered", async function () {
           // Set some address that is not registered as a dispute resolver
           offers[1].disputeResolverId = "16";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("For some absolute zero offer, specified dispute resolver is not registered", async function () {
+          // Prepare an absolute zero offer, but specify dispute resolver
+          offers[2].price = offers[2].sellerDeposit = offers[2].buyerCancelPenalty = offers[2].protocolFee = "0";
+          offers[2].disputeResolverId = "16";
 
           // Attempt to Create an offer, expecting revert
           await expect(
