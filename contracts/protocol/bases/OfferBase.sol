@@ -29,7 +29,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered
-     * - Seller deposit is less than protocol fee
      * - Sum of buyer cancel penalty and protocol fee is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
@@ -80,7 +79,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered
-     * - Seller deposit is less than protocol fee
      * - Sum of buyer cancel penalty and protocol fee is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
@@ -125,9 +123,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             protocolFees().flatBoson : protocolFees().percentage*_offer.price/10000;
         _offer.protocolFee = protocolFee;
         
-        // condition for succesfull payout when exchange final state is revoked        
-        require(_offer.sellerDeposit >= protocolFee, OFFER_DEPOSIT_INVALID);
-
         // condition for succesfull payout when exchange final state is canceled
         require(_offer.buyerCancelPenalty + protocolFee <= _offer.price, OFFER_PENALTY_INVALID);
 

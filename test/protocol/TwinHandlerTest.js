@@ -49,6 +49,7 @@ describe("IBosonTwinHandler", function () {
     tokenId,
     tokenAddress;
   let bundleId, offerIds, twinIds, bundle, tokenType;
+  let protocolFeePercentage, protocolFeeFlatBoson;
 
   before(async function () {
     // get interface Ids

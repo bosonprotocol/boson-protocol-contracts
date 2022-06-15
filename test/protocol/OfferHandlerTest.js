@@ -378,21 +378,6 @@ describe("IBosonOfferHandler", function () {
           );
         });
 
-        it.skip("Seller deposit is less than protocol fee", async function () {
-          // Temporary skip => when new payouts are implemented, this test will probably be changed
-          // Set buyer deposit less than the protocol fee
-          // First calculate the threshold where sellerDeposit == protocolFee and then reduce it for some number
-          let threshold = ethers.BigNumber.from(offer.price)
-            .mul(protocolFeePercentage)
-            .div(ethers.BigNumber.from("10000").sub(protocolFeePercentage));
-          offer.sellerDeposit = threshold.sub("10").toString();
-
-          // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
-            RevertReasons.OFFER_DEPOSIT_INVALID
-          );
-        });
-
         it("Sum of buyer cancel penalty and protocol fee is greater than price", async function () {
           // Set buyer cancel penalty higher than offer price minus protocolFee
           offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).sub(offer.protocolFee).add("10").toString();
@@ -1045,21 +1030,6 @@ describe("IBosonOfferHandler", function () {
           await expect(
             offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
-        });
-
-        it.skip("Seller deposit is less than protocol fee", async function () {
-          // Temporary skip => when new payouts are implemented, this test will probably be changed
-          // Set buyer deposit less than the protocol fee
-          // First calculate the threshold where sellerDeposit == protocolFee and then reduce it for some number
-          let threshold = ethers.BigNumber.from(offers[0].price)
-            .mul(protocolFeePercentage)
-            .div(ethers.BigNumber.from("10000").sub(protocolFeePercentage));
-          offers[0].sellerDeposit = threshold.sub("10").toString();
-
-          // Attempt to Create an offer, expecting revert
-          await expect(
-            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
-          ).to.revertedWith(RevertReasons.OFFER_DEPOSIT_INVALID);
         });
 
         it("Sum of buyer cancel penalty and protocol fee is greater than price", async function () {

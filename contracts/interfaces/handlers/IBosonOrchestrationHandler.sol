@@ -39,7 +39,6 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered
-     *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
      *
      * @param _seller - the fully populated seller struct
@@ -68,7 +67,6 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered
-     *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - Condition includes invalid combination of parameters
      *
@@ -103,8 +101,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered
-     *   - Seller deposit is less than protocol fee
-     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+s     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - when adding to the group if:
      *   - Group does not exists
      *   - Caller is not the operator of the group
@@ -140,7 +137,6 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered
-     *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
@@ -176,7 +172,6 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered
-     *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - Condition includes invalid combination of parameters
      * - when creating twin if
@@ -220,7 +215,6 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered
-     *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - Condition includes invalid combination of parameters
      *
@@ -262,7 +256,6 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered
-     *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
@@ -305,7 +298,6 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered
-     *   - Seller deposit is less than protocol fee
      *   - Sum of buyer cancel penalty and protocol fee is greater than price
      * - Condition includes invalid combination of parameters
      * - when creating twin if
