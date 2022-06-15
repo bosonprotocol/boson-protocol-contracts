@@ -560,10 +560,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * Reverts if buyer is inactive
      *
-     * @param buyer - the buyer address
-     * @return buyerId - - the seller id
+     * @param _buyer - the buyer address
+     * @return buyerId - the buyer id
      * @return buyer - the buyer account
-    */
+     */
     function getValidBuyer(address payable _buyer) internal returns(uint256 buyerId, Buyer storage buyer){
         // Find or create the account associated with the specified buyer address
         bool exists;
