@@ -1,5 +1,5 @@
 # Boson Protocol V2
-## [Intro](../README.md) | [Setup](setup.md) | Tasks |  [Architecture](architecture.md) | [Domain Model](domain.md)
+## [Intro](../README.md) | [Setup](setup.md) | Tasks |  [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md)
 ## Development Tasks
 Everything required to build, test, analyse, and deploy is available as an NPM script.
 * Scripts are defined in [`package.json`](../package.json).
