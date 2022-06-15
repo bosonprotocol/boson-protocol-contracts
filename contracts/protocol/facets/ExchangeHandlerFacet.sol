@@ -555,6 +555,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         }
     }
 
+    /**
+     * @notice Transfer the voucher associated with an exchange to the buyer
+     *
+     * Reverts if buyer is inactive
+     *
+     * @param buyer - the buyer address
+     * @return buyerId - - the seller id
+     * @return buyer - the buyer account
+    */
     function getValidBuyer(address payable _buyer) internal returns(uint256 buyerId, Buyer storage buyer){
         // Find or create the account associated with the specified buyer address
         bool exists;
