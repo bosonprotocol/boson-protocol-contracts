@@ -148,6 +148,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a ProtocolFeePercentageChanged event.
      *
+     * Reverts if the _protocolFeePercentage is greater than 10000.
+     *
      * @param _protocolFeePercentage - the percentage that will be taken as a fee from the net of a Boson Protocol sale or auction (after royalties)
      *
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
@@ -158,9 +160,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     override
     onlyRole(ADMIN)
     {
-        // Make sure percentage is between 1 - 10000
-        require(_protocolFeePercentage > 0 && _protocolFeePercentage <= 10000,
-            "Percentage representation must be between 1 and 10000");
+        // Make sure percentage is less than 10000
+        require(_protocolFeePercentage <= 10000,
+            PROTOCOL_FEE_PERCENTAGE_INVALID);
 
         // Store fee percentage
         protocolFees().percentage = _protocolFeePercentage;
