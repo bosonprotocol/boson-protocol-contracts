@@ -209,4 +209,17 @@ contract BosonTypes {
         address[] tokenList;
         uint256[] tokenAmounts;
     }
+
+    struct MetaTxDispute {
+        uint256 nonce;
+        address from;
+        address contractAddress;
+        string functionName;
+        MetaTxDisputeDetails disputeDetails;
+    }
+
+    struct MetaTxDisputeDetails {
+        uint256 exchangeId;
+        string complaint;
+    }
 }

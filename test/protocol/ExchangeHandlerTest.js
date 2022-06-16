@@ -38,7 +38,7 @@ const {
 describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, other1, game, fauxClient;
+  let accounts, deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, disputeResolver, fauxClient;
   let erc165,
     protocolDiamond,
     accessController,
@@ -68,7 +68,7 @@ describe("IBosonExchangeHandler", function () {
   let protocolFeePercentage, protocolFeeFlatBoson;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state, exchangeStruct, response, exists, buyerStruct;
-  let disputeResolver, active;
+  let active;
   let foreign20, foreign721, foreign1155;
   let twin20, twin721, twin1155, twinIds, bundle, balance, owner;
 
@@ -88,7 +88,7 @@ describe("IBosonExchangeHandler", function () {
     buyer = accounts[5];
     rando = accounts[6];
     newOwner = accounts[7];
-    other1 = game = accounts[8]; // the MR Game that is allowed to push the Dispute into final states
+    disputeResolver = accounts[8];
     fauxClient = accounts[9];
 
     // Deploy the Protocol Diamond
@@ -205,11 +205,11 @@ describe("IBosonExchangeHandler", function () {
 
       // Create a valid dispute resolver
       active = true;
-      disputeResolver = new DisputeResolver(id, other1.address, active);
-      expect(disputeResolver.isValid()).is.true;
+      const disputeResolverEntity = new DisputeResolver(id, disputeResolver.address, active);
+      expect(disputeResolverEntity.isValid()).is.true;
 
       // Register the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
 
       // Create an offer to commit to
       oneWeek = 604800 * 1000; //  7 days in milliseconds
@@ -1415,10 +1415,12 @@ describe("IBosonExchangeHandler", function () {
           assert.equal(response, false, "Incorrectly reports finalized state");
         });
 
-        // TODO Include this test when DisputeHandlerFacet.decideDispute works
-        it.skip("should return true if exchange has a dispute in Decided state", async function () {
+        it("should return true if exchange has a dispute in Decided state", async function () {
+          // Escalate the dispute
+          await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
           // Decide Dispute
-          [exists, response] = await disputeHandler.connect(game).decideDispute(exchange.id);
+          await disputeHandler.connect(disputeResolver).decideDispute(exchange.id, new Resolution("1111"));
 
           // Now in Decided state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
