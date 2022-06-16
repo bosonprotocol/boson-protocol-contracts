@@ -39,7 +39,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
-     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     *   - Buyer cancel penalty is greater than price
      *
      * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
@@ -67,7 +67,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
-     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
@@ -101,7 +101,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
-s     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+s    *   - Buyer cancel penalty is greater than price
      * - when adding to the group if:
      *   - Group does not exists
      *   - Caller is not the operator of the group
@@ -137,7 +137,7 @@ s     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
-     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     *   - Buyer cancel penalty is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
@@ -172,7 +172,7 @@ s     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
-     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token
@@ -215,7 +215,7 @@ s     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
-     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      *
      * @param _seller - the fully populated seller struct
@@ -256,7 +256,7 @@ s     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
-     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     *   - Buyer cancel penalty is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
@@ -298,7 +298,7 @@ s     *   - Sum of buyer cancel penalty and protocol fee is greater than price
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
-     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token

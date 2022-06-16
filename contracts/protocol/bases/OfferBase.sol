@@ -29,7 +29,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
-     * - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - Buyer cancel penalty is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -79,7 +79,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
-     * - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - Buyer cancel penalty is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -126,7 +126,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         _offer.protocolFee = protocolFee;
         
         // condition for succesfull payout when exchange final state is canceled
-        require(_offer.buyerCancelPenalty + protocolFee <= _offer.price, OFFER_PENALTY_INVALID);
+        require(_offer.buyerCancelPenalty <= _offer.price, OFFER_PENALTY_INVALID);
 
         // Get storage location for offer
         (, Offer storage offer) = fetchOffer(_offer.id);

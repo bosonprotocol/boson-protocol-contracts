@@ -398,9 +398,9 @@ describe("IBosonOfferHandler", function () {
           );
         });
 
-        it("Sum of buyer cancel penalty and protocol fee is greater than price", async function () {
-          // Set buyer cancel penalty higher than offer price minus protocolFee
-          offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).sub(offer.protocolFee).add("10").toString();
+        it("Buyer cancel penalty is greater than price", async function () {
+          // Set buyer cancel penalty higher than offer price
+          offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add("10").toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
@@ -1075,12 +1075,9 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
-        it("Sum of buyer cancel penalty and protocol fee is greater than price", async function () {
-          // Set buyer cancel penalty higher than offer price minus protocolFee
-          offers[0].buyerCancelPenalty = ethers.BigNumber.from(offers[0].price)
-            .add(offers[0].protocolFee)
-            .add("10")
-            .toString();
+        it("Buyer cancel penalty is greater than price", async function () {
+          // Set buyer cancel penalty higher than offer price
+          offers[0].buyerCancelPenalty = ethers.BigNumber.from(offers[0].price).add("10").toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(
