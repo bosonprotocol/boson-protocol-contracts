@@ -529,7 +529,7 @@ describe("IBosonDisputeHandler", function () {
         // Extend the dispute timeout
         await disputeHandler.connect(operator).extendDisputeTimeout(exchange.id, newDisputeTimeout);
 
-        dispute = new Dispute(exchange.id, complaint, DisputeState.Resolving, new Resolution("0"));
+        dispute = new Dispute(exchange.id, complaint, DisputeState.Resolving, "0");
         disputeDates = new DisputeDates(disputedDate, "0", "0", newDisputeTimeout);
 
         // Get the dispute as a struct
@@ -904,9 +904,9 @@ describe("IBosonDisputeHandler", function () {
           await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
           // Resolve the dispute, testing for the event
-          await expect(disputeHandler.connect(buyer).resolveDispute(exchange.id, resolution, r, s, v))
+          await expect(disputeHandler.connect(buyer).resolveDispute(exchange.id, buyerPercent, r, s, v))
             .to.emit(disputeHandler, "DisputeResolved")
-            .withArgs(exchange.id, resolution.toStruct(), buyer.address);
+            .withArgs(exchange.id, buyerPercent, buyer.address);
         });
       });
 
@@ -1018,9 +1018,9 @@ describe("IBosonDisputeHandler", function () {
           await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
           // Resolve the dispute, testing for the event
-          await expect(disputeHandler.connect(operator).resolveDispute(exchange.id, resolution, r, s, v))
+          await expect(disputeHandler.connect(operator).resolveDispute(exchange.id, buyerPercent, r, s, v))
             .to.emit(disputeHandler, "DisputeResolved")
-            .withArgs(exchange.id, resolution.toStruct(), operator.address);
+            .withArgs(exchange.id, buyerPercent, operator.address);
         });
       });
 
@@ -1194,7 +1194,7 @@ describe("IBosonDisputeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
         escalatedDate = block.timestamp.toString();
 
-        dispute = new Dispute(exchange.id, complaint, DisputeState.Escalated, buyerPercent);
+        dispute = new Dispute(exchange.id, complaint, DisputeState.Escalated, "0");
         disputeDates = new DisputeDates(disputedDate, escalatedDate, "0", timeout);
 
         // Get the dispute as a struct
