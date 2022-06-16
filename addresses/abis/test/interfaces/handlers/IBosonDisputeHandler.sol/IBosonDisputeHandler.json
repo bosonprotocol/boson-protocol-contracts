@@ -13,17 +13,10 @@
           "type": "uint256"
         },
         {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "buyerPercent",
-              "type": "uint256"
-            }
-          ],
           "indexed": false,
-          "internalType": "struct BosonTypes.Resolution",
-          "name": "resolution",
-          "type": "tuple"
+          "internalType": "uint256",
+          "name": "_buyerPercent",
+          "type": "uint256"
         },
         {
           "indexed": true,
@@ -120,17 +113,10 @@
           "type": "uint256"
         },
         {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "buyerPercent",
-              "type": "uint256"
-            }
-          ],
           "indexed": false,
-          "internalType": "struct BosonTypes.Resolution",
-          "name": "resolution",
-          "type": "tuple"
+          "internalType": "uint256",
+          "name": "_buyerPercent",
+          "type": "uint256"
         },
         {
           "indexed": true,
@@ -306,16 +292,9 @@
           "type": "uint256"
         },
         {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "buyerPercent",
-              "type": "uint256"
-            }
-          ],
-          "internalType": "struct BosonTypes.Resolution",
-          "name": "_resolution",
-          "type": "tuple"
+          "internalType": "uint256",
+          "name": "_buyerPercent",
+          "type": "uint256"
         }
       ],
       "name": "decideDispute",
@@ -400,16 +379,9 @@
               "type": "uint8"
             },
             {
-              "components": [
-                {
-                  "internalType": "uint256",
-                  "name": "buyerPercent",
-                  "type": "uint256"
-                }
-              ],
-              "internalType": "struct BosonTypes.Resolution",
-              "name": "resolution",
-              "type": "tuple"
+              "internalType": "uint256",
+              "name": "buyerPercent",
+              "type": "uint256"
             }
           ],
           "internalType": "struct BosonTypes.Dispute",
@@ -545,16 +517,9 @@
           "type": "uint256"
         },
         {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "buyerPercent",
-              "type": "uint256"
-            }
-          ],
-          "internalType": "struct BosonTypes.Resolution",
-          "name": "_resolution",
-          "type": "tuple"
+          "internalType": "uint256",
+          "name": "_buyerPercent",
+          "type": "uint256"
         },
         {
           "internalType": "bytes32",
