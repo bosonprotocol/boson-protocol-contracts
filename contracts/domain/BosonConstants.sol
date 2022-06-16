@@ -118,6 +118,9 @@ contract BosonConstants {
     string internal constant INVALID_BUYER_PERCENT = "Invalid buyer percent";
     string internal constant DISPUTE_STILL_VALID = "Dispute still valid";
     string internal constant INVALID_DISPUTE_TIMEOUT = "Invalid dispute timeout";
+
+    // Revert Reasons: Config related
+    string internal constant PROTOCOL_FEE_PERCENTAGE_INVALID = "Percentage representation must be less than 10000";
 }
 
 // TODO: Refactor to use file level constants throughout or use custom Errors
