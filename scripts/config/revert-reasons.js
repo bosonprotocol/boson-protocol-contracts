@@ -111,5 +111,5 @@ exports.RevertReasons = {
   INVALID_DISPUTE_TIMEOUT: "Invalid dispute timeout",
 
   // Config related
-  PERCENTAGE_OUTSIDE_RANGE: "Percentage representation must be between 1 and 10000",
+  PROTOCOL_FEE_PERCENTAGE_INVALID: "Percentage representation must be less than 10000",
 };

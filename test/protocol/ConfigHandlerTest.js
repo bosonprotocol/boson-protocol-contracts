@@ -433,12 +433,12 @@ describe("IBosonConfigHandler", function () {
             );
           });
 
-          it("protocolFeePercentage higher than the allowed range", async function () {
-            // Attempt to set new voucher address, expecting revert
+          it("protocolFeePercentage must be less than 10000", async function () {
+            // Attempt to set new protocolFeePercentage value, expecting revert
             protocolFeePercentage = 10001;
             await expect(
               configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage)
-            ).to.revertedWith(RevertReasons.PERCENTAGE_OUTSIDE_RANGE);
+            ).to.revertedWith(RevertReasons.PROTOCOL_FEE_PERCENTAGE_INVALID);
           });
         });
       });
