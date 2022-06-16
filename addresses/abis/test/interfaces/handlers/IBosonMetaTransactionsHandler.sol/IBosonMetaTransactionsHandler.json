@@ -254,6 +254,62 @@
               "internalType": "uint256",
               "name": "exchangeId",
               "type": "uint256"
+            },
+            {
+              "internalType": "string",
+              "name": "complaint",
+              "type": "string"
+            }
+          ],
+          "internalType": "struct BosonTypes.MetaTxDisputeDetails",
+          "name": "_disputeDetails",
+          "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_nonce",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_sigR",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_sigS",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint8",
+          "name": "_sigV",
+          "type": "uint8"
+        }
+      ],
+      "name": "executeMetaTxRaiseDispute",
+      "outputs": [
+        {
+          "internalType": "bytes",
+          "name": "",
+          "type": "bytes"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_userAddress",
+          "type": "address"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "exchangeId",
+              "type": "uint256"
             }
           ],
           "internalType": "struct BosonTypes.MetaTxExchangeDetails",
