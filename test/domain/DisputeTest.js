@@ -1,7 +1,6 @@
 const { expect } = require("chai");
 const Dispute = require("../../scripts/domain/Dispute");
 const DisputeState = require("../../scripts/domain/DisputeState");
-const Resolution = require("../../scripts/domain/Resolution");
 
 /**
  *  Test the Dispute domain entity
@@ -9,20 +8,23 @@ const Resolution = require("../../scripts/domain/Resolution");
 describe("Dispute", function () {
   // Suite-wide scope
   let dispute, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let exchangeId, complaint, state, resolution;
+  let exchangeId, complaint, state, buyerPercent;
 
   beforeEach(async function () {
     // Required constructor params
     exchangeId = "2112";
     complaint = "complain text";
     state = DisputeState.Resolving;
-    resolution = new Resolution("500");
+    buyerPercent = "500";
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated Dispute instance", async function () {
-      dispute = new Dispute(exchangeId, complaint, state, resolution);
+      dispute = new Dispute(exchangeId, complaint, state, buyerPercent);
       expect(dispute.exchangeIdIsValid()).is.true;
+      expect(dispute.complaintIsValid()).is.true;
+      expect(dispute.stateIsValid()).is.true;
+      expect(dispute.buyerPercentIsValid()).is.true;
       expect(dispute.isValid()).is.true;
     });
   });
@@ -30,7 +32,7 @@ describe("Dispute", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid dispute, then set fields in tests directly
-      dispute = new Dispute(exchangeId, complaint, state, resolution);
+      dispute = new Dispute(exchangeId, complaint, state, buyerPercent);
       expect(dispute.isValid()).is.true;
     });
 
@@ -105,30 +107,30 @@ describe("Dispute", function () {
       expect(dispute.isValid()).is.true;
     });
 
-    it("Always present, resolution must be a valid Resolution instance", async function () {
+    it("Always present, buyerPercent must be the string representation of a BigNumber", async function () {
       // Invalid field value
-      dispute.resolution = "zedzdeadbaby";
-      expect(dispute.resolutionIsValid()).is.false;
+      dispute.buyerPercent = "zedzdeadbaby";
+      expect(dispute.buyerPercentIsValid()).is.false;
       expect(dispute.isValid()).is.false;
 
       // Invalid field value
-      dispute.resolution = new Date();
-      expect(dispute.resolutionIsValid()).is.false;
+      dispute.buyerPercent = new Date();
+      expect(dispute.buyerPercentIsValid()).is.false;
       expect(dispute.isValid()).is.false;
 
       // Invalid field value
-      dispute.resolution = 12;
-      expect(dispute.resolutionIsValid()).is.false;
+      dispute.buyerPercent = 12;
+      expect(dispute.buyerPercentIsValid()).is.false;
       expect(dispute.isValid()).is.false;
 
       // Valid field value
-      dispute.resolution = "126";
-      expect(dispute.resolutionIsValid()).is.false;
-      expect(dispute.isValid()).is.false;
+      dispute.buyerPercent = "0";
+      expect(dispute.buyerPercentIsValid()).is.true;
+      expect(dispute.isValid()).is.true;
 
       // Valid field value
-      dispute.resolution = resolution;
-      expect(dispute.resolutionIsValid()).is.true;
+      dispute.buyerPercent = "126";
+      expect(dispute.buyerPercentIsValid()).is.true;
       expect(dispute.isValid()).is.true;
     });
   });
@@ -136,7 +138,7 @@ describe("Dispute", function () {
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid dispute, then set fields in tests directly
-      dispute = new Dispute(exchangeId, complaint, state, resolution);
+      dispute = new Dispute(exchangeId, complaint, state, buyerPercent);
       expect(dispute.isValid()).is.true;
 
       // Get plain object
@@ -144,11 +146,11 @@ describe("Dispute", function () {
         exchangeId,
         complaint,
         state,
-        resolution: resolution.toObject(),
+        buyerPercent,
       };
 
       // Struct representation
-      struct = [exchangeId, complaint, state, resolution.toStruct()];
+      struct = [exchangeId, complaint, state, buyerPercent];
     });
 
     context("👉 Static", async function () {

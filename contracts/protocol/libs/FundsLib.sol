@@ -117,7 +117,7 @@ library FundsLib {
                 sellerPayoff = pot - protocolFee;
             } else {
                 // RESOLVED or DECIDED
-                uint256 buyerPercent = dispute.resolution.buyerPercent;
+                uint256 buyerPercent = dispute.buyerPercent;
                 buyerPayoff = pot * buyerPercent/10000;
                 sellerPayoff = pot - buyerPayoff - protocolFee;
             }           
