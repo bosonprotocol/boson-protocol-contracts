@@ -116,6 +116,17 @@ library FundsLib {
                 protocolFee = offer.protocolFee;
                 // buyerPayoff is 0
                 sellerPayoff = pot - protocolFee;
+            } else if (disputeState == BosonTypes.DisputeState.Refused) {
+                // REFUSED
+                if (ProtocolLib.protocolLookups().explicitRefusal[_exchangeId]) {
+                    // refuse to decide
+                    sellerPayoff = sellerDeposit;
+                    buyerPayoff = price;
+                } else {
+                    // fail to decide
+                    // sellerPayoff is 0
+                    buyerPayoff = pot;
+                }               
             } else {
                 // RESOLVED or DECIDED
                 buyerPayoff = pot * dispute.buyerPercent/10000;
