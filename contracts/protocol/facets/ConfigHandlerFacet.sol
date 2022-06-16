@@ -185,11 +185,11 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     
 
      /**
-     * @notice Sets the flat protocol fee for exchnges in $BOSON.
+     * @notice Sets the flat protocol fee for exchanges in $BOSON.
      *
      * Emits a ProtocolFeeFlatBosonChanged event.
      *
-     * @param _protocolFeeFlatBoson - Flat fee taken for exchages in $BOSON
+     * @param _protocolFeeFlatBoson - Flat fee taken for exchanges in $BOSON
      *
      */
     function setProtocolFeeFlatBoson(uint256 _protocolFeeFlatBoson)

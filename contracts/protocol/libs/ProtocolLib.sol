@@ -46,7 +46,7 @@ library ProtocolLib {
     struct ProtocolFees {
         // Percentage that will be taken as a fee from the net of a Boson Protocol exchange
         uint16 percentage; // 1.75% = 175, 100% = 10000
-        // Flat fee taken for exchages in $BOSON
+        // Flat fee taken for exchanges in $BOSON
         uint256 flatBoson;
     }
 
