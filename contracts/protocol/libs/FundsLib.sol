@@ -51,7 +51,7 @@ library FundsLib {
             transferFundsToProtocol(exchangeToken, price);
         }
 
-        // decrease availabel funds
+        // decrease available funds
         uint256 sellerId = offer.sellerId;
         uint256 sellerDeposit = offer.sellerDeposit;
         decreaseAvailableFunds(sellerId, exchangeToken, sellerDeposit);
@@ -85,26 +85,26 @@ library FundsLib {
         // sum of price and sellerDeposit occurs multiple times
         uint256 pot = price + sellerDeposit;
 
-        // retrieve protocol fee
-        uint256 protocolFee = offer.protocolFee;
 
         // calculate the payoffs depending on state exchange is in
         uint256 sellerPayoff;
         uint256 buyerPayoff;
+        uint256 protocolFee;
 
         if (exchangeState == BosonTypes.ExchangeState.Completed) {
             // COMPLETED
+            protocolFee = offer.protocolFee;
             // buyerPayoff is 0
             sellerPayoff = pot - protocolFee;
         } else if (exchangeState == BosonTypes.ExchangeState.Revoked) {
             // REVOKED
             // sellerPayoff is 0
-            buyerPayoff = pot - protocolFee;
+            buyerPayoff = pot;
         } else if (exchangeState == BosonTypes.ExchangeState.Canceled) {
             // CANCELED
             uint256 buyerCancelPenalty = offer.buyerCancelPenalty;
             sellerPayoff = sellerDeposit + buyerCancelPenalty;
-            buyerPayoff = price - buyerCancelPenalty - protocolFee;
+            buyerPayoff = price - buyerCancelPenalty;
         } else  {
             // DISPUTED
             // get the information about the dispute, which must exist
@@ -113,13 +113,13 @@ library FundsLib {
 
             if (disputeState == BosonTypes.DisputeState.Retracted) {
                 // RETRACTED - same as "COMPLETED"
+                protocolFee = offer.protocolFee;
                 // buyerPayoff is 0
                 sellerPayoff = pot - protocolFee;
             } else {
                 // RESOLVED or DECIDED
-                uint256 buyerPercent = dispute.buyerPercent;
-                buyerPayoff = pot * buyerPercent/10000;
-                sellerPayoff = pot - buyerPayoff - protocolFee;
+                buyerPayoff = pot * dispute.buyerPercent/10000;
+                sellerPayoff = pot - buyerPayoff;
             }           
         }  
 
@@ -190,7 +190,7 @@ library FundsLib {
     }
 
     /**
-     * @notice Increases the amount, availabe to withdraw or use as a seller deposit
+     * @notice Increases the amount, available to withdraw or use as a seller deposit
      *
      * @param _entityId - seller or buyer id, or 0 for protocol
      * @param _tokenAddress - funds contract address or zero address for native currency
@@ -210,7 +210,7 @@ library FundsLib {
     }
 
     /**
-     * @notice Decreases the amount, availabe to withdraw or use as a seller deposit
+     * @notice Decreases the amount, available to withdraw or use as a seller deposit
      *
      * Reverts if:
      * - available funds is less than amount to be decreased
