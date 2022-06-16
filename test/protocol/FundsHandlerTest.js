@@ -10,7 +10,6 @@ const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
-const Resolution = require("../../scripts/domain/Resolution");
 
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -73,7 +72,7 @@ describe("IBosonFundsHandler", function () {
   let tokenListSeller, tokenListBuyer, tokenAmountsSeller, tokenAmountsBuyer, tokenList, tokenAmounts;
   let tx, txReceipt, txCost, event;
   let disputeResolverEntity;
-  let buyerPercent, resolution;
+  let buyerPercent;
   let resolutionType, customSignatureType, message, r, s, v;
   let disputedDate, timeout;
 
@@ -1986,8 +1985,6 @@ describe("IBosonFundsHandler", function () {
               .sub(protocolFee)
               .toString();
 
-            resolution = new Resolution(buyerPercent);
-
             // Set the message Type, needed for signature
             resolutionType = [
               { name: "exchangeId", type: "uint256" },
@@ -2000,7 +1997,7 @@ describe("IBosonFundsHandler", function () {
 
             message = {
               exchangeId: exchangeId,
-              buyerPercent: resolution.buyerPercent,
+              buyerPercent,
             };
 
             // Collect the signature components
@@ -2015,7 +2012,7 @@ describe("IBosonFundsHandler", function () {
 
           it("should emit a FundsReleased event", async function () {
             // Resolve the dispute, expecting event
-            await expect(disputeHandler.connect(operator).resolveDispute(exchangeId, resolution, r, s, v))
+            await expect(disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v))
               .to.emit(disputeHandler, "ExchangeFee")
               .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee)
               .to.emit(disputeHandler, "FundsReleased")
@@ -2041,7 +2038,7 @@ describe("IBosonFundsHandler", function () {
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
 
             // Resolve the dispute, so the funds are released
-            await disputeHandler.connect(operator).resolveDispute(exchangeId, resolution, r, s, v);
+            await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v);
 
             // Available funds should be increased for
             // buyer: (price + sellerDeposit)*buyerPercentage
@@ -2067,7 +2064,6 @@ describe("IBosonFundsHandler", function () {
         context("Final state DISPUTED - DECIDED", async function () {
           beforeEach(async function () {
             buyerPercent = "5566"; // 55.66%
-            resolution = new Resolution(buyerPercent);
 
             // expected payoffs
             // buyer: 0
@@ -2090,7 +2086,7 @@ describe("IBosonFundsHandler", function () {
 
           it("should emit a FundsReleased event", async function () {
             // Decide the dispute, expecting event
-            await expect(disputeHandler.connect(disputeResolver).decideDispute(exchangeId, resolution))
+            await expect(disputeHandler.connect(disputeResolver).decideDispute(exchangeId, buyerPercent))
               .to.emit(disputeHandler, "ExchangeFee")
               .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee)
               .to.emit(disputeHandler, "FundsReleased")
@@ -2116,7 +2112,7 @@ describe("IBosonFundsHandler", function () {
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
 
             // Decide the dispute, so the funds are released
-            await disputeHandler.connect(disputeResolver).decideDispute(exchangeId, resolution);
+            await disputeHandler.connect(disputeResolver).decideDispute(exchangeId, buyerPercent);
 
             // Available funds should be increased for
             // buyer: (price + sellerDeposit)*buyerPercentage

@@ -16,7 +16,6 @@ const TokenType = require("../../scripts/domain/TokenType");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
-const Resolution = require("../../scripts/domain/Resolution");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -1368,8 +1367,6 @@ describe("IBosonExchangeHandler", function () {
         it("should return true if exchange has a dispute in Resolved state", async function () {
           const buyerPercent = "5566"; // 55.66%
 
-          const resolution = new Resolution(buyerPercent);
-
           // Set the message Type, needed for signature
           const resolutionType = [
             { name: "exchangeId", type: "uint256" },
@@ -1382,7 +1379,7 @@ describe("IBosonExchangeHandler", function () {
 
           const message = {
             exchangeId: exchange.id,
-            buyerPercent: resolution.buyerPercent,
+            buyerPercent,
           };
 
           // Collect the signature components
@@ -1395,7 +1392,7 @@ describe("IBosonExchangeHandler", function () {
           );
 
           // Resolve Dispute
-          await disputeHandler.connect(operator).resolveDispute(exchange.id, resolution, r, s, v);
+          await disputeHandler.connect(operator).resolveDispute(exchange.id, buyerPercent, r, s, v);
 
           // Now in Resolved state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
@@ -1420,7 +1417,7 @@ describe("IBosonExchangeHandler", function () {
           await disputeHandler.connect(buyer).escalateDispute(exchange.id);
 
           // Decide Dispute
-          await disputeHandler.connect(disputeResolver).decideDispute(exchange.id, new Resolution("1111"));
+          await disputeHandler.connect(disputeResolver).decideDispute(exchange.id, "1111");
 
           // Now in Decided state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);

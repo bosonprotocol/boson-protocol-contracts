@@ -10,7 +10,7 @@ import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles disputes associated with exchanges within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x268c00be
+ * The ERC-165 identifier for this interface is: 0xa0b14553
  */
 interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
 
@@ -95,12 +95,12 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * - dispute state is neither resolving nor escalated
      *
      * @param _exchangeId  - exchange id to resolve dispute
-     * @param _resolution - resolution struct with the information about the split.
+     * @param _buyerPercent - percentage of the pot that goes to the buyer
      * @param _sigR - r part of the signer's signature.
      * @param _sigS - s part of the signer's signature.
      * @param _sigV - v part of the signer's signature.
      */
-    function resolveDispute(uint256 _exchangeId, BosonTypes.Resolution calldata _resolution, bytes32 _sigR,
+    function resolveDispute(uint256 _exchangeId, uint256 _buyerPercent, bytes32 _sigR,
         bytes32 _sigS,
         uint8 _sigV) external;
 
@@ -133,9 +133,9 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * - dispute state is not escalated
      *
      * @param _exchangeId  - exchange id to resolve dispute
-     * @param _resolution - resolution struct with the information about the split.
+     * @param _buyerPercent - percentage of the pot that goes to the buyer
      */
-    function decideDispute(uint256 _exchangeId, BosonTypes.Resolution calldata _resolution) external;
+    function decideDispute(uint256 _exchangeId, uint256 _buyerPercent) external;
 
     /**
      * @notice Gets the details about a given dispute.
