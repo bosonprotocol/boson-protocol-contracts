@@ -334,7 +334,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         require(block.timestamp <= exchange.voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
 
         // Fetch or create buyer
-        (uint256 buyerId, Buyer storage buyer) = getValidBuyer(_newBuyer);
+        (uint256 buyerId,) = getValidBuyer(_newBuyer);
 
         // Update buyer id for the exchange
         exchange.buyerId = buyerId;
