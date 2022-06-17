@@ -435,8 +435,8 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
    
     function storeDisputeResolver(DisputeResolver memory _disputeResolver, DisputeResolverFee[] memory _disputeResolverFees) internal 
     {
-        // escalation period must be greater than zero
-        require(_disputeResolver.escalationPeriod > 0, INVALID_ESCALATION_PERIOD);
+        // escalation period must be greater than zero and less than or equal to the max allowed
+        require(_disputeResolver.escalationResponsePeriod > 0 && _disputeResolver.escalationResponsePeriod <= protocolLimits().maxEscalationResponsePeriod, INVALID_ESCALATION_PERIOD);
 
         // At least one fee must be specified. The ammount can be 0, but it must be intentional. However, the number of fees cannot exceet the maximum number of dispure resolver fees to avoid running into block gas limit in a loop
         require(_disputeResolverFees.length > 0 && _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
@@ -446,7 +446,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         // Set dispute resolver props individually since memory structs can't be copied to storage
         disputeResolver.id = _disputeResolver.id;
-        disputeResolver.escalationPeriod = _disputeResolver.escalationPeriod;
+        disputeResolver.escalationResponsePeriod = _disputeResolver.escalationResponsePeriod;
         disputeResolver.operator = _disputeResolver.operator;
         disputeResolver.admin = _disputeResolver.admin;
         disputeResolver.clerk = _disputeResolver.clerk;

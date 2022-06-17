@@ -54,7 +54,7 @@ contract BosonTypes {
 
     struct DisputeResolver {
         uint256 id;
-        uint256 escalationPeriod;
+        uint256 escalationResponsePeriod;
         address operator;
         address admin;
         address clerk;

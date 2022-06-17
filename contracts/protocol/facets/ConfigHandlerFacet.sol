@@ -43,6 +43,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxOffersPerBatch(_limits.maxOffersPerBatch);
         setMaxTokensPerWithdrawal(_limits.maxTokensPerWithdrawal);
         setMaxFeesPerDisputeResolver(_limits.maxFeesPerDisputeResolver);
+        setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
         
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -343,8 +344,38 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     function getMaxFeesPerDisputeResolver() 
     external 
     override
-    view returns (uint16)
+    view 
+    returns (uint16)
     {
         return protocolLimits().maxFeesPerDisputeResolver;
+    }
+
+    /**
+     * @notice Sets the maximum escalation response period a dispute resolver can specify
+     *
+     * Emits a MaxEscalationResponsePeriodChanged event.
+     *
+     * @param _maxEscalationResponsePeriod - the maximum escalation response period that a {BosonTypes.DisputeResolver} can specify
+     */
+    function setMaxEscalationResponsePeriod(uint16 _maxEscalationResponsePeriod) 
+    public
+    override
+    onlyRole(ADMIN)
+    {
+        protocolLimits().maxEscalationResponsePeriod = _maxEscalationResponsePeriod;
+        emit MaxEscalationResponsePeriodChanged(_maxEscalationResponsePeriod, msg.sender);   
+    }
+
+   
+    /**
+     * @notice Get the maximum escalation response period a dispute resolver can specify
+     */
+    function getMaxEscalationResponsePeriod()
+    public
+    override
+    view
+    returns (uint16)
+    {
+        return protocolLimits().maxEscalationResponsePeriod;
     }
 }

@@ -156,5 +156,20 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Get the maximum number of dispute resolver fee structs that can be processed in a single transaction
      */
     function getMaxFeesPerDisputeResolver() external view returns (uint16);
+
+    /**
+     * @notice Sets the maximum escalation response period a dispute resolver can specify
+     *
+     * Emits a MaxEscalationResponsePeriodChanged event.
+     *
+     * @param _maxEscalationResponsePeriod - the maximum escalation response period that a {BosonTypes.DisputeResolver} can specify
+     */
+    function setMaxEscalationResponsePeriod(uint16 _maxEscalationResponsePeriod) external;
+
+   
+    /**
+     * @notice Get the maximum escalation response period a dispute resolver can specify
+     */
+    function getMaxEscalationResponsePeriod() external view returns (uint16);
    
 }
