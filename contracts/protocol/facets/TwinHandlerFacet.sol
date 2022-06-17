@@ -102,6 +102,6 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         // delete struct
         delete protocolEntities().twins[_twinId];
 
-        emit TwinDeleted(_twinId, twin.sellerId);
+        emit TwinDeleted(_twinId, twin.sellerId, msgSender());
     }
 }

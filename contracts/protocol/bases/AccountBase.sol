@@ -42,7 +42,7 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         storeSeller(_seller);
 
         // Notify watchers of state change
-        emit SellerCreated(sellerId, _seller);
+        emit SellerCreated(sellerId, _seller, msgSender());
     }
 
        /**
@@ -76,7 +76,7 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         storeBuyer(_buyer);
 
         //Notify watchers of state change
-        emit BuyerCreated(_buyer.id, _buyer);
+        emit BuyerCreated(_buyer.id, _buyer, msgSender());
     }
 
     /**

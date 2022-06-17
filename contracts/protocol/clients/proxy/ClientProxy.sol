@@ -89,7 +89,7 @@ contract ClientProxy is IBosonClient, BosonConstants, Proxy {
         ps.implementation = _impl;
 
         // Notify watchers of state change
-        emit Upgraded(_impl);
+        emit Upgraded(_impl, msg.sender);
 
     }
 
@@ -123,7 +123,7 @@ contract ClientProxy is IBosonClient, BosonConstants, Proxy {
         ps.accessController = IAccessControlUpgradeable(_accessController);
 
         // Notify watchers of state change
-        emit AccessControllerAddressChanged(_accessController);
+        emit AccessControllerAddressChanged(_accessController, msg.sender);
     }
 
     /**
@@ -163,7 +163,7 @@ contract ClientProxy is IBosonClient, BosonConstants, Proxy {
         ps.protocolDiamond = _protocolAddress;
 
         // Notify watchers of state change
-        emit ProtocolAddressChanged(_protocolAddress);
+        emit ProtocolAddressChanged(_protocolAddress, msg.sender);
     }
 
     /**

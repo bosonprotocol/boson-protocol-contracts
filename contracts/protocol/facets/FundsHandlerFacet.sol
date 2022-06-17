@@ -59,7 +59,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         // increase available funds
         FundsLib.increaseAvailableFunds(_sellerId, _tokenAddress, _amount);
 
-        emit FundsDeposited(_sellerId, msg.sender, _tokenAddress, _amount);              
+        emit FundsDeposited(_sellerId, msgSender(), _tokenAddress, _amount);              
     }
     
     /**
