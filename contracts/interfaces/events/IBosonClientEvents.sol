@@ -7,7 +7,7 @@ pragma solidity ^0.8.0;
  * @notice Events related to management of Boson ClientProxy
  */
 interface IBosonClientEvents {
-    event Upgraded(address indexed implementation);
-    event ProtocolAddressChanged(address indexed protocol);
-    event AccessControllerAddressChanged(address indexed accessController);
+    event Upgraded(address indexed implementation, address indexed executedBy);
+    event ProtocolAddressChanged(address indexed protocol, address indexed executedBy);
+    event AccessControllerAddressChanged(address indexed accessController, address indexed executedBy);
 }

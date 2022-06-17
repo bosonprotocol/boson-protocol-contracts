@@ -425,6 +425,7 @@ describe("IBosonBundleHandler", function () {
 
         assert.equal(event.bundleId.toString(), nextBundleId, "Bundle Id is incorrect");
         assert.equal(event.sellerId.toString(), sellerId, "Seller Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(bundleInstance.toStruct().toString(), bundleStruct.toString(), "Bundle struct is incorrect");
       });
     });
@@ -683,6 +684,7 @@ describe("IBosonBundleHandler", function () {
 
         assert.equal(event.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
         assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
       });
 
@@ -761,6 +763,7 @@ describe("IBosonBundleHandler", function () {
 
         assert.equal(event.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
         assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
       });
 
@@ -899,6 +902,7 @@ describe("IBosonBundleHandler", function () {
 
         assert.equal(event.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
         assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
       });
 
@@ -1051,6 +1055,7 @@ describe("IBosonBundleHandler", function () {
 
         assert.equal(event.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
         assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
       });
 
@@ -1256,6 +1261,7 @@ describe("IBosonBundleHandler", function () {
 
         assert.equal(event.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
         assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
       });
 
@@ -1496,7 +1502,7 @@ describe("IBosonBundleHandler", function () {
         // Remove the bundle, testing for the event.
         await expect(bundleHandler.connect(operator).removeBundle(bundle.id))
           .to.emit(bundleHandler, "BundleDeleted")
-          .withArgs(bundle.id, bundle.sellerId);
+          .withArgs(bundle.id, bundle.sellerId, operator.address);
 
         // Expect bundle to be not found.
         [exists] = await bundleHandler.connect(rando).getBundle(bundle.id);
@@ -1519,7 +1525,7 @@ describe("IBosonBundleHandler", function () {
         // Remove the bundle, testing for the event.
         await expect(bundleHandler.connect(operator).removeBundle(bundle.id))
           .to.emit(bundleHandler, "BundleDeleted")
-          .withArgs(bundle.id, bundle.sellerId);
+          .withArgs(bundle.id, bundle.sellerId, operator.address);
 
         // Expect bundle to be not found.
         [exists] = await bundleHandler.connect(rando).getBundle(bundle.id);

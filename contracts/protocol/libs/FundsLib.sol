@@ -12,10 +12,10 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * @dev 
  */
 library FundsLib {
-    event FundsEncumbered(uint256 indexed entityId, address indexed exchangeToken, uint256 amount);
-    event FundsReleased(uint256 indexed exchangeId, uint256 indexed entityId, address indexed exchangeToken, uint256 amount);
-    event ExchangeFee(uint256 indexed exchangeId, address indexed exchangeToken, uint256 amount);
-    event FundsWithdrawn(uint256 indexed sellerId, address indexed withdrawnTo, address indexed tokenAddress, uint256 amount); 
+    event FundsEncumbered(uint256 indexed entityId, address indexed exchangeToken, uint256 amount, address indexed executedBy);
+    event FundsReleased(uint256 indexed exchangeId, uint256 indexed entityId, address indexed exchangeToken, uint256 amount, address executedBy);
+    event ExchangeFee(uint256 indexed exchangeId, address indexed exchangeToken, uint256 amount, address indexed executedBy);
+    event FundsWithdrawn(uint256 indexed sellerId, address indexed withdrawnTo, address indexed tokenAddress, uint256 amount, address executedBy); 
     
     /**
      * @notice Takes in the offer id and buyer id and encumbers buyer's and seller's funds during the commitToOffer
@@ -57,8 +57,8 @@ library FundsLib {
         decreaseAvailableFunds(sellerId, exchangeToken, sellerDeposit);
 
         // notify external observers
-        emit FundsEncumbered(_buyerId, exchangeToken, price);
-        emit FundsEncumbered(sellerId, exchangeToken, sellerDeposit);
+        emit FundsEncumbered(_buyerId, exchangeToken, price, msg.sender);
+        emit FundsEncumbered(sellerId, exchangeToken, sellerDeposit, msg.sender);
     }
 
     /**
@@ -132,9 +132,9 @@ library FundsLib {
         if (protocolFee > 0) increaseAvailableFunds(0, exchangeToken, protocolFee);       
                 
         // Notify the external observers
-        emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff);
-        emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff);
-        emit ExchangeFee(_exchangeId, exchangeToken, protocolFee);
+        emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff, msg.sender);
+        emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff, msg.sender);
+        emit ExchangeFee(_exchangeId, exchangeToken, protocolFee, msg.sender);
     }
 
     /**
@@ -186,7 +186,7 @@ library FundsLib {
         }
 
         // notify the external observers
-        emit FundsWithdrawn(_entityId, _to, _tokenAddress, _amount);    
+        emit FundsWithdrawn(_entityId, _to, _tokenAddress, _amount, msg.sender);    
     }
 
     /**

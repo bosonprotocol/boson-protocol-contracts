@@ -256,6 +256,7 @@ describe("IBosonGroupHandler", function () {
 
         assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
       });
 
@@ -290,6 +291,7 @@ describe("IBosonGroupHandler", function () {
 
         assert.equal(event.groupId.toString(), nextGroupId, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(groupInstance.toStruct().toString(), groupStruct.toString(), "Group struct is incorrect");
 
         // wrong group id should not exist
@@ -329,6 +331,7 @@ describe("IBosonGroupHandler", function () {
 
         assert.equal(event.groupId.toString(), nextGroupId, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), sellerId, "Seller Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(groupInstance.toStruct().toString(), groupStruct.toString(), "Group struct is incorrect");
       });
 
@@ -460,6 +463,7 @@ describe("IBosonGroupHandler", function () {
 
         assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
       });
 
@@ -606,7 +610,8 @@ describe("IBosonGroupHandler", function () {
         expect(groupInstance.isValid()).to.be.true;
 
         assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
-        assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+        assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
       });
 
@@ -729,6 +734,7 @@ describe("IBosonGroupHandler", function () {
 
         assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
       });
 

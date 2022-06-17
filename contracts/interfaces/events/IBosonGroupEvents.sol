@@ -9,6 +9,6 @@ import {BosonTypes} from "../../domain/BosonTypes.sol";
  * @notice Events related to management of groups within the protocol.
  */
 interface IBosonGroupEvents {
-    event GroupCreated(uint256 indexed groupId, uint256 indexed sellerId, BosonTypes.Group group);
-    event GroupUpdated(uint256 indexed groupId, uint256 indexed sellerId, BosonTypes.Group group);
+    event GroupCreated(uint256 indexed groupId, uint256 indexed sellerId, BosonTypes.Group group, address indexed executedBy);
+    event GroupUpdated(uint256 indexed groupId, uint256 indexed sellerId, BosonTypes.Group group, address indexed executedBy);
 }

@@ -459,7 +459,7 @@ describe("IBosonTwinHandler", function () {
         // Remove the twin, testing for the event.
         await expect(twinHandler.connect(operator).removeTwin(twin.id))
           .to.emit(twinHandler, "TwinDeleted")
-          .withArgs(twin.id, twin.sellerId);
+          .withArgs(twin.id, twin.sellerId, operator.address);
 
         // Expect twin to be not found.
         [success] = await twinHandler.connect(rando).getTwin(twin.id);

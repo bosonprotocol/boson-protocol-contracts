@@ -256,7 +256,7 @@ describe("IBosonOfferHandler", function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
       });
 
       it("should update state", async function () {
@@ -289,7 +289,7 @@ describe("IBosonOfferHandler", function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // wrong offer id should not exist
         [exists] = await offerHandler.connect(rando).getOffer(offer.id);
@@ -307,7 +307,7 @@ describe("IBosonOfferHandler", function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
       });
 
       it("should ignore any provided protocol fee and calculate the correct one", async function () {
@@ -317,7 +317,7 @@ describe("IBosonOfferHandler", function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
       });
 
       it("after the protocol fee changes, new offers should have the new fee", async function () {
@@ -334,7 +334,14 @@ describe("IBosonOfferHandler", function () {
         // Create a new offer
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct);
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            operator.address
+          );
       });
 
       it("If exchange token is $BOSON, fee should be flat boson fee", async function () {
@@ -345,7 +352,14 @@ describe("IBosonOfferHandler", function () {
         // Create a new offer
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct);
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            operator.address
+          );
       });
 
       it("For absolute zero offers, dispute resolver can be unspecified", async function () {
@@ -356,7 +370,14 @@ describe("IBosonOfferHandler", function () {
         // Create a new offer
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct);
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            operator.address
+          );
       });
 
       it("Should allow creation of an offer with unlimited supply", async function () {
@@ -366,7 +387,14 @@ describe("IBosonOfferHandler", function () {
         // Create a new offer
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct);
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            operator.address
+          );
       });
 
       context("💔 Revert Reasons", async function () {
@@ -532,7 +560,7 @@ describe("IBosonOfferHandler", function () {
         // Void the offer, testing for the event
         await expect(offerHandler.connect(operator).voidOffer(id))
           .to.emit(offerHandler, "OfferVoided")
-          .withArgs(id, offerStruct.sellerId);
+          .withArgs(id, offerStruct.sellerId, operator.address);
       });
 
       it("should update state", async function () {
@@ -614,7 +642,7 @@ describe("IBosonOfferHandler", function () {
         // Extend the valid until date, testing for the event
         await expect(offerHandler.connect(operator).extendOffer(offer.id, offerDates.validUntil))
           .to.emit(offerHandler, "OfferExtended")
-          .withArgs(id, offer.sellerId, offerDates.validUntil);
+          .withArgs(id, offer.sellerId, offerDates.validUntil, operator.address);
       });
 
       it("should update state", async function () {
@@ -964,11 +992,46 @@ describe("IBosonOfferHandler", function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs("1", offer.sellerId, offerStructs[0], offerDatesStructs[0], offerDurationsStructs[0])
-          .withArgs("2", offer.sellerId, offerStructs[1], offerDatesStructs[1], offerDurationsStructs[1])
-          .withArgs("3", offer.sellerId, offerStructs[2], offerDatesStructs[2], offerDurationsStructs[2])
-          .withArgs("4", offer.sellerId, offerStructs[3], offerDatesStructs[3], offerDurationsStructs[3])
-          .withArgs("5", offer.sellerId, offerStructs[4], offerDatesStructs[4], offerDurationsStructs[4]);
+          .withArgs(
+            "1",
+            offer.sellerId,
+            offerStructs[0],
+            offerDatesStructs[0],
+            offerDurationsStructs[0],
+            operator.address
+          )
+          .withArgs(
+            "2",
+            offer.sellerId,
+            offerStructs[1],
+            offerDatesStructs[1],
+            offerDurationsStructs[1],
+            operator.address
+          )
+          .withArgs(
+            "3",
+            offer.sellerId,
+            offerStructs[2],
+            offerDatesStructs[2],
+            offerDurationsStructs[2],
+            operator.address
+          )
+          .withArgs(
+            "4",
+            offer.sellerId,
+            offerStructs[3],
+            offerDatesStructs[3],
+            offerDurationsStructs[3],
+            operator.address
+          )
+          .withArgs(
+            "5",
+            offer.sellerId,
+            offerStructs[4],
+            offerDatesStructs[4],
+            offerDurationsStructs[4],
+            operator.address
+          );
       });
 
       it("should update state", async function () {
@@ -1009,11 +1072,46 @@ describe("IBosonOfferHandler", function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs("1", offer.sellerId, offerStructs[0], offerDatesStructs[0], offerDurationsStructs[0])
-          .withArgs("2", offer.sellerId, offerStructs[1], offerDatesStructs[1], offerDurationsStructs[1])
-          .withArgs("3", offer.sellerId, offerStructs[2], offerDatesStructs[2], offerDurationsStructs[2])
-          .withArgs("4", offer.sellerId, offerStructs[3], offerDatesStructs[3], offerDurationsStructs[3])
-          .withArgs("5", offer.sellerId, offerStructs[4], offerDatesStructs[4], offerDurationsStructs[4]);
+          .withArgs(
+            "1",
+            offer.sellerId,
+            offerStructs[0],
+            offerDatesStructs[0],
+            offerDurationsStructs[0],
+            operator.address
+          )
+          .withArgs(
+            "2",
+            offer.sellerId,
+            offerStructs[1],
+            offerDatesStructs[1],
+            offerDurationsStructs[1],
+            operator.address
+          )
+          .withArgs(
+            "3",
+            offer.sellerId,
+            offerStructs[2],
+            offerDatesStructs[2],
+            offerDurationsStructs[2],
+            operator.address
+          )
+          .withArgs(
+            "4",
+            offer.sellerId,
+            offerStructs[3],
+            offerDatesStructs[3],
+            offerDurationsStructs[3],
+            operator.address
+          )
+          .withArgs(
+            "5",
+            offer.sellerId,
+            offerStructs[4],
+            offerDatesStructs[4],
+            offerDurationsStructs[4],
+            operator.address
+          );
 
         for (let i = 0; i < 5; i++) {
           // wrong offer id should not exist
@@ -1037,11 +1135,11 @@ describe("IBosonOfferHandler", function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs("1", sellerId, offerStructs[0], offerDatesStructs[0], offerDurationsStructs[0])
-          .withArgs("2", sellerId, offerStructs[1], offerDatesStructs[1], offerDurationsStructs[1])
-          .withArgs("3", sellerId, offerStructs[2], offerDatesStructs[2], offerDurationsStructs[2])
-          .withArgs("4", sellerId, offerStructs[3], offerDatesStructs[3], offerDurationsStructs[3])
-          .withArgs("5", sellerId, offerStructs[4], offerDatesStructs[4], offerDurationsStructs[4]);
+          .withArgs("1", sellerId, offerStructs[0], offerDatesStructs[0], offerDurationsStructs[0], operator.address)
+          .withArgs("2", sellerId, offerStructs[1], offerDatesStructs[1], offerDurationsStructs[1], operator.address)
+          .withArgs("3", sellerId, offerStructs[2], offerDatesStructs[2], offerDurationsStructs[2], operator.address)
+          .withArgs("4", sellerId, offerStructs[3], offerDatesStructs[3], offerDurationsStructs[3], operator.address)
+          .withArgs("5", sellerId, offerStructs[4], offerDatesStructs[4], offerDurationsStructs[4], operator.address);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -1269,9 +1367,9 @@ describe("IBosonOfferHandler", function () {
         // Void offers, testing for the event
         await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid))
           .to.emit(offerHandler, "OfferVoided")
-          .withArgs(offersToVoid[0], offerStruct.sellerId)
-          .withArgs(offersToVoid[1], offerStruct.sellerId)
-          .withArgs(offersToVoid[2], offerStruct.sellerId);
+          .withArgs(offersToVoid[0], offerStruct.sellerId, operator.address)
+          .withArgs(offersToVoid[1], offerStruct.sellerId, operator.address)
+          .withArgs(offersToVoid[2], offerStruct.sellerId, operator.address);
       });
 
       it("should update state", async function () {
@@ -1384,9 +1482,9 @@ describe("IBosonOfferHandler", function () {
         // Extend the valid until date, testing for the event
         await expect(offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate))
           .to.emit(offerHandler, "OfferExtended")
-          .withArgs(offersToExtend[0], offer.sellerId, newValidUntilDate)
-          .withArgs(offersToExtend[1], offer.sellerId, newValidUntilDate)
-          .withArgs(offersToExtend[2], offer.sellerId, newValidUntilDate);
+          .withArgs(offersToExtend[0], offer.sellerId, newValidUntilDate, operator.address)
+          .withArgs(offersToExtend[1], offer.sellerId, newValidUntilDate, operator.address)
+          .withArgs(offersToExtend[2], offer.sellerId, newValidUntilDate, operator.address);
       });
 
       it("should update state", async function () {
