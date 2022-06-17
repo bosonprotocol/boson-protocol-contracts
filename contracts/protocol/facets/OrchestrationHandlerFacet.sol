@@ -153,7 +153,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
         OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
         uint256 _groupId
     )
-    external {
+    external override {
         // create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations);
 
@@ -243,7 +243,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
         Condition memory _condition,
         Twin memory _twin
     )
-    public {
+    public override {
         // create offer with condition first
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _condition);
         // create twin and pack everything into a bundle
