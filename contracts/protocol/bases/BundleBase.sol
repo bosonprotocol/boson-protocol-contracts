@@ -84,7 +84,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         bundle.twinIds = _bundle.twinIds;
 
         // Notify watchers of state change
-        emit BundleCreated(bundleId, sellerId, _bundle);
+        emit BundleCreated(bundleId, sellerId, _bundle, msgSender());
     }
 
     /**

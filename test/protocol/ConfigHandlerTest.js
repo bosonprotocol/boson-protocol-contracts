@@ -86,29 +86,22 @@ describe("IBosonConfigHandler", function () {
 
         await expect(cutTransaction)
           .to.emit(configHandler, "TokenAddressChanged")
-          .withArgs(token.address, deployer.address);
-        await expect(cutTransaction)
+          .withArgs(token.address, deployer.address)
           .to.emit(configHandler, "TreasuryAddressChanged")
-          .withArgs(treasury.address, deployer.address);
-        await expect(cutTransaction)
+          .withArgs(treasury.address, deployer.address)
           .to.emit(configHandler, "VoucherAddressChanged")
-          .withArgs(voucher.address, deployer.address);
-        await expect(cutTransaction)
+          .withArgs(voucher.address, deployer.address)
           .to.emit(configHandler, "ProtocolFeePercentageChanged")
           .withArgs(protocolFeePercentage, deployer.address);
         await expect(cutTransaction)
           .to.emit(configHandler, "MaxOffersPerGroupChanged")
-          .withArgs(maxOffersPerGroup, deployer.address);
-        await expect(cutTransaction)
+          .withArgs(maxOffersPerGroup, deployer.address)
           .to.emit(configHandler, "MaxTwinsPerBundleChanged")
-          .withArgs(maxTwinsPerBundle, deployer.address);
-        await expect(cutTransaction)
+          .withArgs(maxTwinsPerBundle, deployer.address)
           .to.emit(configHandler, "MaxOffersPerBundleChanged")
-          .withArgs(maxOffersPerBundle, deployer.address);
-        await expect(cutTransaction)
+          .withArgs(maxOffersPerBundle, deployer.address)
           .to.emit(configHandler, "MaxOffersPerBatchChanged")
-          .withArgs(maxOffersPerBatch, deployer.address);
-        await expect(cutTransaction)
+          .withArgs(maxOffersPerBatch, deployer.address)
           .to.emit(configHandler, "MaxTokensPerWithdrawalChanged")
           .withArgs(maxTokensPerWithdrawal, deployer.address);
       });

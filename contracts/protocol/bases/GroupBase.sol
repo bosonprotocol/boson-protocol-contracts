@@ -66,7 +66,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         group.condition = _group.condition;
 
         // Notify watchers of state change
-        emit GroupCreated(groupId, sellerId, _group);
+        emit GroupCreated(groupId, sellerId, _group, msgSender());
 
     }
 
@@ -139,7 +139,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         }
              
         // Notify watchers of state change
-        emit GroupUpdated(_groupId, sellerId, group);
+        emit GroupUpdated(_groupId, sellerId, group, msgSender());
     }
 
     /**

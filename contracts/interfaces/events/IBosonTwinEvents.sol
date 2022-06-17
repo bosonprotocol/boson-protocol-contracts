@@ -9,6 +9,6 @@ import {BosonTypes} from "../../domain/BosonTypes.sol";
  * @notice Events related to management of twins within the protocol.
  */
 interface IBosonTwinEvents {
-    event TwinCreated(uint256 indexed twinId, uint256 indexed sellerId, BosonTypes.Twin twin);
-    event TwinDeleted(uint256 indexed twinId, uint256 indexed sellerId);
+    event TwinCreated(uint256 indexed twinId, uint256 indexed sellerId, BosonTypes.Twin twin, address indexed executedBy);
+    event TwinDeleted(uint256 indexed twinId, uint256 indexed sellerId, address indexed executedBy);
 }

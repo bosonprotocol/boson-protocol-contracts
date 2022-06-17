@@ -9,13 +9,13 @@ import {BosonTypes} from "../../domain/BosonTypes.sol";
  * @notice Events related to management of configuration within the protocol.
  */
 interface IBosonConfigEvents {
-    event VoucherAddressChanged(address indexed voucher, address indexed changedBy);
-    event TokenAddressChanged(address indexed tokenAddress, address indexed changedBy);
-    event TreasuryAddressChanged(address indexed treasuryAddress, address indexed changedBy);
-    event ProtocolFeePercentageChanged(uint16 feePercentage, address indexed changedBy);
-    event MaxOffersPerGroupChanged(uint16 maxOffersPerGroup, address indexed changedBy);
-    event MaxOffersPerBatchChanged(uint16 maxOffersPerBatch, address indexed changedBy);
-    event MaxTwinsPerBundleChanged(uint16 maxTwinsPerBundle, address indexed changedBy);
-    event MaxOffersPerBundleChanged(uint16 maxOffersPerBundle, address indexed changedBy);
-    event MaxTokensPerWithdrawalChanged(uint16 maxOffersPerBundle, address indexed changedBy);    
+    event VoucherAddressChanged(address indexed voucher, address indexed executedBy);
+    event TokenAddressChanged(address indexed tokenAddress, address indexed executedBy);
+    event TreasuryAddressChanged(address indexed treasuryAddress, address indexed executedBy);
+    event ProtocolFeePercentageChanged(uint16 feePercentage, address indexed executedBy);
+    event MaxOffersPerGroupChanged(uint16 maxOffersPerGroup, address indexed executedBy);
+    event MaxOffersPerBatchChanged(uint16 maxOffersPerBatch, address indexed executedBy);
+    event MaxTwinsPerBundleChanged(uint16 maxTwinsPerBundle, address indexed executedBy);
+    event MaxOffersPerBundleChanged(uint16 maxOffersPerBundle, address indexed executedBy);
+    event MaxTokensPerWithdrawalChanged(uint16 maxOffersPerBundle, address indexed executedBy);    
 }

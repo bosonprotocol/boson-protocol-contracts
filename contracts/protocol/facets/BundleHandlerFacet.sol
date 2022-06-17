@@ -127,7 +127,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         }
 
         // Notify watchers of state change
-        emit BundleUpdated(_bundleId, sellerId, bundle);
+        emit BundleUpdated(_bundleId, sellerId, bundle, msgSender());
     }
 
     /**
@@ -188,7 +188,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         }
 
         // Notify watchers of state change
-        emit BundleUpdated(_bundleId, sellerId, bundle);
+        emit BundleUpdated(_bundleId, sellerId, bundle, msgSender());
     }
 
     /**
@@ -281,7 +281,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         }
 
         // Notify watchers of state change
-        emit BundleUpdated(_bundleId, sellerId, bundle);
+        emit BundleUpdated(_bundleId, sellerId, bundle, msgSender());
     }
 
     /**
@@ -337,7 +337,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         }
 
         // Notify watchers of state change
-        emit BundleUpdated(_bundleId, sellerId, bundle);
+        emit BundleUpdated(_bundleId, sellerId, bundle, msgSender());
     }
 
     /**
@@ -398,7 +398,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         // delete from bundles mapping
         delete protocolEntities().bundles[_bundleId];
 
-        emit BundleDeleted(_bundleId, bundle.sellerId);
+        emit BundleDeleted(_bundleId, bundle.sellerId, msgSender());
     }
 
     /**

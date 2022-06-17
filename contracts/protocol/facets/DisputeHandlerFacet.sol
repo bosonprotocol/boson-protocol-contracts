@@ -79,7 +79,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // Notify watchers of state change
-        emit DisputeRaised(_exchangeId, exchange.buyerId, offer.sellerId, _complaint);
+        emit DisputeRaised(_exchangeId, exchange.buyerId, offer.sellerId, _complaint, msgSender());
     }
 
     /**
@@ -112,7 +112,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Retracted, 0);
 
         // Notify watchers of state change
-        emit DisputeRetracted(_exchangeId, msg.sender);
+        emit DisputeRetracted(_exchangeId, msgSender());
     }
     
     /**
@@ -195,7 +195,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Retracted, 0);
 
         // Notify watchers of state change
-        emit DisputeExpired(_exchangeId, msg.sender);
+        emit DisputeExpired(_exchangeId, msgSender());
     }
 
     /**
@@ -272,7 +272,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Resolved, _buyerPercent);
 
         // Notify watchers of state change
-        emit DisputeResolved(_exchangeId, _buyerPercent, msg.sender);
+        emit DisputeResolved(_exchangeId, _buyerPercent, msgSender());
     }
 
     /**
@@ -315,7 +315,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // Notify watchers of state change
-        emit DisputeEscalated(_exchangeId, offer.disputeResolverId, msg.sender);
+        emit DisputeEscalated(_exchangeId, offer.disputeResolverId, msgSender());
     }
 
     /**

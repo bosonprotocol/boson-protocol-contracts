@@ -264,9 +264,9 @@ describe("IBosonOrchestrationHandler", function () {
           orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
         )
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct)
+          .withArgs(seller.id, sellerStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
       });
 
       it("should update state", async function () {
@@ -313,9 +313,9 @@ describe("IBosonOrchestrationHandler", function () {
           orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
         )
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(nextAccountId, sellerStruct)
+          .withArgs(nextAccountId, sellerStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // wrong seller id should not exist
         [exists] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -343,7 +343,7 @@ describe("IBosonOrchestrationHandler", function () {
           orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -578,7 +578,7 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -591,6 +591,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         assert.equal(eventGroupCreated.groupId.toString(), group.id, "Group Id is incorrect");
         assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
+        assert.equal(eventGroupCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
       });
 
@@ -642,7 +643,7 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -670,7 +671,7 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -993,7 +994,7 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1057,7 +1058,7 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1085,7 +1086,7 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1318,7 +1319,7 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1410,7 +1411,7 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1456,7 +1457,7 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1754,7 +1755,7 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1867,7 +1868,7 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1923,7 +1924,7 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2002,9 +2003,9 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct)
+          .withArgs(seller.id, sellerStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2082,7 +2083,7 @@ describe("IBosonOrchestrationHandler", function () {
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2144,9 +2145,9 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct)
+          .withArgs(seller.id, sellerStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2159,6 +2160,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         assert.equal(eventTwinCreated.twinId.toString(), twin.id, "Twin Id is incorrect");
         assert.equal(eventTwinCreated.sellerId.toString(), twin.sellerId, "Seller Id is incorrect");
+        assert.equal(eventTwinCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(twinInstance.toString(), twin.toString(), "Twin struct is incorrect");
 
         // BundleCreated event
@@ -2169,6 +2171,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         assert.equal(eventBundleCreated.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
         assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(eventBundleCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
       });
 
@@ -2250,9 +2253,9 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct)
+          .withArgs(seller.id, sellerStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2359,9 +2362,9 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct)
+          .withArgs(seller.id, sellerStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2500,9 +2503,9 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct)
+          .withArgs(seller.id, sellerStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();

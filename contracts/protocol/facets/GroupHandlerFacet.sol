@@ -125,7 +125,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         }
              
         // Notify watchers of state change
-        emit GroupUpdated(_groupId, sellerId, group);
+        emit GroupUpdated(_groupId, sellerId, group, msgSender());
     }
 
       /**
@@ -165,7 +165,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         group.condition = _condition;
       
         // Notify watchers of state change
-        emit GroupUpdated(group.id, sellerId, group);
+        emit GroupUpdated(group.id, sellerId, group, msgSender());
     }
 
     /**
