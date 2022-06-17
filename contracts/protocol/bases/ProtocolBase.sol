@@ -179,6 +179,51 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
+     * @notice Gets a dispute resolver Id from storage by operator address
+     *
+     * @param _operator - the operator address of the dispute resolver
+     * @return exists - whether the dispute resolver Id exists
+     * @return disputeResolverId  - the dispute resolver  Id
+     */
+    function getDisputeResolverIdByOperator(address _operator) internal view returns (bool exists, uint256 disputeResolverId) {
+        // Get the dispute resolver Id
+        disputeResolverId = protocolLookups().disputeResolverIdByOperator[_operator];
+
+        // Determine existence
+        exists = (disputeResolverId > 0);
+    }
+
+    /**
+     * @notice Gets a dispute resolver Id from storage by admin address
+     *
+     * @param _admin - the admin address of the dispute resolver
+     * @return exists - whether the dispute resolver Id exists
+     * @return disputeResolverId  - the dispute resolver Id
+     */
+    function getDisputeResolverIdByAdmin(address _admin) internal view returns (bool exists, uint256 disputeResolverId) {
+        // Get the dispute resolver Id
+        disputeResolverId = protocolLookups().disputeResolverIdByAdmin[_admin];
+
+        // Determine existence
+        exists = (disputeResolverId > 0);
+    }
+
+    /**
+     * @notice Gets a dispute resolver Id from storage by clerk address
+     *
+     * @param _clerk - the clerk address of the dispute resolver
+     * @return exists - whether the dispute resolver Id exists
+     * @return disputeResolverId  - the dispute resolver Id
+     */
+    function getDisputeResolverIdByClerk(address _clerk) internal view returns (bool exists, uint256 disputeResolverId) {
+        // Get the dispute resolver Id
+        disputeResolverId = protocolLookups().disputeResolverIdByClerk[_clerk];
+
+        // Determine existence
+        exists = (disputeResolverId > 0);
+    }
+
+    /**
      * @notice Gets a group id from storage by offer id
      *
      * @param _offerId - the offer id

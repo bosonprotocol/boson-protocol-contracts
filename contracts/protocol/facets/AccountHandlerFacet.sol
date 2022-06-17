@@ -268,6 +268,8 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         delete protocolLookups().disputeResolverIdByOperator[disputeResolver.operator];
         delete protocolLookups().disputeResolverIdByAdmin[disputeResolver.admin];
         delete protocolLookups().disputeResolverIdByClerk[disputeResolver.clerk];
+        delete protocolEntities().disputeResolverFees[disputeResolver.id];
+
 
         storeDisputeResolver(_disputeResolver, _disputeResolverFees);
         
@@ -351,9 +353,42 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     function getDisputeResolver(uint256 _disputeResolverId) 
     external
     override
-    view returns (bool exists, DisputeResolver memory disputeResolver, DisputeResolverFee[] memory disputeResolverFees) 
+    view 
+    returns (bool exists, DisputeResolver memory disputeResolver, DisputeResolverFee[] memory disputeResolverFees) 
     {
         return fetchDisputeResolver(_disputeResolverId);
+    }
+
+    /**
+     * @notice Gets the details about a dispute resolver by an address associated with that dispute resolver: operator, admin, or clerk address.
+     *
+     * @param _associatedAddress - the address associated with the dispute resolver. Must be an operator, admin, or clerk address.
+     * @return exists - the dispute resolver  was found
+     * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
+     * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
+     */
+    function getDisputeResolverByAddress(address _associatedAddress)
+    external
+    override
+    view
+    returns (bool exists, DisputeResolver memory disputeResolver, DisputeResolverFee[] memory disputeResolverFees)
+    {
+         uint disputeResolverId;
+
+        (exists, disputeResolverId) = getDisputeResolverIdByOperator(_associatedAddress);
+        if(exists) {
+            return fetchDisputeResolver(disputeResolverId);
+        } 
+
+        (exists, disputeResolverId) = getDisputeResolverIdByAdmin(_associatedAddress);
+        if(exists) {
+            return fetchDisputeResolver(disputeResolverId);
+        } 
+
+        (exists, disputeResolverId) = getDisputeResolverIdByClerk(_associatedAddress);
+        if(exists) {
+            return fetchDisputeResolver(disputeResolverId);
+        }
     }
 
 
@@ -403,8 +438,8 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         // escalation period must be greater than zero
         require(_disputeResolver.escalationPeriod > 0, INVALID_ESCALATION_PERIOD);
 
-        // limit maximum number of dispure resolver fees to avoid running into block gas limit in a loop
-        require(_disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, TOO_MANY_DISPUTE_RESOLVER_FEES);
+        // At least one fee must be specified. The ammount can be 0, but it must be intentional. However, the number of fees cannot exceet the maximum number of dispure resolver fees to avoid running into block gas limit in a loop
+        require(_disputeResolverFees.length > 0 && _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
 
         // Get storage location for dispute resolver
         (,DisputeResolver storage disputeResolver, DisputeResolverFee[] storage disputeResolverFees) = fetchDisputeResolver(_disputeResolver.id);
@@ -418,6 +453,14 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         disputeResolver.treasury = _disputeResolver.treasury;
         disputeResolver.metadataUri = _disputeResolver.metadataUri;
         disputeResolver.active = _disputeResolver.active;
+
+        //Set dispute resolver fees. Must loop because memory structs cannot be converted to storage structs
+        for(uint i = 0; i < _disputeResolverFees.length; i++) {
+            DisputeResolverFee storage disputeResolverFee = disputeResolverFees[i];
+            disputeResolverFee.tokenAddress = _disputeResolverFees[i].tokenAddress;
+            disputeResolverFee.tokenName = _disputeResolverFees[i].tokenName;
+            disputeResolverFee.feeAmount = _disputeResolverFees[i].feeAmount;
+        }
 
         //Map the dispute resolver's addresses to the dispute resolver Id.
         protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] = _disputeResolver.id;

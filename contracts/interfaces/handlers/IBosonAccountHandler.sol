@@ -145,6 +145,19 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function getDisputeResolver(uint256 _disputeResolverId) external view returns (bool exists, BosonTypes.DisputeResolver memory disputeResolver, BosonTypes.DisputeResolverFee[] memory disputeResolverFees);
 
     /**
+     * @notice Gets the details about a dispute resolver by an address associated with that seller: operator, admin, or clerk address.
+     *
+     * @param _associatedAddress - the address associated with the seller. Must be an operator, admin, or clerk address.
+     * @return exists - the dispute resolver  was found
+     * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
+     * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
+     */
+    function getDisputeResolverByAddress(address _associatedAddress)
+        external
+        view
+        returns (bool exists, BosonTypes.DisputeResolver memory disputeResolver, BosonTypes.DisputeResolverFee[] memory disputeResolverFees);
+
+    /**
      * @notice Gets the next account Id that can be assigned to an account.
      *
      *  Does not increment the counter.
