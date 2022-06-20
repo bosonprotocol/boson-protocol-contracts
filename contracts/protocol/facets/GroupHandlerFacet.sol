@@ -177,6 +177,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      */
     function getGroup(uint256 _groupId)
     external
+    override
     view
     returns(bool exists, Group memory group) {
         return fetchGroup(_groupId);
@@ -191,6 +192,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      */
     function getNextGroupId()
     public
+    override
     view
     returns(uint256 nextGroupId) {
 
