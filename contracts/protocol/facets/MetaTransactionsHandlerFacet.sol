@@ -33,6 +33,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     string private constant WITHDRAW_FUNDS = "withdrawFunds(uint256,address[],uint256[])";
     string private constant RETRACT_DISPUTE = "retractDispute(uint256)";
     string private constant RAISE_DISPUTE = "raiseDispute(uint256,string)";
+    string private constant ESCALATE_DISPUTE = "escalateDispute(uint256)";
 
     /**
      * @notice Facet Initializer
@@ -649,5 +650,50 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         );
 
         return executeTx(_userAddress, RAISE_DISPUTE, functionSignature, _nonce);
+    }
+
+    /**
+     * @notice Handles the incoming meta transaction for Escalate Dispute.
+     *
+     * Reverts if:
+     * - nonce is already used by another transaction.
+     * - sender does not match the recovered signer.
+     * - any code executed in the signed transaction reverts.
+     *
+     * @param _userAddress - the sender of the transaction.
+     * @param _exchangeDetails - the fully populated BosonTypes.MetaTxExchangeDetails struct.
+     * @param _nonce - the nonce value of the transaction.
+     * @param _sigR - r part of the signer's signature.
+     * @param _sigS - s part of the signer's signature.
+     * @param _sigV - v part of the signer's signature.
+     */
+    function executeMetaTxEscalateDispute(
+        address _userAddress,
+        MetaTxExchangeDetails calldata _exchangeDetails,
+        uint256 _nonce,
+        bytes32 _sigR,
+        bytes32 _sigS,
+        uint8 _sigV
+    ) public override returns (bytes memory) {
+        bytes4 functionSelector = IBosonDisputeHandler.escalateDispute.selector;
+        bytes memory functionSignature = abi.encodeWithSelector(
+            functionSelector,
+            _exchangeDetails.exchangeId
+        );
+        validateTx(ESCALATE_DISPUTE, functionSignature, _nonce);
+
+        MetaTxExchange memory metaTx = MetaTxExchange({
+            nonce: _nonce,
+            from: _userAddress,
+            contractAddress: address(this),
+            functionName: ESCALATE_DISPUTE,
+            exchangeDetails: _exchangeDetails
+        });
+        require(
+            EIP712Lib.verify(_userAddress, hashMetaTxExchangeDetails(metaTx), _sigR, _sigS, _sigV),
+            SIGNER_AND_SIGNATURE_DO_NOT_MATCH
+        );
+
+        return executeTx(_userAddress, ESCALATE_DISPUTE, functionSignature, _nonce);
     }
 }
