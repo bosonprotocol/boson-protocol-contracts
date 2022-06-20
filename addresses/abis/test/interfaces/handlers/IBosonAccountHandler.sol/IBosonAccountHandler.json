@@ -34,6 +34,12 @@
           "internalType": "struct BosonTypes.Buyer",
           "name": "buyer",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "BuyerCreated",
@@ -70,6 +76,12 @@
           "internalType": "struct BosonTypes.Buyer",
           "name": "buyer",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "BuyerUpdated",
@@ -106,6 +118,12 @@
           "internalType": "struct BosonTypes.DisputeResolver",
           "name": "disputeResolver",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "DisputeResolverCreated",
@@ -142,6 +160,12 @@
           "internalType": "struct BosonTypes.DisputeResolver",
           "name": "disputeResolver",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "DisputeResolverUpdated",
@@ -193,6 +217,12 @@
           "internalType": "struct BosonTypes.Seller",
           "name": "seller",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "SellerCreated",
@@ -244,6 +274,12 @@
           "internalType": "struct BosonTypes.Seller",
           "name": "seller",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "SellerUpdated",

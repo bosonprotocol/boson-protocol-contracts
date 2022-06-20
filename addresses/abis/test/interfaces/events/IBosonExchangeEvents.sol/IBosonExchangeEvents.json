@@ -83,6 +83,12 @@
           "internalType": "struct BosonTypes.Exchange",
           "name": "exchange",
           "type": "tuple"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "BuyerCommitted",
@@ -108,6 +114,12 @@
           "internalType": "uint256",
           "name": "exchangeId",
           "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "ExchangeCompleted",
@@ -131,7 +143,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "canceledBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -156,7 +168,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "expiredBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -181,7 +193,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "redeemedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -206,7 +218,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "revokedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -233,6 +245,12 @@
           "internalType": "uint256",
           "name": "newBuyerId",
           "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "VoucherTransferred",

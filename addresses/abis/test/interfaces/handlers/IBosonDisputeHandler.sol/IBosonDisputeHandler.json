@@ -21,7 +21,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "decidedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -46,7 +46,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "escalatedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -65,7 +65,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "expiredBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -98,6 +98,12 @@
           "internalType": "string",
           "name": "complaint",
           "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "DisputeRaised",
@@ -121,7 +127,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "resolvedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -140,7 +146,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "retractedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -165,7 +171,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "extendedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -192,6 +198,12 @@
           "internalType": "uint256",
           "name": "amount",
           "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "ExchangeFee",
@@ -217,6 +229,12 @@
           "internalType": "uint256",
           "name": "amount",
           "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "FundsEncumbered",
@@ -248,6 +266,12 @@
           "internalType": "uint256",
           "name": "amount",
           "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "FundsReleased",
@@ -279,6 +303,12 @@
           "internalType": "uint256",
           "name": "amount",
           "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "FundsWithdrawn",
