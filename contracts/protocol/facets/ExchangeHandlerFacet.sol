@@ -356,6 +356,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      */
     function isExchangeFinalized(uint256 _exchangeId)
     external
+    override
     view
     returns(bool exists, bool isFinalized) {
         Exchange storage exchange;
@@ -397,6 +398,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      */
     function getExchange(uint256 _exchangeId)
     external
+    override
     view
     returns(bool exists, Exchange memory exchange) {
         return fetchExchange(_exchangeId);
@@ -411,6 +413,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      */
     function getExchangeState(uint256 _exchangeId)
     external
+    override
     view
     returns(bool exists, ExchangeState state) {
         Exchange memory exchange;
@@ -427,6 +430,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      */
     function getNextExchangeId()
     external
+    override
     view
     returns (uint256 nextExchangeId) {
         nextExchangeId = protocolCounters().nextExchangeId;
