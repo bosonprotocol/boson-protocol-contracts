@@ -211,7 +211,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      *
      * @param _nonce - the nonce that we want to check.
      */
-    function isUsedNonce(uint256 _nonce) external view returns (bool) {
+    function isUsedNonce(uint256 _nonce) external view override returns (bool) {
         return protocolMetaTxInfo().usedNonce[_nonce];
     }
 

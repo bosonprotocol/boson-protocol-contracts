@@ -11,6 +11,12 @@
           "internalType": "address",
           "name": "accessController",
           "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "AccessControllerAddressChanged",
@@ -24,6 +30,12 @@
           "internalType": "address",
           "name": "protocol",
           "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "ProtocolAddressChanged",
@@ -36,6 +48,12 @@
           "indexed": true,
           "internalType": "address",
           "name": "implementation",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
           "type": "address"
         }
       ],

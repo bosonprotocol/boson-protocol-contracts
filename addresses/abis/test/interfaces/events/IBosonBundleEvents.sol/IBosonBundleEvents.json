@@ -45,6 +45,12 @@
           "internalType": "struct BosonTypes.Bundle",
           "name": "bundle",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "BundleCreated",
@@ -64,6 +70,12 @@
           "internalType": "uint256",
           "name": "sellerId",
           "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "BundleDeleted",
@@ -111,6 +123,12 @@
           "internalType": "struct BosonTypes.Bundle",
           "name": "bundle",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "BundleUpdated",

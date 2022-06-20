@@ -213,7 +213,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *  @param _offerIds - list of ids of the offers to extemd
      *  @param _validUntilDate - new valid until date
      */
-    function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external {
+    function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external override {
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offerIds.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
         for (uint i = 0; i < _offerIds.length; i++) { 
@@ -232,6 +232,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      */
     function getOffer(uint256 _offerId)
     external
+    override
     view
     returns(bool exists, Offer memory offer, OfferDates memory offerDates, OfferDurations memory offerDurations) {
         (exists, offer) = fetchOffer(_offerId);
@@ -250,6 +251,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      */
     function getNextOfferId()
     public
+    override
     view
     returns(uint256 nextOfferId) {
 
@@ -266,6 +268,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      */
     function isOfferVoided(uint256 _offerId)
     public
+    override
     view
     returns(bool exists, bool offerVoided) {
         Offer memory offer;

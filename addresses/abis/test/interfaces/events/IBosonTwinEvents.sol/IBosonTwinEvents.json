@@ -60,6 +60,12 @@
           "internalType": "struct BosonTypes.Twin",
           "name": "twin",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "TwinCreated",
@@ -79,6 +85,12 @@
           "internalType": "uint256",
           "name": "sellerId",
           "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "TwinDeleted",
