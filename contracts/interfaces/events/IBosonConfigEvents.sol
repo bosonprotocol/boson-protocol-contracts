@@ -19,5 +19,5 @@ interface IBosonConfigEvents {
     event MaxOffersPerBundleChanged(uint16 maxOffersPerBundle, address indexed changedBy);
     event MaxTokensPerWithdrawalChanged(uint16 maxOffersPerBundle, address indexed changedBy);
     event MaxFeesPerDisputeResolverChanged(uint16 maxFeesPerDisputeResolver, address indexed executedBy); 
-    event MaxEscalationResponsePeriodChanged(uint16 maxEscalationResponsePeriod, address indexed executedBy);            
+    event MaxEscalationResponsePeriodChanged(uint256 maxEscalationResponsePeriod, address indexed executedBy);            
 }

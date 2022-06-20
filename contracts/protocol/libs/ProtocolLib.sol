@@ -43,7 +43,7 @@ library ProtocolLib {
         // limit how many dispute resolver fee structs can be processed in a single transaction
         uint16 maxFeesPerDisputeResolver;
         // limit on the escalation response period that a dispute resolver can specify
-        uint16 maxEscalationResponsePeriod;
+        uint256 maxEscalationResponsePeriod;
     }
 
     // Protocol fees storage

@@ -164,12 +164,12 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * @param _maxEscalationResponsePeriod - the maximum escalation response period that a {BosonTypes.DisputeResolver} can specify
      */
-    function setMaxEscalationResponsePeriod(uint16 _maxEscalationResponsePeriod) external;
+    function setMaxEscalationResponsePeriod(uint256 _maxEscalationResponsePeriod) external;
 
    
     /**
      * @notice Get the maximum escalation response period a dispute resolver can specify
      */
-    function getMaxEscalationResponsePeriod() external view returns (uint16);
+    function getMaxEscalationResponsePeriod() external view returns (uint256);
    
 }

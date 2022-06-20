@@ -88,6 +88,9 @@ describe("IBosonDisputeHandler", function () {
     other1 = accounts[7];
     other2 = accounts[8];
 
+    // A period in milliseconds
+    oneMonth = 2678400 * 1000; // 31 days in milliseconds
+
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
 
@@ -131,6 +134,7 @@ describe("IBosonDisputeHandler", function () {
         maxOffersPerBatch: 0,
         maxTokensPerWithdrawal: 0,
         maxFeesPerDisputeResolver: 100,
+        maxEscalationResponsePeriod: oneMonth,
       },
       // Protocol fees
       {

@@ -91,6 +91,10 @@ describe("IBosonExchangeHandler", function () {
     other1 = game = accounts[8]; // the MR Game that is allowed to push the Dispute into final states
     fauxClient = accounts[9];
 
+    // A period in milliseconds
+    oneMonth = 2678400 * 1000; // 31 days in milliseconds
+
+
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
 
@@ -136,6 +140,7 @@ describe("IBosonExchangeHandler", function () {
         maxOffersPerBatch: 100,
         maxTokensPerWithdrawal: 100,
         maxFeesPerDisputeResolver: 100,
+        maxEscalationResponsePeriod: oneMonth,
       },
       // Protocol fees
       {

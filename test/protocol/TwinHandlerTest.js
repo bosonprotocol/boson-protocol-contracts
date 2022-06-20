@@ -49,6 +49,7 @@ describe("IBosonTwinHandler", function () {
     tokenId,
     tokenAddress;
   let bundleId, offerIds, twinIds, bundle, tokenType;
+  let oneMonth;
 
   before(async function () {
     // get interface Ids
@@ -64,6 +65,9 @@ describe("IBosonTwinHandler", function () {
     clerk = accounts[3];
     treasury = accounts[4];
     rando = accounts[5];
+
+    // A period in milliseconds
+    oneMonth = 2678400 * 1000; // 31 days in milliseconds
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -94,6 +98,7 @@ describe("IBosonTwinHandler", function () {
         maxOffersPerBatch: 100,
         maxTokensPerWithdrawal: 100,
         maxFeesPerDisputeResolver: 100,
+        maxEscalationResponsePeriod: oneMonth,
       },
       // Protocol fees
       {

@@ -10,7 +10,7 @@ describe("DisputeResolver", function () {
   // Suite-wide scope
   let disputeResolver, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
   let accounts, id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active;
-  let oneWeek;
+  let oneMonth;
 
   beforeEach(async function () {
     // Get a list of accounts
@@ -21,12 +21,12 @@ describe("DisputeResolver", function () {
     treasury = accounts[3].address;
 
      // A period in milliseconds
-     oneWeek = 604800 * 1000; //  7 days in milliseconds
+     oneMonth = 2678400 * 1000; // 31 days in milliseconds
 
     // Required constructor params
     id = "170";
     active = true;
-    escalationResponsePeriod = oneWeek.toString();
+    escalationResponsePeriod = oneMonth.toString();
     metadataUri = `https://ipfs.io/ipfs/disputeResolver1`;
   });
 

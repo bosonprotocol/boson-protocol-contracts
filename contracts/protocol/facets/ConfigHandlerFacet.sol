@@ -357,7 +357,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxEscalationResponsePeriod - the maximum escalation response period that a {BosonTypes.DisputeResolver} can specify
      */
-    function setMaxEscalationResponsePeriod(uint16 _maxEscalationResponsePeriod) 
+    function setMaxEscalationResponsePeriod(uint256 _maxEscalationResponsePeriod) 
     public
     override
     onlyRole(ADMIN)
@@ -374,7 +374,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     public
     override
     view
-    returns (uint16)
+    returns (uint256)
     {
         return protocolLimits().maxEscalationResponsePeriod;
     }

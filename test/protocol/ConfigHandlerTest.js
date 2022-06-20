@@ -15,8 +15,9 @@ describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
   let accounts, deployer, rando, token, treasury, voucher;
-  let protocolFee, maxOffersPerGroup, maxTwinsPerBundle, maxOffersPerBundle, maxOffersPerBatch, maxTokensPerWithdrawal, maxFeesPerDisputeResolver;
+  let protocolFee, maxOffersPerGroup, maxTwinsPerBundle, maxOffersPerBundle, maxOffersPerBatch, maxTokensPerWithdrawal, maxFeesPerDisputeResolver, maxEscalationResponsePeriod;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
+  let oneMonth;
 
   before(async function () {
     // get interface Ids
@@ -32,6 +33,9 @@ describe("IBosonConfigHandler", function () {
     treasury = accounts[3];
     voucher = accounts[4];
 
+    // A period in milliseconds
+    oneMonth = 2678400 * 1000; // 31 days in milliseconds
+
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
 
@@ -46,6 +50,7 @@ describe("IBosonConfigHandler", function () {
     maxOffersPerBatch = 100;
     maxTokensPerWithdrawal = 100;
     maxFeesPerDisputeResolver = 100;
+    maxEscalationResponsePeriod = oneMonth;
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
@@ -71,7 +76,8 @@ describe("IBosonConfigHandler", function () {
             maxOffersPerBundle,
             maxOffersPerBatch,
             maxTokensPerWithdrawal,
-            maxFeesPerDisputeResolver
+            maxFeesPerDisputeResolver,
+            maxEscalationResponsePeriod,
           },
           //Protocol fees
           {
@@ -128,7 +134,8 @@ describe("IBosonConfigHandler", function () {
           maxTwinsPerBundle,
           maxOffersPerBundle,
           maxOffersPerBatch,
-          maxTokensPerWithdrawal,
+          maxTokensPerWithdrawal,maxFeesPerDisputeResolver,
+          maxEscalationResponsePeriod,
         },
         // Protocol fees
         {
