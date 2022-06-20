@@ -42,7 +42,7 @@ describe("IBosonAccountHandler", function () {
     exchangeToken,
     disputeResolverId,
     metadataUri,
-    offerChecksum,
+    metadataHash,
     voided,
     offer;
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
@@ -1058,8 +1058,8 @@ describe("IBosonAccountHandler", function () {
           quantityAvailable = "1";
           exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
           disputeResolverId = disputeResolver.id;
-          offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-          metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
+          metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+          metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
           voided = false;
 
           // Create a valid offer entity
@@ -1074,7 +1074,7 @@ describe("IBosonAccountHandler", function () {
             exchangeToken,
             disputeResolverId,
             metadataUri,
-            offerChecksum,
+            metadataHash,
             voided
           );
           expect(offer.isValid()).is.true;

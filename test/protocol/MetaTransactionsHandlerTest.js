@@ -73,7 +73,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     exchangeToken,
     disputeResolverId,
     metadataUri,
-    offerChecksum,
+    metadataHash,
     voided,
     oneMonth,
     oneWeek;
@@ -659,8 +659,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         quantityAvailable = "1";
         exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
         disputeResolverId = "2";
-        offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-        metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
+        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
         voided = false;
 
         // Create a valid offer entity
@@ -675,7 +675,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           exchangeToken,
           disputeResolverId,
           metadataUri,
-          offerChecksum,
+          metadataHash,
           voided
         );
         expect(offer.isValid()).is.true;
@@ -878,8 +878,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         quantityAvailable = "1";
         exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
         disputeResolverId = "2";
-        offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-        metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
+        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
         voided = false;
 
         // Create a valid offer entity
@@ -894,7 +894,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           exchangeToken,
           disputeResolverId,
           metadataUri,
-          offerChecksum,
+          metadataHash,
           voided
         );
         expect(offer.isValid()).is.true;
@@ -1718,8 +1718,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         quantityAvailable = "2";
         exchangeToken = mockToken.address; // Mock token addres
         disputeResolverId = "2";
-        offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-        metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
+        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
         voided = false;
 
         // Create a valid offer entity
@@ -1734,7 +1734,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           exchangeToken,
           disputeResolverId,
           metadataUri,
-          offerChecksum,
+          metadataHash,
           voided
         );
         expect(offerToken.isValid()).is.true;
