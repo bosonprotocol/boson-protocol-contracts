@@ -30,7 +30,8 @@ describe("IBosonAccountHandler", function () {
   let disputeResolver, disputeResolverStruct, disputeResolver2, disputeResolver2Struct;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
-  let oneMonth, oneWeek, blockNumber, block, protocolFeePercentage;
+  let oneMonth, oneWeek, blockNumber, block;
+  let protocolFeePercentage, protocolFeeFlatBoson;
   let bosonVoucher, clients;
   let offerId,
     sellerId,
@@ -90,8 +91,9 @@ describe("IBosonAccountHandler", function () {
     [bosonVoucher] = clients;
     await accessController.grantRole(Role.CLIENT, bosonVoucher.address);
 
-    // set protocolFeePercentage
+    // set protocolFees
     protocolFeePercentage = "200"; // 2 %
+    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
@@ -111,7 +113,8 @@ describe("IBosonAccountHandler", function () {
       },
       // Protocol fees
       {
-        protocolFeePercentage,
+        percentage: protocolFeePercentage,
+        flatBoson: protocolFeeFlatBoson,
       },
     ];
 
@@ -1053,7 +1056,7 @@ describe("IBosonAccountHandler", function () {
           // Required constructor params
           price = ethers.utils.parseUnits("1.5", "ether").toString();
           sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-          protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
+          protocolFee = calculateProtocolFee(price, protocolFeePercentage);
           buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
           quantityAvailable = "1";
           exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
