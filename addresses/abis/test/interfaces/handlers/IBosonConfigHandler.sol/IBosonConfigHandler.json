@@ -103,6 +103,25 @@
       "inputs": [
         {
           "indexed": false,
+          "internalType": "uint256",
+          "name": "feeFlatBoson",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "ProtocolFeeFlatBosonChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
           "internalType": "uint16",
           "name": "feePercentage",
           "type": "uint16"
@@ -241,6 +260,19 @@
     },
     {
       "inputs": [],
+      "name": "getProtocolFeeFlatBoson",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "getProtocolFeePercentage",
       "outputs": [
         {
@@ -352,6 +384,19 @@
         }
       ],
       "name": "setMaxTwinsPerBundle",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_protocolFeeFlatBoson",
+          "type": "uint256"
+        }
+      ],
+      "name": "setProtocolFeeFlatBoson",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
