@@ -19,7 +19,7 @@ class Offer {
             address exchangeToken;
             uint256 disputeResolverId;
             string metadataUri;
-            string offerChecksum;
+            string metadataHash;
             bool voided;
         }
     */
@@ -35,7 +35,7 @@ class Offer {
     exchangeToken,
     disputeResolverId,
     metadataUri,
-    offerChecksum,
+    metadataHash,
     voided
   ) {
     this.id = id;
@@ -48,7 +48,7 @@ class Offer {
     this.exchangeToken = exchangeToken;
     this.disputeResolverId = disputeResolverId;
     this.metadataUri = metadataUri;
-    this.offerChecksum = offerChecksum;
+    this.metadataHash = metadataHash;
     this.voided = voided;
   }
 
@@ -69,7 +69,7 @@ class Offer {
       exchangeToken,
       disputeResolverId,
       metadataUri,
-      offerChecksum,
+      metadataHash,
       voided,
     } = o;
 
@@ -84,7 +84,7 @@ class Offer {
       exchangeToken,
       disputeResolverId,
       metadataUri,
-      offerChecksum,
+      metadataHash,
       voided
     );
   }
@@ -105,7 +105,7 @@ class Offer {
       exchangeToken,
       disputeResolverId,
       metadataUri,
-      offerChecksum,
+      metadataHash,
       voided;
 
     // destructure struct
@@ -120,7 +120,7 @@ class Offer {
       exchangeToken,
       disputeResolverId,
       metadataUri,
-      offerChecksum,
+      metadataHash,
       voided,
     ] = struct;
 
@@ -135,7 +135,7 @@ class Offer {
       exchangeToken,
       disputeResolverId: disputeResolverId.toString(),
       metadataUri,
-      offerChecksum,
+      metadataHash,
       voided,
     });
   }
@@ -172,7 +172,7 @@ class Offer {
       this.exchangeToken,
       this.disputeResolverId,
       this.metadataUri,
-      this.offerChecksum,
+      this.metadataHash,
       this.voided,
     ];
   }
@@ -331,16 +331,16 @@ class Offer {
   }
 
   /**
-   * Is this Offer instance's offerChecksum field valid?
+   * Is this Offer instance's metadataHash field valid?
    * Always present, must be a string
    *
    * @returns {boolean}
    */
-  offerChecksumIsValid() {
+  metadataHashIsValid() {
     let valid = false;
-    let { offerChecksum } = this;
+    let { metadataHash } = this;
     try {
-      valid = typeof offerChecksum === "string";
+      valid = typeof metadataHash === "string";
     } catch (e) {}
     return valid;
   }
@@ -374,7 +374,7 @@ class Offer {
       this.exchangeTokenIsValid() &&
       this.disputeResolverIdIsValid() &&
       this.metadataUriIsValid() &&
-      this.offerChecksumIsValid() &&
+      this.metadataHashIsValid() &&
       this.voidedIsValid()
     );
   }

@@ -69,7 +69,7 @@ contract BosonTypes {
         address exchangeToken;
         uint256 disputeResolverId;
         string metadataUri;
-        string offerChecksum;
+        string metadataHash;
         bool voided;
     }
 
