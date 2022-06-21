@@ -15,6 +15,6 @@ interface IBosonFundsEvents {
 interface IBosonFundsLibEvents {
     event FundsEncumbered(uint256 indexed entityId, address indexed exchangeToken, uint256 amount, address indexed executedBy);  
     event FundsReleased(uint256 indexed exchangeId, uint256 indexed entityId, address indexed exchangeToken, uint256 amount, address executedBy);
-    event ExchangeFee(uint256 indexed exchangeId, address indexed exchangeToken, uint256 amount, address indexed executedBy);
+    event ProtocolFeeCollected(uint256 indexed exchangeId, address indexed exchangeToken, uint256 amount, address indexed executedBy);
     event FundsWithdrawn(uint256 indexed sellerId, address indexed withdrawnTo, address indexed tokenAddress, uint256 amount, address executedBy);  
 }

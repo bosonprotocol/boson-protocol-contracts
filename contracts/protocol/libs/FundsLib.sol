@@ -14,7 +14,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 library FundsLib {
     event FundsEncumbered(uint256 indexed entityId, address indexed exchangeToken, uint256 amount, address indexed executedBy);
     event FundsReleased(uint256 indexed exchangeId, uint256 indexed entityId, address indexed exchangeToken, uint256 amount, address executedBy);
-    event ExchangeFee(uint256 indexed exchangeId, address indexed exchangeToken, uint256 amount, address indexed executedBy);
+    event ProtocolFeeCollected(uint256 indexed exchangeId, address indexed exchangeToken, uint256 amount, address indexed executedBy);
     event FundsWithdrawn(uint256 indexed sellerId, address indexed withdrawnTo, address indexed tokenAddress, uint256 amount, address executedBy); 
     
     /**
@@ -127,18 +127,22 @@ library FundsLib {
             }           
         }  
 
-        // Store payoffs to availablefunds
+        // Store payoffs to availablefunds and notify the external observers
         address exchangeToken = offer.exchangeToken;
         uint256 sellerId = offer.sellerId;
         uint256 buyerId = exchange.buyerId;
-        if (sellerPayoff > 0) increaseAvailableFunds(sellerId, exchangeToken, sellerPayoff);
-        if (buyerPayoff > 0) increaseAvailableFunds(buyerId, exchangeToken, buyerPayoff);
-        if (protocolFee > 0) increaseAvailableFunds(0, exchangeToken, protocolFee);       
-                
-        // Notify the external observers
-        emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff, msg.sender);
-        emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff, msg.sender);
-        emit ExchangeFee(_exchangeId, exchangeToken, protocolFee, msg.sender);
+        if (sellerPayoff > 0) {
+            increaseAvailableFunds(sellerId, exchangeToken, sellerPayoff);
+            emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff, msg.sender);
+        } 
+        if (buyerPayoff > 0) {
+            increaseAvailableFunds(buyerId, exchangeToken, buyerPayoff);
+            emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff, msg.sender);
+        }
+        if (protocolFee > 0) {
+            increaseAvailableFunds(0, exchangeToken, protocolFee);
+            emit ProtocolFeeCollected(_exchangeId, exchangeToken, protocolFee, msg.sender);
+        }        
     }
 
     /**
