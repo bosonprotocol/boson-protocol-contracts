@@ -15,6 +15,7 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
+const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 
 /**
@@ -24,7 +25,16 @@ describe("IBosonOfferHandler", function () {
   // Common vars
   let InterfaceIds;
   let accounts, deployer, rando, operator, admin, clerk, treasury, other1;
-  let erc165, protocolDiamond, accessController, accountHandler, offerHandler, bosonVoucher, offerStruct, key, value;
+  let erc165,
+    protocolDiamond,
+    accessController,
+    accountHandler,
+    offerHandler,
+    bosonVoucher,
+    bosonToken,
+    offerStruct,
+    key,
+    value;
   let offer, nextOfferId, invalidOfferId, oneMonth, oneWeek, support, expected, exists;
   let seller, active;
   let id,
@@ -54,7 +64,7 @@ describe("IBosonOfferHandler", function () {
     offerDurationsStruct,
     offerDurationsStructs,
     offerDurationsList;
-  let protocolFeePercentage;
+  let protocolFeePercentage, protocolFeeFlatBoson;
   let block, blockNumber;
   let disputeResolver;
 
@@ -90,15 +100,19 @@ describe("IBosonOfferHandler", function () {
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
     [, , [bosonVoucher]] = await deployProtocolClients(protocolClientArgs, gasLimit);
 
-    // set protocolFeePercentage
+    // Deploy the boson token
+    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+
+    // set protocolFees
     protocolFeePercentage = "200"; // 2 %
+    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
 
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
       // Protocol addresses
       {
         treasuryAddress: "0x0000000000000000000000000000000000000000",
-        tokenAddress: "0x0000000000000000000000000000000000000000",
+        tokenAddress: bosonToken.address,
         voucherAddress: bosonVoucher.address,
       },
       // Protocol limits
@@ -111,7 +125,8 @@ describe("IBosonOfferHandler", function () {
       },
       // Protocol fees
       {
-        protocolFeePercentage,
+        percentage: protocolFeePercentage,
+        flatBoson: protocolFeeFlatBoson,
       },
     ];
 
@@ -179,7 +194,7 @@ describe("IBosonOfferHandler", function () {
       id = sellerId = "1"; // argument sent to contract for createOffer will be ignored
       price = ethers.utils.parseUnits("1.5", "ether").toString();
       sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage); // will be ignored, but set the correct value here for the tests
+      protocolFee = calculateProtocolFee(price, protocolFeePercentage); // will be ignored, but set the correct value here for the tests
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
@@ -314,7 +329,60 @@ describe("IBosonOfferHandler", function () {
         await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
 
         offer.id = await offerHandler.getNextOfferId();
-        offer.protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
+        offer.protocolFee = calculateProtocolFee(price, protocolFeePercentage);
+
+        // Create a new offer
+        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            operator.address
+          );
+      });
+
+      it("If exchange token is $BOSON, fee should be flat boson fee", async function () {
+        // Prepare an offer with $BOSON as exchange token
+        offer.exchangeToken = bosonToken.address;
+        offer.protocolFee = protocolFeeFlatBoson;
+
+        // Create a new offer
+        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            operator.address
+          );
+      });
+
+      it("For absolute zero offers, dispute resolver can be unspecified", async function () {
+        // Prepare an absolute zero offer
+        offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
+        offer.disputeResolverId = "0";
+
+        // Create a new offer
+        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            operator.address
+          );
+      });
+
+      it("Should allow creation of an offer with unlimited supply", async function () {
+        // Prepare an absolute zero offer
+        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
 
         // Create a new offer
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
@@ -358,23 +426,9 @@ describe("IBosonOfferHandler", function () {
           );
         });
 
-        it("Seller deposit is less than protocol fee", async function () {
-          // Set buyer deposit less than the protocol fee
-          // First calculate the threshold where sellerDeposit == protocolFee and then reduce it for some number
-          let threshold = ethers.BigNumber.from(offer.price)
-            .mul(protocolFeePercentage)
-            .div(ethers.BigNumber.from("10000").sub(protocolFeePercentage));
-          offer.sellerDeposit = threshold.sub("10").toString();
-
-          // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
-            RevertReasons.OFFER_DEPOSIT_INVALID
-          );
-        });
-
-        it("Sum of buyer cancel penalty and protocol fee is greater than price", async function () {
-          // Set buyer cancel penalty higher than offer price minus protocolFee
-          offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).sub(offer.protocolFee).add("10").toString();
+        it("Buyer cancel penalty is greater than price", async function () {
+          // Set buyer cancel penalty higher than offer price
+          offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add("10").toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
@@ -469,6 +523,17 @@ describe("IBosonOfferHandler", function () {
 
         it("Dispute resolver wallet is not registered", async function () {
           // Set some address that is not registered as a dispute resolver
+          offer.disputeResolverId = "16";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.INVALID_DISPUTE_RESOLVER
+          );
+        });
+
+        it("For absolute zero offer, specified dispute resolver is not registered", async function () {
+          // Prepare an absolute zero offer, but specify dispute resolver
+          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
           offer.disputeResolverId = "16";
 
           // Attempt to Create an offer, expecting revert
@@ -854,7 +919,7 @@ describe("IBosonOfferHandler", function () {
         price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
         sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
         buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
-        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
+        protocolFee = calculateProtocolFee(price, protocolFeePercentage);
         quantityAvailable = `${(i + 1) * 2}`;
         exchangeToken = ethers.constants.AddressZero.toString();
         disputeResolverId = "2";
@@ -908,6 +973,18 @@ describe("IBosonOfferHandler", function () {
         offerDurationsList.push(offerDurations);
         offerDurationsStructs.push(offerDurations.toStruct());
       }
+
+      // change some offers to test different cases
+      // offer with boson as an exchange token and unlimited supply
+      offers[2].exchangeToken = bosonToken.address;
+      offers[2].protocolFee = protocolFeeFlatBoson;
+      offers[2].quantityAvailable = ethers.constants.MaxUint256.toString();
+      offerStructs[2] = offers[2].toStruct();
+
+      // absolute zero offer
+      offers[4].price = offers[4].sellerDeposit = offers[4].buyerCancelPenalty = offers[4].protocolFee = "0";
+      offers[4].disputeResolverId = "0";
+      offerStructs[4] = offers[4].toStruct();
     });
 
     context("👉 createOfferBatch()", async function () {
@@ -1096,26 +1173,9 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
-        it("Seller deposit is less than protocol fee", async function () {
-          // Set buyer deposit less than the protocol fee
-          // First calculate the threshold where sellerDeposit == protocolFee and then reduce it for some number
-          let threshold = ethers.BigNumber.from(offers[0].price)
-            .mul(protocolFeePercentage)
-            .div(ethers.BigNumber.from("10000").sub(protocolFeePercentage));
-          offers[0].sellerDeposit = threshold.sub("10").toString();
-
-          // Attempt to Create an offer, expecting revert
-          await expect(
-            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
-          ).to.revertedWith(RevertReasons.OFFER_DEPOSIT_INVALID);
-        });
-
-        it("Sum of buyer cancel penalty and protocol fee is greater than price", async function () {
-          // Set buyer cancel penalty higher than offer price minus protocolFee
-          offers[0].buyerCancelPenalty = ethers.BigNumber.from(offer.price)
-            .add(offers[0].protocolFee)
-            .add("10")
-            .toString();
+        it("Buyer cancel penalty is greater than price", async function () {
+          // Set buyer cancel penalty higher than offer price
+          offers[0].buyerCancelPenalty = ethers.BigNumber.from(offers[0].price).add("10").toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -1235,6 +1295,17 @@ describe("IBosonOfferHandler", function () {
         it("For some offer, dispute resolver wallet is not registered", async function () {
           // Set some address that is not registered as a dispute resolver
           offers[1].disputeResolverId = "16";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("For some absolute zero offer, specified dispute resolver is not registered", async function () {
+          // Prepare an absolute zero offer, but specify dispute resolver
+          offers[2].price = offers[2].sellerDeposit = offers[2].buyerCancelPenalty = offers[2].protocolFee = "0";
+          offers[2].disputeResolverId = "16";
 
           // Attempt to Create an offer, expecting revert
           await expect(

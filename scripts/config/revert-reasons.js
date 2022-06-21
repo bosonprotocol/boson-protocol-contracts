@@ -21,7 +21,6 @@ exports.RevertReasons = {
   OFFER_HAS_BEEN_VOIDED: "Offer has been voided",
   OFFER_PERIOD_INVALID: "Offer period invalid",
   OFFER_PENALTY_INVALID: "Offer penalty invalid",
-  OFFER_DEPOSIT_INVALID: "Offer deposit invalid",
   OFFER_MUST_BE_ACTIVE: "Offer must be active",
   OFFER_NOT_UPDATEABLE: "Offer not updateable",
   OFFER_MUST_BE_UNIQUE: "Offer must be unique to a group",

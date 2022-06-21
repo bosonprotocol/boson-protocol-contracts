@@ -35,7 +35,7 @@ describe("Offer", function () {
     id = sellerId = "0";
     price = ethers.utils.parseUnits("1.5", "ether").toString();
     sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-    protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
+    protocolFee = calculateProtocolFee(price, protocolFeePercentage);
     buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
     quantityAvailable = "1";
     exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
