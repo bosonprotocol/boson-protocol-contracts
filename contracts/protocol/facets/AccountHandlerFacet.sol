@@ -7,6 +7,7 @@ import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
+import "hardhat/console.sol";
 
 contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
@@ -77,6 +78,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     external
     override
     {
+      
         //Check for zero address
         require(_disputeResolver.admin != address(0) &&  
                 _disputeResolver.operator != address(0) && 
@@ -90,7 +92,11 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         // Get the next account Id and increment the counter
         uint256 disputeResolverId = protocolCounters().nextAccountId++;
 
-         //check that the addresses are unique to one dispute resolver Id
+        //console.log("protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] %s for operator %s ", protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator], _disputeResolver.operator );
+       // console.log("protocolLookups().disputeResolverIdByAdmin[_disputeResolver.admin] %s for admin %s ", protocolLookups().disputeResolverIdByAdmin[_disputeResolver.admin], _disputeResolver.admin );
+        //console.log("protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] %s for clerk %s ", protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk],  _disputeResolver.clerk);
+
+        //check that the addresses are unique to one dispute resolver Id
         require(protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] == 0 &&
                 protocolLookups().disputeResolverIdByAdmin[_disputeResolver.admin] == 0 &&
                 protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] == 0, DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
@@ -238,6 +244,10 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
        
         //Dispute Resolver  must already exist
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
+
+        //console.log("stored admin ", disputeResolver.admin);
+        //console.log("passed admin ", _disputeResolver.admin);
+        //console.log("msg.sender   ", msg.sender);
 
         //Check that msg.sender is the admin address for this dispute resolver
         require(disputeResolver.admin  == msg.sender, NOT_ADMIN); 
@@ -401,7 +411,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         // escalation period must be greater than zero and less than or equal to the max allowed
         require(_disputeResolver.escalationResponsePeriod > 0 && _disputeResolver.escalationResponsePeriod <= protocolLimits().maxEscalationResponsePeriod, INVALID_ESCALATION_PERIOD);
 
-        // At least one fee must be specified. The ammount can be 0, but it must be intentional. However, the number of fees cannot exceet the maximum number of dispure resolver fees to avoid running into block gas limit in a loop
+        // At least one fee must be specified. The ammount can be 0, but it must be intentional. However, the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
         require(_disputeResolverFees.length > 0 && _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
 
         // Get storage location for dispute resolver
@@ -417,12 +427,13 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         disputeResolver.metadataUri = _disputeResolver.metadataUri;
         disputeResolver.active = _disputeResolver.active;
 
+        //console.log("_disputeResolverFees length in storeDisputeResolver ", _disputeResolverFees.length);
+
         //Set dispute resolver fees. Must loop because memory structs cannot be converted to storage structs
         for(uint i = 0; i < _disputeResolverFees.length; i++) {
-            DisputeResolverFee storage disputeResolverFee = disputeResolverFees[i];
-            disputeResolverFee.tokenAddress = _disputeResolverFees[i].tokenAddress;
-            disputeResolverFee.tokenName = _disputeResolverFees[i].tokenName;
-            disputeResolverFee.feeAmount = _disputeResolverFees[i].feeAmount;
+           // console.log("inside loop ", i);
+            //console.log("DisputeResolverFee tokenAddress %s tokenName %s feeAmount %s in storeDisputeResolver ", _disputeResolverFees[i].tokenAddress, _disputeResolverFees[i].tokenName, _disputeResolverFees[i].feeAmount);
+            disputeResolverFees.push(DisputeResolverFee( _disputeResolverFees[i].tokenAddress, _disputeResolverFees[i].tokenName, _disputeResolverFees[i].feeAmount));
         }
 
         //Map the dispute resolver's addresses to the dispute resolver Id.

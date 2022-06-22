@@ -236,7 +236,8 @@ describe("IBosonFundsHandler", function () {
         let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
 
         // Chain state should match the expected available funds
-        let expectedAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", depositAmount)]);
+        let expectedAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", depositAmount), new Funds(mockToken.address, "Foreign19", depositAmount)]);
+        
         expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
 
         // Deposit native currency to the same seller id

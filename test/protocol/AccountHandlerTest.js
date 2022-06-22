@@ -22,7 +22,7 @@ const { getEvent } = require("../../scripts/util/test-utils.js");
 /**
  *  Test the Boson Account Handler interface
  */
-describe("IBosonAccountHandler", function () {
+describe.only("IBosonAccountHandler", function () {
   // Common vars
   let InterfaceIds;
   let accounts, deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, other4;
@@ -59,7 +59,7 @@ describe("IBosonAccountHandler", function () {
   });
 
 
-  async function isValidDisputeResolverEvent(tx, eventName, disputeResolverId, disputeResolverStruct, disputeResolverFeeList, execubedBy) {
+  async function isValidDisputeResolverEvent(tx, eventName, disputeResolverId, disputeResolverStruct, disputeResolverFeeList, executedBy) {
     let valid = true;
 
     const txReceipt = await tx.wait();
@@ -70,7 +70,7 @@ describe("IBosonAccountHandler", function () {
     try {
       assert.equal(event.disputeResolverId.toString(), disputeResolverId, "Dispute Resolver Id is incorrect");
       assert.equal(event.disputeResolver.toString(), disputeResolverStruct.toString(), "Dispute Resolver is incorrect");
-      assert.equal(event.execubedBy, execubedBy, "executedBy is incorrect");
+      assert.equal(event.executedBy, executedBy, "executedBy is incorrect");
       expect(DisputeResolver.fromStruct(event.disputeResolver).isValid()).is.true;
 
       const disputeResolverFeeListStruct = event[2]; //DisputeResolverFees[] is in element 2 of the event array

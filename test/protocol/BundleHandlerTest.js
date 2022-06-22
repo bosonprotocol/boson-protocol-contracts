@@ -6,6 +6,7 @@ const { gasLimit } = require("../../environments");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
+const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const Twin = require("../../scripts/domain/Twin");
 const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
@@ -27,7 +28,7 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 describe("IBosonBundleHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury, buyer, other1;
+  let accounts, deployer, rando, operator, admin, clerk, treasury, buyer, other1, other2, other3;
   let erc165,
     protocolDiamond,
     accessController,
@@ -71,7 +72,7 @@ describe("IBosonBundleHandler", function () {
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
   let protocolFeePercentage, protocolFeeFlatBoson;
-  let disputeResolver;
+  let disputeResolver, metadataUriDR, disputeResolverFees;
 
   before(async function () {
     // get interface Ids
@@ -89,9 +90,14 @@ describe("IBosonBundleHandler", function () {
     rando = accounts[5];
     buyer = accounts[6];
     other1 = accounts[7];
+    other2 = accounts[8];
+    other3 = accounts[9];
 
     // A period in milliseconds
     oneMonth = 2678400 * 1000; // 31 days in milliseconds
+
+    //Dispute Resolver metadata URI
+    metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -198,11 +204,18 @@ describe("IBosonBundleHandler", function () {
 
       // Create a valid dispute resolver
       active = true;
-      disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+      disputeResolver = new DisputeResolver(id.toString(), oneMonth.toString(), operator.address, admin.address, clerk.address, treasury.address, metadataUriDR, active);
       expect(disputeResolver.isValid()).is.true;
 
+       //Create DisputeResolverFee array
+       disputeResolverFees = [
+        new DisputeResolverFee(other1.address, "MockToken1", "100"),
+        new DisputeResolverFee(other2.address, "MockToken2", "200"),
+        new DisputeResolverFee(other3.address, "MockToken3", "300"),
+      ];
+
       // Register the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
 
       // create 5 twins
       for (let i = 0; i < 5; i++) {

@@ -19,7 +19,7 @@ const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 /**
  *  Test the Boson Twin Handler interface
  */
-describe.only("IBosonTwinHandler", function () {
+describe("IBosonTwinHandler", function () {
   // Common vars
   let InterfaceIds;
   let accounts, deployer, rando, operator, admin, clerk, treasury;
