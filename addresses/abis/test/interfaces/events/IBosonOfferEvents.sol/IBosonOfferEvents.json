@@ -72,7 +72,7 @@
             },
             {
               "internalType": "string",
-              "name": "offerChecksum",
+              "name": "metadataHash",
               "type": "string"
             },
             {
