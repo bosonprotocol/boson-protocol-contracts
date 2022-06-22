@@ -19,6 +19,7 @@ async function mockOffer() {
   const disputeResolverId = "2";
   const offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
   const metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
+  const metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
   const voided = false;
 
   // Create a valid offer, then set fields in tests directly
@@ -33,6 +34,7 @@ async function mockOffer() {
     exchangeToken,
     disputeResolverId,
     metadataUri,
+    metadataHash,
     offerChecksum,
     voided
   );
