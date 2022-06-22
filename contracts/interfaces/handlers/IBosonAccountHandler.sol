@@ -102,7 +102,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency
      * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency
      */
-    function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver, BosonTypes.DisputeResolverFee[] memory _disputeResolverFees) external;
+    function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver, BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees) external;
 
     /**
      * @notice Gets the details about a seller.

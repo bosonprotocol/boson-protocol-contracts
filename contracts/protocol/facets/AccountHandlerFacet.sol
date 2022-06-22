@@ -74,7 +74,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency
      */
-    function createDisputeResolver(DisputeResolver memory _disputeResolver,  DisputeResolverFee[] memory _disputeResolverFees)
+    function createDisputeResolver(DisputeResolver memory _disputeResolver,  DisputeResolverFee[] calldata _disputeResolverFees)
     external
     override
     {
@@ -91,10 +91,6 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         // Get the next account Id and increment the counter
         uint256 disputeResolverId = protocolCounters().nextAccountId++;
-
-        //console.log("protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] %s for operator %s ", protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator], _disputeResolver.operator );
-       // console.log("protocolLookups().disputeResolverIdByAdmin[_disputeResolver.admin] %s for admin %s ", protocolLookups().disputeResolverIdByAdmin[_disputeResolver.admin], _disputeResolver.admin );
-        //console.log("protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] %s for clerk %s ", protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk],  _disputeResolver.clerk);
 
         //check that the addresses are unique to one dispute resolver Id
         require(protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] == 0 &&
@@ -224,7 +220,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * @param _disputeResolver - the fully populated buydispute resolver struct
      * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency
      */
-    function updateDisputeResolver(DisputeResolver memory _disputeResolver, DisputeResolverFee[] memory _disputeResolverFees)
+    function updateDisputeResolver(DisputeResolver memory _disputeResolver, DisputeResolverFee[] calldata _disputeResolverFees)
     external
     override
     {
@@ -244,10 +240,6 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
        
         //Dispute Resolver  must already exist
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
-
-        //console.log("stored admin ", disputeResolver.admin);
-        //console.log("passed admin ", _disputeResolver.admin);
-        //console.log("msg.sender   ", msg.sender);
 
         //Check that msg.sender is the admin address for this dispute resolver
         require(disputeResolver.admin  == msg.sender, NOT_ADMIN); 
@@ -427,12 +419,8 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         disputeResolver.metadataUri = _disputeResolver.metadataUri;
         disputeResolver.active = _disputeResolver.active;
 
-        //console.log("_disputeResolverFees length in storeDisputeResolver ", _disputeResolverFees.length);
-
         //Set dispute resolver fees. Must loop because memory structs cannot be converted to storage structs
         for(uint i = 0; i < _disputeResolverFees.length; i++) {
-           // console.log("inside loop ", i);
-            //console.log("DisputeResolverFee tokenAddress %s tokenName %s feeAmount %s in storeDisputeResolver ", _disputeResolverFees[i].tokenAddress, _disputeResolverFees[i].tokenName, _disputeResolverFees[i].feeAmount);
             disputeResolverFees.push(DisputeResolverFee( _disputeResolverFees[i].tokenAddress, _disputeResolverFees[i].tokenName, _disputeResolverFees[i].feeAmount));
         }
 
