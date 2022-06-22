@@ -30,6 +30,7 @@ const {
   calculateProtocolFee,
   prepareDataSignatureParameters,
 } = require("../../scripts/util/test-utils.js");
+const { oneWeek, oneMonth } = require("../utils/constants");
 
 /**
  *  Test the Boson Exchange Handler interface
@@ -51,7 +52,7 @@ describe("IBosonExchangeHandler", function () {
   let bosonVoucher, bosonToken;
   let id, buyerId, offer, offerId, seller, sellerId, nextExchangeId, nextAccountId;
   let block, blockNumber, tx, txReceipt, event, clients;
-  let support, oneMonth, oneWeek, newTime;
+  let support, newTime;
   let price,
     sellerDeposit,
     protocolFee,
@@ -209,10 +210,6 @@ describe("IBosonExchangeHandler", function () {
 
       // Register the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
-
-      // Create an offer to commit to
-      oneWeek = 604800 * 1000; //  7 days in milliseconds
-      oneMonth = 2678400 * 1000; // 31 days in milliseconds
 
       // Get the current block info
       blockNumber = await ethers.provider.getBlockNumber();

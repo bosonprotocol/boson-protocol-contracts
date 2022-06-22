@@ -24,6 +24,7 @@ const {
   getEvent,
   prepareDataSignatureParameters,
 } = require("../../scripts/util/test-utils.js");
+const { oneWeek, oneMonth } = require("../utils/constants");
 
 /**
  *  Test the Boson Funds Handler interface
@@ -42,7 +43,7 @@ describe("IBosonFundsHandler", function () {
     configHandler,
     bosonVoucher,
     disputeHandler;
-  let support, oneMonth, oneWeek;
+  let support;
   let seller, active;
   let id, buyer, offerToken, offerNative, sellerId;
   let mockToken, bosonToken;
@@ -366,10 +367,6 @@ describe("IBosonFundsHandler", function () {
 
         // Register the dispute resolver
         await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
-
-        // Create an offer to commit to
-        oneWeek = 604800 * 1000; //  7 days in milliseconds
-        oneMonth = 2678400 * 1000; // 31 days in milliseconds
 
         // Get the current block info
         blockNumber = await ethers.provider.getBlockNumber();
@@ -1233,10 +1230,6 @@ describe("IBosonFundsHandler", function () {
 
       // Register the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
-
-      // Create an offer to commit to
-      oneWeek = 604800 * 1000; //  7 days in milliseconds
-      oneMonth = 2678400 * 1000; // 31 days in milliseconds
 
       // Get the current block info
       blockNumber = await ethers.provider.getBlockNumber();

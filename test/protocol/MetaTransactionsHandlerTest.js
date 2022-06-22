@@ -32,6 +32,7 @@ const {
   setNextBlockTimestamp,
 } = require("../../scripts/util/test-utils.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
+const { oneWeek, oneMonth } = require("../utils/constants");
 
 /**
  *  Test the Boson Meta transactions Handler interface
@@ -74,9 +75,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     disputeResolverId,
     metadataUri,
     metadataHash,
-    voided,
-    oneMonth,
-    oneWeek;
+    voided;
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
   let protocolFeePercentage, protocolFeeFlatBoson;
@@ -648,10 +647,6 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Register the dispute resolver
         await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
 
-        // Create an offer to commit to
-        oneWeek = 604800 * 1000; //  7 days in milliseconds
-        oneMonth = 2678400 * 1000; // 31 days in milliseconds
-
         // Get the current block info
         blockNumber = await ethers.provider.getBlockNumber();
         block = await ethers.provider.getBlock(blockNumber);
@@ -866,10 +861,6 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Register the dispute resolver
         await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
-
-        // Create an offer to commit to
-        oneWeek = 604800 * 1000; //  7 days in milliseconds
-        oneMonth = 2678400 * 1000; // 31 days in milliseconds
 
         // Get the current block info
         blockNumber = await ethers.provider.getBlockNumber();
@@ -1706,10 +1697,6 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Register the dispute resolver
         await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
-
-        // Create an offer to commit to
-        oneWeek = 604800 * 1000; //  7 days in milliseconds
-        oneMonth = 2678400 * 1000; // 31 days in milliseconds
 
         // Get the current block info
         blockNumber = await ethers.provider.getBlockNumber();

@@ -20,6 +20,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { getEvent, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
+const { oneWeek, oneMonth } = require("../utils/constants");
 
 /**
  *  Test the Boson Bundle Handler interface
@@ -55,7 +56,7 @@ describe("IBosonBundleHandler", function () {
   let bundleStruct;
   let twinIdsToAdd, twinIdsToRemove, offerIdsToAdd, offerIdsToRemove, tokenType;
   let bundle, bundleId, bundleIds, offerIds, twinId, twinIds, nextBundleId, invalidBundleId, bundleInstance;
-  let offer, oneMonth, oneWeek, exists, expected, blockNumber, block;
+  let offer, exists, expected, blockNumber, block;
   let offerId,
     price,
     sellerDeposit,
@@ -219,10 +220,6 @@ describe("IBosonBundleHandler", function () {
         // Create a twin.
         await twinHandler.connect(operator).createTwin(twin);
       }
-
-      // Some periods in milliseconds
-      oneWeek = 604800 * 1000; //  7 days in milliseconds
-      oneMonth = 2678400 * 1000; // 31 days in milliseconds
 
       // create 5 offers
       for (let i = 0; i < 5; i++) {

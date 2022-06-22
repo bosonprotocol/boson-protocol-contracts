@@ -22,6 +22,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { getEvent, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
+const { oneWeek, oneMonth } = require("../utils/constants");
 
 /**
  *  Test the Boson Orchestration Handler interface
@@ -42,7 +43,7 @@ describe("IBosonOrchestrationHandler", function () {
     offerStruct,
     key,
     value;
-  let offer, nextOfferId, oneMonth, oneWeek, support, exists;
+  let offer, nextOfferId, support, exists;
   let nextAccountId;
   let seller, sellerStruct, active;
   let disputeResolver;
@@ -192,10 +193,6 @@ describe("IBosonOrchestrationHandler", function () {
 
       // How that seller looks as a returned struct
       sellerStruct = seller.toStruct();
-
-      // Some periods in milliseconds
-      oneWeek = 604800 * 1000; //  7 days in milliseconds
-      oneMonth = 2678400 * 1000; // 31 days in milliseconds
 
       // The first offer id
       nextOfferId = "1";
