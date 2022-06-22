@@ -25,6 +25,8 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     bytes32 private constant META_TX_FUNDS_TYPEHASH = keccak256("MetaTxFund(uint256 nonce,address from,address contractAddress,string functionName,MetaTxFundDetails fundDetails)MetaTxFundDetails(uint256 entityId,address[] tokenList,uint256[] tokenAmounts)");
     bytes32 private constant DISPUTE_DETAILS_TYPEHASH = keccak256("MetaTxDisputeDetails(uint256 exchangeId,string complaint)");
     bytes32 private constant META_TX_DISPUTES_TYPEHASH = keccak256("MetaTxDispute(uint256 nonce,address from,address contractAddress,string functionName,MetaTxDisputeDetails disputeDetails)MetaTxDisputeDetails(uint256 exchangeId,string complaint)");
+    bytes32 private constant DISPUTE_RESOLUTION_DETAILS_TYPEHASH = keccak256("MetaTxDisputeResolutionDetails(uint256 exchangeId,uint256 buyerPercent,bytes32 sigR,bytes32 sigS,uint8 sigV)");
+    bytes32 private constant META_TX_DISPUTE_RESOLUTIONS_TYPEHASH = keccak256("MetaTxDisputeResolution(uint256 nonce,address from,address contractAddress,string functionName,MetaTxDisputeResolutionDetails disputeResolutionDetails)MetaTxDisputeResolutionDetails(uint256 exchangeId,uint256 buyerPercent,bytes32 sigR,bytes32 sigS,uint8 sigV)");
     // Function names
     string private constant COMMIT_TO_OFFER = "commitToOffer(address,uint256)";
     string private constant CANCEL_VOUCHER = "cancelVoucher(uint256)";
@@ -34,6 +36,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     string private constant RETRACT_DISPUTE = "retractDispute(uint256)";
     string private constant RAISE_DISPUTE = "raiseDispute(uint256,string)";
     string private constant ESCALATE_DISPUTE = "escalateDispute(uint256)";
+    string private constant RESOLVE_DISPUTE = "resolveDispute(uint256,uint256,bytes32,bytes32,uint8)";
 
     /**
      * @notice Facet Initializer
@@ -150,6 +153,25 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     }
 
     /**
+     * @notice Returns hashed meta transaction for dispute resolution details.
+     *
+     * @param _metaTx - BosonTypes.MetaTxDisputeResolution struct.
+     */
+    function hashMetaTxDisputeResolutionDetails(MetaTxDisputeResolution memory _metaTx) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    META_TX_DISPUTE_RESOLUTIONS_TYPEHASH,
+                    _metaTx.nonce,
+                    _metaTx.from,
+                    _metaTx.contractAddress,
+                    keccak256(bytes(_metaTx.functionName)),
+                    hashDisputeResolutionDetails(_metaTx.disputeResolutionDetails)
+                )
+            );
+    }
+
+    /**
      * @notice Returns hashed representation of the offer struct.
      *
      * @param _offerDetails - the BosonTypes.MetaTxOfferDetails struct.
@@ -202,6 +224,25 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
                     DISPUTE_DETAILS_TYPEHASH,
                     _disputeDetails.exchangeId,
                     keccak256(bytes(_disputeDetails.complaint))
+                )
+            );
+    }
+
+    /**
+     * @notice Returns hashed representation of the dispute resolution details struct.
+     *
+     * @param _disputeResolutionDetails - the BosonTypes.MetaTxDisputeResolutionDetails struct.
+     */
+    function hashDisputeResolutionDetails(MetaTxDisputeResolutionDetails memory _disputeResolutionDetails) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    DISPUTE_RESOLUTION_DETAILS_TYPEHASH,
+                    _disputeResolutionDetails.exchangeId,
+                    _disputeResolutionDetails.buyerPercent,
+                    _disputeResolutionDetails.sigR,
+                    _disputeResolutionDetails.sigS,
+                    _disputeResolutionDetails.sigV
                 )
             );
     }
@@ -695,5 +736,54 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         );
 
         return executeTx(_userAddress, ESCALATE_DISPUTE, functionSignature, _nonce);
+    }
+
+    /**
+     * @notice Handles the incoming meta transaction for Resolve Dispute.
+     *
+     * Reverts if:
+     * - nonce is already used by another transaction.
+     * - sender does not match the recovered signer.
+     * - any code executed in the signed transaction reverts.
+     *
+     * @param _userAddress - the sender of the transaction.
+     * @param _disputeResolutionDetails - the fully populated BosonTypes.MetaTxDisputeResolutionDetails struct.
+     * @param _nonce - the nonce value of the transaction.
+     * @param _sigR - r part of the signer's signature.
+     * @param _sigS - s part of the signer's signature.
+     * @param _sigV - v part of the signer's signature.
+     */
+    function executeMetaTxResolveDispute(
+        address _userAddress,
+        MetaTxDisputeResolutionDetails calldata _disputeResolutionDetails,
+        uint256 _nonce,
+        bytes32 _sigR,
+        bytes32 _sigS,
+        uint8 _sigV
+    ) public override returns (bytes memory) {
+        bytes4 functionSelector = IBosonDisputeHandler.resolveDispute.selector;
+        bytes memory functionSignature = abi.encodeWithSelector(
+            functionSelector,
+            _disputeResolutionDetails.exchangeId,
+            _disputeResolutionDetails.buyerPercent,
+            _disputeResolutionDetails.sigR,
+            _disputeResolutionDetails.sigS,
+            _disputeResolutionDetails.sigV
+        );
+        validateTx(RESOLVE_DISPUTE, functionSignature, _nonce);
+
+        MetaTxDisputeResolution memory metaTx = MetaTxDisputeResolution({
+            nonce: _nonce,
+            from: _userAddress,
+            contractAddress: address(this),
+            functionName: RESOLVE_DISPUTE,
+            disputeResolutionDetails: _disputeResolutionDetails
+        });
+        require(
+            EIP712Lib.verify(_userAddress, hashMetaTxDisputeResolutionDetails(metaTx), _sigR, _sigS, _sigV),
+            SIGNER_AND_SIGNATURE_DO_NOT_MATCH
+        );
+
+        return executeTx(_userAddress, RESOLVE_DISPUTE, functionSignature, _nonce);
     }
 }

@@ -521,7 +521,7 @@
             },
             {
               "internalType": "string",
-              "name": "offerChecksum",
+              "name": "metadataHash",
               "type": "string"
             },
             {
@@ -915,7 +915,7 @@
             },
             {
               "internalType": "string",
-              "name": "offerChecksum",
+              "name": "metadataHash",
               "type": "string"
             },
             {
@@ -1044,7 +1044,7 @@
             },
             {
               "internalType": "string",
-              "name": "offerChecksum",
+              "name": "metadataHash",
               "type": "string"
             },
             {
@@ -1210,7 +1210,7 @@
             },
             {
               "internalType": "string",
-              "name": "offerChecksum",
+              "name": "metadataHash",
               "type": "string"
             },
             {
@@ -1361,7 +1361,7 @@
             },
             {
               "internalType": "string",
-              "name": "offerChecksum",
+              "name": "metadataHash",
               "type": "string"
             },
             {
@@ -1591,7 +1591,7 @@
             },
             {
               "internalType": "string",
-              "name": "offerChecksum",
+              "name": "metadataHash",
               "type": "string"
             },
             {
@@ -1752,7 +1752,7 @@
             },
             {
               "internalType": "string",
-              "name": "offerChecksum",
+              "name": "metadataHash",
               "type": "string"
             },
             {
@@ -1955,7 +1955,7 @@
             },
             {
               "internalType": "string",
-              "name": "offerChecksum",
+              "name": "metadataHash",
               "type": "string"
             },
             {
@@ -2143,7 +2143,7 @@
             },
             {
               "internalType": "string",
-              "name": "offerChecksum",
+              "name": "metadataHash",
               "type": "string"
             },
             {
