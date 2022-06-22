@@ -79,7 +79,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // Notify watchers of state change
-        emit DisputeRaised(_exchangeId, exchange.buyerId, offer.sellerId, _complaint);
+        emit DisputeRaised(_exchangeId, exchange.buyerId, offer.sellerId, _complaint, msgSender());
     }
 
     /**
@@ -109,10 +109,60 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);
 
         // Finalize the dispute
-        finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Retracted, Resolution(0));
+        finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Retracted, 0);
 
         // Notify watchers of state change
-        emit DisputeRetracted(_exchangeId, msg.sender);
+        emit DisputeRetracted(_exchangeId, msgSender());
+    }
+    
+    /**
+     * @notice Extend the dispute timeout, allowing more time for mutual resolution.
+     * As a consequnece also buyer gets more time to escalate the dispute
+     *
+     * Emits a DisputeTimeoutExtened event if successful.
+     *
+     * Reverts if:
+     * - exchange does not exist
+     * - exchange is not in a disputed state
+     * - caller is not the seller
+     * - dispute has expired already
+     * - new dispute timeout is before the current dispute timeout
+     * - dispute is in some state other than resolving
+     *
+     * @param _exchangeId - the id of the associated exchange
+     * @param _newDisputeTimeout - new date when resolution period ends
+     */
+    function extendDisputeTimeout(uint256 _exchangeId, uint256 _newDisputeTimeout) external override {
+        // Verify that the caller is the seller. Get exchange -> get offer id -> get seller id -> get operator address and compare to msg.sender
+        // Get the exchange, should be in disputed state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+
+        // Get the offer, assume it exist if exchange exist
+        (, Offer storage offer) = fetchOffer(exchange.offerId);
+
+        // Get seller, we assume seller exists if offer exists
+        (,Seller storage seller) = fetchSeller(offer.sellerId);
+
+        // Caller must be seller's operator address
+        require(seller.operator == msg.sender, NOT_OPERATOR);
+
+        // Fetch the dispute, it exists if exchange is in Disputed state
+        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
+
+        // Dispute must be in a resolving state
+        require(dispute.state == DisputeState.Resolving, INVALID_STATE);
+        
+        // If expired already, it cannot be extended
+        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
+
+        // New dispute timout should be after the current dispute timeout
+        require(_newDisputeTimeout > disputeDates.timeout, INVALID_DISPUTE_TIMEOUT);
+
+        // Update the timeout
+        disputeDates.timeout = _newDisputeTimeout;
+
+        // Notify watchers of state change
+        emit DisputeTimeoutExtended(_exchangeId, _newDisputeTimeout, msg.sender);
     }
 
     /**
@@ -142,10 +192,10 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         require(block.timestamp >= disputeDates.timeout, DISPUTE_STILL_VALID);      
 
         // Finalize the dispute
-        finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Retracted, Resolution(0));
+        finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Retracted, 0);
 
         // Notify watchers of state change
-        emit DisputeExpired(_exchangeId, msg.sender);
+        emit DisputeExpired(_exchangeId, msgSender());
     }
 
     /**
@@ -163,16 +213,16 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * - dispute state is neither resolving nor escalated
      *
      * @param _exchangeId  - exchange id to resolve dispute
-     * @param _resolution - resolution struct with the information about the split.
+     * @param _buyerPercent - percentage of the pot that goes to the buyer
      * @param _sigR - r part of the signer's signature.
      * @param _sigS - s part of the signer's signature.
      * @param _sigV - v part of the signer's signature.
      */
-    function resolveDispute(uint256 _exchangeId, Resolution calldata _resolution, bytes32 _sigR,
+    function resolveDispute(uint256 _exchangeId, uint256 _buyerPercent, bytes32 _sigR,
         bytes32 _sigS,
         uint8 _sigV) external override {
         // buyer should get at most 100%
-        require(_resolution.buyerPercent <= 10000, INVALID_BUYER_PERCENT);
+        require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
 
         // Get the exchange, should be in dispute state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
@@ -212,17 +262,17 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
             }
 
             // verify that the signature belongs to the expectedSigner
-            require(EIP712Lib.verify(expectedSigner, hashResolution(_exchangeId, _resolution), _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+            require(EIP712Lib.verify(expectedSigner, hashResolution(_exchangeId, _buyerPercent), _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         }
 
         // Make sure the dispute is in the resolving or escalated state
         require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);
 
         // finalize the dispute
-        finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Resolved, _resolution);
+        finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Resolved, _buyerPercent);
 
         // Notify watchers of state change
-        emit DisputeResolved(_exchangeId, _resolution, msg.sender);
+        emit DisputeResolved(_exchangeId, _buyerPercent, msgSender());
     }
 
     /**
@@ -265,7 +315,49 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // Notify watchers of state change
-        emit DisputeEscalated(_exchangeId, offer.disputeResolverId, msg.sender);
+        emit DisputeEscalated(_exchangeId, offer.disputeResolverId, msgSender());
+    }
+
+    /**
+     * @notice Decide a dispute by providing the information about the split. Callable by the dispute resolver, specified in the offer
+     *
+     * Emits a DisputeDecided event if successful.
+     *
+     * Reverts if:
+     * - specified buyer percent exceeds 100%
+     * - exchange does not exist
+     * - exchange is not in the disputed state
+     * - caller is not the dispute resolver for this dispute
+     * - dispute state is not escalated
+     *
+     * @param _exchangeId  - exchange id to resolve dispute
+     * @param _buyerPercent - percentage of the pot that goes to the buyer
+     */
+    function decideDispute(uint256 _exchangeId, uint256 _buyerPercent) external override {
+        // buyer should get at most 100%
+        require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
+
+        // Get the exchange, should be in dispute state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+
+        // Fetch teh dispute and dispute dates
+        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId); 
+
+        // Make sure the dispute is in the escalated state
+        require(dispute.state == DisputeState.Escalated, INVALID_STATE);
+
+        // Fetch the offer to get the info who the seller is
+        (, Offer storage offer) = fetchOffer(exchange.offerId);
+
+        // get dispute resolver id to check if caller is the dispute resolver
+        uint256 disputeResolverId = protocolLookups().disputeResolverIdByOperator[msg.sender];
+        require(disputeResolverId == offer.disputeResolverId, NOT_DISPUTE_RESOLVER_OPERATOR);
+
+        // finalize the dispute
+        finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Decided, _buyerPercent);
+
+        // Notify watchers of state change
+        emit DisputeDecided(_exchangeId, _buyerPercent, msg.sender);
     }
 
     /**
@@ -281,17 +373,17 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @param _dispute - pointer to dispute storage slot
      * @param _disputeDates - pointer to disputeDates storage slot
      * @param _targetState - target final state
-     * @param _resolution - resolution struct with the information about the split.
+     * @param _buyerPercent - percentage of the pot that goes to the buyer
      */
-    function finalizeDispute(uint256 _exchangeId, Exchange storage _exchange, Dispute storage _dispute, DisputeDates storage _disputeDates, DisputeState _targetState, Resolution memory _resolution) internal {
+    function finalizeDispute(uint256 _exchangeId, Exchange storage _exchange, Dispute storage _dispute, DisputeDates storage _disputeDates, DisputeState _targetState, uint256 _buyerPercent) internal {
         // update dispute and exchange
         _disputeDates.finalized = block.timestamp;
         _dispute.state = _targetState;
         _exchange.finalizedDate = block.timestamp;
 
         // store the resolution if it exists
-        if (_targetState == DisputeState.Resolved) {
-            _dispute.resolution = _resolution;
+        if (_targetState == DisputeState.Resolved || _targetState == DisputeState.Decided) {
+            _dispute.buyerPercent = _buyerPercent;
         }
 
         // Release the funds
@@ -302,15 +394,15 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @notice Returns hashed resolution information. Needed for the verfication in resolveDispute.
      *
      * @param _exchangeId - if of the exchange for which dispute was resolved
-     * @param _resolution - resolution struct with the information about the split
+     * @param _buyerPercent - percentage of the pot that goes to the buyer
      */
-    function hashResolution(uint256 _exchangeId, Resolution calldata _resolution) internal pure returns (bytes32) {
+    function hashResolution(uint256 _exchangeId, uint256 _buyerPercent) internal pure returns (bytes32) {
         return
             keccak256(
                 abi.encode(
                     RESOLUTION_TYPEHASH,
                     _exchangeId,
-                    _resolution.buyerPercent
+                    _buyerPercent
                 )
             );
     }
@@ -346,6 +438,23 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         Dispute storage dispute;
         (exists, dispute, ) = fetchDispute(_exchangeId);
         if (exists) state = dispute.state;
+    }
+
+    /**
+     * @notice Gets the timeout of a given dispute.
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return exists - true if the dispute exists
+     * @return timeout - the end of resolution period
+     */
+    function getDisputeTimeout(uint256 _exchangeId)
+    external
+    view
+    override
+    returns(bool exists, uint256 timeout) {
+        DisputeDates storage disputeDates;
+        (exists, , disputeDates) = fetchDispute(_exchangeId);
+        if (exists) timeout = disputeDates.timeout;
     }
 
     /**

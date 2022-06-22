@@ -9,11 +9,11 @@ import {BosonTypes} from "../../domain/BosonTypes.sol";
  * @notice Events related to exchanges within the protocol.
  */
 interface IBosonExchangeEvents {
-    event BuyerCommitted(uint256 indexed offerId, uint256 indexed buyerId, uint256 indexed exchangeId, BosonTypes.Exchange exchange);
-    event ExchangeCompleted(uint256 indexed offerId, uint256 indexed buyerId, uint256 indexed exchangeId);
-    event VoucherCanceled(uint256 indexed offerId, uint256 indexed exchangeId, address indexed canceledBy);
-    event VoucherExpired(uint256 indexed offerId, uint256 indexed exchangeId, address indexed expiredBy);
-    event VoucherRedeemed(uint256 indexed offerId, uint256 indexed exchangeId, address indexed redeemedBy);
-    event VoucherRevoked(uint256 indexed offerId, uint256 indexed exchangeId, address indexed revokedBy);
-    event VoucherTransferred(uint256 indexed offerId, uint256 indexed exchangeId, uint256 indexed newBuyerId);
+    event BuyerCommitted(uint256 indexed offerId, uint256 indexed buyerId, uint256 indexed exchangeId, BosonTypes.Exchange exchange, address executedBy);
+    event ExchangeCompleted(uint256 indexed offerId, uint256 indexed buyerId, uint256 indexed exchangeId, address executedBy);
+    event VoucherCanceled(uint256 indexed offerId, uint256 indexed exchangeId, address indexed executedBy);
+    event VoucherExpired(uint256 indexed offerId, uint256 indexed exchangeId, address indexed executedBy);
+    event VoucherRedeemed(uint256 indexed offerId, uint256 indexed exchangeId, address indexed executedBy);
+    event VoucherRevoked(uint256 indexed offerId, uint256 indexed exchangeId, address indexed executedBy);
+    event VoucherTransferred(uint256 indexed offerId, uint256 indexed exchangeId, uint256 indexed newBuyerId, address executedBy);
 }

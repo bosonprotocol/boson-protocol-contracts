@@ -10,7 +10,6 @@ const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
-const Resolution = require("../../scripts/domain/Resolution");
 
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -32,7 +31,7 @@ const {
 describe("IBosonFundsHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury, feeCollector, other1;
+  let accounts, deployer, rando, operator, admin, clerk, treasury, feeCollector, disputeResolver;
   let erc165,
     protocolDiamond,
     accessController,
@@ -57,11 +56,11 @@ describe("IBosonFundsHandler", function () {
     exchangeToken,
     disputeResolverId,
     metadataUri,
-    offerChecksum,
+    metadataHash,
     voided;
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
-  let protocolFeePercentage;
+  let protocolFeePercentage, protocolFeeFlatBoson;
   let block, blockNumber;
   let protocolId, exchangeId, buyerId, sellerPayoff, buyerPayoff;
   let sellersAvailableFunds,
@@ -72,8 +71,8 @@ describe("IBosonFundsHandler", function () {
     expectedProtocolAvailableFunds;
   let tokenListSeller, tokenListBuyer, tokenAmountsSeller, tokenAmountsBuyer, tokenList, tokenAmounts;
   let tx, txReceipt, txCost, event;
-  let disputeResolver;
-  let buyerPercent, resolution;
+  let disputeResolverEntity;
+  let buyerPercent;
   let resolutionType, customSignatureType, message, r, s, v;
   let disputedDate, timeout;
 
@@ -93,7 +92,7 @@ describe("IBosonFundsHandler", function () {
     rando = accounts[5];
     buyer = accounts[6];
     feeCollector = accounts[7];
-    other1 = accounts[8];
+    disputeResolver = accounts[8];
 
     // A period in milliseconds
     oneMonth = 2678400 * 1000; // 31 days in milliseconds
@@ -120,15 +119,19 @@ describe("IBosonFundsHandler", function () {
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
     [, , [bosonVoucher]] = await deployProtocolClients(protocolClientArgs, gasLimit);
 
-    // set protocolFeePercentage
+    // Deploy the boson token
+    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+
+    // set protocolFees
     protocolFeePercentage = "200"; // 2 %
+    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
 
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
       // Protocol addresses
       {
         treasuryAddress: "0x0000000000000000000000000000000000000000",
-        tokenAddress: "0x0000000000000000000000000000000000000000",
+        tokenAddress: bosonToken.address,
         voucherAddress: bosonVoucher.address,
       },
       // Protocol limits
@@ -143,7 +146,8 @@ describe("IBosonFundsHandler", function () {
       },
       // Protocol fees
       {
-        protocolFeePercentage,
+        percentage: protocolFeePercentage,
+        flatBoson: protocolFeeFlatBoson,
       },
     ];
 
@@ -363,11 +367,11 @@ describe("IBosonFundsHandler", function () {
 
         // Create a valid dispute resolver
         active = true;
-        disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
-        expect(disputeResolver.isValid()).is.true;
+        disputeResolverEntity = new DisputeResolver(id, disputeResolver.address, active);
+        expect(disputeResolverEntity.isValid()).is.true;
 
         // Register the dispute resolver
-        await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+        await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
 
         // Create an offer to commit to
         oneWeek = 604800 * 1000; //  7 days in milliseconds
@@ -380,13 +384,13 @@ describe("IBosonFundsHandler", function () {
         // Required constructor params
         price = ethers.utils.parseUnits("1.5", "ether").toString();
         sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
+        protocolFee = calculateProtocolFee(price, protocolFeePercentage);
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "2";
         exchangeToken = mockToken.address; // Mock token addres
         disputeResolverId = "2";
-        offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-        metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
+        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
         voided = false;
 
         // Create a valid offer entity
@@ -401,7 +405,7 @@ describe("IBosonFundsHandler", function () {
           exchangeToken,
           disputeResolverId,
           metadataUri,
-          offerChecksum,
+          metadataHash,
           voided
         );
         expect(offerToken.isValid()).is.true;
@@ -481,16 +485,22 @@ describe("IBosonFundsHandler", function () {
           // seller withdrawal
           await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, tokenListSeller, tokenAmountsSeller))
             .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(sellerId, treasury.address, mockToken.address, sellerPayoff)
+            .withArgs(sellerId, treasury.address, mockToken.address, sellerPayoff, clerk.address)
             .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(sellerId, treasury.address, ethers.constants.Zero, ethers.BigNumber.from(sellerPayoff).div("2"));
+            .withArgs(
+              sellerId,
+              treasury.address,
+              ethers.constants.Zero,
+              ethers.BigNumber.from(sellerPayoff).div("2"),
+              clerk.address
+            );
 
           // buyer withdrawal
           await expect(fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer))
-            .to.emit(fundsHandler, "FundsWithdrawn")
+            .to.emit(fundsHandler, "FundsWithdrawn", buyer.address)
             .withArgs(buyerId, buyer.address, mockToken.address, ethers.BigNumber.from(buyerPayoff).div("5"))
             .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(buyerId, buyer.address, ethers.constants.Zero, buyerPayoff);
+            .withArgs(buyerId, buyer.address, ethers.constants.Zero, buyerPayoff, buyer.address);
         });
 
         it("should update state", async function () {
@@ -692,9 +702,9 @@ describe("IBosonFundsHandler", function () {
           // seller withdrawal
           await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, tokenListSeller, tokenAmountsSeller))
             .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(sellerId, treasury.address, mockToken.address, sellerPayoff)
+            .withArgs(sellerId, treasury.address, mockToken.address, sellerPayoff, clerk.address)
             .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(sellerId, treasury.address, mockToken.address, reduction);
+            .withArgs(sellerId, treasury.address, mockToken.address, reduction, clerk.address);
         });
 
         context("💔 Revert Reasons", async function () {
@@ -878,9 +888,9 @@ describe("IBosonFundsHandler", function () {
           // protocol fee withdrawal
           await expect(fundsHandler.connect(feeCollector).withdrawProtocolFees(tokenList, tokenAmounts))
             .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(protocolId, feeCollector.address, mockToken.address, protocolFee)
+            .withArgs(protocolId, feeCollector.address, mockToken.address, protocolFee, feeCollector.address)
             .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(protocolId, feeCollector.address, ethers.constants.Zero, protocolFee);
+            .withArgs(protocolId, feeCollector.address, ethers.constants.Zero, protocolFee, feeCollector.address);
         });
 
         it("should update state", async function () {
@@ -1080,9 +1090,9 @@ describe("IBosonFundsHandler", function () {
           // protocol fee withdrawal
           await expect(fundsHandler.connect(feeCollector).withdrawProtocolFees(tokenList, tokenAmounts))
             .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(protocolId, feeCollector.address, mockToken.address, protocolFee)
+            .withArgs(protocolId, feeCollector.address, mockToken.address, protocolFee, feeCollector.address)
             .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(protocolId, feeCollector.address, mockToken.address, reduction);
+            .withArgs(protocolId, feeCollector.address, mockToken.address, reduction, feeCollector.address);
         });
 
         context("💔 Revert Reasons", async function () {
@@ -1224,11 +1234,11 @@ describe("IBosonFundsHandler", function () {
 
       // Create a valid dispute resolver
       active = true;
-      disputeResolver = new DisputeResolver(id, other1.address, active);
-      expect(disputeResolver.isValid()).is.true;
+      disputeResolverEntity = new DisputeResolver(id, disputeResolver.address, active);
+      expect(disputeResolverEntity.isValid()).is.true;
 
       // Register the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
 
       // Create an offer to commit to
       oneWeek = 604800 * 1000; //  7 days in milliseconds
@@ -1241,13 +1251,13 @@ describe("IBosonFundsHandler", function () {
       // Required constructor params
       price = ethers.utils.parseUnits("1.5", "ether").toString();
       sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
+      protocolFee = calculateProtocolFee(price, protocolFeePercentage);
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "2";
       exchangeToken = mockToken.address; // MockToken address
       disputeResolverId = "2";
-      offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-      metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
+      metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+      metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
       voided = false;
 
       // Create a valid offer entity
@@ -1262,7 +1272,7 @@ describe("IBosonFundsHandler", function () {
         exchangeToken,
         disputeResolverId,
         metadataUri,
-        offerChecksum,
+        metadataHash,
         voided
       );
       expect(offerToken.isValid()).is.true;
@@ -1323,14 +1333,14 @@ describe("IBosonFundsHandler", function () {
           .to.emit(exchangeHandler, "FundsEncumbered")
           .withArgs(buyerId, mockToken.address, price)
           .to.emit(exchangeHandler, "FundsEncumbered")
-          .withArgs(sellerId, mockToken.address, sellerDeposit);
+          .withArgs(sellerId, mockToken.address, sellerDeposit, buyer.address);
 
         // Commit to an offer with native currency, test for FundsEncumbered event
         await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price }))
           .to.emit(exchangeHandler, "FundsEncumbered")
-          .withArgs(buyerId, ethers.constants.AddressZero, price)
+          .withArgs(buyerId, ethers.constants.AddressZero, price, buyer.address)
           .to.emit(exchangeHandler, "FundsEncumbered")
-          .withArgs(sellerId, ethers.constants.AddressZero, sellerDeposit);
+          .withArgs(sellerId, ethers.constants.AddressZero, sellerDeposit, buyer.address);
       });
 
       it("should update state", async function () {
@@ -1600,11 +1610,11 @@ describe("IBosonFundsHandler", function () {
           // Complete the exchange, expecting event
           await expect(exchangeHandler.connect(buyer).completeExchange(exchangeId))
             .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
+            .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address)
             .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff)
+            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address)
             .to.emit(exchangeHandler, "ExchangeFee")
-            .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee);
+            .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, buyer.address);
         });
 
         it("should update state", async function () {
@@ -1682,11 +1692,11 @@ describe("IBosonFundsHandler", function () {
           // Revoke the voucher, expecting event
           await expect(exchangeHandler.connect(operator).revokeVoucher(exchangeId))
             .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
+            .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, operator.address)
             .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff)
+            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, operator.address)
             .to.emit(exchangeHandler, "ExchangeFee")
-            .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee);
+            .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, operator.address);
         });
 
         it("should update state", async function () {
@@ -1772,11 +1782,11 @@ describe("IBosonFundsHandler", function () {
           // Cancel the voucher, expecting event
           await expect(exchangeHandler.connect(buyer).cancelVoucher(exchangeId))
             .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
+            .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address)
             .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff)
+            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address)
             .to.emit(exchangeHandler, "ExchangeFee")
-            .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee);
+            .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, buyer.address);
         });
 
         it("should update state", async function () {
@@ -1859,10 +1869,10 @@ describe("IBosonFundsHandler", function () {
             // Retract from the dispute, expecting event
             await expect(disputeHandler.connect(buyer).retractDispute(exchangeId))
               .to.emit(disputeHandler, "ExchangeFee")
-              .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee)
+              .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, buyer.address)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
-              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff);
+              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address)
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address);
           });
 
           it("should update state", async function () {
@@ -1923,10 +1933,10 @@ describe("IBosonFundsHandler", function () {
             // Expire the dispute, expecting event
             await expect(disputeHandler.connect(rando).expireDispute(exchangeId))
               .to.emit(disputeHandler, "ExchangeFee")
-              .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee)
+              .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, rando.address)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
-              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff);
+              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address)
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, rando.address);
           });
 
           it("should update state", async function () {
@@ -1987,8 +1997,6 @@ describe("IBosonFundsHandler", function () {
               .sub(protocolFee)
               .toString();
 
-            resolution = new Resolution(buyerPercent);
-
             // Set the message Type, needed for signature
             resolutionType = [
               { name: "exchangeId", type: "uint256" },
@@ -2001,7 +2009,7 @@ describe("IBosonFundsHandler", function () {
 
             message = {
               exchangeId: exchangeId,
-              buyerPercent: resolution.buyerPercent,
+              buyerPercent,
             };
 
             // Collect the signature components
@@ -2016,12 +2024,12 @@ describe("IBosonFundsHandler", function () {
 
           it("should emit a FundsReleased event", async function () {
             // Resolve the dispute, expecting event
-            await expect(disputeHandler.connect(operator).resolveDispute(exchangeId, resolution, r, s, v))
+            await expect(disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v))
               .to.emit(disputeHandler, "ExchangeFee")
-              .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee)
+              .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, operator.address)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
-              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff);
+              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, operator.address)
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, operator.address);
           });
 
           it("should update state", async function () {
@@ -2042,7 +2050,7 @@ describe("IBosonFundsHandler", function () {
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
 
             // Resolve the dispute, so the funds are released
-            await disputeHandler.connect(operator).resolveDispute(exchangeId, resolution, r, s, v);
+            await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v);
 
             // Available funds should be increased for
             // buyer: (price + sellerDeposit)*buyerPercentage
@@ -2065,7 +2073,7 @@ describe("IBosonFundsHandler", function () {
           });
         });
 
-        context.skip("Final state DISPUTED - DECIDED", async function () {
+        context("Final state DISPUTED - DECIDED", async function () {
           beforeEach(async function () {
             buyerPercent = "5566"; // 55.66%
 
@@ -2083,17 +2091,19 @@ describe("IBosonFundsHandler", function () {
               .sub(buyerPayoff)
               .sub(protocolFee)
               .toString();
+
+            // escalate the dispute
+            await disputeHandler.connect(buyer).escalateDispute(exchangeId);
           });
 
           it("should emit a FundsReleased event", async function () {
             // Decide the dispute, expecting event
-            await expect(exchangeHandler.connect(buyer).decideDispute(exchangeId, buyerPercent))
-              .to.emit(exchangeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
-              .to.emit(exchangeHandler, "FundsReleased")
-              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff)
-              .to.emit(exchangeHandler, "ExchangeFee")
-              .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee);
+            await expect(disputeHandler.connect(disputeResolver).decideDispute(exchangeId, buyerPercent))
+              .to.emit(disputeHandler, "ExchangeFee")
+              .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, disputeResolver.address)
+              .to.emit(disputeHandler, "FundsReleased")
+              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, disputeResolver.address)
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, disputeResolver.address);
           });
 
           it("should update state", async function () {
@@ -2114,7 +2124,7 @@ describe("IBosonFundsHandler", function () {
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
 
             // Decide the dispute, so the funds are released
-            await exchangeHandler.connect(buyer).decideDispute(exchangeId, buyerPercent);
+            await disputeHandler.connect(disputeResolver).decideDispute(exchangeId, buyerPercent);
 
             // Available funds should be increased for
             // buyer: (price + sellerDeposit)*buyerPercentage
@@ -2125,6 +2135,7 @@ describe("IBosonFundsHandler", function () {
               "Foreign20",
               ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
             );
+            expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff)]);
             expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolFee);
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
@@ -2166,11 +2177,11 @@ describe("IBosonFundsHandler", function () {
           // Complete the exchange, expecting event
           await expect(exchangeHandler.connect(buyer).completeExchange(exchangeId))
             .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
+            .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address)
             .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff)
+            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address)
             .to.emit(exchangeHandler, "ExchangeFee")
-            .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee);
+            .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, buyer.address);
         });
 
         it("Protocol fee for new exchanges should be the same as at the offer creation", async function () {
@@ -2191,11 +2202,11 @@ describe("IBosonFundsHandler", function () {
           // Complete the exchange, expecting event
           await expect(exchangeHandler.connect(buyer).completeExchange(exchangeId))
             .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
+            .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address)
             .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff)
+            .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address)
             .to.emit(exchangeHandler, "ExchangeFee")
-            .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee);
+            .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, buyer.address);
         });
       });
     });

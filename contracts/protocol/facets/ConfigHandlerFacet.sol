@@ -36,7 +36,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setTokenAddress(_addresses.tokenAddress);
         setTreasuryAddress(_addresses.treasuryAddress);
         setVoucherAddress(_addresses.voucherAddress);
-        setProtocolFeePercentage(_fees.protocolFeePercentage);
+        setProtocolFeePercentage(_fees.percentage);
+        setProtocolFeeFlatBoson(_fees.flatBoson);
         setMaxOffersPerGroup(_limits.maxOffersPerGroup);
         setMaxTwinsPerBundle(_limits.maxTwinsPerBundle);
         setMaxOffersPerBundle(_limits.maxOffersPerBundle);
@@ -44,6 +45,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxTokensPerWithdrawal(_limits.maxTokensPerWithdrawal);
         setMaxFeesPerDisputeResolver(_limits.maxFeesPerDisputeResolver);
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
+        
         
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -145,7 +147,10 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
 
     /**
      * @notice Sets the protocol fee percentage.
-     * Emits a FeePercentageChanged event.
+     *
+     * Emits a ProtocolFeePercentageChanged event.
+     *
+     * Reverts if the _protocolFeePercentage is greater than 10000.
      *
      * @param _protocolFeePercentage - the percentage that will be taken as a fee from the net of a Boson Protocol sale or auction (after royalties)
      *
@@ -157,12 +162,12 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     override
     onlyRole(ADMIN)
     {
-        // Make sure percentage is between 1 - 10000
-        require(_protocolFeePercentage > 0 && _protocolFeePercentage <= 10000,
-            "Percentage representation must be between 1 and 10000");
+        // Make sure percentage is less than 10000
+        require(_protocolFeePercentage <= 10000,
+            PROTOCOL_FEE_PERCENTAGE_INVALID);
 
         // Store fee percentage
-        protocolFees().protocolFeePercentage = _protocolFeePercentage;
+        protocolFees().percentage = _protocolFeePercentage;
 
         // Notify watchers of state change
         emit ProtocolFeePercentageChanged(_protocolFeePercentage, msg.sender);
@@ -177,9 +182,41 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     view
     returns (uint16)
     {
-        return protocolFees().protocolFeePercentage;
+        return protocolFees().percentage;
+    }
+    
+
+     /**
+     * @notice Sets the flat protocol fee for exchanges in $BOSON.
+     *
+     * Emits a ProtocolFeeFlatBosonChanged event.
+     *
+     * @param _protocolFeeFlatBoson - Flat fee taken for exchanges in $BOSON
+     *
+     */
+    function setProtocolFeeFlatBoson(uint256 _protocolFeeFlatBoson)
+    public
+    override
+    onlyRole(ADMIN)
+    {
+        // Store fee percentage
+        protocolFees().flatBoson = _protocolFeeFlatBoson;
+
+        // Notify watchers of state change
+        emit ProtocolFeeFlatBosonChanged(_protocolFeeFlatBoson, msg.sender);
     }
 
+    /**
+     * @notice Get the protocol fee percentage
+     */
+    function getProtocolFeeFlatBoson()
+    external
+    override
+    view
+    returns (uint256)
+    {
+        return protocolFees().flatBoson;
+    }
 
      /**
      * @notice Sets the maximum numbers of offers that can be added to a group in a single transaction

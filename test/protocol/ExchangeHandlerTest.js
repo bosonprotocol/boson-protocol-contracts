@@ -16,7 +16,6 @@ const TokenType = require("../../scripts/domain/TokenType");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
-const Resolution = require("../../scripts/domain/Resolution");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -38,7 +37,7 @@ const {
 describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, other1, game, fauxClient;
+  let accounts, deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, disputeResolver, fauxClient;
   let erc165,
     protocolDiamond,
     accessController,
@@ -49,7 +48,7 @@ describe("IBosonExchangeHandler", function () {
     disputeHandler,
     twinHandler,
     bundleHandler;
-  let bosonVoucher;
+  let bosonVoucher, bosonToken;
   let id, buyerId, offer, offerId, seller, sellerId, nextExchangeId, nextAccountId;
   let block, blockNumber, tx, txReceipt, event, clients;
   let support, oneMonth, oneWeek, newTime;
@@ -61,14 +60,14 @@ describe("IBosonExchangeHandler", function () {
     exchangeToken,
     disputeResolverId,
     metadataUri,
-    offerChecksum,
+    metadataHash,
     voided;
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
-  let protocolFeePercentage;
+  let protocolFeePercentage, protocolFeeFlatBoson;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state, exchangeStruct, response, exists, buyerStruct;
-  let disputeResolver, active;
+  let active;
   let foreign20, foreign721, foreign1155;
   let twin20, twin721, twin1155, twinIds, bundle, balance, owner;
 
@@ -88,7 +87,7 @@ describe("IBosonExchangeHandler", function () {
     buyer = accounts[5];
     rando = accounts[6];
     newOwner = accounts[7];
-    other1 = game = accounts[8]; // the MR Game that is allowed to push the Dispute into final states
+    disputeResolver = accounts[8];
     fauxClient = accounts[9];
 
     // A period in milliseconds
@@ -121,15 +120,19 @@ describe("IBosonExchangeHandler", function () {
     [bosonVoucher] = clients;
     await accessController.grantRole(Role.CLIENT, bosonVoucher.address);
 
-    // set protocolFeePercentage
+    // Deploy the boson token
+    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+
+    // set protocolFees
     protocolFeePercentage = "200"; // 2 %
+    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
       // Protocol addresses
       {
         treasuryAddress: "0x0000000000000000000000000000000000000000",
-        tokenAddress: "0x0000000000000000000000000000000000000000",
+        tokenAddress: bosonToken.address,
         voucherAddress: bosonVoucher.address,
       },
       // Protocol limits
@@ -144,7 +147,8 @@ describe("IBosonExchangeHandler", function () {
       },
       // Protocol fees
       {
-        protocolFeePercentage,
+        percentage: protocolFeePercentage,
+        flatBoson: protocolFeeFlatBoson,
       },
     ];
 
@@ -206,11 +210,11 @@ describe("IBosonExchangeHandler", function () {
 
       // Create a valid dispute resolver
       active = true;
-      disputeResolver = new DisputeResolver(id, other1.address, active);
-      expect(disputeResolver.isValid()).is.true;
+      const disputeResolverEntity = new DisputeResolver(id, disputeResolver.address, active);
+      expect(disputeResolverEntity.isValid()).is.true;
 
       // Register the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
 
       // Create an offer to commit to
       oneWeek = 604800 * 1000; //  7 days in milliseconds
@@ -223,13 +227,13 @@ describe("IBosonExchangeHandler", function () {
       // Required constructor params
       price = ethers.utils.parseUnits("1.5", "ether").toString();
       sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
+      protocolFee = calculateProtocolFee(price, protocolFeePercentage);
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
       disputeResolverId = "2";
-      offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-      metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
+      metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+      metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
       voided = false;
 
       // Create a valid offer entity
@@ -244,7 +248,7 @@ describe("IBosonExchangeHandler", function () {
         exchangeToken,
         disputeResolverId,
         metadataUri,
-        offerChecksum,
+        metadataHash,
         voided
       );
       expect(offer.isValid()).is.true;
@@ -391,7 +395,7 @@ describe("IBosonExchangeHandler", function () {
         // Complete the exchange, expecting event
         await expect(exchangeHandler.connect(buyer).completeExchange(exchange.id))
           .to.emit(exchangeHandler, "ExchangeCompleted")
-          .withArgs(offerId, buyerId, exchange.id);
+          .withArgs(offerId, buyerId, exchange.id, buyer.address);
       });
 
       it("should update state", async function () {
@@ -423,13 +427,13 @@ describe("IBosonExchangeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
 
         // Set time forward to run out the fulfillment period
-        newTime = Number((block.timestamp + Number(fulfillmentPeriod) + 1).toString().substring(0, 11));
+        newTime = ethers.BigNumber.from(block.timestamp).add(fulfillmentPeriod).add(1).toNumber();
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
         await expect(exchangeHandler.connect(operator).completeExchange(exchange.id))
           .to.emit(exchangeHandler, "ExchangeCompleted")
-          .withArgs(offerId, buyerId, exchange.id);
+          .withArgs(offerId, buyerId, exchange.id, operator.address);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -1108,7 +1112,7 @@ describe("IBosonExchangeHandler", function () {
         // Call onVoucherTransferred, expecting event
         await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(exchange.id, newOwner.address))
           .to.emit(exchangeHandler, "VoucherTransferred")
-          .withArgs(offerId, exchange.id, nextAccountId);
+          .withArgs(offerId, exchange.id, nextAccountId, fauxClient.address);
       });
 
       it("should update exchange when new buyer (with existing, active account) is passed", async function () {
@@ -1369,8 +1373,6 @@ describe("IBosonExchangeHandler", function () {
         it("should return true if exchange has a dispute in Resolved state", async function () {
           const buyerPercent = "5566"; // 55.66%
 
-          const resolution = new Resolution(buyerPercent);
-
           // Set the message Type, needed for signature
           const resolutionType = [
             { name: "exchangeId", type: "uint256" },
@@ -1383,7 +1385,7 @@ describe("IBosonExchangeHandler", function () {
 
           const message = {
             exchangeId: exchange.id,
-            buyerPercent: resolution.buyerPercent,
+            buyerPercent,
           };
 
           // Collect the signature components
@@ -1396,7 +1398,7 @@ describe("IBosonExchangeHandler", function () {
           );
 
           // Resolve Dispute
-          await disputeHandler.connect(operator).resolveDispute(exchange.id, resolution, r, s, v);
+          await disputeHandler.connect(operator).resolveDispute(exchange.id, buyerPercent, r, s, v);
 
           // Now in Resolved state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
@@ -1416,10 +1418,12 @@ describe("IBosonExchangeHandler", function () {
           assert.equal(response, false, "Incorrectly reports finalized state");
         });
 
-        // TODO Include this test when DisputeHandlerFacet.decideDispute works
-        it.skip("should return true if exchange has a dispute in Decided state", async function () {
+        it("should return true if exchange has a dispute in Decided state", async function () {
+          // Escalate the dispute
+          await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
           // Decide Dispute
-          [exists, response] = await disputeHandler.connect(game).decideDispute(exchange.id);
+          await disputeHandler.connect(disputeResolver).decideDispute(exchange.id, "1111");
 
           // Now in Decided state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);

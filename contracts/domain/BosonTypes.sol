@@ -80,7 +80,7 @@ contract BosonTypes {
         address exchangeToken;
         uint256 disputeResolverId;
         string metadataUri;
-        string offerChecksum;
+        string metadataHash;
         bool voided;
     }
 
@@ -131,7 +131,7 @@ contract BosonTypes {
         uint256 exchangeId;
         string complaint;
         DisputeState state;
-        Resolution resolution;
+        uint256 buyerPercent;
     }
 
     struct DisputeDates {
@@ -139,10 +139,6 @@ contract BosonTypes {
         uint256 escalated;
         uint256 finalized;
         uint256 timeout;
-    }
-
-    struct Resolution {
-        uint256 buyerPercent;
     }
 
     struct Receipt {
@@ -219,5 +215,18 @@ contract BosonTypes {
         uint256 entityId;
         address[] tokenList;
         uint256[] tokenAmounts;
+    }
+
+    struct MetaTxDispute {
+        uint256 nonce;
+        address from;
+        address contractAddress;
+        string functionName;
+        MetaTxDisputeDetails disputeDetails;
+    }
+
+    struct MetaTxDisputeDetails {
+        uint256 exchangeId;
+        string complaint;
     }
 }

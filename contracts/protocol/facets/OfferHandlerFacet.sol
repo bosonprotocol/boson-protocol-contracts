@@ -39,9 +39,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Resolution period is set to zero
      * - Voided is set to true
      * - Available quantity is set to zero
-     * - Dispute resolver wallet is not registered
-     * - Seller deposit is less than protocol fee
-     * - Sum of buyer cancel penalty and protocol fee is greater than price
+     * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     * - Buyer cancel penalty is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -77,9 +76,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
-     *   - Dispute resolver wallet is not registered
-     *   - Seller deposit is less than protocol fee
-     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver with unspecified dispute resolver
+     *   - Buyer cancel penalty is greater than price
      *
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
      * @param _offerDates - the array of fully populated offer dates structs
@@ -131,7 +129,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         offer.voided = true;
 
         // Notify listeners of state change
-        emit OfferVoided(_offerId, offer.sellerId);
+        emit OfferVoided(_offerId, offer.sellerId, msgSender());
 
     }
 
@@ -195,7 +193,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         offerDates.validUntil = _validUntilDate;
 
         // Notify watchers of state change
-        emit OfferExtended(_offerId, offer.sellerId, _validUntilDate);
+        emit OfferExtended(_offerId, offer.sellerId, _validUntilDate, msgSender());
     }
 
     /**
@@ -213,7 +211,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *  @param _offerIds - list of ids of the offers to extemd
      *  @param _validUntilDate - new valid until date
      */
-    function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external {
+    function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external override {
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offerIds.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
         for (uint i = 0; i < _offerIds.length; i++) { 
@@ -232,6 +230,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      */
     function getOffer(uint256 _offerId)
     external
+    override
     view
     returns(bool exists, Offer memory offer, OfferDates memory offerDates, OfferDurations memory offerDurations) {
         (exists, offer) = fetchOffer(_offerId);
@@ -250,6 +249,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      */
     function getNextOfferId()
     public
+    override
     view
     returns(uint256 nextOfferId) {
 
@@ -266,6 +266,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      */
     function isOfferVoided(uint256 _offerId)
     public
+    override
     view
     returns(bool exists, bool offerVoided) {
         Offer memory offer;

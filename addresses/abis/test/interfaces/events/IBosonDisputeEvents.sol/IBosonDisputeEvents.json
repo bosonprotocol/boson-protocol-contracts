@@ -13,6 +13,31 @@
           "type": "uint256"
         },
         {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "_buyerPercent",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "DisputeDecided",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "exchangeId",
+          "type": "uint256"
+        },
+        {
           "indexed": true,
           "internalType": "uint256",
           "name": "disputeResolverId",
@@ -21,7 +46,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "escalatedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -40,7 +65,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "expiredBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -73,6 +98,12 @@
           "internalType": "string",
           "name": "complaint",
           "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "DisputeRaised",
@@ -88,22 +119,15 @@
           "type": "uint256"
         },
         {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "buyerPercent",
-              "type": "uint256"
-            }
-          ],
           "indexed": false,
-          "internalType": "struct BosonTypes.Resolution",
-          "name": "resolution",
-          "type": "tuple"
+          "internalType": "uint256",
+          "name": "_buyerPercent",
+          "type": "uint256"
         },
         {
           "indexed": true,
           "internalType": "address",
-          "name": "resolvedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -122,11 +146,36 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "retractedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
       "name": "DisputeRetracted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "exchangeId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "newDisputeTimeout",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "DisputeTimeoutExtended",
       "type": "event"
     }
   ],

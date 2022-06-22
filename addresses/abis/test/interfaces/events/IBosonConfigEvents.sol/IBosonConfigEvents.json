@@ -15,7 +15,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "changedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -34,7 +34,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "changedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -53,7 +53,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "changedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -72,7 +72,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "changedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -91,11 +91,30 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "changedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
       "name": "MaxTwinsPerBundleChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "feeFlatBoson",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "ProtocolFeeFlatBosonChanged",
       "type": "event"
     },
     {
@@ -110,7 +129,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "changedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -129,7 +148,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "changedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -148,7 +167,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "changedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],
@@ -167,7 +186,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "changedBy",
+          "name": "executedBy",
           "type": "address"
         }
       ],

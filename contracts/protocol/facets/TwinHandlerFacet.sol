@@ -52,6 +52,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      */
     function getTwin(uint256 _twinId)
     external
+    override
     view
     returns(bool exists, Twin memory twin) {
         return fetchTwin(_twinId);
@@ -66,6 +67,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      */
     function getNextTwinId()
     public
+    override
     view
     returns(uint256 nextTwinId) {
 
@@ -85,7 +87,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      *
      * @param _twinId - the id of the twin to check.
      */
-    function removeTwin(uint256 _twinId) external {
+    function removeTwin(uint256 _twinId) external override {
         // Get storage location for twin
         (bool exists, Twin memory twin) = fetchTwin(_twinId);
         require(exists, NO_SUCH_TWIN);
@@ -102,6 +104,6 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         // delete struct
         delete protocolEntities().twins[_twinId];
 
-        emit TwinDeleted(_twinId, twin.sellerId);
+        emit TwinDeleted(_twinId, twin.sellerId, msgSender());
     }
 }

@@ -19,7 +19,7 @@ const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 /**
  *  Test the Boson Twin Handler interface
  */
-describe("IBosonTwinHandler", function () {
+describe.only("IBosonTwinHandler", function () {
   // Common vars
   let InterfaceIds;
   let accounts, deployer, rando, operator, admin, clerk, treasury;
@@ -50,6 +50,7 @@ describe("IBosonTwinHandler", function () {
     tokenAddress;
   let bundleId, offerIds, twinIds, bundle, tokenType;
   let oneMonth;
+  let protocolFeePercentage, protocolFeeFlatBoson;
 
   before(async function () {
     // get interface Ids
@@ -82,12 +83,19 @@ describe("IBosonTwinHandler", function () {
       "BundleHandlerFacet",
     ]);
 
+    // Deploy the boson token
+    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+
+    // set protocolFees
+    protocolFeePercentage = "200"; // 2 %
+    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+
     // Add config Handler, so twin id starts at 1
     const protocolConfig = [
       // Protocol addresses
       {
         treasuryAddress: "0x0000000000000000000000000000000000000000",
-        tokenAddress: "0x0000000000000000000000000000000000000000",
+        tokenAddress: bosonToken.address,
         voucherAddress: "0x0000000000000000000000000000000000000000",
       },
       // Protocol limits
@@ -102,7 +110,8 @@ describe("IBosonTwinHandler", function () {
       },
       // Protocol fees
       {
-        protocolFeePercentage: 1,
+        percentage: protocolFeePercentage,
+        flatBoson: protocolFeeFlatBoson,
       },
     ];
     // Deploy the Config facet, initializing the protocol config
@@ -456,7 +465,7 @@ describe("IBosonTwinHandler", function () {
         // Remove the twin, testing for the event.
         await expect(twinHandler.connect(operator).removeTwin(twin.id))
           .to.emit(twinHandler, "TwinDeleted")
-          .withArgs(twin.id, twin.sellerId);
+          .withArgs(twin.id, twin.sellerId, operator.address);
 
         // Expect twin to be not found.
         [success] = await twinHandler.connect(rando).getTwin(twin.id);

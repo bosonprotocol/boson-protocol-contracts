@@ -45,6 +45,12 @@
           "internalType": "struct BosonTypes.Bundle",
           "name": "bundle",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "BundleCreated",
@@ -64,6 +70,12 @@
           "internalType": "uint256",
           "name": "sellerId",
           "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "BundleDeleted",
@@ -111,6 +123,12 @@
           "internalType": "struct BosonTypes.Bundle",
           "name": "bundle",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "BundleUpdated",
@@ -147,6 +165,12 @@
           "internalType": "struct BosonTypes.Buyer",
           "name": "buyer",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "BuyerCreated",
@@ -183,6 +207,12 @@
           "internalType": "struct BosonTypes.Buyer",
           "name": "buyer",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "BuyerUpdated",
@@ -219,6 +249,12 @@
           "internalType": "struct BosonTypes.DisputeResolver",
           "name": "disputeResolver",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "DisputeResolverCreated",
@@ -255,6 +291,12 @@
           "internalType": "struct BosonTypes.DisputeResolver",
           "name": "disputeResolver",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "DisputeResolverUpdated",
@@ -324,6 +366,12 @@
           "internalType": "struct BosonTypes.Group",
           "name": "group",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "GroupCreated",
@@ -393,6 +441,12 @@
           "internalType": "struct BosonTypes.Group",
           "name": "group",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "GroupUpdated",
@@ -531,6 +585,12 @@
           "internalType": "struct BosonTypes.OfferDurations",
           "name": "offerDurations",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "OfferCreated",
@@ -556,6 +616,12 @@
           "internalType": "uint256",
           "name": "validUntilDate",
           "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "OfferExtended",
@@ -575,6 +641,12 @@
           "internalType": "uint256",
           "name": "sellerId",
           "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "OfferVoided",
@@ -626,6 +698,12 @@
           "internalType": "struct BosonTypes.Seller",
           "name": "seller",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "SellerCreated",
@@ -677,6 +755,12 @@
           "internalType": "struct BosonTypes.Seller",
           "name": "seller",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "SellerUpdated",
@@ -739,6 +823,12 @@
           "internalType": "struct BosonTypes.Twin",
           "name": "twin",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "TwinCreated",
@@ -758,6 +848,12 @@
           "internalType": "uint256",
           "name": "sellerId",
           "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
         }
       ],
       "name": "TwinDeleted",

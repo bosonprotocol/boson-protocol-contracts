@@ -65,12 +65,12 @@ describe("IBosonBundleHandler", function () {
     exchangeToken,
     disputeResolverId,
     metadataUri,
-    offerChecksum,
+    metadataHash,
     voided,
     invalidOfferId;
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
-  let protocolFeePercentage;
+  let protocolFeePercentage, protocolFeeFlatBoson;
   let disputeResolver;
 
   before(async function () {
@@ -117,15 +117,19 @@ describe("IBosonBundleHandler", function () {
     [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
     [bosonVoucher] = clients;
 
-    // set protocolFeePercentage
+    // Deploy the boson token
+    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+
+    // set protocolFees
     protocolFeePercentage = "200"; // 2 %
+    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
 
     // Add config Handler, so twin id starts at 1
     const protocolConfig = [
       // Protocol addresses
       {
         treasuryAddress: "0x0000000000000000000000000000000000000000",
-        tokenAddress: "0x0000000000000000000000000000000000000000",
+        tokenAddress: bosonToken.address,
         voucherAddress: bosonVoucher.address,
       },
       // Protocol limits
@@ -140,7 +144,8 @@ describe("IBosonBundleHandler", function () {
       },
       // Protocol fees
       {
-        protocolFeePercentage,
+        percentage: protocolFeePercentage,
+        flatBoson: protocolFeeFlatBoson,
       },
     ];
     // Deploy the Config facet, initializing the protocol config
@@ -230,13 +235,13 @@ describe("IBosonBundleHandler", function () {
         offerId = sellerId = "1"; // argument sent to contract for createOffer will be ignored
         price = ethers.utils.parseUnits("1.5", "ether").toString();
         sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
+        protocolFee = calculateProtocolFee(price, protocolFeePercentage);
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
         exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
         disputeResolverId = "2";
-        offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
-        metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
+        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
+        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
         voided = false;
 
         // Create a valid offer.
@@ -251,7 +256,7 @@ describe("IBosonBundleHandler", function () {
           exchangeToken,
           disputeResolverId,
           metadataUri,
-          offerChecksum,
+          metadataHash,
           voided
         );
         expect(offer.isValid()).is.true;
@@ -425,6 +430,7 @@ describe("IBosonBundleHandler", function () {
 
         assert.equal(event.bundleId.toString(), nextBundleId, "Bundle Id is incorrect");
         assert.equal(event.sellerId.toString(), sellerId, "Seller Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(bundleInstance.toStruct().toString(), bundleStruct.toString(), "Bundle struct is incorrect");
       });
     });
@@ -683,6 +689,7 @@ describe("IBosonBundleHandler", function () {
 
         assert.equal(event.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
         assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
       });
 
@@ -761,6 +768,7 @@ describe("IBosonBundleHandler", function () {
 
         assert.equal(event.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
         assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
       });
 
@@ -899,6 +907,7 @@ describe("IBosonBundleHandler", function () {
 
         assert.equal(event.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
         assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
       });
 
@@ -1051,6 +1060,7 @@ describe("IBosonBundleHandler", function () {
 
         assert.equal(event.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
         assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
       });
 
@@ -1256,6 +1266,7 @@ describe("IBosonBundleHandler", function () {
 
         assert.equal(event.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
         assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
+        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
       });
 
@@ -1496,7 +1507,7 @@ describe("IBosonBundleHandler", function () {
         // Remove the bundle, testing for the event.
         await expect(bundleHandler.connect(operator).removeBundle(bundle.id))
           .to.emit(bundleHandler, "BundleDeleted")
-          .withArgs(bundle.id, bundle.sellerId);
+          .withArgs(bundle.id, bundle.sellerId, operator.address);
 
         // Expect bundle to be not found.
         [exists] = await bundleHandler.connect(rando).getBundle(bundle.id);
@@ -1519,7 +1530,7 @@ describe("IBosonBundleHandler", function () {
         // Remove the bundle, testing for the event.
         await expect(bundleHandler.connect(operator).removeBundle(bundle.id))
           .to.emit(bundleHandler, "BundleDeleted")
-          .withArgs(bundle.id, bundle.sellerId);
+          .withArgs(bundle.id, bundle.sellerId, operator.address);
 
         // Expect bundle to be not found.
         [exists] = await bundleHandler.connect(rando).getBundle(bundle.id);

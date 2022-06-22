@@ -10,7 +10,7 @@ import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles disputes associated with exchanges within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x55a5b115
+ * The ERC-165 identifier for this interface is: 0xa0b14553
  */
 interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
 
@@ -45,6 +45,25 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @param _exchangeId - the id of the associated exchange
      */
     function retractDispute(uint256 _exchangeId) external;
+
+    /**
+     * @notice Extend the dispute timeout, allowing more time for mutual resolution.
+     * As a consequnece also buyer gets more time to escalate the dispute
+     *
+     * Emits a DisputeTimeoutExtened event if successful.
+     *
+     * Reverts if:
+     * - exchange does not exist
+     * - exchange is not in a disputed state
+     * - caller is not the seller
+     * - dispute has expired already
+     * - new dispute timeout is before the current dispute timeout
+     * - dispute is in some state other than resolving
+     *
+     * @param _exchangeId - the id of the associated exchange
+     * @param _newDisputeTimeout - new date when resolution period ends
+     */
+    function extendDisputeTimeout(uint256 _exchangeId, uint256 _newDisputeTimeout) external;
     
     /**
      * @notice Expire the dispute and release the funds
@@ -76,12 +95,12 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * - dispute state is neither resolving nor escalated
      *
      * @param _exchangeId  - exchange id to resolve dispute
-     * @param _resolution - resolution struct with the information about the split.
+     * @param _buyerPercent - percentage of the pot that goes to the buyer
      * @param _sigR - r part of the signer's signature.
      * @param _sigS - s part of the signer's signature.
      * @param _sigV - v part of the signer's signature.
      */
-    function resolveDispute(uint256 _exchangeId, BosonTypes.Resolution calldata _resolution, bytes32 _sigR,
+    function resolveDispute(uint256 _exchangeId, uint256 _buyerPercent, bytes32 _sigR,
         bytes32 _sigS,
         uint8 _sigV) external;
 
@@ -100,6 +119,23 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @param _exchangeId - the id of the associated exchange
      */
     function escalateDispute(uint256 _exchangeId) external;
+
+    /**
+     * @notice Decide a dispute by providing the information about the split. Callable by the dispute resolver, specified in the offer
+     *
+     * Emits a DisputeDecided event if successful.
+     *
+     * Reverts if:
+     * - specified buyer percent exceeds 100%
+     * - exchange does not exist
+     * - exchange is not in the disputed state
+     * - caller is not the dispute resolver for this dispute
+     * - dispute state is not escalated
+     *
+     * @param _exchangeId  - exchange id to resolve dispute
+     * @param _buyerPercent - percentage of the pot that goes to the buyer
+     */
+    function decideDispute(uint256 _exchangeId, uint256 _buyerPercent) external;
 
     /**
      * @notice Gets the details about a given dispute.
@@ -122,6 +158,18 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @return state - the dispute state. See {BosonTypes.DisputeState}
      */
     function getDisputeState(uint256 _exchangeId) external view returns(bool exists, BosonTypes.DisputeState state);
+
+    /**
+     * @notice Gets the timeout of a given dispute.
+     *
+     * @param _exchangeId - the id of the exchange to check
+     * @return exists - true if the dispute exists
+     * @return timeout - the end of resolution period
+     */
+    function getDisputeTimeout(uint256 _exchangeId)
+    external
+    view
+    returns(bool exists, uint256 timeout);
 
     /**
      * @notice Is the given dispute in a finalized state?

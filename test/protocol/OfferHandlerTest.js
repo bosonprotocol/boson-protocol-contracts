@@ -15,6 +15,7 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
+const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 
 /**
@@ -24,7 +25,16 @@ describe("IBosonOfferHandler", function () {
   // Common vars
   let InterfaceIds;
   let accounts, deployer, rando, operator, admin, clerk, treasury, other1;
-  let erc165, protocolDiamond, accessController, accountHandler, offerHandler, bosonVoucher, offerStruct, key, value;
+  let erc165,
+    protocolDiamond,
+    accessController,
+    accountHandler,
+    offerHandler,
+    bosonVoucher,
+    bosonToken,
+    offerStruct,
+    key,
+    value;
   let offer, nextOfferId, invalidOfferId, oneMonth, oneWeek, support, expected, exists;
   let seller, active;
   let id,
@@ -37,7 +47,7 @@ describe("IBosonOfferHandler", function () {
     exchangeToken,
     disputeResolverId,
     metadataUri,
-    offerChecksum,
+    metadataHash,
     voided;
   let validFrom,
     validUntil,
@@ -54,7 +64,7 @@ describe("IBosonOfferHandler", function () {
     offerDurationsStruct,
     offerDurationsStructs,
     offerDurationsList;
-  let protocolFeePercentage;
+  let protocolFeePercentage, protocolFeeFlatBoson;
   let block, blockNumber;
   let disputeResolver;
 
@@ -93,15 +103,19 @@ describe("IBosonOfferHandler", function () {
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
     [, , [bosonVoucher]] = await deployProtocolClients(protocolClientArgs, gasLimit);
 
-    // set protocolFeePercentage
+    // Deploy the boson token
+    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+
+    // set protocolFees
     protocolFeePercentage = "200"; // 2 %
+    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
 
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
       // Protocol addresses
       {
         treasuryAddress: "0x0000000000000000000000000000000000000000",
-        tokenAddress: "0x0000000000000000000000000000000000000000",
+        tokenAddress: bosonToken.address,
         voucherAddress: bosonVoucher.address,
       },
       // Protocol limits
@@ -116,7 +130,8 @@ describe("IBosonOfferHandler", function () {
       },
       // Protocol fees
       {
-        protocolFeePercentage,
+        percentage: protocolFeePercentage,
+        flatBoson: protocolFeeFlatBoson,
       },
     ];
 
@@ -184,13 +199,13 @@ describe("IBosonOfferHandler", function () {
       id = sellerId = "1"; // argument sent to contract for createOffer will be ignored
       price = ethers.utils.parseUnits("1.5", "ether").toString();
       sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage); // will be ignored, but set the correct value here for the tests
+      protocolFee = calculateProtocolFee(price, protocolFeePercentage); // will be ignored, but set the correct value here for the tests
       buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
       quantityAvailable = "1";
       exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
       disputeResolverId = "2";
-      offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
-      metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
+      metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
+      metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
       voided = false;
 
       // Create a valid offer, then set fields in tests directly
@@ -205,7 +220,7 @@ describe("IBosonOfferHandler", function () {
         exchangeToken,
         disputeResolverId,
         metadataUri,
-        offerChecksum,
+        metadataHash,
         voided
       );
       expect(offer.isValid()).is.true;
@@ -246,7 +261,7 @@ describe("IBosonOfferHandler", function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
       });
 
       it("should update state", async function () {
@@ -279,7 +294,7 @@ describe("IBosonOfferHandler", function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
         // wrong offer id should not exist
         [exists] = await offerHandler.connect(rando).getOffer(offer.id);
@@ -297,7 +312,7 @@ describe("IBosonOfferHandler", function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
       });
 
       it("should ignore any provided protocol fee and calculate the correct one", async function () {
@@ -307,7 +322,7 @@ describe("IBosonOfferHandler", function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct);
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
       });
 
       it("after the protocol fee changes, new offers should have the new fee", async function () {
@@ -319,12 +334,72 @@ describe("IBosonOfferHandler", function () {
         await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
 
         offer.id = await offerHandler.getNextOfferId();
-        offer.protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
+        offer.protocolFee = calculateProtocolFee(price, protocolFeePercentage);
 
         // Create a new offer
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct);
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            operator.address
+          );
+      });
+
+      it("If exchange token is $BOSON, fee should be flat boson fee", async function () {
+        // Prepare an offer with $BOSON as exchange token
+        offer.exchangeToken = bosonToken.address;
+        offer.protocolFee = protocolFeeFlatBoson;
+
+        // Create a new offer
+        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            operator.address
+          );
+      });
+
+      it("For absolute zero offers, dispute resolver can be unspecified", async function () {
+        // Prepare an absolute zero offer
+        offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
+        offer.disputeResolverId = "0";
+
+        // Create a new offer
+        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            operator.address
+          );
+      });
+
+      it("Should allow creation of an offer with unlimited supply", async function () {
+        // Prepare an absolute zero offer
+        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+
+        // Create a new offer
+        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            operator.address
+          );
       });
 
       context("💔 Revert Reasons", async function () {
@@ -356,23 +431,9 @@ describe("IBosonOfferHandler", function () {
           );
         });
 
-        it("Seller deposit is less than protocol fee", async function () {
-          // Set buyer deposit less than the protocol fee
-          // First calculate the threshold where sellerDeposit == protocolFee and then reduce it for some number
-          let threshold = ethers.BigNumber.from(offer.price)
-            .mul(protocolFeePercentage)
-            .div(ethers.BigNumber.from("10000").sub(protocolFeePercentage));
-          offer.sellerDeposit = threshold.sub("10").toString();
-
-          // Attempt to Create an offer, expecting revert
-          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
-            RevertReasons.OFFER_DEPOSIT_INVALID
-          );
-        });
-
-        it("Sum of buyer cancel penalty and protocol fee is greater than price", async function () {
-          // Set buyer cancel penalty higher than offer price minus protocolFee
-          offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).sub(offer.protocolFee).add("10").toString();
+        it("Buyer cancel penalty is greater than price", async function () {
+          // Set buyer cancel penalty higher than offer price
+          offer.buyerCancelPenalty = ethers.BigNumber.from(offer.price).add("10").toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
@@ -474,6 +535,17 @@ describe("IBosonOfferHandler", function () {
             RevertReasons.INVALID_DISPUTE_RESOLVER
           );
         });
+
+        it("For absolute zero offer, specified dispute resolver is not registered", async function () {
+          // Prepare an absolute zero offer, but specify dispute resolver
+          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
+          offer.disputeResolverId = "16";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.INVALID_DISPUTE_RESOLVER
+          );
+        });
       });
     });
 
@@ -493,7 +565,7 @@ describe("IBosonOfferHandler", function () {
         // Void the offer, testing for the event
         await expect(offerHandler.connect(operator).voidOffer(id))
           .to.emit(offerHandler, "OfferVoided")
-          .withArgs(id, offerStruct.sellerId);
+          .withArgs(id, offerStruct.sellerId, operator.address);
       });
 
       it("should update state", async function () {
@@ -575,7 +647,7 @@ describe("IBosonOfferHandler", function () {
         // Extend the valid until date, testing for the event
         await expect(offerHandler.connect(operator).extendOffer(offer.id, offerDates.validUntil))
           .to.emit(offerHandler, "OfferExtended")
-          .withArgs(id, offer.sellerId, offerDates.validUntil);
+          .withArgs(id, offer.sellerId, offerDates.validUntil, operator.address);
       });
 
       it("should update state", async function () {
@@ -852,12 +924,12 @@ describe("IBosonOfferHandler", function () {
         price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
         sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
         buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
-        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
+        protocolFee = calculateProtocolFee(price, protocolFeePercentage);
         quantityAvailable = `${(i + 1) * 2}`;
         exchangeToken = ethers.constants.AddressZero.toString();
         disputeResolverId = "2";
-        offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
-        metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
+        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
+        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
         voided = false;
 
         // Create a valid offer, then set fields in tests directly
@@ -872,7 +944,7 @@ describe("IBosonOfferHandler", function () {
           exchangeToken,
           disputeResolverId,
           metadataUri,
-          offerChecksum,
+          metadataHash,
           voided
         );
         expect(offer.isValid()).is.true;
@@ -906,6 +978,18 @@ describe("IBosonOfferHandler", function () {
         offerDurationsList.push(offerDurations);
         offerDurationsStructs.push(offerDurations.toStruct());
       }
+
+      // change some offers to test different cases
+      // offer with boson as an exchange token and unlimited supply
+      offers[2].exchangeToken = bosonToken.address;
+      offers[2].protocolFee = protocolFeeFlatBoson;
+      offers[2].quantityAvailable = ethers.constants.MaxUint256.toString();
+      offerStructs[2] = offers[2].toStruct();
+
+      // absolute zero offer
+      offers[4].price = offers[4].sellerDeposit = offers[4].buyerCancelPenalty = offers[4].protocolFee = "0";
+      offers[4].disputeResolverId = "0";
+      offerStructs[4] = offers[4].toStruct();
     });
 
     context("👉 createOfferBatch()", async function () {
@@ -913,11 +997,46 @@ describe("IBosonOfferHandler", function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs("1", offer.sellerId, offerStructs[0], offerDatesStructs[0], offerDurationsStructs[0])
-          .withArgs("2", offer.sellerId, offerStructs[1], offerDatesStructs[1], offerDurationsStructs[1])
-          .withArgs("3", offer.sellerId, offerStructs[2], offerDatesStructs[2], offerDurationsStructs[2])
-          .withArgs("4", offer.sellerId, offerStructs[3], offerDatesStructs[3], offerDurationsStructs[3])
-          .withArgs("5", offer.sellerId, offerStructs[4], offerDatesStructs[4], offerDurationsStructs[4]);
+          .withArgs(
+            "1",
+            offer.sellerId,
+            offerStructs[0],
+            offerDatesStructs[0],
+            offerDurationsStructs[0],
+            operator.address
+          )
+          .withArgs(
+            "2",
+            offer.sellerId,
+            offerStructs[1],
+            offerDatesStructs[1],
+            offerDurationsStructs[1],
+            operator.address
+          )
+          .withArgs(
+            "3",
+            offer.sellerId,
+            offerStructs[2],
+            offerDatesStructs[2],
+            offerDurationsStructs[2],
+            operator.address
+          )
+          .withArgs(
+            "4",
+            offer.sellerId,
+            offerStructs[3],
+            offerDatesStructs[3],
+            offerDurationsStructs[3],
+            operator.address
+          )
+          .withArgs(
+            "5",
+            offer.sellerId,
+            offerStructs[4],
+            offerDatesStructs[4],
+            offerDurationsStructs[4],
+            operator.address
+          );
       });
 
       it("should update state", async function () {
@@ -958,11 +1077,46 @@ describe("IBosonOfferHandler", function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs("1", offer.sellerId, offerStructs[0], offerDatesStructs[0], offerDurationsStructs[0])
-          .withArgs("2", offer.sellerId, offerStructs[1], offerDatesStructs[1], offerDurationsStructs[1])
-          .withArgs("3", offer.sellerId, offerStructs[2], offerDatesStructs[2], offerDurationsStructs[2])
-          .withArgs("4", offer.sellerId, offerStructs[3], offerDatesStructs[3], offerDurationsStructs[3])
-          .withArgs("5", offer.sellerId, offerStructs[4], offerDatesStructs[4], offerDurationsStructs[4]);
+          .withArgs(
+            "1",
+            offer.sellerId,
+            offerStructs[0],
+            offerDatesStructs[0],
+            offerDurationsStructs[0],
+            operator.address
+          )
+          .withArgs(
+            "2",
+            offer.sellerId,
+            offerStructs[1],
+            offerDatesStructs[1],
+            offerDurationsStructs[1],
+            operator.address
+          )
+          .withArgs(
+            "3",
+            offer.sellerId,
+            offerStructs[2],
+            offerDatesStructs[2],
+            offerDurationsStructs[2],
+            operator.address
+          )
+          .withArgs(
+            "4",
+            offer.sellerId,
+            offerStructs[3],
+            offerDatesStructs[3],
+            offerDurationsStructs[3],
+            operator.address
+          )
+          .withArgs(
+            "5",
+            offer.sellerId,
+            offerStructs[4],
+            offerDatesStructs[4],
+            offerDurationsStructs[4],
+            operator.address
+          );
 
         for (let i = 0; i < 5; i++) {
           // wrong offer id should not exist
@@ -986,11 +1140,11 @@ describe("IBosonOfferHandler", function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs("1", sellerId, offerStructs[0], offerDatesStructs[0], offerDurationsStructs[0])
-          .withArgs("2", sellerId, offerStructs[1], offerDatesStructs[1], offerDurationsStructs[1])
-          .withArgs("3", sellerId, offerStructs[2], offerDatesStructs[2], offerDurationsStructs[2])
-          .withArgs("4", sellerId, offerStructs[3], offerDatesStructs[3], offerDurationsStructs[3])
-          .withArgs("5", sellerId, offerStructs[4], offerDatesStructs[4], offerDurationsStructs[4]);
+          .withArgs("1", sellerId, offerStructs[0], offerDatesStructs[0], offerDurationsStructs[0], operator.address)
+          .withArgs("2", sellerId, offerStructs[1], offerDatesStructs[1], offerDurationsStructs[1], operator.address)
+          .withArgs("3", sellerId, offerStructs[2], offerDatesStructs[2], offerDurationsStructs[2], operator.address)
+          .withArgs("4", sellerId, offerStructs[3], offerDatesStructs[3], offerDurationsStructs[3], operator.address)
+          .withArgs("5", sellerId, offerStructs[4], offerDatesStructs[4], offerDurationsStructs[4], operator.address);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -1024,26 +1178,9 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
-        it("Seller deposit is less than protocol fee", async function () {
-          // Set buyer deposit less than the protocol fee
-          // First calculate the threshold where sellerDeposit == protocolFee and then reduce it for some number
-          let threshold = ethers.BigNumber.from(offers[0].price)
-            .mul(protocolFeePercentage)
-            .div(ethers.BigNumber.from("10000").sub(protocolFeePercentage));
-          offers[0].sellerDeposit = threshold.sub("10").toString();
-
-          // Attempt to Create an offer, expecting revert
-          await expect(
-            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
-          ).to.revertedWith(RevertReasons.OFFER_DEPOSIT_INVALID);
-        });
-
-        it("Sum of buyer cancel penalty and protocol fee is greater than price", async function () {
-          // Set buyer cancel penalty higher than offer price minus protocolFee
-          offers[0].buyerCancelPenalty = ethers.BigNumber.from(offer.price)
-            .add(offers[0].protocolFee)
-            .add("10")
-            .toString();
+        it("Buyer cancel penalty is greater than price", async function () {
+          // Set buyer cancel penalty higher than offer price
+          offers[0].buyerCancelPenalty = ethers.BigNumber.from(offers[0].price).add("10").toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -1170,6 +1307,17 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
+        it("For some absolute zero offer, specified dispute resolver is not registered", async function () {
+          // Prepare an absolute zero offer, but specify dispute resolver
+          offers[2].price = offers[2].sellerDeposit = offers[2].buyerCancelPenalty = offers[2].protocolFee = "0";
+          offers[2].disputeResolverId = "16";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
         it("Number of dispute dates does not match the number of offers", async function () {
           // Make dispute dates longer
           offerDatesList.push(new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil));
@@ -1224,9 +1372,9 @@ describe("IBosonOfferHandler", function () {
         // Void offers, testing for the event
         await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid))
           .to.emit(offerHandler, "OfferVoided")
-          .withArgs(offersToVoid[0], offerStruct.sellerId)
-          .withArgs(offersToVoid[1], offerStruct.sellerId)
-          .withArgs(offersToVoid[2], offerStruct.sellerId);
+          .withArgs(offersToVoid[0], offerStruct.sellerId, operator.address)
+          .withArgs(offersToVoid[1], offerStruct.sellerId, operator.address)
+          .withArgs(offersToVoid[2], offerStruct.sellerId, operator.address);
       });
 
       it("should update state", async function () {
@@ -1339,9 +1487,9 @@ describe("IBosonOfferHandler", function () {
         // Extend the valid until date, testing for the event
         await expect(offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate))
           .to.emit(offerHandler, "OfferExtended")
-          .withArgs(offersToExtend[0], offer.sellerId, newValidUntilDate)
-          .withArgs(offersToExtend[1], offer.sellerId, newValidUntilDate)
-          .withArgs(offersToExtend[2], offer.sellerId, newValidUntilDate);
+          .withArgs(offersToExtend[0], offer.sellerId, newValidUntilDate, operator.address)
+          .withArgs(offersToExtend[1], offer.sellerId, newValidUntilDate, operator.address)
+          .withArgs(offersToExtend[2], offer.sellerId, newValidUntilDate, operator.address);
       });
 
       it("should update state", async function () {

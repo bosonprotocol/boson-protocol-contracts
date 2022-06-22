@@ -21,7 +21,6 @@ exports.RevertReasons = {
   OFFER_HAS_BEEN_VOIDED: "Offer has been voided",
   OFFER_PERIOD_INVALID: "Offer period invalid",
   OFFER_PENALTY_INVALID: "Offer penalty invalid",
-  OFFER_DEPOSIT_INVALID: "Offer deposit invalid",
   OFFER_MUST_BE_ACTIVE: "Offer must be active",
   OFFER_NOT_UPDATEABLE: "Offer not updateable",
   OFFER_MUST_BE_UNIQUE: "Offer must be unique to a group",
@@ -50,7 +49,7 @@ exports.RevertReasons = {
   NOT_BUYER_WALLET: "Not buyer's wallet address",
   NO_SUCH_BUYER: "No such buyer",
   WALLET_OWNS_VOUCHERS: "Wallet address owns vouchers",
-  NOT_DISPUTE_RESOLVER_WALLET: "Not dispute resolver's wallet address",
+  NOT_DISPUTE_RESOLVER_OPERATOR: "Not dispute resolver's operator address",
   NO_SUCH_DISPUTE_RESOLVER: "No such dispute resolver",
 
   // Twin related
@@ -108,4 +107,8 @@ exports.RevertReasons = {
   DISPUTE_HAS_EXPIRED: "Dispute has expired",
   INVALID_BUYER_PERCENT: "Invalid buyer percent",
   DISPUTE_STILL_VALID: "Dispute still valid",
+  INVALID_DISPUTE_TIMEOUT: "Invalid dispute timeout",
+
+  // Config related
+  PROTOCOL_FEE_PERCENTAGE_INVALID: "Percentage representation must be less than 10000",
 };

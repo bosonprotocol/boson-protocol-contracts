@@ -5,6 +5,7 @@ const { gasLimit } = require("../../environments");
 
 const Exchange = require("../../scripts/domain/Exchange");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
+const MetaTxDisputeDetails = require("../../scripts/domain/MetaTxDisputeDetails");
 const MetaTxExchangeDetails = require("../../scripts/domain/MetaTxExchangeDetails");
 const MetaTxFundDetails = require("../../scripts/domain/MetaTxFundDetails");
 const MetaTxOfferDetails = require("../../scripts/domain/MetaTxOfferDetails");
@@ -72,13 +73,13 @@ describe("IBosonMetaTransactionsHandler", function () {
     exchangeToken,
     disputeResolverId,
     metadataUri,
-    offerChecksum,
+    metadataHash,
     voided,
     oneMonth,
     oneWeek;
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
-  let protocolFeePercentage;
+  let protocolFeePercentage, protocolFeeFlatBoson;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
   let disputeResolver, active;
@@ -97,6 +98,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     expectedBuyerAvailableFunds,
     tokenListBuyer,
     tokenAmountsBuyer;
+  let complaint, validDisputeDetails;
 
   before(async function () {
     // get interface Ids
@@ -143,15 +145,19 @@ describe("IBosonMetaTransactionsHandler", function () {
     [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
     [bosonVoucher] = clients;
 
-    // set protocolFeePercentage
+    // Deploy the boson token
+    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+
+    // set protocolFees
     protocolFeePercentage = "200"; // 2 %
+    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
 
     // Add config Handler
     const protocolConfig = [
       // Protocol addresses
       {
         treasuryAddress: "0x0000000000000000000000000000000000000000",
-        tokenAddress: "0x0000000000000000000000000000000000000000",
+        tokenAddress: bosonToken.address,
         voucherAddress: bosonVoucher.address,
       },
       // Protocol limits
@@ -166,7 +172,8 @@ describe("IBosonMetaTransactionsHandler", function () {
       },
       // Protocol fees
       {
-        protocolFeePercentage,
+        percentage: protocolFeePercentage,
+        flatBoson: protocolFeeFlatBoson,
       },
     ];
 
@@ -657,13 +664,13 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Required constructor params
         price = ethers.utils.parseUnits("1.5", "ether").toString();
         sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
+        protocolFee = calculateProtocolFee(price, protocolFeePercentage);
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
         exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
         disputeResolverId = "2";
-        offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-        metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
+        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
         voided = false;
 
         // Create a valid offer entity
@@ -678,7 +685,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           exchangeToken,
           disputeResolverId,
           metadataUri,
-          offerChecksum,
+          metadataHash,
           voided
         );
         expect(offer.isValid()).is.true;
@@ -876,13 +883,13 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Required constructor params
         price = ethers.utils.parseUnits("1.5", "ether").toString();
         sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
+        protocolFee = calculateProtocolFee(price, protocolFeePercentage);
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
         exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
         disputeResolverId = "2";
-        offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-        metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
+        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
         voided = false;
 
         // Create a valid offer entity
@@ -897,7 +904,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           exchangeToken,
           disputeResolverId,
           metadataUri,
-          offerChecksum,
+          metadataHash,
           voided
         );
         expect(offer.isValid()).is.true;
@@ -1423,6 +1430,264 @@ describe("IBosonMetaTransactionsHandler", function () {
           });
         });
       });
+
+      context("👉 executeMetaTxRaiseDispute()", async function () {
+        beforeEach(async function () {
+          // Set the dispute reason
+          complaint = "Tastes weird";
+
+          // prepare the MetaTxDisputeDetails struct
+          validDisputeDetails = new MetaTxDisputeDetails(exchange.id, complaint);
+          expect(validDisputeDetails.isValid()).is.true;
+
+          // Set the dispute Type
+          let disputeType = [
+            { name: "exchangeId", type: "uint256" },
+            { name: "complaint", type: "string" },
+          ];
+
+          // Set the message Type
+          let metaTxDisputeType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
+            { name: "disputeDetails", type: "MetaTxDisputeDetails" },
+          ];
+
+          customTransactionType = {
+            MetaTxDispute: metaTxDisputeType,
+            MetaTxDisputeDetails: disputeType,
+          };
+
+          // Prepare the message
+          message.functionName = "raiseDispute(uint256,string)";
+          message.disputeDetails = validDisputeDetails;
+          message.from = buyer.address;
+
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+        });
+
+        it("Should emit MetaTransactionExecuted event and update state", async () => {
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionType,
+            "MetaTxDispute",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // send a meta transaction, check for event
+          await expect(
+            metaTransactionsHandler.executeMetaTxRaiseDispute(buyer.address, validDisputeDetails, nonce, r, s, v)
+          )
+            .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+            .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+
+          // Get the dispute state
+          let response;
+          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+          // It should match ExchangeState.Disputed
+          assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+
+          // Verify that nonce is used. Expect true.
+          let expectedResult = true;
+          result = await metaTransactionsHandler.connect(buyer).isUsedNonce(nonce);
+          assert.equal(result, expectedResult, "Nonce is unused");
+        });
+
+        it("does not modify revert reasons", async function () {
+          // An invalid exchange id
+          id = "666";
+
+          // prepare the MetaTxDisputeDetails struct
+          validDisputeDetails = new MetaTxDisputeDetails(id, complaint);
+          expect(validDisputeDetails.isValid()).is.true;
+
+          // Prepare the message
+          message.disputeDetails = validDisputeDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionType,
+            "MetaTxDispute",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Execute meta transaction, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTxRaiseDispute(buyer.address, validDisputeDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("Should fail when replay transaction", async function () {
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              buyer,
+              customTransactionType,
+              "MetaTxDispute",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute the meta transaction.
+            await metaTransactionsHandler.executeMetaTxRaiseDispute(buyer.address, validDisputeDetails, nonce, r, s, v);
+
+            // Execute meta transaction again with the same nonce, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTxRaiseDispute(buyer.address, validDisputeDetails, nonce, r, s, v)
+            ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+          });
+
+          it("Should fail when Signer and Signature do not match", async function () {
+            // Prepare the message
+            message.from = rando.address;
+
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              rando, // Different user, not buyer.
+              customTransactionType,
+              "MetaTxDispute",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTxRaiseDispute(buyer.address, validDisputeDetails, nonce, r, s, v)
+            ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+          });
+        });
+      });
+
+      context("👉 executeMetaTxEscalateDispute()", async function () {
+        beforeEach(async function () {
+          // Prepare the message
+          message.functionName = "escalateDispute(uint256)";
+          message.exchangeDetails = validExchangeDetails;
+          message.from = buyer.address;
+
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Set the dispute reason
+          let complaint = "Tastes weird";
+          await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+        });
+
+        it("Should emit MetaTransactionExecuted event and update state", async () => {
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionType,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // send a meta transaction, check for event
+          await expect(
+            metaTransactionsHandler.executeMetaTxEscalateDispute(buyer.address, validExchangeDetails, nonce, r, s, v)
+          )
+            .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+            .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+
+          // Get the dispute state
+          let response;
+          [, response] = await disputeHandler.connect(rando).getDisputeState(exchange.id);
+          // It should match DisputeState.Escalated
+          assert.equal(response, DisputeState.Escalated, "Dispute state is incorrect");
+
+          // Verify that nonce is used. Expect true.
+          let expectedResult = true;
+          result = await metaTransactionsHandler.connect(buyer).isUsedNonce(nonce);
+          assert.equal(result, expectedResult, "Nonce is unused");
+        });
+
+        it("does not modify revert reasons", async function () {
+          // An invalid exchange id
+          id = "666";
+
+          // prepare the MetaTxExchangeDetails struct
+          validExchangeDetails = new MetaTxExchangeDetails(id);
+          expect(validExchangeDetails.isValid()).is.true;
+
+          // Prepare the message
+          message.exchangeDetails = validExchangeDetails;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionType,
+            "MetaTxExchange",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Execute meta transaction, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTxEscalateDispute(buyer.address, validExchangeDetails, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("Should fail when replay transaction", async function () {
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              buyer,
+              customTransactionType,
+              "MetaTxExchange",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute the meta transaction.
+            await metaTransactionsHandler.executeMetaTxEscalateDispute(
+              buyer.address,
+              validExchangeDetails,
+              nonce,
+              r,
+              s,
+              v
+            );
+
+            // Execute meta transaction again with the same nonce, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTxEscalateDispute(buyer.address, validExchangeDetails, nonce, r, s, v)
+            ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+          });
+
+          it("Should fail when Signer and Signature do not match", async function () {
+            // Prepare the message
+            message.from = rando.address;
+
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              rando, // Different user, not buyer.
+              customTransactionType,
+              "MetaTxExchange",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTxEscalateDispute(buyer.address, validExchangeDetails, nonce, r, s, v)
+            ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+          });
+        });
+      });
     });
 
     context("👉 executeMetaTxWithdrawFunds()", async function () {
@@ -1458,13 +1723,13 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Required constructor params
         price = ethers.utils.parseUnits("1.5", "ether").toString();
         sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-        protocolFee = calculateProtocolFee(sellerDeposit, price, protocolFeePercentage);
+        protocolFee = calculateProtocolFee(price, protocolFeePercentage);
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "2";
         exchangeToken = mockToken.address; // Mock token addres
         disputeResolverId = "2";
-        offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-        metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
+        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
         voided = false;
 
         // Create a valid offer entity
@@ -1479,7 +1744,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           exchangeToken,
           disputeResolverId,
           metadataUri,
-          offerChecksum,
+          metadataHash,
           voided
         );
         expect(offerToken.isValid()).is.true;

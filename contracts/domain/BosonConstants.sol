@@ -29,6 +29,7 @@ contract BosonConstants {
     string internal constant NOT_BUYER_OR_SELLER = "Not buyer or seller";
     string internal constant NOT_VOUCHER_HOLDER = "Not current voucher holder";
     string internal constant NOT_BUYER_WALLET = "Not buyer's wallet address";
+    string internal constant NOT_DISPUTE_RESOLVER_OPERATOR = "Not dispute resolver's operator address";
 
     // Revert Reasons: Account-related
     string internal constant NO_SUCH_SELLER = "No such seller";
@@ -47,7 +48,6 @@ contract BosonConstants {
     string internal constant NO_SUCH_OFFER = "No such offer";
     string internal constant OFFER_PERIOD_INVALID = "Offer period invalid";
     string internal constant OFFER_PENALTY_INVALID = "Offer penalty invalid";
-    string internal constant OFFER_DEPOSIT_INVALID = "Offer deposit invalid";
     string internal constant OFFER_MUST_BE_ACTIVE = "Offer must be active";
     string internal constant OFFER_NOT_UPDATEABLE = "Offer not updateable";
     string internal constant OFFER_MUST_BE_UNIQUE = "Offer must be unique to a group";
@@ -118,6 +118,10 @@ contract BosonConstants {
     string internal constant DISPUTE_HAS_EXPIRED = "Dispute has expired";
     string internal constant INVALID_BUYER_PERCENT = "Invalid buyer percent";
     string internal constant DISPUTE_STILL_VALID = "Dispute still valid";
+    string internal constant INVALID_DISPUTE_TIMEOUT = "Invalid dispute timeout";
+
+    // Revert Reasons: Config related
+    string internal constant PROTOCOL_FEE_PERCENTAGE_INVALID = "Percentage representation must be less than 10000";
 }
 
 // TODO: Refactor to use file level constants throughout or use custom Errors

@@ -48,9 +48,8 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
-     *   - Dispute resolver wallet is not registered
-     *   - Seller deposit is less than protocol fee
-     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Buyer cancel penalty is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _seller - the fully populated seller struct
@@ -87,9 +86,8 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
-     *   - Dispute resolver wallet is not registered
-     *   - Seller deposit is less than protocol fee
-     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
@@ -136,9 +134,8 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
-     *   - Dispute resolver wallet is not registered
-     *   - Seller deposit is less than protocol fee
-     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Buyer cancel penalty is greater than price
      * - when adding to the group if:
      *   - Group does not exists
      *   - Caller is not the operator of the group
@@ -153,7 +150,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
         OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
         uint256 _groupId
     )
-    external {
+    external override {
         // create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations);
 
@@ -181,9 +178,8 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
-     *   - Dispute resolver wallet is not registered
-     *   - Seller deposit is less than protocol fee
-     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Buyer cancel penalty is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
@@ -224,9 +220,8 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
-     *   - Dispute resolver wallet is not registered
-     *   - Seller deposit is less than protocol fee
-     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token
@@ -243,7 +238,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
         Condition memory _condition,
         Twin memory _twin
     )
-    public {
+    public override {
         // create offer with condition first
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _condition);
         // create twin and pack everything into a bundle
@@ -302,9 +297,8 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
-     *   - Dispute resolver wallet is not registered
-     *   - Seller deposit is less than protocol fee
-     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      *
      * @param _seller - the fully populated seller struct
@@ -348,9 +342,8 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
-     *   - Dispute resolver wallet is not registered
-     *   - Seller deposit is less than protocol fee
-     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Buyer cancel penalty is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
      *
@@ -395,9 +388,8 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
-     *   - Dispute resolver wallet is not registered
-     *   - Seller deposit is less than protocol fee
-     *   - Sum of buyer cancel penalty and protocol fee is greater than price
+     *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token

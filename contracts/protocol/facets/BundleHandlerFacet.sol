@@ -62,7 +62,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * @return exists - the bundle was found
      * @return bundle - the bundle details. See {BosonTypes.Bundle}
      */
-    function getBundle(uint256 _bundleId) external view returns(bool exists, Bundle memory bundle) {
+    function getBundle(uint256 _bundleId) external override view returns(bool exists, Bundle memory bundle) {
         return fetchBundle(_bundleId);
     }
 
@@ -73,7 +73,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      *
      * @return nextBundleId - the next bundle id
      */
-    function getNextBundleId() public view returns(uint256 nextBundleId) {
+    function getNextBundleId() public override view returns(uint256 nextBundleId) {
         nextBundleId = protocolCounters().nextBundleId;
     }
 
@@ -127,7 +127,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         }
 
         // Notify watchers of state change
-        emit BundleUpdated(_bundleId, sellerId, bundle);
+        emit BundleUpdated(_bundleId, sellerId, bundle, msgSender());
     }
 
     /**
@@ -188,7 +188,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         }
 
         // Notify watchers of state change
-        emit BundleUpdated(_bundleId, sellerId, bundle);
+        emit BundleUpdated(_bundleId, sellerId, bundle, msgSender());
     }
 
     /**
@@ -281,7 +281,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         }
 
         // Notify watchers of state change
-        emit BundleUpdated(_bundleId, sellerId, bundle);
+        emit BundleUpdated(_bundleId, sellerId, bundle, msgSender());
     }
 
     /**
@@ -337,7 +337,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         }
 
         // Notify watchers of state change
-        emit BundleUpdated(_bundleId, sellerId, bundle);
+        emit BundleUpdated(_bundleId, sellerId, bundle, msgSender());
     }
 
     /**
@@ -352,7 +352,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      *
      * @param _bundleId - the id of the bundle to check.
      */
-    function removeBundle(uint256 _bundleId) external {
+    function removeBundle(uint256 _bundleId) override external {
         // Get storage location for bundle
         (bool exists, Bundle memory bundle) = fetchBundle(_bundleId);
         require(exists, NO_SUCH_BUNDLE);
@@ -398,7 +398,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         // delete from bundles mapping
         delete protocolEntities().bundles[_bundleId];
 
-        emit BundleDeleted(_bundleId, bundle.sellerId);
+        emit BundleDeleted(_bundleId, bundle.sellerId, msgSender());
     }
 
     /**
@@ -429,7 +429,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * @return exists - whether the bundle Id exists
      * @return bundleId  - the bundle Id.
      */
-    function getBundleIdByOffer(uint256 _offerId) external view returns(bool exists, uint256 bundleId) {
+    function getBundleIdByOffer(uint256 _offerId) external override view returns(bool exists, uint256 bundleId) {
         return fetchBundleIdByOffer(_offerId);
     }
 
@@ -440,7 +440,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * @return exists - whether the bundle Ids exist
      * @return bundleIds  - the bundle Ids.
      */
-    function getBundleIdsByTwin(uint256 _twinId) external view returns(bool exists, uint256[] memory bundleIds) {
+    function getBundleIdsByTwin(uint256 _twinId) external override view returns(bool exists, uint256[] memory bundleIds) {
         return fetchBundleIdsByTwin(_twinId);
     }
 }

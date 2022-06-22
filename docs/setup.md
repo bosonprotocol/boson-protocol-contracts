@@ -1,5 +1,5 @@
 # Boson Protocol V2
-## [Intro](../README.md) | Setup | [Tasks](tasks.md) | [Architecture](architecture.md) | [Domain Model](domain.md)
+## [Intro](../README.md) | Setup | [Tasks](tasks.md) | [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md)
 
 ## Developer Setup
 The stack is a simple one:
