@@ -10,6 +10,7 @@ const DisputeResolver = require("../../../scripts/domain/DisputeResolver");
 const { mockOffer } = require("../../utils/mock.js");
 const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
 const { expect } = require("chai");
+const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 
 describe("IBosonVoucher", function () {
   let interfaceId;
@@ -107,7 +108,7 @@ describe("IBosonVoucher", function () {
       });
 
       it("should revert if caller does not have PROTOCOL role", async function () {
-        await expect(bosonVoucher.connect(rando).issueVoucher(0, buyerStruct)).to.be.revertedWith("Access denied, caller doesn't have role");
+        await expect(bosonVoucher.connect(rando).issueVoucher(0, buyerStruct)).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
       });
     });
 
@@ -125,7 +126,7 @@ describe("IBosonVoucher", function () {
       });
 
       it("should revert if caller does not have PROTOCOL role", async function () {
-        await expect(bosonVoucher.connect(rando).burnVoucher(0)).to.be.revertedWith("Access denied, caller doesn't have role");
+        await expect(bosonVoucher.connect(rando).burnVoucher(0)).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
       });
     });
 
