@@ -6,6 +6,7 @@ const { deployProtocolHandlerFacets } = require("../../../scripts/util/deploy-pr
 const Buyer = require("../../../scripts/domain/Buyer");
 const Role = require("../../../scripts/domain/Role");
 const Seller = require("../../../scripts/domain/Seller");
+const DisputeResolver = require("../../../scripts/domain/DisputeResolver");
 const { mockOffer } = require("../../utils/mock.js");
 const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
 const { expect } = require("chai");
@@ -51,6 +52,8 @@ describe("IBosonVoucher", function () {
     const [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
     [bosonVoucher] = clients;
 
+    const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
       // Protocol addresses
@@ -69,7 +72,8 @@ describe("IBosonVoucher", function () {
       },
       // Protocol fees
       {
-        protocolFeePercentage: 200,
+        percentage: 200, // 2%
+        flatBoson: protocolFeeFlatBoson,
       },
     ];
 

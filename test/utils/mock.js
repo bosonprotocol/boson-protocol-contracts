@@ -15,11 +15,10 @@ async function mockOffer() {
   const protocolFee = calculateProtocolFee(sellerDeposit, price, "200");
   const buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
   const quantityAvailable = "1";
-  const exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency,;
+  const exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
   const disputeResolverId = "2";
-  const offerChecksum = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
-  const metadataUri = `https://ipfs.io/ipfs/${offerChecksum}`;
-  const metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
+  const metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
+  const metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
   const voided = false;
 
   // Create a valid offer, then set fields in tests directly
@@ -35,7 +34,6 @@ async function mockOffer() {
     disputeResolverId,
     metadataUri,
     metadataHash,
-    offerChecksum,
     voided
   );
 
