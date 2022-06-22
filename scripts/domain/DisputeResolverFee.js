@@ -148,9 +148,7 @@ class DisputeResolverFeeList {
    * @returns {DisputeResolverFeeList}
    */
   static fromObject(o) {
-    console.log("o in fromObject ", o);
     const { disputeResolverFees } = o;
-    console.log("disputeResolverFees in fromObject", disputeResolverFees);
     return new DisputeResolverFeeList(disputeResolverFees.map((d) => DisputeResolverFee.fromObject(d)));
   }
 
@@ -205,8 +203,6 @@ class DisputeResolverFeeList {
   disputeResolverFeeIsValid() {
     let valid = false;
     let { disputeResolverFees } = this;
-
-    console.log("disputeResolverFees in disputeResolverFeeIsValid() ", disputeResolverFees);
 
     try {
       valid =

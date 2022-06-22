@@ -216,8 +216,6 @@ describe("DisputeResolverFeeList", function () {
       new DisputeResolverFee(accounts[2].address, "MockToken2", "200"),
       new DisputeResolverFee(accounts[3].address, "MockToken3", "300"),
     ];
-
-    console.log("disputeResolverFees in beforeEach", disputeResolverFees)   ; 
   });
 
   context("📋 Constructor", async function () {
@@ -233,19 +231,12 @@ describe("DisputeResolverFeeList", function () {
     beforeEach(async function () {
       // Create valid DisputeResolverFeeList, then set fields in tests directly
       disputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFees);
-
-      console.log("disputeResolverFeeList in beforeEach ", disputeResolverFeeList);
-
       expect(disputeResolverFeeList.isValid()).is.true;
-
-      console.log("disputeResolverFeeList is valid in beforeEach ", disputeResolverFeeList);
     });
 
     it("Always present, disputeResolverFees must be an array of valid DisputeResolverFee instances", async function () {
       // Invalid field value
       disputeResolverFeeList.disputeResolverFees = "0xASFADF";
-
-      console.log("disputeResolverFeeList in test case ", disputeResolverFeeList);
       expect(disputeResolverFeeList.isValid()).is.false;
 
       // Invalid field value
