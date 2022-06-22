@@ -191,7 +191,7 @@ describe("MetaTxDisputeResolutionDetails", function () {
         buyerPercent,
         sigR,
         sigS,
-        sigV
+        sigV,
       };
 
       // Struct representation

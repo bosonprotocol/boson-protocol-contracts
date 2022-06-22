@@ -50,7 +50,7 @@ class MetaTxDisputeResolutionDetails {
       buyerPercent,
       sigR,
       sigS,
-      sigV
+      sigV,
     });
   }
 
@@ -162,7 +162,13 @@ class MetaTxDisputeResolutionDetails {
    * @returns {boolean}
    */
   isValid() {
-    return this.exchangeIdIsValid() && this.buyerPercentIsValid() && this.sigRIsValid() && this.sigSIsValid() && this.sigVIsValid();
+    return (
+      this.exchangeIdIsValid() &&
+      this.buyerPercentIsValid() &&
+      this.sigRIsValid() &&
+      this.sigSIsValid() &&
+      this.sigVIsValid()
+    );
   }
 }
 
