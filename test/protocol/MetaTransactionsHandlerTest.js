@@ -1717,7 +1717,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Collect the signature components
           signatureSplits = await prepareDataSignatureParameters(
-            seller.operator, // When buyer is the caller, seller should be the signer.
+            operator, // When buyer is the caller, seller should be the signer.
             customSignatureType2,
             "Resolution",
             message2,
