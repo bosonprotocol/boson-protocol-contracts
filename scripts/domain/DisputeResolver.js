@@ -54,7 +54,7 @@ class DisputeResolver {
 
     return DisputeResolver.fromObject({
       id: id.toString(),
-      escalationResponsePeriod, 
+      escalationResponsePeriod: escalationResponsePeriod.toString(), 
       operator, 
       admin, 
       clerk, 
