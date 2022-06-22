@@ -173,7 +173,7 @@ class Exchange {
     let valid = false;
     let { state } = this;
     try {
-      valid = ExchangeState.Modes.includes(state);
+      valid = ExchangeState.Types.includes(state);
     } catch (e) {}
     return valid;
   }

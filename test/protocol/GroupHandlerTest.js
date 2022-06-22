@@ -19,6 +19,7 @@ const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const { getEvent, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
+const TokenType = require("../../scripts/domain/TokenType");
 
 /**
  *  Test the Boson Group Handler interface
@@ -48,7 +49,7 @@ describe("IBosonGroupHandler", function () {
   let group, nextGroupId, invalidGroupId;
   let offerIds, condition;
   let groupHandlerFacet_Factory;
-  let method, tokenAddress, tokenId, threshold;
+  let method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
   let groupStruct;
   let offerIdsToAdd, offerIdsToRemove;
   let disputeResolver;
@@ -219,16 +220,18 @@ describe("IBosonGroupHandler", function () {
 
       // Required constructor params for Condition
       method = EvaluationMethod.AboveThreshold;
+      tokenType = TokenType.MultiToken;
       tokenAddress = accounts[0].address; // just need an address
       tokenId = "5150";
       threshold = "1";
+      maxCommits = "1";
 
       // Required constructor params for Group
       id = nextGroupId;
       sellerId = "1";
       offerIds = ["2", "3", "5"];
 
-      condition = new Condition(method, tokenAddress, tokenId, threshold);
+      condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
       expect(condition.isValid()).to.be.true;
 
       group = new Group(nextGroupId, sellerId, offerIds, condition);
@@ -403,7 +406,7 @@ describe("IBosonGroupHandler", function () {
 
         it("Condition 'None' has some values in other fields", async function () {
           method = EvaluationMethod.None;
-          condition = new Condition(method, tokenAddress, tokenId, threshold);
+          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
           group.condition = condition;
 
           // Attempt to create the group, expecting revert
@@ -415,7 +418,7 @@ describe("IBosonGroupHandler", function () {
         it("Condition 'AboveThreshold' has zero token contract address", async function () {
           method = EvaluationMethod.AboveThreshold;
           tokenAddress = ethers.constants.AddressZero;
-          condition = new Condition(method, tokenAddress, tokenId, threshold);
+          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
           group.condition = condition;
 
           // Attempt to create the group, expecting revert
@@ -427,7 +430,7 @@ describe("IBosonGroupHandler", function () {
         it("Condition 'SpecificToken' has has zero token contract address", async function () {
           method = EvaluationMethod.SpecificToken;
           tokenAddress = ethers.constants.AddressZero;
-          condition = new Condition(method, tokenAddress, tokenId, threshold);
+          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
           group.condition = condition;
 
           // Attempt to create the group, expecting revert
@@ -709,11 +712,13 @@ describe("IBosonGroupHandler", function () {
 
         // Required constructor params for Condition
         method = EvaluationMethod.SpecificToken;
+        tokenType = TokenType.MultiToken;
         tokenAddress = accounts[1].address; // just need an address
         tokenId = "88775544";
         threshold = "0";
+        maxCommits = "1";
 
-        condition = new Condition(method, tokenAddress, tokenId, threshold);
+        condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
         expect(condition.isValid()).to.be.true;
 
         groupStruct = group.toStruct();
@@ -780,7 +785,7 @@ describe("IBosonGroupHandler", function () {
 
         it("Condition 'None' has some values in other fields", async function () {
           method = EvaluationMethod.None;
-          condition = new Condition(method, tokenAddress, tokenId, threshold);
+          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
 
           // Attempt to update the group, expecting revert
           await expect(groupHandler.connect(operator).setGroupCondition(group.id, condition)).to.revertedWith(
@@ -791,7 +796,7 @@ describe("IBosonGroupHandler", function () {
         it("Condition 'AboveThreshold' has zero token contract address", async function () {
           method = EvaluationMethod.AboveThreshold;
           tokenAddress = ethers.constants.AddressZero;
-          condition = new Condition(method, tokenAddress, tokenId, threshold);
+          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
 
           // Attempt to update the group, expecting revert
           await expect(groupHandler.connect(operator).setGroupCondition(group.id, condition)).to.revertedWith(
@@ -802,7 +807,7 @@ describe("IBosonGroupHandler", function () {
         it("Condition 'SpecificToken' has has zero token contract address", async function () {
           method = EvaluationMethod.SpecificToken;
           tokenAddress = ethers.constants.AddressZero;
-          condition = new Condition(method, tokenAddress, tokenId, threshold);
+          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
 
           // Attempt to update the group, expecting revert
           await expect(groupHandler.connect(operator).setGroupCondition(group.id, condition)).to.revertedWith(

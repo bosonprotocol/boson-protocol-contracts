@@ -62,7 +62,7 @@ describe("IBosonOrchestrationHandler", function () {
   let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations, offerDurationsStruct;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let group, groupStruct, nextGroupId;
-  let method, tokenAddress, tokenId, threshold;
+  let method, tokenAddress, tokenId, threshold, maxCommits;
   let offerIds, condition;
   let twin, twinStruct, twinIds, nextTwinId, tokenType;
   let bundle, bundleStruct, bundleId, nextBundleId;
@@ -610,15 +610,17 @@ describe("IBosonOrchestrationHandler", function () {
         // Required constructor params for Condition
         method = EvaluationMethod.AboveThreshold;
         tokenAddress = accounts[0].address; // just need an address
+        tokenType = TokenType.MultiToken;
         tokenId = "5150";
         threshold = "1";
+        maxCommits = "1";
 
         // Required constructor params for Group
         id = nextGroupId;
         sellerId = "2"; // "1" is dispute resolver
         offerIds = ["1"];
 
-        condition = new Condition(method, tokenAddress, tokenId, threshold);
+        condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, sellerId, offerIds, condition);
@@ -973,7 +975,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("Condition 'None' has some values in other fields", async function () {
           method = EvaluationMethod.None;
-          condition = new Condition(method, tokenAddress, tokenId, threshold);
+          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
           group.condition = condition;
 
           // Attempt to create an offer with condition, expecting revert
@@ -987,7 +989,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("Condition 'AboveThreshold' has zero token contract address", async function () {
           method = EvaluationMethod.AboveThreshold;
           tokenAddress = ethers.constants.AddressZero;
-          condition = new Condition(method, tokenAddress, tokenId, threshold);
+          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
           group.condition = condition;
 
           // Attempt to create an offer with condition, expecting revert
@@ -1001,7 +1003,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("Condition 'SpecificToken' has has zero token contract address", async function () {
           method = EvaluationMethod.SpecificToken;
           tokenAddress = ethers.constants.AddressZero;
-          condition = new Condition(method, tokenAddress, tokenId, threshold);
+          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
           group.condition = condition;
 
           // Attempt to create an offer with condition, expecting revert
@@ -1083,16 +1085,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Required constructor params for Condition
         method = EvaluationMethod.AboveThreshold;
+        tokenType = TokenType.MultiToken;
         tokenAddress = accounts[0].address; // just need an address
         tokenId = "5150";
         threshold = "1";
+        maxCommits = "3";
 
         // Required constructor params for Group
         id = nextGroupId;
         sellerId = "2"; // "1" is dispute resolver;
         offerIds = ["1", "3"];
 
-        condition = new Condition(method, tokenAddress, tokenId, threshold);
+        condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, sellerId, offerIds, condition);
@@ -1933,16 +1937,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Required constructor params for Condition
         method = EvaluationMethod.AboveThreshold;
+        tokenType = TokenType.MultiToken;
         tokenAddress = accounts[0].address; // just need an address
         tokenId = "5150";
         threshold = "1";
+        maxCommits = "1";
 
         // Required constructor params for Group
         id = nextGroupId;
         sellerId = "2"; // "1" is dispute resolver;
         offerIds = ["1"];
 
-        condition = new Condition(method, tokenAddress, tokenId, threshold);
+        condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, sellerId, offerIds, condition);
@@ -2265,16 +2271,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Required constructor params for Condition
         method = EvaluationMethod.AboveThreshold;
+        tokenType = TokenType.MultiToken;
         tokenAddress = accounts[0].address; // just need an address
         tokenId = "5150";
         threshold = "1";
+        maxCommits = "1";
 
         // Required constructor params for Group
         id = nextGroupId;
         sellerId = "2"; // "1" is dispute resolver;
         offerIds = ["1"];
 
-        condition = new Condition(method, tokenAddress, tokenId, threshold);
+        condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, sellerId, offerIds, condition);
@@ -2585,16 +2593,18 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Required constructor params for Condition
         method = EvaluationMethod.AboveThreshold;
+        tokenType = TokenType.MultiToken;
         tokenAddress = accounts[0].address; // just need an address
         tokenId = "5150";
         threshold = "1";
+        maxCommits = "1";
 
         // Required constructor params for Group
         id = nextGroupId;
         sellerId = "2"; // "1" is dispute resolver;
         offerIds = ["1"];
 
-        condition = new Condition(method, tokenAddress, tokenId, threshold);
+        condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, sellerId, offerIds, condition);

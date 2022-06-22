@@ -33,7 +33,7 @@ exports.RevertReasons = {
   INVALID_QUANTITY_AVAILABLE: "Invalid quantity available",
 
   // Group related
-  NO_SUCH_GROUP: "No such offer",
+  NO_SUCH_GROUP: "No such group",
   OFFER_NOT_IN_GROUP: "Offer not part of the group",
   TOO_MANY_OFFERS: "Exceeded maximum offers in a single transaction",
   NOTHING_UPDATED: "Nothing updated",

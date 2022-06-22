@@ -1,5 +1,7 @@
 const ethers = require("ethers");
 const eip55 = require("eip55");
+const EvaluationMethod = require("./EvaluationMethod");
+const TokenType = require("./TokenType");
 
 /**
  * Boson Protocol Domain Entity: Condition
@@ -10,17 +12,21 @@ class Condition {
   /*
         struct Condition {
             EvaluationMethod method;
+            TokenType tokenType;
             address tokenAddress;
             uint256 tokenId;
             uint256 threshold;
+            uint256 maxCommits;
         }
     */
 
-  constructor(method, tokenAddress, tokenId, threshold) {
+  constructor(method, tokenType, tokenAddress, tokenId, threshold, maxCommits) {
     this.method = method;
+    this.tokenType = tokenType;
     this.tokenAddress = tokenAddress;
     this.tokenId = tokenId;
     this.threshold = threshold;
+    this.maxCommits = maxCommits;
   }
 
   /**
@@ -29,8 +35,8 @@ class Condition {
    * @returns {Condition}
    */
   static fromObject(o) {
-    const { method, tokenAddress, tokenId, threshold } = o;
-    return new Condition(method, tokenAddress, tokenId, threshold);
+    const { method, tokenType, tokenAddress, tokenId, threshold, maxCommits } = o;
+    return new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
   }
 
   /**
@@ -39,16 +45,18 @@ class Condition {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let method, tokenAddress, tokenId, threshold;
+    let method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
 
     // destructure struct
-    [method, tokenAddress, tokenId, threshold] = struct;
+    [method, tokenType, tokenAddress, tokenId, threshold, maxCommits] = struct;
 
     return Condition.fromObject({
       method: parseInt(method),
+      tokenType,
       tokenAddress,
       tokenId,
       threshold,
+      maxCommits,
     });
   }
 
@@ -68,6 +76,7 @@ class Condition {
     let tmp = { ...this };
     tmp.tokenId = tmp.tokenId.toString();
     tmp.threshold = tmp.threshold.toString();
+    tmp.maxCommits = tmp.maxCommits.toString();
     return JSON.stringify(tmp);
   }
 
@@ -76,7 +85,7 @@ class Condition {
    * @returns {string}
    */
   toStruct() {
-    return [this.method, this.tokenAddress, this.tokenId, this.threshold];
+    return [this.method, this.tokenType, this.tokenAddress, this.tokenId, this.threshold, this.maxCommits];
   }
 
   /**
@@ -96,7 +105,21 @@ class Condition {
     let valid = false;
     let { method } = this;
     try {
-      valid = typeof method === "number" && typeof ethers.BigNumber.from(method) === "object";
+      valid = EvaluationMethod.Types.includes(method);
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this Condition instance's tokenType field valid?
+   * Must be a valid
+   * @returns {boolean}
+   */
+  tokenTypeIsValid() {
+    let valid = false;
+    let { tokenType } = this;
+    try {
+      valid = TokenType.Types.includes(tokenType);
     } catch (e) {}
     return valid;
   }
@@ -142,11 +165,31 @@ class Condition {
   }
 
   /**
+   * Is this Condition instance's maxCommits field valid?
+   * @returns {boolean}
+   */
+  maxCommitsIsValid() {
+    let valid = false;
+    let { maxCommits } = this;
+    try {
+      valid = typeof maxCommits === "string" && typeof ethers.BigNumber.from(maxCommits) === "object";
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
    * Is this Condition instance valid?
    * @returns {boolean}
    */
   isValid() {
-    return this.methodIsValid() && this.tokenAddressIsValid() && this.tokenIdIsValid() && this.thresholdIsValid();
+    return (
+      this.methodIsValid() &&
+      this.tokenTypeIsValid() &&
+      this.tokenAddressIsValid() &&
+      this.tokenIdIsValid() &&
+      this.thresholdIsValid() &&
+      this.maxCommitsIsValid()
+    );
   }
 }
 
