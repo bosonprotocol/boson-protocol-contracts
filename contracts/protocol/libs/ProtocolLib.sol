@@ -102,8 +102,6 @@ library ProtocolLib {
         mapping(uint256 => mapping(address => uint256)) availableFunds;
         // seller/buyer id => all tokens with balance > 0
         mapping(uint256 => address[]) tokenList;
-        // exchange id => flag that dispute resolver explicitly refused to decide
-        mapping(uint256 => bool) explicitRefusal;
     }
 
     // Incrementing ID counters

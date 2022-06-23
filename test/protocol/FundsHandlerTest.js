@@ -2164,74 +2164,7 @@ describe("IBosonFundsHandler", function () {
           });
         });
 
-        context.skip("Final state DISPUTED - REFUSED via explicit refusal", async function () {
-          beforeEach(async function () {
-            // expected payoffs
-            // buyer: price
-            buyerPayoff = offerToken.price;
-
-            // seller: sellerDeposit
-            sellerPayoff = offerToken.sellerDeposit;
-
-            // protocol: 0
-            protocolPayoff = 0;
-
-            // dispute resolved explicitly refuse
-            await disputeHandler.connect(disputeResolver).refuseToResolve(exchangeId);
-
-            await setNextBlockTimestamp(Number(timeout));
-          });
-
-          it("should emit a FundsReleased event", async function () {
-            // Expire the dispute, expecting event
-            await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId))
-              .to.emit(disputeHandler, "ExchangeFee")
-              .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff)
-              .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
-              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff);
-          });
-
-          it("should update state", async function () {
-            // Read on chain state
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
-            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-            protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-
-            // Chain state should match the expected available funds
-            expectedSellerAvailableFunds = new FundsList([
-              new Funds(mockToken.address, "Foreign20", sellerDeposit),
-              new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
-            ]);
-            expectedBuyerAvailableFunds = new FundsList([]);
-            expectedProtocolAvailableFunds = new FundsList([]);
-            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-
-            // Expire the escalated dispute, so the funds are released
-            await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
-
-            // Available funds should be increased for
-            // buyer: price
-            // seller: sellerDeposit; note that seller has sellerDeposit in availableFunds from before
-            // protocol: 0
-            expectedSellerAvailableFunds.funds[0] = new Funds(
-              mockToken.address,
-              "Foreign20",
-              ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
-            );
-            expectedBuyerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", buyerPayoff);
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
-            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
-            protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
-            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
-            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
-            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
-          });
-        });
-
-        context.skip("Final state DISPUTED - REFUSED via fail to decide", async function () {
+        context.skip("Final state DISPUTED - REFUSED", async function () {
           beforeEach(async function () {
             // expected payoffs
             // buyer: price + sellerDeposit
