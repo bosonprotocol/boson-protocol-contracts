@@ -12,7 +12,7 @@ async function mockOffer() {
   const sellerId = "1"; // argument sent to contract for createOffer will be ignored
   const price = ethers.utils.parseUnits("1.5", "ether").toString();
   const sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-  const protocolFee = calculateProtocolFee(sellerDeposit, price, "200");
+  const protocolFee = calculateProtocolFee(price, "200");
   const buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
   const quantityAvailable = "1";
   const exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency

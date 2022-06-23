@@ -18,7 +18,7 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
-
+const { mockOffer } = require("../utils/mock");
 /**
  *  Test the Boson Offer Handler interface
  */
@@ -66,7 +66,6 @@ describe("IBosonOfferHandler", function () {
     offerDurationsStructs,
     offerDurationsList;
   let protocolFeePercentage, protocolFeeFlatBoson;
-  let block, blockNumber;
   let disputeResolver;
 
   before(async function () {
@@ -182,69 +181,21 @@ describe("IBosonOfferHandler", function () {
       // The first offer id
       nextOfferId = "1";
       invalidOfferId = "666";
+      sellerId = 1;
 
-      // Get the current block info
-      blockNumber = await ethers.provider.getBlockNumber();
-      block = await ethers.provider.getBlock(blockNumber);
-
-      // Required constructor params
-      id = sellerId = "1"; // argument sent to contract for createOffer will be ignored
-      price = ethers.utils.parseUnits("1.5", "ether").toString();
-      sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      protocolFee = calculateProtocolFee(price, protocolFeePercentage); // will be ignored, but set the correct value here for the tests
-      buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
-      quantityAvailable = "1";
-      exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-      disputeResolverId = "2";
-      metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
-      metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
-      voided = false;
-
-      // Create a valid offer, then set fields in tests directly
-      offer = new Offer(
-        id,
-        sellerId,
-        price,
-        sellerDeposit,
-        protocolFee,
-        buyerCancelPenalty,
-        quantityAvailable,
-        exchangeToken,
-        disputeResolverId,
-        metadataUri,
-        metadataHash,
-        voided
-      );
+      // Mock offer
+      const mo = await mockOffer();
+      offer = mo.offer;
       expect(offer.isValid()).is.true;
-
-      // How that offer looks as a returned struct
+      price = offer.price;
       offerStruct = offer.toStruct();
 
-      // Required constructor params
-      validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-      validUntil = ethers.BigNumber.from(block.timestamp)
-        .add(oneMonth * 6)
-        .toString(); // until 6 months
-      voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-      voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
-
-      // Create a valid offerDates, then set fields in tests directly
-      offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
+      offerDates = mo.offerDates;
       expect(offerDates.isValid()).is.true;
-
-      // How that offer looks as a returned struct
       offerDatesStruct = offerDates.toStruct();
 
-      // Required constructor params
-      fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
-      voucherValid = oneMonth.toString(); // offers valid for one month
-      resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
-
-      // Create a valid offerDurations, then set fields in tests directly
-      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
+      offerDurations = mo.offerDurations;
       expect(offerDurations.isValid()).is.true;
-
-      // How that offer looks as a returned struct
       offerDurationsStruct = offerDurations.toStruct();
     });
 
