@@ -28,8 +28,10 @@ library FundsLib {
      * - if seller has less funds available than sellerDeposit
      *
      * @param _offerId - id of the offer with the details
+     * @param _buyerId - id of the buyer
+     * @param _msgSender - sender of the transaction
      */
-    function encumberFunds(uint256 _offerId, uint256 _buyerId) internal {
+    function encumberFunds(uint256 _offerId, uint256 _buyerId, address _msgSender) internal {
         // Load protocol entities storage
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
 
@@ -48,7 +50,7 @@ library FundsLib {
             require(msg.value == 0, NATIVE_NOT_ALLOWED);
 
             // if transfer is in ERC20 token, try to transfer the amount from buyer to the protocol
-            transferFundsToProtocol(exchangeToken, price);
+            transferFundsToProtocol(exchangeToken, price, _msgSender);
         }
 
         // decrease availabel funds
@@ -146,10 +148,11 @@ library FundsLib {
      *
      * @param _tokenAddress - address of the token to be transferred
      * @param _amount - amount to be transferred
+     * @param _msgSender - sender of the transaction
      */
-    function transferFundsToProtocol(address _tokenAddress, uint256 _amount) internal {
+    function transferFundsToProtocol(address _tokenAddress, uint256 _amount, address _msgSender) internal {
         // transfer ERC20 tokens from the caller
-        try IERC20(_tokenAddress).transferFrom(msg.sender, address(this), _amount)  {
+        try IERC20(_tokenAddress).transferFrom(_msgSender, address(this), _amount)  {
         } catch (bytes memory error) {
             string memory reason = error.length == 0 ? TOKEN_TRANSFER_FAILED : string(error);
             revert(reason);
