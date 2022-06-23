@@ -398,7 +398,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency
      */
    
-    function storeDisputeResolver(DisputeResolver memory _disputeResolver, DisputeResolverFee[] memory _disputeResolverFees) internal 
+    function storeDisputeResolver(DisputeResolver memory _disputeResolver, DisputeResolverFee[] calldata _disputeResolverFees) internal 
     {
         // escalation period must be greater than zero and less than or equal to the max allowed
         require(_disputeResolver.escalationResponsePeriod > 0 && _disputeResolver.escalationResponsePeriod <= protocolLimits().maxEscalationResponsePeriod, INVALID_ESCALATION_PERIOD);

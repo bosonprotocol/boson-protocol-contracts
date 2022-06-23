@@ -327,13 +327,13 @@ describe("DisputeResolverFeeList", function () {
       });
 
       it("DisputeResolverFeeList.toStruct() should return a struct representation of the DisputeResolverFeeList instance", async function () {
-        // Get struct from disputeResolverFee
+        // Get struct from DisputeResolverFeeList
         struct = disputeResolverFeeList.toStruct();
 
-        // Marshal back to a disputeResolverFee instance
+        // Marshal back to a DisputeResolverFeeList instance
         disputeResolverFeeList = DisputeResolverFeeList.fromStruct(struct);
 
-        // Ensure it marshals back to a valid disputeResolverFee
+        // Ensure it marshals back to a valid DisputeResolverFeeList
         expect(disputeResolverFeeList.isValid()).to.be.true;
       });
 
@@ -341,7 +341,7 @@ describe("DisputeResolverFeeList", function () {
         // Get plain object
         clone = disputeResolverFeeList.clone();
 
-        // Is a DisputeResolverFee instance
+        // Is a DisputeResolverFeeList instance
         expect(clone instanceof DisputeResolverFeeList).is.true;
 
         // Key values all match
