@@ -17,7 +17,7 @@ async function mockOffer() {
   const quantityAvailable = "1";
   const exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
   const disputeResolverId = "2";
-  const metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual offerChecksum, just some data for tests
+  const metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
   const metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
   const voided = false;
 

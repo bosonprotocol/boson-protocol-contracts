@@ -1,3 +1,6 @@
+const hre = require("hardhat");
+const ethers = hre.ethers;
+
 const { gasLimit } = require("../../../environments");
 const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
 const { getInterfaceIds } = require("../../../scripts/config/supported-interfaces.js");
@@ -14,13 +17,13 @@ const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 
 describe("IBosonVoucher", function () {
   let interfaceId;
-  let bosonVoucher, offerHandler, accountHandler, exchjangeHandler;
+  let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler;
   let deployer, protocol, buyer, rando, operator, admin, clerk, treasury;
 
   before(async function () {
     // Get interface id
-    const { IBosonVoucher, IBosonExchangeHandler } = await getInterfaceIds();
-    interfaceId = IBosonVoucher
+    const { IBosonVoucher } = await getInterfaceIds();
+    interfaceId = IBosonVoucher;
   });
 
   beforeEach(async function () {
@@ -43,10 +46,10 @@ describe("IBosonVoucher", function () {
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
-    "ExchangeHandlerFacet",
-    "OfferHandlerFacet",
-    "AccountHandlerFacet",
-    "FundsHandlerFacet"
+      "ExchangeHandlerFacet",
+      "OfferHandlerFacet",
+      "AccountHandlerFacet",
+      "FundsHandlerFacet",
     ]);
 
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
@@ -79,75 +82,85 @@ describe("IBosonVoucher", function () {
     ];
 
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
-  })
+  });
 
-    // Interface support 
-    context("📋 Interfaces", async function () {
-      context("👉 supportsInterface()", async function () {
-        it("should indicate support for IBosonVoucher interface", async function () {
-          const support = await bosonVoucher.supportsInterface(interfaceId);
+  // Interface support
+  context("📋 Interfaces", async function () {
+    context("👉 supportsInterface()", async function () {
+      it("should indicate support for IBosonVoucher interface", async function () {
+        const support = await bosonVoucher.supportsInterface(interfaceId);
 
-          await expect(support, "IBosonVoucher interface not supported").is.true;
-        });
+        await expect(support, "IBosonVoucher interface not supported").is.true;
       });
     });
+  });
 
-    context("issueVoucher()", function () {
-      before(function () {
-       buyerStruct = new Buyer(1, buyer.address, true).toStruct();
-      });
-      
-      it("should issue a voucher with success", async function () {
-        const balanceBefore = await bosonVoucher.balanceOf(buyer.address);
+  context("issueVoucher()", function () {
+    let buyerStruct;
 
-        await bosonVoucher.connect(protocol).issueVoucher(0, buyerStruct);
-
-        const balanceAfter = await bosonVoucher.balanceOf(buyer.address);
-
-        expect(balanceAfter.sub(balanceBefore)).eq(1);
-      });
-
-      it("should revert if caller does not have PROTOCOL role", async function () {
-        await expect(bosonVoucher.connect(rando).issueVoucher(0, buyerStruct)).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
-      });
+    before(function () {
+      buyerStruct = new Buyer(1, buyer.address, true).toStruct();
     });
 
-    context("burnVoucher()", function () {
-      it("should burn a voucher with success", async function () {
-        await bosonVoucher.connect(protocol).issueVoucher(0, new Buyer(1, buyer.address, true).toStruct());
+    it("should issue a voucher with success", async function () {
+      const balanceBefore = await bosonVoucher.balanceOf(buyer.address);
 
-        const balanceBefore = await bosonVoucher.balanceOf(buyer.address);
+      await bosonVoucher.connect(protocol).issueVoucher(0, buyerStruct);
 
-        await bosonVoucher.connect(protocol).burnVoucher(0);
+      const balanceAfter = await bosonVoucher.balanceOf(buyer.address);
 
-        const balanceAfter = await bosonVoucher.balanceOf(buyer.address);
-        
-        expect(balanceBefore.sub(balanceAfter)).eq(1);
-      });
-
-      it("should revert if caller does not have PROTOCOL role", async function () {
-        await expect(bosonVoucher.connect(rando).burnVoucher(0)).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
-      });
+      expect(balanceAfter.sub(balanceBefore)).eq(1);
     });
 
-    context("tokenURI", function () {
-      beforeEach(async function () {
+    it("should revert if caller does not have PROTOCOL role", async function () {
+      await expect(bosonVoucher.connect(rando).issueVoucher(0, buyerStruct)).to.be.revertedWith(
+        RevertReasons.ACCESS_DENIED
+      );
+    });
+  });
+
+  context("burnVoucher()", function () {
+    it("should burn a voucher with success", async function () {
+      await bosonVoucher.connect(protocol).issueVoucher(0, new Buyer(1, buyer.address, true).toStruct());
+
+      const balanceBefore = await bosonVoucher.balanceOf(buyer.address);
+
+      await bosonVoucher.connect(protocol).burnVoucher(0);
+
+      const balanceAfter = await bosonVoucher.balanceOf(buyer.address);
+
+      expect(balanceBefore.sub(balanceAfter)).eq(1);
+    });
+
+    it("should revert if caller does not have PROTOCOL role", async function () {
+      await expect(bosonVoucher.connect(rando).burnVoucher(0)).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
+    });
+  });
+
+  context("tokenURI", function () {
+    let metadataUri;
+
+    beforeEach(async function () {
       const seller = new Seller("1", operator.address, admin.address, clerk.address, treasury.address, true);
 
       await accountHandler.connect(admin).createSeller(seller);
-      await accountHandler.connect(admin).createDisputeResolver(new DisputeResolver("2", rando.address, true))
+      await accountHandler.connect(admin).createDisputeResolver(new DisputeResolver("2", rando.address, true));
 
-      const { offer, offerDates, offerDurations} = await mockOffer();
-      await offerHandler.connect(operator).createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct());
-      await fundsHandler.connect(admin).depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+      const { offer, offerDates, offerDurations } = await mockOffer();
+      await offerHandler
+        .connect(operator)
+        .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct());
+      await fundsHandler
+        .connect(admin)
+        .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
       await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
-      
-      metadataUri = offer.metadataUri;
-      })
 
-      it("should return the correct tokenURI", async function () {
+      metadataUri = offer.metadataUri;
+    });
+
+    it("should return the correct tokenURI", async function () {
       const tokenURI = await bosonVoucher.tokenURI(1);
       expect(tokenURI).eq(metadataUri);
     });
-  })
-})
+  });
+});
