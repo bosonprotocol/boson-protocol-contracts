@@ -2013,10 +2013,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // expected payoffs - they are the same for token and native currency
         // buyer: price - buyerCancelPenalty - protocolFee
-        buyerPayoff = ethers.BigNumber.from(offerToken.price)
-          .sub(offerToken.buyerCancelPenalty)
-          .sub(offerToken.protocolFee)
-          .toString();
+        buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
 
         // prepare the MetaTxFundDetails struct
         tokenListBuyer = [mockToken.address, ethers.constants.AddressZero];

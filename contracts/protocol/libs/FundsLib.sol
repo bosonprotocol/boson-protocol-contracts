@@ -14,7 +14,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 library FundsLib {
     event FundsEncumbered(uint256 indexed entityId, address indexed exchangeToken, uint256 amount, address indexed executedBy);
     event FundsReleased(uint256 indexed exchangeId, uint256 indexed entityId, address indexed exchangeToken, uint256 amount, address executedBy);
-    event ExchangeFee(uint256 indexed exchangeId, address indexed exchangeToken, uint256 amount, address indexed executedBy);
+    event ProtocolFeeCollected(uint256 indexed exchangeId, address indexed exchangeToken, uint256 amount, address indexed executedBy);
     event FundsWithdrawn(uint256 indexed sellerId, address indexed withdrawnTo, address indexed tokenAddress, uint256 amount, address executedBy); 
     
     /**
@@ -53,7 +53,7 @@ library FundsLib {
             transferFundsToProtocol(exchangeToken, price, _msgSender);
         }
 
-        // decrease availabel funds
+        // decrease available funds
         uint256 sellerId = offer.sellerId;
         uint256 sellerDeposit = offer.sellerDeposit;
         decreaseAvailableFunds(sellerId, exchangeToken, sellerDeposit);
@@ -87,26 +87,26 @@ library FundsLib {
         // sum of price and sellerDeposit occurs multiple times
         uint256 pot = price + sellerDeposit;
 
-        // retrieve protocol fee
-        uint256 protocolFee = offer.protocolFee;
 
         // calculate the payoffs depending on state exchange is in
         uint256 sellerPayoff;
         uint256 buyerPayoff;
+        uint256 protocolFee;
 
         if (exchangeState == BosonTypes.ExchangeState.Completed) {
             // COMPLETED
+            protocolFee = offer.protocolFee;
             // buyerPayoff is 0
             sellerPayoff = pot - protocolFee;
         } else if (exchangeState == BosonTypes.ExchangeState.Revoked) {
             // REVOKED
             // sellerPayoff is 0
-            buyerPayoff = pot - protocolFee;
+            buyerPayoff = pot;
         } else if (exchangeState == BosonTypes.ExchangeState.Canceled) {
             // CANCELED
             uint256 buyerCancelPenalty = offer.buyerCancelPenalty;
             sellerPayoff = sellerDeposit + buyerCancelPenalty;
-            buyerPayoff = price - buyerCancelPenalty - protocolFee;
+            buyerPayoff = price - buyerCancelPenalty;
         } else  {
             // DISPUTED
             // get the information about the dispute, which must exist
@@ -115,28 +115,36 @@ library FundsLib {
 
             if (disputeState == BosonTypes.DisputeState.Retracted) {
                 // RETRACTED - same as "COMPLETED"
+                protocolFee = offer.protocolFee;
                 // buyerPayoff is 0
                 sellerPayoff = pot - protocolFee;
+            } else if (disputeState == BosonTypes.DisputeState.Refused) {
+                // REFUSED
+                // sellerPayoff is 0
+                buyerPayoff = pot;
             } else {
                 // RESOLVED or DECIDED
-                uint256 buyerPercent = dispute.buyerPercent;
-                buyerPayoff = pot * buyerPercent/10000;
-                sellerPayoff = pot - buyerPayoff - protocolFee;
+                buyerPayoff = pot * dispute.buyerPercent/10000;
+                sellerPayoff = pot - buyerPayoff;
             }           
         }  
 
-        // Store payoffs to availablefunds
+        // Store payoffs to availablefunds and notify the external observers
         address exchangeToken = offer.exchangeToken;
         uint256 sellerId = offer.sellerId;
         uint256 buyerId = exchange.buyerId;
-        if (sellerPayoff > 0) increaseAvailableFunds(sellerId, exchangeToken, sellerPayoff);
-        if (buyerPayoff > 0) increaseAvailableFunds(buyerId, exchangeToken, buyerPayoff);
-        if (protocolFee > 0) increaseAvailableFunds(0, exchangeToken, protocolFee);       
-                
-        // Notify the external observers
-        emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff, msg.sender);
-        emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff, msg.sender);
-        emit ExchangeFee(_exchangeId, exchangeToken, protocolFee, msg.sender);
+        if (sellerPayoff > 0) {
+            increaseAvailableFunds(sellerId, exchangeToken, sellerPayoff);
+            emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff, msg.sender);
+        } 
+        if (buyerPayoff > 0) {
+            increaseAvailableFunds(buyerId, exchangeToken, buyerPayoff);
+            emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff, msg.sender);
+        }
+        if (protocolFee > 0) {
+            increaseAvailableFunds(0, exchangeToken, protocolFee);
+            emit ProtocolFeeCollected(_exchangeId, exchangeToken, protocolFee, msg.sender);
+        }        
     }
 
     /**
@@ -193,7 +201,7 @@ library FundsLib {
     }
 
     /**
-     * @notice Increases the amount, availabe to withdraw or use as a seller deposit
+     * @notice Increases the amount, available to withdraw or use as a seller deposit
      *
      * @param _entityId - seller or buyer id, or 0 for protocol
      * @param _tokenAddress - funds contract address or zero address for native currency
@@ -213,7 +221,7 @@ library FundsLib {
     }
 
     /**
-     * @notice Decreases the amount, availabe to withdraw or use as a seller deposit
+     * @notice Decreases the amount, available to withdraw or use as a seller deposit
      *
      * Reverts if:
      * - available funds is less than amount to be decreased

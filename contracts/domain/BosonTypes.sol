@@ -28,7 +28,8 @@ contract BosonTypes {
         Retracted,
         Resolved,
         Escalated,
-        Decided
+        Decided,
+        Refused
     }
 
     enum TokenType {
