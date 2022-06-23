@@ -664,7 +664,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         protocolFee = calculateProtocolFee(price, protocolFeePercentage);
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
-        exchangeToken = mockToken.address; // Mock token addres
+        exchangeToken = mockToken.address; // Mock token address
         disputeResolverId = "2";
         metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
         metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
@@ -1938,7 +1938,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         protocolFee = calculateProtocolFee(price, protocolFeePercentage);
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "2";
-        exchangeToken = mockToken.address; // Mock token addres
+        exchangeToken = mockToken.address; // Mock token address
         disputeResolverId = "2";
         metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
         metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
