@@ -133,8 +133,10 @@ describe("IBosonConfigHandler", function () {
           maxTwinsPerBundle,
           maxOffersPerBundle,
           maxOffersPerBatch,
-          maxTokensPerWithdrawal,maxFeesPerDisputeResolver,
+          maxTokensPerWithdrawal,
+          maxFeesPerDisputeResolver,
           maxEscalationResponsePeriod,
+         
         },
         // Protocol fees
         {

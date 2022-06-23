@@ -408,7 +408,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @notice Get the maximum escalation response period a dispute resolver can specify
      */
     function getMaxEscalationResponsePeriod()
-    public
+    external
     override
     view
     returns (uint256)

@@ -100,7 +100,6 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      *
      * @param _disputeResolver - the fully populated buydispute resolver struct
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency
-     * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency
      */
     function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver, BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees) external;
 
@@ -148,7 +147,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @notice Gets the details about a dispute resolver by an address associated with that seller: operator, admin, or clerk address.
      *
      * @param _associatedAddress - the address associated with the seller. Must be an operator, admin, or clerk address.
-     * @return exists - the dispute resolver  was found
+     * @return exists - the dispute resolver was found
      * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      */
