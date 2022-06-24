@@ -28,7 +28,8 @@ contract BosonTypes {
         Retracted,
         Resolved,
         Escalated,
-        Decided
+        Decided,
+        Refused
     }
 
     enum TokenType {
@@ -217,5 +218,21 @@ contract BosonTypes {
     struct MetaTxDisputeDetails {
         uint256 exchangeId;
         string complaint;
+    }
+
+    struct MetaTxDisputeResolution {
+        uint256 nonce;
+        address from;
+        address contractAddress;
+        string functionName;
+        MetaTxDisputeResolutionDetails disputeResolutionDetails;
+    }
+
+    struct MetaTxDisputeResolutionDetails {
+        uint256 exchangeId;
+        uint256 buyerPercent;
+        bytes32 sigR;
+        bytes32 sigS;
+        uint8 sigV;
     }
 }

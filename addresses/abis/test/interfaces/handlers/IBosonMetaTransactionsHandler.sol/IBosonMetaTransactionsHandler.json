@@ -412,6 +412,77 @@
               "internalType": "uint256",
               "name": "exchangeId",
               "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "buyerPercent",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "sigR",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "sigS",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "uint8",
+              "name": "sigV",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct BosonTypes.MetaTxDisputeResolutionDetails",
+          "name": "_disputeResolutionDetails",
+          "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_nonce",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_sigR",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "_sigS",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint8",
+          "name": "_sigV",
+          "type": "uint8"
+        }
+      ],
+      "name": "executeMetaTxResolveDispute",
+      "outputs": [
+        {
+          "internalType": "bytes",
+          "name": "",
+          "type": "bytes"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_userAddress",
+          "type": "address"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "exchangeId",
+              "type": "uint256"
             }
           ],
           "internalType": "struct BosonTypes.MetaTxExchangeDetails",
