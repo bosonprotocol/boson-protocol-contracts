@@ -130,6 +130,10 @@ library ProtocolLib {
         bytes32 domainSeparator;
         // nonce => existance of nonce in the mapping
         mapping(uint256 => bool) usedNonce;
+        // map function name to input type
+        mapping(string => BosonTypes.MetaTxInputType) inputType;
+        // map input type => hash info
+        mapping (BosonTypes.MetaTxInputType => BosonTypes.HashInfo) hashInfo;
     }
 
     // Individual facet initialization states

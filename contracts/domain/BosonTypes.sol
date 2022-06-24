@@ -38,6 +38,13 @@ contract BosonTypes {
         MultiToken
     } // ERC20, ERC721, ERC1155
 
+    enum MetaTxInputType {
+        General,
+        CommitToOffer,
+        Exchange,
+        Funds
+    }
+
     struct Seller {
         uint256 id;
         address operator;
@@ -234,5 +241,10 @@ contract BosonTypes {
         bytes32 sigR;
         bytes32 sigS;
         uint8 sigV;
+    }
+
+    struct HashInfo {
+        bytes32 typeHash;
+        function(bytes memory) internal pure returns (bytes32) hashFunction;
     }
 }

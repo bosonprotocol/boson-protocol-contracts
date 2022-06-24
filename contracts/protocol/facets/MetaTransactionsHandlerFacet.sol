@@ -6,6 +6,7 @@ import { IBosonDisputeHandler } from "../../interfaces/handlers/IBosonDisputeHan
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonFundsHandler } from "../../interfaces/handlers/IBosonFundsHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import { ProtocolLib } from  "../libs/ProtocolLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
@@ -43,6 +44,15 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      */
     function initialize() public onlyUnInitialized(type(IBosonMetaTransactionsHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonMetaTransactionsHandler).interfaceId);
+
+        // set types for special metatxs
+        ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
+
+        pmti.inputType[COMMIT_TO_OFFER] = MetaTxInputType.CommitToOffer;
+        pmti.inputType[WITHDRAW_FUNDS] = MetaTxInputType.Funds;
+
+        pmti.hashInfo[MetaTxInputType.CommitToOffer] = HashInfo(META_TX_COMMIT_TO_OFFER_TYPEHASH, hashOfferDetailsUni);
+        pmti.hashInfo[MetaTxInputType.Funds] = HashInfo(META_TX_FUNDS_TYPEHASH, hashFundDetailsUni);
     }
 
     /**
