@@ -659,11 +659,22 @@ describe("IBosonMetaTransactionsHandler", function () {
         protocolFee = calculateProtocolFee(price, protocolFeePercentage);
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "1";
-        exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
+        exchangeToken = mockToken.address; // Mock token address
         disputeResolverId = "2";
         metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
         metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
         voided = false;
+
+        // top up seller's and buyer's account
+        await mockToken.mint(operator.address, sellerDeposit);
+        await mockToken.mint(buyer.address, price);
+
+        // approve protocol to transfer the tokens
+        await mockToken.connect(operator).approve(protocolDiamond.address, sellerDeposit);
+        await mockToken.connect(buyer).approve(protocolDiamond.address, price);
+
+        // deposit to seller's pool
+        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, sellerDeposit);
 
         // Create a valid offer entity
         offer = new Offer(
@@ -754,9 +765,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // send a meta transaction, check for event
         await expect(
-          metaTransactionsHandler.executeMetaTxCommitToOffer(buyer.address, validOfferDetails, nonce, r, s, v, {
-            value: price,
-          })
+          metaTransactionsHandler.executeMetaTxCommitToOffer(buyer.address, validOfferDetails, nonce, r, s, v)
         )
           .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
           .withArgs(buyer.address, deployer.address, message.functionName, nonce);
@@ -789,9 +798,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Execute meta transaction, expecting revert.
         await expect(
-          metaTransactionsHandler.executeMetaTxCommitToOffer(buyer.address, validOfferDetails, nonce, r, s, v, {
-            value: price,
-          })
+          metaTransactionsHandler.executeMetaTxCommitToOffer(buyer.address, validOfferDetails, nonce, r, s, v)
         ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
       });
 
@@ -807,15 +814,11 @@ describe("IBosonMetaTransactionsHandler", function () {
           );
 
           // Execute the meta transaction.
-          await metaTransactionsHandler.executeMetaTxCommitToOffer(buyer.address, validOfferDetails, nonce, r, s, v, {
-            value: price,
-          });
+          await metaTransactionsHandler.executeMetaTxCommitToOffer(buyer.address, validOfferDetails, nonce, r, s, v);
 
           // Execute meta transaction again with the same nonce, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTxCommitToOffer(buyer.address, validOfferDetails, nonce, r, s, v, {
-              value: price,
-            })
+            metaTransactionsHandler.executeMetaTxCommitToOffer(buyer.address, validOfferDetails, nonce, r, s, v)
           ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
         });
 
@@ -834,9 +837,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Execute meta transaction, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTxCommitToOffer(buyer.address, validOfferDetails, nonce, r, s, v, {
-              value: price,
-            })
+            metaTransactionsHandler.executeMetaTxCommitToOffer(buyer.address, validOfferDetails, nonce, r, s, v)
           ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         });
       });
@@ -1924,7 +1925,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         protocolFee = calculateProtocolFee(price, protocolFeePercentage);
         buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
         quantityAvailable = "2";
-        exchangeToken = mockToken.address; // Mock token addres
+        exchangeToken = mockToken.address; // Mock token address
         disputeResolverId = "2";
         metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
         metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
