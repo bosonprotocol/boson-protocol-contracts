@@ -88,8 +88,10 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function updateBuyer(BosonTypes.Buyer memory _buyer) external;
 
     /**
-     * @notice Updates a dispute resolver. All fields should be filled, even those staying the same.
-     *
+     * @notice Updates a dispute resolver, not including DisputeResolverFees. 
+     * All DisputeResolver fields should be filled, even those staying the same.
+     * Use addDisputeResolverFees and removeDisputeResolverFees
+     * 
      * Emits a DisputeResolverUpdated event if successful.
      *
      * Reverts if:
@@ -99,9 +101,8 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Dispute resolver does not exist
      *
      * @param _disputeResolver - the fully populated buydispute resolver struct
-     * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency
      */
-    function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver, BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees) external;
+    function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver) external;
 
     /**
      * @notice Gets the details about a seller.

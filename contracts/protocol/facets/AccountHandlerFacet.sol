@@ -98,7 +98,25 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
                 protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] == 0, DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
 
         _disputeResolver.id = disputeResolverId;
-        storeDisputeResolver(_disputeResolver, _disputeResolverFees);
+
+        // At least one fee must be specified. The ammount can be 0, but it must be intentional. However, the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
+        require(_disputeResolverFees.length > 0 && _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
+
+        // Get storage location for dispute resolver fees
+        (,,DisputeResolverFee[] storage disputeResolverFees) = fetchDisputeResolver(_disputeResolver.id);
+
+        //Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
+        for(uint i = 0; i < _disputeResolverFees.length; i++) {
+            console.log("i ", i);
+            if(protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] == 0) { //This token address does not yet exist for this Dispute Resolver
+                console.log("DisputeResolverFee tokenAddress %s tokenName %s feeAmount %s in storeDisputeResolver ", _disputeResolverFees[i].tokenAddress, _disputeResolverFees[i].tokenName, _disputeResolverFees[i].feeAmount);
+                console.log("tokenAddress not already in array so adding ");
+                disputeResolverFees.push(DisputeResolverFee( _disputeResolverFees[i].tokenAddress, _disputeResolverFees[i].tokenName, _disputeResolverFees[i].feeAmount));
+                protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] = disputeResolverFees.length;
+            }
+        }
+
+        storeDisputeResolver(_disputeResolver);
 
         //Notify watchers of state change
         emit DisputeResolverCreated(_disputeResolver.id, _disputeResolver, _disputeResolverFees, msgSender());
@@ -207,8 +225,10 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
-     * @notice Updates a dispute resolver. All fields should be filled, even those staying the same.
-     *
+     * @notice Updates a dispute resolver, not including DisputeResolverFees. 
+     * All DisputeResolver fields should be filled, even those staying the same.
+     * Use addDisputeResolverFees and removeDisputeResolverFees
+     * 
      * Emits a DisputeResolverUpdated event if successful.
      *
      * Reverts if:
@@ -218,9 +238,8 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - Dispute resolver does not exist
      *
      * @param _disputeResolver - the fully populated buydispute resolver struct
-     * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency
      */
-    function updateDisputeResolver(DisputeResolver memory _disputeResolver, DisputeResolverFee[] calldata _disputeResolverFees)
+    function updateDisputeResolver(DisputeResolver memory _disputeResolver)
     external
     override
     {
@@ -254,13 +273,11 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         delete protocolLookups().disputeResolverIdByOperator[disputeResolver.operator];
         delete protocolLookups().disputeResolverIdByAdmin[disputeResolver.admin];
         delete protocolLookups().disputeResolverIdByClerk[disputeResolver.clerk];
-        delete protocolEntities().disputeResolverFees[disputeResolver.id];
-
-
-        storeDisputeResolver(_disputeResolver, _disputeResolverFees);
+    
+        storeDisputeResolver(_disputeResolver);
         
         // Notify watchers of state change
-        emit DisputeResolverUpdated(_disputeResolver.id, _disputeResolver, _disputeResolverFees, msgSender());
+        emit DisputeResolverUpdated(_disputeResolver.id, _disputeResolver, msgSender());
 
     }
 
@@ -395,19 +412,15 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * @notice Stores DisputeResolver struct in storage
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set
-     * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency
      */
    
-    function storeDisputeResolver(DisputeResolver memory _disputeResolver, DisputeResolverFee[] calldata _disputeResolverFees) internal 
+    function storeDisputeResolver(DisputeResolver memory _disputeResolver) internal 
     {
         // escalation period must be greater than zero and less than or equal to the max allowed
         require(_disputeResolver.escalationResponsePeriod > 0 && _disputeResolver.escalationResponsePeriod <= protocolLimits().maxEscalationResponsePeriod, INVALID_ESCALATION_PERIOD);
 
-        // At least one fee must be specified. The ammount can be 0, but it must be intentional. However, the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
-        require(_disputeResolverFees.length > 0 && _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
-
         // Get storage location for dispute resolver
-        (,DisputeResolver storage disputeResolver, DisputeResolverFee[] storage disputeResolverFees) = fetchDisputeResolver(_disputeResolver.id);
+        (,DisputeResolver storage disputeResolver,) = fetchDisputeResolver(_disputeResolver.id);
 
         // Set dispute resolver props individually since memory structs can't be copied to storage
         disputeResolver.id = _disputeResolver.id;
@@ -419,10 +432,6 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         disputeResolver.metadataUri = _disputeResolver.metadataUri;
         disputeResolver.active = _disputeResolver.active;
 
-        //Set dispute resolver fees. Must loop because memory structs cannot be converted to storage structs
-        for(uint i = 0; i < _disputeResolverFees.length; i++) {
-            disputeResolverFees.push(DisputeResolverFee( _disputeResolverFees[i].tokenAddress, _disputeResolverFees[i].tokenName, _disputeResolverFees[i].feeAmount));
-        }
 
         //Map the dispute resolver's addresses to the dispute resolver Id.
         protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] = _disputeResolver.id;

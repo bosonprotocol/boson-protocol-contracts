@@ -51,6 +51,8 @@ exports.RevertReasons = {
   WALLET_OWNS_VOUCHERS: "Wallet address owns vouchers",
   NOT_DISPUTE_RESOLVER_OPERATOR: "Not dispute resolver's operator address",
   NO_SUCH_DISPUTE_RESOLVER: "No such dispute resolver",
+  INVALID_ESCALATION_PERIOD: "Invalid escalation period",
+  INVALID_AMOUNT_DISPUTE_RESOLVER_FEES: "Dispute resolver fees are not present or exceeds maximum dispute resolver fees in a single transaction",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",
