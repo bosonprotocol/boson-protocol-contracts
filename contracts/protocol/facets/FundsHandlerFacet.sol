@@ -53,7 +53,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             require(_amount == msg.value, NATIVE_WRONG_AMOUNT);
         } else {
             // transfer tokens from the caller
-            FundsLib.transferFundsToProtocol(_tokenAddress, _amount);
+            FundsLib.transferFundsToProtocol(_tokenAddress, _amount, msgSender());
         }
 
         // increase available funds
