@@ -25,7 +25,7 @@ const { mockOffer } = require("../utils/mock");
 describe("IBosonOfferHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury, other1;
+  let deployer, rando, operator, admin, clerk, treasury, other1;
   let erc165,
     protocolDiamond,
     accessController,
@@ -75,14 +75,7 @@ describe("IBosonOfferHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    accounts = await ethers.getSigners();
-    deployer = accounts[0];
-    operator = accounts[1];
-    admin = accounts[2];
-    clerk = accounts[3];
-    treasury = accounts[4];
-    rando = accounts[5];
-    other1 = accounts[6];
+    [deployer, operator, admin, clerk, treasury, rando, other1] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();

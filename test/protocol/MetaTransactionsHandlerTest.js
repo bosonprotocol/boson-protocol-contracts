@@ -10,9 +10,6 @@ const MetaTxDisputeResolutionDetails = require("../../scripts/domain/MetaTxDispu
 const MetaTxExchangeDetails = require("../../scripts/domain/MetaTxExchangeDetails");
 const MetaTxFundDetails = require("../../scripts/domain/MetaTxFundDetails");
 const MetaTxOfferDetails = require("../../scripts/domain/MetaTxOfferDetails");
-const Offer = require("../../scripts/domain/Offer");
-const OfferDates = require("../../scripts/domain/OfferDates");
-const OfferDurations = require("../../scripts/domain/OfferDurations");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
@@ -27,13 +24,8 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const {
-  prepareDataSignatureParameters,
-  calculateProtocolFee,
-  setNextBlockTimestamp,
-} = require("../../scripts/util/test-utils.js");
+const { prepareDataSignatureParameters, setNextBlockTimestamp } = require("../../scripts/util/test-utils.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { oneWeek, oneMonth } = require("../utils/constants");
 const { mockOffer } = require("../utils/mock");
 
 /**
@@ -42,7 +34,7 @@ const { mockOffer } = require("../utils/mock");
 describe("IBosonMetaTransactionsHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, buyer, admin, clerk, treasury, other1;
+  let deployer, rando, operator, buyer, admin, clerk, treasury, other1;
   let erc165,
     protocolDiamond,
     accessController,
@@ -57,7 +49,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     result;
   let metaTransactionsHandler, nonce, functionSignature;
   let seller, sellerId, offerId, id, buyerId;
-  let block, blockNumber, clients;
+  let clients;
   let bosonVoucher;
   let validOfferDetails,
     offerType,
@@ -68,23 +60,8 @@ describe("IBosonMetaTransactionsHandler", function () {
     exchangeType,
     message;
   let offer, offerDates, offerDurations;
-  let sellerDeposit,
-    price,
-    protocolFee,
-    buyerCancelPenalty,
-    quantityAvailable,
-    exchangeToken,
-    disputeResolverId,
-    voided,
-    metadataHash,
-    metadataUri;
-  let fulfillmentPeriod,
-    resolutionPeriod,
-    voucherValid,
-    validFrom,
-    validUntil,
-    voucherRedeemableUntil,
-    voucherRedeemableFrom;
+  let sellerDeposit, price;
+  let voucherRedeemableFrom;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
@@ -114,15 +91,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    accounts = await ethers.getSigners();
-    deployer = accounts[0];
-    operator = accounts[1];
-    buyer = accounts[3];
-    rando = accounts[4];
-    admin = accounts[5];
-    clerk = accounts[6];
-    treasury = accounts[7];
-    other1 = accounts[8];
+    [deployer, operator, buyer, rando, admin, clerk, treasury, other1] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -655,16 +624,31 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Register the dispute resolver
         await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
 
-        // Create the offer
-        ({ offer, offerDates, offerDurations} = await mockOffer());
+        // Valid offer domains
+        ({ offer, offerDates, offerDurations } = await mockOffer());
+        offer.exchangeToken = mockToken.address;
         expect(offer.isValid()).is.true;
         expect(offerDates.isValid()).is.true;
         expect(offerDurations.isValid()).is.true;
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
-        
-        // Update used variables 
+
+        // Update used variables
         sellerDeposit = offer.sellerDeposit;
         price = offer.price;
+        voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+
+        // top up seller's and buyer's account
+        await mockToken.mint(operator.address, sellerDeposit);
+        await mockToken.mint(buyer.address, price);
+
+        // approve protocol to transfer the tokens
+        await mockToken.connect(operator).approve(protocolDiamond.address, sellerDeposit);
+        await mockToken.connect(buyer).approve(protocolDiamond.address, price);
+
+        // deposit to seller's pool
+        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, sellerDeposit);
+
+        // Create the offer
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
         // Set the offer Type
         offerType = [
@@ -1820,66 +1804,25 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Register the dispute resolver
         await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
 
-        // Get the current block info
-        blockNumber = await ethers.provider.getBlockNumber();
-        block = await ethers.provider.getBlock(blockNumber);
-
-        // Required constructor params
-        price = ethers.utils.parseUnits("1.5", "ether").toString();
-        sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-        protocolFee = calculateProtocolFee(price, protocolFeePercentage);
-        buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
-        quantityAvailable = "2";
-        exchangeToken = mockToken.address; // Mock token address
-        disputeResolverId = "2";
-        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
-        voided = false;
-
-        // Create a valid offer entity
-        offerToken = new Offer(
-          id,
-          sellerId,
-          price,
-          sellerDeposit,
-          protocolFee,
-          buyerCancelPenalty,
-          quantityAvailable,
-          exchangeToken,
-          disputeResolverId,
-          metadataUri,
-          metadataHash,
-          voided
-        );
-        expect(offerToken.isValid()).is.true;
-
-        offerNative = offerToken.clone();
-        offerNative.id = "2";
-        offerNative.exchangeToken = ethers.constants.AddressZero;
+        const { offer, ...mo } = await mockOffer();
+        offerNative = offer;
         expect(offerNative.isValid()).is.true;
 
-        // Required constructor params
-        validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-        validUntil = ethers.BigNumber.from(block.timestamp)
-          .add(oneMonth * 6)
-          .toString(); // until 6 months
-        voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-        voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
+        offerToken = offerNative.clone();
+        offerToken.id = "2";
+        offerToken.exchangeToken = mockToken.address;
 
-        // Create a valid offerDates, then set fields in tests directly
-        offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
+        offerDates = mo.offerDates;
+        expect(offerDates.isValid()).is.true;
 
-        // Required constructor params
-        fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
-        voucherValid = oneMonth.toString(); // offers valid for one month
-        resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
-
-        // Create a valid offerDurations, then set fields in tests directly
-        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
+        offerDurations = mo.offerDurations;
+        expect(offerDurations.isValid()).is.true;
 
         // Create both offers
-        await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations);
-        await offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations);
+        await Promise.all([
+          offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations),
+          offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations),
+        ]);
 
         // top up seller's and buyer's account
         await mockToken.mint(operator.address, sellerDeposit);

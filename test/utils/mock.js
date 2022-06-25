@@ -6,6 +6,32 @@ const OfferDurations = require("../../scripts/domain/OfferDurations");
 const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("./constants.js");
 
+function mockOfferDurations() {
+  // Required constructor params
+  const fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
+  const voucherValid = oneMonth.toString(); // offers valid for one month
+  const resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
+
+  // Create a valid offerDurations, then set fields in tests directly
+  return new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
+}
+
+async function mockOfferDates() {
+  // Get the current block info
+  const blockNumber = await ethers.provider.getBlockNumber();
+  const block = await ethers.provider.getBlock(blockNumber);
+
+  const validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
+  const validUntil = ethers.BigNumber.from(block.timestamp)
+    .add(oneMonth * 6)
+    .toString(); // until 6 months
+  const voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
+  const voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
+
+  // Create a valid offerDates, then set fields in tests directly
+  return new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
+}
+
 // Returns a mock offer with price in native token
 async function mockOffer() {
   const id = "1"; // argument sent to contract for createOffer will be ignored
@@ -37,27 +63,8 @@ async function mockOffer() {
     voided
   );
 
-  // Get the current block info
-  const blockNumber = await ethers.provider.getBlockNumber();
-  const block = await ethers.provider.getBlock(blockNumber);
-
-  const validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-  const validUntil = ethers.BigNumber.from(block.timestamp)
-    .add(oneMonth * 6)
-    .toString(); // until 6 months
-  const voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-  const voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
-
-  // Create a valid offerDates, then set fields in tests directly
-  let offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
-
-  // Required constructor params
-  const fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
-  const voucherValid = oneMonth.toString(); // offers valid for one month
-  const resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
-
-  // Create a valid offerDurations, then set fields in tests directly
-  let offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
+  const offerDates = await mockOfferDates();
+  const offerDurations = mockOfferDurations();
 
   return { offer, offerDates, offerDurations };
 }

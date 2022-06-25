@@ -35,7 +35,7 @@ const { oneWeek } = require("../utils/constants");
 describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, disputeResolver, fauxClient;
+  let deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, disputeResolver, fauxClient;
   let erc165,
     protocolDiamond,
     accessController,
@@ -67,17 +67,8 @@ describe("IBosonExchangeHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    accounts = await ethers.getSigners();
-    deployer = accounts[0];
-    operator = accounts[1];
-    admin = accounts[2];
-    clerk = accounts[3];
-    treasury = accounts[4];
-    buyer = accounts[5];
-    rando = accounts[6];
-    newOwner = accounts[7];
-    disputeResolver = accounts[8];
-    fauxClient = accounts[9];
+    [deployer, operator, admin, clerk, treasury, buyer, rando, newOwner, disputeResolver, fauxClient] =
+      await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
