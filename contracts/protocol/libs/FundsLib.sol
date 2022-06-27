@@ -113,7 +113,6 @@ library FundsLib {
             // get the information about the dispute, which must exist
             BosonTypes.Dispute storage dispute = pe.disputes[_exchangeId];
             BosonTypes.DisputeState disputeState = dispute.state;
-    console.log("state", uint256(disputeState));
 
             if (disputeState == BosonTypes.DisputeState.Retracted) {
                 // RETRACTED - same as "COMPLETED"
