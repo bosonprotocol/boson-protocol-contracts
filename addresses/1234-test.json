@@ -5,27 +5,27 @@
   "contracts": [
     {
       "name": "AccessController",
-      "address": "0x88420f8cEa0cDD65519a7b61995c10Ac276c4Ce3",
+      "address": "0x5B46Ef099892D7dec86cb26dEC122D6Bd25003e4",
       "args": []
     },
     {
       "name": "DiamondLoupeFacet",
-      "address": "0x747D8E645cec8A0126461aAF54c67EA1969Ee3b5",
+      "address": "0x68379dad5B715B29Ff0219f2DBCded02E951A435",
       "args": []
     },
     {
       "name": "DiamondCutFacet",
-      "address": "0xC4F3eDb8A9a0a8622d04d97e8DB10EE8a0AF973f",
+      "address": "0x85b1f655A71263C4f927BAa02475DbA2EbF889CC",
       "args": []
     },
     {
       "name": "ProtocolDiamond",
-      "address": "0x4DC58853000C8B17edF03dCBeD0A1eB343544308",
+      "address": "0x3C699F1e15E99A6fEa5a1C5D51AD932ea66Ff2e2",
       "args": [
-        "0x88420f8cEa0cDD65519a7b61995c10Ac276c4Ce3",
+        "0x5B46Ef099892D7dec86cb26dEC122D6Bd25003e4",
         [
           [
-            "0x747D8E645cec8A0126461aAF54c67EA1969Ee3b5",
+            "0x68379dad5B715B29Ff0219f2DBCded02E951A435",
             0,
             [
               "0xcdffacc6",
@@ -35,7 +35,7 @@
             ]
           ],
           [
-            "0xC4F3eDb8A9a0a8622d04d97e8DB10EE8a0AF973f",
+            "0x85b1f655A71263C4f927BAa02475DbA2EbF889CC",
             0,
             [
               "0x1f931c1c"
@@ -51,71 +51,71 @@
     },
     {
       "name": "ConfigHandlerFacet",
-      "address": "0xe3357a9cD50292d3d9847Abc5da775fAFE311607",
+      "address": "0xf5c7c928AFc704beB25bcC29bEb0e30DFFc875ca",
       "args": []
     },
     {
       "name": "AccountHandlerFacet",
-      "address": "0x0d0be80690F275b68B11818560fD1C8695D91502",
+      "address": "0x74E37b83F81dec47fC11D80927c79cC2c53572E3",
       "args": []
     },
     {
       "name": "BundleHandlerFacet",
-      "address": "0xA22Ec9f7D5D76EaFA06938e0766E9Aa0433AcE98",
+      "address": "0x0179D6277EF3190177cc873d07c3a25be328e9Ff",
       "args": []
     },
     {
       "name": "DisputeHandlerFacet",
-      "address": "0x75E297387102d2675D6Ac7860562dfa80Ed40cb1",
+      "address": "0xC5EEaf12791C80544123012F771865d0d49BC49D",
       "args": []
     },
     {
       "name": "ExchangeHandlerFacet",
-      "address": "0x3646Af771E535a5Ae9e0D32E8217cD225429fA28",
+      "address": "0xb715c2F8F71b9e75350d0664B034aCBF1418CDc0",
       "args": []
     },
     {
       "name": "FundsHandlerFacet",
-      "address": "0x5C1190D51fD0B92d7CcE543f182E4F2D6F938768",
+      "address": "0x708C7581084A15b17d611EbfcE417Fe08DCd0A18",
       "args": []
     },
     {
       "name": "GroupHandlerFacet",
-      "address": "0x708c67aeFb57dCF3d1720FDb5068eBe1f087723A",
+      "address": "0x2aE03081a658EB16eE4448895AF6cb3e6DB985Bc",
       "args": []
     },
     {
       "name": "MetaTransactionsHandlerFacet",
-      "address": "0x1374f192Cea540b7D57A99438501baAE85DB5684",
+      "address": "0x3FF65baf9F9ff74c457C66a711c8589C6ec3cFA3",
       "args": []
     },
     {
       "name": "OfferHandlerFacet",
-      "address": "0xA4Dc2fcDfa835F2ED958508619d9A6071424B1cb",
+      "address": "0x9965E83BB7c156dE24198AcdF9F0E41B7a236e8C",
       "args": []
     },
     {
       "name": "OrchestrationHandlerFacet",
-      "address": "0x31Dc37E400889bE1be26Ea903013c85A6b23b1f8",
+      "address": "0x1D37c975E277028aD933C191Cda5e18aCecDd1f7",
       "args": []
     },
     {
       "name": "TwinHandlerFacet",
-      "address": "0x1B71822cA9Cd54f39Bc3Ab15000e3C9603989A0c",
+      "address": "0x26f7A5cB5C97204E22199A8Ae373078812dc8536",
       "args": []
     },
     {
       "name": "BosonVoucher Logic",
-      "address": "0xe4154c3d51C5Fd56E3455899f030883AEf6eB464",
+      "address": "0x613c78044d7987738f00259AF9f2eB0c22933f9f",
       "args": []
     },
     {
       "name": "BosonVoucher Proxy",
-      "address": "0xdab2F90c3B71DDA609C29cc27Fe84900688E0E87",
+      "address": "0xbA9bc71342592f2bdA8F1E8Bffe66eF2D1F77fD7",
       "args": [
-        "0x88420f8cEa0cDD65519a7b61995c10Ac276c4Ce3",
-        "0x4DC58853000C8B17edF03dCBeD0A1eB343544308",
-        "0xe4154c3d51C5Fd56E3455899f030883AEf6eB464"
+        "0x5B46Ef099892D7dec86cb26dEC122D6Bd25003e4",
+        "0x3C699F1e15E99A6fEa5a1C5D51AD932ea66Ff2e2",
+        "0x613c78044d7987738f00259AF9f2eB0c22933f9f"
       ]
     }
   ]
