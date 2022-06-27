@@ -22,7 +22,7 @@ const { mockOffer } = require("../utils/mock");
 /**
  *  Test the Boson Offer Handler interface
  */
-describe("IBosonOfferHandler", function () {
+describe.only("IBosonOfferHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer, rando, operator, admin, clerk, treasury, other1;
@@ -38,18 +38,7 @@ describe("IBosonOfferHandler", function () {
     value;
   let offer, nextOfferId, invalidOfferId, support, expected, exists;
   let seller, active;
-  let id,
-    sellerId,
-    price,
-    sellerDeposit,
-    protocolFee,
-    buyerCancelPenalty,
-    quantityAvailable,
-    exchangeToken,
-    disputeResolverId,
-    metadataUri,
-    metadataHash,
-    voided;
+  let id, sellerId, price, voided;
   let validFrom,
     validUntil,
     voucherRedeemableFrom,
@@ -249,7 +238,7 @@ describe("IBosonOfferHandler", function () {
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
-      });
+      }, ``);
 
       it("should ignore any provided protocol fee and calculate the correct one", async function () {
         // set some protocole fee
@@ -850,66 +839,41 @@ describe("IBosonOfferHandler", function () {
       offerDurationsStructs = [];
 
       for (let i = 0; i < 5; i++) {
-        // Required constructor params
-        id = `${i + 1}`;
-        sellerId = "1"; //
-        price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
-        sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
-        buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
-        protocolFee = calculateProtocolFee(price, protocolFeePercentage);
-        quantityAvailable = `${(i + 1) * 2}`;
-        exchangeToken = ethers.constants.AddressZero.toString();
-        disputeResolverId = "2";
-        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
-        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
-        voided = false;
+        // Mock offer, offerDates and offerDurations
+        ({ offer, offerDates, offerDurations } = await mockOffer());
 
-        // Create a valid offer, then set fields in tests directly
-        offer = new Offer(
-          id,
-          sellerId,
-          price,
-          sellerDeposit,
-          protocolFee,
-          buyerCancelPenalty,
-          quantityAvailable,
-          exchangeToken,
-          disputeResolverId,
-          metadataUri,
-          metadataHash,
-          voided
-        );
+        // Set unique offer properties based on index
+        offer.id = `${i + 1}`;
+        offer.price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
+        offer.sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
+        offer.protocolFee = calculateProtocolFee(offer.price, protocolFeePercentage);
+        offer.buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
+        offer.quantityAvailable = `${(i + 1) * 2}`;
+
+        offerDates.validFrom = validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
+        offerDates.validUntil = validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
+        
+        offerDurations.fulfillmentPeriod = fulfillmentPeriod = `${(i + 1) * oneMonth}`;
+        offerDurations.voucherValid = voucherValid = `${(i + 1) * oneMonth}`;
+        offerDurations.resolutionPeriod = resolutionPeriod = `${(i + 1) * oneWeek}`;
+
+        // Check if domains are valid
         expect(offer.isValid()).is.true;
+        expect(offerDates.isValid()).is.true;
+        expect(offerDurations.isValid()).is.true;
 
         offers.push(offer);
         offerStructs.push(offer.toStruct());
 
-        // Required constructor params
-        validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
-        validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
-        voucherRedeemableFrom = ethers.BigNumber.from(validUntil + oneWeek).toString();
-        voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
-
-        // Create a valid offerDates, then set fields in tests directly
-        offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
-        expect(offerDates.isValid()).is.true;
-
-        // How that offer looks as a returned struct
         offerDatesList.push(offerDates);
         offerDatesStructs.push(offerDates.toStruct());
-
-        // Required constructor params
-        fulfillmentPeriod = `${(i + 1) * oneMonth}`;
-        voucherValid = `${(i + 1) * oneMonth}`;
-        resolutionPeriod = `${(i + 1) * oneWeek}`;
-
-        // Create a valid offerDurations, then set fields in tests directly
-        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
-        expect(offerDurations.isValid()).is.true;
 
         offerDurationsList.push(offerDurations);
         offerDurationsStructs.push(offerDurations.toStruct());
       }
+
+      voucherRedeemableFrom = offerDatesList[0].voucherRedeemableFrom;
+      voucherRedeemableUntil = offerDatesList[0].voucherRedeemableUntil;
 
       // change some offers to test different cases
       // offer with boson as an exchange token and unlimited supply
@@ -988,6 +952,11 @@ describe("IBosonOfferHandler", function () {
 
           // Returned values should match the input in createOfferBatch
           for ([key, value] of Object.entries(offers[i])) {
+            const x = JSON.stringify(returnedOffer[key]) === JSON.stringify(value)
+            if(x == false) {
+              console.log(returnedOffer[key])
+              console.log('key', key, 'value', value)
+            }
             expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
           }
           for ([key, value] of Object.entries(offerDatesList[i])) {
@@ -1291,6 +1260,8 @@ describe("IBosonOfferHandler", function () {
     context("👉 voidOfferBatch()", async function () {
       let offersToVoid;
       beforeEach(async function () {
+        sellerId = "1";
+
         // Create an offer
         await offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList);
 

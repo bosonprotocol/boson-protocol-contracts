@@ -73,7 +73,7 @@ async function mockOffer() {
 
 function mockTwin(tokenAddress, tokenType) {
   tokenType = tokenType ?? TokenType.FungibleToken;
-  const id ="1";
+  const id = "1";
   const sellerId = "1";
   const supplyAvailable = "500";
   const tokenId = "0";
