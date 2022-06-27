@@ -8,7 +8,6 @@ const ExchangeState = require("../../scripts/domain/ExchangeState");
 const MetaTxDisputeDetails = require("../../scripts/domain/MetaTxDisputeDetails");
 const MetaTxDisputeResolutionDetails = require("../../scripts/domain/MetaTxDisputeResolutionDetails");
 const MetaTxExchangeDetails = require("../../scripts/domain/MetaTxExchangeDetails");
-const MetaTxFundDetails = require("../../scripts/domain/MetaTxFundDetails");
 const MetaTxOfferDetails = require("../../scripts/domain/MetaTxOfferDetails");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
@@ -1560,7 +1559,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
       });
 
-      context("👉 executeMetaTxResolveDispute()", async function () {
+      context("👉 DisputeHandlerFacet 👉 resolveDispute()", async function () {
         beforeEach(async function () {
           // Set time forward to the offer's voucherRedeemableFrom
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
@@ -1775,7 +1774,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
     });
 
-    context("👉 executeMetaTxWithdrawFunds()", async function () {
+    context("👉 FundsHandlerFacet 👉 withdrawFunds()", async function () {
       beforeEach(async function () {
         // Set a random nonce
         nonce = parseInt(ethers.utils.randomBytes(8));
@@ -1841,11 +1840,14 @@ describe("IBosonMetaTransactionsHandler", function () {
         // buyer: price - buyerCancelPenalty - protocolFee
         buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
 
-        // prepare the MetaTxFundDetails struct
+        // prepare validFundDetails
         tokenListBuyer = [mockToken.address, ethers.constants.AddressZero];
         tokenAmountsBuyer = [buyerPayoff, ethers.BigNumber.from(buyerPayoff).div("2").toString()];
-        validFundDetails = new MetaTxFundDetails(buyerId, tokenListBuyer, tokenAmountsBuyer);
-        expect(validFundDetails.isValid()).is.true;
+        validFundDetails = {
+          entityId: buyerId,
+          tokenList: tokenListBuyer,
+          tokenAmounts: tokenAmountsBuyer
+        }
 
         // Prepare the message
         message = {};
@@ -1904,9 +1906,24 @@ describe("IBosonMetaTransactionsHandler", function () {
             metaTransactionsHandler.address
           );
 
+          // Prepare the function signature
+          functionSignature = fundsHandler.interface.encodeFunctionData("withdrawFunds", [
+            validFundDetails.entityId,
+            validFundDetails.tokenList,
+            validFundDetails.tokenAmounts,
+          ]);
+
           // Withdraw funds. Send a meta transaction, check for event.
           await expect(
-            metaTransactionsHandler.executeMetaTxWithdrawFunds(buyer.address, validFundDetails, nonce, r, s, v)
+            metaTransactionsHandler.executeMetaTransactionUni(
+              buyer.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
             .withArgs(buyer.address, deployer.address, message.functionName, nonce);
@@ -1939,8 +1956,11 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
 
         it("withdraws all the tokens when we use empty tokenList and tokenAmounts arrays", async () => {
-          validFundDetails = new MetaTxFundDetails(buyerId, [], []);
-          expect(validFundDetails.isValid()).is.true;
+          validFundDetails = {
+            entityId: buyerId,
+            tokenList: [],
+            tokenAmounts: []
+          }
 
           // Prepare the message
           message.fundDetails = validFundDetails;
@@ -1954,9 +1974,20 @@ describe("IBosonMetaTransactionsHandler", function () {
             metaTransactionsHandler.address
           );
 
+          // Prepare the function signature
+          functionSignature = fundsHandler.interface.encodeFunctionData("withdrawFunds", [validFundDetails.entityId, validFundDetails.tokenList, validFundDetails.tokenAmounts]);
+
           // Withdraw funds. Send a meta transaction, check for event.
           await expect(
-            metaTransactionsHandler.executeMetaTxWithdrawFunds(buyer.address, validFundDetails, nonce, r, s, v)
+            metaTransactionsHandler.executeMetaTransactionUni(
+              buyer.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
           )
             .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
             .withArgs(buyer.address, deployer.address, message.functionName, nonce);
@@ -1985,8 +2016,11 @@ describe("IBosonMetaTransactionsHandler", function () {
 
       it("does not modify revert reasons", async function () {
         // Set token address to boson token
-        validFundDetails = new MetaTxFundDetails(buyerId, [bosonToken.address], [buyerPayoff]);
-        expect(validFundDetails.isValid()).is.true;
+        validFundDetails = {
+          entityId: buyerId,
+          tokenList: [bosonToken.address],
+          tokenAmounts: [buyerPayoff],
+        }
 
         // Prepare the message
         message.fundDetails = validFundDetails;
@@ -2000,9 +2034,24 @@ describe("IBosonMetaTransactionsHandler", function () {
           metaTransactionsHandler.address
         );
 
+        // Prepare the function signature
+        functionSignature = fundsHandler.interface.encodeFunctionData("withdrawFunds", [
+          validFundDetails.entityId,
+          validFundDetails.tokenList,
+          validFundDetails.tokenAmounts,
+        ]);
+
         // Execute meta transaction, expecting revert.
         await expect(
-          metaTransactionsHandler.executeMetaTxWithdrawFunds(buyer.address, validFundDetails, nonce, r, s, v)
+          metaTransactionsHandler.executeMetaTransactionUni(
+            buyer.address,
+            message.functionName,
+            functionSignature,
+            nonce,
+            r,
+            s,
+            v
+          )
         ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
       });
 
@@ -2017,12 +2066,35 @@ describe("IBosonMetaTransactionsHandler", function () {
             metaTransactionsHandler.address
           );
 
+          // Prepare the function signature
+          functionSignature = fundsHandler.interface.encodeFunctionData("withdrawFunds", [
+            validFundDetails.entityId,
+            validFundDetails.tokenList,
+            validFundDetails.tokenAmounts,
+          ]);
+
           // Execute the meta transaction.
-          await metaTransactionsHandler.executeMetaTxWithdrawFunds(buyer.address, validFundDetails, nonce, r, s, v);
+          await metaTransactionsHandler.executeMetaTransactionUni(
+            buyer.address,
+            message.functionName,
+            functionSignature,
+            nonce,
+            r,
+            s,
+            v
+          );
 
           // Execute meta transaction again with the same nonce, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTxWithdrawFunds(buyer.address, validFundDetails, nonce, r, s, v)
+            metaTransactionsHandler.executeMetaTransactionUni(
+              buyer.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
           ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
         });
 
@@ -2039,9 +2111,24 @@ describe("IBosonMetaTransactionsHandler", function () {
             metaTransactionsHandler.address
           );
 
+          // Prepare the function signature
+          functionSignature = fundsHandler.interface.encodeFunctionData("withdrawFunds", [
+            validFundDetails.entityId,
+            validFundDetails.tokenList,
+            validFundDetails.tokenAmounts,
+          ]);
+
           // Execute meta transaction, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTxWithdrawFunds(buyer.address, validFundDetails, nonce, r, s, v)
+            metaTransactionsHandler.executeMetaTransactionUni(
+              buyer.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
           ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         });
       });

@@ -145,31 +145,6 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
     ) external returns (bytes memory);
 
     /**
-     * @notice Handles the incoming meta transaction for Withdraw Funds.
-     *
-     * Reverts if:
-     * - nonce is already used by another transaction.
-     * - sender does not match the recovered signer.
-     * - any code executed in the signed transaction reverts.
-     *
-     * @param _userAddress - the sender of the transaction.
-     * @param _fundDetails - the fully populated BosonTypes.MetaTxFundDetails struct.
-     * @param _nonce - the nonce value of the transaction.
-     * @param _sigR - r part of the signer's signature.
-     * @param _sigS - s part of the signer's signature.
-     * @param _sigV - v part of the signer's signature.
-     */
-    function executeMetaTxWithdrawFunds(
-        address _userAddress,
-        BosonTypes.MetaTxFundDetails calldata _fundDetails,
-        uint256 _nonce,
-        bytes32 _sigR,
-        bytes32 _sigS,
-        uint8 _sigV
-    ) external returns (bytes memory);
-
-
-    /**
      * @notice Handles the incoming meta transaction for Retract Dispute.
      *
      * Reverts if:
