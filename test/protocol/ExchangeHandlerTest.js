@@ -191,11 +191,16 @@ describe("IBosonExchangeHandler", function () {
 
       // Create the offer
       const { offer, offerDates, offerDurations } = await mockOffer();
+
+      // Check if domains are valid
       expect(offer.isValid()).is.true;
       expect(offerDates.isValid()).is.true;
       expect(offerDurations.isValid()).is.true;
+
+      // Create the offer
       await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
+      // Set used variables
       price = offer.price;
       sellerDeposit = offer.sellerDeposit;
       voucherRedeemableFrom = offerDates.voucherRedeemableFrom;

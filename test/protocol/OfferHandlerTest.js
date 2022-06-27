@@ -22,7 +22,7 @@ const { mockOffer } = require("../utils/mock");
 /**
  *  Test the Boson Offer Handler interface
  */
-describe.only("IBosonOfferHandler", function () {
+describe("IBosonOfferHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer, rando, operator, admin, clerk, treasury, other1;
@@ -166,19 +166,20 @@ describe.only("IBosonOfferHandler", function () {
       sellerId = 1;
 
       // Mock offer
-      const mo = await mockOffer();
-      offer = mo.offer;
+      ({ offer, offerDates, offerDurations } = await mockOffer());
+
+      // Check if domais are valid
       expect(offer.isValid()).is.true;
-      price = offer.price;
-      offerStruct = offer.toStruct();
-
-      offerDates = mo.offerDates;
       expect(offerDates.isValid()).is.true;
-      offerDatesStruct = offerDates.toStruct();
-
-      offerDurations = mo.offerDurations;
       expect(offerDurations.isValid()).is.true;
+
+      // Set domains transformed into struct
+      offerStruct = offer.toStruct();
+      offerDatesStruct = offerDates.toStruct();
       offerDurationsStruct = offerDurations.toStruct();
+
+      // Set used variables
+      price = offer.price;
     });
 
     context("👉 createOffer()", async function () {
@@ -230,15 +231,19 @@ describe.only("IBosonOfferHandler", function () {
         expect(exists).to.be.true;
       });
 
-      it("should ignore any provided seller and assign seller id of msg.sender", async function () {
-        // set some other sellerId
-        offer.sellerId = "123";
+      it(
+        "should ignore any provided seller and assign seller id of msg.sender",
+        async function () {
+          // set some other sellerId
+          offer.sellerId = "123";
 
-        // Create an offer, testing for the event
-        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
-          .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
-      }, ``);
+          // Create an offer, testing for the event
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
+            .to.emit(offerHandler, "OfferCreated")
+            .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+        },
+        ``
+      );
 
       it("should ignore any provided protocol fee and calculate the correct one", async function () {
         // set some protocole fee
@@ -852,7 +857,7 @@ describe.only("IBosonOfferHandler", function () {
 
         offerDates.validFrom = validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
         offerDates.validUntil = validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
-        
+
         offerDurations.fulfillmentPeriod = fulfillmentPeriod = `${(i + 1) * oneMonth}`;
         offerDurations.voucherValid = voucherValid = `${(i + 1) * oneMonth}`;
         offerDurations.resolutionPeriod = resolutionPeriod = `${(i + 1) * oneWeek}`;
@@ -952,10 +957,10 @@ describe.only("IBosonOfferHandler", function () {
 
           // Returned values should match the input in createOfferBatch
           for ([key, value] of Object.entries(offers[i])) {
-            const x = JSON.stringify(returnedOffer[key]) === JSON.stringify(value)
-            if(x == false) {
-              console.log(returnedOffer[key])
-              console.log('key', key, 'value', value)
+            const x = JSON.stringify(returnedOffer[key]) === JSON.stringify(value);
+            if (x == false) {
+              console.log(returnedOffer[key]);
+              console.log("key", key, "value", value);
             }
             expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
           }

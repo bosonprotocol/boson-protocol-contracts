@@ -177,6 +177,8 @@ describe("IBosonDisputeHandler", function () {
       // Mock offer
       ({ offer, offerDates, offerDurations } = await mockOffer());
       offer.quantityAvailable = "2";
+
+      // Check if domains are valid
       expect(offer.isValid()).is.true;
       expect(offerDates.isValid()).is.true;
       expect(offerDurations.isValid()).is.true;

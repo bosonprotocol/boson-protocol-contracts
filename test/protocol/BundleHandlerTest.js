@@ -58,17 +58,13 @@ describe("IBosonBundleHandler", function () {
     InterfaceIds = await getInterfaceIds();
 
     // Mock offer
-    const mo = await mockOffer();
-    offer = mo.offer;
-    expect(offer.isValid()).is.true;
-
+    ({ offer, offerDates, offerDurations } = await mockOffer());
     price = offer.price;
     sellerDeposit = offer.sellerDeposit;
 
-    offerDates = mo.offerDates;
+    // Check if domains are valid
+    expect(offer.isValid()).is.true;
     expect(offerDates.isValid()).is.true;
-
-    offerDurations = mo.offerDurations;
     expect(offerDurations.isValid()).is.true;
   });
 

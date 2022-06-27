@@ -161,7 +161,6 @@ describe("IBosonGroupHandler", function () {
         offer.protocolFee = calculateProtocolFee(offer.price, protocolFeePercentage);
         offer.buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
         offer.quantityAvailable = `${(i + 1) * 2}`;
-
         offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
         offerDates.validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
 

@@ -347,19 +347,19 @@ describe("IBosonFundsHandler", function () {
 
         // Mock offer
         const { offer, ...mo } = await mockOffer();
+        ({ offerDates, offerDurations } = mo);
         offer.quantityAvailable = "2";
-        offerNative = offer;
-        expect(offerNative.isValid()).is.true;
 
-        offerToken = offerNative.clone();
+        offerNative = offer;
+
+        offerToken = offer.clone();
         offerToken.id = "2";
         offerToken.exchangeToken = mockToken.address;
+
+        // Check if domais are valid
+        expect(offerNative.isValid()).is.true;
         expect(offerToken.isValid()).is.true;
-
-        offerDates = mo.offerDates;
         expect(offerDates.isValid()).is.true;
-
-        offerDurations = mo.offerDurations;
         expect(offerDurations.isValid()).is.true;
 
         // Set used variables
@@ -371,7 +371,7 @@ describe("IBosonFundsHandler", function () {
           offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations),
         ]);
 
-        // Set used variables;
+        // Set used variables
         price = offerToken.price;
         sellerDeposit = offerToken.sellerDeposit;
         protocolFee = offerToken.protocolFee;
@@ -1219,7 +1219,7 @@ describe("IBosonFundsHandler", function () {
         offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations),
       ]);
 
-      // Set used variables;
+      // Set used variables
       price = offerToken.price;
       protocolFee = offerToken.protocolFee;
       sellerDeposit = offerToken.sellerDeposit;

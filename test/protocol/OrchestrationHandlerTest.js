@@ -21,8 +21,9 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { getEvent, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { mockTwin, mockOffer } = require("../utils/mock");
 const { oneMonth } = require("../utils/constants");
+const { mockTwin, mockOffer } = require("../utils/mock");
+
 /**
  *  Test the Boson Orchestration Handler interface
  */
@@ -44,9 +45,9 @@ describe("IBosonOrchestrationHandler", function () {
     value;
   let offer, nextOfferId, support, exists;
   let nextAccountId;
-  let seller, sellerId, sellerStruct, active;
+  let seller, sellerStruct, active;
   let disputeResolver;
-  let id;
+  let id, sellerId;
   let offerDates, offerDatesStruct;
   let offerDurations, offerDurationsStruct;
   let protocolFeePercentage, protocolFeeFlatBoson;
@@ -187,6 +188,8 @@ describe("IBosonOrchestrationHandler", function () {
       ({ offer, offerDates, offerDurations } = await mockOffer());
       offer.disputeResolverId = "1";
       offer.sellerId = "2";
+      offerDates.validFrom = ethers.BigNumber.from(Date.now()).toString();
+      offerDates.validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString();
 
       // Check if domains are valid
       expect(offer.isValid()).is.true;
@@ -415,7 +418,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("Valid until date is not in the future", async function () {
           // Set until date in the past
           offerDates.validUntil = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
-
+          console.log(offerDates);
           // Attempt to create a seller and an offer, expecting revert
           // @TODO
           await expect(

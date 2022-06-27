@@ -618,11 +618,13 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Valid offer domains
         ({ offer, offerDates, offerDurations } = await mockOffer());
         offer.exchangeToken = mockToken.address;
+
+        // Check if domains are valid
         expect(offer.isValid()).is.true;
         expect(offerDates.isValid()).is.true;
         expect(offerDurations.isValid()).is.true;
 
-        // Update used variables
+        // Set used variables
         sellerDeposit = offer.sellerDeposit;
         price = offer.price;
         voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
@@ -1796,17 +1798,15 @@ describe("IBosonMetaTransactionsHandler", function () {
         await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
 
         const { offer, ...mo } = await mockOffer();
+        ({ offerDates, offerDurations } = mo);
         offerNative = offer;
-        expect(offerNative.isValid()).is.true;
-
         offerToken = offerNative.clone();
         offerToken.id = "2";
         offerToken.exchangeToken = mockToken.address;
 
-        offerDates = mo.offerDates;
+        // Check if domains are valid
+        expect(offerNative.isValid()).is.true;
         expect(offerDates.isValid()).is.true;
-
-        offerDurations = mo.offerDurations;
         expect(offerDurations.isValid()).is.true;
 
         // Create both offers

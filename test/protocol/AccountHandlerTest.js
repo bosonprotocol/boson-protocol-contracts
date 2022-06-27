@@ -1017,12 +1017,16 @@ describe("IBosonAccountHandler", function () {
           // Register the dispute resolver
           await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
 
-          // Create the offer
+          // Mock the offer
           let { offer, offerDates, offerDurations } = await mockOffer();
           offer.disputeResolverId = disputeResolver.id;
+
+          // Check if domains are valid
           expect(offer.isValid()).is.true;
           expect(offerDates.isValid()).is.true;
           expect(offerDurations.isValid()).is.true;
+
+          // Create the offer
           await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
           offerId = offer.id;
