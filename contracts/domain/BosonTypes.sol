@@ -39,10 +39,11 @@ contract BosonTypes {
     } // ERC20, ERC721, ERC1155
 
     enum MetaTxInputType {
-        General,
         CommitToOffer,
         Exchange,
-        Funds
+        Funds,
+        RaiseDispute,
+        ResolveDispute
     }
 
     struct Seller {
@@ -173,60 +174,6 @@ contract BosonTypes {
         address contractAddress;
         string functionName;
         bytes functionSignature;
-    }
-
-    struct MetaTxCommitToOffer {
-        uint256 nonce;
-        address from;
-        address contractAddress;
-        string functionName;
-        MetaTxOfferDetails offerDetails;
-    }
-
-    struct MetaTxOfferDetails {
-        address buyer;
-        uint256 offerId;
-    }
-
-    struct MetaTxExchange {
-        uint256 nonce;
-        address from;
-        address contractAddress;
-        string functionName;
-        MetaTxExchangeDetails exchangeDetails;
-    }
-
-    struct MetaTxExchangeDetails {
-        uint256 exchangeId;
-    }
-
-    struct MetaTxDispute {
-        uint256 nonce;
-        address from;
-        address contractAddress;
-        string functionName;
-        MetaTxDisputeDetails disputeDetails;
-    }
-
-    struct MetaTxDisputeDetails {
-        uint256 exchangeId;
-        string complaint;
-    }
-
-    struct MetaTxDisputeResolution {
-        uint256 nonce;
-        address from;
-        address contractAddress;
-        string functionName;
-        MetaTxDisputeResolutionDetails disputeResolutionDetails;
-    }
-
-    struct MetaTxDisputeResolutionDetails {
-        uint256 exchangeId;
-        uint256 buyerPercent;
-        bytes32 sigR;
-        bytes32 sigS;
-        uint8 sigV;
     }
 
     struct HashInfo {
