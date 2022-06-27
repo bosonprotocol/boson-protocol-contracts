@@ -2161,7 +2161,7 @@ describe("IBosonFundsHandler", function () {
           });
         });
 
-        context.only("Final state DISPUTED - REFUSED", async function () {
+        context("Final state DISPUTED - REFUSED", async function () {
           beforeEach(async function () {
             // expected payoffs
             // buyer: price + sellerDeposit

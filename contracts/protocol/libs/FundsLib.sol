@@ -5,7 +5,6 @@ import {NATIVE_NOT_ALLOWED, TOKEN_TRANSFER_FAILED, INSUFFICIENT_VALUE_SENT, INSU
 import {BosonTypes} from "../../domain/BosonTypes.sol";
 import {ProtocolLib} from "../libs/ProtocolLib.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "hardhat/console.sol";
 
 /**
  * @title FundsLib
@@ -127,12 +126,8 @@ library FundsLib {
                 // RESOLVED or DECIDED
                 buyerPayoff = pot * dispute.buyerPercent/10000;
                 sellerPayoff = pot - buyerPayoff;
-            }           
-        }  
-
-        console.log("sellerPayoff", sellerPayoff);
-        console.log("buyerPayoff", buyerPayoff);
-        
+            }
+        }
 
         // Store payoffs to availablefunds and notify the external observers
         address exchangeToken = offer.exchangeToken;
