@@ -4,10 +4,10 @@
 class EvaluationMethod {}
 
 EvaluationMethod.None = 0;
-EvaluationMethod.AboveThreshold = 1;
+EvaluationMethod.Threshold = 1;
 EvaluationMethod.SpecificToken = 2;
 
-EvaluationMethod.Types = [EvaluationMethod.None, EvaluationMethod.AboveThreshold, EvaluationMethod.SpecificToken];
+EvaluationMethod.Types = [EvaluationMethod.None, EvaluationMethod.Threshold, EvaluationMethod.SpecificToken];
 
 // Export
 module.exports = EvaluationMethod;

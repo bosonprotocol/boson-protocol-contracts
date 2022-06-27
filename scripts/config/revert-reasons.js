@@ -24,6 +24,7 @@ exports.RevertReasons = {
   OFFER_MUST_BE_ACTIVE: "Offer must be active",
   OFFER_NOT_UPDATEABLE: "Offer not updateable",
   OFFER_MUST_BE_UNIQUE: "Offer must be unique to a group",
+  CANNOT_COMMIT: "Caller cannot commit",
   EXCHANGE_FOR_OFFER_EXISTS: "Exchange for offer exists",
   AMBIGUOUS_VOUCHER_EXPIRY: "Exactly one of voucherRedeemableUntil and voucherValid must be non zero",
   REDEMPTION_PERIOD_INVALID: "Redemption period invalid",

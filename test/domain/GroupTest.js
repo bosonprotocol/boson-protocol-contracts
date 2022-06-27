@@ -20,7 +20,7 @@ describe("Group", function () {
     accounts = await ethers.getSigners();
 
     // Required constructor params for Condition
-    method = EvaluationMethod.AboveThreshold;
+    method = EvaluationMethod.Threshold;
     tokenType = TokenType.MultiToken;
     tokenAddress = accounts[0].address; // just need an address
     tokenId = "5150";

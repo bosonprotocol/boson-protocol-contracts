@@ -85,7 +85,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         require(offer.quantityAvailable > 0, OFFER_SOLD_OUT);
 
         // Authorize the buyer to commit if offer is in a conditional group
-        require(authorizeCommit(_buyer, offer));
+        require(authorizeCommit(_buyer, offer), CANNOT_COMMIT);
 
         // Fetch or create buyer
         (uint256 buyerId, Buyer storage buyer) = getValidBuyer(_buyer);
@@ -647,8 +647,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                 if (commitCount < group.condition.maxCommits) {
 
                     // Buyer is allowed if they meet the group's condition
-                    allow = (group.condition.method == EvaluationMethod.AboveThreshold)
-                        ? holdsAboveThreshold(_buyer, group.condition)
+                    allow = (group.condition.method == EvaluationMethod.Threshold)
+                        ? holdsThreshold(_buyer, group.condition)
                         : holdsSpecificToken(_buyer, group.condition);
 
                     // Increment number of commits to the group for this address if they are allowed to commit
@@ -676,7 +676,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * @return bool true if buyer meets the condition
      */
-    function holdsAboveThreshold(address _buyer, Condition storage _condition)
+    function holdsThreshold(address _buyer, Condition storage _condition)
     internal
     view
     returns (bool)

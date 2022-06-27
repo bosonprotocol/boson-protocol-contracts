@@ -219,7 +219,7 @@ describe("IBosonGroupHandler", function () {
       }
 
       // Required constructor params for Condition
-      method = EvaluationMethod.AboveThreshold;
+      method = EvaluationMethod.Threshold;
       tokenType = TokenType.MultiToken;
       tokenAddress = accounts[0].address; // just need an address
       tokenId = "5150";
@@ -415,8 +415,8 @@ describe("IBosonGroupHandler", function () {
           );
         });
 
-        it("Condition 'AboveThreshold' has zero token contract address", async function () {
-          method = EvaluationMethod.AboveThreshold;
+        it("Condition 'Threshold' has zero token contract address", async function () {
+          method = EvaluationMethod.Threshold;
           tokenAddress = ethers.constants.AddressZero;
           condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
           group.condition = condition;
@@ -793,8 +793,8 @@ describe("IBosonGroupHandler", function () {
           );
         });
 
-        it("Condition 'AboveThreshold' has zero token contract address", async function () {
-          method = EvaluationMethod.AboveThreshold;
+        it("Condition 'Threshold' has zero token contract address", async function () {
+          method = EvaluationMethod.Threshold;
           tokenAddress = ethers.constants.AddressZero;
           condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
 

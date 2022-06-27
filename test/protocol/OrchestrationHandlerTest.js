@@ -608,7 +608,7 @@ describe("IBosonOrchestrationHandler", function () {
         nextGroupId = "1";
 
         // Required constructor params for Condition
-        method = EvaluationMethod.AboveThreshold;
+        method = EvaluationMethod.Threshold;
         tokenAddress = accounts[0].address; // just need an address
         tokenType = TokenType.MultiToken;
         tokenId = "5150";
@@ -986,8 +986,8 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
 
-        it("Condition 'AboveThreshold' has zero token contract address", async function () {
-          method = EvaluationMethod.AboveThreshold;
+        it("Condition 'Threshold' has zero token contract address", async function () {
+          method = EvaluationMethod.Threshold;
           tokenAddress = ethers.constants.AddressZero;
           condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
           group.condition = condition;
@@ -1084,7 +1084,7 @@ describe("IBosonOrchestrationHandler", function () {
         offerDurationsStruct = offerDurations.toStruct();
 
         // Required constructor params for Condition
-        method = EvaluationMethod.AboveThreshold;
+        method = EvaluationMethod.Threshold;
         tokenType = TokenType.MultiToken;
         tokenAddress = accounts[0].address; // just need an address
         tokenId = "5150";
@@ -1936,7 +1936,7 @@ describe("IBosonOrchestrationHandler", function () {
         nextGroupId = "1";
 
         // Required constructor params for Condition
-        method = EvaluationMethod.AboveThreshold;
+        method = EvaluationMethod.Threshold;
         tokenType = TokenType.MultiToken;
         tokenAddress = accounts[0].address; // just need an address
         tokenId = "5150";
@@ -2270,7 +2270,7 @@ describe("IBosonOrchestrationHandler", function () {
         nextGroupId = "1";
 
         // Required constructor params for Condition
-        method = EvaluationMethod.AboveThreshold;
+        method = EvaluationMethod.Threshold;
         tokenType = TokenType.MultiToken;
         tokenAddress = accounts[0].address; // just need an address
         tokenId = "5150";
@@ -2592,7 +2592,7 @@ describe("IBosonOrchestrationHandler", function () {
         nextGroupId = "1";
 
         // Required constructor params for Condition
-        method = EvaluationMethod.AboveThreshold;
+        method = EvaluationMethod.Threshold;
         tokenType = TokenType.MultiToken;
         tokenAddress = accounts[0].address; // just need an address
         tokenId = "5150";

@@ -10,7 +10,7 @@ pragma solidity ^0.8.0;
 contract BosonTypes {
     enum EvaluationMethod {
         None,
-        AboveThreshold,
+        Threshold,
         SpecificToken
     }
 

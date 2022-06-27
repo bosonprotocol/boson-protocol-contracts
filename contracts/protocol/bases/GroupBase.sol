@@ -76,7 +76,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      *
      * Reverts if:
      * - EvaluationMethod.None and has fields different from 0
-     * - EvaluationMethod.AboveThreshold and token address or maxCommits is zero
+     * - EvaluationMethod.Threshold and token address or maxCommits is zero
      * - EvaluationMethod.SpecificToken and token address or maxCommits is zero
      *
      * @param _condition - fully populated condition struct
@@ -91,7 +91,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
                 _condition.threshold == 0 &&
                 _condition.maxCommits == 0
             );
-        } else if (_condition.method ==  EvaluationMethod.AboveThreshold) {
+        } else if (_condition.method ==  EvaluationMethod.Threshold) {
             valid = (
                 _condition.tokenAddress != address(0) &&
                 _condition.maxCommits > 0
