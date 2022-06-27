@@ -67,9 +67,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * Emits a DisputeResolverCreated event if successful.
      *
      * Reverts if:
-     * - Address values are zero address
+     * - Any address is zero address
+     * - Any address is not unique to this dispute resolver
      * - Active is not true
-     * - Addresses are not unique to this dispute resolver
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency
@@ -99,7 +99,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         _disputeResolver.id = disputeResolverId;
 
-        // At least one fee must be specified. The ammount can be 0, but it must be intentional. However, the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
+        // At least one fee must be specified. The feeAmount can be 0, but it must be intentional. However, the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
         require(_disputeResolverFees.length > 0 && _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
 
         // Get storage location for dispute resolver fees
@@ -107,12 +107,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         //Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
         for(uint i = 0; i < _disputeResolverFees.length; i++) {
-            console.log("i ", i);
             if(protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] == 0) { //This token address does not yet exist for this Dispute Resolver
-                console.log("DisputeResolverFee tokenAddress %s tokenName %s feeAmount %s in storeDisputeResolver ", _disputeResolverFees[i].tokenAddress, _disputeResolverFees[i].tokenName, _disputeResolverFees[i].feeAmount);
-                console.log("tokenAddress not already in array so adding ");
                 disputeResolverFees.push(DisputeResolverFee( _disputeResolverFees[i].tokenAddress, _disputeResolverFees[i].tokenName, _disputeResolverFees[i].feeAmount));
-                protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] = disputeResolverFees.length;
+                protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] = disputeResolverFees.length; //Set index mapping. Should be index in disputeResolverFees array + 1
             }
         }
 
@@ -227,14 +224,14 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     /**
      * @notice Updates a dispute resolver, not including DisputeResolverFees. 
      * All DisputeResolver fields should be filled, even those staying the same.
-     * Use addDisputeResolverFees and removeDisputeResolverFees
+     * Use addFeesToDisputeResolver and removeFeesFromDisputeResolver
      * 
      * Emits a DisputeResolverUpdated event if successful.
      *
      * Reverts if:
-     * - Caller is not the wallet address associated with the dipute resolver account
-     * - Wallet address is zero address
-     * - Address is not unique to this dispute resolver
+     * - Caller is not the admin address associated with the dipute resolver account
+     * - Any address is zero address
+     * - Any address is not unique to this dispute resolver
      * - Dispute resolver does not exist
      *
      * @param _disputeResolver - the fully populated buydispute resolver struct
@@ -281,6 +278,112 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
     }
 
+    /**
+     * @notice Add DisputeResolverFees to an existing disputeResolver
+     * 
+     * Emits a DisputeResolverFeesAdded event if successful.
+     *
+     * Reverts if:
+     * - Caller is not the admin address associated with the dipute resolver account
+     * - Dispute resolver does not exist
+     * - Number of DisputeResolverFee structs in array exceeds max
+     *
+     * @param _disputeResolverId - Id of the disputer resolver
+     * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
+     */
+    function addFeesToDisputeResolver(uint256 _disputeResolverId, DisputeResolverFee[] calldata _disputeResolverFees) 
+    external
+    override
+    {
+        bool exists;
+        DisputeResolver storage disputeResolver;
+        DisputeResolverFee[] storage disputeResolverFees;
+        
+        //Check Dispute Resolver and Dispute Resolver Fees from  disputeResolvers and disputeResolverFees mappings
+        (exists, disputeResolver, disputeResolverFees) = fetchDisputeResolver(_disputeResolverId);
+       
+        //Dispute Resolver  must already exist
+        require(exists, NO_SUCH_DISPUTE_RESOLVER);
+
+        //Check that msg.sender is the admin address for this dispute resolver
+        require(disputeResolver.admin  == msg.sender, NOT_ADMIN); 
+
+         // At least one fee must be specified. The feeAmount can be 0, but it must be intentional. However, the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
+        require(_disputeResolverFees.length > 0 && _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
+
+        //Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
+        for(uint i = 0; i < _disputeResolverFees.length; i++) {
+            if(protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] == 0) { //This token address does not yet exist for this Dispute Resolver
+                disputeResolverFees.push(DisputeResolverFee( _disputeResolverFees[i].tokenAddress, _disputeResolverFees[i].tokenName, _disputeResolverFees[i].feeAmount));
+                protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] = disputeResolverFees.length; //Set index mapping. Should be index in disputeResolverFees array + 1
+            }
+        }
+
+        emit DisputeResolverFeesAdded(_disputeResolverId, _disputeResolverFees, msg.sender);
+    }
+
+    /**
+     * @notice Remove DisputeResolverFees from  an existing disputeResolver
+     * 
+     * Emits a DisputeResolverFeesRemoved event if successful.
+     *
+     * Reverts if:
+     * - Caller is not the admin address associated with the dipute resolver account
+     * - Dispute resolver does not exist
+     * - Number of DisputeResolverFee structs in array exceeds max
+     *
+     * @param _disputeResolverId - Id of the disputer resolver
+     * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
+     */
+    function removeFeesFromDisputeResolver(uint256 _disputeResolverId, DisputeResolverFee[] calldata _disputeResolverFees) 
+    external
+    override
+    {
+         bool exists;
+        DisputeResolver storage disputeResolver;
+        DisputeResolverFee[] storage disputeResolverFees;
+        
+        //Check Dispute Resolver and Dispute Resolver Fees from  disputeResolvers and disputeResolverFees mappings
+        (exists, disputeResolver, disputeResolverFees) = fetchDisputeResolver(_disputeResolverId);
+       
+        //Dispute Resolver  must already exist
+        require(exists, NO_SUCH_DISPUTE_RESOLVER);
+
+        //Check that msg.sender is the admin address for this dispute resolver
+        require(disputeResolver.admin  == msg.sender, NOT_ADMIN); 
+
+        // At least one fee must be specified. The feeAmount can be 0, but it must be intentional. However, the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
+        require(_disputeResolverFees.length > 0 && _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
+
+         console.log("disputeResolverFees.length before loop", disputeResolverFees.length);
+
+        //Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
+        for(uint i = 0; i < _disputeResolverFees.length; i++) {
+            console.log("i ", i);
+            if(protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] != 0) { //This is one to remove
+                console.log("DisputeResolverFee tokenAddress %s tokenName %s feeAmount %s in storeDisputeResolver ", _disputeResolverFees[i].tokenAddress, _disputeResolverFees[i].tokenName, _disputeResolverFees[i].feeAmount);
+                console.log("tokenAddress in  storage so removing ");
+                uint disputeResolverFeeArrayIndex = protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] - 1; //Get the index in the DisputeResolverFees array, which is 1 less than the disputeResolverFeeTokenIndex index
+                delete disputeResolverFees[disputeResolverFeeArrayIndex]; //Delete DisputeResolverFee struct at this index
+                if(disputeResolverFees.length > 1) { //Need to fill gap caused by delete
+                    DisputeResolverFee memory disputeResolverFeeToMove = disputeResolverFees[disputeResolverFees.length - 1];
+                    console.log("disputeResolverFeeTokenIndexvalue of fee to be moved to fill gap before move", protocolLookups().disputeResolverFeeTokenIndex[disputeResolverFeeToMove.tokenAddress]);
+                    disputeResolverFees[disputeResolverFeeArrayIndex] = disputeResolverFeeToMove; //Copy the last DisputeResolverFee struct in the array to this index to fill the gap
+                    protocolLookups().disputeResolverFeeTokenIndex[disputeResolverFeeToMove.tokenAddress] = disputeResolverFeeArrayIndex + 1; //Reset index mapping. Should be index in disputeResolverFees array + 1
+                    console.log("disputeResolverFeeTokenIndexvalue of fee just moved to fill gap after move", protocolLookups().disputeResolverFeeTokenIndex[disputeResolverFeeToMove.tokenAddress]);
+                }
+                disputeResolverFees.pop(); // Delete last DisputeResolverFee struct in the array, which was just moved to fill the gap
+                delete protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress]; //Delete from index mapping
+
+               
+            }
+
+            console.log("disputeResolverFeeTokenIndexvalue of fee just removed ", protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress]);
+            console.log("disputeResolverFees.length after loop", disputeResolverFees.length);
+        }
+
+        emit DisputeResolverFeesRemoved(_disputeResolverId, _disputeResolverFees, msg.sender);
+    }
   
     /**
      * @notice Gets the details about a seller.

@@ -47,9 +47,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a DisputeResolverCreated event if successful.
      *
      * Reverts if:
-     * - Address values are zero address
+     * - Any address is zero address
+     * - Any address is not unique to this dispute resolver
      * - Active is not true
-     * - Addresses are not unique to this dispute resolver
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
      * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currence
@@ -90,19 +90,49 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     /**
      * @notice Updates a dispute resolver, not including DisputeResolverFees. 
      * All DisputeResolver fields should be filled, even those staying the same.
-     * Use addDisputeResolverFees and removeDisputeResolverFees
+     * Use removeFeesFromDisputeResolver
      * 
      * Emits a DisputeResolverUpdated event if successful.
      *
      * Reverts if:
-     * - Caller is not the wallet address associated with the dipute resolver account
-     * - Wallet address is zero address
-     * - Address is not unique to this dispute resolver
+     * - Caller is not the admin address associated with the dipute resolver account
+     * - Any address is zero address
+     * - Any address is not unique to this dispute resolver
      * - Dispute resolver does not exist
      *
      * @param _disputeResolver - the fully populated buydispute resolver struct
      */
     function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver) external;
+
+    /**
+     * @notice Add DisputeResolverFees to an existing disputeResolver
+     * 
+     * Emits a DisputeResolverFeesAdded event if successful.
+     *
+     * Reverts if:
+     * - Caller is not the admin address associated with the dipute resolver account
+     * - Dispute resolver does not exist
+     * - Number of DisputeResolverFee structs in array exceeds max
+     *
+     * @param _disputeResolverId - Id of the disputer resolver
+     * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
+     */
+    function addFeesToDisputeResolver(uint256 _disputeResolverId, BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees) external;
+
+    /**
+     * @notice Remove DisputeResolverFees from  an existing disputeResolver
+     * 
+     * Emits a DisputeResolverFeesRemoved event if successful.
+     *
+     * Reverts if:
+     * - Caller is not the admin address associated with the dipute resolver account
+     * - Dispute resolver does not exist
+     * - Number of DisputeResolverFee structs in array exceeds max
+     *
+     * @param _disputeResolverId - Id of the disputer resolver
+     * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
+     */
+    function removeFeesFromDisputeResolver(uint256 _disputeResolverId, BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees) external;
 
     /**
      * @notice Gets the details about a seller.

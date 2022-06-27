@@ -15,4 +15,6 @@ interface IBosonAccountEvents {
     event BuyerUpdated(uint256 indexed buyerId, BosonTypes.Buyer buyer,  address indexed executedBy);
     event DisputeResolverCreated(uint256 indexed disputeResolverId, BosonTypes.DisputeResolver disputeResolver,  BosonTypes.DisputeResolverFee[], address indexed executedBy);
     event DisputeResolverUpdated(uint256 indexed disputeResolverId, BosonTypes.DisputeResolver disputeResolver, address indexed executedBy);
+    event DisputeResolverFeesAdded(uint256 indexed disputeResolverId, BosonTypes.DisputeResolverFee[], address indexed executedBy);
+    event DisputeResolverFeesRemoved(uint256 indexed disputeResolverId, BosonTypes.DisputeResolverFee[], address indexed executedBy);
 }
