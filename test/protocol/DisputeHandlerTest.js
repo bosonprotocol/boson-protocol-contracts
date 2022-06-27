@@ -175,24 +175,22 @@ describe("IBosonDisputeHandler", function () {
       await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
 
       // Mock offer
-      const mo = await mockOffer();
-      offer = mo.offer;
-      price = offer.price;
-      sellerDeposit = offer.sellerDeposit;
-      fulfillmentPeriod = offer.fulfillmentPeriod;
-      resolutionPeriod = offer.resolutionPeriod;
-      quantityAvailable = offer.quantityAvailable;
+      ({ offer, offerDates, offerDurations } = await mockOffer());
+      offer.quantityAvailable = "2";
       expect(offer.isValid()).is.true;
-
-      offerDates = mo.offerDates;
-      voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
       expect(offerDates.isValid()).is.true;
-
-      offerDurations = mo.offerDurations;
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
       await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
+
+      // Set used variables
+      price = offer.price;
+      quantityAvailable = offer.quantityAvailable;
+      sellerDeposit = offer.sellerDeposit;
+      voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+      resolutionPeriod = offerDurations.resolutionPeriod;
+      fulfillmentPeriod = offerDurations.fulfillmentPeriod;
 
       // Required voucher constructor params
       committedDate = "0";
