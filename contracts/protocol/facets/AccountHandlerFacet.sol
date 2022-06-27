@@ -62,17 +62,18 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
-     * @notice Creates a Dispute Resolver
+     * @notice Creates a Dispute Resolver. Dispute Resolver must be activated before it can participate in the protocol.
      *
      * Emits a DisputeResolverCreated event if successful.
      *
      * Reverts if:
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
-     * - Active is not true
+     * - Number of DisputeResolverFee structs in array exceeds max
+     * - EscalationResponsePeriod is invalid
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
-     * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency
+     * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currence. Can be empty.
      */
     function createDisputeResolver(DisputeResolver memory _disputeResolver,  DisputeResolverFee[] calldata _disputeResolverFees)
     external
@@ -86,8 +87,8 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
                 _disputeResolver.treasury != address(0), 
                 INVALID_ADDRESS);
 
-        //Check active is not set to false
-        require(_disputeResolver.active, MUST_BE_ACTIVE);
+        //Ignore supplied active flag and set to false
+        _disputeResolver.active = false;
 
         // Get the next account Id and increment the counter
         uint256 disputeResolverId = protocolCounters().nextAccountId++;
@@ -100,7 +101,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         _disputeResolver.id = disputeResolverId;
 
         // At least one fee must be specified. The feeAmount can be 0, but it must be intentional. However, the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
-        require(_disputeResolverFees.length > 0 && _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
+        require(_disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
 
         // Get storage location for dispute resolver fees
         (,,DisputeResolverFee[] storage disputeResolverFees) = fetchDisputeResolver(_disputeResolver.id);

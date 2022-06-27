@@ -42,17 +42,17 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function createBuyer(BosonTypes.Buyer memory _buyer) external;
 
     /**
-     * @notice Creates a Dispute Resolver
+     * @notice Creates a Dispute Resolver. Dispute Resolver must be activated before it can participate in the protocol.
      *
      * Emits a DisputeResolverCreated event if successful.
      *
      * Reverts if:
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
-     * - Active is not true
+     * - Number of DisputeResolverFee structs in array exceeds max
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
-     * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currence
+     * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currence. Can be empty.
      */
     function createDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver, BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees) external;
 
