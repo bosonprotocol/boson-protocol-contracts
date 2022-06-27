@@ -50,6 +50,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
      * - Number of DisputeResolverFee structs in array exceeds max
+     * - EscalationResponsePeriod is invalid
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
      * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currence. Can be empty.
