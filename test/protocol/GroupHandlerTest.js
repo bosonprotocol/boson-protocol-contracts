@@ -19,6 +19,7 @@ const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const { getEvent, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
+const { oneWeek, oneMonth } = require("../utils/constants");
 
 /**
  *  Test the Boson Group Handler interface
@@ -28,7 +29,7 @@ describe("IBosonGroupHandler", function () {
   let InterfaceIds;
   let accounts, deployer, rando, operator, admin, clerk, treasury, other1;
   let erc165, protocolDiamond, accessController, accountHandler, offerHandler, groupHandler, bosonToken, key, value;
-  let offer, oneMonth, oneWeek, support, expected, exists;
+  let offer, support, expected, exists;
   let seller, active;
   let id,
     sellerId,
@@ -156,10 +157,6 @@ describe("IBosonGroupHandler", function () {
 
       // Register the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
-
-      // Some periods in milliseconds
-      oneWeek = 604800 * 1000; //  7 days in milliseconds
-      oneMonth = 2678400 * 1000; // 31 days in milliseconds
 
       // The first group id
       nextGroupId = "1";

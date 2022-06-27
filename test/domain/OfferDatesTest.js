@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const OfferDates = require("../../scripts/domain/OfferDates");
+const { oneWeek, oneMonth } = require("../utils/constants");
 
 /**
  *  Test the OfferDates domain entity
@@ -9,14 +10,9 @@ const OfferDates = require("../../scripts/domain/OfferDates");
 describe("OfferDates", function () {
   // Suite-wide scope
   let offerDates, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let oneMonth, oneWeek;
   let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil;
 
   beforeEach(async function () {
-    // Some periods in milliseconds
-    oneWeek = 604800 * 1000; //  7 days in milliseconds
-    oneMonth = 2678400 * 1000; // 31 days in milliseconds
-
     // Required constructor params
     validFrom = ethers.BigNumber.from(Date.now()).toString(); // valid from now
     validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // until 6 months

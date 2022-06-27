@@ -17,6 +17,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
+const { oneWeek, oneMonth } = require("../utils/constants");
 
 /**
  *  Test the Boson Offer Handler interface
@@ -35,7 +36,7 @@ describe("IBosonOfferHandler", function () {
     offerStruct,
     key,
     value;
-  let offer, nextOfferId, invalidOfferId, oneMonth, oneWeek, support, expected, exists;
+  let offer, nextOfferId, invalidOfferId, support, expected, exists;
   let seller, active;
   let id,
     sellerId,
@@ -177,10 +178,6 @@ describe("IBosonOfferHandler", function () {
 
       // Register the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
-
-      // Some periods in milliseconds
-      oneWeek = 604800 * 1000; //  7 days in milliseconds
-      oneMonth = 2678400 * 1000; // 31 days in milliseconds
 
       // The first offer id
       nextOfferId = "1";
@@ -899,10 +896,6 @@ describe("IBosonOfferHandler", function () {
 
       // Register the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
-
-      // Some periods in milliseconds
-      oneWeek = 604800 * 1000; //  7 days in milliseconds
-      oneMonth = 2678400 * 1000; // 31 days in milliseconds
 
       // create 5 offers
       offers = [];

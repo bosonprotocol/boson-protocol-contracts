@@ -16,6 +16,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
+const { oneWeek, oneMonth } = require("../utils/constants");
 
 /**
  *  Test the Boson Account Handler interface
@@ -30,7 +31,7 @@ describe("IBosonAccountHandler", function () {
   let disputeResolver, disputeResolverStruct, disputeResolver2, disputeResolver2Struct;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
-  let oneMonth, oneWeek, blockNumber, block;
+  let blockNumber, block;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let bosonVoucher, clients;
   let offerId,
@@ -1044,10 +1045,6 @@ describe("IBosonAccountHandler", function () {
 
           // Register the dispute resolver
           await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
-
-          // Create an offer to commit to
-          oneWeek = 604800 * 1000; //  7 days in milliseconds
-          oneMonth = 2678400 * 1000; // 31 days in milliseconds
 
           // Get the current block info
           blockNumber = await ethers.provider.getBlockNumber();
