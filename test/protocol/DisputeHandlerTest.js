@@ -1296,7 +1296,7 @@ describe("IBosonDisputeHandler", function () {
 
       it("should emit a EscalatedDisputeExpired event", async function () {
         // Set time forward past the dispute escalation period
-        await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+        await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
 
         // Expire the escalated dispute, testing for the event
         await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchange.id))
@@ -1306,7 +1306,7 @@ describe("IBosonDisputeHandler", function () {
 
       it("should update state", async function () {
         // Set time forward past the dispute escalation period
-        await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+        await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
 
         // Expire the dispute
         tx = await disputeHandler.connect(rando).expireEscalatedDispute(exchange.id);
@@ -1381,7 +1381,7 @@ describe("IBosonDisputeHandler", function () {
           );
         });
 
-        it.only("Dispute is in some state other than escalated", async function () {
+        it("Dispute is in some state other than escalated", async function () {
           exchange.id++;
 
           // Commit to offer, creating a new exchange

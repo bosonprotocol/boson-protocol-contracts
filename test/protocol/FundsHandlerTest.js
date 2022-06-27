@@ -75,7 +75,7 @@ describe("IBosonFundsHandler", function () {
   let disputeResolverEntity;
   let buyerPercent;
   let resolutionType, customSignatureType, message, r, s, v;
-  let disputedDate, timeout;
+  let disputedDate, escalatedDate, timeout;
 
   before(async function () {
     // get interface Ids
@@ -2157,7 +2157,7 @@ describe("IBosonFundsHandler", function () {
           });
         });
 
-        context.skip("Final state DISPUTED - REFUSED", async function () {
+        context.only("Final state DISPUTED - REFUSED", async function () {
           beforeEach(async function () {
             // expected payoffs
             // buyer: price + sellerDeposit
@@ -2169,17 +2169,26 @@ describe("IBosonFundsHandler", function () {
             // protocol: 0
             protocolPayoff = 0;
 
-            await setNextBlockTimestamp(Number(timeout));
+            // Escalate the dispute
+            tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+
+            // Get the block timestamp of the confirmed tx and set escalatedDate
+            blockNumber = tx.blockNumber;
+            block = await ethers.provider.getBlock(blockNumber);
+            escalatedDate = block.timestamp.toString();
+
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
           });
 
           it("should emit a FundsReleased event", async function () {
             // Expire the dispute, expecting event
             await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId))
-              .to.emit(disputeHandler, "ExchangeFee")
-              .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
-              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff);
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, rando.address)
+              .to.not.emit(disputeHandler, "ProtocolFeeCollected")
+              .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, rando.address);
+            // .to.not.emit(disputeHandler, "FundsReleased")
+            // .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
           });
 
           it("should update state", async function () {

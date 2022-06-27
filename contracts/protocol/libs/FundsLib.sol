@@ -5,6 +5,7 @@ import {NATIVE_NOT_ALLOWED, TOKEN_TRANSFER_FAILED, INSUFFICIENT_VALUE_SENT, INSU
 import {BosonTypes} from "../../domain/BosonTypes.sol";
 import {ProtocolLib} from "../libs/ProtocolLib.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "hardhat/console.sol";
 
 /**
  * @title FundsLib
@@ -112,6 +113,7 @@ library FundsLib {
             // get the information about the dispute, which must exist
             BosonTypes.Dispute storage dispute = pe.disputes[_exchangeId];
             BosonTypes.DisputeState disputeState = dispute.state;
+    console.log("state", uint256(disputeState));
 
             if (disputeState == BosonTypes.DisputeState.Retracted) {
                 // RETRACTED - same as "COMPLETED"
@@ -129,17 +131,21 @@ library FundsLib {
             }           
         }  
 
+        console.log("sellerPayoff", sellerPayoff);
+        console.log("buyerPayoff", buyerPayoff);
+        
+
         // Store payoffs to availablefunds and notify the external observers
         address exchangeToken = offer.exchangeToken;
         uint256 sellerId = offer.sellerId;
         uint256 buyerId = exchange.buyerId;
         if (sellerPayoff > 0) {
             increaseAvailableFunds(sellerId, exchangeToken, sellerPayoff);
-            emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff, msg.sender);
+            emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff, msg.sender);           
         } 
         if (buyerPayoff > 0) {
             increaseAvailableFunds(buyerId, exchangeToken, buyerPayoff);
-            emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff, msg.sender);
+            emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff, msg.sender);
         }
         if (protocolFee > 0) {
             increaseAvailableFunds(0, exchangeToken, protocolFee);
