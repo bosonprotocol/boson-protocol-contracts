@@ -15,8 +15,6 @@ const Seller = require("../../scripts/domain/Seller");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
-const Twin = require("../../scripts/domain/Twin");
-const TokenType = require("../../scripts/domain/TokenType");
 const Voucher = require("../../scripts/domain/Voucher");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -26,8 +24,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { prepareDataSignatureParameters, setNextBlockTimestamp } = require("../../scripts/util/test-utils.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { mockOffer } = require("../utils/mock");
-
+const { mockOffer, mockTwin } = require("../utils/mock");
 /**
  *  Test the Boson Meta transactions Handler interface
  */
@@ -48,7 +45,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     support,
     result;
   let metaTransactionsHandler, nonce, functionSignature;
-  let seller, sellerId, offerId, id, buyerId;
+  let seller, offerId, id, buyerId;
   let clients;
   let bosonVoucher;
   let validOfferDetails,
@@ -66,7 +63,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
   let disputeResolver, active;
-  let twin, supplyAvailable, tokenId, supplyIds, tokenAddress, tokenType, success;
+  let twin, success;
   let exchangeId,
     mockToken,
     buyerPayoff,
@@ -385,16 +382,10 @@ describe("IBosonMetaTransactionsHandler", function () {
             // Create the seller
             await accountHandler.connect(admin).createSeller(seller);
 
-            // Required constructor params
-            id = sellerId = "1";
-            supplyAvailable = "500";
-            tokenId = "4096";
-            supplyIds = ["1", "2"];
-            tokenAddress = bosonToken.address;
-            tokenType = TokenType.FungibleToken;
-
             // Create a valid twin, then set fields in tests directly
-            twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
+            twin = mockTwin(bosonToken.address);
+            twin.id = "1";
+            twin.sellerId = "1";
             expect(twin.isValid()).is.true;
 
             // Approving the twinHandler contract to transfer seller's tokens
@@ -609,7 +600,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = offerId = sellerId = "1";
+        id = offerId = "1";
 
         // Create a valid seller
         seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
@@ -784,7 +775,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = offerId = sellerId = "1";
+        id = offerId = "1";
         buyerId = "3"; // created after seller and dispute resolver
 
         // Create a valid seller
@@ -1788,7 +1779,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = sellerId = exchangeId = "1";
+        id = exchangeId = "1";
         buyerId = "3"; // created after a seller and a dispute resolver
         active = true;
 

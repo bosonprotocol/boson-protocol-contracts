@@ -10,7 +10,6 @@ const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const TokenType = require("../../scripts/domain/TokenType");
-const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -20,7 +19,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { mockOffer } = require("../utils/mock");
+const { mockOffer, mockTwin } = require("../utils/mock");
 const {
   getEvent,
   setNextBlockTimestamp,
@@ -793,15 +792,20 @@ describe("IBosonExchangeHandler", function () {
         await foreign1155.connect(operator).setApprovalForAll(protocolDiamond.address, true);
 
         // Create an ERC20 twin
-        twin20 = new Twin("1", sellerId, "500", [], "0", foreign20.address, TokenType.FungibleToken);
+        twin20 = mockTwin(foreign20.address);
         expect(twin20.isValid()).is.true;
 
         // Create an ERC721 twin
-        twin721 = new Twin("2", sellerId, "0", ["1"], "0", foreign721.address, TokenType.NonFungibleToken);
+        twin721 = mockTwin(foreign721.address, TokenType.NonFungibleToken);
+        twin721.id = "2";
+        twin721.supplyIds = ["1"];
         expect(twin721.isValid()).is.true;
 
         // Create an ERC1155 twin
-        twin1155 = new Twin("3", sellerId, "500", [], "1", foreign1155.address, TokenType.MultiToken);
+        twin1155 = mockTwin(foreign1155.address, TokenType.MultiToken);
+        twin1155.id = "3";
+        twin1155.tokenId = "1";
+
         expect(twin1155.isValid()).is.true;
 
         // All the twin ids (for mixed bundle)

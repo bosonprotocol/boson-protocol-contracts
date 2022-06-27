@@ -3,6 +3,8 @@ const ethers = hre.ethers;
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
+const Twin = require("../../scripts/domain/Twin.js");
+const TokenType = require("../../scripts/domain/TokenType.js");
 const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("./constants.js");
 
@@ -69,4 +71,15 @@ async function mockOffer() {
   return { offer, offerDates, offerDurations };
 }
 
+function mockTwin(tokenAddress, tokenType) {
+  tokenType = tokenType ?? TokenType.FungibleToken;
+  const id ="1";
+  const sellerId = "1";
+  const supplyAvailable = "500";
+  const tokenId = "0";
+  const supplyIds = [];
+  return new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
+}
+
 exports.mockOffer = mockOffer;
+exports.mockTwin = mockTwin;

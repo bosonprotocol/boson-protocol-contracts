@@ -6,8 +6,6 @@ const { gasLimit } = require("../../environments");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
-const Twin = require("../../scripts/domain/Twin");
-const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -17,7 +15,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { mockOffer } = require("../utils/mock");
+const { mockOffer, mockTwin } = require("../utils/mock");
 
 /**
  *  Test the Boson Bundle Handler interface
@@ -40,10 +38,6 @@ describe("IBosonBundleHandler", function () {
     support,
     id,
     sellerId,
-    supplyAvailable,
-    supplyIds,
-    tokenId,
-    tokenAddress,
     key,
     value,
     clients,
@@ -51,7 +45,7 @@ describe("IBosonBundleHandler", function () {
   let offerHandler, bundleHandlerFacet_Factory;
   let seller, active;
   let bundleStruct;
-  let twinIdsToAdd, twinIdsToRemove, offerIdsToAdd, offerIdsToRemove, tokenType;
+  let twinIdsToAdd, twinIdsToRemove, offerIdsToAdd, offerIdsToRemove;
   let bundle, bundleId, bundleIds, offerIds, twinId, twinIds, nextBundleId, invalidBundleId, bundleInstance;
   let offer, exists, expected;
   let offerId, invalidOfferId, price, sellerDeposit;
@@ -193,16 +187,8 @@ describe("IBosonBundleHandler", function () {
 
       // create 5 twins
       for (let i = 0; i < 5; i++) {
-        // Required constructor params for Twin
-        id = sellerId = "1";
-        supplyAvailable = "1000";
-        tokenId = "0";
-        supplyIds = [];
-        tokenAddress = bosonToken.address;
-        tokenType = TokenType.FungibleToken;
-
         // Create a valid twin.
-        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
+        twin = mockTwin(bosonToken.address);
         expect(twin.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens
@@ -224,6 +210,7 @@ describe("IBosonBundleHandler", function () {
       // Required constructor params for Bundle
       offerIds = ["2", "3", "5"];
       twinIds = ["2", "3", "5"];
+      sellerId = twin.sellerId;
 
       bundle = new Bundle(bundleId, sellerId, offerIds, twinIds);
 
