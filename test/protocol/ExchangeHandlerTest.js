@@ -6,14 +6,10 @@ const { expect, assert } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
-const Offer = require("../../scripts/domain/Offer");
-const OfferDates = require("../../scripts/domain/OfferDates");
-const OfferDurations = require("../../scripts/domain/OfferDurations");
 const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const TokenType = require("../../scripts/domain/TokenType");
-const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const Group = require("../../scripts/domain/Group");
@@ -26,13 +22,14 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
+const { mockOffer, mockTwin } = require("../utils/mock");
 const {
   getEvent,
   setNextBlockTimestamp,
   calculateVoucherExpiry,
-  calculateProtocolFee,
   prepareDataSignatureParameters,
 } = require("../../scripts/util/test-utils.js");
+const { oneWeek } = require("../utils/constants");
 
 /**
  *  Test the Boson Exchange Handler interface
@@ -40,7 +37,7 @@ const {
 describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, disputeResolver, fauxClient;
+  let deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, disputeResolver, fauxClient;
   let erc165,
     protocolDiamond,
     accessController,
@@ -53,21 +50,12 @@ describe("IBosonExchangeHandler", function () {
     bundleHandler,
     groupHandler;
   let bosonVoucher;
-  let id, buyerId, offer, offerId, seller, sellerId, nextExchangeId, nextAccountId;
+  let id, buyerId, offerId, seller, sellerId, nextExchangeId, nextAccountId;
   let block, blockNumber, tx, txReceipt, event, clients;
-  let support, oneMonth, oneWeek, newTime;
-  let price,
-    sellerDeposit,
-    protocolFee,
-    buyerCancelPenalty,
-    quantityAvailable,
-    exchangeToken,
-    disputeResolverId,
-    metadataUri,
-    metadataHash,
-    voided;
-  let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
-  let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
+  let support, newTime;
+  let price, sellerDeposit;
+  let voucherRedeemableFrom;
+  let fulfillmentPeriod, voucherValid;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state, exchangeStruct, response, exists, buyerStruct;
@@ -83,17 +71,8 @@ describe("IBosonExchangeHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    accounts = await ethers.getSigners();
-    deployer = accounts[0];
-    operator = accounts[1];
-    admin = accounts[2];
-    clerk = accounts[3];
-    treasury = accounts[4];
-    buyer = accounts[5];
-    rando = accounts[6];
-    newOwner = accounts[7];
-    disputeResolver = accounts[8];
-    fauxClient = accounts[9];
+    [deployer, operator, admin, clerk, treasury, buyer, rando, newOwner, disputeResolver, fauxClient] =
+      await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -219,67 +198,26 @@ describe("IBosonExchangeHandler", function () {
       // Register the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
 
-      // Create an offer to commit to
-      oneWeek = 604800 * 1000; //  7 days in milliseconds
-      oneMonth = 2678400 * 1000; // 31 days in milliseconds
+      // Create the offer
+      const { offer, offerDates, offerDurations } = await mockOffer();
+      offer.quantityAvailable = "10";
 
-      // Get the current block info
-      blockNumber = await ethers.provider.getBlockNumber();
-      block = await ethers.provider.getBlock(blockNumber);
-
-      // Required constructor params
-      price = ethers.utils.parseUnits("1.5", "ether").toString();
-      sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      sellerPool = ethers.utils.parseUnits("15", "ether").toString();
-      protocolFee = calculateProtocolFee(price, protocolFeePercentage);
-      buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
-      quantityAvailable = "10";
-      exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-      disputeResolverId = "2";
-      metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-      metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
-      voided = false;
-
-      // Create a valid offer entity
-      offer = new Offer(
-        offerId,
-        sellerId,
-        price,
-        sellerDeposit,
-        protocolFee,
-        buyerCancelPenalty,
-        quantityAvailable,
-        exchangeToken,
-        disputeResolverId,
-        metadataUri,
-        metadataHash,
-        voided
-      );
+      // Check if domains are valid
       expect(offer.isValid()).is.true;
-
-      // Required constructor params
-      validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-      validUntil = ethers.BigNumber.from(block.timestamp)
-        .add(oneMonth * 6)
-        .toString(); // until 6 months
-      voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-      voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
-
-      // Create a valid offerDates, then set fields in tests directly
-      offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
-
-      // Required constructor params
-      fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
-      voucherValid = oneMonth.toString(); // offers valid for one month
-      resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
-
-      // Create a valid offerDurations, then set fields in tests directly
-      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
+      expect(offerDates.isValid()).is.true;
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
       await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
+      // Set used variables
+      price = offer.price;
+      sellerDeposit = offer.sellerDeposit;
+      voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+      voucherValid = offerDurations.voucherValid;
+      fulfillmentPeriod = offerDurations.fulfillmentPeriod;
+      sellerPool = ethers.utils.parseUnits("15", "ether").toString();
+      
       // Required voucher constructor params
       committedDate = "0";
       validUntilDate = "0";
@@ -1198,15 +1136,20 @@ describe("IBosonExchangeHandler", function () {
         await foreign1155.connect(operator).setApprovalForAll(protocolDiamond.address, true);
 
         // Create an ERC20 twin
-        twin20 = new Twin("1", sellerId, "500", [], "0", foreign20.address, TokenType.FungibleToken);
+        twin20 = mockTwin(foreign20.address);
         expect(twin20.isValid()).is.true;
 
         // Create an ERC721 twin
-        twin721 = new Twin("2", sellerId, "0", ["1"], "0", foreign721.address, TokenType.NonFungibleToken);
+        twin721 = mockTwin(foreign721.address, TokenType.NonFungibleToken);
+        twin721.id = "2";
+        twin721.supplyIds = ["1"];
         expect(twin721.isValid()).is.true;
 
         // Create an ERC1155 twin
-        twin1155 = new Twin("3", sellerId, "500", [], "1", foreign1155.address, TokenType.MultiToken);
+        twin1155 = mockTwin(foreign1155.address, TokenType.MultiToken);
+        twin1155.id = "3";
+        twin1155.tokenId = "1";
+
         expect(twin1155.isValid()).is.true;
 
         // All the twin ids (for mixed bundle)

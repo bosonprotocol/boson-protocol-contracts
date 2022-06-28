@@ -7,9 +7,6 @@ const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
-const Offer = require("../../scripts/domain/Offer");
-const OfferDates = require("../../scripts/domain/OfferDates");
-const OfferDurations = require("../../scripts/domain/OfferDurations");
 
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -18,12 +15,8 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const {
-  setNextBlockTimestamp,
-  calculateProtocolFee,
-  getEvent,
-  prepareDataSignatureParameters,
-} = require("../../scripts/util/test-utils.js");
+const { setNextBlockTimestamp, getEvent, prepareDataSignatureParameters } = require("../../scripts/util/test-utils.js");
+const { mockOffer } = require("../utils/mock");
 
 /**
  *  Test the Boson Funds Handler interface
@@ -31,7 +24,7 @@ const {
 describe("IBosonFundsHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury, feeCollector, disputeResolver;
+  let deployer, rando, operator, admin, clerk, treasury, feeCollector, disputeResolver;
   let erc165,
     protocolDiamond,
     accessController,
@@ -42,27 +35,17 @@ describe("IBosonFundsHandler", function () {
     configHandler,
     bosonVoucher,
     disputeHandler;
-  let support, oneMonth, oneWeek;
+  let support;
   let seller, active;
   let id, buyer, offerToken, offerNative, sellerId;
   let mockToken, bosonToken;
   let depositAmount;
-  let offerId,
-    price,
-    sellerDeposit,
-    protocolFee,
-    buyerCancelPenalty,
-    quantityAvailable,
-    exchangeToken,
-    disputeResolverId,
-    metadataUri,
-    metadataHash,
-    voided;
-  let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
-  let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
+  let protocolFee, price, sellerDeposit;
+  let offerDates, voucherRedeemableFrom;
+  let resolutionPeriod, offerDurations;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let block, blockNumber;
-  let protocolId, exchangeId, buyerId, sellerPayoff, buyerPayoff;
+  let protocolId, exchangeId, buyerId, sellerPayoff, buyerPayoff, protocolPayoff;
   let sellersAvailableFunds,
     buyerAvailableFunds,
     protocolAvailableFunds,
@@ -79,20 +62,15 @@ describe("IBosonFundsHandler", function () {
   before(async function () {
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
+
+    // Deploy the mock token
+    [mockToken] = await deployMockTokens(gasLimit, ["Foreign20"]);
   });
 
   beforeEach(async function () {
     // Make accounts available
-    accounts = await ethers.getSigners();
-    deployer = accounts[0];
-    operator = accounts[1];
-    admin = accounts[2];
-    clerk = accounts[3];
-    treasury = accounts[4];
-    rando = accounts[5];
-    buyer = accounts[6];
-    feeCollector = accounts[7];
-    disputeResolver = accounts[8];
+    [deployer, operator, admin, clerk, treasury, rando, buyer, feeCollector, disputeResolver] =
+      await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -367,70 +345,35 @@ describe("IBosonFundsHandler", function () {
         // Register the dispute resolver
         await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
 
-        // Create an offer to commit to
-        oneWeek = 604800 * 1000; //  7 days in milliseconds
-        oneMonth = 2678400 * 1000; // 31 days in milliseconds
+        // Mock offer
+        const { offer, offerDates, offerDurations } = await mockOffer();
+        offer.quantityAvailable = "2";
 
-        // Get the current block info
-        blockNumber = await ethers.provider.getBlockNumber();
-        block = await ethers.provider.getBlock(blockNumber);
+        offerNative = offer;
 
-        // Required constructor params
-        price = ethers.utils.parseUnits("1.5", "ether").toString();
-        sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-        protocolFee = calculateProtocolFee(price, protocolFeePercentage);
-        buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
-        quantityAvailable = "2";
-        exchangeToken = mockToken.address; // Mock token addres
-        disputeResolverId = "2";
-        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
-        voided = false;
+        offerToken = offer.clone();
+        offerToken.id = "2";
+        offerToken.exchangeToken = mockToken.address;
 
-        // Create a valid offer entity
-        offerToken = new Offer(
-          id,
-          sellerId,
-          price,
-          sellerDeposit,
-          protocolFee,
-          buyerCancelPenalty,
-          quantityAvailable,
-          exchangeToken,
-          disputeResolverId,
-          metadataUri,
-          metadataHash,
-          voided
-        );
-        expect(offerToken.isValid()).is.true;
-
-        offerNative = offerToken.clone();
-        offerNative.id = "2";
-        offerNative.exchangeToken = ethers.constants.AddressZero;
+        // Check if domais are valid
         expect(offerNative.isValid()).is.true;
+        expect(offerToken.isValid()).is.true;
+        expect(offerDates.isValid()).is.true;
+        expect(offerDurations.isValid()).is.true;
 
-        // Required constructor params
-        validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-        validUntil = ethers.BigNumber.from(block.timestamp)
-          .add(oneMonth * 6)
-          .toString(); // until 6 months
-        voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-        voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
-
-        // Create a valid offerDates, then set fields in tests directly
-        offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
-
-        // Required constructor params
-        fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
-        voucherValid = oneMonth.toString(); // offers valid for one month
-        resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
-
-        // Create a valid offerDurations, then set fields in tests directly
-        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
+        // Set used variables
+        voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
 
         // Create both offers
-        await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations);
-        await offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations);
+        await Promise.all([
+          offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations),
+          offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations),
+        ]);
+
+        // Set used variables
+        price = offerToken.price;
+        sellerDeposit = offerToken.sellerDeposit;
+        protocolFee = offerToken.protocolFee;
 
         // top up seller's and buyer's account
         await mockToken.mint(operator.address, sellerDeposit);
@@ -449,23 +392,22 @@ describe("IBosonFundsHandler", function () {
         // commit to both offers
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: offerNative.price });
-
-        // cancel the voucher, so both seller and buyer have something to withdraw
-        await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
-        await exchangeHandler.connect(buyer).cancelVoucher(++exchangeId); // canceling the voucher in the native currency
-
-        // expected payoffs - they are the same for token and native currency
-        // buyer: price - buyerCancelPenalty - protocolFee
-        buyerPayoff = ethers.BigNumber.from(offerToken.price)
-          .sub(offerToken.buyerCancelPenalty)
-          .sub(offerToken.protocolFee)
-          .toString();
-
-        // seller: sellerDeposit + buyerCancelPenalty
-        sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit).add(offerToken.buyerCancelPenalty).toString();
       });
 
       context("👉 withdrawFunds()", async function () {
+        beforeEach(async function () {
+          // cancel the voucher, so both seller and buyer have something to withdraw
+          await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
+          await exchangeHandler.connect(buyer).cancelVoucher(++exchangeId); // canceling the voucher in the native currency
+
+          // expected payoffs - they are the same for token and native currency
+          // buyer: price - buyerCancelPenalty
+          buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
+
+          // seller: sellerDeposit + buyerCancelPenalty
+          sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit).add(offerToken.buyerCancelPenalty).toString();
+        });
+
         it("should emit a FundsWithdrawn event", async function () {
           // Withdraw funds, testing for the event
           // Withdraw tokens
@@ -867,6 +809,26 @@ describe("IBosonFundsHandler", function () {
 
       context("👉 withdrawProtocolFees()", async function () {
         beforeEach(async function () {
+          const tokenExchangeId = exchangeId;
+          const nativeExchangeId = ++exchangeId;
+
+          // succesfully finalize the exchange so the protocol gets some fees
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+          await exchangeHandler.connect(buyer).redeemVoucher(tokenExchangeId);
+          await exchangeHandler.connect(buyer).redeemVoucher(nativeExchangeId);
+          await exchangeHandler.connect(buyer).completeExchange(tokenExchangeId);
+          await exchangeHandler.connect(buyer).completeExchange(nativeExchangeId);
+
+          // expected payoffs - they are the same for token and native currency
+          // buyer: 0
+          buyerPayoff = 0;
+
+          // seller: sellerDeposit + buyerCancelPenalty
+          sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit).add(offerToken.price).toString();
+
+          // protocol: protocolFee
+          protocolPayoff = offerToken.protocolFee;
+
           // grant fee collecor role
           await accessController.grantRole(Role.FEE_COLLECTOR, feeCollector.address);
 
@@ -877,14 +839,14 @@ describe("IBosonFundsHandler", function () {
         it("should emit a FundsWithdrawn event", async function () {
           // Withdraw funds, testing for the event
           tokenList = [mockToken.address, ethers.constants.AddressZero];
-          tokenAmounts = [protocolFee, protocolFee];
+          tokenAmounts = [protocolPayoff, protocolPayoff];
 
           // protocol fee withdrawal
           await expect(fundsHandler.connect(feeCollector).withdrawProtocolFees(tokenList, tokenAmounts))
             .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(protocolId, feeCollector.address, mockToken.address, protocolFee, feeCollector.address)
+            .withArgs(protocolId, feeCollector.address, mockToken.address, protocolPayoff, feeCollector.address)
             .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(protocolId, feeCollector.address, ethers.constants.Zero, protocolFee, feeCollector.address);
+            .withArgs(protocolId, feeCollector.address, ethers.constants.Zero, protocolPayoff, feeCollector.address);
         });
 
         it("should update state", async function () {
@@ -895,8 +857,8 @@ describe("IBosonFundsHandler", function () {
 
           // Chain state should match the expected available funds before the withdrawal
           expectedProtocolAvailableFunds = new FundsList([
-            new Funds(mockToken.address, "Foreign20", protocolFee),
-            new Funds(ethers.constants.AddressZero, "Native currency", protocolFee),
+            new Funds(mockToken.address, "Foreign20", protocolPayoff),
+            new Funds(ethers.constants.AddressZero, "Native currency", protocolPayoff),
           ]);
           expect(protocolAvailableFunds).to.eql(
             expectedProtocolAvailableFunds,
@@ -904,14 +866,15 @@ describe("IBosonFundsHandler", function () {
           );
 
           // withdraw funds
-          const partialFeeWithdrawAmount = ethers.BigNumber.from(protocolFee)
+          const partialFeeWithdrawAmount = ethers.BigNumber.from(protocolPayoff)
             .sub(ethers.utils.parseUnits("0.01", "ether"))
             .toString();
+
           tx = await fundsHandler
             .connect(feeCollector)
             .withdrawProtocolFees(
               [mockToken.address, ethers.constants.AddressZero],
-              [protocolFee, partialFeeWithdrawAmount]
+              [protocolPayoff, partialFeeWithdrawAmount]
             );
 
           // calcualte tx costs
@@ -930,7 +893,7 @@ describe("IBosonFundsHandler", function () {
             new Funds(
               ethers.constants.AddressZero,
               "Native currency",
-              ethers.BigNumber.from(protocolFee).sub(partialFeeWithdrawAmount).toString()
+              ethers.BigNumber.from(protocolPayoff).sub(partialFeeWithdrawAmount).toString()
             ),
           ]);
           expect(protocolAvailableFunds).to.eql(
@@ -944,7 +907,7 @@ describe("IBosonFundsHandler", function () {
           );
           // Token balance is increased for the protocol fee
           expect(feeCollectorTokenBalanceAfter).to.eql(
-            feeCollectorTokenBalanceBefore.add(protocolFee),
+            feeCollectorTokenBalanceBefore.add(protocolPayoff),
             "Fee collector token balance mismatch"
           );
         });
@@ -957,8 +920,8 @@ describe("IBosonFundsHandler", function () {
 
           // Chain state should match the expected available funds before the withdrawal
           expectedProtocolAvailableFunds = new FundsList([
-            new Funds(mockToken.address, "Foreign20", protocolFee),
-            new Funds(ethers.constants.AddressZero, "Native currency", protocolFee),
+            new Funds(mockToken.address, "Foreign20", protocolPayoff),
+            new Funds(ethers.constants.AddressZero, "Native currency", protocolPayoff),
           ]);
           expect(protocolAvailableFunds).to.eql(
             expectedProtocolAvailableFunds,
@@ -986,12 +949,12 @@ describe("IBosonFundsHandler", function () {
           );
           // Native currency balance is increased for the partialFeeWithdrawAmount
           expect(feeCollectorNativeBalanceAfter).to.eql(
-            feeCollectorNativeBalanceBefore.add(protocolFee).sub(txCost),
+            feeCollectorNativeBalanceBefore.add(protocolPayoff).sub(txCost),
             "Fee collector native currency balance mismatch"
           );
           // Token balance is increased for the protocol fee
           expect(feeCollectorTokenBalanceAfter).to.eql(
-            feeCollectorTokenBalanceBefore.add(protocolFee),
+            feeCollectorTokenBalanceBefore.add(protocolPayoff),
             "Fee collector token balance mismatch"
           );
         });
@@ -1008,8 +971,8 @@ describe("IBosonFundsHandler", function () {
 
           // Chain state should match the expected available funds before the withdrawal
           expectedProtocolAvailableFunds = new FundsList([
-            new Funds(mockToken.address, "Foreign20", protocolFee),
-            new Funds(ethers.constants.AddressZero, "Native currency", protocolFee),
+            new Funds(mockToken.address, "Foreign20", protocolPayoff),
+            new Funds(ethers.constants.AddressZero, "Native currency", protocolPayoff),
           ]);
           expect(protocolAvailableFunds).to.eql(
             expectedProtocolAvailableFunds,
@@ -1031,7 +994,7 @@ describe("IBosonFundsHandler", function () {
           // Chain state should match the expected available funds after the withdrawal
           // Funds available should still have the entries from above the threshold
           expectedProtocolAvailableFunds = new FundsList([
-            new Funds(ethers.constants.AddressZero, "Native currency", protocolFee),
+            new Funds(ethers.constants.AddressZero, "Native currency", protocolPayoff),
           ]);
           expect(protocolAvailableFunds).to.eql(
             expectedProtocolAvailableFunds,
@@ -1043,7 +1006,7 @@ describe("IBosonFundsHandler", function () {
             "Fee collector native currency balance mismatch after first withdrawal"
           );
           expect(feeCollectorTokenBalanceAfter).to.eql(
-            feeCollectorTokenBalanceBefore.add(protocolFee),
+            feeCollectorTokenBalanceBefore.add(protocolPayoff),
             "Fee collector token balance mismatch after first withdrawal"
           );
 
@@ -1075,16 +1038,16 @@ describe("IBosonFundsHandler", function () {
           );
         });
 
-        it("It's possible to withdraw same toke twice if in total enough available funds", async function () {
+        it("It's possible to withdraw same token twice if in total enough available funds", async function () {
           let reduction = ethers.utils.parseUnits("0.01", "ether").toString();
           // Withdraw token
           tokenList = [mockToken.address, mockToken.address];
-          tokenAmounts = [ethers.BigNumber.from(protocolFee).sub(reduction).toString(), reduction];
+          tokenAmounts = [ethers.BigNumber.from(protocolPayoff).sub(reduction).toString(), reduction];
 
           // protocol fee withdrawal
           await expect(fundsHandler.connect(feeCollector).withdrawProtocolFees(tokenList, tokenAmounts))
             .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(protocolId, feeCollector.address, mockToken.address, protocolFee, feeCollector.address)
+            .withArgs(protocolId, feeCollector.address, mockToken.address, protocolPayoff, feeCollector.address)
             .to.emit(fundsHandler, "FundsWithdrawn")
             .withArgs(protocolId, feeCollector.address, mockToken.address, reduction, feeCollector.address);
         });
@@ -1201,7 +1164,7 @@ describe("IBosonFundsHandler", function () {
             );
           });
 
-          it("Transfer of funds failed - revert durin ERC20 transfer", async function () {
+          it("Transfer of funds failed - revert during ERC20 transfer", async function () {
             // pause mockToken
             await mockToken.pause();
 
@@ -1219,7 +1182,7 @@ describe("IBosonFundsHandler", function () {
   context("📋 FundsLib  Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
-      offerId = id = sellerId = "1";
+      id = sellerId = "1";
 
       // Create a valid seller
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
@@ -1234,72 +1197,33 @@ describe("IBosonFundsHandler", function () {
       // Register the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
 
-      // Create an offer to commit to
-      oneWeek = 604800 * 1000; //  7 days in milliseconds
-      oneMonth = 2678400 * 1000; // 31 days in milliseconds
-
-      // Get the current block info
-      blockNumber = await ethers.provider.getBlockNumber();
-      block = await ethers.provider.getBlock(blockNumber);
-
-      // Required constructor params
-      price = ethers.utils.parseUnits("1.5", "ether").toString();
-      sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      protocolFee = calculateProtocolFee(price, protocolFeePercentage);
-      buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
-      quantityAvailable = "2";
-      exchangeToken = mockToken.address; // MockToken address
-      disputeResolverId = "2";
-      metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-      metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
-      voided = false;
-
-      // Create a valid offer entity
-      offerToken = new Offer(
-        offerId,
-        sellerId,
-        price,
-        sellerDeposit,
-        protocolFee,
-        buyerCancelPenalty,
-        quantityAvailable,
-        exchangeToken,
-        disputeResolverId,
-        metadataUri,
-        metadataHash,
-        voided
-      );
-      expect(offerToken.isValid()).is.true;
-
-      offerNative = offerToken.clone();
-      offerNative.id = "2";
-      offerNative.exchangeToken = ethers.constants.AddressZero;
+      const { offer, ...mo } = await mockOffer();
+      offer.quantityAvailable = "2";
+      offerNative = offer;
       expect(offerNative.isValid()).is.true;
 
-      // Required constructor params
-      validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-      validUntil = ethers.BigNumber.from(block.timestamp)
-        .add(oneMonth * 6)
-        .toString(); // until 6 months
-      voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-      voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
+      offerToken = offerNative.clone();
+      offerToken.id = "2";
+      offerToken.exchangeToken = mockToken.address;
 
-      // Create a valid offerDates, then set fields in tests directly
-      offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
+      offerDates = mo.offerDates;
       expect(offerDates.isValid()).is.true;
 
-      // Required constructor params
-      fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
-      voucherValid = oneMonth.toString(); // offers valid for one month
-      resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
-
-      // Create a valid offerDurations, then set fields in tests directly
-      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
+      offerDurations = mo.offerDurations;
       expect(offerDurations.isValid()).is.true;
 
       // Create both offers
-      await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations);
-      await offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations);
+      await Promise.all([
+        offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations),
+        offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations),
+      ]);
+
+      // Set used variables
+      price = offerToken.price;
+      protocolFee = offerToken.protocolFee;
+      sellerDeposit = offerToken.sellerDeposit;
+      voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+      resolutionPeriod = offerDurations.resolutionPeriod;
 
       // top up seller's and buyer's account
       await mockToken.mint(operator.address, `${2 * sellerDeposit}`);
@@ -1598,6 +1522,9 @@ describe("IBosonFundsHandler", function () {
             .add(offerToken.price)
             .sub(offerToken.protocolFee)
             .toString();
+
+          // protocol: protocolFee
+          protocolPayoff = offerToken.protocolFee;
         });
 
         it("should emit a FundsReleased event", async function () {
@@ -1607,8 +1534,8 @@ describe("IBosonFundsHandler", function () {
             .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address)
             .to.emit(exchangeHandler, "FundsReleased")
             .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address)
-            .to.emit(exchangeHandler, "ExchangeFee")
-            .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, buyer.address);
+            .to.emit(exchangeHandler, "ProtocolFeeCollected")
+            .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, buyer.address);
         });
 
         it("should update state", async function () {
@@ -1661,7 +1588,7 @@ describe("IBosonFundsHandler", function () {
           expectedProtocolAvailableFunds.funds[0] = new Funds(
             mockToken.address,
             "Foreign20",
-            ethers.BigNumber.from(protocolFee).mul(2).toString()
+            ethers.BigNumber.from(protocolPayoff).mul(2).toString()
           );
           expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
           expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
@@ -1672,25 +1599,25 @@ describe("IBosonFundsHandler", function () {
       context("Final state REVOKED", async function () {
         beforeEach(async function () {
           // expected payoffs
-          // buyer: sellerDeposit + price - protocolFee
-          buyerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit)
-            .add(offerToken.price)
-            .sub(offerToken.protocolFee)
-            .toString();
+          // buyer: sellerDeposit + price
+          buyerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit).add(offerToken.price).toString();
 
-          // seller:
+          // seller: 0
           sellerPayoff = 0;
+
+          // protocol: 0
+          protocolPayoff = 0;
         });
 
         it("should emit a FundsReleased event", async function () {
           // Revoke the voucher, expecting event
           await expect(exchangeHandler.connect(operator).revokeVoucher(exchangeId))
-            .to.emit(exchangeHandler, "FundsReleased")
+            .to.not.emit(exchangeHandler, "FundsReleased")
             .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, operator.address)
             .to.emit(exchangeHandler, "FundsReleased")
             .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, operator.address)
-            .to.emit(exchangeHandler, "ExchangeFee")
-            .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, operator.address);
+            .to.not.emit(exchangeHandler, "ProtocolFeeCollected")
+            .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, operator.address);
         });
 
         it("should update state", async function () {
@@ -1714,11 +1641,10 @@ describe("IBosonFundsHandler", function () {
           await exchangeHandler.connect(operator).revokeVoucher(exchangeId);
 
           // Available funds should be increased for
-          // buyer: sellerDeposit + price - protocolFee
+          // buyer: sellerDeposit + price
           // seller: 0
-          // protocol: protocolFee
+          // protocol: 0
           expectedBuyerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", buyerPayoff));
-          expectedProtocolAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", protocolFee));
           sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
           buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
           protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
@@ -1734,9 +1660,9 @@ describe("IBosonFundsHandler", function () {
           await exchangeHandler.connect(operator).revokeVoucher(++exchangeId);
 
           // Available funds should be increased for
-          // buyer: sellerDeposit + price - protocolFee
+          // buyer: sellerDeposit + price
           // seller: 0; but during the commitToOffer, sellerDeposit is encumbered
-          // protocol: protocolFee
+          // protocol: 0
           expectedBuyerAvailableFunds.funds[0] = new Funds(
             mockToken.address,
             "Foreign20",
@@ -1745,11 +1671,6 @@ describe("IBosonFundsHandler", function () {
           expectedSellerAvailableFunds = new FundsList([
             new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
           ]);
-          expectedProtocolAvailableFunds.funds[0] = new Funds(
-            mockToken.address,
-            "Foreign20",
-            ethers.BigNumber.from(protocolFee).mul(2).toString()
-          );
           sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
           buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
           protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
@@ -1762,14 +1683,14 @@ describe("IBosonFundsHandler", function () {
       context("Final state CANCELED", async function () {
         beforeEach(async function () {
           // expected payoffs
-          // buyer: price - buyerCancelPenalty - protocolFee
-          buyerPayoff = ethers.BigNumber.from(offerToken.price)
-            .sub(offerToken.buyerCancelPenalty)
-            .sub(offerToken.protocolFee)
-            .toString();
+          // buyer: price - buyerCancelPenalty
+          buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
 
           // seller: sellerDeposit + buyerCancelPenalty
           sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit).add(offerToken.buyerCancelPenalty).toString();
+
+          // protocol: 0
+          protocolPayoff = 0;
         });
 
         it("should emit a FundsReleased event", async function () {
@@ -1779,8 +1700,8 @@ describe("IBosonFundsHandler", function () {
             .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address)
             .to.emit(exchangeHandler, "FundsReleased")
             .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address)
-            .to.emit(exchangeHandler, "ExchangeFee")
-            .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, buyer.address);
+            .to.not.emit(exchangeHandler, "ProtocolFeeCollected")
+            .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, buyer.address);
         });
 
         it("should update state", async function () {
@@ -1804,15 +1725,14 @@ describe("IBosonFundsHandler", function () {
           await exchangeHandler.connect(buyer).cancelVoucher(exchangeId);
 
           // Available funds should be increased for
-          // buyer: price - buyerCancelPenalty - protocolFee
+          // buyer: price - buyerCancelPenalty
           // seller: sellerDeposit + buyerCancelPenalty; note that seller has sellerDeposit in availableFunds from before
-          // protocol: protocolFee
+          // protocol: 0
           expectedSellerAvailableFunds.funds[0] = new Funds(
             mockToken.address,
             "Foreign20",
             ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
           );
-          expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolFee);
           expectedBuyerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", buyerPayoff));
           sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
           buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
@@ -1857,13 +1777,16 @@ describe("IBosonFundsHandler", function () {
               .add(offerToken.price)
               .sub(offerToken.protocolFee)
               .toString();
+
+            // protocol: 0
+            protocolPayoff = offerToken.protocolFee;
           });
 
           it("should emit a FundsReleased event", async function () {
             // Retract from the dispute, expecting event
             await expect(disputeHandler.connect(buyer).retractDispute(exchangeId))
-              .to.emit(disputeHandler, "ExchangeFee")
-              .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, buyer.address)
+              .to.emit(disputeHandler, "ProtocolFeeCollected")
+              .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, buyer.address)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address)
               .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address);
@@ -1898,7 +1821,7 @@ describe("IBosonFundsHandler", function () {
               "Foreign20",
               ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
             );
-            expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolFee);
+            expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
@@ -1920,14 +1843,17 @@ describe("IBosonFundsHandler", function () {
               .sub(offerToken.protocolFee)
               .toString();
 
+            // protocol: protocolFee
+            protocolPayoff = offerToken.protocolFee;
+
             await setNextBlockTimestamp(Number(timeout));
           });
 
           it("should emit a FundsReleased event", async function () {
             // Expire the dispute, expecting event
             await expect(disputeHandler.connect(rando).expireDispute(exchangeId))
-              .to.emit(disputeHandler, "ExchangeFee")
-              .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, rando.address)
+              .to.emit(disputeHandler, "ProtocolFeeCollected")
+              .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, rando.address)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address)
               .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, rando.address);
@@ -1962,7 +1888,7 @@ describe("IBosonFundsHandler", function () {
               "Foreign20",
               ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
             );
-            expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolFee);
+            expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
@@ -1977,19 +1903,21 @@ describe("IBosonFundsHandler", function () {
             buyerPercent = "5566"; // 55.66%
 
             // expected payoffs
-            // buyer: 0
+            // buyer: (price + sellerDeposit)*buyerPercentage
             buyerPayoff = ethers.BigNumber.from(offerToken.price)
               .add(offerToken.sellerDeposit)
               .mul(buyerPercent)
               .div("10000")
               .toString();
 
-            // seller: sellerDeposit + price - protocolFee
+            // seller: (price + sellerDeposit)*(1-buyerPercentage)
             sellerPayoff = ethers.BigNumber.from(offerToken.price)
               .add(offerToken.sellerDeposit)
               .sub(buyerPayoff)
-              .sub(protocolFee)
               .toString();
+
+            // protocol: 0
+            protocolPayoff = 0;
 
             // Set the message Type, needed for signature
             resolutionType = [
@@ -2019,11 +1947,11 @@ describe("IBosonFundsHandler", function () {
           it("should emit a FundsReleased event", async function () {
             // Resolve the dispute, expecting event
             await expect(disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v))
-              .to.emit(disputeHandler, "ExchangeFee")
-              .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, operator.address)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, operator.address)
-              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, operator.address);
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, operator.address)
+              .to.not.emit(disputeHandler, "ProtocolFeeCollected")
+              .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, operator.address);
           });
 
           it("should update state", async function () {
@@ -2048,15 +1976,14 @@ describe("IBosonFundsHandler", function () {
 
             // Available funds should be increased for
             // buyer: (price + sellerDeposit)*buyerPercentage
-            // seller: (price + sellerDeposit)*(1-buyerPercentage)-protocolFee; note that seller has sellerDeposit in availableFunds from before
-            // protocol: protocolFee
+            // seller: (price + sellerDeposit)*(1-buyerPercentage); note that seller has sellerDeposit in availableFunds from before
+            // protocol: 0
             expectedSellerAvailableFunds.funds[0] = new Funds(
               mockToken.address,
               "Foreign20",
               ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
             );
             expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff)]);
-            expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolFee);
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
@@ -2072,19 +1999,21 @@ describe("IBosonFundsHandler", function () {
             buyerPercent = "5566"; // 55.66%
 
             // expected payoffs
-            // buyer: 0
+            // buyer: (price + sellerDeposit)*buyerPercentage
             buyerPayoff = ethers.BigNumber.from(offerToken.price)
               .add(offerToken.sellerDeposit)
               .mul(buyerPercent)
               .div("10000")
               .toString();
 
-            // seller: sellerDeposit + price - protocolFee
+            // seller: (price + sellerDeposit)*(1-buyerPercentage)
             sellerPayoff = ethers.BigNumber.from(offerToken.price)
               .add(offerToken.sellerDeposit)
               .sub(buyerPayoff)
-              .sub(protocolFee)
               .toString();
+
+            // protocol: 0
+            protocolPayoff = 0;
 
             // escalate the dispute
             await disputeHandler.connect(buyer).escalateDispute(exchangeId);
@@ -2093,11 +2022,11 @@ describe("IBosonFundsHandler", function () {
           it("should emit a FundsReleased event", async function () {
             // Decide the dispute, expecting event
             await expect(disputeHandler.connect(disputeResolver).decideDispute(exchangeId, buyerPercent))
-              .to.emit(disputeHandler, "ExchangeFee")
-              .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, disputeResolver.address)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, disputeResolver.address)
-              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, disputeResolver.address);
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, disputeResolver.address)
+              .to.not.emit(disputeHandler, "ProtocolFeeCollected")
+              .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, disputeResolver.address);
           });
 
           it("should update state", async function () {
@@ -2122,15 +2051,73 @@ describe("IBosonFundsHandler", function () {
 
             // Available funds should be increased for
             // buyer: (price + sellerDeposit)*buyerPercentage
-            // seller: (price + sellerDeposit)*(1-buyerPercentage)-protocolFee; note that seller has sellerDeposit in availableFunds from before
-            // protocol: protocolFee
+            // seller: (price + sellerDeposit)*(1-buyerPercentage); note that seller has sellerDeposit in availableFunds from before
+            // protocol: 0
             expectedSellerAvailableFunds.funds[0] = new Funds(
               mockToken.address,
               "Foreign20",
               ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
             );
             expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff)]);
-            expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolFee);
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
+            protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
+            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+          });
+        });
+
+        context.skip("Final state DISPUTED - REFUSED", async function () {
+          beforeEach(async function () {
+            // expected payoffs
+            // buyer: price + sellerDeposit
+            buyerPayoff = ethers.BigNumber.from(offerToken.price).add(offerToken.sellerDeposit).toString();
+
+            // seller: 0
+            sellerPayoff = 0;
+
+            // protocol: 0
+            protocolPayoff = 0;
+
+            await setNextBlockTimestamp(Number(timeout));
+          });
+
+          it("should emit a FundsReleased event", async function () {
+            // Expire the dispute, expecting event
+            await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId))
+              .to.emit(disputeHandler, "ExchangeFee")
+              .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff)
+              .to.emit(disputeHandler, "FundsReleased")
+              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff);
+          });
+
+          it("should update state", async function () {
+            // Read on chain state
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
+            protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
+
+            // Chain state should match the expected available funds
+            expectedSellerAvailableFunds = new FundsList([
+              new Funds(mockToken.address, "Foreign20", sellerDeposit),
+              new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
+            ]);
+            expectedBuyerAvailableFunds = new FundsList([]);
+            expectedProtocolAvailableFunds = new FundsList([]);
+            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+
+            // Expire the escalated dispute, so the funds are released
+            await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
+
+            // Available funds should be increased for
+            // buyer: price + sellerDeposit
+            // seller: 0; note that seller has sellerDeposit in availableFunds from before
+            // protocol: 0
+            expectedBuyerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", buyerPayoff);
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
@@ -2174,7 +2161,7 @@ describe("IBosonFundsHandler", function () {
             .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address)
             .to.emit(exchangeHandler, "FundsReleased")
             .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address)
-            .to.emit(exchangeHandler, "ExchangeFee")
+            .to.emit(exchangeHandler, "ProtocolFeeCollected")
             .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, buyer.address);
         });
 
@@ -2192,14 +2179,13 @@ describe("IBosonFundsHandler", function () {
 
           // succesfully redeem exchange
           await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-
           // Complete the exchange, expecting event
           await expect(exchangeHandler.connect(buyer).completeExchange(exchangeId))
             .to.emit(exchangeHandler, "FundsReleased")
             .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address)
             .to.emit(exchangeHandler, "FundsReleased")
             .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address)
-            .to.emit(exchangeHandler, "ExchangeFee")
+            .to.emit(exchangeHandler, "ProtocolFeeCollected")
             .withArgs(exchangeId, offerToken.exchangeToken, offerToken.protocolFee, buyer.address);
         });
       });

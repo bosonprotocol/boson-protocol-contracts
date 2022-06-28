@@ -13,7 +13,6 @@ const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const Twin = require("../../scripts/domain/Twin");
-const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -22,6 +21,8 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { getEvent, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
+const { oneMonth } = require("../utils/constants");
+const { mockTwin, mockOffer } = require("../utils/mock");
 
 /**
  *  Test the Boson Orchestration Handler interface
@@ -42,31 +43,20 @@ describe("IBosonOrchestrationHandler", function () {
     offerStruct,
     key,
     value;
-  let offer, nextOfferId, oneMonth, oneWeek, support, exists;
+  let offer, nextOfferId, support, exists;
   let nextAccountId;
   let seller, sellerStruct, active;
   let disputeResolver;
-  let id,
-    sellerId,
-    price,
-    sellerDeposit,
-    protocolFee,
-    buyerCancelPenalty,
-    quantityAvailable,
-    exchangeToken,
-    disputeResolverId,
-    metadataUri,
-    metadataHash,
-    voided;
-  let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates, offerDatesStruct;
-  let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations, offerDurationsStruct;
+  let id, sellerId;
+  let offerDates, offerDatesStruct;
+  let offerDurations, offerDurationsStruct;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let group, groupStruct, nextGroupId;
   let method, tokenAddress, tokenId, threshold, maxCommits;
   let offerIds, condition;
-  let twin, twinStruct, twinIds, nextTwinId, tokenType;
+  let twin, twinStruct, twinIds, nextTwinId;
   let bundle, bundleStruct, bundleId, nextBundleId;
-  let bosonToken, supplyAvailable, supplyIds;
+  let bosonToken;
   let foreign721, foreign1155, fallbackError;
 
   before(async function () {
@@ -171,9 +161,6 @@ describe("IBosonOrchestrationHandler", function () {
   // All supported methods - single offer
   context("📋 Orchestration Handler Methods", async function () {
     beforeEach(async function () {
-      // The first seller id
-      nextAccountId = "2";
-
       // Required constructor params
       id = "1"; // dispute resolver gets id "1"
 
@@ -185,77 +172,33 @@ describe("IBosonOrchestrationHandler", function () {
       // Register the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
 
-      id = "2"; // argument sent to contract for createSeller will be ignored
+      // The first seller id
+      nextAccountId = id = sellerId = "2"; // argument sent to contract for createSeller will be ignored
       // Create a valid seller, then set fields in tests directly
-      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
+      seller = new Seller(sellerId, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
 
       // How that seller looks as a returned struct
       sellerStruct = seller.toStruct();
 
-      // Some periods in milliseconds
-      oneWeek = 604800 * 1000; //  7 days in milliseconds
-      oneMonth = 2678400 * 1000; // 31 days in milliseconds
-
       // The first offer id
       nextOfferId = "1";
 
-      // Required constructor params
-      id = sellerId = "2"; // argument sent to contract for createOffer will be ignored
-      price = ethers.utils.parseUnits("1.5", "ether").toString();
-      sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      protocolFee = calculateProtocolFee(price, protocolFeePercentage);
-      buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
-      quantityAvailable = "1";
-      exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-      disputeResolverId = "1";
-      metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
-      metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
-      voided = false;
+      // Mock offer, offerDates and offerDurations
+      ({ offer, offerDates, offerDurations } = await mockOffer());
+      offer.disputeResolverId = "1";
+      offer.sellerId = "2";
+      offerDates.validFrom = ethers.BigNumber.from(Date.now()).toString();
+      offerDates.validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString();
 
-      // Create a valid offer, then set fields in tests directly
-      offer = new Offer(
-        nextOfferId,
-        sellerId,
-        price,
-        sellerDeposit,
-        protocolFee,
-        buyerCancelPenalty,
-        quantityAvailable,
-        exchangeToken,
-        disputeResolverId,
-        metadataUri,
-        metadataHash,
-        voided
-      );
+      // Check if domains are valid
       expect(offer.isValid()).is.true;
-
-      // How that offer looks as a returned struct
-      offerStruct = offer.toStruct();
-
-      // Required constructor params
-      validFrom = ethers.BigNumber.from(Date.now()).toString(); // valid from now
-      validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // until 6 months
-      voucherRedeemableFrom = ethers.BigNumber.from(Date.now() + oneWeek).toString(); // redeemable in 1 week
-      voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
-
-      // Create a valid offerDates, then set fields in tests directly
-      offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
       expect(offerDates.isValid()).is.true;
-
-      // How that offer looks as a returned struct
-      offerDatesStruct = offerDates.toStruct();
-
-      // Required constructor params
-      fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
-      voucherValid = oneMonth.toString(); // offers valid for one month
-      resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
-
-      // Create a valid offerDurations, then set fields in tests directly
-      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
       expect(offerDurations.isValid()).is.true;
 
-      // How that offer looks as a returned struct
+      // Set domains transformed into struct
+      offerStruct = offer.toStruct();
+      offerDatesStruct = offerDates.toStruct();
       offerDurationsStruct = offerDurations.toStruct();
     });
 
@@ -475,7 +418,6 @@ describe("IBosonOrchestrationHandler", function () {
         it("Valid until date is not in the future", async function () {
           // Set until date in the past
           offerDates.validUntil = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
-
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
@@ -1026,56 +968,26 @@ describe("IBosonOrchestrationHandler", function () {
 
         // create 3 offers
         for (let i = 0; i < 3; i++) {
-          // Required constructor params
-          id = `${i + 1}`; // argument sent to contract for createGroup will be ignored
-          sellerId = "2"; // "1" is dispute resolver
-          price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
-          sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
-          protocolFee = calculateProtocolFee(price, protocolFeePercentage);
-          buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
-          quantityAvailable = `${(i + 1) * 2}`;
-          exchangeToken = ethers.constants.AddressZero.toString();
-          disputeResolverId = "1";
-          metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
-          metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
-          voided = false;
+          // Mock offer, offerDates and offerDurations
+          ({ offer, offerDates, offerDurations } = await mockOffer());
+          offer.id = `${i + 1}`;
+          offer.price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
+          offer.sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
+          offer.protocolFee = calculateProtocolFee(offer.price, protocolFeePercentage);
+          offer.buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
+          offer.quantityAvailable = `${(i + 1) * 2}`;
+          offer.disputeResolverId = "1";
+          offer.sellerId = "2"; // "1" is dispute resolver
 
-          // Create a valid offer, then set fields in tests directly
-          offer = new Offer(
-            id,
-            sellerId,
-            price,
-            sellerDeposit,
-            protocolFee,
-            buyerCancelPenalty,
-            quantityAvailable,
-            exchangeToken,
-            disputeResolverId,
-            metadataUri,
-            metadataHash,
-            voided
-          );
+          offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
+          offerDates.validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
+
+          // Check if domains are valid
           expect(offer.isValid()).is.true;
-
-          // Required constructor params
-          validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
-          validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
-          voucherRedeemableFrom = ethers.BigNumber.from(validUntil + oneWeek).toString();
-          voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
-
-          // Create a valid offerDates, then set fields in tests directly
-          offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
           expect(offerDates.isValid()).is.true;
-
-          // Required constructor params
-          fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
-          voucherValid = oneMonth.toString(); // offers valid for one month
-          resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
-
-          // Create a valid offerDurations, then set fields in tests directly
-          offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
           expect(offerDurations.isValid()).is.true;
 
+          // Create the offer
           await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
 
           nextOfferId++;
@@ -1480,17 +1392,11 @@ describe("IBosonOrchestrationHandler", function () {
         // How that bundle looks as a returned struct
         bundleStruct = bundle.toStruct();
 
-        // Required constructor params for Twin
-        id = nextTwinId = "1";
-        supplyAvailable = "1000";
-        tokenId = "0";
-        supplyIds = [];
-        tokenAddress = bosonToken.address;
-        tokenType = TokenType.FungibleToken;
+        nextTwinId = "1";
 
         // Create a valid twin.
-        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
-
+        twin = mockTwin(bosonToken.address);
+        twin.sellerId = sellerId;
         // How that twin looks as a returned struct
         twinStruct = twin.toStruct();
 
@@ -1870,7 +1776,6 @@ describe("IBosonOrchestrationHandler", function () {
 
           //ERC20 token address
           twin.tokenAddress = bosonToken.address;
-          tokenType = TokenType.FungibleToken;
 
           await expect(
             orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
@@ -1973,16 +1878,10 @@ describe("IBosonOrchestrationHandler", function () {
         // How that bundle looks as a returned struct
         bundleStruct = bundle.toStruct();
 
-        // Required constructor params for Twin
-        id = nextTwinId = "1";
-        supplyAvailable = "1000";
-        tokenId = "0";
-        supplyIds = [];
-        tokenAddress = bosonToken.address;
-        tokenType = TokenType.FungibleToken;
-
+        nextTwinId = "1";
         // Create a valid twin.
-        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
+        twin = mockTwin(bosonToken.address);
+        twin.sellerId = "2";
 
         // How that twin looks as a returned struct
         twinStruct = twin.toStruct();
@@ -2417,16 +2316,11 @@ describe("IBosonOrchestrationHandler", function () {
         // How that bundle looks as a returned struct
         bundleStruct = bundle.toStruct();
 
-        // Required constructor params for Twin
-        id = nextTwinId = "1";
-        supplyAvailable = "1000";
-        tokenId = "0";
-        supplyIds = [];
-        tokenAddress = bosonToken.address;
-        tokenType = TokenType.FungibleToken;
+        nextTwinId = "1";
 
         // Create a valid twin.
-        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
+        twin = mockTwin(bosonToken.address);
+        twin.sellerId = "2";
 
         // How that twin looks as a returned struct
         twinStruct = twin.toStruct();
@@ -2629,16 +2523,11 @@ describe("IBosonOrchestrationHandler", function () {
         // How that bundle looks as a returned struct
         bundleStruct = bundle.toStruct();
 
-        // Required constructor params for Twin
-        id = nextTwinId = "1";
-        supplyAvailable = "1000";
-        tokenId = "0";
-        supplyIds = [];
-        tokenAddress = bosonToken.address;
-        tokenType = TokenType.FungibleToken;
+        nextTwinId = "1";
 
         // Create a valid twin.
-        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
+        twin = mockTwin(bosonToken.address);
+        twin.sellerId = sellerId;
 
         // How that twin looks as a returned struct
         twinStruct = twin.toStruct();

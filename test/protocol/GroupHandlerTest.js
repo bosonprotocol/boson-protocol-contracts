@@ -6,9 +6,6 @@ const { gasLimit } = require("../../environments");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
-const Offer = require("../../scripts/domain/Offer");
-const OfferDates = require("../../scripts/domain/OfferDates");
-const OfferDurations = require("../../scripts/domain/OfferDurations");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -19,7 +16,8 @@ const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const { getEvent, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
-const TokenType = require("../../scripts/domain/TokenType");
+const { oneMonth } = require("../utils/constants");
+const { mockOffer } = require("../utils/mock");
 
 /**
  *  Test the Boson Group Handler interface
@@ -29,27 +27,16 @@ describe("IBosonGroupHandler", function () {
   let InterfaceIds;
   let accounts, deployer, rando, operator, admin, clerk, treasury, other1;
   let erc165, protocolDiamond, accessController, accountHandler, offerHandler, groupHandler, bosonToken, key, value;
-  let offer, oneMonth, oneWeek, support, expected, exists;
+  let offer, support, expected, exists;
   let seller, active;
-  let id,
-    sellerId,
-    price,
-    sellerDeposit,
-    protocolFee,
-    buyerCancelPenalty,
-    quantityAvailable,
-    exchangeToken,
-    disputeResolverId,
-    metadataUri,
-    metadataHash,
-    voided;
-  let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
-  let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
+  let id, sellerId;
+  let offerDates;
+  let offerDurations;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let group, nextGroupId, invalidGroupId;
   let offerIds, condition;
   let groupHandlerFacet_Factory;
-  let method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
+  let method, tokenAddress, tokenId, threshold, maxCommits;
   let groupStruct;
   let offerIdsToAdd, offerIdsToRemove;
   let disputeResolver;
@@ -158,63 +145,31 @@ describe("IBosonGroupHandler", function () {
       // Register the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
 
-      // Some periods in milliseconds
-      oneWeek = 604800 * 1000; //  7 days in milliseconds
-      oneMonth = 2678400 * 1000; // 31 days in milliseconds
-
       // The first group id
       nextGroupId = "1";
       invalidGroupId = "666";
 
       // create 5 offers
       for (let i = 0; i < 5; i++) {
-        // Required constructor params
-        id = sellerId = "1"; // argument sent to contract for createGroup will be ignored
-        price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
-        sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
-        protocolFee = calculateProtocolFee(price, protocolFeePercentage);
-        buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
-        quantityAvailable = `${(i + 1) * 2}`;
-        exchangeToken = ethers.constants.AddressZero.toString();
-        disputeResolverId = "2";
-        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
-        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
-        voided = false;
+        // Mock offer, offerDates and offerDurations
+        ({ offer, offerDates, offerDurations } = await mockOffer());
 
-        // Create a valid offer, then set fields in tests directly
-        offer = new Offer(
-          id,
-          sellerId,
-          price,
-          sellerDeposit,
-          protocolFee,
-          buyerCancelPenalty,
-          quantityAvailable,
-          exchangeToken,
-          disputeResolverId,
-          metadataUri,
-          metadataHash,
-          voided
-        );
+        // Set unique offer properties based on index
+        offer.id = `${i + 1}`;
+        offer.price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
+        offer.sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
+        offer.protocolFee = calculateProtocolFee(offer.price, protocolFeePercentage);
+        offer.buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
+        offer.quantityAvailable = `${(i + 1) * 2}`;
+        offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
+        offerDates.validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
+
+        // Check if domains are valid
         expect(offer.isValid()).is.true;
+        expect(offerDates.isValid()).is.true;
+        expect(offerDurations.isValid()).is.true;
 
-        // Required constructor params
-        validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
-        validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
-        voucherRedeemableFrom = ethers.BigNumber.from(validUntil + oneWeek).toString();
-        voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
-
-        // Create a valid offerDates, then set fields in tests directly
-        offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
-
-        // Required constructor params
-        fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
-        voucherValid = oneMonth.toString(); // offers valid for one month
-        resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
-
-        // Create a valid offerDurations, then set fields in tests directly
-        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
-
+        // Create the offer
         await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
       }
 
