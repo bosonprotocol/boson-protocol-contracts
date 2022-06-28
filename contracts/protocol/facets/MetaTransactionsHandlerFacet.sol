@@ -48,6 +48,18 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         // set types for special metatxs
         ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
 
+        // insert special function names to the array
+        pmti.specialFunctions.push(COMMIT_TO_OFFER);
+        pmti.specialFunctions.push(CANCEL_VOUCHER);
+        pmti.specialFunctions.push(REDEEM_VOUCHER);
+        pmti.specialFunctions.push(COMPLETE_EXCHANGE);
+        pmti.specialFunctions.push(WITHDRAW_FUNDS);
+        pmti.specialFunctions.push(RETRACT_DISPUTE);
+        pmti.specialFunctions.push(RAISE_DISPUTE);
+        pmti.specialFunctions.push(ESCALATE_DISPUTE);
+        pmti.specialFunctions.push(RESOLVE_DISPUTE);
+
+        // set input type for the function name
         pmti.inputType[COMMIT_TO_OFFER] = MetaTxInputType.CommitToOffer;
         pmti.inputType[WITHDRAW_FUNDS] = MetaTxInputType.Funds;
         pmti.inputType[RESOLVE_DISPUTE] = MetaTxInputType.ResolveDispute;
@@ -59,6 +71,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         pmti.inputType[ESCALATE_DISPUTE] = MetaTxInputType.Exchange;
         pmti.inputType[RAISE_DISPUTE] = MetaTxInputType.RaiseDispute;
 
+        // set the hash info to the input type
         pmti.hashInfo[MetaTxInputType.CommitToOffer] = HashInfo(META_TX_COMMIT_TO_OFFER_TYPEHASH, hashOfferDetails);
         pmti.hashInfo[MetaTxInputType.Funds] = HashInfo(META_TX_FUNDS_TYPEHASH, hashFundDetails);
         pmti.hashInfo[MetaTxInputType.Exchange] = HashInfo(META_TX_EXCHANGE_TYPEHASH, hashExchangeDetails);
@@ -81,41 +94,36 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     /**
      * @notice Returns hashed meta transaction
      *
-     * @param _metaTx  - the meta-transaction struct.
+     * @param _metaTx - the meta-transaction struct.
      */
-    function hashMetaTransactionUni(MetaTransaction memory _metaTx) internal view returns (bytes32) {
-        MetaTxInputType inputType = protocolMetaTxInfo().inputType[_metaTx.functionName];
-        HashInfo memory hi = protocolMetaTxInfo().hashInfo[inputType];
-        return
-            keccak256(
-                abi.encode(
-                    hi.typeHash,
-                    _metaTx.nonce,
-                    _metaTx.from,
-                    _metaTx.contractAddress,
-                    keccak256(bytes(_metaTx.functionName)),
-                    hi.hashFunction(_metaTx.functionSignature)
-                )
-            );
-    }
-
-    /**
-     * @notice Returns hashed meta transaction
-     *
-     * @param _metaTx  - the meta-transaction struct.
-     */
-    function hashMetaTransaction(MetaTransaction memory _metaTx) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    META_TRANSACTION_TYPEHASH,
-                    _metaTx.nonce,
-                    _metaTx.from,
-                    _metaTx.contractAddress,
-                    keccak256(bytes(_metaTx.functionName)),
-                    keccak256(_metaTx.functionSignature)
-                )
-            );
+    function hashMetaTransaction(MetaTransaction memory _metaTx) internal view returns (bytes32) {
+        if (!isSpecialFunction(_metaTx.functionName)) {
+            return
+                keccak256(
+                    abi.encode(
+                        META_TRANSACTION_TYPEHASH,
+                        _metaTx.nonce,
+                        _metaTx.from,
+                        _metaTx.contractAddress,
+                        keccak256(bytes(_metaTx.functionName)),
+                        keccak256(_metaTx.functionSignature)
+                    )
+                );
+        } else {
+            MetaTxInputType inputType = protocolMetaTxInfo().inputType[_metaTx.functionName];
+            HashInfo memory hi = protocolMetaTxInfo().hashInfo[inputType];
+            return
+                keccak256(
+                    abi.encode(
+                        hi.typeHash,
+                        _metaTx.nonce,
+                        _metaTx.from,
+                        _metaTx.contractAddress,
+                        keccak256(bytes(_metaTx.functionName)),
+                        hi.hashFunction(_metaTx.functionSignature)
+                    )
+                );
+        }
     }
 
     /**
@@ -235,6 +243,24 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     }
 
     /**
+     * @notice Checks if function name is a special function or a generic function.
+     *
+     * @param _functionName - the function name that we want to execute.
+     */
+    function isSpecialFunction(
+        string memory _functionName
+    ) internal view returns (bool){
+        string[] memory functionNames = protocolMetaTxInfo().specialFunctions;
+        for (uint i = 0; i < functionNames.length; i++) {
+            string memory functionNameInStorage = functionNames[i];
+            if ( keccak256(abi.encodePacked(functionNameInStorage)) == keccak256(abi.encodePacked(_functionName))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * @notice Sets the current transaction sender.
      *
      * @param _signerAddress - Address of the transaction signer.
@@ -303,50 +329,6 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     function executeMetaTransaction(
         address _userAddress,
         string memory _functionName,
-        bytes memory _functionSignature,
-        uint256 _nonce,
-        bytes32 _sigR,
-        bytes32 _sigS,
-        uint8 _sigV
-    ) public payable override returns (bytes memory) {
-        validateTx(_functionName, _functionSignature, _nonce);
-
-        MetaTransaction memory metaTx = MetaTransaction({
-            nonce: _nonce,
-            from: _userAddress,
-            contractAddress: address(this),
-            functionName: _functionName,
-            functionSignature: _functionSignature
-        });
-        require(
-            EIP712Lib.verify(_userAddress, hashMetaTransaction(metaTx), _sigR, _sigS, _sigV),
-            SIGNER_AND_SIGNATURE_DO_NOT_MATCH
-        );
-
-        return executeTx(_userAddress, _functionName, _functionSignature, _nonce);
-    }
-
-    /**
-     * @notice Handles the incoming universal meta transaction.
-     *
-     * Reverts if:
-     * - nonce is already used by another transaction.
-     * - function signature matches to executeMetaTransactionUni.
-     * - function name does not match with bytes 4 version of the function signature.
-     * - sender does not match the recovered signer.
-     * - any code executed in the signed transaction reverts.
-     *
-     * @param _userAddress - the sender of the transaction.
-     * @param _functionName - the function name that we want to execute.
-     * @param _functionSignature - the function signature.
-     * @param _nonce - the nonce value of the transaction.
-     * @param _sigR - r part of the signer's signature.
-     * @param _sigS - s part of the signer's signature.
-     * @param _sigV - v part of the signer's signature.
-     */
-    function executeMetaTransactionUni(
-        address _userAddress,
-        string memory _functionName,
         bytes calldata _functionSignature,
         uint256 _nonce,
         bytes32 _sigR,
@@ -355,16 +337,27 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     ) public payable override returns (bytes memory) {
         validateTx(_functionName, _functionSignature, _nonce);
 
-        MetaTransaction memory metaTx = MetaTransaction({
-            nonce: _nonce,
-            from: _userAddress,
-            contractAddress: address(this),
-            functionName: _functionName,
-            functionSignature: bytes(_functionSignature[4:])
-        });
+        MetaTransaction memory metaTx;
+        if (!isSpecialFunction(_functionName)) {
+            metaTx = MetaTransaction({
+                nonce: _nonce,
+                from: _userAddress,
+                contractAddress: address(this),
+                functionName: _functionName,
+                functionSignature: _functionSignature
+            });
+        } else {
+            metaTx = MetaTransaction({
+                nonce: _nonce,
+                from: _userAddress,
+                contractAddress: address(this),
+                functionName: _functionName,
+                functionSignature: bytes(_functionSignature[4:])
+            });
+        }
 
         require(
-            EIP712Lib.verify(_userAddress, hashMetaTransactionUni(metaTx), _sigR, _sigS, _sigV),
+            EIP712Lib.verify(_userAddress, hashMetaTransaction(metaTx), _sigR, _sigS, _sigV),
             SIGNER_AND_SIGNATURE_DO_NOT_MATCH
         );
 

@@ -134,6 +134,8 @@ library ProtocolLib {
         mapping(string => BosonTypes.MetaTxInputType) inputType;
         // map input type => hash info
         mapping (BosonTypes.MetaTxInputType => BosonTypes.HashInfo) hashInfo;
+        // array of all special function names
+        string[] specialFunctions;
     }
 
     // Individual facet initialization states

@@ -696,7 +696,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // send a meta transaction, check for event
         await expect(
-          metaTransactionsHandler.executeMetaTransactionUni(
+          metaTransactionsHandler.executeMetaTransaction(
             buyer.address,
             message.functionName,
             functionSignature,
@@ -745,7 +745,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Execute meta transaction, expecting revert.
         await expect(
-          metaTransactionsHandler.executeMetaTransactionUni(
+          metaTransactionsHandler.executeMetaTransaction(
             buyer.address,
             message.functionName,
             functionSignature,
@@ -777,7 +777,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           );
 
           // Execute the meta transaction.
-          await metaTransactionsHandler.executeMetaTransactionUni(
+          await metaTransactionsHandler.executeMetaTransaction(
             buyer.address,
             message.functionName,
             functionSignature,
@@ -789,7 +789,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Execute meta transaction again with the same nonce, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -816,7 +816,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Execute meta transaction, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -936,7 +936,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // send a meta transaction, check for event
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -983,7 +983,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Execute meta transaction, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -1014,7 +1014,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Execute the meta transaction.
-            await metaTransactionsHandler.executeMetaTransactionUni(
+            await metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -1026,7 +1026,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Execute meta transaction again with the same nonce, expecting revert.
             await expect(
-              metaTransactionsHandler.executeMetaTransactionUni(
+              metaTransactionsHandler.executeMetaTransaction(
                 buyer.address,
                 message.functionName,
                 functionSignature,
@@ -1053,7 +1053,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Execute meta transaction, expecting revert.
             await expect(
-              metaTransactionsHandler.executeMetaTransactionUni(
+              metaTransactionsHandler.executeMetaTransaction(
                 buyer.address,
                 message.functionName,
                 functionSignature,
@@ -1095,7 +1095,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // send a meta transaction, check for event
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -1142,7 +1142,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Execute meta transaction, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -1173,7 +1173,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Execute the meta transaction.
-            await metaTransactionsHandler.executeMetaTransactionUni(
+            await metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -1185,7 +1185,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Execute meta transaction again with the same nonce, expecting revert.
             await expect(
-              metaTransactionsHandler.executeMetaTransactionUni(
+              metaTransactionsHandler.executeMetaTransaction(
                 buyer.address,
                 message.functionName,
                 functionSignature,
@@ -1212,7 +1212,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Execute meta transaction, expecting revert.
             await expect(
-              metaTransactionsHandler.executeMetaTransactionUni(
+              metaTransactionsHandler.executeMetaTransaction(
                 buyer.address,
                 message.functionName,
                 functionSignature,
@@ -1257,7 +1257,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // send a meta transaction, check for event
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -1310,7 +1310,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Execute meta transaction, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -1341,7 +1341,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Execute the meta transaction.
-            await metaTransactionsHandler.executeMetaTransactionUni(
+            await metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -1353,7 +1353,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Execute meta transaction again with the same nonce, expecting revert.
             await expect(
-              metaTransactionsHandler.executeMetaTransactionUni(
+              metaTransactionsHandler.executeMetaTransaction(
                 buyer.address,
                 message.functionName,
                 functionSignature,
@@ -1380,7 +1380,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Execute meta transaction, expecting revert.
             await expect(
-              metaTransactionsHandler.executeMetaTransactionUni(
+              metaTransactionsHandler.executeMetaTransaction(
                 buyer.address,
                 message.functionName,
                 functionSignature,
@@ -1429,7 +1429,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // send a meta transaction, check for event
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -1482,7 +1482,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Execute meta transaction, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -1513,7 +1513,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Execute the meta transaction.
-            await metaTransactionsHandler.executeMetaTransactionUni(
+            await metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -1525,7 +1525,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Execute meta transaction again with the same nonce, expecting revert.
             await expect(
-              metaTransactionsHandler.executeMetaTransactionUni(
+              metaTransactionsHandler.executeMetaTransaction(
                 buyer.address,
                 message.functionName,
                 functionSignature,
@@ -1552,7 +1552,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Execute meta transaction, expecting revert.
             await expect(
-              metaTransactionsHandler.executeMetaTransactionUni(
+              metaTransactionsHandler.executeMetaTransaction(
                 buyer.address,
                 message.functionName,
                 functionSignature,
@@ -1627,7 +1627,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // send a meta transaction, check for event
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -1682,7 +1682,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Execute meta transaction, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -1714,7 +1714,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Execute the meta transaction.
-            await metaTransactionsHandler.executeMetaTransactionUni(
+            await metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -1726,7 +1726,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Execute meta transaction again with the same nonce, expecting revert.
             await expect(
-              metaTransactionsHandler.executeMetaTransactionUni(
+              metaTransactionsHandler.executeMetaTransaction(
                 buyer.address,
                 message.functionName,
                 functionSignature,
@@ -1753,7 +1753,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Execute meta transaction, expecting revert.
             await expect(
-              metaTransactionsHandler.executeMetaTransactionUni(
+              metaTransactionsHandler.executeMetaTransaction(
                 buyer.address,
                 message.functionName,
                 functionSignature,
@@ -1802,7 +1802,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // send a meta transaction, check for event
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -1855,7 +1855,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Execute meta transaction, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -1886,7 +1886,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Execute the meta transaction.
-            await metaTransactionsHandler.executeMetaTransactionUni(
+            await metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -1898,7 +1898,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Execute meta transaction again with the same nonce, expecting revert.
             await expect(
-              metaTransactionsHandler.executeMetaTransactionUni(
+              metaTransactionsHandler.executeMetaTransaction(
                 buyer.address,
                 message.functionName,
                 functionSignature,
@@ -1925,7 +1925,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Execute meta transaction, expecting revert.
             await expect(
-              metaTransactionsHandler.executeMetaTransactionUni(
+              metaTransactionsHandler.executeMetaTransaction(
                 buyer.address,
                 message.functionName,
                 functionSignature,
@@ -2036,7 +2036,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // send a meta transaction, check for event
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -2097,7 +2097,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Execute meta transaction, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -2132,7 +2132,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             );
 
             // Execute the meta transaction.
-            await metaTransactionsHandler.executeMetaTransactionUni(
+            await metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -2144,7 +2144,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Execute meta transaction again with the same nonce, expecting revert.
             await expect(
-              metaTransactionsHandler.executeMetaTransactionUni(
+              metaTransactionsHandler.executeMetaTransaction(
                 buyer.address,
                 message.functionName,
                 functionSignature,
@@ -2171,7 +2171,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             // Execute meta transaction, expecting revert.
             await expect(
-              metaTransactionsHandler.executeMetaTransactionUni(
+              metaTransactionsHandler.executeMetaTransaction(
                 buyer.address,
                 message.functionName,
                 functionSignature,
@@ -2327,7 +2327,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Withdraw funds. Send a meta transaction, check for event.
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -2395,7 +2395,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Withdraw funds. Send a meta transaction, check for event.
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -2459,7 +2459,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Execute meta transaction, expecting revert.
         await expect(
-          metaTransactionsHandler.executeMetaTransactionUni(
+          metaTransactionsHandler.executeMetaTransaction(
             buyer.address,
             message.functionName,
             functionSignature,
@@ -2492,7 +2492,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           );
 
           // Execute the meta transaction.
-          await metaTransactionsHandler.executeMetaTransactionUni(
+          await metaTransactionsHandler.executeMetaTransaction(
             buyer.address,
             message.functionName,
             functionSignature,
@@ -2504,7 +2504,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Execute meta transaction again with the same nonce, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
@@ -2531,7 +2531,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
           // Execute meta transaction, expecting revert.
           await expect(
-            metaTransactionsHandler.executeMetaTransactionUni(
+            metaTransactionsHandler.executeMetaTransaction(
               buyer.address,
               message.functionName,
               functionSignature,
