@@ -8,17 +8,12 @@ const Role = require("../../scripts/domain/Role");
  */
 describe("AccessController", function () {
   // Shared args
-  let accounts, deployer, admin, protocol, upgrader, associate;
+  let deployer, admin, protocol, upgrader, associate;
   let AccessController, accessController, roleAdmin;
 
   beforeEach(async function () {
     // Make accounts available
-    accounts = await ethers.getSigners();
-    deployer = accounts[0];
-    admin = accounts[1];
-    protocol = accounts[2];
-    upgrader = accounts[3];
-    associate = accounts[4];
+    [deployer, admin, protocol, upgrader, associate] = await ethers.getSigners();
 
     // Deploy the contract
     AccessController = await ethers.getContractFactory("AccessController");

@@ -6,7 +6,6 @@ const { gasLimit } = require("../../environments");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const Twin = require("../../scripts/domain/Twin");
-const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -15,6 +14,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
+const { mockTwin } = require("../utils/mock");
 
 /**
  *  Test the Boson Twin Handler interface
@@ -22,7 +22,7 @@ const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 describe("IBosonTwinHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury;
+  let deployer, rando, operator, admin, clerk, treasury;
   let seller, active;
   let erc165,
     protocolDiamond,
@@ -43,12 +43,8 @@ describe("IBosonTwinHandler", function () {
     support,
     twinInstance,
     id,
-    sellerId,
-    supplyAvailable,
-    supplyIds,
-    tokenId,
-    tokenAddress;
-  let bundleId, offerIds, twinIds, bundle, tokenType;
+    sellerId;
+  let bundleId, offerIds, twinIds, bundle;
   let protocolFeePercentage, protocolFeeFlatBoson;
 
   before(async function () {
@@ -58,13 +54,7 @@ describe("IBosonTwinHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    accounts = await ethers.getSigners();
-    deployer = accounts[0];
-    operator = accounts[1];
-    admin = accounts[2];
-    clerk = accounts[3];
-    treasury = accounts[4];
-    rando = accounts[5];
+    [deployer, operator, admin, clerk, treasury, rando] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -155,19 +145,11 @@ describe("IBosonTwinHandler", function () {
       await accountHandler.connect(admin).createSeller(seller);
 
       // The first twin id
-      nextTwinId = "1";
+      nextTwinId = sellerId = "1";
       invalidTwinId = "222";
 
-      // Required constructor params
-      id = sellerId = "1";
-      supplyAvailable = "500";
-      tokenId = "0"; // has to be zero, even if not used.
-      supplyIds = [];
-      tokenAddress = bosonToken.address;
-      tokenType = TokenType.FungibleToken;
-
       // Create a valid twin, then set fields in tests directly
-      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
+      twin = mockTwin(bosonToken.address);
       expect(twin.isValid()).is.true;
 
       // How that twin looks as a returned struct

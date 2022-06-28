@@ -3,6 +3,7 @@ const ethers = hre.ethers;
 const { expect } = require("chai");
 const Twin = require("../../scripts/domain/Twin.js");
 const TokenType = require("../../scripts/domain/TokenType.js");
+const { mockTwin } = require("../utils/mock");
 
 /**
  *  Test the Twin domain entity
@@ -10,32 +11,17 @@ const TokenType = require("../../scripts/domain/TokenType.js");
 describe("Twin", function () {
   // Suite-wide scope
   let twin, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let accounts, id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType;
+  let tokenAddress;
 
   beforeEach(async function () {
     // Get a list of accounts
-    accounts = await ethers.getSigners();
-
-    // Required constructor params
-    id = "1000";
-    sellerId = "12";
-    supplyAvailable = "500";
-    tokenId = "0";
-    supplyIds = [];
+    const accounts = await ethers.getSigners();
     tokenAddress = accounts[0].address;
-    tokenType = TokenType.FungibleToken;
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated Twin instance", async function () {
-      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
-      expect(twin.idIsValid()).is.true;
-      expect(twin.sellerIdIsValid()).is.true;
-      expect(twin.supplyAvailableIsValid()).is.true;
-      expect(twin.supplyIdsIsValid()).is.true;
-      expect(twin.tokenIdIsValid()).is.true;
-      expect(twin.tokenAddressIsValid()).is.true;
-      expect(twin.tokenTypeIsValid()).is.true;
+      twin = mockTwin(tokenAddress);
       expect(twin.isValid()).is.true;
     });
   });
@@ -43,7 +29,14 @@ describe("Twin", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid twin, then set fields in tests directly
-      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
+      twin = mockTwin(tokenAddress);
+      expect(twin.idIsValid()).is.true;
+      expect(twin.sellerIdIsValid()).is.true;
+      expect(twin.supplyAvailableIsValid()).is.true;
+      expect(twin.supplyIdsIsValid()).is.true;
+      expect(twin.tokenIdIsValid()).is.true;
+      expect(twin.tokenAddressIsValid()).is.true;
+      expect(twin.tokenTypeIsValid()).is.true;
       expect(twin.isValid()).is.true;
     });
 
@@ -194,7 +187,7 @@ describe("Twin", function () {
       expect(twin.isValid()).is.false;
 
       // Valid field value
-      twin.tokenAddress = accounts[0].address;
+      twin.tokenAddress = tokenAddress;
       expect(twin.tokenAddressIsValid()).is.true;
       expect(twin.isValid()).is.true;
 
@@ -250,8 +243,10 @@ describe("Twin", function () {
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid twin, then set fields in tests directly
-      twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
+      twin = mockTwin(tokenAddress);
       expect(twin.isValid()).is.true;
+
+      const { id, sellerId, supplyAvailable, supplyIds, tokenId, tokenType } = twin;
 
       // Get plain object
       object = {

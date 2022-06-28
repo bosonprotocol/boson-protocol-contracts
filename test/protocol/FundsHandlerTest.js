@@ -7,9 +7,6 @@ const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
-const Offer = require("../../scripts/domain/Offer");
-const OfferDates = require("../../scripts/domain/OfferDates");
-const OfferDurations = require("../../scripts/domain/OfferDurations");
 
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -18,13 +15,8 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const {
-  setNextBlockTimestamp,
-  calculateProtocolFee,
-  getEvent,
-  prepareDataSignatureParameters,
-} = require("../../scripts/util/test-utils.js");
-const { oneWeek, oneMonth } = require("../utils/constants");
+const { setNextBlockTimestamp, getEvent, prepareDataSignatureParameters } = require("../../scripts/util/test-utils.js");
+const { mockOffer } = require("../utils/mock");
 
 /**
  *  Test the Boson Funds Handler interface
@@ -32,7 +24,7 @@ const { oneWeek, oneMonth } = require("../utils/constants");
 describe("IBosonFundsHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury, feeCollector, disputeResolver;
+  let deployer, rando, operator, admin, clerk, treasury, feeCollector, disputeResolver;
   let erc165,
     protocolDiamond,
     accessController,
@@ -48,19 +40,9 @@ describe("IBosonFundsHandler", function () {
   let id, buyer, offerToken, offerNative, sellerId;
   let mockToken, bosonToken;
   let depositAmount;
-  let offerId,
-    price,
-    sellerDeposit,
-    protocolFee,
-    buyerCancelPenalty,
-    quantityAvailable,
-    exchangeToken,
-    disputeResolverId,
-    metadataUri,
-    metadataHash,
-    voided;
-  let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
-  let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
+  let protocolFee, price, sellerDeposit;
+  let offerDates, voucherRedeemableFrom;
+  let resolutionPeriod, offerDurations;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let block, blockNumber;
   let protocolId, exchangeId, buyerId, sellerPayoff, buyerPayoff, protocolPayoff;
@@ -80,20 +62,15 @@ describe("IBosonFundsHandler", function () {
   before(async function () {
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
+
+    // Deploy the mock token
+    [mockToken] = await deployMockTokens(gasLimit, ["Foreign20"]);
   });
 
   beforeEach(async function () {
     // Make accounts available
-    accounts = await ethers.getSigners();
-    deployer = accounts[0];
-    operator = accounts[1];
-    admin = accounts[2];
-    clerk = accounts[3];
-    treasury = accounts[4];
-    rando = accounts[5];
-    buyer = accounts[6];
-    feeCollector = accounts[7];
-    disputeResolver = accounts[8];
+    [deployer, operator, admin, clerk, treasury, rando, buyer, feeCollector, disputeResolver] =
+      await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -368,66 +345,35 @@ describe("IBosonFundsHandler", function () {
         // Register the dispute resolver
         await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
 
-        // Get the current block info
-        blockNumber = await ethers.provider.getBlockNumber();
-        block = await ethers.provider.getBlock(blockNumber);
+        // Mock offer
+        const { offer, offerDates, offerDurations } = await mockOffer();
+        offer.quantityAvailable = "2";
 
-        // Required constructor params
-        price = ethers.utils.parseUnits("1.5", "ether").toString();
-        sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-        protocolFee = calculateProtocolFee(price, protocolFeePercentage);
-        buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
-        quantityAvailable = "2";
-        exchangeToken = mockToken.address; // Mock token addres
-        disputeResolverId = "2";
-        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
-        voided = false;
+        offerNative = offer;
 
-        // Create a valid offer entity
-        offerToken = new Offer(
-          id,
-          sellerId,
-          price,
-          sellerDeposit,
-          protocolFee,
-          buyerCancelPenalty,
-          quantityAvailable,
-          exchangeToken,
-          disputeResolverId,
-          metadataUri,
-          metadataHash,
-          voided
-        );
-        expect(offerToken.isValid()).is.true;
+        offerToken = offer.clone();
+        offerToken.id = "2";
+        offerToken.exchangeToken = mockToken.address;
 
-        offerNative = offerToken.clone();
-        offerNative.id = "2";
-        offerNative.exchangeToken = ethers.constants.AddressZero;
+        // Check if domais are valid
         expect(offerNative.isValid()).is.true;
+        expect(offerToken.isValid()).is.true;
+        expect(offerDates.isValid()).is.true;
+        expect(offerDurations.isValid()).is.true;
 
-        // Required constructor params
-        validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-        validUntil = ethers.BigNumber.from(block.timestamp)
-          .add(oneMonth * 6)
-          .toString(); // until 6 months
-        voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-        voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
-
-        // Create a valid offerDates, then set fields in tests directly
-        offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
-
-        // Required constructor params
-        fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
-        voucherValid = oneMonth.toString(); // offers valid for one month
-        resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
-
-        // Create a valid offerDurations, then set fields in tests directly
-        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
+        // Set used variables
+        voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
 
         // Create both offers
-        await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations);
-        await offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations);
+        await Promise.all([
+          offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations),
+          offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations),
+        ]);
+
+        // Set used variables
+        price = offerToken.price;
+        sellerDeposit = offerToken.sellerDeposit;
+        protocolFee = offerToken.protocolFee;
 
         // top up seller's and buyer's account
         await mockToken.mint(operator.address, sellerDeposit);
@@ -1236,7 +1182,7 @@ describe("IBosonFundsHandler", function () {
   context("📋 FundsLib  Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
-      offerId = id = sellerId = "1";
+      id = sellerId = "1";
 
       // Create a valid seller
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
@@ -1251,68 +1197,33 @@ describe("IBosonFundsHandler", function () {
       // Register the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
 
-      // Get the current block info
-      blockNumber = await ethers.provider.getBlockNumber();
-      block = await ethers.provider.getBlock(blockNumber);
-
-      // Required constructor params
-      price = ethers.utils.parseUnits("1.5", "ether").toString();
-      sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-      protocolFee = calculateProtocolFee(price, protocolFeePercentage);
-      buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
-      quantityAvailable = "2";
-      exchangeToken = mockToken.address; // MockToken address
-      disputeResolverId = "2";
-      metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T";
-      metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
-      voided = false;
-
-      // Create a valid offer entity
-      offerToken = new Offer(
-        offerId,
-        sellerId,
-        price,
-        sellerDeposit,
-        protocolFee,
-        buyerCancelPenalty,
-        quantityAvailable,
-        exchangeToken,
-        disputeResolverId,
-        metadataUri,
-        metadataHash,
-        voided
-      );
-      expect(offerToken.isValid()).is.true;
-
-      offerNative = offerToken.clone();
-      offerNative.id = "2";
-      offerNative.exchangeToken = ethers.constants.AddressZero;
+      const { offer, ...mo } = await mockOffer();
+      offer.quantityAvailable = "2";
+      offerNative = offer;
       expect(offerNative.isValid()).is.true;
 
-      // Required constructor params
-      validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-      validUntil = ethers.BigNumber.from(block.timestamp)
-        .add(oneMonth * 6)
-        .toString(); // until 6 months
-      voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-      voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
+      offerToken = offerNative.clone();
+      offerToken.id = "2";
+      offerToken.exchangeToken = mockToken.address;
 
-      // Create a valid offerDates, then set fields in tests directly
-      offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
+      offerDates = mo.offerDates;
       expect(offerDates.isValid()).is.true;
 
-      // Required constructor params
-      fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
-      voucherValid = oneMonth.toString(); // offers valid for one month
-      resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
-
-      // Create a valid offerDurations, then set fields in tests directly
-      offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
+      offerDurations = mo.offerDurations;
       expect(offerDurations.isValid()).is.true;
 
       // Create both offers
-      await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations);
-      await offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations);
+      await Promise.all([
+        offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations),
+        offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations),
+      ]);
+
+      // Set used variables
+      price = offerToken.price;
+      protocolFee = offerToken.protocolFee;
+      sellerDeposit = offerToken.sellerDeposit;
+      voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+      resolutionPeriod = offerDurations.resolutionPeriod;
 
       // top up seller's and buyer's account
       await mockToken.mint(operator.address, `${2 * sellerDeposit}`);
@@ -2268,7 +2179,6 @@ describe("IBosonFundsHandler", function () {
 
           // succesfully redeem exchange
           await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-
           // Complete the exchange, expecting event
           await expect(exchangeHandler.connect(buyer).completeExchange(exchangeId))
             .to.emit(exchangeHandler, "FundsReleased")
