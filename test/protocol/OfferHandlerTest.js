@@ -66,9 +66,6 @@ describe("IBosonOfferHandler", function () {
     // Make accounts available
     [deployer, operator, admin, clerk, treasury, rando, other1] = await ethers.getSigners();
 
-    // A period in milliseconds
-    oneMonth = 2678400 * 1000; // 31 days in milliseconds
-
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
 

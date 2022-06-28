@@ -14,6 +14,7 @@ const { mockOffer } = require("../../utils/mock.js");
 const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
 const { expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
+const { oneMonth } = require("../../utils/constants");
 
 describe("IBosonVoucher", function () {
   let interfaceId;
@@ -73,8 +74,10 @@ describe("IBosonVoucher", function () {
         maxOffersPerBundle: 0,
         maxOffersPerBatch: 0,
         maxTokensPerWithdrawal: 0,
+        maxFeesPerDisputeResolver: 100,
+        maxEscalationResponsePeriod: oneMonth,
       },
-      // Protocol fees
+      //Protocol fees
       {
         percentage: 200, // 2%
         flatBoson: protocolFeeFlatBoson,

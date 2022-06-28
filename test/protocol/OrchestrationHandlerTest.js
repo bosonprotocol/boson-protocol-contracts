@@ -66,18 +66,7 @@ describe("IBosonOrchestrationHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    accounts = await ethers.getSigners();
-    deployer = accounts[0];
-    operator = accounts[1];
-    admin = accounts[2];
-    clerk = accounts[3];
-    treasury = accounts[4];
-    rando = accounts[5];
-    other1 = accounts[6];
-    other2 = accounts[7];
-
-    // A period in milliseconds
-    oneMonth = 2678400 * 1000; // 31 days in milliseconds 
+    [deployer, operator, admin, clerk, treasury, rando, other1, other2] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
