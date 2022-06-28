@@ -346,8 +346,7 @@ describe("IBosonFundsHandler", function () {
         await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
 
         // Mock offer
-        const { offer, ...mo } = await mockOffer();
-        ({ offerDates, offerDurations } = mo);
+        const { offer, offerDates, offerDurations } = await mockOffer();
         offer.quantityAvailable = "2";
 
         offerNative = offer;
