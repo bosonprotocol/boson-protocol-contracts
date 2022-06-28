@@ -48,7 +48,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         // set types for special metatxs
         ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
 
-        // insert special function names to the array
+        // insert each special function name to the specialFunctions array.
         pmti.specialFunctions.push(COMMIT_TO_OFFER);
         pmti.specialFunctions.push(CANCEL_VOUCHER);
         pmti.specialFunctions.push(REDEEM_VOUCHER);
