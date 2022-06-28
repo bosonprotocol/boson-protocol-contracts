@@ -87,9 +87,6 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
                 _disputeResolver.treasury != address(0), 
                 INVALID_ADDRESS);
 
-        //Ignore supplied active flag and set to false
-        _disputeResolver.active = false;
-
         // Get the next account Id and increment the counter
         uint256 disputeResolverId = protocolCounters().nextAccountId++;
 
@@ -113,6 +110,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
                 protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] = disputeResolverFees.length; //Set index mapping. Should be index in disputeResolverFees array + 1
             }
         }
+
+         //Ignore supplied active flag and set to false. Dispute Resolver must be activated by protocol.
+        _disputeResolver.active = false;
 
         storeDisputeResolver(_disputeResolver);
 
@@ -223,7 +223,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
-     * @notice Updates a dispute resolver, not including DisputeResolverFees. 
+     * @notice Updates a dispute resolver, not including DisputeResolverFees or active flag. 
      * All DisputeResolver fields should be filled, even those staying the same.
      * Use addFeesToDisputeResolver and removeFeesFromDisputeResolver
      * 
@@ -272,6 +272,8 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         delete protocolLookups().disputeResolverIdByAdmin[disputeResolver.admin];
         delete protocolLookups().disputeResolverIdByClerk[disputeResolver.clerk];
     
+        //Ignore supplied active flag and set to false. Dispute Resolver must be activated by protocol.
+        _disputeResolver.active = false;
         storeDisputeResolver(_disputeResolver);
         
         // Notify watchers of state change

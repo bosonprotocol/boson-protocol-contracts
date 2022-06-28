@@ -1279,7 +1279,7 @@ describe("IBosonAccountHandler", function () {
       // Required constructor params
       id = "1"; // argument sent to contract for createDisputeResolver will be ignored
 
-      active = true;
+      active = true; //will be ignored by create and update functions
 
       // Create a valid dispute resolver, then set fields in tests directly
       disputeResolver = new DisputeResolver(id, oneMonth.toString(), operator.address, admin.address, clerk.address, treasury.address, metadataUriDR, active);
@@ -1568,41 +1568,54 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should emit a DisputeResolverUpdated event with correct values if values change", async function () {
-        disputeResolver.wallet = other2.address;
-        disputeResolver.active = false;
-        expect(disputeResolver.isValid()).is.true;
-
-        disputeResolverStruct = disputeResolver.toStruct();
-
-        //Update a dispute resolver, testing for the event
-        await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver))
-          .to.emit(accountHandler, "DisputeResolverUpdated")
-          .withArgs(disputeResolver.id, disputeResolverStruct, admin.address);
-      });
-
-      it("should emit a DisputeResolverUpdated event with correct values if values stay the same", async function () {
-        await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver))
-        .to.emit(accountHandler, "DisputeResolverUpdated")
-        .withArgs(disputeResolver.id, disputeResolverStruct, admin.address);
-      });
-
-      it("should update state of all fields except Id", async function () {
         disputeResolver.escalationResponsePeriod = Number(Number(disputeResolver.escalationResponsePeriod) - oneWeek).toString();
         disputeResolver.operator = other1.address;
         disputeResolver.admin = other2.address;
         disputeResolver.clerk = other3.address;
         disputeResolver.treasury = other4.address;
         disputeResolver.metadataUri = "https://ipfs.io/ipfs/updatedUri";
-        disputeResolver.active = false;
+        disputeResolver.active = true;
         expect(disputeResolver.isValid()).is.true;
 
-        disputeResolverStruct = disputeResolver.toStruct();
+        expectedDisputeResolver = disputeResolver;
+        expectedDisputeResolver.active = false;
+        expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
+
+        //Update a dispute resolver, testing for the event
+        await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverUpdated")
+          .withArgs(disputeResolver.id, expectedDisputeResolverStruct, admin.address);
+      });
+
+      it("should emit a DisputeResolverUpdated event with correct values if values stay the same", async function () {
+        expectedDisputeResolver = disputeResolver;
+        expectedDisputeResolver.active = false;
+        expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
+
+        await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver))
+        .to.emit(accountHandler, "DisputeResolverUpdated")
+        .withArgs(disputeResolver.id, expectedDisputeResolverStruct, admin.address);
+      });
+
+      it("should update state of all fields except Id and active flag and fees", async function () {
+        disputeResolver.escalationResponsePeriod = Number(Number(disputeResolver.escalationResponsePeriod) - oneWeek).toString();
+        disputeResolver.operator = other1.address;
+        disputeResolver.admin = other2.address;
+        disputeResolver.clerk = other3.address;
+        disputeResolver.treasury = other4.address;
+        disputeResolver.metadataUri = "https://ipfs.io/ipfs/updatedUri";
+        disputeResolver.active = true;
+        expect(disputeResolver.isValid()).is.true;
+
+        expectedDisputeResolver = disputeResolver;
+        expectedDisputeResolver.active = false;
+        expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
 
         // Update disupte resolver
         await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
 
         // Get the disupte resolver as structs
-        [, disputeResolverStruct,] = await accountHandler.connect(rando).getDisputeResolver(disputeResolver.id);
+        [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler.connect(rando).getDisputeResolver(disputeResolver.id);
 
        // Parse into entity
        let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
@@ -1611,7 +1624,7 @@ describe("IBosonAccountHandler", function () {
        expect(returnedDisputeResolverFeeList.isValid()).is.true;
 
         // Returned values should match the input in updateDisputeResolver
-        for ([key, value] of Object.entries(disputeResolver)) {
+        for ([key, value] of Object.entries(expectedDisputeResolver)) {
           expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
         }
         assert.equal(returnedDisputeResolverFeeList.toString(), disputeResolverFeeList.toString(), "Dispute Resolver Fee List is incorrect");
@@ -1622,7 +1635,11 @@ describe("IBosonAccountHandler", function () {
         // Update disupte resolver
         await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
 
-        [, disputeResolverStruct,] = await accountHandler.connect(rando).getDisputeResolver(id);
+        expectedDisputeResolver = disputeResolver;
+        expectedDisputeResolver.active = false;
+        expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
+
+        [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler.connect(rando).getDisputeResolver(id);
 
         // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
@@ -1632,17 +1649,19 @@ describe("IBosonAccountHandler", function () {
         expect(returnedDisputeResolver.isValid()).is.true;
 
         // Returned values should match the input in updateDisputeResolver
-        for ([key, value] of Object.entries(disputeResolver)) {
+        for ([key, value] of Object.entries(expectedDisputeResolver)) {
           expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
         }
         assert.equal(returnedDisputeResolverFeeList.toString(), disputeResolverFeeList.toString(), "Dispute Resolver Fee List is incorrect");
       });
 
-      it("should update only active flag", async function () {
-        disputeResolver.active = false;
+      it("should not update active flag", async function () {
+        disputeResolver.active = true;
         expect(disputeResolver.isValid()).is.true;
 
-        disputeResolverStruct = disputeResolver.toStruct();
+        expectedDisputeResolver = disputeResolver;
+        expectedDisputeResolver.active = false;
+        expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
 
         // Update disupte resolver
         await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
@@ -1654,7 +1673,7 @@ describe("IBosonAccountHandler", function () {
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
 
         // Returned values should match the input in updateDisputeResolver
-        for ([key, value] of Object.entries(disputeResolver)) {
+        for ([key, value] of Object.entries(expectedDisputeResolver)) {
           expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
         }
       });
@@ -1695,9 +1714,13 @@ describe("IBosonAccountHandler", function () {
         
         const disputeResolverFeeList2 = new DisputeResolverFeeList(disputeResolverFees2);
 
+        expectedDisputeResolver = disputeResolver2;
+        expectedDisputeResolver.active = false;
+        expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
+
         //Create disputeResolver2 testing, for the event
         const tx = await accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees2);
-        const valid = await isValidDisputeResolverEvent(tx, "DisputeResolverCreated", disputeResolver2.id, disputeResolver2Struct, disputeResolverFeeList2, 2, rando.address);
+        const valid = await isValidDisputeResolverEvent(tx, "DisputeResolverCreated", disputeResolver2.id, expectedDisputeResolverStruct, disputeResolverFeeList2, 2, rando.address);
         expect(valid).is.true;
        
         //Update first dispute resolver values
@@ -1740,7 +1763,7 @@ describe("IBosonAccountHandler", function () {
         expect(returnedDisputeResolverFeeList2.isValid()).is.true;
 
         //returnedDisputeResolver2 should still contain original values
-        for ([key, value] of Object.entries(disputeResolver2)) {
+        for ([key, value] of Object.entries(expectedDisputeResolver)) {
           expect(JSON.stringify(returnedDisputeResolver2[key]) === JSON.stringify(value)).is.true;
         }
 

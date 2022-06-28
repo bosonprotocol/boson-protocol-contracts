@@ -89,7 +89,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function updateBuyer(BosonTypes.Buyer memory _buyer) external;
 
     /**
-     * @notice Updates a dispute resolver, not including DisputeResolverFees. 
+     * @notice Updates a dispute resolver, not including DisputeResolverFees or active flag. 
      * All DisputeResolver fields should be filled, even those staying the same.
      * Use removeFeesFromDisputeResolver
      * 
