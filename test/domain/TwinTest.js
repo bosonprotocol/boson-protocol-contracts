@@ -30,6 +30,13 @@ describe("Twin", function () {
     beforeEach(async function () {
       // Create a valid twin, then set fields in tests directly
       twin = mockTwin(tokenAddress);
+      expect(twin.idIsValid()).is.true;
+      expect(twin.sellerIdIsValid()).is.true;
+      expect(twin.supplyAvailableIsValid()).is.true;
+      expect(twin.supplyIdsIsValid()).is.true;
+      expect(twin.tokenIdIsValid()).is.true;
+      expect(twin.tokenAddressIsValid()).is.true;
+      expect(twin.tokenTypeIsValid()).is.true;
       expect(twin.isValid()).is.true;
     });
 

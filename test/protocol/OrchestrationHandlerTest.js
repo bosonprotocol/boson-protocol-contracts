@@ -418,9 +418,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("Valid until date is not in the future", async function () {
           // Set until date in the past
           offerDates.validUntil = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
-          console.log(offerDates);
           // Attempt to create a seller and an offer, expecting revert
-          // @TODO
           await expect(
             orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);

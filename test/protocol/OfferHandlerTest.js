@@ -231,19 +231,15 @@ describe("IBosonOfferHandler", function () {
         expect(exists).to.be.true;
       });
 
-      it(
-        "should ignore any provided seller and assign seller id of msg.sender",
-        async function () {
-          // set some other sellerId
-          offer.sellerId = "123";
+      it("should ignore any provided seller and assign seller id of msg.sender", async function () {
+        // set some other sellerId
+        offer.sellerId = "123";
 
-          // Create an offer, testing for the event
-          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
-            .to.emit(offerHandler, "OfferCreated")
-            .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
-        },
-        ``
-      );
+        // Create an offer, testing for the event
+        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+      });
 
       it("should ignore any provided protocol fee and calculate the correct one", async function () {
         // set some protocole fee
@@ -957,11 +953,6 @@ describe("IBosonOfferHandler", function () {
 
           // Returned values should match the input in createOfferBatch
           for ([key, value] of Object.entries(offers[i])) {
-            const x = JSON.stringify(returnedOffer[key]) === JSON.stringify(value);
-            if (x == false) {
-              console.log(returnedOffer[key]);
-              console.log("key", key, "value", value);
-            }
             expect(JSON.stringify(returnedOffer[key]) === JSON.stringify(value)).is.true;
           }
           for ([key, value] of Object.entries(offerDatesList[i])) {
