@@ -387,6 +387,37 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         emit DisputeResolverFeesRemoved(_disputeResolverId, _disputeResolverFees, msg.sender);
     }
+
+     /**
+     * @notice Set the active flag for this Dispute Resolver to true. Only callable by the protocol ADMIN role.
+     * 
+     * Emits a DisputeResolverActivated event if successful.
+     *
+     * Reverts if:
+     * - Caller does not have the ADMIN role
+     * - Dispute resolver does not exist
+     *
+     * @param _disputeResolverId - the fully populated buydispute resolver struct
+     */
+    function activateDisputeResolver(uint256 _disputeResolverId)
+    external
+    override
+    onlyRole(ADMIN)
+    {
+        bool exists;
+        DisputeResolver storage disputeResolver;
+        
+        //Check Dispute Resolver and Dispute Resolver Fees from  disputeResolvers and disputeResolverFees mappings
+        (exists, disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
+       
+        //Dispute Resolver  must already exist
+        require(exists, NO_SUCH_DISPUTE_RESOLVER);
+
+        disputeResolver.active = true;
+
+        emit DisputeResolverActivated(_disputeResolverId, disputeResolver, msg.sender);
+    }
+
   
     /**
      * @notice Gets the details about a seller.

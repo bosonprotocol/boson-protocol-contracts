@@ -101,7 +101,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Any address is not unique to this dispute resolver
      * - Dispute resolver does not exist
      *
-     * @param _disputeResolver - the fully populated buydispute resolver struct
+     * @param _disputeResolver - the fully populated dispute resolver struct
      */
     function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver) external;
 
@@ -134,6 +134,19 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      */
     function removeFeesFromDisputeResolver(uint256 _disputeResolverId, BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees) external;
+
+    /**
+     * @notice Set the active flag for this Dispute Resolver to true. Only callable by the protocol ADMIN role.
+     * 
+     * Emits a DisputeResolverActivated event if successful.
+     *
+     * Reverts if:
+     * - Caller does not have the ADMIN role
+     * - Dispute resolver does not exist
+     *
+     * @param _disputeResolverId - the fully populated buydispute resolver struct
+     */
+    function activateDisputeResolver(uint256 _disputeResolverId) external;
 
     /**
      * @notice Gets the details about a seller.
