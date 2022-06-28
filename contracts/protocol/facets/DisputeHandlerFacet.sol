@@ -252,7 +252,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
                 expectedSigner = buyer.wallet;
             } else {
                 uint256 buyerId;
-                (exists, buyerId) = getBuyerIdByWallet(msg.sender);
+                (exists, buyerId) = getBuyerIdByWallet(msgSender());
                 require(exists && buyerId == exchange.buyerId, NOT_BUYER_OR_SELLER);
                 
                 // caller is the buyer

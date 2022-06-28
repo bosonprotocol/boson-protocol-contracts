@@ -31,7 +31,7 @@ describe("ProtocolDiamond", async function () {
 
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, admin, upgrader, rando;
+  let deployer, admin, upgrader, rando;
   let protocolDiamond, diamondLoupe, diamondCut, accessController;
   let loupeFacetViaDiamond, cutFacetViaDiamond;
   let Test1Facet, test1Facet, test1ViaDiamond;
@@ -50,11 +50,7 @@ describe("ProtocolDiamond", async function () {
 
   beforeEach(async function () {
     // Make accounts available
-    accounts = await ethers.getSigners();
-    deployer = accounts[0];
-    admin = accounts[1];
-    upgrader = accounts[2];
-    rando = accounts[3];
+    [deployer, admin, upgrader, rando] = await ethers.getSigners();
 
     // Deploy the Diamond
     [protocolDiamond, diamondLoupe, diamondCut, accessController] = await deployProtocolDiamond();

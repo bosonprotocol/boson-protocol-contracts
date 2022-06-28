@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
+const { oneWeek, oneMonth } = require("../utils/constants");
 
 /**
  *  Test the OfferDurations domain entity
@@ -7,14 +8,9 @@ const OfferDurations = require("../../scripts/domain/OfferDurations");
 describe("OfferDurations", function () {
   // Suite-wide scope
   let offerDurations, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let oneMonth, oneWeek;
   let fulfillmentPeriod, voucherValid, resolutionPeriod;
 
   beforeEach(async function () {
-    // Some periods in milliseconds
-    oneWeek = 604800 * 1000; //  7 days in milliseconds
-    oneMonth = 2678400 * 1000; // 31 days in milliseconds
-
     // Required constructor params
     fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
     voucherValid = oneMonth.toString(); // offers valid for one month

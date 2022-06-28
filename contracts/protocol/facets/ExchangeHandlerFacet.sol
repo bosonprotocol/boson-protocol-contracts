@@ -78,7 +78,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         (uint256 buyerId, Buyer storage buyer) = getValidBuyer(_buyer);
 
         // Encumber funds before creating the exchange
-        FundsLib.encumberFunds(_offerId, buyerId);
+        FundsLib.encumberFunds(_offerId, buyerId, msgSender());
 
         // Create and store a new exchange
         uint256 exchangeId = protocolCounters().nextExchangeId++;
