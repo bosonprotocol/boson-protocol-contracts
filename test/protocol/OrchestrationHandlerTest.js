@@ -14,6 +14,7 @@ const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
+const TokenType = require("../../scripts/domain/TokenType");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -52,7 +53,7 @@ describe("IBosonOrchestrationHandler", function () {
   let offerDurations, offerDurationsStruct;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let group, groupStruct, nextGroupId;
-  let method, tokenAddress, tokenId, threshold, maxCommits;
+  let method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
   let offerIds, condition;
   let twin, twinStruct, twinIds, nextTwinId;
   let bundle, bundleStruct, bundleId, nextBundleId;

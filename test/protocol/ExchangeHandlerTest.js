@@ -53,7 +53,7 @@ describe("IBosonExchangeHandler", function () {
   let id, buyerId, offerId, seller, sellerId, nextExchangeId, nextAccountId;
   let block, blockNumber, tx, txReceipt, event, clients;
   let support, newTime;
-  let price, sellerDeposit;
+  let price;
   let voucherRedeemableFrom;
   let fulfillmentPeriod, voucherValid;
   let protocolFeePercentage, protocolFeeFlatBoson;
@@ -212,12 +212,11 @@ describe("IBosonExchangeHandler", function () {
 
       // Set used variables
       price = offer.price;
-      sellerDeposit = offer.sellerDeposit;
       voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
       voucherValid = offerDurations.voucherValid;
       fulfillmentPeriod = offerDurations.fulfillmentPeriod;
       sellerPool = ethers.utils.parseUnits("15", "ether").toString();
-      
+
       // Required voucher constructor params
       committedDate = "0";
       validUntilDate = "0";
