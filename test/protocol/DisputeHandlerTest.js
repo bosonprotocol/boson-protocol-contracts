@@ -1402,7 +1402,7 @@ describe("IBosonDisputeHandler", function () {
           // Retract the dispute, put it into RETRACTED state
           await disputeHandler.connect(buyer).retractDispute(exchange.id);
 
-          // Attempt to expire the escalated dispute, expecting revert
+          // Attempt to expire the retracted dispute, expecting revert
           await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchange.id)).to.revertedWith(
             RevertReasons.INVALID_STATE
           );
