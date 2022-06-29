@@ -52,7 +52,7 @@ describe("IBosonFundsHandler", function () {
     expectedProtocolAvailableFunds;
   let tokenListSeller, tokenListBuyer, tokenAmountsSeller, tokenAmountsBuyer, tokenList, tokenAmounts;
   let tx, txReceipt, txCost, event;
-  let disputeResolverEntity, disputeResolverFees, disputeResolver;
+  let disputeResolverFees, disputeResolver;
   let buyerPercent;
   let resolutionType, customSignatureType, message, r, s, v;
   let disputedDate, timeout;
