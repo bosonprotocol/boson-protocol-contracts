@@ -73,6 +73,7 @@ describe("IBosonVoucher", function () {
         maxOffersPerBundle: 0,
         maxOffersPerBatch: 0,
         maxTokensPerWithdrawal: 0,
+        maxDisputesPerBatch: 0,
       },
       // Protocol fees
       {
