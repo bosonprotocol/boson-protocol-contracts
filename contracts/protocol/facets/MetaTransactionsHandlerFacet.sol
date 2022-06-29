@@ -50,14 +50,14 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
 
         // insert each special function name to the specialFunctions array.
         pmti.specialFunctions.push(COMMIT_TO_OFFER);
+        pmti.specialFunctions.push(WITHDRAW_FUNDS);
+        pmti.specialFunctions.push(RESOLVE_DISPUTE);
         pmti.specialFunctions.push(CANCEL_VOUCHER);
         pmti.specialFunctions.push(REDEEM_VOUCHER);
         pmti.specialFunctions.push(COMPLETE_EXCHANGE);
-        pmti.specialFunctions.push(WITHDRAW_FUNDS);
         pmti.specialFunctions.push(RETRACT_DISPUTE);
-        pmti.specialFunctions.push(RAISE_DISPUTE);
         pmti.specialFunctions.push(ESCALATE_DISPUTE);
-        pmti.specialFunctions.push(RESOLVE_DISPUTE);
+        pmti.specialFunctions.push(RAISE_DISPUTE);
 
         // set input type for the function name
         pmti.inputType[COMMIT_TO_OFFER] = MetaTxInputType.CommitToOffer;
@@ -67,7 +67,6 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         pmti.inputType[REDEEM_VOUCHER] = MetaTxInputType.Exchange;
         pmti.inputType[COMPLETE_EXCHANGE] = MetaTxInputType.Exchange;
         pmti.inputType[RETRACT_DISPUTE] = MetaTxInputType.Exchange;
-        pmti.inputType[ESCALATE_DISPUTE] = MetaTxInputType.Exchange;
         pmti.inputType[ESCALATE_DISPUTE] = MetaTxInputType.Exchange;
         pmti.inputType[RAISE_DISPUTE] = MetaTxInputType.RaiseDispute;
 
@@ -250,14 +249,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     function isSpecialFunction(
         string memory _functionName
     ) internal view returns (bool){
-        string[] memory functionNames = protocolMetaTxInfo().specialFunctions;
-        for (uint i = 0; i < functionNames.length; i++) {
-            string memory functionNameInStorage = functionNames[i];
-            if ( keccak256(abi.encodePacked(functionNameInStorage)) == keccak256(abi.encodePacked(_functionName))) {
-                return true;
-            }
-        }
-        return false;
+        return protocolMetaTxInfo().inputType[_functionName] != MetaTxInputType.Generic;
     }
 
     /**

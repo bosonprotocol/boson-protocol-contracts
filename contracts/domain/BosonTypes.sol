@@ -39,6 +39,7 @@ contract BosonTypes {
     } // ERC20, ERC721, ERC1155
 
     enum MetaTxInputType {
+        Generic,
         CommitToOffer,
         Exchange,
         Funds,
