@@ -13,8 +13,8 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { setNextBlockTimestamp, getEvent, prepareDataSignatureParameters } = require("../../scripts/util/test-utils.js");
-const { mockOffer } = require("../utils/mock");
-const { oneWeek } = require("../utils/constants");
+const { oneMonth, oneWeek } = require("../utils/constants");
+const { mockOffer, mockDisputeResolver } = require("../utils/mock");
 
 /**
  *  Test the Boson Funds Handler interface
