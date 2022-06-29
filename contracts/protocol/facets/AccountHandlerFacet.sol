@@ -7,7 +7,6 @@ import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import "hardhat/console.sol";
 
 contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
@@ -358,31 +357,21 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         // At least one fee must be specified. The feeAmount can be 0, but it must be intentional. However, the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
         require(_disputeResolverFees.length > 0 && _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
 
-         console.log("disputeResolverFees.length before loop", disputeResolverFees.length);
-
         //Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
         for(uint i = 0; i < _disputeResolverFees.length; i++) {
-            console.log("i ", i);
             if(protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] != 0) { //This is one to remove
-                console.log("DisputeResolverFee tokenAddress %s tokenName %s feeAmount %s in storeDisputeResolver ", _disputeResolverFees[i].tokenAddress, _disputeResolverFees[i].tokenName, _disputeResolverFees[i].feeAmount);
-                console.log("tokenAddress in  storage so removing ");
                 uint disputeResolverFeeArrayIndex = protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] - 1; //Get the index in the DisputeResolverFees array, which is 1 less than the disputeResolverFeeTokenIndex index
                 delete disputeResolverFees[disputeResolverFeeArrayIndex]; //Delete DisputeResolverFee struct at this index
                 if(disputeResolverFees.length > 1) { //Need to fill gap caused by delete
                     DisputeResolverFee memory disputeResolverFeeToMove = disputeResolverFees[disputeResolverFees.length - 1];
-                    console.log("disputeResolverFeeTokenIndexvalue of fee to be moved to fill gap before move", protocolLookups().disputeResolverFeeTokenIndex[disputeResolverFeeToMove.tokenAddress]);
                     disputeResolverFees[disputeResolverFeeArrayIndex] = disputeResolverFeeToMove; //Copy the last DisputeResolverFee struct in the array to this index to fill the gap
                     protocolLookups().disputeResolverFeeTokenIndex[disputeResolverFeeToMove.tokenAddress] = disputeResolverFeeArrayIndex + 1; //Reset index mapping. Should be index in disputeResolverFees array + 1
-                    console.log("disputeResolverFeeTokenIndexvalue of fee just moved to fill gap after move", protocolLookups().disputeResolverFeeTokenIndex[disputeResolverFeeToMove.tokenAddress]);
                 }
                 disputeResolverFees.pop(); // Delete last DisputeResolverFee struct in the array, which was just moved to fill the gap
                 delete protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress]; //Delete from index mapping
 
                
             }
-
-            console.log("disputeResolverFeeTokenIndexvalue of fee just removed ", protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress]);
-            console.log("disputeResolverFees.length after loop", disputeResolverFees.length);
         }
 
         emit DisputeResolverFeesRemoved(_disputeResolverId, _disputeResolverFees, msg.sender);

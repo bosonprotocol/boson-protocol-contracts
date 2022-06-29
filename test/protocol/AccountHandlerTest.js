@@ -1257,12 +1257,8 @@ describe("IBosonAccountHandler", function () {
       );
       expect(disputeResolver.isValid()).is.true;
 
-      //console.log("disputeResolver in beforeEach ", disputeResolver);
-
       // How that dispute resolver looks as a returned struct
       disputeResolverStruct = disputeResolver.toStruct();
-
-      //console.log("disputeResolverStruct in beforeEach ", disputeResolverStruct);
 
       //Create DisputeResolverFee array
       disputeResolverFees = [
@@ -1271,10 +1267,7 @@ describe("IBosonAccountHandler", function () {
         new DisputeResolverFee(other3.address, "MockToken3", "300"),
       ];
 
-      //console.log("disputeResolverFees ", disputeResolverFees);
-
       disputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFees);
-      //console.log("disputeResolverFeeList in beforeEach", disputeResolverFeeList);
     });
 
     context("👉 createDisputeResolver()", async function () {

@@ -9,7 +9,7 @@ import {IBosonAccountEvents} from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xa1784772
+ * The ERC-165 identifier for this interface is: 0x2cf25a22
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
 
