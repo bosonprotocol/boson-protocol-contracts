@@ -178,7 +178,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function expireDispute(uint256 _exchangeId) external override {
+    function expireDispute(uint256 _exchangeId) public override {
         // Get the exchange, should be in dispute state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
@@ -196,6 +196,32 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // Notify watchers of state change
         emit DisputeExpired(_exchangeId, msgSender());
+    }
+
+    /**
+     * @notice Expire a batch of disputes and release the funds
+     *
+     * Emits a DisputeExpired event for every dispute if successful.
+     *
+     * Reverts if:
+     * - Number of disputes exceeds maximum allowed number per batch
+     * - for any dispute:
+     *   - exchange does not exist
+     *   - exchange is not in a disputed state
+     *   - dispute is still valid
+     *   - dispute is in some state other than resolving
+     *
+     * @param _exchangeIds - the array of ids of the associated exchanges
+     */
+    function expireDisputeBatch(uint256[] calldata _exchangeIds) external override
+    {
+        // limit maximum number of disputes to avoid running into block gas limit in a loop
+        require(_exchangeIds.length <= protocolLimits().maxDisputesPerBatch, TOO_MANY_DISPUTES);
+
+        for (uint256 i = 0; i < _exchangeIds.length; i++) {        
+            // create offer and update structs values to represent true state
+            expireDispute(_exchangeIds[i]);
+        }
     }
 
     /**
