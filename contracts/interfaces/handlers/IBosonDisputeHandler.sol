@@ -10,7 +10,7 @@ import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles disputes associated with exchanges within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xa0b14553
+ * The ERC-165 identifier for this interface is: 0x57681a68
  */
 interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
 
@@ -136,6 +136,21 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @param _buyerPercent - percentage of the pot that goes to the buyer
      */
     function decideDispute(uint256 _exchangeId, uint256 _buyerPercent) external;
+
+    /**
+     * @notice Expire the dispute in escalated state and release the funds
+     *
+     * Emits a EscalatedDisputeExpired event if successful.
+     *
+     * Reverts if:
+     * - exchange does not exist
+     * - exchange is not in a disputed state
+     * - dispute is in some state other than escalated
+     * - dispute escalation period has not passed yet
+     *
+     * @param _exchangeId - the id of the associated exchange
+     */
+    function expireEscalatedDispute(uint256 _exchangeId) external;
 
     /**
      * @notice Gets the details about a given dispute.

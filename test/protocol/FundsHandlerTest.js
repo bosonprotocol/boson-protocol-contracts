@@ -13,8 +13,8 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { setNextBlockTimestamp, getEvent, prepareDataSignatureParameters } = require("../../scripts/util/test-utils.js");
-const { oneMonth } = require("../utils/constants");
-const { mockOffer, mockDisputeResolver } = require("../utils/mock");
+const { mockOffer } = require("../utils/mock");
+const { oneWeek } = require("../utils/constants");
 
 /**
  *  Test the Boson Funds Handler interface
@@ -55,7 +55,7 @@ describe("IBosonFundsHandler", function () {
   let disputeResolverFees, disputeResolver;
   let buyerPercent;
   let resolutionType, customSignatureType, message, r, s, v;
-  let disputedDate, timeout;
+  let disputedDate, escalatedDate, timeout;
 
   before(async function () {
     // get interface Ids
@@ -1805,12 +1805,15 @@ describe("IBosonFundsHandler", function () {
 
           it("should emit a FundsReleased event", async function () {
             // Retract from the dispute, expecting event
-            await expect(disputeHandler.connect(buyer).retractDispute(exchangeId))
+            const tx = await disputeHandler.connect(buyer).retractDispute(exchangeId);
+
+            await expect(tx)
               .to.emit(disputeHandler, "ProtocolFeeCollected")
               .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, buyer.address)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address)
-              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address);
+              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address);
+            // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
+            // .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address);
           });
 
           it("should update state", async function () {
@@ -1876,8 +1879,9 @@ describe("IBosonFundsHandler", function () {
               .to.emit(disputeHandler, "ProtocolFeeCollected")
               .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, rando.address)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address)
-              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, rando.address);
+              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
+            // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
+            // .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, rando.address);
           });
 
           it("should update state", async function () {
@@ -2089,7 +2093,7 @@ describe("IBosonFundsHandler", function () {
           });
         });
 
-        context.skip("Final state DISPUTED - REFUSED", async function () {
+        context("Final state DISPUTED - REFUSED", async function () {
           beforeEach(async function () {
             // expected payoffs
             // buyer: price + sellerDeposit
@@ -2101,17 +2105,26 @@ describe("IBosonFundsHandler", function () {
             // protocol: 0
             protocolPayoff = 0;
 
-            await setNextBlockTimestamp(Number(timeout));
+            // Escalate the dispute
+            tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+
+            // Get the block timestamp of the confirmed tx and set escalatedDate
+            blockNumber = tx.blockNumber;
+            block = await ethers.provider.getBlock(blockNumber);
+            escalatedDate = block.timestamp.toString();
+
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
           });
 
           it("should emit a FundsReleased event", async function () {
             // Expire the dispute, expecting event
             await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId))
-              .to.emit(disputeHandler, "ExchangeFee")
-              .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff)
-              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff);
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, rando.address)
+              .to.not.emit(disputeHandler, "ProtocolFeeCollected")
+              .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, rando.address);
+            // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
+            // .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
           });
 
           it("should update state", async function () {
