@@ -17,6 +17,7 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { setNextBlockTimestamp, getEvent, prepareDataSignatureParameters } = require("../../scripts/util/test-utils.js");
 const { mockOffer } = require("../utils/mock");
+const { oneWeek } = require("../utils/constants");
 
 /**
  *  Test the Boson Funds Handler interface
