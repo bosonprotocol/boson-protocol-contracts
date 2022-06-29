@@ -5,7 +5,6 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
-const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
@@ -18,14 +17,14 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
-const { mockOffer } = require("../utils/mock");
+const { mockOffer, mockDisputeResolver } = require("../utils/mock");
 /**
  *  Test the Boson Offer Handler interface
  */
 describe("IBosonOfferHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, admin, clerk, treasury, other1;
+  let deployer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
   let erc165,
     protocolDiamond,
     accessController,
@@ -36,7 +35,7 @@ describe("IBosonOfferHandler", function () {
     offerStruct,
     key,
     value;
-  let offer, nextOfferId, invalidOfferId, support, expected, exists;
+  let offer, nextOfferId, invalidOfferId, support, expected, exists, nextAccountId;
   let seller, active;
   let id, sellerId, price, voided;
   let validFrom,
@@ -55,7 +54,7 @@ describe("IBosonOfferHandler", function () {
     offerDurationsStructs,
     offerDurationsList;
   let protocolFeePercentage, protocolFeeFlatBoson;
-  let disputeResolver;
+  let disputeResolver, disputeResolverFees;
 
   before(async function () {
     // get interface Ids
@@ -64,7 +63,7 @@ describe("IBosonOfferHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, other1] = await ethers.getSigners();
+    [deployer, operator, admin, clerk, treasury, rando, operatorDR, adminDR, clerkDR, treasuryDR] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -144,7 +143,7 @@ describe("IBosonOfferHandler", function () {
     beforeEach(async function () {
       // create a seller
       // Required constructor params
-      id = "1"; // argument sent to contract for createSeller will be ignored
+      id = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
 
       active = true;
 
@@ -155,12 +154,15 @@ describe("IBosonOfferHandler", function () {
       await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid dispute resolver
-      active = true;
-      disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+      disputeResolver = await mockDisputeResolver( operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address, false)
       expect(disputeResolver.isValid()).is.true;
 
-      // Register the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
+      disputeResolverFees = [];
+      
+      // Register and activate the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+      await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
       // The first offer id
       nextOfferId = "1";
@@ -815,7 +817,7 @@ describe("IBosonOfferHandler", function () {
     beforeEach(async function () {
       // create a seller
       // Required constructor params
-      id = "1"; // argument sent to contract for createSeller will be ignored
+      id = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
 
       active = true;
 
@@ -826,13 +828,15 @@ describe("IBosonOfferHandler", function () {
       await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid dispute resolver
-      active = true;
-      disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+      disputeResolver = await mockDisputeResolver( operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address, false)
       expect(disputeResolver.isValid()).is.true;
 
-      // Register the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
-
+      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
+      disputeResolverFees = [];
+      
+      // Register and activate the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+      await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
       // create 5 offers
       offers = [];
       offerStructs = [];
