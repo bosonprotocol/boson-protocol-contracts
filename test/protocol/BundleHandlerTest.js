@@ -6,21 +6,16 @@ const { gasLimit } = require("../../environments");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
-const Twin = require("../../scripts/domain/Twin");
-const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
-const Offer = require("../../scripts/domain/Offer");
-const OfferDates = require("../../scripts/domain/OfferDates");
-const OfferDurations = require("../../scripts/domain/OfferDurations");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
-const { getEvent, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
+const { getEvent } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { oneWeek, oneMonth } = require("../utils/constants");
+const { mockOffer, mockTwin } = require("../utils/mock");
 
 /**
  *  Test the Boson Bundle Handler interface
@@ -28,7 +23,7 @@ const { oneWeek, oneMonth } = require("../utils/constants");
 describe("IBosonBundleHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury, buyer, other1;
+  let deployer, rando, operator, admin, clerk, treasury, buyer, other1;
   let erc165,
     protocolDiamond,
     accessController,
@@ -43,10 +38,6 @@ describe("IBosonBundleHandler", function () {
     support,
     id,
     sellerId,
-    supplyAvailable,
-    supplyIds,
-    tokenId,
-    tokenAddress,
     key,
     value,
     clients,
@@ -54,42 +45,32 @@ describe("IBosonBundleHandler", function () {
   let offerHandler, bundleHandlerFacet_Factory;
   let seller, active;
   let bundleStruct;
-  let twinIdsToAdd, twinIdsToRemove, offerIdsToAdd, offerIdsToRemove, tokenType;
+  let twinIdsToAdd, twinIdsToRemove, offerIdsToAdd, offerIdsToRemove;
   let bundle, bundleId, bundleIds, offerIds, twinId, twinIds, nextBundleId, invalidBundleId, bundleInstance;
-  let offer, exists, expected, blockNumber, block;
-  let offerId,
-    price,
-    sellerDeposit,
-    protocolFee,
-    buyerCancelPenalty,
-    quantityAvailable,
-    exchangeToken,
-    disputeResolverId,
-    metadataUri,
-    metadataHash,
-    voided,
-    invalidOfferId;
-  let validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil, offerDates;
-  let fulfillmentPeriod, voucherValid, resolutionPeriod, offerDurations;
+  let offer, exists, expected;
+  let offerId, invalidOfferId, price, sellerDeposit;
+  let offerDates, offerDurations;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let disputeResolver;
 
   before(async function () {
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
+
+    // Mock offer
+    ({ offer, offerDates, offerDurations } = await mockOffer());
+    price = offer.price;
+    sellerDeposit = offer.sellerDeposit;
+
+    // Check if domains are valid
+    expect(offer.isValid()).is.true;
+    expect(offerDates.isValid()).is.true;
+    expect(offerDurations.isValid()).is.true;
   });
 
   beforeEach(async function () {
     // Make accounts available
-    accounts = await ethers.getSigners();
-    deployer = accounts[0];
-    operator = accounts[1];
-    admin = accounts[2];
-    clerk = accounts[3];
-    treasury = accounts[4];
-    rando = accounts[5];
-    buyer = accounts[6];
-    other1 = accounts[7];
+    [deployer, operator, admin, clerk, treasury, rando, buyer, other1] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -126,7 +107,7 @@ describe("IBosonBundleHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: "0x0000000000000000000000000000000000000000",
+        treasuryAddress: ethers.constants.AddressZero,
         tokenAddress: bosonToken.address,
         voucherAddress: bosonVoucher.address,
       },
@@ -202,16 +183,8 @@ describe("IBosonBundleHandler", function () {
 
       // create 5 twins
       for (let i = 0; i < 5; i++) {
-        // Required constructor params for Twin
-        id = sellerId = "1";
-        supplyAvailable = "1000";
-        tokenId = "0";
-        supplyIds = [];
-        tokenAddress = bosonToken.address;
-        tokenType = TokenType.FungibleToken;
-
         // Create a valid twin.
-        twin = new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
+        twin = mockTwin(bosonToken.address);
         expect(twin.isValid()).is.true;
 
         // Approving the twinHandler contract to transfer seller's tokens
@@ -223,57 +196,6 @@ describe("IBosonBundleHandler", function () {
 
       // create 5 offers
       for (let i = 0; i < 5; i++) {
-        // Required constructor params
-        offerId = sellerId = "1"; // argument sent to contract for createOffer will be ignored
-        price = ethers.utils.parseUnits("1.5", "ether").toString();
-        sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-        protocolFee = calculateProtocolFee(price, protocolFeePercentage);
-        buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
-        quantityAvailable = "1";
-        exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-        disputeResolverId = "2";
-        metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
-        metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
-        voided = false;
-
-        // Create a valid offer.
-        offer = new Offer(
-          id,
-          sellerId,
-          price,
-          sellerDeposit,
-          protocolFee,
-          buyerCancelPenalty,
-          quantityAvailable,
-          exchangeToken,
-          disputeResolverId,
-          metadataUri,
-          metadataHash,
-          voided
-        );
-        expect(offer.isValid()).is.true;
-
-        // Required constructor params
-        blockNumber = await ethers.provider.getBlockNumber();
-        block = await ethers.provider.getBlock(blockNumber);
-        validFrom = ethers.BigNumber.from(block.timestamp).toString(); // valid from now
-        validUntil = ethers.BigNumber.from(block.timestamp)
-          .add(oneMonth * 6)
-          .toString(); // until 6 months
-        voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-        voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
-
-        // Create a valid offerDates, then set fields in tests directly
-        offerDates = new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
-
-        // Required constructor params
-        fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
-        voucherValid = oneMonth.toString(); // offers valid for one month
-        resolutionPeriod = oneWeek.toString(); // dispute is valid for one month
-
-        // Create a valid offerDurations, then set fields in tests directly
-        offerDurations = new OfferDurations(fulfillmentPeriod, voucherValid, resolutionPeriod);
-
         await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
       }
 
@@ -284,6 +206,7 @@ describe("IBosonBundleHandler", function () {
       // Required constructor params for Bundle
       offerIds = ["2", "3", "5"];
       twinIds = ["2", "3", "5"];
+      sellerId = twin.sellerId;
 
       bundle = new Bundle(bundleId, sellerId, offerIds, twinIds);
 
