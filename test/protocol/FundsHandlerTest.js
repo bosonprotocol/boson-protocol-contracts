@@ -1222,9 +1222,6 @@ describe("IBosonFundsHandler", function () {
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
       await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
-      // Register the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
-
       const { offer, ...mo } = await mockOffer();
       offer.quantityAvailable = "2";
       offerNative = offer;
