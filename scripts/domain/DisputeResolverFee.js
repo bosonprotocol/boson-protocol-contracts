@@ -207,7 +207,11 @@ class DisputeResolverFeeList {
     try {
       valid =
         Array.isArray(disputeResolverFees) &&
-        disputeResolverFees.reduce((previousDisputeResolverFees, currentDisputeResolverFees) => previousDisputeResolverFees && currentDisputeResolverFees.isValid(), true);
+        disputeResolverFees.reduce(
+          (previousDisputeResolverFees, currentDisputeResolverFees) =>
+            previousDisputeResolverFees && currentDisputeResolverFees.isValid(),
+          true
+        );
     } catch (e) {}
     return valid;
   }

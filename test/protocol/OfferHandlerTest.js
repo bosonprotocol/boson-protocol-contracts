@@ -63,7 +63,8 @@ describe("IBosonOfferHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, operatorDR, adminDR, clerkDR, treasuryDR] = await ethers.getSigners();
+    [deployer, operator, admin, clerk, treasury, rando, operatorDR, adminDR, clerkDR, treasuryDR] =
+      await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -154,12 +155,18 @@ describe("IBosonOfferHandler", function () {
       await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver( operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address, false)
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
       expect(disputeResolver.isValid()).is.true;
 
       //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
       disputeResolverFees = [];
-      
+
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
       await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
@@ -828,12 +835,18 @@ describe("IBosonOfferHandler", function () {
       await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver( operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address, false)
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
       expect(disputeResolver.isValid()).is.true;
 
       //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
       disputeResolverFees = [];
-      
+
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
       await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);

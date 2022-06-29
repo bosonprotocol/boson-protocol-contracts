@@ -70,7 +70,8 @@ describe("IBosonBundleHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, buyer, operatorDR, adminDR, clerkDR, treasuryDR] = await ethers.getSigners();
+    [deployer, operator, admin, clerk, treasury, rando, buyer, operatorDR, adminDR, clerkDR, treasuryDR] =
+      await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -167,7 +168,7 @@ describe("IBosonBundleHandler", function () {
     beforeEach(async function () {
       // create a seller
       // Required constructor params
-      id = nextAccountId = "1";; // argument sent to contract for createSeller will be ignored
+      id = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
       active = true;
 
       // Create a valid seller, then set fields in tests directly
@@ -178,7 +179,13 @@ describe("IBosonBundleHandler", function () {
       id = ++nextAccountId;
 
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver( operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address, false)
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
       expect(disputeResolver.isValid()).is.true;
 
       //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;

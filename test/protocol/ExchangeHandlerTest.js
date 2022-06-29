@@ -33,7 +33,19 @@ const { oneWeek, oneMonth } = require("../utils/constants");
 describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, fauxClient, operatorDR, adminDR, clerkDR, treasuryDR;
+  let deployer,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    rando,
+    buyer,
+    newOwner,
+    fauxClient,
+    operatorDR,
+    adminDR,
+    clerkDR,
+    treasuryDR;
   let erc165,
     protocolDiamond,
     accessController,
@@ -65,9 +77,21 @@ describe("IBosonExchangeHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, buyer, rando, newOwner, fauxClient, operatorDR, adminDR, clerkDR, treasuryDR] =
-      await ethers.getSigners();
-
+    [
+      deployer,
+      operator,
+      admin,
+      clerk,
+      treasury,
+      buyer,
+      rando,
+      newOwner,
+      fauxClient,
+      operatorDR,
+      adminDR,
+      clerkDR,
+      treasuryDR,
+    ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -177,19 +201,25 @@ describe("IBosonExchangeHandler", function () {
       // Initial ids for all the things
       id = offerId = sellerId = nextAccountId = "1";
       buyerId = "3"; // created after seller and dispute resolver
- 
+
       // Create a valid seller
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
       expect(seller.isValid()).is.true;
       await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver( operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address, false)
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
       expect(disputeResolver.isValid()).is.true;
 
       //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
       disputeResolverFees = [];
-      
+
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
       await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);

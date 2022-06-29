@@ -85,7 +85,16 @@ function mockTwin(tokenAddress, tokenType) {
 function mockDisputeResolver(operatorAddress, adminAddress, clerkAddress, treasuryAddress, active) {
   const id = "1";
   const metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
-  return new DisputeResolver(id.toString(), oneMonth.toString(), operatorAddress, adminAddress, clerkAddress, treasuryAddress, metadataUriDR, active);
+  return new DisputeResolver(
+    id.toString(),
+    oneMonth.toString(),
+    operatorAddress,
+    adminAddress,
+    clerkAddress,
+    treasuryAddress,
+    metadataUriDR,
+    active
+  );
 }
 exports.mockOffer = mockOffer;
 exports.mockTwin = mockTwin;

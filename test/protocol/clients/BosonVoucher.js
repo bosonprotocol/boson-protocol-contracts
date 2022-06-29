@@ -16,7 +16,6 @@ const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 const { oneMonth } = require("../../utils/constants");
 const { mockDisputeResolver } = require("../../utils/mock");
 
-
 describe("IBosonVoucher", function () {
   let interfaceId;
   let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler;
@@ -31,7 +30,8 @@ describe("IBosonVoucher", function () {
 
   beforeEach(async function () {
     // Set signers (fake protocol address to test issue and burn voucher without protocol dependencie)
-    [deployer, protocol, buyer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR] = await ethers.getSigners();
+    [deployer, protocol, buyer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR] =
+      await ethers.getSigners();
 
     // Deploy diamond
     const [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -151,12 +151,18 @@ describe("IBosonVoucher", function () {
       await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver( operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address, false)
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
       expect(disputeResolver.isValid()).is.true;
 
       //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
       disputeResolverFees = [];
-      
+
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
       await accountHandler.connect(deployer).activateDisputeResolver("2");

@@ -37,7 +37,7 @@ class DisputeResolver {
    * @returns {DisputeResolver}
    */
   static fromObject(o) {
-    const { id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active} = o;
+    const { id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active } = o;
     return new DisputeResolver(id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active);
   }
 
@@ -54,13 +54,13 @@ class DisputeResolver {
 
     return DisputeResolver.fromObject({
       id: id.toString(),
-      escalationResponsePeriod: escalationResponsePeriod.toString(), 
-      operator, 
-      admin, 
-      clerk, 
-      treasury, 
-      metadataUri, 
-      active
+      escalationResponsePeriod: escalationResponsePeriod.toString(),
+      operator,
+      admin,
+      clerk,
+      treasury,
+      metadataUri,
+      active,
     });
   }
 
@@ -85,7 +85,16 @@ class DisputeResolver {
    * @returns {string}
    */
   toStruct() {
-    return [this.id, this.escalationResponsePeriod, this.operator, this.admin, this.clerk, this.treasury, this.metadataUri, this.active];
+    return [
+      this.id,
+      this.escalationResponsePeriod,
+      this.operator,
+      this.admin,
+      this.clerk,
+      this.treasury,
+      this.metadataUri,
+      this.active,
+    ];
   }
 
   /**
@@ -115,11 +124,13 @@ class DisputeResolver {
    * Must be a string representation of a big number
    * @returns {boolean}
    */
-   escalationResponsePeriodIsValid() {
+  escalationResponsePeriodIsValid() {
     let valid = false;
     let { escalationResponsePeriod } = this;
     try {
-      valid = typeof escalationResponsePeriod === "string" && typeof ethers.BigNumber.from(escalationResponsePeriod) === "object";
+      valid =
+        typeof escalationResponsePeriod === "string" &&
+        typeof ethers.BigNumber.from(escalationResponsePeriod) === "object";
     } catch (e) {}
     return valid;
   }
@@ -152,7 +163,7 @@ class DisputeResolver {
     return valid;
   }
 
-   /**
+  /**
    * Is this DisputeResolver instance's clerk field valid?
    * Must be a eip55 compliant Ethereum address
    * @returns {boolean}
@@ -165,12 +176,12 @@ class DisputeResolver {
     } catch (e) {}
     return valid;
   }
-  
+
   /**
-  * Is this DisputeResolver instance's treasury field valid?
-  * Must be a eip55 compliant Ethereum address
-  * @returns {boolean}
-  */
+   * Is this DisputeResolver instance's treasury field valid?
+   * Must be a eip55 compliant Ethereum address
+   * @returns {boolean}
+   */
   treasuryIsValid() {
     let valid = false;
     let { treasury } = this;
@@ -179,7 +190,7 @@ class DisputeResolver {
     } catch (e) {}
     return valid;
   }
-  
+
   /**
    * Is this DisputeResolver instance's metadataUri field valid?
    * Always present, must be a string
@@ -213,7 +224,16 @@ class DisputeResolver {
    * @returns {boolean}
    */
   isValid() {
-    return this.idIsValid() && this.escalationResponsePeriodIsValid() && this. operatorIsValid() && this.adminIsValid() && this.clerkIsValid() && this.treasuryIsValid() && this.activeIsValid() && this.metadataUriIsValid();
+    return (
+      this.idIsValid() &&
+      this.escalationResponsePeriodIsValid() &&
+      this.operatorIsValid() &&
+      this.adminIsValid() &&
+      this.clerkIsValid() &&
+      this.treasuryIsValid() &&
+      this.activeIsValid() &&
+      this.metadataUriIsValid()
+    );
   }
 }
 

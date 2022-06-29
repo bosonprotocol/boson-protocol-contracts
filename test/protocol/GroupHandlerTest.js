@@ -47,7 +47,8 @@ describe("IBosonGroupHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, rando, operator, admin, clerk, treasury,operatorDR, adminDR, clerkDR, treasuryDR] = await ethers.getSigners();
+    [deployer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR] =
+      await ethers.getSigners();
     accounts = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
@@ -133,16 +134,22 @@ describe("IBosonGroupHandler", function () {
       await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver( operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address, false)
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
       expect(disputeResolver.isValid()).is.true;
 
       //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
       disputeResolverFees = [];
-      
+
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
       await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
- 
+
       // The first group id
       nextGroupId = "1";
       invalidGroupId = "666";

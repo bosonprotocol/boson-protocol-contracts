@@ -20,8 +20,8 @@ describe("DisputeResolver", function () {
     clerk = accounts[2].address;
     treasury = accounts[3].address;
 
-     // A period in milliseconds
-     oneMonth = 2678400 * 1000; // 31 days in milliseconds
+    // A period in milliseconds
+    oneMonth = 2678400 * 1000; // 31 days in milliseconds
 
     // Required constructor params
     id = "170";
@@ -33,7 +33,16 @@ describe("DisputeResolver", function () {
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated DisputeResolver instance", async function () {
       // Create a valid dispute resolver
-      disputeResolver = new DisputeResolver(id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active);
+      disputeResolver = new DisputeResolver(
+        id,
+        escalationResponsePeriod,
+        operator,
+        admin,
+        clerk,
+        treasury,
+        metadataUri,
+        active
+      );
       expect(disputeResolver.idIsValid()).is.true;
       expect(disputeResolver.escalationResponsePeriodIsValid()).is.true;
       expect(disputeResolver.operatorIsValid()).is.true;
@@ -49,7 +58,16 @@ describe("DisputeResolver", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid dispute resolver, then set fields in tests directly
-      disputeResolver = new DisputeResolver(id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active);
+      disputeResolver = new DisputeResolver(
+        id,
+        escalationResponsePeriod,
+        operator,
+        admin,
+        clerk,
+        treasury,
+        metadataUri,
+        active
+      );
       expect(disputeResolver.isValid()).is.true;
     });
 
@@ -238,18 +256,27 @@ describe("DisputeResolver", function () {
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid dispute resolver, then set fields in tests directly
-      disputeResolver = new DisputeResolver(id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active);
+      disputeResolver = new DisputeResolver(
+        id,
+        escalationResponsePeriod,
+        operator,
+        admin,
+        clerk,
+        treasury,
+        metadataUri,
+        active
+      );
       expect(disputeResolver.isValid()).is.true;
 
       // Get plain object
       object = {
         id,
         escalationResponsePeriod,
-        operator, 
-        admin, 
-        clerk, 
-        treasury, 
-        metadataUri, 
+        operator,
+        admin,
+        clerk,
+        treasury,
+        metadataUri,
         active,
       };
 

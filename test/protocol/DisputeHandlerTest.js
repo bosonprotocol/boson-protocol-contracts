@@ -28,7 +28,19 @@ const { mockOffer, mockDisputeResolver } = require("../utils/mock");
 describe("IBosonDisputeHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, operator, admin, clerk, treasury, rando, buyer, other1, other2, operatorDR, adminDR, clerkDR, treasuryDR;
+  let deployer,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    rando,
+    buyer,
+    other1,
+    other2,
+    operatorDR,
+    adminDR,
+    clerkDR,
+    treasuryDR;
   let erc165,
     protocolDiamond,
     accessController,
@@ -61,8 +73,21 @@ describe("IBosonDisputeHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, buyer, rando, other1, other2, operatorDR, adminDR, clerkDR, treasuryDR] =
-      await ethers.getSigners();
+    [
+      deployer,
+      operator,
+      admin,
+      clerk,
+      treasury,
+      buyer,
+      rando,
+      other1,
+      other2,
+      operatorDR,
+      adminDR,
+      clerkDR,
+      treasuryDR,
+    ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -159,7 +184,7 @@ describe("IBosonDisputeHandler", function () {
   context("📋 Dispute Handler Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
-      id = offerId = sellerId = nextAccountId =  "1";
+      id = offerId = sellerId = nextAccountId = "1";
       buyerId = "3"; // created after seller and dispute resolver
 
       active = true;
@@ -170,16 +195,21 @@ describe("IBosonDisputeHandler", function () {
       await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver( operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address, false)
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
       expect(disputeResolver.isValid()).is.true;
 
       //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
       disputeResolverFees = [];
-      
+
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
       await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
-
 
       // Mock offer
       ({ offer, offerDates, offerDurations } = await mockOffer());
@@ -1244,7 +1274,7 @@ describe("IBosonDisputeHandler", function () {
         buyerPercent = "4321";
       });
 
-      it("should emit a DisputeDecided event", async function () {  
+      it("should emit a DisputeDecided event", async function () {
         // Escalate the dispute, testing for the event
         await expect(disputeHandler.connect(operatorDR).decideDispute(exchange.id, buyerPercent))
           .to.emit(disputeHandler, "DisputeDecided")
@@ -1291,9 +1321,9 @@ describe("IBosonDisputeHandler", function () {
           buyerPercent = "12000"; // 120%
 
           // Attempt to decide the dispute, expecting revert
-          await expect(
-            disputeHandler.connect(operatorDR).decideDispute(exchange.id, buyerPercent)
-          ).to.revertedWith(RevertReasons.INVALID_BUYER_PERCENT);
+          await expect(disputeHandler.connect(operatorDR).decideDispute(exchange.id, buyerPercent)).to.revertedWith(
+            RevertReasons.INVALID_BUYER_PERCENT
+          );
         });
 
         it("Exchange does not exist", async function () {
@@ -1313,9 +1343,9 @@ describe("IBosonDisputeHandler", function () {
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
           // Attempt to decide the dispute, expecting revert
-          await expect(
-            disputeHandler.connect(operatorDR).decideDispute(exchange.id, buyerPercent)
-          ).to.revertedWith(RevertReasons.INVALID_STATE);
+          await expect(disputeHandler.connect(operatorDR).decideDispute(exchange.id, buyerPercent)).to.revertedWith(
+            RevertReasons.INVALID_STATE
+          );
         });
 
         it("Caller is not the dispute resolver for this dispute", async function () {
@@ -1338,9 +1368,9 @@ describe("IBosonDisputeHandler", function () {
           await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
 
           // Attempt to decide the dispute, expecting revert
-          await expect(
-            disputeHandler.connect(operatorDR).decideDispute(exchange.id, buyerPercent)
-          ).to.revertedWith(RevertReasons.INVALID_STATE);
+          await expect(disputeHandler.connect(operatorDR).decideDispute(exchange.id, buyerPercent)).to.revertedWith(
+            RevertReasons.INVALID_STATE
+          );
         });
       });
     });

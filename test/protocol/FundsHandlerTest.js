@@ -208,7 +208,10 @@ describe("IBosonFundsHandler", function () {
         let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
 
         // Chain state should match the expected available funds
-        let expectedAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", depositAmount), new Funds(mockToken.address, "Foreign19", depositAmount)]);
+        let expectedAvailableFunds = new FundsList([
+          new Funds(mockToken.address, "Foreign20", depositAmount),
+          new Funds(mockToken.address, "Foreign19", depositAmount),
+        ]);
 
         expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
 
@@ -339,14 +342,20 @@ describe("IBosonFundsHandler", function () {
         buyerId = "3"; // created after a seller and a dispute resolver
 
         active = true;
-    
+
         // Create a valid dispute resolver
-        disputeResolver = await mockDisputeResolver( operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address, false)
+        disputeResolver = await mockDisputeResolver(
+          operatorDR.address,
+          adminDR.address,
+          clerkDR.address,
+          treasuryDR.address,
+          false
+        );
         expect(disputeResolver.isValid()).is.true;
 
         //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
         disputeResolverFees = [];
-        
+
         // Register and activate the dispute resolver
         await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
         await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
@@ -1188,26 +1197,30 @@ describe("IBosonFundsHandler", function () {
   context("📋 FundsLib  Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
-      id = sellerId = nextAccountId =  "1";
+      id = sellerId = nextAccountId = "1";
       active = true;
-  
+
       // Create a valid seller
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
       expect(seller.isValid()).is.true;
       await accountHandler.connect(admin).createSeller(seller);
 
-  
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver( operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address, false)
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
       expect(disputeResolver.isValid()).is.true;
 
       //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
       disputeResolverFees = [];
-      
+
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
       await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
-
 
       // Register the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);

@@ -204,7 +204,17 @@ describe("DisputeResolverFee", function () {
 
 describe("DisputeResolverFeeList", function () {
   // Suite-wide scope
-  let accounts, disputeResolverFees, disputeResolverFeeList, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
+  let accounts,
+    disputeResolverFees,
+    disputeResolverFeeList,
+    object,
+    promoted,
+    clone,
+    dehydrated,
+    rehydrated,
+    key,
+    value,
+    struct;
 
   beforeEach(async function () {
     // Get a list of accounts

@@ -29,7 +29,19 @@ const { mockTwin, mockOffer, mockDisputeResolver } = require("../utils/mock");
 describe("IBosonOrchestrationHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, admin, clerk, treasury, other1, other2, other3,  operatorDR, adminDR, clerkDR, treasuryDR;
+  let deployer,
+    rando,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    other1,
+    other2,
+    other3,
+    operatorDR,
+    adminDR,
+    clerkDR,
+    treasuryDR;
   let erc165,
     protocolDiamond,
     accessController,
@@ -65,7 +77,21 @@ describe("IBosonOrchestrationHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, other1, other2, other3, operatorDR, adminDR, clerkDR, treasuryDR] = await ethers.getSigners();
+    [
+      deployer,
+      operator,
+      admin,
+      clerk,
+      treasury,
+      rando,
+      other1,
+      other2,
+      other3,
+      operatorDR,
+      adminDR,
+      clerkDR,
+      treasuryDR,
+    ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -160,12 +186,18 @@ describe("IBosonOrchestrationHandler", function () {
       active = true;
 
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver( operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address, false)
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
       expect(disputeResolver.isValid()).is.true;
 
       //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
       disputeResolverFees = [];
-      
+
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
       await accountHandler.connect(deployer).activateDisputeResolver(nextAccountId);
