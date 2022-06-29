@@ -40,6 +40,7 @@ function getConfig() {
   const maxOffersPerBundle = "100";
   const maxOffersPerBatch = "100";
   const maxTokensPerWithdrawal = "100";
+  const maxDisputesPerBatch = "100";
 
   // Boson Token (ERC-20) contract address
   const TOKEN = {
@@ -77,6 +78,7 @@ function getConfig() {
       maxOffersPerBundle,
       maxOffersPerBatch,
       maxTokensPerWithdrawal,
+      maxDisputesPerBatch,
     },
     {
       percentage: feePercentage,

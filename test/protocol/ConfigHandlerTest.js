@@ -21,7 +21,8 @@ describe("IBosonConfigHandler", function () {
     maxTwinsPerBundle,
     maxOffersPerBundle,
     maxOffersPerBatch,
-    maxTokensPerWithdrawal;
+    maxTokensPerWithdrawal,
+    maxDisputesPerBatch;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
 
   before(async function () {
@@ -52,6 +53,7 @@ describe("IBosonConfigHandler", function () {
     maxOffersPerBundle = 100;
     maxOffersPerBatch = 100;
     maxTokensPerWithdrawal = 100;
+    maxDisputesPerBatch = 100;
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
@@ -77,6 +79,7 @@ describe("IBosonConfigHandler", function () {
             maxOffersPerBundle,
             maxOffersPerBatch,
             maxTokensPerWithdrawal,
+            maxDisputesPerBatch,
           },
           //Protocol fees
           {
@@ -95,11 +98,9 @@ describe("IBosonConfigHandler", function () {
           .to.emit(configHandler, "VoucherAddressChanged")
           .withArgs(voucher.address, deployer.address)
           .to.emit(configHandler, "ProtocolFeePercentageChanged")
-          .withArgs(protocolFeePercentage, deployer.address);
-        await expect(cutTransaction)
+          .withArgs(protocolFeePercentage, deployer.address)
           .to.emit(configHandler, "ProtocolFeeFlatBosonChanged")
-          .withArgs(protocolFeeFlatBoson, deployer.address);
-        await expect(cutTransaction)
+          .withArgs(protocolFeeFlatBoson, deployer.address)
           .to.emit(configHandler, "MaxOffersPerGroupChanged")
           .withArgs(maxOffersPerGroup, deployer.address)
           .to.emit(configHandler, "MaxTwinsPerBundleChanged")
@@ -109,7 +110,9 @@ describe("IBosonConfigHandler", function () {
           .to.emit(configHandler, "MaxOffersPerBatchChanged")
           .withArgs(maxOffersPerBatch, deployer.address)
           .to.emit(configHandler, "MaxTokensPerWithdrawalChanged")
-          .withArgs(maxTokensPerWithdrawal, deployer.address);
+          .withArgs(maxTokensPerWithdrawal, deployer.address)
+          .to.emit(configHandler, "MaxDisputesPerBatchChanged")
+          .withArgs(maxDisputesPerBatch, deployer.address);
       });
     });
   });
@@ -131,6 +134,7 @@ describe("IBosonConfigHandler", function () {
           maxOffersPerBundle,
           maxOffersPerBatch,
           maxTokensPerWithdrawal,
+          maxDisputesPerBatch,
         },
         // Protocol fees
         {
@@ -473,6 +477,37 @@ describe("IBosonConfigHandler", function () {
           });
         });
       });
+
+      context("👉 setMaxDisputesPerBatch()", async function () {
+        beforeEach(async function () {
+          // set new value for max disputes per batch
+          maxDisputesPerBatch = 135;
+        });
+
+        it("should emit a MaxDisputesPerBatchChanged event", async function () {
+          // Set new max disputes per batch, testing for the event
+          await expect(configHandler.connect(deployer).setMaxDisputesPerBatch(maxDisputesPerBatch))
+            .to.emit(configHandler, "MaxDisputesPerBatchChanged")
+            .withArgs(maxDisputesPerBatch, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new max disputes per batch,
+          await configHandler.connect(deployer).setMaxDisputesPerBatch(maxDisputesPerBatch);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxDisputesPerBatch()).to.equal(maxDisputesPerBatch);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new max disputes per batch, expecting revert
+            await expect(configHandler.connect(rando).setMaxDisputesPerBatch(maxDisputesPerBatch)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
+          });
+        });
+      });
     });
 
     context("📋 Getters", async function () {
@@ -517,6 +552,10 @@ describe("IBosonConfigHandler", function () {
         expect(await configHandler.connect(rando).getMaxTokensPerWithdrawal()).to.equal(
           maxTokensPerWithdrawal,
           "Invalid max tokens per withdrawal"
+        );
+        expect(await configHandler.connect(rando).getMaxDisputesPerBatch()).to.equal(
+          maxDisputesPerBatch,
+          "Invalid max disputes per batch"
         );
       });
     });

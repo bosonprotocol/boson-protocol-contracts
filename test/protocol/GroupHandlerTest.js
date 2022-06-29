@@ -90,6 +90,7 @@ describe("IBosonGroupHandler", function () {
         maxOffersPerBundle: 100,
         maxOffersPerBatch: 100,
         maxTokensPerWithdrawal: 100,
+        maxDisputesPerBatch: 100,
       },
       // Protocol fees
       {

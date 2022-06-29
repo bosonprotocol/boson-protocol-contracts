@@ -9,7 +9,7 @@ import {IBosonConfigEvents} from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x2fe070b5
+ * The ERC-165 identifier for this interface is: 0x787ba057
  */
 interface IBosonConfigHandler is IBosonConfigEvents {
 
@@ -156,4 +156,18 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Get the maximum tokens per withdrawal
      */
     function getMaxTokensPerWithdrawal() external view returns (uint16);
+
+    /**
+     * @notice Sets the maximum numbers of disputes that can be expired in the single transaction
+     *
+     * Emits a MaxDisputesPerBatchChanged event.
+     *
+     * @param _maxDisputesPerBatch - the maximum number of disputes to expire
+     */
+    function setMaxDisputesPerBatch(uint16 _maxDisputesPerBatch) external;
+
+    /**
+     * @notice Get the maximum offers per batch
+     */
+    function getMaxDisputesPerBatch() external view returns (uint16);
 }

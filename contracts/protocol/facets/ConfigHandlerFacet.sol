@@ -43,7 +43,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxOffersPerBundle(_limits.maxOffersPerBundle);
         setMaxOffersPerBatch(_limits.maxOffersPerBatch);
         setMaxTokensPerWithdrawal(_limits.maxTokensPerWithdrawal);
-        
+        setMaxDisputesPerBatch(_limits.maxDisputesPerBatch);
         
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -354,5 +354,33 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     returns (uint16)
     {
         return protocolLimits().maxTokensPerWithdrawal;
+    }
+
+    /**
+     * @notice Sets the maximum numbers of disputes that can be expired in the single transaction
+     *
+     * Emits a MaxDisputesPerBatchChanged event.
+     *
+     * @param _maxDisputesPerBatch - the maximum number of disputes to expire
+     */
+    function setMaxDisputesPerBatch(uint16 _maxDisputesPerBatch)
+    public
+    override
+    onlyRole(ADMIN)
+    {
+        protocolLimits().maxDisputesPerBatch = _maxDisputesPerBatch;
+        emit MaxDisputesPerBatchChanged(_maxDisputesPerBatch, msg.sender);
+    }
+
+    /**
+     * @notice Get the maximum offers per batch
+     */
+    function getMaxDisputesPerBatch()
+    external
+    override
+    view
+    returns (uint16)
+    {
+        return protocolLimits().maxDisputesPerBatch;
     }
 }
