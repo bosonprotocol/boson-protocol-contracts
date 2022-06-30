@@ -23,7 +23,7 @@ const { mockOffer } = require("../utils/mock.js");
 describe("IBosonAccountHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, other4;
+  let deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, other4, other5;
   let erc165,
     protocolDiamond,
     accessController,
@@ -103,7 +103,8 @@ describe("IBosonAccountHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, other1, other2, other3, other4] = await ethers.getSigners();
+    [deployer, operator, admin, clerk, treasury, rando, other1, other2, other3, other4, other5] =
+      await ethers.getSigners();
 
     //Dispute Resolver metadata URI
     metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
@@ -1105,6 +1106,7 @@ describe("IBosonAccountHandler", function () {
 
           // Register the dispute resolver
           await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          await accountHandler.connect(deployer).activateDisputeResolver(++id);
 
           // Mock the offer
           let { offer, offerDates, offerDurations } = await mockOffer();
@@ -1372,6 +1374,73 @@ describe("IBosonAccountHandler", function () {
         );
       });
 
+      it("should allow same fee token to be specified for multiple dispute resolvers", async function () {
+        // Create a dispute resolver 1
+        await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+
+        // Get the dispute resolver data as structs
+        [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
+          .connect(rando)
+          .getDisputeResolver(id);
+
+        // Parse into entity
+        let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
+        let returnedDisputeResolverFeeList = DisputeResolverFeeList.fromStruct(disputeResolverFeeListStruct);
+        expect(returnedDisputeResolver.isValid()).is.true;
+        expect(returnedDisputeResolverFeeList.isValid()).is.true;
+
+        // Returned values should match the expectedDisputeResolver
+        for ([key, value] of Object.entries(expectedDisputeResolver)) {
+          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
+        }
+
+        assert.equal(
+          returnedDisputeResolverFeeList.toString(),
+          disputeResolverFeeList.toString(),
+          "Dispute Resolver Fee List is incorrect"
+        );
+
+        // Create a dispute resolver 2
+        id2 = nextAccountId++;
+        disputeResolver2 = new DisputeResolver(
+          id2.toString(),
+          oneMonth.toString(),
+          other1.address,
+          other2.address,
+          other3.address,
+          other4.address,
+          metadataUriDR,
+          false
+        );
+        expect(disputeResolver2.isValid()).is.true;
+
+        await accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees);
+
+        let disputeResolverStruct2;
+
+        // Get the dispute resolver data as structs
+        [, disputeResolverStruct2, disputeResolverFeeListStruct2] = await accountHandler
+          .connect(rando)
+          .getDisputeResolver(id2);
+
+        // Parse into entity
+        let returnedDisputeResolver2 = DisputeResolver.fromStruct(disputeResolverStruct2);
+        let returnedDisputeResolverFeeList2 = DisputeResolverFeeList.fromStruct(disputeResolverFeeListStruct2);
+        expect(returnedDisputeResolver2.isValid()).is.true;
+        expect(returnedDisputeResolverFeeList2.isValid()).is.true;
+
+        // Returned values should match the expectedDisputeResolver
+        for ([key, value] of Object.entries(returnedDisputeResolver2)) {
+          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
+        }
+
+        assert.equal(
+          returnedDisputeResolverFeeList2.toString(),
+          disputeResolverFeeList.toString(),
+          "Dispute Resolver Fee List is incorrect"
+        );
+      });
+
       it("should ignore any provided id and assign the next available", async function () {
         disputeResolver.id = "444";
 
@@ -1395,42 +1464,6 @@ describe("IBosonAccountHandler", function () {
         // next dispute resolver id should exist
         [exists] = await accountHandler.connect(rando).getDisputeResolver(nextAccountId);
         expect(exists).to.be.true;
-      });
-
-      it("should de-deplicate funds with same token address", async function () {
-        //Create new DisputeResolverFee array
-        disputeResolverFees2 = [
-          new DisputeResolverFee(other1.address, "MockToken1", "100"),
-          new DisputeResolverFee(other2.address, "MockToken2", "200"),
-          new DisputeResolverFee(other3.address, "MockToken3", "300"),
-          new DisputeResolverFee(other2.address, "MockToken2", "200"),
-        ];
-
-        // Create a dispute resolver
-        await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees2);
-
-        // Get the dispute resolver data as structs
-        [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
-          .connect(rando)
-          .getDisputeResolver(id);
-
-        // Parse into entity
-        let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
-        let returnedDisputeResolverFeeList = DisputeResolverFeeList.fromStruct(disputeResolverFeeListStruct);
-        expect(returnedDisputeResolver.isValid()).is.true;
-        expect(returnedDisputeResolverFeeList.isValid()).is.true;
-
-        // Returned values should match the input in createDisputeResolver
-        for ([key, value] of Object.entries(expectedDisputeResolver)) {
-          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
-        }
-
-        //Retuened fee list should match original fee list before second MockToken2 was added
-        assert.equal(
-          returnedDisputeResolverFeeList.toString(),
-          disputeResolverFeeList.toString(),
-          "Dispute Resolver Fee List is incorrect"
-        );
       });
 
       context("💔 Revert Reasons", async function () {
@@ -1534,6 +1567,21 @@ describe("IBosonAccountHandler", function () {
           await expect(
             accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees)
           ).to.revertedWith(RevertReasons.INVALID_ESCALATION_PERIOD);
+        });
+
+        it("Duplicate dispute resolver fees", async function () {
+          //Create new DisputeResolverFee array
+          disputeResolverFees2 = [
+            new DisputeResolverFee(other1.address, "MockToken1", "100"),
+            new DisputeResolverFee(other2.address, "MockToken2", "200"),
+            new DisputeResolverFee(other3.address, "MockToken3", "300"),
+            new DisputeResolverFee(other2.address, "MockToken2", "200"),
+          ];
+
+          // Create a dispute resolver
+          await expect(
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees2)
+          ).to.revertedWith(RevertReasons.DUPLICATE_DISPUTE_RESOLVER_FEES);
         });
       });
     });
@@ -2012,35 +2060,53 @@ describe("IBosonAccountHandler", function () {
         // How that dispute resolver looks as a returned struct
         disputeResolverStruct = disputeResolver.toStruct();
 
-        //Add to DisputeResolverFee array
-        disputeResolverFees.push(new DisputeResolverFee(other4.address, "MockToken4", "400"));
-        disputeResolverFees.push(new DisputeResolverFee(rando.address, "MockToken5", "500"));
-        disputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFees);
-
         expectedDisputeResolver = disputeResolver.clone();
         expectedDisputeResolver.active = false;
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
       });
 
       it("should emit a DisputeResolverFeesAdded event", async function () {
+        const disputeResolverFeesToAdd = [
+          new DisputeResolverFee(other4.address, "MockToken4", "400"),
+          new DisputeResolverFee(other5.address, "MockToken5", "500"),
+        ];
+
+        const addedDisputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFeesToAdd);
+
         const tx = await accountHandler
           .connect(admin)
-          .addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees);
+          .addFeesToDisputeResolver(disputeResolver.id, disputeResolverFeesToAdd);
+
         const valid = await isValidDisputeResolverEvent(
           tx,
           "DisputeResolverFeesAdded",
           disputeResolver.id,
           "dummy value",
-          disputeResolverFeeList,
+          addedDisputeResolverFeeList,
           1,
           admin.address
         );
+
         expect(valid).is.true;
       });
 
       it("should update DisputeRsolverFee state only", async function () {
+        const disputeResolverFeesToAdd = [
+          new DisputeResolverFee(other4.address, "MockToken4", "400"),
+          new DisputeResolverFee(other5.address, "MockToken5", "500"),
+        ];
+
+        const expectedDisputeResovlerFees = (disputeResolverFees = [
+          new DisputeResolverFee(other1.address, "MockToken1", "100"),
+          new DisputeResolverFee(other2.address, "MockToken2", "200"),
+          new DisputeResolverFee(other3.address, "MockToken3", "300"),
+          new DisputeResolverFee(other4.address, "MockToken4", "400"),
+          new DisputeResolverFee(other5.address, "MockToken5", "500"),
+        ]);
+        const expectedDisputeResolverFeeList = new DisputeResolverFeeList(expectedDisputeResovlerFees);
+
         // Create a dispute resolver
-        await accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees);
+        await accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFeesToAdd);
 
         // Get the dispute resolver data as structs
         [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
@@ -2060,7 +2126,7 @@ describe("IBosonAccountHandler", function () {
 
         assert.equal(
           returnedDisputeResolverFeeList.toString(),
-          disputeResolverFeeList.toString(),
+          expectedDisputeResolverFeeList.toString(),
           "Dispute Resolver Fee List is incorrect"
         );
       });
@@ -2098,6 +2164,18 @@ describe("IBosonAccountHandler", function () {
           await expect(
             accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
+        });
+
+        it("Duplicate dispute resolver fees", async function () {
+          //Add to DisputeResolverFee array
+          disputeResolverFees.push(new DisputeResolverFee(other4.address, "MockToken4", "400"));
+          disputeResolverFees.push(new DisputeResolverFee(other5.address, "MockToken5", "500"));
+          disputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFees);
+
+          // Attempt to Create a DisputeResolver, expecting revert
+          await expect(
+            accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
+          ).to.revertedWith(RevertReasons.DUPLICATE_DISPUTE_RESOLVER_FEES);
         });
       });
     });
@@ -2240,6 +2318,18 @@ describe("IBosonAccountHandler", function () {
           await expect(
             accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, disputeResolverFees)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
+        });
+
+        it("DisputeResolverFee in array does not exist for Dispute Resolver", async function () {
+          const disputeResolverFeesToRemove = [
+            new DisputeResolverFee(other4.address, "MockToken4", "400"),
+            new DisputeResolverFee(other5.address, "MockToken5", "500"),
+          ];
+
+          // Attempt to update the disputer resolver, expecting revert
+          await expect(
+            accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, disputeResolverFeesToRemove)
+          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_FEE_NOT_FOUND);
         });
       });
     });

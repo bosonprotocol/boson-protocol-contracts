@@ -50,6 +50,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
      * - Number of DisputeResolverFee structs in array exceeds max
+     * - DisputeResolverFee array contains duplicates
      * - EscalationResponsePeriod is invalid
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
@@ -114,6 +115,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Caller is not the admin address associated with the dipute resolver account
      * - Dispute resolver does not exist
      * - Number of DisputeResolverFee structs in array exceeds max
+     * - DisputeResolverFee array contains duplicates
      *
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
@@ -129,6 +131,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Caller is not the admin address associated with the dipute resolver account
      * - Dispute resolver does not exist
      * - Number of DisputeResolverFee structs in array exceeds max
+     * - DisputeResolverFee does not exist for the dispute resolver
      *
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}

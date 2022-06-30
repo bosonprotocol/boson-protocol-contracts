@@ -44,6 +44,8 @@ contract BosonConstants {
     string internal constant INVALID_ESCALATION_PERIOD = "Invalid escalation period";
     string internal constant INVALID_AMOUNT_DISPUTE_RESOLVER_FEES =
         "Dispute resolver fees are not present or exceeds maximum dispute resolver fees in a single transaction";
+    string internal constant DUPLICATE_DISPUTE_RESOLVER_FEES = "Duplicate dispute resolver fee";
+    string internal constant DISPUTE_RESOLVER_FEE_NOT_FOUND = "Dispute resolver fee not found";
 
     // Revert Reasons: Offer related
     string internal constant NO_SUCH_OFFER = "No such offer";

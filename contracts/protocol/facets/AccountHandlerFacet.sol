@@ -7,6 +7,7 @@ import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
+import "hardhat/console.sol";
 
 contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
@@ -69,6 +70,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
      * - Number of DisputeResolverFee structs in array exceeds max
+     * - DisputeResolverFee array contains duplicates
      * - EscalationResponsePeriod is invalid
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
@@ -104,10 +106,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     
         //Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
         for(uint i = 0; i < _disputeResolverFees.length; i++) {
-            if(protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] == 0) { //This token address does not yet exist for this Dispute Resolver
-                disputeResolverFees.push(DisputeResolverFee( _disputeResolverFees[i].tokenAddress, _disputeResolverFees[i].tokenName, _disputeResolverFees[i].feeAmount));
-                protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] = disputeResolverFees.length; //Set index mapping. Should be index in disputeResolverFees array + 1
-            } 
+            require(protocolLookups().disputeResolverFeeTokenIndex[ _disputeResolver.id ][_disputeResolverFees[i].tokenAddress] == 0, DUPLICATE_DISPUTE_RESOLVER_FEES);
+            disputeResolverFees.push(DisputeResolverFee( _disputeResolverFees[i].tokenAddress, _disputeResolverFees[i].tokenName, _disputeResolverFees[i].feeAmount));
+            protocolLookups().disputeResolverFeeTokenIndex[_disputeResolver.id][_disputeResolverFees[i].tokenAddress] = disputeResolverFees.length; //Set index mapping. Should be index in disputeResolverFees array + 1
         }
 
          //Ignore supplied active flag and set to false. Dispute Resolver must be activated by protocol.
@@ -289,6 +290,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
      * - Number of DisputeResolverFee structs in array exceeds max
+     * - DisputeResolverFee array contains duplicates
      *
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
@@ -315,10 +317,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         //Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
         for(uint i = 0; i < _disputeResolverFees.length; i++) {
-            if(protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] == 0) { //This token address does not yet exist for this Dispute Resolver
-                disputeResolverFees.push(DisputeResolverFee( _disputeResolverFees[i].tokenAddress, _disputeResolverFees[i].tokenName, _disputeResolverFees[i].feeAmount));
-                protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] = disputeResolverFees.length; //Set index mapping. Should be index in disputeResolverFees array + 1
-            }
+            require(protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_disputeResolverFees[i].tokenAddress] == 0, DUPLICATE_DISPUTE_RESOLVER_FEES);
+            disputeResolverFees.push(DisputeResolverFee( _disputeResolverFees[i].tokenAddress, _disputeResolverFees[i].tokenName, _disputeResolverFees[i].feeAmount));
+            protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_disputeResolverFees[i].tokenAddress] = disputeResolverFees.length; //Set index mapping. Should be index in disputeResolverFees array + 1
         }
 
         emit DisputeResolverFeesAdded(_disputeResolverId, _disputeResolverFees, msg.sender);
@@ -333,6 +334,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
      * - Number of DisputeResolverFee structs in array exceeds max
+     * - DisputeResolverFee does not exist for the dispute resolver
      *
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
@@ -359,19 +361,19 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         //Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
         for(uint i = 0; i < _disputeResolverFees.length; i++) {
-            if(protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] != 0) { //This is one to remove
-                uint disputeResolverFeeArrayIndex = protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] - 1; //Get the index in the DisputeResolverFees array, which is 1 less than the disputeResolverFeeTokenIndex index
-                delete disputeResolverFees[disputeResolverFeeArrayIndex]; //Delete DisputeResolverFee struct at this index
-                if(disputeResolverFees.length > 1) { //Need to fill gap caused by delete
-                    DisputeResolverFee memory disputeResolverFeeToMove = disputeResolverFees[disputeResolverFees.length - 1];
-                    disputeResolverFees[disputeResolverFeeArrayIndex] = disputeResolverFeeToMove; //Copy the last DisputeResolverFee struct in the array to this index to fill the gap
-                    protocolLookups().disputeResolverFeeTokenIndex[disputeResolverFeeToMove.tokenAddress] = disputeResolverFeeArrayIndex + 1; //Reset index mapping. Should be index in disputeResolverFees array + 1
-                }
-                disputeResolverFees.pop(); // Delete last DisputeResolverFee struct in the array, which was just moved to fill the gap
-                delete protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress]; //Delete from index mapping
-
-               
+            require(protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_disputeResolverFees[i].tokenAddress] != 0, DISPUTE_RESOLVER_FEE_NOT_FOUND);
+        
+            uint disputeResolverFeeArrayIndex = protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_disputeResolverFees[i].tokenAddress] - 1; //Get the index in the DisputeResolverFees array, which is 1 less than the disputeResolverFeeTokenIndex index
+            delete disputeResolverFees[disputeResolverFeeArrayIndex]; //Delete DisputeResolverFee struct at this index
+            if(disputeResolverFees.length > 1) { //Need to fill gap caused by delete
+                DisputeResolverFee memory disputeResolverFeeToMove = disputeResolverFees[disputeResolverFees.length - 1];
+                disputeResolverFees[disputeResolverFeeArrayIndex] = disputeResolverFeeToMove; //Copy the last DisputeResolverFee struct in the array to this index to fill the gap
+                protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][disputeResolverFeeToMove.tokenAddress] = disputeResolverFeeArrayIndex + 1; //Reset index mapping. Should be index in disputeResolverFees array + 1
             }
+            disputeResolverFees.pop(); // Delete last DisputeResolverFee struct in the array, which was just moved to fill the gap
+            delete protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_disputeResolverFees[i].tokenAddress]; //Delete from index mapping
+
+            
         }
 
         emit DisputeResolverFeesRemoved(_disputeResolverId, _disputeResolverFees, msg.sender);

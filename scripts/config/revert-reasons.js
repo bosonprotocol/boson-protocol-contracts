@@ -54,6 +54,8 @@ exports.RevertReasons = {
   INVALID_ESCALATION_PERIOD: "Invalid escalation period",
   INVALID_AMOUNT_DISPUTE_RESOLVER_FEES:
     "Dispute resolver fees are not present or exceeds maximum dispute resolver fees in a single transaction",
+  DUPLICATE_DISPUTE_RESOLVER_FEES: "Duplicate dispute resolver fee",
+  DISPUTE_RESOLVER_FEE_NOT_FOUND: "Dispute resolver fee not found",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",

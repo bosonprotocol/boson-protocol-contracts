@@ -108,8 +108,8 @@ library ProtocolLib {
         mapping(address => uint256) disputeResolverIdByAdmin;
         //dispute resolver clerk address => disputeResolverId
         mapping(address => uint256) disputeResolverIdByClerk;
-        //dispute resolver fee token address => index of the token address
-        mapping(address => uint256) disputeResolverFeeTokenIndex;
+        //dispute resolver id to fee token address => index of the token address
+        mapping(uint256 => mapping(address => uint256)) disputeResolverFeeTokenIndex;
         // seller/buyer id => token address => amount
         mapping(uint256 => mapping(address => uint256)) availableFunds;
         // seller/buyer id => all tokens with balance > 0
