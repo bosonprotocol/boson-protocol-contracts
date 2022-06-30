@@ -178,7 +178,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function expireDispute(uint256 _exchangeId) external override {
+    function expireDispute(uint256 _exchangeId) public override {
         // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
