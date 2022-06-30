@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
+const { oneMonth } = require("../utils/constants");
 
 /**
  *  Test the DisputeResolver domain entity
@@ -10,7 +11,6 @@ describe("DisputeResolver", function () {
   // Suite-wide scope
   let disputeResolver, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
   let accounts, id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active;
-  let oneMonth;
 
   beforeEach(async function () {
     // Get a list of accounts
@@ -19,9 +19,6 @@ describe("DisputeResolver", function () {
     admin = accounts[1].address;
     clerk = accounts[2].address;
     treasury = accounts[3].address;
-
-    // A period in milliseconds
-    oneMonth = 2678400 * 1000; // 31 days in milliseconds
 
     // Required constructor params
     id = "170";

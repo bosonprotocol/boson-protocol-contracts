@@ -96,7 +96,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a DisputeResolverUpdated event if successful.
      *
      * Reverts if:
-     * - Caller is not the admin address associated with the dipute resolver account
+     * - Caller is not the admin address associated with the dispute resolver account
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
      * - Dispute resolver does not exist
@@ -115,7 +115,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Dispute resolver does not exist
      * - Number of DisputeResolverFee structs in array exceeds max
      *
-     * @param _disputeResolverId - Id of the disputer resolver
+     * @param _disputeResolverId - Id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      */
     function addFeesToDisputeResolver(uint256 _disputeResolverId, BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees) external;
@@ -130,7 +130,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Dispute resolver does not exist
      * - Number of DisputeResolverFee structs in array exceeds max
      *
-     * @param _disputeResolverId - Id of the disputer resolver
+     * @param _disputeResolverId - Id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      */
     function removeFeesFromDisputeResolver(uint256 _disputeResolverId, BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees) external;
@@ -144,7 +144,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Caller does not have the ADMIN role
      * - Dispute resolver does not exist
      *
-     * @param _disputeResolverId - the fully populated buydispute resolver struct
+     * @param _disputeResolverId - Id of the dispute resolver
      */
     function activateDisputeResolver(uint256 _disputeResolverId) external;
 
@@ -191,7 +191,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     /**
      * @notice Gets the details about a dispute resolver by an address associated with that seller: operator, admin, or clerk address.
      *
-     * @param _associatedAddress - the address associated with the seller. Must be an operator, admin, or clerk address.
+     * @param _associatedAddress - the address associated with the dispute resolver. Must be an operator, admin, or clerk address.
      * @return exists - the dispute resolver was found
      * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}

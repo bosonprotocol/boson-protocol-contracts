@@ -1693,7 +1693,7 @@ describe("IBosonAccountHandler", function () {
         );
       });
 
-      it("should not update active flag", async function () {
+      it("should ignore active flag passed in", async function () {
         disputeResolver.active = true;
         expect(disputeResolver.isValid()).is.true;
 
@@ -1706,7 +1706,29 @@ describe("IBosonAccountHandler", function () {
         // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
 
-        // Returned values should match the input in updateDisputeResolver
+        // Returned values should match expected values
+        for ([key, value] of Object.entries(expectedDisputeResolver)) {
+          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
+        }
+
+        //ADMIN role activates Dispute Resolver
+        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+
+        disputeResolver.acitve = false;
+        expect(disputeResolver.isValid()).is.true;
+        expectedDisputeResolver.active = true;
+        expect(expectedDisputeResolver.isValid()).is.true;
+
+        // Update disupte resolver
+        await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
+
+        // Get the disupte resolver as a struct
+        [, disputeResolverStruct] = await accountHandler.connect(rando).getDisputeResolver(disputeResolver.id);
+
+        // Parse into entity
+        returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
+
+        // Returned values should match expected values
         for ([key, value] of Object.entries(expectedDisputeResolver)) {
           expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
         }
@@ -1730,7 +1752,7 @@ describe("IBosonAccountHandler", function () {
         // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
 
-        // Returned values should match the input in updateDisputeResolver
+        // Returned values should match expected values
         for ([key, value] of Object.entries(expectedDisputeResolver)) {
           expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
         }

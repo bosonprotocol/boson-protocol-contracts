@@ -101,13 +101,13 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         // Get storage location for dispute resolver fees
         (,,DisputeResolverFee[] storage disputeResolverFees) = fetchDisputeResolver(_disputeResolver.id);
-
+    
         //Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
         for(uint i = 0; i < _disputeResolverFees.length; i++) {
             if(protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] == 0) { //This token address does not yet exist for this Dispute Resolver
                 disputeResolverFees.push(DisputeResolverFee( _disputeResolverFees[i].tokenAddress, _disputeResolverFees[i].tokenName, _disputeResolverFees[i].feeAmount));
                 protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverFees[i].tokenAddress] = disputeResolverFees.length; //Set index mapping. Should be index in disputeResolverFees array + 1
-            }
+            } 
         }
 
          //Ignore supplied active flag and set to false. Dispute Resolver must be activated by protocol.
@@ -229,7 +229,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * Emits a DisputeResolverUpdated event if successful.
      *
      * Reverts if:
-     * - Caller is not the admin address associated with the dipute resolver account
+     * - Caller is not the admin address associated with the dispute resolver account
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
      * - Dispute resolver does not exist
@@ -271,8 +271,8 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         delete protocolLookups().disputeResolverIdByAdmin[disputeResolver.admin];
         delete protocolLookups().disputeResolverIdByClerk[disputeResolver.clerk];
     
-        //Ignore supplied active flag and set to false. Dispute Resolver must be activated by protocol.
-        _disputeResolver.active = false;
+        //Ignore supplied active flag and keep value already stored. Dispute Resolver cannot self-activate.
+        _disputeResolver.active = disputeResolver.active;
         storeDisputeResolver(_disputeResolver);
         
         // Notify watchers of state change
@@ -286,11 +286,11 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * Emits a DisputeResolverFeesAdded event if successful.
      *
      * Reverts if:
-     * - Caller is not the admin address associated with the dipute resolver account
+     * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
      * - Number of DisputeResolverFee structs in array exceeds max
      *
-     * @param _disputeResolverId - Id of the disputer resolver
+     * @param _disputeResolverId - Id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      */
     function addFeesToDisputeResolver(uint256 _disputeResolverId, DisputeResolverFee[] calldata _disputeResolverFees) 
@@ -310,7 +310,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         //Check that msg.sender is the admin address for this dispute resolver
         require(disputeResolver.admin  == msg.sender, NOT_ADMIN); 
 
-         // At least one fee must be specified. The feeAmount can be 0, but it must be intentional. However, the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
+         // At least one fee must be specified. However, the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
         require(_disputeResolverFees.length > 0 && _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
 
         //Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
@@ -330,18 +330,18 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * Emits a DisputeResolverFeesRemoved event if successful.
      *
      * Reverts if:
-     * - Caller is not the admin address associated with the dipute resolver account
+     * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
      * - Number of DisputeResolverFee structs in array exceeds max
      *
-     * @param _disputeResolverId - Id of the disputer resolver
+     * @param _disputeResolverId - Id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      */
     function removeFeesFromDisputeResolver(uint256 _disputeResolverId, DisputeResolverFee[] calldata _disputeResolverFees) 
     external
     override
     {
-         bool exists;
+        bool exists;
         DisputeResolver storage disputeResolver;
         DisputeResolverFee[] storage disputeResolverFees;
         
@@ -386,7 +386,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - Caller does not have the ADMIN role
      * - Dispute resolver does not exist
      *
-     * @param _disputeResolverId - the fully populated buydispute resolver struct
+     * @param _disputeResolverId - Id of the dispute resolver
      */
     function activateDisputeResolver(uint256 _disputeResolverId)
     external
