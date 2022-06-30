@@ -184,6 +184,25 @@
         {
           "indexed": true,
           "internalType": "uint256",
+          "name": "exchangeId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "EscalatedDisputeExpired",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
           "name": "entityId",
           "type": "uint256"
         },
@@ -354,6 +373,19 @@
         }
       ],
       "name": "expireDispute",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_exchangeId",
+          "type": "uint256"
+        }
+      ],
+      "name": "expireEscalatedDispute",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
