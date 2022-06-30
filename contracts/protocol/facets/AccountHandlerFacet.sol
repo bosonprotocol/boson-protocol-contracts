@@ -290,6 +290,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
      * - Number of DisputeResolverFee structs in array exceeds max
+     * - Number of DisputeResolverFee structs in array is zero
      * - DisputeResolverFee array contains duplicates
      *
      * @param _disputeResolverId - Id of the dispute resolver
@@ -334,6 +335,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
      * - Number of DisputeResolverFee structs in array exceeds max
+     * - Number of DisputeResolverFee structs in array is zero
      * - DisputeResolverFee does not exist for the dispute resolver
      *
      * @param _disputeResolverId - Id of the dispute resolver

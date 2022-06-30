@@ -71,8 +71,7 @@ describe("IBosonAccountHandler", function () {
     let valid = true;
 
     const txReceipt = await tx.wait();
-    const accountHandlerFacet_Factory = await ethers.getContractFactory("AccountHandlerFacet");
-    const event = getEvent(txReceipt, accountHandlerFacet_Factory, eventName);
+    const event = getEvent(txReceipt, accountHandler, eventName);
 
     try {
       if (eventName == "DisputeResolverCreated") {
@@ -1476,6 +1475,7 @@ describe("IBosonAccountHandler", function () {
             accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
 
+          disputeResolver.operator = operator.address;
           disputeResolver.admin = ethers.constants.AddressZero;
 
           // Attempt to Create a DisputeResolver, expecting revert
@@ -1483,6 +1483,7 @@ describe("IBosonAccountHandler", function () {
             accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
 
+          disputeResolver.admin = admin.address;
           disputeResolver.clerk = ethers.constants.AddressZero;
 
           // Attempt to Create a DisputeResolver, expecting revert
@@ -1490,6 +1491,7 @@ describe("IBosonAccountHandler", function () {
             accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
 
+          disputeResolver.clerk = clerk.address;
           disputeResolver.treasury = ethers.constants.AddressZero;
 
           // Attempt to Create a DisputeResolver, expecting revert
@@ -1522,7 +1524,8 @@ describe("IBosonAccountHandler", function () {
             accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees)
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
 
-          //Set each address value to be same as disputeResolver2 and expect revert
+          //Set each address value to be same as dispute resolver 1 and expect revert
+          disputeResolver2.operator = rando.address;
           disputeResolver2.admin = admin.address;
 
           // Attempt to create another dispute resolver with same addresses
@@ -1530,14 +1533,8 @@ describe("IBosonAccountHandler", function () {
             accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees)
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
 
+          disputeResolver2.admin = other2.address;
           disputeResolver2.clerk = clerk.address;
-
-          // Attempt to create another dispute resolver with same addresses
-          await expect(
-            accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees)
-          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
-
-          disputeResolver2.treasury = treasury.address;
 
           // Attempt to create another dispute resolver with same addresses
           await expect(
@@ -1637,7 +1634,7 @@ describe("IBosonAccountHandler", function () {
 
     context("👉 updateDisputeResolver()", async function () {
       beforeEach(async function () {
-        // Create a dispute resolver from objects in Dipuste Resolver Methods beforeEach
+        // Create a dispute resolver from objects in Dispute Resolver Methods beforeEach
         await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
 
         // id of the current dispute resolver and increment nextAccountId
@@ -2137,7 +2134,7 @@ describe("IBosonAccountHandler", function () {
           // Set invalid id
           disputeResolver.id = "444";
 
-          // Attempt to update the dispute resolver, expecting revert
+          // Attempt to add fees to the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
@@ -2145,23 +2142,32 @@ describe("IBosonAccountHandler", function () {
           // Set invalid id
           disputeResolver.id = "0";
 
-          // Attempt to update the dispute resolver, expecting revert
+          // Attempt to add fees to the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
         });
 
         it("Caller is not dispute resolver admin address", async function () {
-          // Attempt to update the disputer resolver, expecting revert
+          // Attempt to add fees to the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(rando).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
           ).to.revertedWith(RevertReasons.NOT_ADMIN);
         });
 
+        it("DisputeResolverFees above empty", async function () {
+          disputeResolverFees = [];
+
+          // Attempt to add fees to the dispute resolver, expecting revert
+          await expect(
+            accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
+          ).to.revertedWith(RevertReasons.INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
+        });
+
         it("DisputeResolverFees above max", async function () {
           await configHandler.setMaxFeesPerDisputeResolver(2);
 
-          // Attempt to Create a DisputeResolver, expecting revert
+          // Attempt to add fees to the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
@@ -2173,7 +2179,7 @@ describe("IBosonAccountHandler", function () {
           disputeResolverFees.push(new DisputeResolverFee(other5.address, "MockToken5", "500"));
           disputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFees);
 
-          // Attempt to Create a DisputeResolver, expecting revert
+          // Attempt to add fees to the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
           ).to.revertedWith(RevertReasons.DUPLICATE_DISPUTE_RESOLVER_FEES);
@@ -2195,18 +2201,21 @@ describe("IBosonAccountHandler", function () {
 
       it("should emit a DisputeResolverFeesRemoved event", async function () {
         feeTokenAddressesToRemove = [other1.address, other2.address, other3.address];
-      
-        await expect(accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove))
-        .to.emit(accountHandler, "DisputeResolverFeesRemoved")
-        .withArgs(disputeResolver.id, feeTokenAddressesToRemove, admin.address);
 
+        await expect(
+          accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
+        )
+          .to.emit(accountHandler, "DisputeResolverFeesRemoved")
+          .withArgs(disputeResolver.id, feeTokenAddressesToRemove, admin.address);
       });
 
       it("should update DisputeRsolverFee state only if some DisputeResolverFees are removed", async function () {
         feeTokenAddressesToRemove = [other1.address, other3.address];
 
         // Create a dispute resolver
-        await accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove);
+        await accountHandler
+          .connect(admin)
+          .removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove);
 
         // Get the dispute resolver data as structs
         [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
@@ -2234,11 +2243,13 @@ describe("IBosonAccountHandler", function () {
         );
       });
 
-      it("should update DisputeRsolverFee state only if all DisputeResolverFees are removed", async function () {
+      it("should update DisputeResolverFee state only if all DisputeResolverFees are removed", async function () {
         const feeTokenAddressesToRemove = [other1.address, other2.address, other3.address];
 
         // Create a dispute resolver
-        await accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove);
+        await accountHandler
+          .connect(admin)
+          .removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove);
 
         // Get the dispute resolver data as structs
         [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
@@ -2274,7 +2285,7 @@ describe("IBosonAccountHandler", function () {
           // Set invalid id
           disputeResolver.id = "444";
 
-          // Attempt to update the dispute resolver, expecting revert
+          // Attempt to remove fees from the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
@@ -2282,23 +2293,32 @@ describe("IBosonAccountHandler", function () {
           // Set invalid id
           disputeResolver.id = "0";
 
-          // Attempt to update the dispute resolver, expecting revert
+          // Attempt to remove fees from the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
         });
 
         it("Caller is not dispute resolver admin address", async function () {
-          // Attempt to update the disputer resolver, expecting revert
+          // Attempt to remove fees from the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(rando).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
           ).to.revertedWith(RevertReasons.NOT_ADMIN);
         });
 
+        it("DisputeResolverFees empty", async function () {
+          feeTokenAddressesToRemove = [];
+
+          // Attempt to remove fees from the dispute resolver, expecting revert
+          await expect(
+            accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
+          ).to.revertedWith(RevertReasons.INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
+        });
+
         it("DisputeResolverFees above max", async function () {
           await configHandler.setMaxFeesPerDisputeResolver(2);
 
-          // Attempt to Create a DisputeResolver, expecting revert
+          // Attempt to remove fees from the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
@@ -2306,8 +2326,8 @@ describe("IBosonAccountHandler", function () {
 
         it("DisputeResolverFee in array does not exist for Dispute Resolver", async function () {
           feeTokenAddressesToRemove = [other4.address, other5.address];
-         
-          // Attempt to update the disputer resolver, expecting revert
+
+          // Attempt to remove fees from the dispute resolver, expecting revert
           await expect(
             accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_FEE_NOT_FOUND);
@@ -2330,7 +2350,7 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should update only active flag state", async function () {
-        // Update disupte resolver
+        // Activate disupte resolver
         await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
         [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
@@ -2344,7 +2364,7 @@ describe("IBosonAccountHandler", function () {
         expect(returnedDisputeResolverFeeList.isValid()).is.true;
         expect(returnedDisputeResolver.isValid()).is.true;
 
-        // Returned values should match the input in updateDisputeResolver
+        // Returned values should match the input in activateDisputeResolver
         for ([key, value] of Object.entries(disputeResolver)) {
           expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
         }
@@ -2360,7 +2380,7 @@ describe("IBosonAccountHandler", function () {
           // Set invalid id
           disputeResolver.id = "444";
 
-          // Attempt to update the dispute resolver, expecting revert
+          // Attempt to activate the dispute resolver, expecting revert
           await expect(accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id)).to.revertedWith(
             RevertReasons.NO_SUCH_DISPUTE_RESOLVER
           );
@@ -2368,7 +2388,7 @@ describe("IBosonAccountHandler", function () {
           // Set invalid id
           disputeResolver.id = "0";
 
-          // Attempt to update the dispute resolver, expecting revert
+          // Attempt to activate the dispute resolver, expecting revert
           await expect(accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id)).to.revertedWith(
             RevertReasons.NO_SUCH_DISPUTE_RESOLVER
           );
@@ -2377,7 +2397,7 @@ describe("IBosonAccountHandler", function () {
         it("Caller does not have ADMIN role", async function () {
           //ADMIN role is not the same as DR's admin address
 
-          // Attempt to update the dispute resolver, expecting revert
+          // Attempt to activate the dispute resolver, expecting revert
           await expect(accountHandler.connect(admin).activateDisputeResolver(disputeResolver.id)).to.revertedWith(
             RevertReasons.ACCESS_DENIED
           );

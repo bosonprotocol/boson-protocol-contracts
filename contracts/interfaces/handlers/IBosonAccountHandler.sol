@@ -114,6 +114,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Reverts if:
      * - Caller is not the admin address associated with the dipute resolver account
      * - Dispute resolver does not exist
+     * - Number of DisputeResolverFee structs in array is zero
      * - Number of DisputeResolverFee structs in array exceeds max
      * - DisputeResolverFee array contains duplicates
      *
@@ -130,6 +131,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Reverts if:
      * - Caller is not the admin address associated with the dipute resolver account
      * - Dispute resolver does not exist
+     * - Number of DisputeResolverFee structs in array is zero
      * - Number of DisputeResolverFee structs in array exceeds max
      * - DisputeResolverFee does not exist for the dispute resolver
      *
