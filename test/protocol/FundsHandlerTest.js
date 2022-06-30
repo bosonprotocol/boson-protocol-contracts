@@ -2096,11 +2096,11 @@ describe("IBosonFundsHandler", function () {
         context("Final state DISPUTED - REFUSED via expireEscalatedDispute (fail to resolve)", async function () {
           beforeEach(async function () {
             // expected payoffs
-            // buyer: price + sellerDeposit
-            buyerPayoff = ethers.BigNumber.from(offerToken.price).add(offerToken.sellerDeposit).toString();
+            // buyer: price
+            buyerPayoff = offerToken.price;
 
-            // seller: 0
-            sellerPayoff = 0;
+            // seller: sellerDeposit
+            sellerPayoff = offerToken.sellerDeposit;
 
             // protocol: 0
             protocolPayoff = 0;
@@ -2148,10 +2148,15 @@ describe("IBosonFundsHandler", function () {
             await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
 
             // Available funds should be increased for
-            // buyer: price + sellerDeposit
-            // seller: 0; note that seller has sellerDeposit in availableFunds from before
+            // buyer: price
+            // seller: sellerDeposit; note that seller has sellerDeposit in availableFunds from before
             // protocol: 0
             expectedBuyerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", buyerPayoff);
+            expectedSellerAvailableFunds.funds[0] = new Funds(
+              mockToken.address,
+              "Foreign20",
+              ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
+            );
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
@@ -2164,11 +2169,11 @@ describe("IBosonFundsHandler", function () {
         context("Final state DISPUTED - REFUSED via refuseEscalatedDispute (explicit refusal)", async function () {
           beforeEach(async function () {
             // expected payoffs
-            // buyer: price + sellerDeposit
-            buyerPayoff = ethers.BigNumber.from(offerToken.price).add(offerToken.sellerDeposit).toString();
+            // buyer: price
+            buyerPayoff = offerToken.price;
 
-            // seller: 0
-            sellerPayoff = 0;
+            // seller: sellerDeposit
+            sellerPayoff = offerToken.sellerDeposit;
 
             // protocol: 0
             protocolPayoff = 0;
@@ -2209,10 +2214,15 @@ describe("IBosonFundsHandler", function () {
             await disputeHandler.connect(disputeResolver).refuseEscalatedDispute(exchangeId);
 
             // Available funds should be increased for
-            // buyer: price + sellerDeposit
-            // seller: 0; note that seller has sellerDeposit in availableFunds from before
+            // buyer: price
+            // seller: sellerDeposit; note that seller has sellerDeposit in availableFunds from before
             // protocol: 0
             expectedBuyerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", buyerPayoff);
+            expectedSellerAvailableFunds.funds[0] = new Funds(
+              mockToken.address,
+              "Foreign20",
+              ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
+            );
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
