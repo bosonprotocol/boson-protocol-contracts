@@ -443,6 +443,23 @@ describe("IBosonDisputeHandler", function () {
             RevertReasons.INVALID_STATE
           );
         });
+
+        it("Dispute was escalated and escalation period has elapsed", async function () {
+          // Escalate the dispute
+          tx = await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
+          // Get the block timestamp of the confirmed tx and set escalatedDate
+          blockNumber = tx.blockNumber;
+          block = await ethers.provider.getBlock(blockNumber);
+          escalatedDate = block.timestamp.toString();
+
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+
+          // Attempt to retract the dispute, expecting revert
+          await expect(disputeHandler.connect(buyer).retractDispute(exchange.id)).to.revertedWith(
+            RevertReasons.DISPUTE_HAS_EXPIRED
+          );
+        });
       });
     });
 
@@ -1106,6 +1123,23 @@ describe("IBosonDisputeHandler", function () {
             disputeHandler.connect(operator).resolveDispute(exchange.id, buyerPercent, r, s, v)
           ).to.revertedWith(RevertReasons.INVALID_STATE);
         });
+
+        it("Dispute was escalated and escalation period has elapsed", async function () {
+          // Escalate the dispute
+          tx = await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
+          // Get the block timestamp of the confirmed tx and set escalatedDate
+          blockNumber = tx.blockNumber;
+          block = await ethers.provider.getBlock(blockNumber);
+          escalatedDate = block.timestamp.toString();
+
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+
+          // Attempt to resolve the dispute, expecting revert
+          await expect(
+            disputeHandler.connect(operator).resolveDispute(exchange.id, buyerPercent, r, s, v)
+          ).to.revertedWith(RevertReasons.DISPUTE_HAS_EXPIRED);
+        });
       });
     });
 
@@ -1470,6 +1504,16 @@ describe("IBosonDisputeHandler", function () {
           await expect(
             disputeHandler.connect(disputeResolver).decideDispute(exchange.id, buyerPercent)
           ).to.revertedWith(RevertReasons.INVALID_STATE);
+        });
+
+        it("Dispute escalation period has elapsed", async function () {
+          // Set time past escalation period
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+
+          // Attempt to decide the dispute, expecting revert
+          await expect(
+            disputeHandler.connect(disputeResolver).decideDispute(exchange.id, buyerPercent)
+          ).to.revertedWith(RevertReasons.DISPUTE_HAS_EXPIRED);
         });
       });
     });
