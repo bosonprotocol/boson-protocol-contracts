@@ -337,9 +337,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - DisputeResolverFee does not exist for the dispute resolver
      *
      * @param _disputeResolverId - Id of the dispute resolver
-     * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
+     * @param _feeTokenAddresses - list of adddresses of dispute resolver fee tokens to remove
      */
-    function removeFeesFromDisputeResolver(uint256 _disputeResolverId, DisputeResolverFee[] calldata _disputeResolverFees) 
+    function removeFeesFromDisputeResolver(uint256 _disputeResolverId, address[] calldata _feeTokenAddresses) 
     external
     override
     {
@@ -357,26 +357,23 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         require(disputeResolver.admin  == msg.sender, NOT_ADMIN); 
 
         // At least one fee must be specified. The feeAmount can be 0, but it must be intentional. However, the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
-        require(_disputeResolverFees.length > 0 && _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
+        require(_feeTokenAddresses.length > 0 && _feeTokenAddresses.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
 
         //Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
-        for(uint i = 0; i < _disputeResolverFees.length; i++) {
-            require(protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_disputeResolverFees[i].tokenAddress] != 0, DISPUTE_RESOLVER_FEE_NOT_FOUND);
-        
-            uint disputeResolverFeeArrayIndex = protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_disputeResolverFees[i].tokenAddress] - 1; //Get the index in the DisputeResolverFees array, which is 1 less than the disputeResolverFeeTokenIndex index
+        for(uint i = 0; i < _feeTokenAddresses.length; i++) {
+            require(protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_feeTokenAddresses[i]] != 0, DISPUTE_RESOLVER_FEE_NOT_FOUND);
+            uint disputeResolverFeeArrayIndex = protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_feeTokenAddresses[i]] - 1; //Get the index in the DisputeResolverFees array, which is 1 less than the disputeResolverFeeTokenIndex index
             delete disputeResolverFees[disputeResolverFeeArrayIndex]; //Delete DisputeResolverFee struct at this index
-            if(disputeResolverFees.length > 1) { //Need to fill gap caused by delete
+            if(disputeResolverFees.length > 1) { //Need to fill gap caused by delete if more than one element in storage array
                 DisputeResolverFee memory disputeResolverFeeToMove = disputeResolverFees[disputeResolverFees.length - 1];
                 disputeResolverFees[disputeResolverFeeArrayIndex] = disputeResolverFeeToMove; //Copy the last DisputeResolverFee struct in the array to this index to fill the gap
                 protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][disputeResolverFeeToMove.tokenAddress] = disputeResolverFeeArrayIndex + 1; //Reset index mapping. Should be index in disputeResolverFees array + 1
             }
             disputeResolverFees.pop(); // Delete last DisputeResolverFee struct in the array, which was just moved to fill the gap
-            delete protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_disputeResolverFees[i].tokenAddress]; //Delete from index mapping
-
-            
+            delete protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_feeTokenAddresses[i]]; //Delete from index mapping
         }
 
-        emit DisputeResolverFeesRemoved(_disputeResolverId, _disputeResolverFees, msg.sender);
+        emit DisputeResolverFeesRemoved(_disputeResolverId, _feeTokenAddresses, msg.sender);
     }
 
      /**

@@ -134,9 +134,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - DisputeResolverFee does not exist for the dispute resolver
      *
      * @param _disputeResolverId - Id of the dispute resolver
-     * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
+     * @param _feeTokenAddresses - list of adddresses of dispute resolver fee tokens to remove
      */
-    function removeFeesFromDisputeResolver(uint256 _disputeResolverId, BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees) external;
+    function removeFeesFromDisputeResolver(uint256 _disputeResolverId, address[] calldata _feeTokenAddresses) external;
 
     /**
      * @notice Set the active flag for this Dispute Resolver to true. Only callable by the protocol ADMIN role.

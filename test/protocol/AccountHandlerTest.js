@@ -45,7 +45,8 @@ describe("IBosonAccountHandler", function () {
     disputeResolverFeeList,
     disputeResolverFeeListStruct,
     disputeResolverFeeListStruct2,
-    disputeResolverFees2;
+    disputeResolverFees2,
+    feeTokenAddressesToRemove;
   let metadataUriDR;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
@@ -2193,32 +2194,19 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should emit a DisputeResolverFeesRemoved event", async function () {
-        const tx = await accountHandler
-          .connect(admin)
-          .removeFeesFromDisputeResolver(disputeResolver.id, disputeResolverFees);
-        const valid = await isValidDisputeResolverEvent(
-          tx,
-          "DisputeResolverFeesRemoved",
-          disputeResolver.id,
-          "dummy value",
-          disputeResolverFeeList,
-          1,
-          admin.address
-        );
-        expect(valid).is.true;
+        feeTokenAddressesToRemove = [other1.address, other2.address, other3.address];
+      
+        await expect(accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove))
+        .to.emit(accountHandler, "DisputeResolverFeesRemoved")
+        .withArgs(disputeResolver.id, feeTokenAddressesToRemove, admin.address);
+
       });
 
       it("should update DisputeRsolverFee state only if some DisputeResolverFees are removed", async function () {
-        //DisputeResolverFee array of DisputeResolverFees to remove
-        disputeResolverFees = [
-          new DisputeResolverFee(other1.address, "MockToken1", "100"),
-          new DisputeResolverFee(other3.address, "MockToken3", "300"),
-        ];
-
-        disputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFees);
+        feeTokenAddressesToRemove = [other1.address, other3.address];
 
         // Create a dispute resolver
-        await accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, disputeResolverFees);
+        await accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove);
 
         // Get the dispute resolver data as structs
         [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
@@ -2231,7 +2219,7 @@ describe("IBosonAccountHandler", function () {
         expect(returnedDisputeResolver.isValid()).is.true;
         expect(returnedDisputeResolverFeeList.isValid()).is.true;
 
-        // Returned values should match the input in expectedDisputeResolver
+        // Returned values should match expectedDisputeResolver
         for ([key, value] of Object.entries(expectedDisputeResolver)) {
           expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
         }
@@ -2247,17 +2235,10 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should update DisputeRsolverFee state only if all DisputeResolverFees are removed", async function () {
-        //DisputeResolverFee array of DisputeResolverFees to remove
-        disputeResolverFees = [
-          new DisputeResolverFee(other1.address, "MockToken1", "100"),
-          new DisputeResolverFee(other2.address, "MockToken2", "200"),
-          new DisputeResolverFee(other3.address, "MockToken3", "300"),
-        ];
-
-        disputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFees);
+        const feeTokenAddressesToRemove = [other1.address, other2.address, other3.address];
 
         // Create a dispute resolver
-        await accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, disputeResolverFees);
+        await accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove);
 
         // Get the dispute resolver data as structs
         [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
@@ -2270,7 +2251,7 @@ describe("IBosonAccountHandler", function () {
         expect(returnedDisputeResolver.isValid()).is.true;
         expect(returnedDisputeResolverFeeList.isValid()).is.true;
 
-        // Returned values should match the input in expectedDisputeResolver
+        // Returned values should match expectedDisputeResolver
         for ([key, value] of Object.entries(expectedDisputeResolver)) {
           expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
         }
@@ -2286,13 +2267,16 @@ describe("IBosonAccountHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        beforeEach(async function () {
+          feeTokenAddressesToRemove = [other1.address, other2.address, other3.address];
+        });
         it("Dispute resolver does not exist", async function () {
           // Set invalid id
           disputeResolver.id = "444";
 
           // Attempt to update the dispute resolver, expecting revert
           await expect(
-            accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, disputeResolverFees)
+            accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
 
           // Set invalid id
@@ -2300,14 +2284,14 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to update the dispute resolver, expecting revert
           await expect(
-            accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, disputeResolverFees)
+            accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
         });
 
         it("Caller is not dispute resolver admin address", async function () {
           // Attempt to update the disputer resolver, expecting revert
           await expect(
-            accountHandler.connect(rando).removeFeesFromDisputeResolver(disputeResolver.id, disputeResolverFees)
+            accountHandler.connect(rando).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
           ).to.revertedWith(RevertReasons.NOT_ADMIN);
         });
 
@@ -2316,19 +2300,16 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
-            accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, disputeResolverFees)
+            accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
         });
 
         it("DisputeResolverFee in array does not exist for Dispute Resolver", async function () {
-          const disputeResolverFeesToRemove = [
-            new DisputeResolverFee(other4.address, "MockToken4", "400"),
-            new DisputeResolverFee(other5.address, "MockToken5", "500"),
-          ];
-
+          feeTokenAddressesToRemove = [other4.address, other5.address];
+         
           // Attempt to update the disputer resolver, expecting revert
           await expect(
-            accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, disputeResolverFeesToRemove)
+            accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_FEE_NOT_FOUND);
         });
       });
