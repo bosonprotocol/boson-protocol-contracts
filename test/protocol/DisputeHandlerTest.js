@@ -1766,6 +1766,28 @@ describe("IBosonDisputeHandler", function () {
           assert.equal(exists, true, "Incorrectly reports existence");
           assert.equal(response, true, "Incorrectly reports unfinalized state");
         });
+
+        it("should return true if dispute is in Refused state", async function () {
+          // Escalate the dispute
+          tx = await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
+          // Get the block timestamp of the confirmed tx and set escalatedDate
+          blockNumber = tx.blockNumber;
+          block = await ethers.provider.getBlock(blockNumber);
+          escalatedDate = block.timestamp.toString();
+
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+
+          // Expire dispute
+          await disputeHandler.connect(rando).expireEscalatedDispute(exchange.id);
+
+          // Dispute in decided state, ask if exchange is finalized
+          [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchange.id);
+
+          // It should exist and be finalized
+          assert.equal(exists, true, "Incorrectly reports existence");
+          assert.equal(response, true, "Incorrectly reports unfinalized state");
+        });
       });
     });
   });
