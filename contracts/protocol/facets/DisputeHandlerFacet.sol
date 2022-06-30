@@ -108,11 +108,8 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // If dispute was escalated, make sure that escalation period is not over yet
         if (dispute.state == DisputeState.Escalated) {
-            // TODO: fetch the escalation period from the storage
-            uint256 escalationPeriod = 1 weeks; // only for tests    
-
             // make sure the dispute escalation period not expired already
-            require(block.timestamp <= disputeDates.escalated + escalationPeriod, DISPUTE_HAS_EXPIRED);  
+            require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);  
         } else {
             // If dispute is not escalated, make sure the it is in the resolving state
             require(dispute.state == DisputeState.Resolving, INVALID_STATE);
@@ -241,21 +238,11 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Fetch teh dispute and dispute dates
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId); 
 
-        // Make sure that the dispute is still valid
-        if (dispute.state == DisputeState.Escalated) {
-            // If dispute was escalated, make sure that escalation period is not over yet
-            // TODO: fetch the escalation period from the storage
-            uint256 escalationPeriod = 1 weeks; // only for tests    
+        // Make sure the dispute is in the resolving or escalated state
+        require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);
 
-            // make sure the dispute escalation period not expired already
-            require(block.timestamp <= disputeDates.escalated + escalationPeriod, DISPUTE_HAS_EXPIRED);  
-        } else {
-            // dispute was not escalated, make sure the it is still in the resolving state
-            require(dispute.state == DisputeState.Resolving, INVALID_STATE);
-            
-            // make sure the dispute not expired already
-            require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
-        }
+        // Make sure the dispute not expired already 
+        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);  
 
         // wrap the code in a separate block to avoid stack too deep error 
         { 
@@ -326,8 +313,12 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Make sure the dispute is in the resolving state             
         require(dispute.state == DisputeState.Resolving, INVALID_STATE);
 
+        // TODO: fetch the escalation period from the storage
+        uint256 escalationPeriod = 1000 weeks; // only for tests  
+
         // store the time of escalation
         disputeDates.escalated = block.timestamp;
+        disputeDates.timeout = block.timestamp + escalationPeriod;
 
         // Set the dispute state
         dispute.state = DisputeState.Escalated;
@@ -369,9 +360,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         require(dispute.state == DisputeState.Escalated, INVALID_STATE);
        
         // Make sure the dispute escalation period not expired already
-        // TODO: fetch the escalation period from the storage
-        uint256 escalationPeriod = 1 weeks; // only for tests  
-        require(block.timestamp <= disputeDates.escalated + escalationPeriod, DISPUTE_HAS_EXPIRED);
+        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
 
         // Fetch the offer to get the info who the seller is
         (, Offer storage offer) = fetchOffer(exchange.offerId);
@@ -410,11 +399,8 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Make sure the dispute is in the escalated state
         require(dispute.state == DisputeState.Escalated, INVALID_STATE);
 
-        // TODO: fetch the escalation period from the storage
-        uint256 escalationPeriod = 1 weeks; // only for tests    
-
         // make sure the dispute escalation has expired already
-        require(block.timestamp > disputeDates.escalated + escalationPeriod, DISPUTE_STILL_VALID);      
+        require(block.timestamp > disputeDates.timeout, DISPUTE_STILL_VALID);      
 
         // Finalize the dispute
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Refused, 0);

@@ -193,6 +193,7 @@ describe("IBosonDisputeHandler", function () {
       voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
       resolutionPeriod = offerDurations.resolutionPeriod;
       fulfillmentPeriod = offerDurations.fulfillmentPeriod;
+      escalationPeriod = oneWeek;
 
       // Required voucher constructor params
       committedDate = "0";
@@ -842,11 +843,14 @@ describe("IBosonDisputeHandler", function () {
         });
 
         it("Dispute can be mutualy resolved even if it's in escalated state and past the resolution period", async function () {
+          // Set time forward to the dispute original expiration date
+          await setNextBlockTimestamp((ethers.BigNumber.from(disputedDate).add(resolutionPeriod/2)).toNumber());
+
           // escalate dispute
           await disputeHandler.connect(buyer).escalateDispute(exchange.id);
 
-          // Set time forward to the dispute expiration date
-          await setNextBlockTimestamp(Number(timeout) + oneWeek);
+          // Set time forward to the dispute original expiration date
+          await setNextBlockTimestamp(Number(timeout) + 10);
 
           // Resolve the dispute, testing for the event
           await expect(disputeHandler.connect(buyer).resolveDispute(exchange.id, buyerPercent, r, s, v))
@@ -956,11 +960,14 @@ describe("IBosonDisputeHandler", function () {
         });
 
         it("Dispute can be mutualy resolved even if it's in escalated state and past the resolution period", async function () {
+          // Set time forward to the dispute original expiration date
+          await setNextBlockTimestamp((ethers.BigNumber.from(disputedDate).add(resolutionPeriod/2)).toNumber());
+
           // escalate dispute
           await disputeHandler.connect(buyer).escalateDispute(exchange.id);
 
-          // Set time forward to the dispute expiration date
-          await setNextBlockTimestamp(Number(timeout) + oneWeek);
+          // Set time forward to the dispute original expiration date
+          await setNextBlockTimestamp(Number(timeout) + 10);
 
           // Resolve the dispute, testing for the event
           await expect(disputeHandler.connect(operator).resolveDispute(exchange.id, buyerPercent, r, s, v))
@@ -1170,7 +1177,8 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         escalatedDate = block.timestamp.toString();
-
+        timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
+        
         dispute = new Dispute(exchange.id, complaint, DisputeState.Escalated, "0");
         disputeDates = new DisputeDates(disputedDate, escalatedDate, "0", timeout);
 
@@ -1257,7 +1265,6 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
-        timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
 
         // Escalate the dispute
         tx = await disputeHandler.connect(buyer).escalateDispute(exchange.id);
@@ -1266,6 +1273,7 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         escalatedDate = block.timestamp.toString();
+        timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
       });
 
       it("should emit a EscalatedDisputeExpired event", async function () {
@@ -1393,7 +1401,6 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         disputedDate = block.timestamp.toString();
-        timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
 
         // Escalate the dispute
         tx = await disputeHandler.connect(buyer).escalateDispute(exchange.id);
@@ -1402,6 +1409,7 @@ describe("IBosonDisputeHandler", function () {
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
         escalatedDate = block.timestamp.toString();
+        timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
 
         // buyer percent used in tests
         buyerPercent = "4321";
