@@ -2093,7 +2093,7 @@ describe("IBosonFundsHandler", function () {
           });
         });
 
-        context("Final state DISPUTED - REFUSED", async function () {
+        context("Final state DISPUTED - REFUSED via expireEscalatedDispute (fail to resolve)", async function () {
           beforeEach(async function () {
             // expected payoffs
             // buyer: price + sellerDeposit
@@ -2146,6 +2146,67 @@ describe("IBosonFundsHandler", function () {
 
             // Expire the escalated dispute, so the funds are released
             await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
+
+            // Available funds should be increased for
+            // buyer: price + sellerDeposit
+            // seller: 0; note that seller has sellerDeposit in availableFunds from before
+            // protocol: 0
+            expectedBuyerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", buyerPayoff);
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
+            protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
+            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+          });
+        });
+
+        context("Final state DISPUTED - REFUSED via refuseEscalatedDispute (explicit refusal)", async function () {
+          beforeEach(async function () {
+            // expected payoffs
+            // buyer: price + sellerDeposit
+            buyerPayoff = ethers.BigNumber.from(offerToken.price).add(offerToken.sellerDeposit).toString();
+
+            // seller: 0
+            sellerPayoff = 0;
+
+            // protocol: 0
+            protocolPayoff = 0;
+
+            // Escalate the dispute
+            tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+          });
+
+          it("should emit a FundsReleased event", async function () {
+            // Expire the dispute, expecting event
+            await expect(disputeHandler.connect(disputeResolver).refuseEscalatedDispute(exchangeId))
+              .to.emit(disputeHandler, "FundsReleased")
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, rando.address)
+              .to.not.emit(disputeHandler, "ProtocolFeeCollected")
+              .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, rando.address);
+            // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
+            // .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
+          });
+
+          it("should update state", async function () {
+            // Read on chain state
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
+            protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
+
+            // Chain state should match the expected available funds
+            expectedSellerAvailableFunds = new FundsList([
+              new Funds(mockToken.address, "Foreign20", sellerDeposit),
+              new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
+            ]);
+            expectedBuyerAvailableFunds = new FundsList([]);
+            expectedProtocolAvailableFunds = new FundsList([]);
+            expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
+            expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
+            expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+
+            // Expire the escalated dispute, so the funds are released
+            await disputeHandler.connect(disputeResolver).refuseEscalatedDispute(exchangeId);
 
             // Available funds should be increased for
             // buyer: price + sellerDeposit
