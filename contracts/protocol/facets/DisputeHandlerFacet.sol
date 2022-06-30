@@ -497,7 +497,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @notice Is the given dispute in a finalized state?
      *
      * Returns true if
-     * - Dispute state is Retracted, Resolved, or Decided
+     * - Dispute state is Retracted, Resolved, Decided or Refused
      *
      * @param _exchangeId - the id of the exchange to check
      * @return exists - true if the dispute exists
@@ -519,7 +519,8 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
             isFinalized = (
                 dispute.state == DisputeState.Retracted ||
                 dispute.state == DisputeState.Resolved ||
-                dispute.state == DisputeState.Decided
+                dispute.state == DisputeState.Decided ||
+                dispute.state == DisputeState.Refused
             );
         }
     }
