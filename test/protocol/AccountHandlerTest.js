@@ -1869,7 +1869,7 @@ describe("IBosonAccountHandler", function () {
         expect(returnedDisputeResolver.isValid()).is.true;
         expect(returnedDisputeResolverFeeList.isValid()).is.true;
 
-        // Returned values should match the input in createDisputeResolver
+        // Returned values should match expectedDisputeResolver
         for ([key, value] of Object.entries(expectedDisputeResolver)) {
           expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
         }
@@ -1964,6 +1964,7 @@ describe("IBosonAccountHandler", function () {
             RevertReasons.INVALID_ADDRESS
           );
 
+          disputeResolver.operator = operator.address;
           disputeResolver.admin = ethers.constants.AddressZero;
 
           // Attempt to update the disputer resolver, expecting revert
@@ -1971,6 +1972,7 @@ describe("IBosonAccountHandler", function () {
             RevertReasons.INVALID_ADDRESS
           );
 
+          disputeResolver.admin = admin.address;
           disputeResolver.clerk = ethers.constants.AddressZero;
 
           // Attempt to update the disputer resolver, expecting revert
@@ -1978,6 +1980,7 @@ describe("IBosonAccountHandler", function () {
             RevertReasons.INVALID_ADDRESS
           );
 
+          disputeResolver.clerk = clerk.address;
           disputeResolver.treasury = ethers.constants.AddressZero;
 
           // Attempt to update the disputer resolver, expecting revert
@@ -2036,14 +2039,14 @@ describe("IBosonAccountHandler", function () {
         it("EscalationResponsePeriod is invalid", async function () {
           await configHandler.setMaxEscalationResponsePeriod(oneWeek);
 
-          // Attempt to Create a DisputeResolver, expecting revert
+          // Attempt to update a DisputeResolver, expecting revert
           await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.INVALID_ESCALATION_PERIOD
           );
 
           disputeResolver.escalationResponsePeriod = 0;
 
-          // Attempt to Create a DisputeResolver, expecting revert
+          // Attempt to update a DisputeResolver, expecting revert
           await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.INVALID_ESCALATION_PERIOD
           );
@@ -2088,7 +2091,7 @@ describe("IBosonAccountHandler", function () {
         expect(valid).is.true;
       });
 
-      it("should update DisputeRsolverFee state only", async function () {
+      it("should update DisputeResolverFee state only", async function () {
         const disputeResolverFeesToAdd = [
           new DisputeResolverFee(other4.address, "MockToken4", "400"),
           new DisputeResolverFee(other5.address, "MockToken5", "500"),
@@ -2103,7 +2106,7 @@ describe("IBosonAccountHandler", function () {
         ]);
         const expectedDisputeResolverFeeList = new DisputeResolverFeeList(expectedDisputeResovlerFees);
 
-        // Create a dispute resolver
+        // Add fees to dispute resolver
         await accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFeesToAdd);
 
         // Get the dispute resolver data as structs
@@ -2117,7 +2120,7 @@ describe("IBosonAccountHandler", function () {
         expect(returnedDisputeResolver.isValid()).is.true;
         expect(returnedDisputeResolverFeeList.isValid()).is.true;
 
-        // Returned values should match the input in expectedDisputeResolver
+        // Returned values should match expectedDisputeResolver
         for ([key, value] of Object.entries(expectedDisputeResolver)) {
           expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
         }
@@ -2209,10 +2212,10 @@ describe("IBosonAccountHandler", function () {
           .withArgs(disputeResolver.id, feeTokenAddressesToRemove, admin.address);
       });
 
-      it("should update DisputeRsolverFee state only if some DisputeResolverFees are removed", async function () {
+      it("should update DisputeResolverFee state only if some DisputeResolverFees are removed", async function () {
         feeTokenAddressesToRemove = [other1.address, other3.address];
 
-        // Create a dispute resolver
+        // Remove fees from dispute resolver
         await accountHandler
           .connect(admin)
           .removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove);
@@ -2246,7 +2249,7 @@ describe("IBosonAccountHandler", function () {
       it("should update DisputeResolverFee state only if all DisputeResolverFees are removed", async function () {
         const feeTokenAddressesToRemove = [other1.address, other2.address, other3.address];
 
-        // Create a dispute resolver
+        // Remove fees from dispute resolver
         await accountHandler
           .connect(admin)
           .removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove);

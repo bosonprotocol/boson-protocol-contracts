@@ -134,7 +134,7 @@ describe("DisputeResolverFee", function () {
         // Promote to instance
         promoted = DisputeResolverFee.fromObject(object);
 
-        // Is a Buyer instance
+        // Is a DisputeResolverFee instance
         expect(promoted instanceof DisputeResolverFee).is.true;
 
         // Key values all match
@@ -314,7 +314,7 @@ describe("DisputeResolverFeeList", function () {
     });
 
     context("👉 Instance", async function () {
-      it("instance.toString() should return a JSON string representation of the DisputeResolverFee instance", async function () {
+      it("instance.toString() should return a JSON string representation of the DisputeResolverFeeList instance", async function () {
         dehydrated = disputeResolverFeeList.toString();
         rehydrated = JSON.parse(dehydrated);
 

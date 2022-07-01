@@ -97,7 +97,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         _disputeResolver.id = disputeResolverId;
 
-        // At least one fee must be specified. The feeAmount can be 0, but it must be intentional. However, the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
+        // The number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
         require(_disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
 
         // Get storage location for dispute resolver fees
@@ -249,10 +249,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         bool exists;
         DisputeResolver storage disputeResolver;
-        DisputeResolverFee[] storage disputeResolverFees;
         
         //Check Dispute Resolver and Dispute Resolver Fees from  disputeResolvers and disputeResolverFees mappings
-        (exists, disputeResolver, disputeResolverFees) = fetchDisputeResolver(_disputeResolver.id);
+        (exists, disputeResolver, ) = fetchDisputeResolver(_disputeResolver.id);
        
         //Dispute Resolver  must already exist
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
@@ -312,7 +311,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         //Check that msg.sender is the admin address for this dispute resolver
         require(disputeResolver.admin  == msg.sender, NOT_ADMIN); 
 
-         // At least one fee must be specified. However, the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
+         // At least one fee must be specified and the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
         require(_disputeResolverFees.length > 0 && _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
 
         //Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
@@ -357,7 +356,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         //Check that msg.sender is the admin address for this dispute resolver
         require(disputeResolver.admin  == msg.sender, NOT_ADMIN); 
 
-        // At least one fee must be specified. The feeAmount can be 0, but it must be intentional. However, the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
+         // At least one fee must be specified and the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
         require(_feeTokenAddresses.length > 0 && _feeTokenAddresses.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
 
         //Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
