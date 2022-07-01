@@ -1368,6 +1368,27 @@ describe("IBosonExchangeHandler", function () {
           // It should be finalized
           assert.equal(response, true, "Incorrectly reports unfinalized state");
         });
+
+        it("should return true if exchange has a dispute in Refused state", async function () {
+          // Escalate the dispute
+          tx = await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
+          // Get the block timestamp of the confirmed tx and set escalatedDate
+          blockNumber = tx.blockNumber;
+          block = await ethers.provider.getBlock(blockNumber);
+          const escalatedDate = block.timestamp.toString();
+
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+
+          // Expire dispute
+          await disputeHandler.connect(rando).expireEscalatedDispute(exchange.id);
+
+          // Now in Decided state, ask if exchange is finalized
+          [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
+
+          // It should be finalized
+          assert.equal(response, true, "Incorrectly reports unfinalized state");
+        });
       });
     });
 

@@ -96,7 +96,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @param _exchangeId - the id of the associated exchange
      */
     function retractDispute(uint256 _exchangeId) external override {
-        // Get the exchange, should be in dispute state
+        // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Make sure the caller is buyer associated with the exchange  // {MR: only by game}
@@ -185,7 +185,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Fetch the dispute and dispute dates
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
         
-        // Make sure the dispute is in the resolving or escalated state
+        // Make sure the dispute is in the resolving state
         require(dispute.state == DisputeState.Resolving, INVALID_STATE);
 
         // make sure the dispute not expired already
@@ -250,7 +250,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // buyer should get at most 100%
         require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
 
-        // Get the exchange, should be in dispute state
+        // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Fetch teh dispute and dispute dates
@@ -316,7 +316,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @param _exchangeId - the id of the associated exchange
      */
     function escalateDispute(uint256 _exchangeId) external override {
-        // Get the exchange, should be in dispute state
+        // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Make sure the caller is buyer associated with the exchange
@@ -363,7 +363,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // buyer should get at most 100%
         require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
 
-        // Get the exchange, should be in dispute state
+        // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Fetch teh dispute and dispute dates
@@ -384,6 +384,42 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // Notify watchers of state change
         emit DisputeDecided(_exchangeId, _buyerPercent, msg.sender);
+    }
+
+    /**
+     * @notice Expire the dispute in escalated state and release the funds
+     *
+     * Emits a EscalatedDisputeExpired event if successful.
+     *
+     * Reverts if:
+     * - exchange does not exist
+     * - exchange is not in a disputed state
+     * - dispute is in some state other than escalated
+     * - dispute escalation period has not passed yet
+     *
+     * @param _exchangeId - the id of the associated exchange
+     */
+    function expireEscalatedDispute(uint256 _exchangeId) external override {
+        // Get the exchange, should be in disputed state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+
+        // Fetch the dispute and dispute dates
+        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
+        
+        // Make sure the dispute is in the escalated state
+        require(dispute.state == DisputeState.Escalated, INVALID_STATE);
+
+        // TODO: fetch the escalation period from the storage
+        uint256 escalationPeriod = 1 weeks; // only for tests    
+
+        // make sure the dispute escalation period not expired already
+        require(block.timestamp >= disputeDates.escalated + escalationPeriod, DISPUTE_STILL_VALID);      
+
+        // Finalize the dispute
+        finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Refused, 0);
+
+        // Notify watchers of state change
+        emit EscalatedDisputeExpired(_exchangeId, msgSender());
     }
 
     /**
@@ -487,7 +523,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @notice Is the given dispute in a finalized state?
      *
      * Returns true if
-     * - Dispute state is Retracted, Resolved, or Decided
+     * - Dispute state is Retracted, Resolved, Decided or Refused
      *
      * @param _exchangeId - the id of the exchange to check
      * @return exists - true if the dispute exists
@@ -509,7 +545,8 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
             isFinalized = (
                 dispute.state == DisputeState.Retracted ||
                 dispute.state == DisputeState.Resolved ||
-                dispute.state == DisputeState.Decided
+                dispute.state == DisputeState.Decided ||
+                dispute.state == DisputeState.Refused
             );
         }
     }

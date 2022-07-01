@@ -155,6 +155,21 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
     function decideDispute(uint256 _exchangeId, uint256 _buyerPercent) external;
 
     /**
+     * @notice Expire the dispute in escalated state and release the funds
+     *
+     * Emits a EscalatedDisputeExpired event if successful.
+     *
+     * Reverts if:
+     * - exchange does not exist
+     * - exchange is not in a disputed state
+     * - dispute is in some state other than escalated
+     * - dispute escalation period has not passed yet
+     *
+     * @param _exchangeId - the id of the associated exchange
+     */
+    function expireEscalatedDispute(uint256 _exchangeId) external;
+
+    /**
      * @notice Gets the details about a given dispute.
      *
      * @param _exchangeId - the id of the exchange to check
@@ -192,7 +207,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @notice Is the given dispute in a finalized state?
      *
      * Returns true if
-     * - Dispute state is Retracted, Resolved, or Decided
+     * - Dispute state is Retracted, Resolved, Decided or Refused
      *
      * @param _exchangeId - the id of the exchange to check
      * @return exists - true if the dispute exists

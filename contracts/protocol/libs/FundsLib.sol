@@ -65,7 +65,7 @@ library FundsLib {
 
     /**
      * @notice Takes in the exchange id and releases the funds to buyer and seller, depending on the state of the exchange.
-     * It is called only from finalizeExchange and ?? finalizeDispute ?? // TODO: update description whne dispute functions are done
+     * It is called only from finalizeExchange and finalizeDispute
      *
      * @param _exchangeId - exchange id
      */
@@ -126,8 +126,8 @@ library FundsLib {
                 // RESOLVED or DECIDED
                 buyerPayoff = pot * dispute.buyerPercent/10000;
                 sellerPayoff = pot - buyerPayoff;
-            }           
-        }  
+            }
+        }
 
         // Store payoffs to availablefunds and notify the external observers
         address exchangeToken = offer.exchangeToken;
@@ -135,11 +135,11 @@ library FundsLib {
         uint256 buyerId = exchange.buyerId;
         if (sellerPayoff > 0) {
             increaseAvailableFunds(sellerId, exchangeToken, sellerPayoff);
-            emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff, msg.sender);
+            emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff, msg.sender);
         } 
         if (buyerPayoff > 0) {
             increaseAvailableFunds(buyerId, exchangeToken, buyerPayoff);
-            emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff, msg.sender);
+            emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff, msg.sender);
         }
         if (protocolFee > 0) {
             increaseAvailableFunds(0, exchangeToken, protocolFee);
