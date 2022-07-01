@@ -70,15 +70,18 @@ jobs:
         shell: bash
         run: |
           rsync -av --exclude='*.dbg.json' artifacts/contracts/interfaces addresses/abis/test/
-      - name: Create Automated Pull Request
+      - name: Commit auto-generated files
         if: env.CAN_GENERATE_AUTOMATED_PR == 'true'
-        uses: peter-evans/create-pull-request@v3
+        run: |
+          git config --local user.email "noreply@github.com"
+          git config --local user.name "GitHub Actions Bot"
+          git commit -a \
+            -m "Add json file with addresses for test environment" \
+            -m "[Test Environment] New deployed addresses" \
+            -m "This is an auto-generated commit. This commit contains addresses generated after deploy to the internal test environment."
+      - name: Push changes
+        if: env.CAN_GENERATE_AUTOMATED_PR == 'true'
+        uses: ad-m/github-push-action@master
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: Add json file with addresses for test environment.
-          committer: GitHub Actions Bot <noreply@github.com>
-          author: GitHub Actions Bot <noreply@github.com>
-          title: '[Test Environment] New deployed addresses'
-          body: >
-            This is an auto-generated PR. This PR contains addresses generated after deploy to the internal test environment.
-          labels: deployed addresses, automated pr
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
