@@ -54,7 +54,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - EscalationResponsePeriod is invalid
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
-     * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currence. Can be empty.
+     * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency. Can be empty.
      */
     function createDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver, BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees) external;
 
@@ -107,12 +107,12 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver) external;
 
     /**
-     * @notice Add DisputeResolverFees to an existing disputeResolver
+     * @notice Add DisputeResolverFees to an existing dispute resolver
      * 
      * Emits a DisputeResolverFeesAdded event if successful.
      *
      * Reverts if:
-     * - Caller is not the admin address associated with the dipute resolver account
+     * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
      * - Number of DisputeResolverFee structs in array is zero
      * - Number of DisputeResolverFee structs in array exceeds max
@@ -124,12 +124,12 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function addFeesToDisputeResolver(uint256 _disputeResolverId, BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees) external;
 
     /**
-     * @notice Remove DisputeResolverFees from  an existing disputeResolver
+     * @notice Remove DisputeResolverFees from  an existing dispute resolver
      * 
      * Emits a DisputeResolverFeesRemoved event if successful.
      *
      * Reverts if:
-     * - Caller is not the admin address associated with the dipute resolver account
+     * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
      * - Number of DisputeResolverFee structs in array is zero
      * - Number of DisputeResolverFee structs in array exceeds max

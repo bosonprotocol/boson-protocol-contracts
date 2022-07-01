@@ -7,7 +7,6 @@ import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import "hardhat/console.sol";
 
 contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
@@ -74,7 +73,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - EscalationResponsePeriod is invalid
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
-     * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currence. Can be empty.
+     * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency. Can be empty.
      */
     function createDisputeResolver(DisputeResolver memory _disputeResolver,  DisputeResolverFee[] calldata _disputeResolverFees)
     external
@@ -282,7 +281,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
-     * @notice Add DisputeResolverFees to an existing disputeResolver
+     * @notice Add DisputeResolverFees to an existing dispute resolver
      * 
      * Emits a DisputeResolverFeesAdded event if successful.
      *
@@ -327,7 +326,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
-     * @notice Remove DisputeResolverFees from  an existing disputeResolver
+     * @notice Remove DisputeResolverFees from  an existing dispute resolver
      * 
      * Emits a DisputeResolverFeesRemoved event if successful.
      *

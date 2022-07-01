@@ -2155,7 +2155,7 @@ describe("IBosonAccountHandler", function () {
           ).to.revertedWith(RevertReasons.NOT_ADMIN);
         });
 
-        it("DisputeResolverFees above empty", async function () {
+        it("DisputeResolverFees empty", async function () {
           disputeResolverFees = [];
 
           // Attempt to add fees to the dispute resolver, expecting revert

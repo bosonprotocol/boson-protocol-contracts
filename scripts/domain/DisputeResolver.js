@@ -136,7 +136,7 @@ class DisputeResolver {
   }
 
   /**
-   * Is this DisputeResolver instance's admin field valid?
+   * Is this DisputeResolver instance's operator field valid?
    * Must be a eip55 compliant Ethereum address
    * @returns {boolean}
    */
