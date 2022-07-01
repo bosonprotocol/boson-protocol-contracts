@@ -191,6 +191,7 @@ describe("IBosonExchangeHandler", function () {
 
       // Create the offer
       const { offer, offerDates, offerDurations } = await mockOffer();
+      offer.quantityAvailable = "2";
 
       // Check if domains are valid
       expect(offer.isValid()).is.true;
@@ -788,7 +789,7 @@ describe("IBosonExchangeHandler", function () {
       beforeEach(async function () {
         // Mint some tokens to be bundled
         await foreign20.connect(operator).mint(operator.address, "500");
-        await foreign721.connect(operator).mint("1");
+        await foreign721.connect(operator).mint("0", "1");
         await foreign1155.connect(operator).mint("1", "500");
 
         // Approve the protocol diamond to transfer seller's tokens
@@ -803,7 +804,6 @@ describe("IBosonExchangeHandler", function () {
         // Create an ERC721 twin
         twin721 = mockTwin(foreign721.address, TokenType.NonFungibleToken);
         twin721.id = "2";
-        twin721.supplyIds = ["1"];
         expect(twin721.isValid()).is.true;
 
         // Create an ERC1155 twin
@@ -878,14 +878,14 @@ describe("IBosonExchangeHandler", function () {
 
         it("should transfer the twin", async function () {
           // Check the operator owns the ERC721
-          owner = await foreign721.ownerOf("1");
+          owner = await foreign721.ownerOf("0");
           expect(owner).to.equal(operator.address);
 
           // Redeem the voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
           // Check the buyer owns the ERC721
-          owner = await foreign721.ownerOf("1");
+          owner = await foreign721.ownerOf("0");
           expect(owner).to.equal(buyer.address);
         });
 
@@ -896,6 +896,25 @@ describe("IBosonExchangeHandler", function () {
 
             // Attempt to redeem the voucher, expecting revert
             await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
+              RevertReasons.TWIN_TRANSFER_FAILED
+            );
+          });
+
+          it("current tokenId is greater than lastTokenId", async function () {
+            // Deposit seller funds so the second commit will not revert for Insufficient available funds";
+            await fundsHandler
+            .connect(operator)
+            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
+            // Redeem the first commit
+            await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+            // Commit to offer for the second time  
+            // Offer quantity available (2) and twin tokenIds range (1) doesn't match, seller must void the offer as all redeem will fail
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+            // Attempt to redeem the voucher, expecting revert 
+            await expect(exchangeHandler.connect(buyer).redeemVoucher("2")).to.revertedWith(
               RevertReasons.TWIN_TRANSFER_FAILED
             );
           });

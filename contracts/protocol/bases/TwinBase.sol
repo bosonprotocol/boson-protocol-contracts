@@ -48,7 +48,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         twin.id = _twin.id = twinId;
         twin.sellerId = _twin.sellerId = sellerId;
         twin.supplyAvailable = _twin.supplyAvailable;
-        twin.supplyIds = _twin.supplyIds;
+        twin.lastTokenId = _twin.lastTokenId;
         twin.tokenId = _twin.tokenId;
         twin.tokenAddress = _twin.tokenAddress;
         twin.tokenType = _twin.tokenType;
