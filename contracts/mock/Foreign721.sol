@@ -19,8 +19,8 @@ contract Foreign721 is ERC721Upgradeable {
      */
     function mint(uint256 _tokenId, uint256 _supply) public {
         for (uint256 index = 0; index < _supply; index++) {
-        _mint(msg.sender, _tokenId);
-        _tokenId++;
+            _mint(msg.sender, _tokenId);
+            _tokenId++;
         }
     }
 }

@@ -153,7 +153,9 @@ class Twin {
     let valid = false;
     let { lastTokenId } = this;
     try {
-      valid = typeof lastTokenId === "string" && (lastTokenId === "" || typeof ethers.BigNumber.from(lastTokenId) === "object");
+      valid =
+        typeof lastTokenId === "string" &&
+        (lastTokenId === "" || typeof ethers.BigNumber.from(lastTokenId) === "object");
     } catch (e) {}
     return valid;
   }
