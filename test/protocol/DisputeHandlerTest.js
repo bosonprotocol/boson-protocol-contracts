@@ -47,7 +47,7 @@ describe("IBosonDisputeHandler", function () {
   let protocolFeePercentage, protocolFeeFlatBoson;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, exchangeStruct, finalizedDate, state;
-  let dispute, disputedDate, escalatedDate, complaint, disputeStruct, timeout, newDisputeTimeout;
+  let dispute, disputedDate, escalatedDate, complaint, disputeStruct, timeout, newDisputeTimeout, escalationPeriod;
   let disputeDates, disputeDatesStruct;
   let exists, response;
   let disputeResolver, active;
@@ -844,7 +844,11 @@ describe("IBosonDisputeHandler", function () {
 
         it("Dispute can be mutualy resolved even if it's in escalated state and past the resolution period", async function () {
           // Set time forward to the dispute original expiration date
-          await setNextBlockTimestamp((ethers.BigNumber.from(disputedDate).add(resolutionPeriod/2)).toNumber());
+          await setNextBlockTimestamp(
+            ethers.BigNumber.from(disputedDate)
+              .add(resolutionPeriod / 2)
+              .toNumber()
+          );
 
           // escalate dispute
           await disputeHandler.connect(buyer).escalateDispute(exchange.id);
@@ -961,7 +965,11 @@ describe("IBosonDisputeHandler", function () {
 
         it("Dispute can be mutualy resolved even if it's in escalated state and past the resolution period", async function () {
           // Set time forward to the dispute original expiration date
-          await setNextBlockTimestamp((ethers.BigNumber.from(disputedDate).add(resolutionPeriod/2)).toNumber());
+          await setNextBlockTimestamp(
+            ethers.BigNumber.from(disputedDate)
+              .add(resolutionPeriod / 2)
+              .toNumber()
+          );
 
           // escalate dispute
           await disputeHandler.connect(buyer).escalateDispute(exchange.id);
@@ -1178,7 +1186,7 @@ describe("IBosonDisputeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
         escalatedDate = block.timestamp.toString();
         timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
-        
+
         dispute = new Dispute(exchange.id, complaint, DisputeState.Escalated, "0");
         disputeDates = new DisputeDates(disputedDate, escalatedDate, "0", timeout);
 
