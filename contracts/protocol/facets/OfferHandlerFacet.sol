@@ -46,15 +46,17 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      */
     function createOffer(
         Offer memory _offer,
-        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations
+        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId
     )
     external
     override
     {    
-        createOfferInternal(_offer, _offerDates, _offerDurations);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId);
     }
 
     /**
@@ -84,10 +86,11 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
      * @param _offerDates - the array of fully populated offer dates structs
      * @param _offerDurations - the array of fully populated offer durations structs
+     * @param _disputeResolverIds - the array of ids of chosen dispute resolvers (can be 0)
      */
     function createOfferBatch(
         Offer[] calldata _offers,
-        OfferDates[] calldata _offerDates, OfferDurations[] calldata _offerDurations
+        OfferDates[] calldata _offerDates, OfferDurations[] calldata _offerDurations, uint256[] calldata _disputeResolverIds
     )
     external
     override
@@ -100,7 +103,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
 
         for (uint256 i = 0; i < _offers.length; i++) {        
             // create offer and update structs values to represent true state
-            createOfferInternal(_offers[i], _offerDates[i], _offerDurations[i]);
+            createOfferInternal(_offers[i], _offerDates[i], _offerDurations[i], _disputeResolverIds[i]);
         }
     }   
     

@@ -62,6 +62,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.OfferDates) offerDates;
         // offer id => offer durations
         mapping(uint256 => BosonTypes.OfferDurations) offerDurations;
+        // offer id => dispute resolution terms
+        mapping(uint256 => BosonTypes.DisputeResolutionTerms) disputeResolutionTerms;       
         // exchange id => exchange
         mapping(uint256 => BosonTypes.Exchange) exchanges;
         // exchange id => dispute

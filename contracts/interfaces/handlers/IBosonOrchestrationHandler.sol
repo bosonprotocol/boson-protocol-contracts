@@ -46,8 +46,9 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      */
-    function createSellerAndOffer(BosonTypes.Seller calldata _seller, BosonTypes.Offer memory _offer, BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations) external;
+    function createSellerAndOffer(BosonTypes.Seller calldata _seller, BosonTypes.Offer memory _offer, BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations, uint256 _disputeResolverId) external;
 
     /**
      * @notice Takes an offer and a condition, creates an offer, then a group with that offer and the given condition.
@@ -75,11 +76,13 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      */
     function createOfferWithCondition(
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         BosonTypes.Condition memory _condition
     )
     external;
@@ -112,11 +115,13 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _groupId - id of the group, where offer will be added
      */
     function createOfferAddToGroup(
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         uint256 _groupId
     )
     external;
@@ -148,11 +153,13 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _twin - the fully populated twin struct
      */
     function createOfferAndTwinWithBundle(
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         BosonTypes.Twin memory _twin
     )
     external;
@@ -185,12 +192,14 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      */
     function createOfferWithConditionAndTwinAndBundle(
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         BosonTypes.Condition memory _condition,
         BosonTypes.Twin memory _twin
     )
@@ -228,12 +237,14 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      */
     function createSellerAndOfferWithCondition(
         BosonTypes.Seller memory _seller,
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         BosonTypes.Condition memory _condition
     )
     external;
@@ -271,12 +282,14 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _twin - the fully populated twin struct
      */
     function createSellerAndOfferAndTwinWithBundle(
         BosonTypes.Seller memory _seller,
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         BosonTypes.Twin memory _twin
     )
     external;
@@ -315,6 +328,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      */
@@ -322,6 +336,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
         BosonTypes.Seller memory _seller,
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         BosonTypes.Condition memory _condition,
         BosonTypes.Twin memory _twin
     )

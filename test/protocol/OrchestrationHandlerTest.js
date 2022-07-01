@@ -569,7 +569,7 @@ describe("IBosonOrchestrationHandler", function () {
             false
           );
           await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
-          
+
           // Set some address that is not registered as a dispute resolver
           offer.disputeResolverId = ++nextAccountId;
 
@@ -600,7 +600,7 @@ describe("IBosonOrchestrationHandler", function () {
             false
           );
           await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
-          
+
           // Prepare an absolute zero offer, but specify dispute resolver
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
           offer.disputeResolverId = ++nextAccountId;
@@ -981,7 +981,7 @@ describe("IBosonOrchestrationHandler", function () {
             false
           );
           await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
-          
+
           // Set some address that is not registered as a dispute resolver
           offer.disputeResolverId = ++nextAccountId;
 
@@ -1006,7 +1006,6 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
-
         it("For absolute zero offer, specified dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
           disputeResolver = await mockDisputeResolver(
@@ -1017,7 +1016,7 @@ describe("IBosonOrchestrationHandler", function () {
             false
           );
           await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
-          
+
           // Prepare an absolute zero offer, but specify dispute resolver
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
           offer.disputeResolverId = ++nextAccountId;
@@ -1455,7 +1454,7 @@ describe("IBosonOrchestrationHandler", function () {
             false
           );
           await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
-          
+
           // Set some address that is not registered as a dispute resolver
           offer.disputeResolverId = ++nextAccountId;
 
@@ -1476,7 +1475,6 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
-
         it("For absolute zero offer, specified dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
           disputeResolver = await mockDisputeResolver(
@@ -1487,7 +1485,7 @@ describe("IBosonOrchestrationHandler", function () {
             false
           );
           await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
-          
+
           // Prepare an absolute zero offer, but specify dispute resolver
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
           offer.disputeResolverId = ++nextAccountId;
@@ -1924,7 +1922,7 @@ describe("IBosonOrchestrationHandler", function () {
             false
           );
           await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
-          
+
           // Set some address that is not registered as a dispute resolver
           offer.disputeResolverId = ++nextAccountId;
 
@@ -1945,7 +1943,6 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
-
         it("For absolute zero offer, specified dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
           disputeResolver = await mockDisputeResolver(
@@ -1956,7 +1953,7 @@ describe("IBosonOrchestrationHandler", function () {
             false
           );
           await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
-          
+
           // Prepare an absolute zero offer, but specify dispute resolver
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
           offer.disputeResolverId = ++nextAccountId;

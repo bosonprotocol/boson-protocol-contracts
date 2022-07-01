@@ -37,8 +37,9 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @param _offer - the fully populated struct with offer id set to 0x0
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      */
-    function createOffer(BosonTypes.Offer memory _offer, BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations) external;
+    function createOffer(BosonTypes.Offer memory _offer, BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations, uint256 _disputeResolverId) external;
 
     /**
      * @notice Creates a batch of offers.
@@ -67,8 +68,9 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
      * @param _offerDates - the array of fully populated offer dates structs
      * @param _offerDurations - the array of fully populated offer durations structs
+     * @param _disputeResolverIds - the array of ids of chosen dispute resolvers (can be 0)
      */
-    function createOfferBatch(BosonTypes.Offer[] calldata _offers, BosonTypes.OfferDates[] calldata _offerDates, BosonTypes.OfferDurations[] calldata _offerDurations) external;
+    function createOfferBatch(BosonTypes.Offer[] calldata _offers, BosonTypes.OfferDates[] calldata _offerDates, BosonTypes.OfferDurations[] calldata _offerDurations, uint256[] calldata _disputeResolverIds) external;
 
     /**
      * @notice Voids a given offer

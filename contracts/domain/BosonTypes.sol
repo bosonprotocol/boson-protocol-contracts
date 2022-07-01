@@ -79,6 +79,11 @@ contract BosonTypes {
         uint256 feeAmount;
     }
 
+    struct DisputeResolutionTerms {
+        uint256 disputeResolverId;
+        uint256 escalationResponsePeriod;
+    }
+
     struct Offer {
         uint256 id;
         uint256 sellerId;
@@ -88,7 +93,6 @@ contract BosonTypes {
         uint256 buyerCancelPenalty;
         uint256 quantityAvailable;
         address exchangeToken;
-        uint256 disputeResolverId;
         string metadataUri;
         string metadataHash;
         bool voided;

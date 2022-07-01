@@ -56,17 +56,18 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      * @param _seller - the fully populated seller struct
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      */
     function createSellerAndOffer(
         Seller memory _seller,
         Offer memory _offer,
-        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations
+        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations, uint256 _disputeResolverId
     )
     external
     override
     {   
         checkAndCreateSeller(_seller);
-        createOfferInternal(_offer, _offerDates, _offerDurations);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId);
     }
 
     /**
@@ -95,18 +96,20 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      */
     function createOfferWithCondition(
         Offer memory _offer,
         OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         Condition memory _condition
     )
     public
     override
     {   
         // create offer and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId);
 
         // construct new group
         // - groupid is 0, and it is ignored
@@ -146,16 +149,18 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _groupId - id of the group, where offer will be added
      */
     function createOfferAddToGroup(
         Offer memory _offer,
-        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
+        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations, 
+        uint256 _disputeResolverId,
         uint256 _groupId
     )
     external override {
         // create offer and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId);
 
         // create an array with offer ids and add it to the group
         uint256[] memory _offerIds = new uint256[](1);
@@ -190,17 +195,19 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _twin - the fully populated twin struct
      */
     function createOfferAndTwinWithBundle(
         Offer memory _offer,
         OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         Twin memory _twin
     )
     public 
     override {
         // create seller and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId);
 
         // create twin and pack everything into a bundle
         createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
@@ -234,18 +241,20 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      */
     function createOfferWithConditionAndTwinAndBundle(
         Offer memory _offer,
         OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         Condition memory _condition,
         Twin memory _twin
     )
     public override {
         // create offer with condition first
-        createOfferWithCondition(_offer, _offerDates, _offerDurations, _condition);
+        createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition);
         // create twin and pack everything into a bundle
         createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
     }
@@ -311,18 +320,20 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      */
     function createSellerAndOfferWithCondition(
         Seller memory _seller,
         Offer memory _offer,
         OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         Condition memory _condition
     )
     external 
     override {
         checkAndCreateSeller(_seller);
-        createOfferWithCondition(_offer, _offerDates, _offerDurations, _condition);
+        createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition);
     } 
 
     /**
@@ -358,18 +369,20 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _twin - the fully populated twin struct
      */
     function createSellerAndOfferAndTwinWithBundle(
         Seller memory _seller,
         Offer memory _offer,
         OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         Twin memory _twin
     )
     external 
     override {
         checkAndCreateSeller(_seller);
-        createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _twin);
+        createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin);
     }
 
     /**
@@ -406,6 +419,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      */
@@ -413,12 +427,13 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
         Seller memory _seller,
         Offer memory _offer,
         OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         Condition memory _condition,
         Twin memory _twin
     )
     external override {
         checkAndCreateSeller(_seller);
-        createOfferWithConditionAndTwinAndBundle(_offer, _offerDates, _offerDurations, _condition, _twin);
+        createOfferWithConditionAndTwinAndBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _twin);
     }
 
     /**

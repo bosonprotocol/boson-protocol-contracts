@@ -315,7 +315,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // Notify watchers of state change
-        emit DisputeEscalated(_exchangeId, offer.disputeResolverId, msgSender());
+        emit DisputeEscalated(_exchangeId, protocolEntities().disputeResolutionTerms[offer.id].disputeResolverId, msgSender());
     }
 
     /**
@@ -351,7 +351,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // get dispute resolver id to check if caller is the dispute resolver
         uint256 disputeResolverId = protocolLookups().disputeResolverIdByOperator[msg.sender];
-        require(disputeResolverId == offer.disputeResolverId, NOT_DISPUTE_RESOLVER_OPERATOR);
+        require(disputeResolverId == protocolEntities().disputeResolutionTerms[offer.id].disputeResolverId, NOT_DISPUTE_RESOLVER_OPERATOR);
 
         // finalize the dispute
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Decided, _buyerPercent);
