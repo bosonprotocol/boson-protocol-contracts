@@ -981,7 +981,7 @@ describe("IBosonExchangeHandler", function () {
           expect(balance).to.equal(0);
 
           // Check the operator owns the ERC721
-          owner = await foreign721.ownerOf("1");
+          owner = await foreign721.ownerOf("0");
           expect(owner).to.equal(operator.address);
 
           // Check the buyer's balance of the ERC1155
@@ -996,7 +996,7 @@ describe("IBosonExchangeHandler", function () {
           expect(balance).to.equal(1);
 
           // Check the buyer owns the ERC721
-          owner = await foreign721.ownerOf("1");
+          owner = await foreign721.ownerOf("0");
           expect(owner).to.equal(buyer.address);
 
           // Check the buyer's balance of the ERC1155
