@@ -39,6 +39,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      *
      * @param _seller - the fully populated seller struct
@@ -67,6 +68,7 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      *
@@ -101,7 +103,8 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
-s    *   - Buyer cancel penalty is greater than price
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     *   - Buyer cancel penalty is greater than price
      * - when adding to the group if:
      *   - Group does not exists
      *   - Caller is not the operator of the group
@@ -137,6 +140,7 @@ s    *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
@@ -172,6 +176,7 @@ s    *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      * - when creating twin if
@@ -215,6 +220,7 @@ s    *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      *
@@ -256,6 +262,7 @@ s    *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
@@ -298,6 +305,7 @@ s    *   - Buyer cancel penalty is greater than price
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      * - when creating twin if

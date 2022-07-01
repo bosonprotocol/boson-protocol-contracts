@@ -559,10 +559,51 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
+        it("Dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          
+          // Set some address that is not registered as a dispute resolver
+          offer.disputeResolverId = ++nextAccountId;
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
         it("For absolute zero offer, specified dispute resolver is not registered", async function () {
           // Prepare an absolute zero offer, but specify dispute resolver
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
           offer.disputeResolverId = "16";
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("For absolute zero offer, specified dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          
+          // Prepare an absolute zero offer, but specify dispute resolver
+          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
+          offer.disputeResolverId = ++nextAccountId;
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -930,10 +971,56 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
+        it("Dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          
+          // Set some address that is not registered as a dispute resolver
+          offer.disputeResolverId = ++nextAccountId;
+
+          // Attempt to create an offer with condition, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
         it("For absolute zero offer, specified dispute resolver is not registered", async function () {
           // Prepare an absolute zero offer, but specify dispute resolver
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
           offer.disputeResolverId = "16";
+
+          // Attempt to create an offer with condition, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+
+        it("For absolute zero offer, specified dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          
+          // Prepare an absolute zero offer, but specify dispute resolver
+          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
+          offer.disputeResolverId = ++nextAccountId;
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
@@ -1358,10 +1445,52 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
+        it("Dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          
+          // Set some address that is not registered as a dispute resolver
+          offer.disputeResolverId = ++nextAccountId;
+
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(
+            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
         it("For absolute zero offer, specified dispute resolver is not registered", async function () {
           // Prepare an absolute zero offer, but specify dispute resolver
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
           offer.disputeResolverId = "16";
+
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(
+            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+
+        it("For absolute zero offer, specified dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          
+          // Prepare an absolute zero offer, but specify dispute resolver
+          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
+          offer.disputeResolverId = ++nextAccountId;
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
@@ -1785,10 +1914,52 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
+        it("Dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          
+          // Set some address that is not registered as a dispute resolver
+          offer.disputeResolverId = ++nextAccountId;
+
+          // Attempt to create an offer, twin and bundle, expecting revert
+          await expect(
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
         it("For absolute zero offer, specified dispute resolver is not registered", async function () {
           // Prepare an absolute zero offer, but specify dispute resolver
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
           offer.disputeResolverId = "16";
+
+          // Attempt to create an offer, twin and bundle, expecting revert
+          await expect(
+            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+
+        it("For absolute zero offer, specified dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          
+          // Prepare an absolute zero offer, but specify dispute resolver
+          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
+          offer.disputeResolverId = ++nextAccountId;
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(

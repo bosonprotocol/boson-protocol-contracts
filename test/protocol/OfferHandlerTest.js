@@ -473,6 +473,33 @@ describe("IBosonOfferHandler", function () {
           );
         });
 
+        it("Dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          
+          // Set some address that is not registered as a dispute resolver
+          offer.disputeResolverId = ++nextAccountId;
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.INVALID_DISPUTE_RESOLVER
+          );
+
+          // after activation it should be possible to create the offer
+          await accountHandler.connect(deployer).activateDisputeResolver(nextAccountId);
+
+          // Create an offer, test event
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
+          .to.emit(offerHandler, "OfferCreated");
+        });
+
         it("For absolute zero offer, specified dispute resolver is not registered", async function () {
           // Prepare an absolute zero offer, but specify dispute resolver
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
@@ -482,6 +509,34 @@ describe("IBosonOfferHandler", function () {
           await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
             RevertReasons.INVALID_DISPUTE_RESOLVER
           );
+        });
+
+        it("For absolute zero offer, specified dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          
+          // Prepare an absolute zero offer, but specify dispute resolver
+          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
+          offer.disputeResolverId = ++nextAccountId;
+
+          // Attempt to Create an offer, expecting revert
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations)).to.revertedWith(
+            RevertReasons.INVALID_DISPUTE_RESOLVER
+          );
+
+          // after activation it should be possible to create the offer
+          await accountHandler.connect(deployer).activateDisputeResolver(nextAccountId);
+
+          // Create an offer, test event
+          await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations))
+          .to.emit(offerHandler, "OfferCreated");
         });
       });
     });
@@ -1223,15 +1278,70 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
+        it("For some offer, dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          
+          // Set some address that is not registered as a dispute resolver
+          offers[2].disputeResolverId = ++nextAccountId;
+
+          // Attempt to Create offers, expecting revert
+          await expect(offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)).to.revertedWith(
+            RevertReasons.INVALID_DISPUTE_RESOLVER
+          );
+
+          // after activation it should be possible to create the offer
+          await accountHandler.connect(deployer).activateDisputeResolver(nextAccountId);
+
+          // Create offers, test event
+          await expect(offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList))
+          .to.emit(offerHandler, "OfferCreated");
+        });
+
         it("For some absolute zero offer, specified dispute resolver is not registered", async function () {
           // Prepare an absolute zero offer, but specify dispute resolver
           offers[2].price = offers[2].sellerDeposit = offers[2].buyerCancelPenalty = offers[2].protocolFee = "0";
           offers[2].disputeResolverId = "16";
 
-          // Attempt to Create an offer, expecting revert
+          // Attempt to Create offers, expecting revert
           await expect(
             offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("For some absolute zero offer, specified dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          
+          // Prepare an absolute zero offer, but specify dispute resolver
+          offers[1].price = offers[1].sellerDeposit = offers[1].buyerCancelPenalty = offers[1].protocolFee = "0";
+          offers[1].disputeResolverId = ++nextAccountId;
+
+          // Attempt to Create offers, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+
+          // after activation it should be possible to create the offer
+          await accountHandler.connect(deployer).activateDisputeResolver(nextAccountId);
+
+          // Create offers, test event
+          await expect(offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList))
+          .to.emit(offerHandler, "OfferCreated");
         });
 
         it("Number of dispute dates does not match the number of offers", async function () {

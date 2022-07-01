@@ -29,6 +29,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      * - Buyer cancel penalty is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
@@ -79,6 +80,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      * - Buyer cancel penalty is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
@@ -114,10 +116,10 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // quantity must be greater than zero
         require(_offer.quantityAvailable > 0, INVALID_QUANTITY_AVAILABLE);
 
-        // specified resolver must be registered, except for absolute zero offers with unspecified dispute resolver
+        // specified resolver must be registered and active, except for absolute zero offers with unspecified dispute resolver
         if (_offer.price != 0 || _offer.sellerDeposit != 0 || _offer.disputeResolverId != 0) {
-            (bool exists,,) = fetchDisputeResolver(_offer.disputeResolverId);
-            require(exists, INVALID_DISPUTE_RESOLVER);
+            (bool exists, DisputeResolver storage disputeResolver,) = fetchDisputeResolver(_offer.disputeResolverId);
+            require(exists && disputeResolver.active, INVALID_DISPUTE_RESOLVER);
         }
 
         // Calculate and set the protocol fee

@@ -49,6 +49,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
@@ -87,6 +88,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      *
@@ -135,6 +137,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - when adding to the group if:
      *   - Group does not exists
@@ -179,6 +182,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
@@ -221,6 +225,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      * - when creating twin if
@@ -298,6 +303,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      *
@@ -343,6 +349,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
@@ -389,6 +396,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      * - when creating twin if
