@@ -47,8 +47,8 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         // Set twin props individually since memory structs can't be copied to storage
         twin.id = _twin.id = twinId;
         twin.sellerId = _twin.sellerId = sellerId;
-        twin.supplyAvailable = _twin.supplyAvailable;
         twin.lastTokenId = _twin.lastTokenId;
+        twin.amount = _twin.amount;
         twin.tokenId = _twin.tokenId;
         twin.tokenAddress = _twin.tokenAddress;
         twin.tokenType = _twin.tokenType;

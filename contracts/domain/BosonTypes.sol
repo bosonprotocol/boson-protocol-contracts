@@ -140,7 +140,7 @@ contract BosonTypes {
     struct Twin {
         uint256 id;
         uint256 sellerId;
-        uint256 supplyAvailable; // ERC-1155 / ERC-20
+        uint256 amount; // ERC-1155 / ERC-20 (amount to be transferred to each buyer on redemption)
         uint256 lastTokenId; // ERC-721 (the last token id of the ERC-721 available range)
         uint256 tokenId; // ERC-1155 / ERC-721 (must be initialized with the initial pointer position of the ERC-721 ids available range)
         address tokenAddress; // all

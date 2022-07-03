@@ -242,7 +242,7 @@ describe("IBosonTwinHandler", function () {
         twin.tokenAddress = foreign1155.address;
 
         // Mint a token and approve twinHandler contract to transfer it
-        await foreign1155.connect(operator).mint(twin.tokenId, twin.supplyAvailable);
+        await foreign1155.connect(operator).mint(twin.tokenId, twin.amount);
         await foreign1155.connect(operator).setApprovalForAll(twinHandler.address, true);
 
         // Create a twin, testing for the event

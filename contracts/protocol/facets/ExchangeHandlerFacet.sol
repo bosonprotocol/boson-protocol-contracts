@@ -521,7 +521,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                             "transferFrom(address,address,uint256)",
                             seller.operator,
                             msg.sender,
-                            1
+                            twin.amount
                         )
                     );
                 } else if (twin.tokenType == TokenType.NonFungibleToken) {
@@ -549,9 +549,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                             seller.operator,
                             msg.sender,
                             twin.tokenId,
-                            1,
+                            twin.amount,
                             ""
-                        )
+                            )
                     );
                 }
                 require(success, TWIN_TRANSFER_FAILED);
