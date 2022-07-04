@@ -1564,9 +1564,9 @@ describe("IBosonDisputeHandler", function () {
           await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
 
           // Attempt to decide the dispute, expecting revert
-          await expect(
-            disputeHandler.connect(disputeResolver).decideDispute(exchange.id, buyerPercent)
-          ).to.revertedWith(RevertReasons.DISPUTE_HAS_EXPIRED);
+          await expect(disputeHandler.connect(operatorDR).decideDispute(exchange.id, buyerPercent)).to.revertedWith(
+            RevertReasons.DISPUTE_HAS_EXPIRED
+          );
         });
       });
     });
