@@ -1,0 +1,13 @@
+name: Contracts CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: build
+    steps:
+      - run: gh auth status
+        env:
+          GITHUB_TOKEN: ${{ secrets.BOT_PAT }}
+

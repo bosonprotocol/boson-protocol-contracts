@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.BOT_PAT }}
       - name: Setup node
         uses: actions/setup-node@v2.5.1
         with:
@@ -47,14 +49,10 @@ jobs:
           rsync -av --exclude='*.dbg.json' artifacts/contracts/interfaces addresses/abis/test/
       - name: Commit auto-generated files
         run: |
-          git config --local user.email "noreply@github.com"
+          git config --local user.email "bsn-ci@users.noreply.github.com"
           git config --local user.name "GitHub Actions Bot"
           git commit -a \
             -m "[skip ci] Add json file with addresses for test environment" \
             -m "[Test Environment] New deployed addresses" \
             -m "This is an auto-generated commit. This commit contains addresses generated after deploy to the internal test environment."
-      - name: Push changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref }}
+          git push
