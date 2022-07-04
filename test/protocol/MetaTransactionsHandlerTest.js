@@ -12,7 +12,6 @@ const MetaTxFundDetails = require("../../scripts/domain/MetaTxFundDetails");
 const MetaTxOfferDetails = require("../../scripts/domain/MetaTxOfferDetails");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
-const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const Voucher = require("../../scripts/domain/Voucher");
@@ -24,14 +23,15 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { prepareDataSignatureParameters, setNextBlockTimestamp } = require("../../scripts/util/test-utils.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { mockOffer, mockTwin } = require("../utils/mock");
+const { mockOffer, mockTwin, mockDisputeResolver } = require("../utils/mock");
+const { oneMonth } = require("../utils/constants");
 /**
  *  Test the Boson Meta transactions Handler interface
  */
 describe("IBosonMetaTransactionsHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, buyer, admin, clerk, treasury, other1;
+  let deployer, rando, operator, buyer, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
   let erc165,
     protocolDiamond,
     accessController,
@@ -45,7 +45,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     support,
     result;
   let metaTransactionsHandler, nonce, functionSignature;
-  let seller, offerId, id, buyerId;
+  let seller, offerId, id, buyerId, nextAccountId;
   let clients;
   let bosonVoucher;
   let validOfferDetails,
@@ -62,7 +62,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let protocolFeePercentage, protocolFeeFlatBoson;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
-  let disputeResolver, active;
+  let disputeResolver, active, disputeResolverFees;
   let twin, success;
   let exchangeId,
     mockToken,
@@ -88,7 +88,8 @@ describe("IBosonMetaTransactionsHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, buyer, rando, admin, clerk, treasury, other1] = await ethers.getSigners();
+    [deployer, operator, buyer, rando, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR] =
+      await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -137,6 +138,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         maxOffersPerBundle: 100,
         maxOffersPerBatch: 100,
         maxTokensPerWithdrawal: 100,
+        maxFeesPerDisputeResolver: 100,
+        maxEscalationResponsePeriod: oneMonth,
       },
       // Protocol fees
       {
@@ -600,7 +603,9 @@ describe("IBosonMetaTransactionsHandler", function () {
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = offerId = "1";
+        id = offerId = nextAccountId = "1";
+
+        active = true;
 
         // Create a valid seller
         seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
@@ -608,12 +613,21 @@ describe("IBosonMetaTransactionsHandler", function () {
         await accountHandler.connect(operator).createSeller(seller);
 
         // Create a valid dispute resolver
-        active = true;
-        disputeResolver = new DisputeResolver(id, other1.address, active);
+        disputeResolver = await mockDisputeResolver(
+          operatorDR.address,
+          adminDR.address,
+          clerkDR.address,
+          treasuryDR.address,
+          false
+        );
         expect(disputeResolver.isValid()).is.true;
 
-        // Register the dispute resolver
-        await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+        //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
+        disputeResolverFees = [];
+
+        // Register and activate the dispute resolver
+        await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+        await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
         // Valid offer domains
         ({ offer, offerDates, offerDurations } = await mockOffer());
@@ -777,8 +791,10 @@ describe("IBosonMetaTransactionsHandler", function () {
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = offerId = "1";
+        id = offerId = nextAccountId = "1";
         buyerId = "3"; // created after seller and dispute resolver
+
+        active = true;
 
         // Create a valid seller
         seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
@@ -786,12 +802,21 @@ describe("IBosonMetaTransactionsHandler", function () {
         await accountHandler.connect(operator).createSeller(seller);
 
         // Create a valid dispute resolver
-        active = true;
-        disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+        disputeResolver = await mockDisputeResolver(
+          operatorDR.address,
+          adminDR.address,
+          clerkDR.address,
+          treasuryDR.address,
+          false
+        );
         expect(disputeResolver.isValid()).is.true;
 
-        // Register the dispute resolver
-        await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+        //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
+        disputeResolverFees = [];
+
+        // Register and activate the dispute resolver
+        await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+        await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
         // Create the offer
         ({ offer, offerDates, offerDurations } = await mockOffer());
@@ -1781,7 +1806,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = exchangeId = "1";
+        id = exchangeId = nextAccountId = "1";
         buyerId = "3"; // created after a seller and a dispute resolver
         active = true;
 
@@ -1789,13 +1814,23 @@ describe("IBosonMetaTransactionsHandler", function () {
         seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
         expect(seller.isValid()).is.true;
         await accountHandler.connect(operator).createSeller(seller);
-
         // Create a valid dispute resolver
-        disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+
+        disputeResolver = await mockDisputeResolver(
+          operatorDR.address,
+          adminDR.address,
+          clerkDR.address,
+          treasuryDR.address,
+          false
+        );
         expect(disputeResolver.isValid()).is.true;
 
-        // Register the dispute resolver
-        await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+        //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
+        disputeResolverFees = [];
+
+        // Register and activate the dispute resolver
+        await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+        await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
         const { offer, ...mo } = await mockOffer();
         ({ offerDates, offerDurations } = mo);
