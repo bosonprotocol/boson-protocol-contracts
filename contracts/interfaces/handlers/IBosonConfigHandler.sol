@@ -196,7 +196,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     function setMaxDisputesPerBatch(uint16 _maxDisputesPerBatch) external;
 
     /**
-     * @notice Get the maximum offers per batch
+     * @notice Get the maximum disputes per batch
      */
     function getMaxDisputesPerBatch() external view returns (uint16);   
 }

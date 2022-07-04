@@ -432,7 +432,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     }
 
     /**
-     * @notice Get the maximum offers per batch
+     * @notice Get the maximum disputes per batch
      */
     function getMaxDisputesPerBatch()
     external
