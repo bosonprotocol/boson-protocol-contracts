@@ -42,6 +42,10 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             require(_twin.lastTokenId >= _twin.tokenId, ERC721_INVALID_RANGE);
         }
 
+        if(_twin.tokenType == TokenType.FungibleToken || _twin.tokenType == TokenType.MultiToken) {
+            require(_twin.amount > 0, INVALID_AMOUNT);   
+        }
+
         // Get the next twinId and increment the counter
         uint256 twinId = protocolCounters().nextTwinId++;
 

@@ -83,15 +83,7 @@ class Twin {
    * @returns {string}
    */
   toStruct() {
-    return [
-      this.id,
-      this.sellerId,
-      this.amount,
-      this.lastTokenId,
-      this.tokenId,
-      this.tokenAddress,
-      this.tokenType,
-    ];
+    return [this.id, this.sellerId, this.amount, this.lastTokenId, this.tokenId, this.tokenAddress, this.tokenType];
   }
 
   /**

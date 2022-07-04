@@ -834,6 +834,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Create an ERC20 twin
         twin20 = mockTwin(foreign20.address);
+        twin20.amount = "1";
         expect(twin20.isValid()).is.true;
 
         // Create an ERC721 twin
@@ -845,6 +846,7 @@ describe("IBosonExchangeHandler", function () {
         twin1155 = mockTwin(foreign1155.address, TokenType.MultiToken);
         twin1155.id = "3";
         twin1155.tokenId = "1";
+        twin1155.amount = "1";
 
         expect(twin1155.isValid()).is.true;
 
@@ -884,7 +886,8 @@ describe("IBosonExchangeHandler", function () {
           expect(balance).to.equal(1);
         });
 
-        context("💔 Revert Reasons", async function () {
+        // Skip these tests because we decide that for now we shouldn't revert redeemVoucher if twin transfer failed otherwise buyer will lose cancellation penalty
+        context.skip("💔 Revert Reasons", async function () {
           it("unable to transfer the twin", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
             await foreign20.connect(operator).approve(protocolDiamond.address, "0");
@@ -941,7 +944,8 @@ describe("IBosonExchangeHandler", function () {
           await expect(exchangeHandler.connect(buyer).redeemVoucher("2")).to.not.reverted;
         });
 
-        context("💔 Revert Reasons", async function () {
+        // Skip these tests because we decide that for now we shouldn't revert redeemVoucher if twin transfer failed otherwise buyer will lose cancellation penalty
+        context.skip("💔 Revert Reasons", async function () {
           it("unable to transfer the twin", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
             await foreign721.connect(operator).setApprovalForAll(protocolDiamond.address, false);
@@ -982,7 +986,8 @@ describe("IBosonExchangeHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
-          it("unable to transfer the twin", async function () {
+          // Skip these tests because we decide that for now we shouldn't revert redeemVoucher if twin transfer failed otherwise buyer will lose cancellation penalty
+          it.skip("unable to transfer the twin", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
             await foreign1155.connect(operator).setApprovalForAll(protocolDiamond.address, false);
 
@@ -1037,7 +1042,8 @@ describe("IBosonExchangeHandler", function () {
           expect(balance).to.equal(1);
         });
 
-        context("💔 Revert Reasons", async function () {
+        // Skip these tests because we decide that for now we shouldn't revert redeemVoucher if twin transfer failed otherwise buyer will lose cancellation penalty
+        context.skip("💔 Revert Reasons", async function () {
           it("unable to transfer the ERC20 twin", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
             await foreign20.connect(operator).approve(protocolDiamond.address, "0");

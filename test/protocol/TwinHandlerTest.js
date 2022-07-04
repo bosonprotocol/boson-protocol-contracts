@@ -312,6 +312,29 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
+        it("Amount must not be zero if token type is ERC20", async function () {
+          // Approving the twinHandler contract to transfer seller's tokens
+          await bosonToken.connect(operator).approve(twinHandler.address, 1);
+
+          twin.amount = "0";
+          twin.tokenAddress = bosonToken.address;
+          twin.tokenType = TokenType.FungibleToken;
+
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(RevertReasons.INVALID_AMOUNT);
+        });
+
+        it("Amount must not be zero if token is type is ERC1155", async function () {
+          // Mint a token and approve twinHandler contract to transfer it
+          await foreign1155.connect(operator).mint(twin.tokenId, "1");
+          await foreign1155.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+          twin.amount = "0";
+          twin.tokenAddress = foreign1155.address;
+          twin.tokenType = TokenType.MultiToken;
+
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(RevertReasons.INVALID_AMOUNT);
+        });
+
         context("Token address is unsupported", async function () {
           it("Token address is a zero address", async function () {
             twin.tokenAddress = ethers.constants.AddressZero;

@@ -516,7 +516,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                 bytes memory result;
                 if (twin.tokenType == TokenType.FungibleToken) {
                     // ERC-20 style transfer
-                    (success, result) = twin.tokenAddress.call(
+                    (, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
                             "transferFrom(address,address,uint256)",
                             seller.operator,
@@ -530,7 +530,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                     if(pointer <= twin.lastTokenId) {
                         // ERC-721 style transfer
                         twin.tokenId++;
-                        (success, result) = twin.tokenAddress.call(
+                        (, result) = twin.tokenAddress.call(
                             abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,bytes)",
                             seller.operator,
@@ -538,12 +538,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                             pointer,
                             ""
                         ));
-                    } else {
-                        success = true;
-                    }
+                    } 
                 } else if (twin.tokenType == TokenType.MultiToken){
                     // ERC-1155 style transfer
-                    (success, result) = twin.tokenAddress.call(
+                    (, result) = twin.tokenAddress.call(
                             abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
                             seller.operator,
@@ -554,7 +552,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                             )
                     );
                 }
-                require(success, TWIN_TRANSFER_FAILED);
+                // @TODO comment the line below because we assume that for now we'll not revert the redeem if Twin transfer failed.
+                // require(success, TWIN_TRANSFER_FAILED);
             }
         }
     }
