@@ -2,12 +2,9 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const { gasLimit } = require("../../environments");
-
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
-const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
-
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -16,8 +13,8 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { setNextBlockTimestamp, getEvent, prepareDataSignatureParameters } = require("../../scripts/util/test-utils.js");
-const { mockOffer } = require("../utils/mock");
-const { oneWeek } = require("../utils/constants");
+const { oneMonth, oneWeek } = require("../utils/constants");
+const { mockOffer, mockDisputeResolver } = require("../utils/mock");
 
 /**
  *  Test the Boson Funds Handler interface
@@ -25,7 +22,7 @@ const { oneWeek } = require("../utils/constants");
 describe("IBosonFundsHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, admin, clerk, treasury, feeCollector, disputeResolver;
+  let deployer, rando, operator, admin, clerk, treasury, feeCollector, operatorDR, adminDR, clerkDR, treasuryDR;
   let erc165,
     protocolDiamond,
     accessController,
@@ -38,7 +35,7 @@ describe("IBosonFundsHandler", function () {
     disputeHandler;
   let support;
   let seller, active;
-  let id, buyer, offerToken, offerNative, sellerId;
+  let id, buyer, offerToken, offerNative, sellerId, nextAccountId;
   let mockToken, bosonToken;
   let depositAmount;
   let protocolFee, price, sellerDeposit;
@@ -55,7 +52,7 @@ describe("IBosonFundsHandler", function () {
     expectedProtocolAvailableFunds;
   let tokenListSeller, tokenListBuyer, tokenAmountsSeller, tokenAmountsBuyer, tokenList, tokenAmounts;
   let tx, txReceipt, txCost, event;
-  let disputeResolverEntity;
+  let disputeResolverFees, disputeResolver;
   let buyerPercent;
   let resolutionType, customSignatureType, message, r, s, v;
   let disputedDate, escalatedDate, timeout;
@@ -70,7 +67,7 @@ describe("IBosonFundsHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, buyer, feeCollector, disputeResolver] =
+    [deployer, operator, admin, clerk, treasury, rando, buyer, feeCollector, operatorDR, adminDR, clerkDR, treasuryDR] =
       await ethers.getSigners();
 
     // Deploy the Protocol Diamond
@@ -116,6 +113,8 @@ describe("IBosonFundsHandler", function () {
         maxOffersPerBundle: 100,
         maxOffersPerBatch: 100,
         maxTokensPerWithdrawal: 100,
+        maxFeesPerDisputeResolver: 100,
+        maxEscalationResponsePeriod: oneMonth,
       },
       // Protocol fees
       {
@@ -335,16 +334,27 @@ describe("IBosonFundsHandler", function () {
     context("💸 withdraw", async function () {
       beforeEach(async function () {
         // Initial ids for all the things
-        id = sellerId = exchangeId = "1";
+        id = sellerId = exchangeId = nextAccountId = "1";
         buyerId = "3"; // created after a seller and a dispute resolver
 
-        // Create a valid dispute resolver
         active = true;
-        disputeResolverEntity = new DisputeResolver(id, disputeResolver.address, active);
-        expect(disputeResolverEntity.isValid()).is.true;
 
-        // Register the dispute resolver
-        await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
+        // Create a valid dispute resolver
+        disputeResolver = await mockDisputeResolver(
+          operatorDR.address,
+          adminDR.address,
+          clerkDR.address,
+          treasuryDR.address,
+          false
+        );
+        expect(disputeResolver.isValid()).is.true;
+
+        //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
+        disputeResolverFees = [];
+
+        // Register and activate the dispute resolver
+        await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+        await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
         // Mock offer
         const { offer, offerDates, offerDurations } = await mockOffer();
@@ -1183,7 +1193,8 @@ describe("IBosonFundsHandler", function () {
   context("📋 FundsLib  Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
-      id = sellerId = "1";
+      id = sellerId = nextAccountId = "1";
+      active = true;
 
       // Create a valid seller
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
@@ -1191,12 +1202,21 @@ describe("IBosonFundsHandler", function () {
       await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid dispute resolver
-      active = true;
-      disputeResolverEntity = new DisputeResolver(id, disputeResolver.address, active);
-      expect(disputeResolverEntity.isValid()).is.true;
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
+      expect(disputeResolver.isValid()).is.true;
 
-      // Register the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
+      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
+      disputeResolverFees = [];
+
+      // Register and activate the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+      await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
       const { offer, ...mo } = await mockOffer();
       offer.quantityAvailable = "2";
@@ -2026,12 +2046,12 @@ describe("IBosonFundsHandler", function () {
 
           it("should emit a FundsReleased event", async function () {
             // Decide the dispute, expecting event
-            await expect(disputeHandler.connect(disputeResolver).decideDispute(exchangeId, buyerPercent))
+            await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent))
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, disputeResolver.address)
-              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, disputeResolver.address)
+              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, operatorDR.address)
+              .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, operatorDR.address)
               .to.not.emit(disputeHandler, "ProtocolFeeCollected")
-              .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, disputeResolver.address);
+              .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, operatorDR.address);
           });
 
           it("should update state", async function () {
@@ -2052,7 +2072,7 @@ describe("IBosonFundsHandler", function () {
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
 
             // Decide the dispute, so the funds are released
-            await disputeHandler.connect(disputeResolver).decideDispute(exchangeId, buyerPercent);
+            await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent);
 
             // Available funds should be increased for
             // buyer: (price + sellerDeposit)*buyerPercentage
