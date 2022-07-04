@@ -32,7 +32,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
     internal
     {
         // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+        (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
         require(exists, NOT_OPERATOR);
         
         // limit maximum number of offers to avoid running into block gas limit in a loop
@@ -172,7 +172,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         require(exists, NO_SUCH_GROUP);
 
         // Get seller id, we assume seller id exists if group exists
-        (, sellerId) = getSellerIdByOperator(msg.sender);
+        (, sellerId) = getSellerIdByOperator(msgSender());
 
         // Caller's seller id must match group seller id
         require(sellerId == group.sellerId, NOT_OPERATOR);

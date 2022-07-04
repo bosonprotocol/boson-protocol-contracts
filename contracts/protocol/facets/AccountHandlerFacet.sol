@@ -147,7 +147,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         require(exists, NO_SUCH_SELLER);
 
         //Check that msg.sender is the admin address for this seller
-        require(seller.admin  == msg.sender, NOT_ADMIN); 
+        require(seller.admin == msgSender(), NOT_ADMIN);
 
         //Check that the addresses are unique to one seller Id -- not used or are used by this seller id. Checking this seller id is necessary because one or more addresses may not change
         require((protocolLookups().sellerIdByOperator[_seller.operator] == 0 || protocolLookups().sellerIdByOperator[_seller.operator] == _seller.id) && 
@@ -198,7 +198,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         require(exists, NO_SUCH_BUYER);
 
         //Check that msg.sender is the wallet address for this buyer
-        require(buyer.wallet  == msg.sender, NOT_BUYER_WALLET); 
+        require(buyer.wallet == msgSender(), NOT_BUYER_WALLET);
 
         //Check that current wallet address does not own any vouchers, if changing wallet address
         if(buyer.wallet != _buyer.wallet) {
@@ -211,7 +211,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
                 protocolLookups().buyerIdByWallet[_buyer.wallet] == _buyer.id, BUYER_ADDRESS_MUST_BE_UNIQUE);
        
         //Delete current mappings
-        delete protocolLookups().buyerIdByWallet[msg.sender];
+        delete protocolLookups().buyerIdByWallet[msgSender()];
 
         storeBuyer(_buyer);
         
@@ -257,7 +257,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
 
         //Check that msg.sender is the admin address for this dispute resolver
-        require(disputeResolver.admin  == msg.sender, NOT_ADMIN); 
+        require(disputeResolver.admin == msgSender(), NOT_ADMIN);
 
         //check that the addresses are unique to one dispute resolverId if new
         require((protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] == 0 || protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] == _disputeResolver.id) &&
@@ -309,7 +309,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
 
         //Check that msg.sender is the admin address for this dispute resolver
-        require(disputeResolver.admin  == msg.sender, NOT_ADMIN); 
+        require(disputeResolver.admin == msgSender(), NOT_ADMIN);
 
          // At least one fee must be specified and the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
         require(_disputeResolverFees.length > 0 && _disputeResolverFees.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
@@ -321,7 +321,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
             protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_disputeResolverFees[i].tokenAddress] = disputeResolverFees.length; //Set index mapping. Should be index in disputeResolverFees array + 1
         }
 
-        emit DisputeResolverFeesAdded(_disputeResolverId, _disputeResolverFees, msg.sender);
+        emit DisputeResolverFeesAdded(_disputeResolverId, _disputeResolverFees, msgSender());
     }
 
     /**
@@ -354,7 +354,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
 
         //Check that msg.sender is the admin address for this dispute resolver
-        require(disputeResolver.admin  == msg.sender, NOT_ADMIN); 
+        require(disputeResolver.admin == msgSender(), NOT_ADMIN);
 
          // At least one fee must be specified and the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
         require(_feeTokenAddresses.length > 0 && _feeTokenAddresses.length <= protocolLimits().maxFeesPerDisputeResolver, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
@@ -373,7 +373,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
             delete protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_feeTokenAddresses[i]]; //Delete from index mapping
         }
 
-        emit DisputeResolverFeesRemoved(_disputeResolverId, _feeTokenAddresses, msg.sender);
+        emit DisputeResolverFeesRemoved(_disputeResolverId, _feeTokenAddresses, msgSender());
     }
 
      /**
@@ -403,7 +403,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         disputeResolver.active = true;
 
-        emit DisputeResolverActivated(_disputeResolverId, disputeResolver, msg.sender);
+        emit DisputeResolverActivated(_disputeResolverId, disputeResolver, msgSender());
     }
 
   

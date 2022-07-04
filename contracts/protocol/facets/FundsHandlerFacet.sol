@@ -53,7 +53,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             require(_amount == msg.value, NATIVE_WRONG_AMOUNT);
         } else {
             // transfer tokens from the caller
-            FundsLib.transferFundsToProtocol(_tokenAddress, _amount, msgSender());
+            FundsLib.transferFundsToProtocol(_tokenAddress, _amount);
         }
 
         // increase available funds
@@ -153,7 +153,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      */
     function withdrawProtocolFees(address[] calldata _tokenList, uint256[] calldata _tokenAmounts) external override onlyRole(FEE_COLLECTOR) {
         // withdraw the funds
-        withdrawFundsInternal(payable(msg.sender), 0, _tokenList, _tokenAmounts);
+        withdrawFundsInternal(payable(msgSender()), 0, _tokenList, _tokenAmounts);
     }
 
     /**
