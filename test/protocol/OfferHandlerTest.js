@@ -289,7 +289,7 @@ describe("IBosonOfferHandler", function () {
           );
       });
 
-      it.only("should ignore any provided protocol fee and calculate the correct one", async function () {
+      it("should ignore any provided protocol fee and calculate the correct one", async function () {
         // set some protocole fee
         offer.protocolFee = "999";
 
@@ -351,7 +351,7 @@ describe("IBosonOfferHandler", function () {
           );
       });
 
-      it.only("For absolute zero offers, dispute resolver can be unspecified", async function () {
+      it("For absolute zero offers, dispute resolver can be unspecified", async function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
