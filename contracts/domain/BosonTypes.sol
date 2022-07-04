@@ -38,6 +38,15 @@ contract BosonTypes {
         MultiToken
     } // ERC20, ERC721, ERC1155
 
+    enum MetaTxInputType {
+        Generic,
+        CommitToOffer,
+        Exchange,
+        Funds,
+        RaiseDispute,
+        ResolveDispute
+    }
+
     struct Seller {
         uint256 id;
         address operator;
@@ -55,8 +64,19 @@ contract BosonTypes {
 
     struct DisputeResolver {
         uint256 id;
-        address payable wallet;
+        uint256 escalationResponsePeriod;
+        address operator;
+        address admin;
+        address clerk;
+        address payable treasury;
+        string metadataUri;
         bool active;
+    }
+
+    struct DisputeResolverFee {
+        address tokenAddress;
+        string tokenName;
+        uint256 feeAmount;
     }
 
     struct Offer {
@@ -168,71 +188,8 @@ contract BosonTypes {
         bytes functionSignature;
     }
 
-    struct MetaTxCommitToOffer {
-        uint256 nonce;
-        address from;
-        address contractAddress;
-        string functionName;
-        MetaTxOfferDetails offerDetails;
-    }
-
-    struct MetaTxOfferDetails {
-        address buyer;
-        uint256 offerId;
-    }
-
-    struct MetaTxExchange {
-        uint256 nonce;
-        address from;
-        address contractAddress;
-        string functionName;
-        MetaTxExchangeDetails exchangeDetails;
-    }
-
-    struct MetaTxExchangeDetails {
-        uint256 exchangeId;
-    }
-
-    struct MetaTxFund {
-        uint256 nonce;
-        address from;
-        address contractAddress;
-        string functionName;
-        MetaTxFundDetails fundDetails;
-    }
-
-    struct MetaTxFundDetails {
-        uint256 entityId;
-        address[] tokenList;
-        uint256[] tokenAmounts;
-    }
-
-    struct MetaTxDispute {
-        uint256 nonce;
-        address from;
-        address contractAddress;
-        string functionName;
-        MetaTxDisputeDetails disputeDetails;
-    }
-
-    struct MetaTxDisputeDetails {
-        uint256 exchangeId;
-        string complaint;
-    }
-
-    struct MetaTxDisputeResolution {
-        uint256 nonce;
-        address from;
-        address contractAddress;
-        string functionName;
-        MetaTxDisputeResolutionDetails disputeResolutionDetails;
-    }
-
-    struct MetaTxDisputeResolutionDetails {
-        uint256 exchangeId;
-        uint256 buyerPercent;
-        bytes32 sigR;
-        bytes32 sigS;
-        uint8 sigV;
+    struct HashInfo {
+        bytes32 typeHash;
+        function(bytes memory) internal pure returns (bytes32) hashFunction;
     }
 }

@@ -7,7 +7,7 @@ const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.j
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
-
+const { oneWeek, oneMonth } = require("../utils/constants");
 /**
  *  Test the Boson Config Handler interface
  */
@@ -15,13 +15,14 @@ describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
   let accounts, deployer, rando, token, treasury, voucher;
-  let protocolFeePercentage,
-    protocolFeeFlatBoson,
-    maxOffersPerGroup,
+  let maxOffersPerGroup,
     maxTwinsPerBundle,
     maxOffersPerBundle,
     maxOffersPerBatch,
-    maxTokensPerWithdrawal;
+    maxTokensPerWithdrawal,
+    maxFeesPerDisputeResolver,
+    maxEscalationResponsePeriod;
+  let protocolFeePercentage, protocolFeeFlatBoson;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
 
   before(async function () {
@@ -52,6 +53,8 @@ describe("IBosonConfigHandler", function () {
     maxOffersPerBundle = 100;
     maxOffersPerBatch = 100;
     maxTokensPerWithdrawal = 100;
+    maxFeesPerDisputeResolver = 100;
+    maxEscalationResponsePeriod = oneMonth;
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
@@ -77,6 +80,8 @@ describe("IBosonConfigHandler", function () {
             maxOffersPerBundle,
             maxOffersPerBatch,
             maxTokensPerWithdrawal,
+            maxFeesPerDisputeResolver,
+            maxEscalationResponsePeriod,
           },
           //Protocol fees
           {
@@ -109,7 +114,11 @@ describe("IBosonConfigHandler", function () {
           .to.emit(configHandler, "MaxOffersPerBatchChanged")
           .withArgs(maxOffersPerBatch, deployer.address)
           .to.emit(configHandler, "MaxTokensPerWithdrawalChanged")
-          .withArgs(maxTokensPerWithdrawal, deployer.address);
+          .withArgs(maxTokensPerWithdrawal, deployer.address)
+          .to.emit(configHandler, "MaxFeesPerDisputeResolverChanged")
+          .withArgs(maxFeesPerDisputeResolver, deployer.address)
+          .to.emit(configHandler, "MaxEscalationResponsePeriodChanged")
+          .withArgs(maxEscalationResponsePeriod, deployer.address);
       });
     });
   });
@@ -131,6 +140,8 @@ describe("IBosonConfigHandler", function () {
           maxOffersPerBundle,
           maxOffersPerBatch,
           maxTokensPerWithdrawal,
+          maxFeesPerDisputeResolver,
+          maxEscalationResponsePeriod,
         },
         // Protocol fees
         {
@@ -473,6 +484,70 @@ describe("IBosonConfigHandler", function () {
           });
         });
       });
+
+      context("👉 setMaxFeesPerDisputeResolver()", async function () {
+        beforeEach(async function () {
+          // set new value
+          maxFeesPerDisputeResolver = 200;
+        });
+
+        it("should emit a MaxFeesPerDisputeResolverChanged event", async function () {
+          // Set max fees per dispute resolver
+          await expect(configHandler.connect(deployer).setMaxFeesPerDisputeResolver(maxFeesPerDisputeResolver))
+            .to.emit(configHandler, "MaxFeesPerDisputeResolverChanged")
+            .withArgs(maxFeesPerDisputeResolver, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set max fees per dispute resolver
+          await configHandler.connect(deployer).setMaxFeesPerDisputeResolver(maxFeesPerDisputeResolver);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxFeesPerDisputeResolver()).to.equal(maxFeesPerDisputeResolver);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new value, expecting revert
+            await expect(
+              configHandler.connect(rando).setMaxFeesPerDisputeResolver(maxFeesPerDisputeResolver)
+            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          });
+        });
+      });
+
+      context("👉 setMaxEscalationResponsePeriod()", async function () {
+        beforeEach(async function () {
+          // set new value
+          maxEscalationResponsePeriod = ethers.BigNumber.from(oneMonth).add(oneWeek);
+        });
+
+        it("should emit a MaxEscalationResponsePeriodChanged event", async function () {
+          // Set new escalation response period
+          await expect(configHandler.connect(deployer).setMaxEscalationResponsePeriod(maxEscalationResponsePeriod))
+            .to.emit(configHandler, "MaxEscalationResponsePeriodChanged")
+            .withArgs(maxEscalationResponsePeriod, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new escalation response period
+          await configHandler.connect(deployer).setMaxEscalationResponsePeriod(maxEscalationResponsePeriod);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxEscalationResponsePeriod()).to.equal(
+            maxEscalationResponsePeriod
+          );
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new value, expecting revert
+            await expect(
+              configHandler.connect(rando).setMaxEscalationResponsePeriod(maxEscalationResponsePeriod)
+            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          });
+        });
+      });
     });
 
     context("📋 Getters", async function () {
@@ -517,6 +592,14 @@ describe("IBosonConfigHandler", function () {
         expect(await configHandler.connect(rando).getMaxTokensPerWithdrawal()).to.equal(
           maxTokensPerWithdrawal,
           "Invalid max tokens per withdrawal"
+        );
+        expect(await configHandler.connect(rando).getMaxFeesPerDisputeResolver()).to.equal(
+          maxFeesPerDisputeResolver,
+          "Invalid max fees per dispute resolver"
+        );
+        expect(await configHandler.connect(rando).getMaxEscalationResponsePeriod()).to.equal(
+          maxEscalationResponsePeriod,
+          "Invalid max escalatio response period"
         );
       });
     });

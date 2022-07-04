@@ -5,7 +5,6 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
-const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
@@ -22,7 +21,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { getEvent, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { oneMonth } = require("../utils/constants");
-const { mockTwin, mockOffer } = require("../utils/mock");
+const { mockTwin, mockOffer, mockDisputeResolver } = require("../utils/mock");
 
 /**
  *  Test the Boson Orchestration Handler interface
@@ -30,7 +29,19 @@ const { mockTwin, mockOffer } = require("../utils/mock");
 describe("IBosonOrchestrationHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury, other1, other2;
+  let deployer,
+    rando,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    other1,
+    other2,
+    other3,
+    operatorDR,
+    adminDR,
+    clerkDR,
+    treasuryDR;
   let erc165,
     protocolDiamond,
     accessController,
@@ -46,7 +57,7 @@ describe("IBosonOrchestrationHandler", function () {
   let offer, nextOfferId, support, exists;
   let nextAccountId;
   let seller, sellerStruct, active;
-  let disputeResolver;
+  let disputeResolver, disputeResolverFees;
   let id, sellerId;
   let offerDates, offerDatesStruct;
   let offerDurations, offerDurationsStruct;
@@ -66,15 +77,21 @@ describe("IBosonOrchestrationHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    accounts = await ethers.getSigners();
-    deployer = accounts[0];
-    operator = accounts[1];
-    admin = accounts[2];
-    clerk = accounts[3];
-    treasury = accounts[4];
-    rando = accounts[5];
-    other1 = accounts[6];
-    other2 = accounts[7];
+    [
+      deployer,
+      operator,
+      admin,
+      clerk,
+      treasury,
+      rando,
+      other1,
+      other2,
+      other3,
+      operatorDR,
+      adminDR,
+      clerkDR,
+      treasuryDR,
+    ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -114,6 +131,8 @@ describe("IBosonOrchestrationHandler", function () {
         maxOffersPerBundle: 100,
         maxOffersPerBatch: 100,
         maxTokensPerWithdrawal: 100,
+        maxFeesPerDisputeResolver: 100,
+        maxEscalationResponsePeriod: oneMonth,
       },
       // Protocol fees
       {
@@ -162,15 +181,26 @@ describe("IBosonOrchestrationHandler", function () {
   context("📋 Orchestration Handler Methods", async function () {
     beforeEach(async function () {
       // Required constructor params
-      id = "1"; // dispute resolver gets id "1"
+      id = nextAccountId = "1"; // dispute resolver gets id "1"
+
+      active = true;
 
       // Create a valid dispute resolver
-      active = true;
-      disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
       expect(disputeResolver.isValid()).is.true;
 
-      // Register the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
+      disputeResolverFees = [];
+
+      // Register and activate the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+      await accountHandler.connect(deployer).activateDisputeResolver(nextAccountId);
 
       // The first seller id
       nextAccountId = id = sellerId = "2"; // argument sent to contract for createSeller will be ignored
@@ -551,7 +581,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Required constructor params for Condition
         method = EvaluationMethod.AboveThreshold;
-        tokenAddress = accounts[0].address; // just need an address
+        tokenAddress = other3.address; // just need an address
         tokenId = "5150";
         threshold = "1";
 
@@ -995,7 +1025,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Required constructor params for Condition
         method = EvaluationMethod.AboveThreshold;
-        tokenAddress = accounts[0].address; // just need an address
+        tokenAddress = other3.address; // just need an address
         tokenId = "5150";
         threshold = "1";
 
@@ -1838,7 +1868,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Required constructor params for Condition
         method = EvaluationMethod.AboveThreshold;
-        tokenAddress = accounts[0].address; // just need an address
+        tokenAddress = other3.address; // just need an address
         tokenId = "5150";
         threshold = "1";
 
@@ -2164,7 +2194,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Required constructor params for Condition
         method = EvaluationMethod.AboveThreshold;
-        tokenAddress = accounts[0].address; // just need an address
+        tokenAddress = other3.address; // just need an address
         tokenId = "5150";
         threshold = "1";
 
@@ -2479,7 +2509,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Required constructor params for Condition
         method = EvaluationMethod.AboveThreshold;
-        tokenAddress = accounts[0].address; // just need an address
+        tokenAddress = other3.address; // just need an address
         tokenId = "5150";
         threshold = "1";
 

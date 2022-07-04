@@ -40,6 +40,10 @@ library ProtocolLib {
         uint16 maxOffersPerBatch;
         // limit how many different tokens can be withdrawn in a single transaction
         uint16 maxTokensPerWithdrawal;
+        // limit how many dispute resolver fee structs can be processed in a single transaction
+        uint16 maxFeesPerDisputeResolver;
+        // limit on the escalation response period that a dispute resolver can specify
+        uint256 maxEscalationResponsePeriod;
     }
 
     // Protocol fees storage
@@ -68,8 +72,10 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Seller) sellers;
         // buyer id => buyer
         mapping(uint256 => BosonTypes.Buyer) buyers;
-        // buyer id => dispute resolver
+        // dispute resolver id => dispute resolver
         mapping(uint256 => BosonTypes.DisputeResolver) disputeResolvers;
+        // dispute resolver id => dispute resolver fee array
+        mapping(uint256 => BosonTypes.DisputeResolverFee[]) disputeResolverFees;
         // group id => group
         mapping(uint256 => BosonTypes.Group) groups;
         // bundle id => bundle
@@ -96,8 +102,14 @@ library ProtocolLib {
         mapping(address => uint256) sellerIdByClerk;
         //buyer wallet address => buyerId
         mapping(address => uint256) buyerIdByWallet;
-        //dispute resolver wallet address => disputeResolverId
-        mapping(address => uint256) disputeResolverIdByWallet;
+        //dispute resolver operator address => disputeResolverId
+        mapping(address => uint256) disputeResolverIdByOperator;
+        //dispute resolver admin address => disputeResolverId
+        mapping(address => uint256) disputeResolverIdByAdmin;
+        //dispute resolver clerk address => disputeResolverId
+        mapping(address => uint256) disputeResolverIdByClerk;
+        //dispute resolver id to fee token address => index of the token address
+        mapping(uint256 => mapping(address => uint256)) disputeResolverFeeTokenIndex;
         // seller/buyer id => token address => amount
         mapping(uint256 => mapping(address => uint256)) availableFunds;
         // seller/buyer id => all tokens with balance > 0
@@ -130,6 +142,10 @@ library ProtocolLib {
         bytes32 domainSeparator;
         // nonce => existance of nonce in the mapping
         mapping(uint256 => bool) usedNonce;
+        // map function name to input type
+        mapping(string => BosonTypes.MetaTxInputType) inputType;
+        // map input type => hash info
+        mapping (BosonTypes.MetaTxInputType => BosonTypes.HashInfo) hashInfo;
     }
 
     // Individual facet initialization states
