@@ -15,6 +15,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockTwin } = require("../utils/mock");
+const { oneMonth } = require("../utils/constants");
 
 /**
  *  Test the Boson Twin Handler interface
@@ -91,6 +92,8 @@ describe("IBosonTwinHandler", function () {
         maxOffersPerBundle: 100,
         maxOffersPerBatch: 100,
         maxTokensPerWithdrawal: 100,
+        maxFeesPerDisputeResolver: 100,
+        maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
       },
       // Protocol fees

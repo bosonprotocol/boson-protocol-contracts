@@ -179,7 +179,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @param _exchangeId - the id of the associated exchange
      */
     function expireDispute(uint256 _exchangeId) public override {
-        // Get the exchange, should be in dispute state
+        // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Fetch the dispute and dispute dates
@@ -376,8 +376,8 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // get dispute resolver id to check if caller is the dispute resolver
-        uint256 disputeResolverId = protocolLookups().disputeResolverIdByWallet[msg.sender];
-        require(disputeResolverId == offer.disputeResolverId, NOT_DISPUTE_RESOLVER_WALLET);
+        uint256 disputeResolverId = protocolLookups().disputeResolverIdByOperator[msg.sender];
+        require(disputeResolverId == offer.disputeResolverId, NOT_DISPUTE_RESOLVER_OPERATOR);
 
         // finalize the dispute
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Decided, _buyerPercent);
