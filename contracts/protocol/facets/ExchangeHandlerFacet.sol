@@ -525,22 +525,21 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                         )
                     );
                 } else if (twin.tokenType == TokenType.NonFungibleToken) {
-                    uint256 supply = twin.supplyIds.length;
-                    if (supply >= 1) {
-                        // Get the next token from the supply list
-                        uint256 tokenId = twin.supplyIds[supply-1];
-                        twin.supplyIds.pop();
-
+                    uint256 pointer = twin.tokenId;
+                    // @TODO TBD, needs to revisit
+                    if(pointer <= twin.lastTokenId) {
                         // ERC-721 style transfer
+                        twin.tokenId++;
                         (success, result) = twin.tokenAddress.call(
                             abi.encodeWithSignature(
-                                "safeTransferFrom(address,address,uint256,bytes)",
-                                seller.operator,
-                                msg.sender,
-                                tokenId,
-                                ""
-                            )
-                        );
+                            "safeTransferFrom(address,address,uint256,bytes)",
+                            seller.operator,
+                            msg.sender,
+                            pointer,
+                            ""
+                        ));
+                    } else {
+                        success = true;
                     }
                 } else if (twin.tokenType == TokenType.MultiToken){
                     // ERC-1155 style transfer

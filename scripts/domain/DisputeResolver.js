@@ -9,15 +9,25 @@ const eip55 = require("eip55");
 class DisputeResolver {
   /*
         struct DisputeResolver {
-            uint256 id;
-            address payable wallet;
-            bool active;
-        }
+          uint256 id;
+          uint256 escalationResponsePeriod;
+          address operator;
+          address admin;
+          address clerk;
+          address payable treasury;
+          string metadataUri;
+          bool active;
+     }
     */
 
-  constructor(id, wallet, active) {
+  constructor(id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active) {
     this.id = id;
-    this.wallet = wallet;
+    this.escalationResponsePeriod = escalationResponsePeriod;
+    this.operator = operator;
+    this.admin = admin;
+    this.clerk = clerk;
+    this.treasury = treasury;
+    this.metadataUri = metadataUri;
     this.active = active;
   }
 
@@ -27,8 +37,8 @@ class DisputeResolver {
    * @returns {DisputeResolver}
    */
   static fromObject(o) {
-    const { id, wallet, active } = o;
-    return new DisputeResolver(id, wallet, active);
+    const { id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active } = o;
+    return new DisputeResolver(id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active);
   }
 
   /**
@@ -37,14 +47,19 @@ class DisputeResolver {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let id, wallet, active;
+    let id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active;
 
     // destructure struct
-    [id, wallet, active] = struct;
+    [id, escalationResponsePeriod, operator, admin, clerk, treasury, metadataUri, active] = struct;
 
     return DisputeResolver.fromObject({
       id: id.toString(),
-      wallet,
+      escalationResponsePeriod: escalationResponsePeriod.toString(),
+      operator,
+      admin,
+      clerk,
+      treasury,
+      metadataUri,
       active,
     });
   }
@@ -70,7 +85,16 @@ class DisputeResolver {
    * @returns {string}
    */
   toStruct() {
-    return [this.id, this.wallet, this.active];
+    return [
+      this.id,
+      this.escalationResponsePeriod,
+      this.operator,
+      this.admin,
+      this.clerk,
+      this.treasury,
+      this.metadataUri,
+      this.active,
+    ];
   }
 
   /**
@@ -96,15 +120,88 @@ class DisputeResolver {
   }
 
   /**
-   * Is this DisputeResolver instance's wallet field valid?
+   * Is this DisputeResolver instance's escalationResponsePeriod field valid?
+   * Must be a string representation of a big number
+   * @returns {boolean}
+   */
+  escalationResponsePeriodIsValid() {
+    let valid = false;
+    let { escalationResponsePeriod } = this;
+    try {
+      valid =
+        typeof escalationResponsePeriod === "string" &&
+        typeof ethers.BigNumber.from(escalationResponsePeriod) === "object";
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this DisputeResolver instance's operator field valid?
    * Must be a eip55 compliant Ethereum address
    * @returns {boolean}
    */
-  walletIsValid() {
+  operatorIsValid() {
     let valid = false;
-    let { wallet } = this;
+    let { operator } = this;
     try {
-      valid = eip55.verify(eip55.encode(wallet));
+      valid = eip55.verify(eip55.encode(operator));
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this DisputeResolver instance's admin field valid?
+   * Must be a eip55 compliant Ethereum address
+   * @returns {boolean}
+   */
+  adminIsValid() {
+    let valid = false;
+    let { admin } = this;
+    try {
+      valid = eip55.verify(eip55.encode(admin));
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this DisputeResolver instance's clerk field valid?
+   * Must be a eip55 compliant Ethereum address
+   * @returns {boolean}
+   */
+  clerkIsValid() {
+    let valid = false;
+    let { clerk } = this;
+    try {
+      valid = eip55.verify(eip55.encode(clerk));
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this DisputeResolver instance's treasury field valid?
+   * Must be a eip55 compliant Ethereum address
+   * @returns {boolean}
+   */
+  treasuryIsValid() {
+    let valid = false;
+    let { treasury } = this;
+    try {
+      valid = eip55.verify(eip55.encode(treasury));
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this DisputeResolver instance's metadataUri field valid?
+   * Always present, must be a string
+   *
+   * @returns {boolean}
+   */
+  metadataUriIsValid() {
+    let valid = false;
+    let { metadataUri } = this;
+    try {
+      valid = typeof metadataUri === "string";
     } catch (e) {}
     return valid;
   }
@@ -127,7 +224,16 @@ class DisputeResolver {
    * @returns {boolean}
    */
   isValid() {
-    return this.idIsValid() && this.walletIsValid() && this.activeIsValid();
+    return (
+      this.idIsValid() &&
+      this.escalationResponsePeriodIsValid() &&
+      this.operatorIsValid() &&
+      this.adminIsValid() &&
+      this.clerkIsValid() &&
+      this.treasuryIsValid() &&
+      this.activeIsValid() &&
+      this.metadataUriIsValid()
+    );
   }
 }
 

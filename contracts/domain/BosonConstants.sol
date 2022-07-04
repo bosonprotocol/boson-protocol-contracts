@@ -25,11 +25,11 @@ contract BosonConstants {
     // Revert Reasons: Access related
     string internal constant ACCESS_DENIED = "Access denied, caller doesn't have role";
     string internal constant NOT_OPERATOR = "Not seller's operator";
-    string internal constant NOT_ADMIN = "Not seller's admin";
+    string internal constant NOT_ADMIN = "Not admin";
     string internal constant NOT_BUYER_OR_SELLER = "Not buyer or seller";
     string internal constant NOT_VOUCHER_HOLDER = "Not current voucher holder";
     string internal constant NOT_BUYER_WALLET = "Not buyer's wallet address";
-    string internal constant NOT_DISPUTE_RESOLVER_WALLET = "Not dispute resolver's wallet address";
+    string internal constant NOT_DISPUTE_RESOLVER_OPERATOR = "Not dispute resolver's operator address";
 
     // Revert Reasons: Account-related
     string internal constant NO_SUCH_SELLER = "No such seller";
@@ -41,6 +41,11 @@ contract BosonConstants {
     string internal constant NO_SUCH_BUYER = "No such buyer";
     string internal constant WALLET_OWNS_VOUCHERS = "Wallet address owns vouchers";
     string internal constant NO_SUCH_DISPUTE_RESOLVER = "No such dispute resolver";
+    string internal constant INVALID_ESCALATION_PERIOD = "Invalid escalation period";
+    string internal constant INVALID_AMOUNT_DISPUTE_RESOLVER_FEES =
+        "Dispute resolver fees are not present or exceeds maximum dispute resolver fees in a single transaction";
+    string internal constant DUPLICATE_DISPUTE_RESOLVER_FEES = "Duplicate dispute resolver fee";
+    string internal constant DISPUTE_RESOLVER_FEE_NOT_FOUND = "Dispute resolver fee not found";
 
     // Revert Reasons: Offer related
     string internal constant NO_SUCH_OFFER = "No such offer";
@@ -82,6 +87,7 @@ contract BosonConstants {
     string internal constant TWIN_TRANSFER_FAILED = "Twin could not be transferred";
     string internal constant UNSUPPORTED_TOKEN = "Unsupported token";
     string internal constant TWIN_HAS_BUNDLES = "Twin has bundles";
+    string internal constant ERC721_INVALID_RANGE = "lastTokenId must be equal or greater than tokenId";
 
     // Revert Reasons: Bundle related
     string internal constant NO_SUCH_BUNDLE = "No such bundle";
