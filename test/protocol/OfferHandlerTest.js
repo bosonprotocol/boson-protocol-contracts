@@ -8,6 +8,7 @@ const Seller = require("../../scripts/domain/Seller");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
+const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -55,7 +56,11 @@ describe("IBosonOfferHandler", function () {
     offerDurationsList,
     disputeResolverIds;
   let protocolFeePercentage, protocolFeeFlatBoson;
-  let disputeResolver, disputeResolverFees, disputeResolverId;
+  let disputeResolver,
+    disputeResolverFees,
+    disputeResolverId,
+    disputeResolutionTermsStruct,
+    disputeResolutionTermsStructs;
 
   before(async function () {
     // get interface Ids
@@ -192,6 +197,13 @@ describe("IBosonOfferHandler", function () {
 
       // Set used variables
       price = offer.price;
+
+      // Set despute resolution terms
+      const disputeResolutionTerms = new DisputeResolutionTerms(
+        disputeResolverId,
+        disputeResolver.escalationResponsePeriod
+      );
+      disputeResolutionTermsStruct = disputeResolutionTerms.toStruct();
     });
 
     context("👉 createOffer()", async function () {
@@ -199,7 +211,15 @@ describe("IBosonOfferHandler", function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("should update state", async function () {
@@ -232,7 +252,15 @@ describe("IBosonOfferHandler", function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // wrong offer id should not exist
         [exists] = await offerHandler.connect(rando).getOffer(offer.id);
@@ -250,17 +278,33 @@ describe("IBosonOfferHandler", function () {
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
-      it("should ignore any provided protocol fee and calculate the correct one", async function () {
+      it.only("should ignore any provided protocol fee and calculate the correct one", async function () {
         // set some protocole fee
         offer.protocolFee = "999";
 
         // Create an offer, testing for the event
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId))
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("after the protocol fee changes, new offers should have the new fee", async function () {
@@ -283,6 +327,7 @@ describe("IBosonOfferHandler", function () {
             offer.toStruct(),
             offerDatesStruct,
             offerDurationsStruct,
+            disputeResolutionTermsStruct,
             operator.address
           );
       });
@@ -301,14 +346,16 @@ describe("IBosonOfferHandler", function () {
             offer.toStruct(),
             offerDatesStruct,
             offerDurationsStruct,
+            disputeResolutionTermsStruct,
             operator.address
           );
       });
 
-      it("For absolute zero offers, dispute resolver can be unspecified", async function () {
+      it.only("For absolute zero offers, dispute resolver can be unspecified", async function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
 
         // Create a new offer
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId))
@@ -319,6 +366,7 @@ describe("IBosonOfferHandler", function () {
             offer.toStruct(),
             offerDatesStruct,
             offerDurationsStruct,
+            disputeResolutionTermsStruct,
             operator.address
           );
       });
@@ -336,6 +384,7 @@ describe("IBosonOfferHandler", function () {
             offer.toStruct(),
             offerDatesStruct,
             offerDurationsStruct,
+            disputeResolutionTermsStruct,
             operator.address
           );
       });
@@ -916,6 +965,7 @@ describe("IBosonOfferHandler", function () {
       offerDurationsList = [];
       offerDurationsStructs = [];
       disputeResolverIds = new Array(101).fill(disputeResolverId);
+      disputeResolutionTermsStructs = [];
 
       for (let i = 0; i < 5; i++) {
         // Mock offer, offerDates and offerDurations
@@ -949,6 +999,12 @@ describe("IBosonOfferHandler", function () {
 
         offerDurationsList.push(offerDurations);
         offerDurationsStructs.push(offerDurations.toStruct());
+
+        const disputeResolutionTerms = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod
+        );
+        disputeResolutionTermsStructs.push(disputeResolutionTerms.toStruct());
       }
 
       voucherRedeemableFrom = offerDatesList[0].voucherRedeemableFrom;
@@ -965,6 +1021,7 @@ describe("IBosonOfferHandler", function () {
       offers[4].price = offers[4].sellerDeposit = offers[4].buyerCancelPenalty = offers[4].protocolFee = "0";
       offerStructs[4] = offers[4].toStruct();
       disputeResolverIds[4] = "0";
+      disputeResolutionTermsStructs[4] = new DisputeResolutionTerms("0", "0").toStruct();
     });
 
     context("👉 createOfferBatch()", async function () {
@@ -982,6 +1039,7 @@ describe("IBosonOfferHandler", function () {
             offerStructs[0],
             offerDatesStructs[0],
             offerDurationsStructs[0],
+            disputeResolutionTermsStructs[0],
             operator.address
           )
           .withArgs(
@@ -990,6 +1048,7 @@ describe("IBosonOfferHandler", function () {
             offerStructs[1],
             offerDatesStructs[1],
             offerDurationsStructs[1],
+            disputeResolutionTermsStructs[1],
             operator.address
           )
           .withArgs(
@@ -998,6 +1057,7 @@ describe("IBosonOfferHandler", function () {
             offerStructs[2],
             offerDatesStructs[2],
             offerDurationsStructs[2],
+            disputeResolutionTermsStructs[2],
             operator.address
           )
           .withArgs(
@@ -1006,6 +1066,7 @@ describe("IBosonOfferHandler", function () {
             offerStructs[3],
             offerDatesStructs[3],
             offerDurationsStructs[3],
+            disputeResolutionTermsStructs[3],
             operator.address
           )
           .withArgs(
@@ -1014,6 +1075,7 @@ describe("IBosonOfferHandler", function () {
             offerStructs[4],
             offerDatesStructs[4],
             offerDurationsStructs[4],
+            disputeResolutionTermsStructs[4],
             operator.address
           );
       });
@@ -1068,6 +1130,7 @@ describe("IBosonOfferHandler", function () {
             offerStructs[0],
             offerDatesStructs[0],
             offerDurationsStructs[0],
+            disputeResolutionTermsStructs[0],
             operator.address
           )
           .withArgs(
@@ -1076,6 +1139,7 @@ describe("IBosonOfferHandler", function () {
             offerStructs[1],
             offerDatesStructs[1],
             offerDurationsStructs[1],
+            disputeResolutionTermsStructs[1],
             operator.address
           )
           .withArgs(
@@ -1084,6 +1148,7 @@ describe("IBosonOfferHandler", function () {
             offerStructs[2],
             offerDatesStructs[2],
             offerDurationsStructs[2],
+            disputeResolutionTermsStructs[2],
             operator.address
           )
           .withArgs(
@@ -1092,6 +1157,7 @@ describe("IBosonOfferHandler", function () {
             offerStructs[3],
             offerDatesStructs[3],
             offerDurationsStructs[3],
+            disputeResolutionTermsStructs[3],
             operator.address
           )
           .withArgs(
@@ -1100,6 +1166,7 @@ describe("IBosonOfferHandler", function () {
             offerStructs[4],
             offerDatesStructs[4],
             offerDurationsStructs[4],
+            disputeResolutionTermsStructs[4],
             operator.address
           );
 
@@ -1129,11 +1196,51 @@ describe("IBosonOfferHandler", function () {
             .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds)
         )
           .to.emit(offerHandler, "OfferCreated")
-          .withArgs("1", sellerId, offerStructs[0], offerDatesStructs[0], offerDurationsStructs[0], operator.address)
-          .withArgs("2", sellerId, offerStructs[1], offerDatesStructs[1], offerDurationsStructs[1], operator.address)
-          .withArgs("3", sellerId, offerStructs[2], offerDatesStructs[2], offerDurationsStructs[2], operator.address)
-          .withArgs("4", sellerId, offerStructs[3], offerDatesStructs[3], offerDurationsStructs[3], operator.address)
-          .withArgs("5", sellerId, offerStructs[4], offerDatesStructs[4], offerDurationsStructs[4], operator.address);
+          .withArgs(
+            "1",
+            sellerId,
+            offerStructs[0],
+            offerDatesStructs[0],
+            offerDurationsStructs[0],
+            disputeResolutionTermsStructs[0],
+            operator.address
+          )
+          .withArgs(
+            "2",
+            sellerId,
+            offerStructs[1],
+            offerDatesStructs[1],
+            offerDurationsStructs[1],
+            disputeResolutionTermsStructs[1],
+            operator.address
+          )
+          .withArgs(
+            "3",
+            sellerId,
+            offerStructs[2],
+            offerDatesStructs[2],
+            offerDurationsStructs[2],
+            disputeResolutionTermsStructs[2],
+            operator.address
+          )
+          .withArgs(
+            "4",
+            sellerId,
+            offerStructs[3],
+            offerDatesStructs[3],
+            offerDurationsStructs[3],
+            disputeResolutionTermsStructs[3],
+            operator.address
+          )
+          .withArgs(
+            "5",
+            sellerId,
+            offerStructs[4],
+            offerDatesStructs[4],
+            offerDurationsStructs[4],
+            disputeResolutionTermsStructs[4],
+            operator.address
+          );
       });
 
       context("💔 Revert Reasons", async function () {

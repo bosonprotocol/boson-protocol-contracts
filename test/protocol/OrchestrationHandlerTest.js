@@ -13,6 +13,7 @@ const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
+const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -69,6 +70,7 @@ describe("IBosonOrchestrationHandler", function () {
   let bundle, bundleStruct, bundleId, nextBundleId;
   let bosonToken;
   let foreign721, foreign1155, fallbackError;
+  let disputeResolutionTermsStruct;
 
   before(async function () {
     // get interface Ids
@@ -230,6 +232,13 @@ describe("IBosonOrchestrationHandler", function () {
       offerStruct = offer.toStruct();
       offerDatesStruct = offerDates.toStruct();
       offerDurationsStruct = offerDurations.toStruct();
+
+      // Set despute resolution terms
+      const disputeResolutionTerms = new DisputeResolutionTerms(
+        disputeResolverId,
+        disputeResolver.escalationResponsePeriod
+      );
+      disputeResolutionTermsStruct = disputeResolutionTerms.toStruct();
     });
 
     context("👉 createSellerAndOffer()", async function () {
@@ -243,7 +252,15 @@ describe("IBosonOrchestrationHandler", function () {
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("should update state", async function () {
@@ -296,7 +313,15 @@ describe("IBosonOrchestrationHandler", function () {
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(nextAccountId, sellerStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // wrong seller id should not exist
         [exists] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -326,7 +351,15 @@ describe("IBosonOrchestrationHandler", function () {
             .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("should ignore any provided protocol fee and calculate the correct one", async function () {
@@ -340,7 +373,15 @@ describe("IBosonOrchestrationHandler", function () {
             .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("If exchange token is $BOSON, fee should be flat boson fee", async function () {
@@ -355,13 +396,22 @@ describe("IBosonOrchestrationHandler", function () {
             .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("For absolute zero offers, dispute resolver can be unspecified", async function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
 
         // Create a seller and an offer, testing for the event
         await expect(
@@ -370,7 +420,15 @@ describe("IBosonOrchestrationHandler", function () {
             .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("Should allow creation of an offer with unlimited supply", async function () {
@@ -384,7 +442,15 @@ describe("IBosonOrchestrationHandler", function () {
             .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       context("💔 Revert Reasons", async function () {
@@ -714,7 +780,15 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -779,7 +853,15 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -807,7 +889,15 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -834,7 +924,15 @@ describe("IBosonOrchestrationHandler", function () {
             .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("If exchange token is $BOSON, fee should be flat boson fee", async function () {
@@ -849,13 +947,22 @@ describe("IBosonOrchestrationHandler", function () {
             .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("For absolute zero offers, dispute resolver can be unspecified", async function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
 
         // Create an offer with condition, testing for the events
         await expect(
@@ -864,7 +971,15 @@ describe("IBosonOrchestrationHandler", function () {
             .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("Should allow creation of an offer with unlimited supply", async function () {
@@ -878,7 +993,15 @@ describe("IBosonOrchestrationHandler", function () {
             .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       context("💔 Revert Reasons", async function () {
@@ -1219,7 +1342,15 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1283,7 +1414,15 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1311,7 +1450,15 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1338,7 +1485,15 @@ describe("IBosonOrchestrationHandler", function () {
             .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("If exchange token is $BOSON, fee should be flat boson fee", async function () {
@@ -1353,13 +1508,22 @@ describe("IBosonOrchestrationHandler", function () {
             .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("For absolute zero offers, dispute resolver can be unspecified", async function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
 
         // Create an offer, add it to the group, testing for the events
         await expect(
@@ -1368,7 +1532,15 @@ describe("IBosonOrchestrationHandler", function () {
             .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("Should allow creation of an offer with unlimited supply", async function () {
@@ -1382,7 +1554,15 @@ describe("IBosonOrchestrationHandler", function () {
             .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       context("💔 Revert Reasons", async function () {
@@ -1682,7 +1862,15 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1768,7 +1956,15 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1811,7 +2007,15 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1852,7 +2056,15 @@ describe("IBosonOrchestrationHandler", function () {
             .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("If exchange token is $BOSON, fee should be flat boson fee", async function () {
@@ -1867,13 +2079,22 @@ describe("IBosonOrchestrationHandler", function () {
             .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("For absolute zero offers, dispute resolver can be unspecified", async function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
@@ -1882,7 +2103,15 @@ describe("IBosonOrchestrationHandler", function () {
             .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("Should allow creation of an offer with unlimited supply", async function () {
@@ -1896,7 +2125,15 @@ describe("IBosonOrchestrationHandler", function () {
             .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       context("💔 Revert Reasons", async function () {
@@ -2260,7 +2497,15 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2381,7 +2626,15 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2441,7 +2694,15 @@ describe("IBosonOrchestrationHandler", function () {
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2499,7 +2760,15 @@ describe("IBosonOrchestrationHandler", function () {
             )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("If exchange token is $BOSON, fee should be flat boson fee", async function () {
@@ -2521,13 +2790,22 @@ describe("IBosonOrchestrationHandler", function () {
             )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("For absolute zero offers, dispute resolver can be unspecified", async function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
 
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
@@ -2543,7 +2821,15 @@ describe("IBosonOrchestrationHandler", function () {
             )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("Should allow creation of an offer with unlimited supply", async function () {
@@ -2564,7 +2850,15 @@ describe("IBosonOrchestrationHandler", function () {
             )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
     });
 
@@ -2608,7 +2902,15 @@ describe("IBosonOrchestrationHandler", function () {
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2686,7 +2988,15 @@ describe("IBosonOrchestrationHandler", function () {
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2745,7 +3055,15 @@ describe("IBosonOrchestrationHandler", function () {
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2853,7 +3171,15 @@ describe("IBosonOrchestrationHandler", function () {
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2958,7 +3284,15 @@ describe("IBosonOrchestrationHandler", function () {
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -3101,7 +3435,15 @@ describe("IBosonOrchestrationHandler", function () {
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
