@@ -934,7 +934,7 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
           // Commit to offer for the second time
-          // Offer quantity available (2) and twin tokenIds range (1) doesn't match, seller must void the offer as all redeem will fail
+          // Offer quantity available (2) and twin tokenIds range (1) doesn't match
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
           // Attempt to redeem the voucher, expecting revert
