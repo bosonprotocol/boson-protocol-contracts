@@ -66,8 +66,9 @@ async function mockOffer() {
 
   const offerDates = await mockOfferDates();
   const offerDurations = mockOfferDurations();
+  const disputeResolverId = "2";
 
-  return { offer, offerDates, offerDurations };
+  return { offer, offerDates, offerDurations, disputeResolverId };
 }
 
 function mockTwin(tokenAddress, tokenType) {

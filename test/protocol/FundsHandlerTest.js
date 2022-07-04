@@ -52,7 +52,7 @@ describe("IBosonFundsHandler", function () {
     expectedProtocolAvailableFunds;
   let tokenListSeller, tokenListBuyer, tokenAmountsSeller, tokenAmountsBuyer, tokenList, tokenAmounts;
   let tx, txReceipt, txCost, event;
-  let disputeResolverFees, disputeResolver;
+  let disputeResolverFees, disputeResolver, disputeResolverId;
   let buyerPercent;
   let resolutionType, customSignatureType, message, r, s, v;
   let disputedDate, escalatedDate, timeout;
@@ -357,7 +357,7 @@ describe("IBosonFundsHandler", function () {
         await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
         // Mock offer
-        const { offer, offerDates, offerDurations } = await mockOffer();
+        const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
         offer.quantityAvailable = "2";
 
         offerNative = offer;
@@ -377,8 +377,8 @@ describe("IBosonFundsHandler", function () {
 
         // Create both offers
         await Promise.all([
-          offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations),
-          offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations),
+          offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations, disputeResolverId),
+          offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations, disputeResolverId),
         ]);
 
         // Set used variables
@@ -1233,10 +1233,12 @@ describe("IBosonFundsHandler", function () {
       offerDurations = mo.offerDurations;
       expect(offerDurations.isValid()).is.true;
 
+      disputeResolverId = mo.disputeResolverId;
+
       // Create both offers
       await Promise.all([
-        offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations),
-        offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations),
+        offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations, disputeResolverId),
+        offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations, disputeResolverId),
       ]);
 
       // Set used variables
@@ -1450,7 +1452,7 @@ describe("IBosonFundsHandler", function () {
           // create an offer with a bad token contrat
           offerToken.exchangeToken = bosonToken.address;
           offerToken.id = "3";
-          await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations);
+          await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations, disputeResolverId);
 
           // Attempt to commit to an offer, expecting revert
           await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
@@ -1462,7 +1464,7 @@ describe("IBosonFundsHandler", function () {
           // create an offer with a bad token contrat
           offerToken.exchangeToken = admin.address;
           offerToken.id = "3";
-          await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations);
+          await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations, disputeResolverId);
 
           // Attempt to commit to an offer, expecting revert
           await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
@@ -1493,7 +1495,7 @@ describe("IBosonFundsHandler", function () {
           // create an offer with token with higher seller deposit
           offerToken.sellerDeposit = ethers.BigNumber.from(offerToken.sellerDeposit).mul("4");
           offerToken.id = "3";
-          await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations);
+          await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations, disputeResolverId);
 
           // Attempt to commit to an offer, expecting revert
           await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
@@ -1503,7 +1505,7 @@ describe("IBosonFundsHandler", function () {
           // create an offer with native currency with higher seller deposit
           offerNative.sellerDeposit = ethers.BigNumber.from(offerNative.sellerDeposit).mul("4");
           offerNative.id = "4";
-          await offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations);
+          await offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations, disputeResolverId);
 
           // Attempt to commit to an offer, expecting revert
           await expect(

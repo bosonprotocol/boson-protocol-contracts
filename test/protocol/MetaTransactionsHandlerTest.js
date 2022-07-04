@@ -57,7 +57,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let protocolFeePercentage, protocolFeeFlatBoson;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
-  let disputeResolver, active, disputeResolverFees;
+  let disputeResolver, active, disputeResolverFees, disputeResolverId;
   let twin, success;
   let exchangeId,
     mockToken,
@@ -625,7 +625,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
         // Valid offer domains
-        ({ offer, offerDates, offerDurations } = await mockOffer());
+        ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
         offer.exchangeToken = mockToken.address;
 
         // Check if domains are valid
@@ -650,7 +650,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, sellerDeposit);
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
 
         // Set the offer Type
         offerType = [
@@ -882,7 +882,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         expect(offer.isValid()).is.true;
         expect(offerDates.isValid()).is.true;
         expect(offerDurations.isValid()).is.true;
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
 
         sellerDeposit = offer.sellerDeposit;
         price = offer.price;
@@ -2244,11 +2244,14 @@ describe("IBosonMetaTransactionsHandler", function () {
         await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
         const { offer, ...mo } = await mockOffer();
-        ({ offerDates, offerDurations } = mo);
+        ({ offerDates, offerDurations, disputeResolverId } = mo);
         offerNative = offer;
         offerToken = offerNative.clone();
         offerToken.id = "2";
         offerToken.exchangeToken = mockToken.address;
+
+        price = offer.price;
+        sellerDeposit = offer.sellerDeposit;
 
         // Check if domains are valid
         expect(offerNative.isValid()).is.true;
@@ -2257,8 +2260,8 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Create both offers
         await Promise.all([
-          offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations),
-          offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations),
+          offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations, disputeResolverId),
+          offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations, disputeResolverId),
         ]);
 
         // top up seller's and buyer's account
@@ -2463,47 +2466,47 @@ describe("IBosonMetaTransactionsHandler", function () {
           result = await metaTransactionsHandler.connect(buyer).isUsedNonce(nonce);
           assert.equal(result, expectedResult, "Nonce is unused");
         });
-      });
 
-      it("does not modify revert reasons", async function () {
-        // Set token address to boson token
-        validFundDetails = {
-          entityId: buyerId,
-          tokenList: [bosonToken.address],
-          tokenAmounts: [buyerPayoff],
-        };
+        it("does not modify revert reasons", async function () {
+          // Set token address to boson token
+          validFundDetails = {
+            entityId: buyerId,
+            tokenList: [bosonToken.address],
+            tokenAmounts: [buyerPayoff],
+          };
 
-        // Prepare the message
-        message.fundDetails = validFundDetails;
+          // Prepare the message
+          message.fundDetails = validFundDetails;
 
-        // Collect the signature components
-        let { r, s, v } = await prepareDataSignatureParameters(
-          buyer,
-          customTransactionType,
-          "MetaTxFund",
-          message,
-          metaTransactionsHandler.address
-        );
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionType,
+            "MetaTxFund",
+            message,
+            metaTransactionsHandler.address
+          );
 
-        // Prepare the function signature
-        functionSignature = fundsHandler.interface.encodeFunctionData("withdrawFunds", [
-          validFundDetails.entityId,
-          validFundDetails.tokenList,
-          validFundDetails.tokenAmounts,
-        ]);
+          // Prepare the function signature
+          functionSignature = fundsHandler.interface.encodeFunctionData("withdrawFunds", [
+            validFundDetails.entityId,
+            validFundDetails.tokenList,
+            validFundDetails.tokenAmounts,
+          ]);
 
-        // Execute meta transaction, expecting revert.
-        await expect(
-          metaTransactionsHandler.executeMetaTransaction(
-            buyer.address,
-            message.functionName,
-            functionSignature,
-            nonce,
-            r,
-            s,
-            v
-          )
-        ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+          // Execute meta transaction, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTransaction(
+              buyer.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
+          ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+        });
       });
 
       context("💔 Revert Reasons", async function () {

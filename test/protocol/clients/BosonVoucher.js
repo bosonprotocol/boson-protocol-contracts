@@ -167,10 +167,10 @@ describe("IBosonVoucher", function () {
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
       await accountHandler.connect(deployer).activateDisputeResolver("2");
 
-      const { offer, offerDates, offerDurations } = await mockOffer();
+      const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
       await offerHandler
         .connect(operator)
-        .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct());
+        .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId);
       await fundsHandler
         .connect(admin)
         .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });

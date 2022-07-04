@@ -61,7 +61,7 @@ describe("IBosonDisputeHandler", function () {
   let dispute, disputedDate, escalatedDate, complaint, disputeStruct, timeout, newDisputeTimeout;
   let disputeDates, disputeDatesStruct;
   let exists, response;
-  let disputeResolver, active, disputeResolverFees;
+  let disputeResolver, active, disputeResolverFees, disputeResolverId;
   let buyerPercent;
   let resolutionType, customSignatureType, message, r, s, v;
   let returnedDispute, returnedDisputeDates;
@@ -212,7 +212,7 @@ describe("IBosonDisputeHandler", function () {
       await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
       // Mock offer
-      ({ offer, offerDates, offerDurations } = await mockOffer());
+      ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
       offer.quantityAvailable = "2";
 
       // Check if domains are valid
@@ -221,7 +221,7 @@ describe("IBosonDisputeHandler", function () {
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
-      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
+      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
 
       // Set used variables
       price = offer.price;
@@ -1162,7 +1162,7 @@ describe("IBosonDisputeHandler", function () {
         // Escalate the dispute, testing for the event
         await expect(disputeHandler.connect(buyer).escalateDispute(exchange.id))
           .to.emit(disputeHandler, "DisputeEscalated")
-          .withArgs(exchange.id, offer.disputeResolverId, buyer.address);
+          .withArgs(exchange.id, disputeResolverId, buyer.address);
       });
 
       it("should update state", async function () {
