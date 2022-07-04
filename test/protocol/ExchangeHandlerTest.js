@@ -8,7 +8,6 @@ const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
 const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
-const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
@@ -19,14 +18,14 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { mockOffer, mockTwin } = require("../utils/mock");
+const { mockOffer, mockTwin, mockDisputeResolver } = require("../utils/mock");
 const {
   getEvent,
   setNextBlockTimestamp,
   calculateVoucherExpiry,
   prepareDataSignatureParameters,
 } = require("../../scripts/util/test-utils.js");
-const { oneWeek } = require("../utils/constants");
+const { oneWeek, oneMonth } = require("../utils/constants");
 
 /**
  *  Test the Boson Exchange Handler interface
@@ -34,7 +33,19 @@ const { oneWeek } = require("../utils/constants");
 describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, disputeResolver, fauxClient;
+  let deployer,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    rando,
+    buyer,
+    newOwner,
+    fauxClient,
+    operatorDR,
+    adminDR,
+    clerkDR,
+    treasuryDR;
   let erc165,
     protocolDiamond,
     accessController,
@@ -55,7 +66,7 @@ describe("IBosonExchangeHandler", function () {
   let protocolFeePercentage, protocolFeeFlatBoson;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state, exchangeStruct, response, exists, buyerStruct;
-  let active;
+  let disputeResolver, disputeResolverFees;
   let foreign20, foreign721, foreign1155;
   let twin20, twin721, twin1155, twinIds, bundle, balance, owner;
 
@@ -66,8 +77,21 @@ describe("IBosonExchangeHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, buyer, rando, newOwner, disputeResolver, fauxClient] =
-      await ethers.getSigners();
+    [
+      deployer,
+      operator,
+      admin,
+      clerk,
+      treasury,
+      buyer,
+      rando,
+      newOwner,
+      fauxClient,
+      operatorDR,
+      adminDR,
+      clerkDR,
+      treasuryDR,
+    ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -117,6 +141,8 @@ describe("IBosonExchangeHandler", function () {
         maxOffersPerBundle: 100,
         maxOffersPerBatch: 100,
         maxTokensPerWithdrawal: 100,
+        maxFeesPerDisputeResolver: 100,
+        maxEscalationResponsePeriod: oneMonth,
       },
       // Protocol fees
       {
@@ -173,7 +199,7 @@ describe("IBosonExchangeHandler", function () {
   context("📋 Exchange Handler Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
-      id = offerId = sellerId = "1";
+      id = offerId = sellerId = nextAccountId = "1";
       buyerId = "3"; // created after seller and dispute resolver
 
       // Create a valid seller
@@ -182,12 +208,21 @@ describe("IBosonExchangeHandler", function () {
       await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid dispute resolver
-      active = true;
-      const disputeResolverEntity = new DisputeResolver(id, disputeResolver.address, active);
-      expect(disputeResolverEntity.isValid()).is.true;
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
+      expect(disputeResolver.isValid()).is.true;
 
-      // Register the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
+      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
+      disputeResolverFees = [];
+
+      // Register and activate the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+      await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
       // Create the offer
       const { offer, offerDates, offerDurations } = await mockOffer();
@@ -1359,7 +1394,7 @@ describe("IBosonExchangeHandler", function () {
           await disputeHandler.connect(buyer).escalateDispute(exchange.id);
 
           // Decide Dispute
-          await disputeHandler.connect(disputeResolver).decideDispute(exchange.id, "1111");
+          await disputeHandler.connect(operatorDR).decideDispute(exchange.id, "1111");
 
           // Now in Decided state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
