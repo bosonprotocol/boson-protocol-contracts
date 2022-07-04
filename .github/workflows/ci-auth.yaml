@@ -9,5 +9,5 @@ jobs:
     steps:
       - run: gh auth status
         env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
+          GITHUB_TOKEN: ${{ secrets.BSNORG_ACTIONS_SECRET }}
 
