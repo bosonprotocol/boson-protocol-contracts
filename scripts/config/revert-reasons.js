@@ -63,6 +63,7 @@ exports.RevertReasons = {
   TWIN_TRANSFER_FAILED: "Twin could not be transferred",
   UNSUPPORTED_TOKEN: "Unsupported token",
   TWIN_HAS_BUNDLES: "Twin has bundles",
+  ERC721_INVALID_RANGE: "lastTokenId must be equal or greater than tokenId",
 
   // Bundle related
   NO_SUCH_BUNDLE: "No such bundle",

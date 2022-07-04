@@ -38,6 +38,10 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         // Protocol must be approved to transfer seller’s tokens
         require(isProtocolApproved(_twin.tokenAddress, msg.sender, address(this)), NO_TRANSFER_APPROVED);
 
+        if(_twin.tokenType == TokenType.NonFungibleToken) {
+            require(_twin.lastTokenId >= _twin.tokenId, ERC721_INVALID_RANGE);
+        }
+
         // Get the next twinId and increment the counter
         uint256 twinId = protocolCounters().nextTwinId++;
 
@@ -48,7 +52,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         twin.id = _twin.id = twinId;
         twin.sellerId = _twin.sellerId = sellerId;
         twin.supplyAvailable = _twin.supplyAvailable;
-        twin.supplyIds = _twin.supplyIds;
+        twin.lastTokenId = _twin.lastTokenId;
         twin.tokenId = _twin.tokenId;
         twin.tokenAddress = _twin.tokenAddress;
         twin.tokenType = _twin.tokenType;
