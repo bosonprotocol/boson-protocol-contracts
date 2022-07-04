@@ -9,5 +9,5 @@ jobs:
     steps:
       - run: gh auth status
         env:
-          GITHUB_TOKEN: ${{ secrets.BOT_PAT }}
+          GITHUB_TOKEN: ${{ secrets.PAT }}
 
