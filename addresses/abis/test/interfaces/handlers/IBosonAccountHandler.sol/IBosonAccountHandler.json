@@ -104,9 +104,34 @@
               "type": "uint256"
             },
             {
-              "internalType": "address payable",
-              "name": "wallet",
+              "internalType": "uint256",
+              "name": "escalationResponsePeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "operator",
               "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             },
             {
               "internalType": "bool",
@@ -118,6 +143,96 @@
           "internalType": "struct BosonTypes.DisputeResolver",
           "name": "disputeResolver",
           "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "DisputeResolverActivated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "escalationResponsePeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "operator",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.DisputeResolver",
+          "name": "disputeResolver",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "tokenName",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "feeAmount",
+              "type": "uint256"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.DisputeResolverFee[]",
+          "name": "disputeResolverFees",
+          "type": "tuple[]"
         },
         {
           "indexed": true,
@@ -141,14 +256,106 @@
         {
           "components": [
             {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "tokenName",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "feeAmount",
+              "type": "uint256"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.DisputeResolverFee[]",
+          "name": "disputeResolverFees",
+          "type": "tuple[]"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "DisputeResolverFeesAdded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address[]",
+          "name": "feeTokensRemoved",
+          "type": "address[]"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "DisputeResolverFeesRemoved",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
               "internalType": "uint256",
               "name": "id",
               "type": "uint256"
             },
             {
-              "internalType": "address payable",
-              "name": "wallet",
+              "internalType": "uint256",
+              "name": "escalationResponsePeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "operator",
               "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             },
             {
               "internalType": "bool",
@@ -288,6 +495,54 @@
     {
       "inputs": [
         {
+          "internalType": "uint256",
+          "name": "_disputeResolverId",
+          "type": "uint256"
+        }
+      ],
+      "name": "activateDisputeResolver",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "tokenName",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "feeAmount",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.DisputeResolverFee[]",
+          "name": "_disputeResolverFees",
+          "type": "tuple[]"
+        }
+      ],
+      "name": "addFeesToDisputeResolver",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "components": [
             {
               "internalType": "uint256",
@@ -325,9 +580,34 @@
               "type": "uint256"
             },
             {
-              "internalType": "address payable",
-              "name": "wallet",
+              "internalType": "uint256",
+              "name": "escalationResponsePeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "operator",
               "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             },
             {
               "internalType": "bool",
@@ -338,6 +618,28 @@
           "internalType": "struct BosonTypes.DisputeResolver",
           "name": "_disputeResolver",
           "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "tokenName",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "feeAmount",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.DisputeResolverFee[]",
+          "name": "_disputeResolverFees",
+          "type": "tuple[]"
         }
       ],
       "name": "createDisputeResolver",
@@ -454,9 +756,34 @@
               "type": "uint256"
             },
             {
-              "internalType": "address payable",
-              "name": "wallet",
+              "internalType": "uint256",
+              "name": "escalationResponsePeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "operator",
               "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             },
             {
               "internalType": "bool",
@@ -467,6 +794,116 @@
           "internalType": "struct BosonTypes.DisputeResolver",
           "name": "disputeResolver",
           "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "tokenName",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "feeAmount",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.DisputeResolverFee[]",
+          "name": "disputeResolverFees",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_associatedAddress",
+          "type": "address"
+        }
+      ],
+      "name": "getDisputeResolverByAddress",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "exists",
+          "type": "bool"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "escalationResponsePeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "operator",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct BosonTypes.DisputeResolver",
+          "name": "disputeResolver",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "tokenAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "tokenName",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "feeAmount",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct BosonTypes.DisputeResolverFee[]",
+          "name": "disputeResolverFees",
+          "type": "tuple[]"
         }
       ],
       "stateMutability": "view",
@@ -600,6 +1037,24 @@
     {
       "inputs": [
         {
+          "internalType": "uint256",
+          "name": "_disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address[]",
+          "name": "_feeTokenAddresses",
+          "type": "address[]"
+        }
+      ],
+      "name": "removeFeesFromDisputeResolver",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "components": [
             {
               "internalType": "uint256",
@@ -637,9 +1092,34 @@
               "type": "uint256"
             },
             {
-              "internalType": "address payable",
-              "name": "wallet",
+              "internalType": "uint256",
+              "name": "escalationResponsePeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "operator",
               "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "clerk",
+              "type": "address"
+            },
+            {
+              "internalType": "address payable",
+              "name": "treasury",
+              "type": "address"
+            },
+            {
+              "internalType": "string",
+              "name": "metadataUri",
+              "type": "string"
             },
             {
               "internalType": "bool",
