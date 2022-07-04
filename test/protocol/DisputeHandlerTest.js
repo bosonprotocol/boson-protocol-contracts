@@ -679,16 +679,6 @@ describe("IBosonDisputeHandler", function () {
             );
           });
 
-          it("Dispute is in escalated state", async function () {
-            // Escalate a dispute
-            await disputeHandler.connect(buyer).escalateDispute(exchangeId);
-
-            // Attempt to expire the dispute, expecting revert
-            await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWith(
-              RevertReasons.INVALID_STATE
-            );
-          });
-
           it("Dispute is in some state other than resolving", async function () {
             // Retract the dispute, put it into RETRACTED state
             await disputeHandler.connect(buyer).retractDispute(exchangeId);
@@ -1720,6 +1710,28 @@ describe("IBosonDisputeHandler", function () {
             assert.equal(exists, true, "Incorrectly reports existence");
             assert.equal(response, true, "Incorrectly reports unfinalized state");
           });
+
+          it("should return true if dispute is in Refused state", async function () {
+            // Escalate the dispute
+            tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+
+            // Get the block timestamp of the confirmed tx and set escalatedDate
+            blockNumber = tx.blockNumber;
+            block = await ethers.provider.getBlock(blockNumber);
+            escalatedDate = block.timestamp.toString();
+
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+
+            // Expire dispute
+            await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
+
+            // Dispute in decided state, ask if exchange is finalized
+            [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchangeId);
+
+            // It should exist and be finalized
+            assert.equal(exists, true, "Incorrectly reports existence");
+            assert.equal(response, true, "Incorrectly reports unfinalized state");
+          });
         });
       });
     });
@@ -1856,16 +1868,6 @@ describe("IBosonDisputeHandler", function () {
             );
           });
 
-          it("Dispute is in escalated state", async function () {
-            // Escalate a dispute
-            await disputeHandler.connect(buyer).escalateDispute("2");
-
-            // Attempt to expire the disputes, expecting revert
-            await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWith(
-              RevertReasons.INVALID_STATE
-            );
-          });
-
           it("Dispute is in some state other than resolving", async function () {
             await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
@@ -1887,28 +1889,6 @@ describe("IBosonDisputeHandler", function () {
               RevertReasons.TOO_MANY_DISPUTES
             );
           });
-        });
-
-        it("should return true if dispute is in Refused state", async function () {
-          // Escalate the dispute
-          tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
-
-          // Get the block timestamp of the confirmed tx and set escalatedDate
-          blockNumber = tx.blockNumber;
-          block = await ethers.provider.getBlock(blockNumber);
-          escalatedDate = block.timestamp.toString();
-
-          await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
-
-          // Expire dispute
-          await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
-
-          // Dispute in decided state, ask if exchange is finalized
-          [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchangeId);
-
-          // It should exist and be finalized
-          assert.equal(exists, true, "Incorrectly reports existence");
-          assert.equal(response, true, "Incorrectly reports unfinalized state");
         });
       });
     });

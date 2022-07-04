@@ -158,11 +158,11 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     function getMaxTokensPerWithdrawal() external view returns (uint16);
 
     /**
-     * @notice Sets the maximum numbers of disputes that can be expired in the single transaction
+     * @notice Sets the maximum numbers of disputes that can be expired in a single transaction
      *
      * Emits a MaxDisputesPerBatchChanged event.
      *
-     * @param _maxDisputesPerBatch - the maximum number of disputes to expire
+     * @param _maxDisputesPerBatch - the maximum number of disputes that can be expired
      */
     function setMaxDisputesPerBatch(uint16 _maxDisputesPerBatch) external;
 
