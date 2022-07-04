@@ -102,10 +102,10 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             require(_offerDurations.voucherValid > 0, AMBIGUOUS_VOUCHER_EXPIRY);
         }
 
-        // fulfillment period must be grater than zero
+        // fulfillment period must be greater than zero
         require(_offerDurations.fulfillmentPeriod > 0, INVALID_FULFILLMENT_PERIOD);
 
-        // dispute duration must be grater than zero
+        // dispute duration must be greater than zero
         require(_offerDurations.resolutionPeriod > 0, INVALID_DISPUTE_DURATION);
 
         // when creating offer, it cannot be set to voided
@@ -116,7 +116,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
         // specified resolver must be registered, except for absolute zero offers with unspecified dispute resolver
         if (_offer.price != 0 || _offer.sellerDeposit != 0 || _offer.disputeResolverId != 0) {
-            (bool exists,) = fetchDisputeResolver(_offer.disputeResolverId);
+            (bool exists,,) = fetchDisputeResolver(_offer.disputeResolverId);
             require(exists, INVALID_DISPUTE_RESOLVER);
         }
 

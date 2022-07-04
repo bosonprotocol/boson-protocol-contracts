@@ -5,6 +5,7 @@ const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
 const Twin = require("../../scripts/domain/Twin.js");
 const TokenType = require("../../scripts/domain/TokenType.js");
+const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("./constants.js");
 
@@ -81,5 +82,20 @@ function mockTwin(tokenAddress, tokenType) {
   return new Twin(id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType);
 }
 
+function mockDisputeResolver(operatorAddress, adminAddress, clerkAddress, treasuryAddress, active) {
+  const id = "1";
+  const metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
+  return new DisputeResolver(
+    id.toString(),
+    oneMonth.toString(),
+    operatorAddress,
+    adminAddress,
+    clerkAddress,
+    treasuryAddress,
+    metadataUriDR,
+    active
+  );
+}
 exports.mockOffer = mockOffer;
 exports.mockTwin = mockTwin;
+exports.mockDisputeResolver = mockDisputeResolver;
