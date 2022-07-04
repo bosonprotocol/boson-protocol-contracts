@@ -1006,9 +1006,9 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256[]",
-              "name": "supplyIds",
-              "type": "uint256[]"
+              "internalType": "uint256",
+              "name": "lastTokenId",
+              "type": "uint256"
             },
             {
               "internalType": "uint256",
@@ -1331,9 +1331,9 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256[]",
-              "name": "supplyIds",
-              "type": "uint256[]"
+              "internalType": "uint256",
+              "name": "lastTokenId",
+              "type": "uint256"
             },
             {
               "internalType": "uint256",
@@ -1675,9 +1675,9 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256[]",
-              "name": "supplyIds",
-              "type": "uint256[]"
+              "internalType": "uint256",
+              "name": "lastTokenId",
+              "type": "uint256"
             },
             {
               "internalType": "uint256",
@@ -2039,9 +2039,9 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256[]",
-              "name": "supplyIds",
-              "type": "uint256[]"
+              "internalType": "uint256",
+              "name": "lastTokenId",
+              "type": "uint256"
             },
             {
               "internalType": "uint256",
@@ -2457,9 +2457,9 @@
               "type": "uint256"
             },
             {
-              "internalType": "uint256[]",
-              "name": "supplyIds",
-              "type": "uint256[]"
+              "internalType": "uint256",
+              "name": "lastTokenId",
+              "type": "uint256"
             },
             {
               "internalType": "uint256",
