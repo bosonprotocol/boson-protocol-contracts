@@ -15,6 +15,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockTwin } = require("../utils/mock");
+const TokenType = require("../../scripts/domain/TokenType.js");
 const { oneMonth } = require("../utils/constants");
 
 /**
@@ -223,7 +224,7 @@ describe("IBosonTwinHandler", function () {
         twin.tokenAddress = foreign721.address;
 
         // Mint a token and approve twinHandler contract to transfer it
-        await foreign721.connect(operator).mint(twin.tokenId);
+        await foreign721.connect(operator).mint(twin.tokenId, "1");
         await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
 
         // Create a twin, testing for the event
@@ -293,6 +294,21 @@ describe("IBosonTwinHandler", function () {
 
           await expect(twinHandler.connect(operator).createTwin(twin)).to.revertedWith(
             RevertReasons.NO_TRANSFER_APPROVED
+          );
+        });
+
+        it("lastTokenId is lower than tokenId", async function () {
+          // Mint a token and approve twinHandler contract to transfer it
+          await foreign721.connect(operator).mint(twin.tokenId, "1");
+          await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+          twin.lastTokenId = "0";
+          twin.tokenId = "1";
+          twin.tokenAddress = foreign721.address;
+          twin.tokenType = TokenType.NonFungibleToken;
+
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
+            RevertReasons.ERC721_INVALID_RANGE
           );
         });
 

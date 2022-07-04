@@ -33,7 +33,7 @@ describe("Twin", function () {
       expect(twin.idIsValid()).is.true;
       expect(twin.sellerIdIsValid()).is.true;
       expect(twin.supplyAvailableIsValid()).is.true;
-      expect(twin.supplyIdsIsValid()).is.true;
+      expect(twin.lastTokenIdIsValid()).is.true;
       expect(twin.tokenIdIsValid()).is.true;
       expect(twin.tokenAddressIsValid()).is.true;
       expect(twin.tokenTypeIsValid()).is.true;
@@ -121,30 +121,30 @@ describe("Twin", function () {
       expect(twin.isValid()).is.true;
     });
 
-    it("Always present, supplyIds must be the array containing string representation of a BigNumber", async function () {
+    it("Always present, lastTokenId must be the array containing string representation of a BigNumber", async function () {
       // Invalid field value
-      twin.supplyIds = "zedzdeadbaby";
-      expect(twin.supplyIdsIsValid()).is.false;
+      twin.lastTokenId = "zedzdeadbaby";
+      expect(twin.lastTokenIdIsValid()).is.false;
       expect(twin.isValid()).is.false;
 
       // Invalid field value
-      twin.supplyIds = new Date();
-      expect(twin.supplyIdsIsValid()).is.false;
+      twin.lastTokenId = new Date();
+      expect(twin.lastTokenIdIsValid()).is.false;
       expect(twin.isValid()).is.false;
 
       // Invalid field value
-      twin.supplyIds = 12;
-      expect(twin.supplyIdsIsValid()).is.false;
+      twin.lastTokenId = 12;
+      expect(twin.lastTokenIdIsValid()).is.false;
+      expect(twin.isValid()).is.false;
+
+      // Invalid field value
+      twin.lastTokenId = ["1", "2"];
+      expect(twin.lastTokenIdIsValid()).is.false;
       expect(twin.isValid()).is.false;
 
       // Valid field value
-      twin.supplyIds = ["1", "2"];
-      expect(twin.supplyIdsIsValid()).is.true;
-      expect(twin.isValid()).is.true;
-
-      // Valid field value
-      twin.supplyIds = ["126"];
-      expect(twin.supplyIdsIsValid()).is.true;
+      twin.lastTokenId = "126";
+      expect(twin.lastTokenIdIsValid()).is.true;
       expect(twin.isValid()).is.true;
     });
 
@@ -246,21 +246,21 @@ describe("Twin", function () {
       twin = mockTwin(tokenAddress);
       expect(twin.isValid()).is.true;
 
-      const { id, sellerId, supplyAvailable, supplyIds, tokenId, tokenType } = twin;
+      const { id, sellerId, supplyAvailable, lastTokenId, tokenId, tokenType } = twin;
 
       // Get plain object
       object = {
         id,
         sellerId,
         supplyAvailable,
-        supplyIds,
+        lastTokenId,
         tokenId,
         tokenAddress,
         tokenType,
       };
 
       // Struct representation
-      struct = [id, sellerId, supplyAvailable, supplyIds, tokenId, tokenAddress, tokenType];
+      struct = [id, sellerId, supplyAvailable, lastTokenId, tokenId, tokenAddress, tokenType];
     });
 
     context("👉 Static", async function () {
