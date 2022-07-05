@@ -115,6 +115,7 @@ exports.RevertReasons = {
   INVALID_BUYER_PERCENT: "Invalid buyer percent",
   DISPUTE_STILL_VALID: "Dispute still valid",
   INVALID_DISPUTE_TIMEOUT: "Invalid dispute timeout",
+  TOO_MANY_DISPUTES: "Exceeded maximum disputes in a single transaction",
 
   // Config related
   PROTOCOL_FEE_PERCENTAGE_INVALID: "Percentage representation must be less than 10000",

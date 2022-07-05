@@ -78,6 +78,7 @@ describe("IBosonVoucher", function () {
         maxTokensPerWithdrawal: 0,
         maxFeesPerDisputeResolver: 100,
         maxEscalationResponsePeriod: oneMonth,
+        maxDisputesPerBatch: 100,
       },
       //Protocol fees
       {

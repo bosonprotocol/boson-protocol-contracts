@@ -143,6 +143,7 @@ describe("IBosonExchangeHandler", function () {
         maxTokensPerWithdrawal: 100,
         maxFeesPerDisputeResolver: 100,
         maxEscalationResponsePeriod: oneMonth,
+        maxDisputesPerBatch: 100,
       },
       // Protocol fees
       {

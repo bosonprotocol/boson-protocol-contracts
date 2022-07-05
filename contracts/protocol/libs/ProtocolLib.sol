@@ -44,6 +44,8 @@ library ProtocolLib {
         uint16 maxFeesPerDisputeResolver;
         // limit on the escalation response period that a dispute resolver can specify
         uint256 maxEscalationResponsePeriod;
+        // limit how many disputes can be processed in single batch transaction
+        uint16 maxDisputesPerBatch;
     }
 
     // Protocol fees storage

@@ -32,11 +32,11 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
     internal
     {
         // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+        (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
         require(exists, NOT_OPERATOR);
 
         // Protocol must be approved to transfer seller’s tokens
-        require(isProtocolApproved(_twin.tokenAddress, msg.sender, address(this)), NO_TRANSFER_APPROVED);
+        require(isProtocolApproved(_twin.tokenAddress, msgSender(), address(this)), NO_TRANSFER_APPROVED);
 
         if(_twin.tokenType == TokenType.NonFungibleToken) {
             require(_twin.lastTokenId >= _twin.tokenId, ERC721_INVALID_RANGE);

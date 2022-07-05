@@ -37,7 +37,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      */
     function createOfferInternal(Offer memory _offer, OfferDates calldata _offerDates, OfferDurations calldata _offerDurations) internal {
         // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+        (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
         require(exists, NOT_OPERATOR);
         _offer.sellerId = sellerId;
 
