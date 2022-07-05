@@ -6,6 +6,7 @@ import { IBosonClient } from "../../../interfaces/clients/IBosonClient.sol";
 import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
 import { BosonConstants } from "../../../domain/BosonConstants.sol";
 import { ClientLib } from "../../libs/ClientLib.sol";
+import { EIP712Lib } from "../../libs/EIP712Lib.sol";
 import { Proxy } from "./Proxy.sol";
 
 /**
@@ -89,7 +90,7 @@ contract ClientProxy is IBosonClient, BosonConstants, Proxy {
         ps.implementation = _impl;
 
         // Notify watchers of state change
-        emit Upgraded(_impl, msg.sender);
+        emit Upgraded(_impl, EIP712Lib.msgSender());
 
     }
 
@@ -123,7 +124,7 @@ contract ClientProxy is IBosonClient, BosonConstants, Proxy {
         ps.accessController = IAccessControlUpgradeable(_accessController);
 
         // Notify watchers of state change
-        emit AccessControllerAddressChanged(_accessController, msg.sender);
+        emit AccessControllerAddressChanged(_accessController, EIP712Lib.msgSender());
     }
 
     /**
@@ -163,7 +164,7 @@ contract ClientProxy is IBosonClient, BosonConstants, Proxy {
         ps.protocolDiamond = _protocolAddress;
 
         // Notify watchers of state change
-        emit ProtocolAddressChanged(_protocolAddress, msg.sender);
+        emit ProtocolAddressChanged(_protocolAddress, EIP712Lib.msgSender());
     }
 
     /**

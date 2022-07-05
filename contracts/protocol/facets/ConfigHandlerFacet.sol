@@ -74,7 +74,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolAddresses().tokenAddress = _tokenAddress;
-        emit TokenAddressChanged(_tokenAddress, msg.sender);
+        emit TokenAddressChanged(_tokenAddress, msgSender());
     }
 
     /**
@@ -102,7 +102,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolAddresses().treasuryAddress = _treasuryAddress;
-        emit TreasuryAddressChanged(_treasuryAddress, msg.sender);
+        emit TreasuryAddressChanged(_treasuryAddress, msgSender());
     }
 
     /**
@@ -130,7 +130,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolAddresses().voucherAddress = _voucherAddress;
-        emit VoucherAddressChanged(_voucherAddress, msg.sender);
+        emit VoucherAddressChanged(_voucherAddress, msgSender());
     }
 
     /**
@@ -170,7 +170,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         protocolFees().percentage = _protocolFeePercentage;
 
         // Notify watchers of state change
-        emit ProtocolFeePercentageChanged(_protocolFeePercentage, msg.sender);
+        emit ProtocolFeePercentageChanged(_protocolFeePercentage, msgSender());
     }
 
     /**
@@ -203,7 +203,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         protocolFees().flatBoson = _protocolFeeFlatBoson;
 
         // Notify watchers of state change
-        emit ProtocolFeeFlatBosonChanged(_protocolFeeFlatBoson, msg.sender);
+        emit ProtocolFeeFlatBosonChanged(_protocolFeeFlatBoson, msgSender());
     }
 
     /**
@@ -231,7 +231,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolLimits().maxOffersPerGroup = _maxOffersPerGroup;
-        emit MaxOffersPerGroupChanged(_maxOffersPerGroup, msg.sender);
+        emit MaxOffersPerGroupChanged(_maxOffersPerGroup, msgSender());
     }
 
     /**
@@ -259,7 +259,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolLimits().maxTwinsPerBundle = _maxTwinsPerBundle;
-        emit MaxTwinsPerBundleChanged(_maxTwinsPerBundle, msg.sender);
+        emit MaxTwinsPerBundleChanged(_maxTwinsPerBundle, msgSender());
     }
 
     /**
@@ -287,7 +287,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolLimits().maxOffersPerBundle = _maxOffersPerBundle;
-        emit MaxOffersPerBundleChanged(_maxOffersPerBundle, msg.sender);
+        emit MaxOffersPerBundleChanged(_maxOffersPerBundle, msgSender());
     }
 
     /**
@@ -315,7 +315,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolLimits().maxOffersPerBatch = _maxOffersPerBatch;
-        emit MaxOffersPerBatchChanged(_maxOffersPerBatch, msg.sender);
+        emit MaxOffersPerBatchChanged(_maxOffersPerBatch, msgSender());
     }
 
     /**
@@ -343,7 +343,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolLimits().maxTokensPerWithdrawal = _maxTokensPerWithdrawal;
-        emit MaxTokensPerWithdrawalChanged(_maxTokensPerWithdrawal, msg.sender);
+        emit MaxTokensPerWithdrawalChanged(_maxTokensPerWithdrawal, msgSender());
     }
 
     /**
@@ -371,7 +371,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolLimits().maxFeesPerDisputeResolver = _maxFeesPerDisputeResolver;
-        emit MaxFeesPerDisputeResolverChanged(_maxFeesPerDisputeResolver, msg.sender);
+        emit MaxFeesPerDisputeResolverChanged(_maxFeesPerDisputeResolver, msgSender());
     }
 
    
@@ -400,7 +400,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolLimits().maxEscalationResponsePeriod = _maxEscalationResponsePeriod;
-        emit MaxEscalationResponsePeriodChanged(_maxEscalationResponsePeriod, msg.sender);   
+        emit MaxEscalationResponsePeriodChanged(_maxEscalationResponsePeriod, msgSender());
     }
 
    

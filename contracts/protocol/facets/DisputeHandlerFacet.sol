@@ -151,7 +151,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         (,Seller storage seller) = fetchSeller(offer.sellerId);
 
         // Caller must be seller's operator address
-        require(seller.operator == msg.sender, NOT_OPERATOR);
+        require(seller.operator == msgSender(), NOT_OPERATOR);
 
         // Fetch the dispute, it exists if exchange is in Disputed state
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
@@ -169,7 +169,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         disputeDates.timeout = _newDisputeTimeout;
 
         // Notify watchers of state change
-        emit DisputeTimeoutExtended(_exchangeId, _newDisputeTimeout, msg.sender);
+        emit DisputeTimeoutExtended(_exchangeId, _newDisputeTimeout, msgSender());
     }
 
     /**
@@ -250,7 +250,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
             (, Offer storage offer) = fetchOffer(exchange.offerId);
 
             // get seller id to check if caller is the seller
-            (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);     
+            (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
 
             // variable to store who the expected signer is
             address expectedSigner;
@@ -366,14 +366,14 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // get dispute resolver id to check if caller is the dispute resolver
-        uint256 disputeResolverId = protocolLookups().disputeResolverIdByOperator[msg.sender];
+        uint256 disputeResolverId = protocolLookups().disputeResolverIdByOperator[msgSender()];
         require(disputeResolverId == offer.disputeResolverId, NOT_DISPUTE_RESOLVER_OPERATOR);
 
         // finalize the dispute
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Decided, _buyerPercent);
 
         // Notify watchers of state change
-        emit DisputeDecided(_exchangeId, _buyerPercent, msg.sender);
+        emit DisputeDecided(_exchangeId, _buyerPercent, msgSender());
     }
 
     /**
