@@ -2183,7 +2183,7 @@ describe("IBosonFundsHandler", function () {
             tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
           });
 
-          it.only("should emit a FundsReleased event", async function () {
+          it("should emit a FundsReleased event", async function () {
             // Expire the dispute, expecting event
             await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId))
               .to.emit(disputeHandler, "FundsReleased")
@@ -2194,7 +2194,7 @@ describe("IBosonFundsHandler", function () {
             // .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
           });
 
-          it.only("should update state", async function () {
+          it("should update state", async function () {
             // Read on chain state
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
