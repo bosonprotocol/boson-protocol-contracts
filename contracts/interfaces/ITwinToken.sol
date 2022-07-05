@@ -19,4 +19,17 @@ interface ITwinToken is IERC165 {
      * @return _isApproved - the approval was found.
      */
     function isApprovedForAll(address _owner, address _operator) external view returns (bool _isApproved);
+
+    /**
+     * @notice Returns the remaining number of tokens that `_operator` will be
+     * allowed to spend on behalf of `_owner` through {transferFrom}. This is
+     * zero by default.
+     *
+     * This value changes when {approve} or {transferFrom} are called.
+     *
+     * @param _owner - the owner address
+     * @param _operator - the operator address
+     * @return The remaining amount allowed
+     */
+    function allowance(address _owner, address _operator) external view returns (uint256);
 }
