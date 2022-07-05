@@ -1948,7 +1948,7 @@ describe("IBosonDisputeHandler", function () {
             block = await ethers.provider.getBlock(blockNumber);
             escalatedDate = block.timestamp.toString();
 
-            await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
             // Expire dispute
             await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
