@@ -60,7 +60,6 @@ describe("IBosonDisputeHandler", function () {
   let exchange, exchangeStruct, finalizedDate, state;
   let dispute, disputedDate, escalatedDate, complaint, disputeStruct, timeout, newDisputeTimeout, escalationPeriod;
   let disputeDates, disputeDatesStruct;
-  let escalationPeriod;
   let exists, response;
   let disputeResolver, active, disputeResolverFees;
   let buyerPercent;
@@ -1324,14 +1323,14 @@ describe("IBosonDisputeHandler", function () {
 
       it("should emit a EscalatedDisputeRefused event", async function () {
         // Expire the escalated dispute, testing for the event
-        await expect(disputeHandler.connect(disputeResolver).refuseEscalatedDispute(exchange.id))
+        await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchange.id))
           .to.emit(disputeHandler, "EscalatedDisputeRefused")
-          .withArgs(exchange.id, disputeResolver.address);
+          .withArgs(exchange.id, operatorDR.address);
       });
 
       it("should update state", async function () {
         // Expire the dispute
-        tx = await disputeHandler.connect(disputeResolver).refuseEscalatedDispute(exchange.id);
+        tx = await disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchange.id);
 
         // Get the block timestamp of the confirmed tx and set finalizedDate
         blockNumber = tx.blockNumber;
@@ -1379,7 +1378,7 @@ describe("IBosonDisputeHandler", function () {
           const exchangeId = "666";
 
           // Attempt to refuse the escalated dispute, expecting revert
-          await expect(disputeHandler.connect(disputeResolver).refuseEscalatedDispute(exchangeId)).to.revertedWith(
+          await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -1391,7 +1390,7 @@ describe("IBosonDisputeHandler", function () {
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
           // Attempt to refuse the escalated dispute, expecting revert
-          await expect(disputeHandler.connect(disputeResolver).refuseEscalatedDispute(exchange.id)).to.revertedWith(
+          await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchange.id)).to.revertedWith(
             RevertReasons.INVALID_STATE
           );
         });
@@ -1410,7 +1409,7 @@ describe("IBosonDisputeHandler", function () {
 
           // dispute raised but not escalated
           // Attempt to refuse the escalated dispute, expecting revert
-          await expect(disputeHandler.connect(disputeResolver).refuseEscalatedDispute(exchange.id)).to.revertedWith(
+          await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchange.id)).to.revertedWith(
             RevertReasons.INVALID_STATE
           );
 
@@ -1418,7 +1417,7 @@ describe("IBosonDisputeHandler", function () {
           await disputeHandler.connect(buyer).retractDispute(exchange.id);
 
           // Attempt to refuse the retracted dispute, expecting revert
-          await expect(disputeHandler.connect(disputeResolver).refuseEscalatedDispute(exchange.id)).to.revertedWith(
+          await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchange.id)).to.revertedWith(
             RevertReasons.INVALID_STATE
           );
         });
@@ -1428,7 +1427,7 @@ describe("IBosonDisputeHandler", function () {
           await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
 
           // Attempt to refuse the escalated dispute, expecting revert
-          await expect(disputeHandler.connect(disputeResolver).refuseEscalatedDispute(exchange.id)).to.revertedWith(
+          await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchange.id)).to.revertedWith(
             RevertReasons.DISPUTE_HAS_EXPIRED
           );
         });
@@ -1436,7 +1435,7 @@ describe("IBosonDisputeHandler", function () {
         it("Caller is not the dispute resolver for this dispute", async function () {
           // Attempt to refuse the escalated dispute, expecting revert
           await expect(disputeHandler.connect(rando).refuseEscalatedDispute(exchange.id)).to.revertedWith(
-            RevertReasons.NOT_DISPUTE_RESOLVER_WALLET
+            RevertReasons.NOT_DISPUTE_RESOLVER_OPERATOR
           );
         });
       });
