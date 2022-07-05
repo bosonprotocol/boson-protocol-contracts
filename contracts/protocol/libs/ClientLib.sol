@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {IAccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
 import {IBosonConfigHandler} from "../../interfaces/handlers/IBosonConfigHandler.sol";
+import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
 /**
  * @title ClientLib
@@ -54,7 +55,7 @@ library ClientLib {
      */
     function hasRole(bytes32 role) internal view returns (bool) {
         ProxyStorage storage ps = proxyStorage();
-        return ps.accessController.hasRole(role, msg.sender);
+        return ps.accessController.hasRole(role, EIP712Lib.msgSender());
     }
 
 }
