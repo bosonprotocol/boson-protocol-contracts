@@ -92,6 +92,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * - exchange is not in a disputed state
      * - caller is not the buyer for the given exchange id
      * - dispute is in some state other than resolving or escalated
+     * - dispute was escalated and escalation period has elapsed
      *
      * @param _exchangeId - the id of the associated exchange
      */
@@ -105,8 +106,14 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Fetch the dispute
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
 
-        // Make sure the dispute is in the resolving or escalated state
-        require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);
+        // If dispute was escalated, make sure that escalation period is not over yet
+        if (dispute.state == DisputeState.Escalated) {
+            // make sure the dispute escalation period not expired already
+            require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);  
+        } else {
+            // If dispute is not escalated, make sure the it is in the resolving state
+            require(dispute.state == DisputeState.Resolving, INVALID_STATE);
+        }
 
         // Finalize the dispute
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Retracted, 0);
@@ -211,6 +218,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * - caller is neither the seller nor the buyer
      * - signature does not belong to the address of the other party
      * - dispute state is neither resolving nor escalated
+     * - dispute was escalated and escalation period has elapsed
      *
      * @param _exchangeId  - exchange id to resolve dispute
      * @param _buyerPercent - percentage of the pot that goes to the buyer
@@ -230,8 +238,11 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Fetch teh dispute and dispute dates
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId); 
 
-        // make sure the dispute not expired already or it is in the escalated state
-        require(block.timestamp <= disputeDates.timeout || disputeDates.escalated > 0, DISPUTE_HAS_EXPIRED);
+        // Make sure the dispute is in the resolving or escalated state
+        require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);
+
+        // Make sure the dispute not expired already 
+        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);  
 
         // wrap the code in a separate block to avoid stack too deep error 
         { 
@@ -264,9 +275,6 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
             // verify that the signature belongs to the expectedSigner
             require(EIP712Lib.verify(expectedSigner, hashResolution(_exchangeId, _buyerPercent), _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         }
-
-        // Make sure the dispute is in the resolving or escalated state
-        require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);
 
         // finalize the dispute
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Resolved, _buyerPercent);
@@ -305,8 +313,12 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Make sure the dispute is in the resolving state             
         require(dispute.state == DisputeState.Resolving, INVALID_STATE);
 
+        // TODO: fetch the escalation period from the storage
+        uint256 escalationPeriod = 1000 weeks; // only for tests  
+
         // store the time of escalation
         disputeDates.escalated = block.timestamp;
+        disputeDates.timeout = block.timestamp + escalationPeriod;
 
         // Set the dispute state
         dispute.state = DisputeState.Escalated;
@@ -329,6 +341,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * - exchange is not in the disputed state
      * - caller is not the dispute resolver for this dispute
      * - dispute state is not escalated
+     * - dispute escalation period has elapsed
      *
      * @param _exchangeId  - exchange id to resolve dispute
      * @param _buyerPercent - percentage of the pot that goes to the buyer
@@ -345,6 +358,9 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // Make sure the dispute is in the escalated state
         require(dispute.state == DisputeState.Escalated, INVALID_STATE);
+       
+        // Make sure the dispute escalation period not expired already
+        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
 
         // Fetch the offer to get the info who the seller is
         (, Offer storage offer) = fetchOffer(exchange.offerId);
@@ -383,11 +399,8 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Make sure the dispute is in the escalated state
         require(dispute.state == DisputeState.Escalated, INVALID_STATE);
 
-        // TODO: fetch the escalation period from the storage
-        uint256 escalationPeriod = 1 weeks; // only for tests    
-
-        // make sure the dispute escalation period not expired already
-        require(block.timestamp >= disputeDates.escalated + escalationPeriod, DISPUTE_STILL_VALID);      
+        // make sure the dispute escalation has expired already
+        require(block.timestamp > disputeDates.timeout, DISPUTE_STILL_VALID);      
 
         // Finalize the dispute
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Refused, 0);
