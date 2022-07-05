@@ -37,10 +37,10 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         require(isProtocolApproved(_twin.tokenAddress, msgSender(), address(this)), NO_TRANSFER_APPROVED);
 
         if(_twin.tokenType == TokenType.NonFungibleToken) {
+            require(_twin.amount == 0,INVALID_TWIN_PROPERTY);
             require(_twin.lastTokenId >= _twin.tokenId, ERC721_INVALID_RANGE);
-        }
-
-        if(_twin.tokenType == TokenType.FungibleToken || _twin.tokenType == TokenType.MultiToken) {
+        } else if(_twin.tokenType == TokenType.FungibleToken || _twin.tokenType == TokenType.MultiToken) {
+            require(_twin.lastTokenId == 0, INVALID_TWIN_PROPERTY);
             require(_twin.amount > 0, INVALID_AMOUNT);   
         }
 

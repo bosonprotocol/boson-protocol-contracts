@@ -65,6 +65,7 @@ exports.RevertReasons = {
   TWIN_HAS_BUNDLES: "Twin has bundles",
   ERC721_INVALID_RANGE: "lastTokenId must be equal or greater than tokenId",
   INVALID_AMOUNT: "Amount must be greater than zero if token is ERC20 or ERC1155",
+  INVALID_TWIN_PROPERTY: "Invalid property for selected token type",
 
   // Bundle related
   NO_SUCH_BUNDLE: "No such bundle",
