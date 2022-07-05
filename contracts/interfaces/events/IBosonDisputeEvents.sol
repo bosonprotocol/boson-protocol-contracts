@@ -16,5 +16,6 @@ interface IBosonDisputeEvents {
     event DisputeDecided(uint256 indexed exchangeId, uint256 _buyerPercent, address indexed executedBy);
     event DisputeTimeoutExtended(uint256 indexed exchangeId, uint256 newDisputeTimeout, address indexed executedBy);   
     event DisputeEscalated(uint256 indexed exchangeId, uint256 indexed disputeResolverId, address indexed executedBy);
-    event EscalatedDisputeExpired(uint256 indexed exchangeId, address indexed executedBy);    
+    event EscalatedDisputeExpired(uint256 indexed exchangeId, address indexed executedBy);
+    event EscalatedDisputeRefused(uint256 indexed exchangeId, address indexed executedBy);
 }
