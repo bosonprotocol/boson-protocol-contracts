@@ -175,6 +175,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Offer does not exist
      * - Caller is not the operator of the offer
      * - New valid until date is before existing valid until dates
+     * - Offer has voucherRedeemableUntil set and new valid until date is greater than that
      *
      *  @param _offerId - the id of the offer to check
      *  @param _validUntilDate - new valid until date
@@ -194,6 +195,11 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         // New valid until date must be greater than existing one
         require(offerDates.validUntil < _validUntilDate, OFFER_PERIOD_INVALID);
 
+        // If voucherRedeemableUntil is set, _validUntilDate must be less or equal than that
+        if (offerDates.voucherRedeemableUntil > 0) {
+            require(_validUntilDate <=  offerDates.voucherRedeemableUntil, OFFER_PERIOD_INVALID);
+        }
+
         // Update the valid until property
         offerDates.validUntil = _validUntilDate;
 
@@ -212,6 +218,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *   - Offer does not exist
      *   - Caller is not the operator of the offer
      *   - New valid until date is before existing valid until dates
+     *   - Offer has voucherRedeemableUntil set and new valid until date is greater than that
      *
      *  @param _offerIds - list of ids of the offers to extemd
      *  @param _validUntilDate - new valid until date

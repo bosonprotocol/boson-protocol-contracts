@@ -118,6 +118,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Offer does not exist
      * - Caller is not the operator of the offer
      * - New valid until date is before existing valid until dates
+     * - Offer has voucherRedeemableUntil set and new valid until date is greater than that
      *
      *  @param _offerId - the id of the offer to extend
      *  @param _validUntilDate - new valid until date
@@ -135,6 +136,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *   - Offer does not exist
      *   - Caller is not the operator of the offer
      *   - New valid until date is before existing valid until dates
+     *   - Offer has voucherRedeemableUntil set and new valid until date is greater than that
      *
      *  @param _offerIds - list of ids of the offers to extemd
      *  @param _validUntilDate - new valid until date

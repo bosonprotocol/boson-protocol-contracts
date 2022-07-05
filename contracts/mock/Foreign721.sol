@@ -14,9 +14,13 @@ contract Foreign721 is ERC721Upgradeable {
 
     /**
      * Mint a Sample NFT
-     * @param _tokenId - the token ID to mint
+     * @param _tokenId - the first token ID to mint
+     * @param _supply - the number of tokens to mint
      */
-    function mint(uint256 _tokenId) public {
-        _mint(msg.sender, _tokenId);
+    function mint(uint256 _tokenId, uint256 _supply) public {
+        for (uint256 index = 0; index < _supply; index++) {
+            _mint(msg.sender, _tokenId);
+            _tokenId++;
+        }
     }
 }

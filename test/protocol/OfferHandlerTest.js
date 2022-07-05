@@ -783,6 +783,22 @@ describe("IBosonOfferHandler", function () {
             RevertReasons.OFFER_PERIOD_INVALID
           );
         });
+
+        it("Offer has voucherRedeemableUntil set and new valid until date is greater than that", async function () {
+          // create a new offer with vouchers with fix expiration date
+          offer.id++;
+          offerDates.voucherRedeemableUntil = ethers.BigNumber.from(offerDates.validUntil).add(oneMonth).toString();
+          offerDurations.voucherValid = "0"; // only one of voucherRedeemableUntil and voucherValid can be non zero
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
+
+          // Set until date in the before offerDates.voucherRedeemableUntil
+          offerDates.validUntil = ethers.BigNumber.from(offerDates.voucherRedeemableUntil).add(oneWeek).toString(); // one week after voucherRedeemableUntil
+
+          // Attempt to update an offer, expecting revert
+          await expect(offerHandler.connect(operator).extendOffer(offer.id, offerDates.validUntil)).to.revertedWith(
+            RevertReasons.OFFER_PERIOD_INVALID
+          );
+        });
       });
     });
 
@@ -1704,7 +1720,7 @@ describe("IBosonOfferHandler", function () {
           expect(offerStruct.validUntilDate).is.not.equal(newValidUntilDate);
         }
 
-        // Void offers
+        // Extend offers
         await offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate);
 
         for (const id of offersToExtend) {
@@ -1719,7 +1735,7 @@ describe("IBosonOfferHandler", function () {
           // Set invalid id
           offersToExtend = ["1", "432", "2"];
 
-          // Attempt to extend the offer, expecting revert
+          // Attempt to extend the offers, expecting revert
           await expect(
             offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
           ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
@@ -1727,7 +1743,7 @@ describe("IBosonOfferHandler", function () {
           // Set invalid id
           offersToExtend = ["1", "2", "0"];
 
-          // Attempt to extend the offer, expecting revert
+          // Attempt to extend the offers, expecting revert
           await expect(
             offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
           ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
@@ -1735,7 +1751,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Caller is not seller", async function () {
           // caller is not the operator of any seller
-          // Attempt to extend the offer, expecting revert
+          // Attempt to extend the offers, expecting revert
           await expect(offerHandler.connect(rando).extendOfferBatch(offersToExtend, newValidUntilDate)).to.revertedWith(
             RevertReasons.NOT_OPERATOR
           );
@@ -1744,7 +1760,7 @@ describe("IBosonOfferHandler", function () {
           seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, active);
           await accountHandler.connect(rando).createSeller(seller);
 
-          // Attempt to extend the offer, expecting revert
+          // Attempt to extend the offers, expecting revert
           await expect(offerHandler.connect(rando).extendOfferBatch(offersToExtend, newValidUntilDate)).to.revertedWith(
             RevertReasons.NOT_OPERATOR
           );
@@ -1754,7 +1770,7 @@ describe("IBosonOfferHandler", function () {
           // Void the offer first
           await offerHandler.connect(operator).voidOffer("3");
 
-          // Attempt to extend the offer, expecting revert
+          // Attempt to extend the offers, expecting revert
           await expect(
             offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
           ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
@@ -1771,7 +1787,7 @@ describe("IBosonOfferHandler", function () {
           // Make new the valid until date less than existing one
           newValidUntilDate = ethers.BigNumber.from(newValidUntilDate).sub("1").toString(); // less that validUntilDate of offer 5
 
-          // Attempt to extend the offer, expecting revert
+          // Attempt to extend the offers, expecting revert
           await expect(
             offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
@@ -1781,7 +1797,24 @@ describe("IBosonOfferHandler", function () {
           // Set until date in the past
           newValidUntilDate = ethers.BigNumber.from(offerDatesList[0].validFrom - (oneMonth / 1000) * 6).toString(); // 6 months ago
 
-          // Attempt to extend the offer, expecting revert
+          // Attempt to extend the offers, expecting revert
+          await expect(
+            offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
+          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+        });
+
+        it("Offer has voucherRedeemableUntil set and new valid until date is greater than that", async function () {
+          // create a new offer with vouchers with fix expiration date
+          offer.id++;
+          offerDates.voucherRedeemableUntil = ethers.BigNumber.from(offerDates.validUntil).add(oneMonth).toString();
+          offerDurations.voucherValid = "0"; // only one of voucherRedeemableUntil and voucherValid can be non zero
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
+          offersToExtend.push(offer.id);
+
+          // Set until date in after the offerDates.voucherRedeemableUntil
+          newValidUntilDate = ethers.BigNumber.from(offerDates.voucherRedeemableUntil).add(oneWeek).toString(); // one week after voucherRedeemableUntil
+
+          // Attempt to extend the offers, expecting revert
           await expect(
             offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);

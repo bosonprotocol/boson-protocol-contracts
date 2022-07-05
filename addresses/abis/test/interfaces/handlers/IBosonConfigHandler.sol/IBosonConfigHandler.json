@@ -8,6 +8,44 @@
       "inputs": [
         {
           "indexed": false,
+          "internalType": "uint256",
+          "name": "maxEscalationResponsePeriod",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MaxEscalationResponsePeriodChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint16",
+          "name": "maxFeesPerDisputeResolver",
+          "type": "uint16"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MaxFeesPerDisputeResolverChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
           "internalType": "uint16",
           "name": "maxOffersPerBatch",
           "type": "uint16"
@@ -66,7 +104,7 @@
         {
           "indexed": false,
           "internalType": "uint16",
-          "name": "maxOffersPerBundle",
+          "name": "maxTokensPerWithdrawal",
           "type": "uint16"
         },
         {
@@ -192,6 +230,32 @@
       ],
       "name": "VoucherAddressChanged",
       "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "getMaxEscalationResponsePeriod",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getMaxFeesPerDisputeResolver",
+      "outputs": [
+        {
+          "internalType": "uint16",
+          "name": "",
+          "type": "uint16"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
     },
     {
       "inputs": [],
@@ -321,6 +385,32 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_maxEscalationResponsePeriod",
+          "type": "uint256"
+        }
+      ],
+      "name": "setMaxEscalationResponsePeriod",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint16",
+          "name": "_maxFeesPerDisputeResolver",
+          "type": "uint16"
+        }
+      ],
+      "name": "setMaxFeesPerDisputeResolver",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
