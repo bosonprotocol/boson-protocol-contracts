@@ -236,7 +236,7 @@ describe("IBosonDisputeHandler", function () {
       voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
       resolutionPeriod = offerDurations.resolutionPeriod;
       fulfillmentPeriod = offerDurations.fulfillmentPeriod;
-      escalationPeriod = oneWeek;
+      escalationPeriod = disputeResolver.escalationResponsePeriod;
 
       // Deposit seller funds so the commit will succeed
       const fundsToDeposit = ethers.BigNumber.from(sellerDeposit).mul(quantityAvailable);
@@ -491,7 +491,7 @@ describe("IBosonDisputeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
           escalatedDate = block.timestamp.toString();
 
-          await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
           // Attempt to retract the dispute, expecting revert
           await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWith(
