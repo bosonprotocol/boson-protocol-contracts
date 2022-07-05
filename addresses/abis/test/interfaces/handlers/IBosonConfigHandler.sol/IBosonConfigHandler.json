@@ -8,6 +8,25 @@
       "inputs": [
         {
           "indexed": false,
+          "internalType": "uint16",
+          "name": "maxDisputesPerBatch",
+          "type": "uint16"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MaxDisputesPerBatchChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
           "internalType": "uint256",
           "name": "maxEscalationResponsePeriod",
           "type": "uint256"
@@ -233,6 +252,19 @@
     },
     {
       "inputs": [],
+      "name": "getMaxDisputesPerBatch",
+      "outputs": [
+        {
+          "internalType": "uint16",
+          "name": "",
+          "type": "uint16"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "getMaxEscalationResponsePeriod",
       "outputs": [
         {
@@ -385,6 +417,19 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint16",
+          "name": "_maxDisputesPerBatch",
+          "type": "uint16"
+        }
+      ],
+      "name": "setMaxDisputesPerBatch",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
