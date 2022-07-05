@@ -789,7 +789,7 @@ describe("IBosonOfferHandler", function () {
           offer.id++;
           offerDates.voucherRedeemableUntil = ethers.BigNumber.from(offerDates.validUntil).add(oneMonth).toString();
           offerDurations.voucherValid = "0"; // only one of voucherRedeemableUntil and voucherValid can be non zero
-          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
 
           // Set until date in the before offerDates.voucherRedeemableUntil
           offerDates.validUntil = ethers.BigNumber.from(offerDates.voucherRedeemableUntil).add(oneWeek).toString(); // one week after voucherRedeemableUntil
@@ -1808,7 +1808,7 @@ describe("IBosonOfferHandler", function () {
           offer.id++;
           offerDates.voucherRedeemableUntil = ethers.BigNumber.from(offerDates.validUntil).add(oneMonth).toString();
           offerDurations.voucherValid = "0"; // only one of voucherRedeemableUntil and voucherValid can be non zero
-          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
           offersToExtend.push(offer.id);
 
           // Set until date in after the offerDates.voucherRedeemableUntil
