@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Tests ",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceRoot}",
+      "skipFiles": ["<node_internals>/**"],
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["test", "--experimental-modules"],
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "outFiles": ["${workspaceFolder}/**/*.js", "**/@ethersproject/**/*.js"]
+    }
+  ]
+}
