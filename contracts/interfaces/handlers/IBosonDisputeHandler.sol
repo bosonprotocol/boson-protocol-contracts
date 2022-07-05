@@ -10,7 +10,7 @@ import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles disputes associated with exchanges within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x57681a68
+ * The ERC-165 identifier for this interface is: 0xf9186576
  */
 interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
 
@@ -80,6 +80,23 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @param _exchangeId - the id of the associated exchange
      */
     function expireDispute(uint256 _exchangeId) external;
+
+    /**
+     * @notice Expire a batch of disputes and release the funds
+     *
+     * Emits a DisputeExpired event for every dispute if successful.
+     *
+     * Reverts if:
+     * - Number of disputes exceeds maximum allowed number per batch
+     * - for any dispute:
+     *   - exchange does not exist
+     *   - exchange is not in a disputed state
+     *   - dispute is still valid
+     *   - dispute is in some state other than resolving
+     *
+     * @param _exchangeIds - the array of ids of the associated exchanges
+     */
+    function expireDisputeBatch(uint256[] calldata _exchangeIds) external;
 
      /**
      * @notice Resolve a dispute by providing the information about the split. Callable by the buyer or seller, but they must provide the resolution signed by the other party

@@ -153,6 +153,7 @@ describe("IBosonAccountHandler", function () {
         maxTokensPerWithdrawal: 0,
         maxFeesPerDisputeResolver: 100,
         maxEscalationResponsePeriod: oneMonth,
+        maxDisputesPerBatch: 0,
       },
       // Protocol fees
       {

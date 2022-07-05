@@ -45,7 +45,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxTokensPerWithdrawal(_limits.maxTokensPerWithdrawal);
         setMaxFeesPerDisputeResolver(_limits.maxFeesPerDisputeResolver);
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
-        
+        setMaxDisputesPerBatch(_limits.maxDisputesPerBatch);        
         
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -373,7 +373,6 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         protocolLimits().maxFeesPerDisputeResolver = _maxFeesPerDisputeResolver;
         emit MaxFeesPerDisputeResolverChanged(_maxFeesPerDisputeResolver, msgSender());
     }
-
    
     /**
      * @notice Get the maximum number of dispute resolver fee structs that can be processed in a single transaction
@@ -414,5 +413,33 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     returns (uint256)
     {
         return protocolLimits().maxEscalationResponsePeriod;
+    }
+
+    /**
+     * @notice Sets the maximum numbers of disputes that can be expired in a single transaction
+     *
+     * Emits a MaxDisputesPerBatchChanged event.
+     *
+     * @param _maxDisputesPerBatch - the maximum number of disputes that can be expired
+     */
+    function setMaxDisputesPerBatch(uint16 _maxDisputesPerBatch)
+    public
+    override
+    onlyRole(ADMIN)
+    {
+        protocolLimits().maxDisputesPerBatch = _maxDisputesPerBatch;
+        emit MaxDisputesPerBatchChanged(_maxDisputesPerBatch, msg.sender);
+    }
+
+    /**
+     * @notice Get the maximum disputes per batch
+     */
+    function getMaxDisputesPerBatch()
+    external
+    override
+    view
+    returns (uint16)
+    {
+        return protocolLimits().maxDisputesPerBatch;
     }
 }
