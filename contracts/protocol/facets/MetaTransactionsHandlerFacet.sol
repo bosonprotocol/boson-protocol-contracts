@@ -281,7 +281,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         setCurrentSenderAddress(address(0));
         protocolMetaTxInfo().isMetaTransaction = false;
 
-        emit MetaTransactionExecuted(_userAddress, msg.sender, _functionName, _nonce);
+        emit MetaTransactionExecuted(_userAddress, msgSender(), _functionName, _nonce);
         return returnData;
     }
 
