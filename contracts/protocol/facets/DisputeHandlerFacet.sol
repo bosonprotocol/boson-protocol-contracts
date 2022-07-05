@@ -196,7 +196,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         require(dispute.state == DisputeState.Resolving, INVALID_STATE);
 
         // make sure the dispute not expired already
-        require(block.timestamp >= disputeDates.timeout, DISPUTE_STILL_VALID);      
+        require(block.timestamp > disputeDates.timeout, DISPUTE_STILL_VALID);      
 
         // Finalize the dispute
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Retracted, 0);
@@ -350,24 +350,8 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // buyer should get at most 100%
         require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
 
-        // Get the exchange, should be in disputed state
-        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
-
-        // Fetch teh dispute and dispute dates
-        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId); 
-
-        // Make sure the dispute is in the escalated state
-        require(dispute.state == DisputeState.Escalated, INVALID_STATE);
-       
-        // Make sure the dispute escalation period not expired already
-        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
-
-        // Fetch the offer to get the info who the seller is
-        (, Offer storage offer) = fetchOffer(exchange.offerId);
-
-        // get dispute resolver id to check if caller is the dispute resolver
-        uint256 disputeResolverId = protocolLookups().disputeResolverIdByOperator[msg.sender];
-        require(disputeResolverId == offer.disputeResolverId, NOT_DISPUTE_RESOLVER_OPERATOR);
+        // Make sure the dispute is valid and the caller is the dispute resolver
+        (Exchange storage exchange, Dispute storage dispute, DisputeDates storage disputeDates) = disputeResolverChecks(_exchangeId);
 
         // finalize the dispute
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Decided, _buyerPercent);
@@ -391,11 +375,34 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @param _exchangeId - the id of the associated exchange
      */
     function refuseEscalatedDispute(uint256 _exchangeId) external override {
+        // Make sure the dispute is valid and the caller is the dispute resolver
+        (Exchange storage exchange, Dispute storage dispute, DisputeDates storage disputeDates) = disputeResolverChecks(_exchangeId);
+
+        // Finalize the dispute
+        finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Refused, 0);
+
+        // Notify watchers of state change
+        emit EscalatedDisputeRefused(_exchangeId, msgSender());
+    }
+
+    /**
+     * @notice Validates that exchange and dispute are in the correct state and that the caller is the dispute resolver for this dispute
+     *
+     * Reverts if:
+     * - exchange does not exist
+     * - exchange is not in a disputed state
+     * - dispute is in some state other than escalated
+     * - dispute escalation period has elapsed
+     * - caller is not the dispute resolver for this dispute
+     *
+     * @param _exchangeId - the id of the associated exchange
+     */
+    function disputeResolverChecks(uint256 _exchangeId) internal view returns (Exchange storage exchange , Dispute storage dispute, DisputeDates storage disputeDates) {
         // Get the exchange, should be in disputed state
-        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+        exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Fetch the dispute and dispute dates
-        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
+        (, dispute, disputeDates) = fetchDispute(_exchangeId);
         
         // Make sure the dispute is in the escalated state
         require(dispute.state == DisputeState.Escalated, INVALID_STATE);
@@ -409,12 +416,6 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // get dispute resolver id to check if caller is the dispute resolver
         uint256 disputeResolverId = protocolLookups().disputeResolverIdByOperator[msg.sender];
         require(disputeResolverId == offer.disputeResolverId, NOT_DISPUTE_RESOLVER_OPERATOR);
-
-        // Finalize the dispute
-        finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Refused, 0);
-
-        // Notify watchers of state change
-        emit EscalatedDisputeRefused(_exchangeId, msgSender());
     }
     
     /**
