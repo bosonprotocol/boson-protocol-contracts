@@ -428,7 +428,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolLimits().maxDisputesPerBatch = _maxDisputesPerBatch;
-        emit MaxDisputesPerBatchChanged(_maxDisputesPerBatch, msg.sender);
+        emit MaxDisputesPerBatchChanged(_maxDisputesPerBatch, msgSender());
     }
 
     /**

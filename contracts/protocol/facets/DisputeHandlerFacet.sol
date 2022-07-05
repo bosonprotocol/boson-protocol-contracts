@@ -383,7 +383,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Decided, _buyerPercent);
 
         // Notify watchers of state change
-        emit DisputeDecided(_exchangeId, _buyerPercent, msg.sender);
+        emit DisputeDecided(_exchangeId, _buyerPercent, msgSender());
     }
 
     /**
