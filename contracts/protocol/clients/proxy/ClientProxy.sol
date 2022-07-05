@@ -24,7 +24,6 @@ import { Proxy } from "./Proxy.sol";
  * future upgradability.
  */
 contract ClientProxy is IBosonClient, BosonConstants, Proxy {
-
     /**
      * @dev Modifier that checks that the caller has a specific role.
      *
@@ -42,7 +41,6 @@ contract ClientProxy is IBosonClient, BosonConstants, Proxy {
         address _protocolAddress,
         address _impl
     ) payable {
-
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
 
@@ -54,35 +52,24 @@ contract ClientProxy is IBosonClient, BosonConstants, Proxy {
 
         // Store the implementation address
         ps.implementation = _impl;
-
     }
 
     /**
      * @dev Returns the address to which the fallback function
      * and {_fallback} should delegate.
      */
-    function _implementation()
-    internal
-    view
-    override
-    returns (address) {
-
+    function _implementation() internal view override returns (address) {
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
 
         // Return the current implementation address
         return ps.implementation;
-
     }
 
     /**
      * @dev Set the implementation address
      */
-    function setImplementation(address _impl)
-    external
-    onlyRole(UPGRADER)
-    override
-    {
+    function setImplementation(address _impl) external override onlyRole(UPGRADER) {
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
 
@@ -91,17 +78,12 @@ contract ClientProxy is IBosonClient, BosonConstants, Proxy {
 
         // Notify watchers of state change
         emit Upgraded(_impl, EIP712Lib.msgSender());
-
     }
 
     /**
      * @dev Get the implementation address
      */
-    function getImplementation()
-    external
-    view
-    override
-    returns (address) {
+    function getImplementation() external view override returns (address) {
         return _implementation();
     }
 
@@ -112,11 +94,7 @@ contract ClientProxy is IBosonClient, BosonConstants, Proxy {
      *
      * @param _accessController - the Boson Protocol AccessController address
      */
-    function setAccessController(address _accessController)
-    external
-    onlyRole(UPGRADER)
-    override
-    {
+    function setAccessController(address _accessController) external override onlyRole(UPGRADER) {
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
 
@@ -132,12 +110,7 @@ contract ClientProxy is IBosonClient, BosonConstants, Proxy {
      *
      * @return the address of the AccessController contract
      */
-    function getAccessController()
-    public
-    view
-    override
-    returns(IAccessControlUpgradeable)
-    {
+    function getAccessController() public view override returns (IAccessControlUpgradeable) {
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
 
@@ -152,11 +125,7 @@ contract ClientProxy is IBosonClient, BosonConstants, Proxy {
      *
      * @param _protocolAddress - the ProtocolDiamond address
      */
-    function setProtocolAddress(address _protocolAddress)
-    external
-    onlyRole(UPGRADER)
-    override
-    {
+    function setProtocolAddress(address _protocolAddress) external override onlyRole(UPGRADER) {
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
 
@@ -172,17 +141,11 @@ contract ClientProxy is IBosonClient, BosonConstants, Proxy {
      *
      * @return the address of the ProtocolDiamond contract
      */
-    function getProtocolAddress()
-    public
-    override
-    view
-    returns(address)
-    {
+    function getProtocolAddress() public view override returns (address) {
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
 
         // Return the current ProtocolDiamond address
         return ps.protocolDiamond;
     }
-
 }

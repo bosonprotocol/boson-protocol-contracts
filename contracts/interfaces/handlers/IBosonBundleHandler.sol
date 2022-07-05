@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {BosonTypes} from "../../domain/BosonTypes.sol";
-import {IBosonBundleEvents} from "../events/IBosonBundleEvents.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
 
 /**
  * @title IBosonBundleHandler
@@ -12,7 +12,6 @@ import {IBosonBundleEvents} from "../events/IBosonBundleEvents.sol";
  * The ERC-165 identifier for this interface is: 0xa13dc8bd
  */
 interface IBosonBundleHandler is IBosonBundleEvents {
-
     /**
      * @notice Creates a bundle.
      *

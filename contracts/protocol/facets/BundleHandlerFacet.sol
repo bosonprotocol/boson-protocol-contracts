@@ -11,7 +11,6 @@ import { BundleBase } from "../bases/BundleBase.sol";
  * @notice Manages bundling associated with offers and twins within the protocol
  */
 contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
-
     enum BundleUpdateAttribute {
         TWIN,
         OFFER
@@ -20,10 +19,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
     /**
      * @notice Facet Initializer
      */
-    function initialize()
-    public
-    onlyUnInitialized(type(IBosonBundleHandler).interfaceId)
-    {
+    function initialize() public onlyUnInitialized(type(IBosonBundleHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonBundleHandler).interfaceId);
     }
 
@@ -46,12 +42,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
-    function createBundle(
-        Bundle memory _bundle
-    )
-    external
-    override
-    {
+    function createBundle(Bundle memory _bundle) external override {
         createBundleInternal(_bundle);
     }
 
@@ -62,7 +53,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * @return exists - the bundle was found
      * @return bundle - the bundle details. See {BosonTypes.Bundle}
      */
-    function getBundle(uint256 _bundleId) external override view returns(bool exists, Bundle memory bundle) {
+    function getBundle(uint256 _bundleId) external view override returns (bool exists, Bundle memory bundle) {
         return fetchBundle(_bundleId);
     }
 
@@ -73,7 +64,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      *
      * @return nextBundleId - the next bundle id
      */
-    function getNextBundleId() public override view returns(uint256 nextBundleId) {
+    function getNextBundleId() public view override returns (uint256 nextBundleId) {
         nextBundleId = protocolCounters().nextBundleId;
     }
 
@@ -95,25 +86,23 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * @param _bundleId  - the id of the bundle to be updated
      * @param _twinIds - array of twin ids to be added to the bundle
      */
-    function addTwinsToBundle(
-        uint256 _bundleId,
-        uint256[] calldata _twinIds
-    )
-    external
-    override
-    {
+    function addTwinsToBundle(uint256 _bundleId, uint256[] calldata _twinIds) external override {
         // check if bundle can be updated
-        (uint256 sellerId, Bundle storage bundle) = preBundleUpdateChecks(_bundleId, _twinIds, BundleUpdateAttribute.TWIN);
+        (uint256 sellerId, Bundle storage bundle) = preBundleUpdateChecks(
+            _bundleId,
+            _twinIds,
+            BundleUpdateAttribute.TWIN
+        );
 
-        for (uint i = 0; i < _twinIds.length; i++) {
-            uint twinId = _twinIds[i];
+        for (uint256 i = 0; i < _twinIds.length; i++) {
+            uint256 twinId = _twinIds[i];
             // make sure twin exist and belong to the seller
             getValidTwin(twinId);
 
             // Twin can already be associated with a different bundle, but it cannot be added to the same bundle twice.
             (bool bundlesForTwinExist, uint256[] memory bundleIds) = fetchBundleIdsByTwin(twinId);
             if (bundlesForTwinExist) {
-                for (uint j = 0; j < bundleIds.length; j++) {
+                for (uint256 j = 0; j < bundleIds.length; j++) {
                     // Revert if bundleId already exists in the bundleIdsByTwin mapping
                     require((bundleIds[j] != _bundleId), TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE);
                 }
@@ -145,18 +134,16 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * @param _bundleId  - the id of the bundle to be updated
      * @param _twinIds - array of twin ids to be removed to the bundle
      */
-    function removeTwinsFromBundle(
-        uint256 _bundleId,
-        uint256[] calldata _twinIds
-    )
-    external
-    override
-    {
+    function removeTwinsFromBundle(uint256 _bundleId, uint256[] calldata _twinIds) external override {
         // check if bundle can be updated
-        (uint256 sellerId, Bundle storage bundle) = preBundleUpdateChecks(_bundleId, _twinIds, BundleUpdateAttribute.TWIN);
+        (uint256 sellerId, Bundle storage bundle) = preBundleUpdateChecks(
+            _bundleId,
+            _twinIds,
+            BundleUpdateAttribute.TWIN
+        );
 
-        for (uint i = 0; i < _twinIds.length; i++) {
-            uint twinId = _twinIds[i];
+        for (uint256 i = 0; i < _twinIds.length; i++) {
+            uint256 twinId = _twinIds[i];
 
             // Get all bundleIds that are associated to this Twin.
             (bool bundlesForTwinExist, uint256[] memory bundleIds) = fetchBundleIdsByTwin(twinId);
@@ -166,7 +153,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
 
             // remove bundleId from the bundleIdsByTwin mapping
             bool foundMatchingBundle;
-            for (uint j = 0; j < bundleIds.length; j++) {
+            for (uint256 j = 0; j < bundleIds.length; j++) {
                 if (bundleIds[j] == _bundleId) {
                     foundMatchingBundle = true;
                     protocolLookups().bundleIdsByTwin[twinId][j] = bundleIds[bundleIds.length - 1];
@@ -178,7 +165,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
 
             // Also remove from the bundle struct
             uint256 twinIdsLength = bundle.twinIds.length;
-            for (uint j = 0; j < twinIdsLength; j++) {
+            for (uint256 j = 0; j < twinIdsLength; j++) {
                 if (bundle.twinIds[j] == twinId) {
                     bundle.twinIds[j] = bundle.twinIds[twinIdsLength - 1];
                     bundle.twinIds.pop();
@@ -207,7 +194,11 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * @return sellerId  - the seller Id
      * @return bundle - the bundle details
      */
-    function preBundleUpdateChecks(uint256 _bundleId, uint256[] calldata _ids, BundleUpdateAttribute _attribute) internal view returns (uint256 sellerId, Bundle storage bundle) {
+    function preBundleUpdateChecks(
+        uint256 _bundleId,
+        uint256[] calldata _ids,
+        BundleUpdateAttribute _attribute
+    ) internal view returns (uint256 sellerId, Bundle storage bundle) {
         // make sure that at least something will be updated
         require(_ids.length != 0, NOTHING_UPDATED);
 
@@ -250,18 +241,16 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * @param _bundleId  - the id of the bundle to be updated
      * @param _offerIds - array of offer ids to be added to the bundle
      */
-    function addOffersToBundle(
-        uint256 _bundleId,
-        uint256[] calldata _offerIds
-    )
-    external
-    override
-    {
+    function addOffersToBundle(uint256 _bundleId, uint256[] calldata _offerIds) external override {
         // check if bundle can be updated
-        (uint256 sellerId, Bundle storage bundle) = preBundleUpdateChecks(_bundleId, _offerIds, BundleUpdateAttribute.OFFER);
+        (uint256 sellerId, Bundle storage bundle) = preBundleUpdateChecks(
+            _bundleId,
+            _offerIds,
+            BundleUpdateAttribute.OFFER
+        );
 
-        for (uint i = 0; i < _offerIds.length; i++) {
-            uint offerId = _offerIds[i];
+        for (uint256 i = 0; i < _offerIds.length; i++) {
+            uint256 offerId = _offerIds[i];
             // make sure offer exist and belong to the seller
             getValidOffer(offerId);
 
@@ -300,18 +289,16 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * @param _bundleId  - the id of the bundle to be updated
      * @param _offerIds - array of offer ids to be removed to the bundle
      */
-    function removeOffersFromBundle(
-        uint256 _bundleId,
-        uint256[] calldata _offerIds
-    )
-    external
-    override
-    {
+    function removeOffersFromBundle(uint256 _bundleId, uint256[] calldata _offerIds) external override {
         // check if bundle can be updated
-        (uint256 sellerId, Bundle storage bundle) = preBundleUpdateChecks(_bundleId, _offerIds, BundleUpdateAttribute.OFFER);
+        (uint256 sellerId, Bundle storage bundle) = preBundleUpdateChecks(
+            _bundleId,
+            _offerIds,
+            BundleUpdateAttribute.OFFER
+        );
 
-        for (uint i = 0; i < _offerIds.length; i++) {
-            uint offerId = _offerIds[i];
+        for (uint256 i = 0; i < _offerIds.length; i++) {
+            uint256 offerId = _offerIds[i];
 
             // Offer should belong to the bundle
             (, uint256 bundleId) = fetchBundleIdByOffer(offerId);
@@ -327,7 +314,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             // remove from the bundle struct
             uint256 offerIdsLength = bundle.offerIds.length;
 
-            for (uint j = 0; j < offerIdsLength; j++) {
+            for (uint256 j = 0; j < offerIdsLength; j++) {
                 if (bundle.offerIds[j] == offerId) {
                     bundle.offerIds[j] = bundle.offerIds[offerIdsLength - 1];
                     bundle.offerIds.pop();
@@ -352,7 +339,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      *
      * @param _bundleId - the id of the bundle to check.
      */
-    function removeBundle(uint256 _bundleId) override external {
+    function removeBundle(uint256 _bundleId) external override {
         // Get storage location for bundle
         (bool exists, Bundle memory bundle) = fetchBundle(_bundleId);
         require(exists, NO_SUCH_BUNDLE);
@@ -375,19 +362,18 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         uint256[] memory twinIds = bundle.twinIds;
         // loop over all the twins in the bundle
         for (uint256 j = 0; j < twinIds.length; j++) {
-
             uint256 twinId = twinIds[j];
             (bool bundlesForTwinExist, uint256[] memory bundleIds) = fetchBundleIdsByTwin(twinId);
 
             if (bundlesForTwinExist) {
-
                 uint256 bundleIdsLength = bundleIds.length;
                 // loop over all the bundleIds associated with a twin
-                for (uint k = 0; k < bundleIdsLength; k++) {
-
+                for (uint256 k = 0; k < bundleIdsLength; k++) {
                     // If bundleId is found in the array, then pop it.
                     if (protocolLookups().bundleIdsByTwin[twinId][k] == _bundleId) {
-                        protocolLookups().bundleIdsByTwin[twinId][k] = protocolLookups().bundleIdsByTwin[twinId][bundleIdsLength - 1];
+                        protocolLookups().bundleIdsByTwin[twinId][k] = protocolLookups().bundleIdsByTwin[twinId][
+                            bundleIdsLength - 1
+                        ];
                         protocolLookups().bundleIdsByTwin[twinId].pop();
                         break;
                     }
@@ -429,7 +415,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * @return exists - whether the bundle Id exists
      * @return bundleId  - the bundle Id.
      */
-    function getBundleIdByOffer(uint256 _offerId) external override view returns(bool exists, uint256 bundleId) {
+    function getBundleIdByOffer(uint256 _offerId) external view override returns (bool exists, uint256 bundleId) {
         return fetchBundleIdByOffer(_offerId);
     }
 
@@ -440,7 +426,12 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * @return exists - whether the bundle Ids exist
      * @return bundleIds  - the bundle Ids.
      */
-    function getBundleIdsByTwin(uint256 _twinId) external override view returns(bool exists, uint256[] memory bundleIds) {
+    function getBundleIdsByTwin(uint256 _twinId)
+        external
+        view
+        override
+        returns (bool exists, uint256[] memory bundleIds)
+    {
         return fetchBundleIdsByTwin(_twinId);
     }
 }

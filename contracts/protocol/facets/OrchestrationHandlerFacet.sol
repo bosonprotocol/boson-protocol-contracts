@@ -14,15 +14,18 @@ import { BundleBase } from "../bases/BundleBase.sol";
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  */
-contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBase, BundleBase, IBosonOrchestrationHandler {
-
+contract OrchestrationHandlerFacet is
+    AccountBase,
+    OfferBase,
+    GroupBase,
+    TwinBase,
+    BundleBase,
+    IBosonOrchestrationHandler
+{
     /**
      * @notice Facet Initializer
      */
-    function initialize()
-    public
-    onlyUnInitialized(type(IBosonOrchestrationHandler).interfaceId)
-    {
+    function initialize() public onlyUnInitialized(type(IBosonOrchestrationHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonOrchestrationHandler).interfaceId);
     }
 
@@ -59,11 +62,9 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
     function createSellerAndOffer(
         Seller memory _seller,
         Offer memory _offer,
-        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations
-    )
-    external
-    override
-    {   
+        OfferDates calldata _offerDates,
+        OfferDurations calldata _offerDurations
+    ) external override {
         checkAndCreateSeller(_seller);
         createOfferInternal(_offer, _offerDates, _offerDurations);
     }
@@ -97,12 +98,10 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      */
     function createOfferWithCondition(
         Offer memory _offer,
-        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
+        OfferDates calldata _offerDates,
+        OfferDurations calldata _offerDurations,
         Condition memory _condition
-    )
-    public
-    override
-    {   
+    ) public override {
         // create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations);
 
@@ -114,7 +113,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
 
         // create group and update structs values to represent true state
         createGroupInternal(_group);
-    } 
+    }
 
     /**
      * @notice Takes an offer and group ID, creates an offer and adds it to the existing group with given id
@@ -147,10 +146,10 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      */
     function createOfferAddToGroup(
         Offer memory _offer,
-        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
+        OfferDates calldata _offerDates,
+        OfferDurations calldata _offerDurations,
         uint256 _groupId
-    )
-    external override {
+    ) external override {
         // create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations);
 
@@ -190,11 +189,10 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      */
     function createOfferAndTwinWithBundle(
         Offer memory _offer,
-        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
+        OfferDates calldata _offerDates,
+        OfferDurations calldata _offerDurations,
         Twin memory _twin
-    )
-    public 
-    override {
+    ) public override {
         // create seller and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations);
 
@@ -234,11 +232,11 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      */
     function createOfferWithConditionAndTwinAndBundle(
         Offer memory _offer,
-        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
+        OfferDates calldata _offerDates,
+        OfferDurations calldata _offerDurations,
         Condition memory _condition,
         Twin memory _twin
-    )
-    public override {
+    ) public override {
         // create offer with condition first
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _condition);
         // create twin and pack everything into a bundle
@@ -259,7 +257,11 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      * @param _offerId - offerid, obtained in previous steps
      * @param _sellerId - sellerId, obtained in previous steps
      */
-    function createTwinAndBundleAfterOffer(Twin memory _twin, uint256 _offerId, uint256 _sellerId) internal {
+    function createTwinAndBundleAfterOffer(
+        Twin memory _twin,
+        uint256 _offerId,
+        uint256 _sellerId
+    ) internal {
         // create twin and update structs values to represent true state
         createTwinInternal(_twin);
 
@@ -271,7 +273,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
         _bundle.twinIds[0] = _twin.id;
 
         // create bundle and update structs values to represent true state
-        createBundleInternal(_bundle);        
+        createBundleInternal(_bundle);
     }
 
     /**
@@ -310,14 +312,13 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
     function createSellerAndOfferWithCondition(
         Seller memory _seller,
         Offer memory _offer,
-        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
+        OfferDates calldata _offerDates,
+        OfferDurations calldata _offerDurations,
         Condition memory _condition
-    )
-    external 
-    override {
+    ) external override {
         checkAndCreateSeller(_seller);
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _condition);
-    } 
+    }
 
     /**
      * @notice Takes a seller, an offer and a twin, creates a seller, creates an offer, creates a twin, then a bundle with that offer and the given twin
@@ -356,11 +357,10 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
     function createSellerAndOfferAndTwinWithBundle(
         Seller memory _seller,
         Offer memory _offer,
-        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
+        OfferDates calldata _offerDates,
+        OfferDurations calldata _offerDurations,
         Twin memory _twin
-    )
-    external 
-    override {
+    ) external override {
         checkAndCreateSeller(_seller);
         createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _twin);
     }
@@ -404,11 +404,11 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
     function createSellerAndOfferWithConditionAndTwinAndBundle(
         Seller memory _seller,
         Offer memory _offer,
-        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
+        OfferDates calldata _offerDates,
+        OfferDurations calldata _offerDurations,
         Condition memory _condition,
         Twin memory _twin
-    )
-    external override {
+    ) external override {
         checkAndCreateSeller(_seller);
         createOfferWithConditionAndTwinAndBundle(_offer, _offerDates, _offerDurations, _condition, _twin);
     }

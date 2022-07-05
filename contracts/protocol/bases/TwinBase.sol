@@ -14,7 +14,6 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
  * @dev Provides methods for twin creation that can be shared accross facets
  */
 contract TwinBase is ProtocolBase, IBosonTwinEvents {
-
     /**
      * @notice Creates a Twin.
      *
@@ -26,11 +25,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
      */
-    function createTwinInternal(
-        Twin memory _twin
-    )
-    internal
-    {
+    function createTwinInternal(Twin memory _twin) internal {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
         require(exists, NOT_OPERATOR);
@@ -38,7 +33,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         // Protocol must be approved to transfer seller’s tokens
         require(isProtocolApproved(_twin.tokenAddress, msgSender(), address(this)), NO_TRANSFER_APPROVED);
 
-        if(_twin.tokenType == TokenType.NonFungibleToken) {
+        if (_twin.tokenType == TokenType.NonFungibleToken) {
             require(_twin.lastTokenId >= _twin.tokenId, ERC721_INVALID_RANGE);
         }
 
@@ -73,14 +68,13 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         address _tokenAddress,
         address _operator,
         address _protocol
-    ) internal view returns (bool _approved){
+    ) internal view returns (bool _approved) {
         require(_tokenAddress != address(0), UNSUPPORTED_TOKEN);
 
-        try IERC20(_tokenAddress).allowance(
-            _operator,
-            _protocol
-        ) returns(uint256 _allowance) {
-            if (_allowance > 0) {_approved = true; }
+        try IERC20(_tokenAddress).allowance(_operator, _protocol) returns (uint256 _allowance) {
+            if (_allowance > 0) {
+                _approved = true;
+            }
         } catch {
             try ITwinToken(_tokenAddress).isApprovedForAll(_operator, _protocol) returns (bool _isApproved) {
                 _approved = _isApproved;
@@ -89,5 +83,4 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             }
         }
     }
-
 }

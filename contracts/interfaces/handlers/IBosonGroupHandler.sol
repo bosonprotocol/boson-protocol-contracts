@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {BosonTypes} from "../../domain/BosonTypes.sol";
-import {IBosonGroupEvents} from "../events/IBosonGroupEvents.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { IBosonGroupEvents } from "../events/IBosonGroupEvents.sol";
 
 /**
  * @title IBosonGroupHandler
@@ -12,7 +12,6 @@ import {IBosonGroupEvents} from "../events/IBosonGroupEvents.sol";
  * The ERC-165 identifier for this interface is: 0x4d0d87ad
  */
 interface IBosonGroupHandler is IBosonGroupEvents {
-
     /**
      * @notice Creates a group.
      *

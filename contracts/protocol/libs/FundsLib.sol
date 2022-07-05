@@ -1,23 +1,45 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {NATIVE_NOT_ALLOWED, TOKEN_TRANSFER_FAILED, INSUFFICIENT_VALUE_SENT, INSUFFICIENT_AVAILABLE_FUNDS} from "../../domain/BosonConstants.sol";
-import {BosonTypes} from "../../domain/BosonTypes.sol";
-import {EIP712Lib} from "../libs/EIP712Lib.sol";
-import {ProtocolLib} from "../libs/ProtocolLib.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { NATIVE_NOT_ALLOWED, TOKEN_TRANSFER_FAILED, INSUFFICIENT_VALUE_SENT, INSUFFICIENT_AVAILABLE_FUNDS } from "../../domain/BosonConstants.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { EIP712Lib } from "../libs/EIP712Lib.sol";
+import { ProtocolLib } from "../libs/ProtocolLib.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title FundsLib
  *
- * @dev 
+ * @dev
  */
 library FundsLib {
-    event FundsEncumbered(uint256 indexed entityId, address indexed exchangeToken, uint256 amount, address indexed executedBy);
-    event FundsReleased(uint256 indexed exchangeId, uint256 indexed entityId, address indexed exchangeToken, uint256 amount, address executedBy);
-    event ProtocolFeeCollected(uint256 indexed exchangeId, address indexed exchangeToken, uint256 amount, address indexed executedBy);
-    event FundsWithdrawn(uint256 indexed sellerId, address indexed withdrawnTo, address indexed tokenAddress, uint256 amount, address executedBy); 
-    
+    event FundsEncumbered(
+        uint256 indexed entityId,
+        address indexed exchangeToken,
+        uint256 amount,
+        address indexed executedBy
+    );
+    event FundsReleased(
+        uint256 indexed exchangeId,
+        uint256 indexed entityId,
+        address indexed exchangeToken,
+        uint256 amount,
+        address executedBy
+    );
+    event ProtocolFeeCollected(
+        uint256 indexed exchangeId,
+        address indexed exchangeToken,
+        uint256 amount,
+        address indexed executedBy
+    );
+    event FundsWithdrawn(
+        uint256 indexed sellerId,
+        address indexed withdrawnTo,
+        address indexed tokenAddress,
+        uint256 amount,
+        address executedBy
+    );
+
     /**
      * @notice Takes in the offer id and buyer id and encumbers buyer's and seller's funds during the commitToOffer
      *
@@ -35,7 +57,7 @@ library FundsLib {
         // Load protocol entities storage
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
 
-        // fetch offer to get the exchange token, price and seller 
+        // fetch offer to get the exchange token, price and seller
         // this will be called only from commitToOffer so we expect that exchange actually exist
         BosonTypes.Offer storage offer = pe.offers[_offerId];
         address exchangeToken = offer.exchangeToken;
@@ -87,7 +109,6 @@ library FundsLib {
         // sum of price and sellerDeposit occurs multiple times
         uint256 pot = price + sellerDeposit;
 
-
         // calculate the payoffs depending on state exchange is in
         uint256 sellerPayoff;
         uint256 buyerPayoff;
@@ -107,7 +128,7 @@ library FundsLib {
             uint256 buyerCancelPenalty = offer.buyerCancelPenalty;
             sellerPayoff = sellerDeposit + buyerCancelPenalty;
             buyerPayoff = price - buyerCancelPenalty;
-        } else  {
+        } else {
             // DISPUTED
             // get the information about the dispute, which must exist
             BosonTypes.Dispute storage dispute = pe.disputes[_exchangeId];
@@ -124,7 +145,7 @@ library FundsLib {
                 buyerPayoff = pot;
             } else {
                 // RESOLVED or DECIDED
-                buyerPayoff = pot * dispute.buyerPercent/10000;
+                buyerPayoff = (pot * dispute.buyerPercent) / 10000;
                 sellerPayoff = pot - buyerPayoff;
             }
         }
@@ -136,7 +157,7 @@ library FundsLib {
         if (sellerPayoff > 0) {
             increaseAvailableFunds(sellerId, exchangeToken, sellerPayoff);
             emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff, EIP712Lib.msgSender());
-        } 
+        }
         if (buyerPayoff > 0) {
             increaseAvailableFunds(buyerId, exchangeToken, buyerPayoff);
             emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff, EIP712Lib.msgSender());
@@ -144,7 +165,7 @@ library FundsLib {
         if (protocolFee > 0) {
             increaseAvailableFunds(0, exchangeToken, protocolFee);
             emit ProtocolFeeCollected(_exchangeId, exchangeToken, protocolFee, EIP712Lib.msgSender());
-        }        
+        }
     }
 
     /**
@@ -159,8 +180,9 @@ library FundsLib {
      */
     function transferFundsToProtocol(address _tokenAddress, uint256 _amount) internal {
         // transfer ERC20 tokens from the caller
-        try IERC20(_tokenAddress).transferFrom(EIP712Lib.msgSender(), address(this), _amount)  {
-        } catch (bytes memory error) {
+        try IERC20(_tokenAddress).transferFrom(EIP712Lib.msgSender(), address(this), _amount) {} catch (
+            bytes memory error
+        ) {
             string memory reason = error.length == 0 ? TOKEN_TRANSFER_FAILED : string(error);
             revert(reason);
         }
@@ -178,18 +200,22 @@ library FundsLib {
      * @param _to - address of the recepient
      * @param _amount - amount to be transferred
      */
-    function transferFundsFromProtocol(uint256 _entityId, address _tokenAddress, address payable _to, uint256 _amount) internal {
+    function transferFundsFromProtocol(
+        uint256 _entityId,
+        address _tokenAddress,
+        address payable _to,
+        uint256 _amount
+    ) internal {
         // first decrease the amount to prevent the reentrancy attack
-        FundsLib.decreaseAvailableFunds(_entityId, _tokenAddress, _amount); 
+        FundsLib.decreaseAvailableFunds(_entityId, _tokenAddress, _amount);
 
         // try to transfer the funds
         if (_tokenAddress == address(0)) {
             // transfer native currency
-            (bool success, ) = _to.call{value: _amount}("");
+            (bool success, ) = _to.call{ value: _amount }("");
             require(success, TOKEN_TRANSFER_FAILED);
         } else {
-            try IERC20(_tokenAddress).transfer(_to, _amount)  {
-            } catch (bytes memory error) {
+            try IERC20(_tokenAddress).transfer(_to, _amount) {} catch (bytes memory error) {
                 string memory reason = error.length == 0 ? TOKEN_TRANSFER_FAILED : string(error);
                 revert(reason);
             }
@@ -207,7 +233,11 @@ library FundsLib {
      * @param _amount - amount to be credited
      */
 
-    function increaseAvailableFunds(uint256 _entityId, address _tokenAddress, uint256 _amount) internal {
+    function increaseAvailableFunds(
+        uint256 _entityId,
+        address _tokenAddress,
+        uint256 _amount
+    ) internal {
         ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
 
         // if the current amount of token is 0, the token address must be added to the token list
@@ -229,7 +259,11 @@ library FundsLib {
      * @param _tokenAddress - funds contract address or zero address for native currency
      * @param _amount - amount to be taken away
      */
-    function decreaseAvailableFunds(uint256 _entityId, address _tokenAddress, uint256 _amount) internal {
+    function decreaseAvailableFunds(
+        uint256 _entityId,
+        address _tokenAddress,
+        uint256 _amount
+    ) internal {
         ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
 
         // get available fnds from storage
@@ -241,10 +275,10 @@ library FundsLib {
 
         // if availableFunds are totally emptied, the token address is removed from the seller's tokenList
         if (availableFunds == _amount) {
-            uint len = pl.tokenList[_entityId].length;
-            for (uint i = 0; i < len; i++) {
+            uint256 len = pl.tokenList[_entityId].length;
+            for (uint256 i = 0; i < len; i++) {
                 if (pl.tokenList[_entityId][i] == _tokenAddress) {
-                    pl.tokenList[_entityId][i] = pl.tokenList[_entityId][len-1];
+                    pl.tokenList[_entityId][i] = pl.tokenList[_entityId][len - 1];
                     pl.tokenList[_entityId].pop();
                     break;
                 }

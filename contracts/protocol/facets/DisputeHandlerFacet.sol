@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {IBosonDisputeHandler} from "../../interfaces/handlers/IBosonDisputeHandler.sol";
-import {DiamondLib} from "../../diamond/DiamondLib.sol";
-import {ProtocolBase} from "../bases/ProtocolBase.sol";
-import {FundsLib} from "../libs/FundsLib.sol";
-import {EIP712Lib} from "../libs/EIP712Lib.sol";
+import { IBosonDisputeHandler } from "../../interfaces/handlers/IBosonDisputeHandler.sol";
+import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import { ProtocolBase } from "../bases/ProtocolBase.sol";
+import { FundsLib } from "../libs/FundsLib.sol";
+import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
 /**
  * @title DisputeHandlerFacet
@@ -13,15 +13,13 @@ import {EIP712Lib} from "../libs/EIP712Lib.sol";
  * @notice Handles disputes associated with exchanges within the protocol
  */
 contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
-    bytes32 private constant RESOLUTION_TYPEHASH = keccak256(bytes("Resolution(uint256 exchangeId,uint256 buyerPercent)")); // needed for verification during the resolveDispute
+    bytes32 private constant RESOLUTION_TYPEHASH =
+        keccak256(bytes("Resolution(uint256 exchangeId,uint256 buyerPercent)")); // needed for verification during the resolveDispute
 
     /**
      * @notice Facet Initializer
      */
-    function initialize()
-    public
-    onlyUnInitialized(type(IBosonDisputeHandler).interfaceId)
-    {
+    function initialize() public onlyUnInitialized(type(IBosonDisputeHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonDisputeHandler).interfaceId);
     }
 
@@ -40,13 +38,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @param _exchangeId - the id of the associated exchange
      * @param _complaint - the buyer's complaint description
      */
-    function raiseDispute(
-        uint256 _exchangeId,
-        string calldata _complaint
-    )
-    external
-    override
-    {
+    function raiseDispute(uint256 _exchangeId, string calldata _complaint) external override {
         // Buyer must provide a reason to dispute
         require(bytes(_complaint).length > 0, COMPLAINT_MISSING);
 
@@ -74,7 +66,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Update the disputeDates
         disputeDates.disputed = block.timestamp;
         disputeDates.timeout = block.timestamp + fetchOfferDurations(exchange.offerId).resolutionPeriod;
-        
+
         // Get the offer, which will exist if the exchange does
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
@@ -109,7 +101,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // If dispute was escalated, make sure that escalation period is not over yet
         if (dispute.state == DisputeState.Escalated) {
             // make sure the dispute escalation period not expired already
-            require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);  
+            require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
         } else {
             // If dispute is not escalated, make sure the it is in the resolving state
             require(dispute.state == DisputeState.Resolving, INVALID_STATE);
@@ -121,7 +113,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Notify watchers of state change
         emit DisputeRetracted(_exchangeId, msgSender());
     }
-    
+
     /**
      * @notice Extend the dispute timeout, allowing more time for mutual resolution.
      * As a consequnece also buyer gets more time to escalate the dispute
@@ -148,7 +140,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // Get seller, we assume seller exists if offer exists
-        (,Seller storage seller) = fetchSeller(offer.sellerId);
+        (, Seller storage seller) = fetchSeller(offer.sellerId);
 
         // Caller must be seller's operator address
         require(seller.operator == msgSender(), NOT_OPERATOR);
@@ -158,7 +150,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // Dispute must be in a resolving state
         require(dispute.state == DisputeState.Resolving, INVALID_STATE);
-        
+
         // If expired already, it cannot be extended
         require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
 
@@ -191,12 +183,12 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // Fetch the dispute and dispute dates
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
-        
+
         // Make sure the dispute is in the resolving state
         require(dispute.state == DisputeState.Resolving, INVALID_STATE);
 
         // make sure the dispute not expired already
-        require(block.timestamp >= disputeDates.timeout, DISPUTE_STILL_VALID);      
+        require(block.timestamp >= disputeDates.timeout, DISPUTE_STILL_VALID);
 
         // Finalize the dispute
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Retracted, 0);
@@ -220,12 +212,11 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      *
      * @param _exchangeIds - the array of ids of the associated exchanges
      */
-    function expireDisputeBatch(uint256[] calldata _exchangeIds) external override
-    {
+    function expireDisputeBatch(uint256[] calldata _exchangeIds) external override {
         // limit maximum number of disputes to avoid running into block gas limit in a loop
         require(_exchangeIds.length <= protocolLimits().maxDisputesPerBatch, TOO_MANY_DISPUTES);
 
-        for (uint256 i = 0; i < _exchangeIds.length; i++) {        
+        for (uint256 i = 0; i < _exchangeIds.length; i++) {
             // create offer and update structs values to represent true state
             expireDispute(_exchangeIds[i]);
         }
@@ -252,9 +243,13 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @param _sigS - s part of the signer's signature.
      * @param _sigV - v part of the signer's signature.
      */
-    function resolveDispute(uint256 _exchangeId, uint256 _buyerPercent, bytes32 _sigR,
+    function resolveDispute(
+        uint256 _exchangeId,
+        uint256 _buyerPercent,
+        bytes32 _sigR,
         bytes32 _sigS,
-        uint8 _sigV) external override {
+        uint8 _sigV
+    ) external override {
         // buyer should get at most 100%
         require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
 
@@ -262,16 +257,16 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Fetch teh dispute and dispute dates
-        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId); 
+        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
 
         // Make sure the dispute is in the resolving or escalated state
         require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);
 
-        // Make sure the dispute not expired already 
-        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);  
+        // Make sure the dispute not expired already
+        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
 
-        // wrap the code in a separate block to avoid stack too deep error 
-        { 
+        // wrap the code in a separate block to avoid stack too deep error
+        {
             // Fetch the offer to get the info who the seller is
             (, Offer storage offer) = fetchOffer(exchange.offerId);
 
@@ -291,15 +286,18 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
                 uint256 buyerId;
                 (exists, buyerId) = getBuyerIdByWallet(msgSender());
                 require(exists && buyerId == exchange.buyerId, NOT_BUYER_OR_SELLER);
-                
+
                 // caller is the buyer
-                // get the seller's address, which should be the signer of the resolution         
+                // get the seller's address, which should be the signer of the resolution
                 (, Seller storage seller) = fetchSeller(offer.sellerId);
                 expectedSigner = seller.operator;
             }
 
             // verify that the signature belongs to the expectedSigner
-            require(EIP712Lib.verify(expectedSigner, hashResolution(_exchangeId, _buyerPercent), _sigR, _sigS, _sigV), SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+            require(
+                EIP712Lib.verify(expectedSigner, hashResolution(_exchangeId, _buyerPercent), _sigR, _sigS, _sigV),
+                SIGNER_AND_SIGNATURE_DO_NOT_MATCH
+            );
         }
 
         // finalize the dispute
@@ -331,16 +329,16 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         checkBuyer(exchange.buyerId);
 
         // Fetch teh dispute and dispute dates
-        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);   
-        
-        // make sure the dispute not expired already        
+        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
+
+        // make sure the dispute not expired already
         require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
 
-        // Make sure the dispute is in the resolving state             
+        // Make sure the dispute is in the resolving state
         require(dispute.state == DisputeState.Resolving, INVALID_STATE);
 
         // TODO: fetch the escalation period from the storage
-        uint256 escalationPeriod = 1000 weeks; // only for tests  
+        uint256 escalationPeriod = 1000 weeks; // only for tests
 
         // store the time of escalation
         disputeDates.escalated = block.timestamp;
@@ -380,11 +378,11 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Fetch teh dispute and dispute dates
-        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId); 
+        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
 
         // Make sure the dispute is in the escalated state
         require(dispute.state == DisputeState.Escalated, INVALID_STATE);
-       
+
         // Make sure the dispute escalation period not expired already
         require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
 
@@ -421,12 +419,12 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // Fetch the dispute and dispute dates
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
-        
+
         // Make sure the dispute is in the escalated state
         require(dispute.state == DisputeState.Escalated, INVALID_STATE);
 
         // make sure the dispute escalation has expired already
-        require(block.timestamp > disputeDates.timeout, DISPUTE_STILL_VALID);      
+        require(block.timestamp > disputeDates.timeout, DISPUTE_STILL_VALID);
 
         // Finalize the dispute
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Refused, 0);
@@ -450,7 +448,14 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @param _targetState - target final state
      * @param _buyerPercent - percentage of the pot that goes to the buyer
      */
-    function finalizeDispute(uint256 _exchangeId, Exchange storage _exchange, Dispute storage _dispute, DisputeDates storage _disputeDates, DisputeState _targetState, uint256 _buyerPercent) internal {
+    function finalizeDispute(
+        uint256 _exchangeId,
+        Exchange storage _exchange,
+        Dispute storage _dispute,
+        DisputeDates storage _disputeDates,
+        DisputeState _targetState,
+        uint256 _buyerPercent
+    ) internal {
         // update dispute and exchange
         _disputeDates.finalized = block.timestamp;
         _dispute.state = _targetState;
@@ -472,14 +477,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @param _buyerPercent - percentage of the pot that goes to the buyer
      */
     function hashResolution(uint256 _exchangeId, uint256 _buyerPercent) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    RESOLUTION_TYPEHASH,
-                    _exchangeId,
-                    _buyerPercent
-                )
-            );
+        return keccak256(abi.encode(RESOLUTION_TYPEHASH, _exchangeId, _buyerPercent));
     }
 
     /**
@@ -491,10 +489,15 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @return disputeDates - the dispute dates details {BosonTypes.DisputeDates}
      */
     function getDispute(uint256 _exchangeId)
-    external
-    view
-    override
-    returns(bool exists, Dispute memory dispute, DisputeDates memory disputeDates) {
+        external
+        view
+        override
+        returns (
+            bool exists,
+            Dispute memory dispute,
+            DisputeDates memory disputeDates
+        )
+    {
         return fetchDispute(_exchangeId);
     }
 
@@ -505,11 +508,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @return exists - true if the dispute exists
      * @return state - the dispute state. See {BosonTypes.DisputeState}
      */
-    function getDisputeState(uint256 _exchangeId)
-    external
-    view
-    override
-    returns(bool exists, DisputeState state) {
+    function getDisputeState(uint256 _exchangeId) external view override returns (bool exists, DisputeState state) {
         Dispute storage dispute;
         (exists, dispute, ) = fetchDispute(_exchangeId);
         if (exists) state = dispute.state;
@@ -522,11 +521,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @return exists - true if the dispute exists
      * @return timeout - the end of resolution period
      */
-    function getDisputeTimeout(uint256 _exchangeId)
-    external
-    view
-    override
-    returns(bool exists, uint256 timeout) {
+    function getDisputeTimeout(uint256 _exchangeId) external view override returns (bool exists, uint256 timeout) {
         DisputeDates storage disputeDates;
         (exists, , disputeDates) = fetchDispute(_exchangeId);
         if (exists) timeout = disputeDates.timeout;
@@ -542,11 +537,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @return exists - true if the dispute exists
      * @return isFinalized - true if the dispute is finalized
      */
-    function isDisputeFinalized(uint256 _exchangeId)
-    external
-    view
-    override
-    returns(bool exists, bool isFinalized) {
+    function isDisputeFinalized(uint256 _exchangeId) external view override returns (bool exists, bool isFinalized) {
         Dispute storage dispute;
 
         // Get the dispute
@@ -555,12 +546,10 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // if exists, set isFinalized to true if state is a valid finalized state
         if (exists) {
             // Check for finalized dispute state
-            isFinalized = (
-                dispute.state == DisputeState.Retracted ||
+            isFinalized = (dispute.state == DisputeState.Retracted ||
                 dispute.state == DisputeState.Resolved ||
                 dispute.state == DisputeState.Decided ||
-                dispute.state == DisputeState.Refused
-            );
+                dispute.state == DisputeState.Refused);
         }
     }
 }
