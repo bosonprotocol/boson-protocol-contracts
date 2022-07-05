@@ -5,6 +5,7 @@ import {ProtocolLib} from "../libs/ProtocolLib.sol";
 import {DiamondLib} from "../../diamond/DiamondLib.sol";
 import {BosonTypes} from "../../domain/BosonTypes.sol";
 import {BosonConstants} from "../../domain/BosonConstants.sol";
+import {EIP712Lib} from "../libs/EIP712Lib.sol";
 
 /**
  * @title ProtocolBase
@@ -42,7 +43,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     modifier onlyRole(bytes32 _role) {
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
-        require(ds.accessController.hasRole(_role, msg.sender), ACCESS_DENIED);
+        require(ds.accessController.hasRole(_role, msgSender()), ACCESS_DENIED);
         _;
     }
 
@@ -438,7 +439,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
         (, seller) = fetchSeller(offer.sellerId);
 
         // Caller must be seller's operator address
-        require(seller.operator == msg.sender, NOT_OPERATOR);
+        require(seller.operator == msgSender(), NOT_OPERATOR);
     }
 
     /**
@@ -534,23 +535,9 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
-     * @notice Get the current sender address from storage.
-     */
-    function getCurrentSenderAddress() internal view returns (address) {
-        return ProtocolLib.protocolMetaTxInfo().currentSenderAddress;
-    }
-
-    /**
      * @notice Returns the current sender address.
      */
     function msgSender() internal view returns (address) {
-        bool isItAMetaTransaction = ProtocolLib.protocolMetaTxInfo().isMetaTransaction;
-
-        // Get sender from the storage if this is a meta transaction
-        if (isItAMetaTransaction) {
-            return getCurrentSenderAddress();
-        } else {
-            return msg.sender;
-        }
+        return EIP712Lib.msgSender();
     }
 }

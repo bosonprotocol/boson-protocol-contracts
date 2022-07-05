@@ -151,7 +151,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         (,Seller storage seller) = fetchSeller(offer.sellerId);
 
         // Caller must be seller's operator address
-        require(seller.operator == msg.sender, NOT_OPERATOR);
+        require(seller.operator == msgSender(), NOT_OPERATOR);
 
         // Fetch the dispute, it exists if exchange is in Disputed state
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
@@ -169,7 +169,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         disputeDates.timeout = _newDisputeTimeout;
 
         // Notify watchers of state change
-        emit DisputeTimeoutExtended(_exchangeId, _newDisputeTimeout, msg.sender);
+        emit DisputeTimeoutExtended(_exchangeId, _newDisputeTimeout, msgSender());
     }
 
     /**
@@ -203,6 +203,32 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // Notify watchers of state change
         emit DisputeExpired(_exchangeId, msgSender());
+    }
+
+    /**
+     * @notice Expire a batch of disputes and release the funds
+     *
+     * Emits a DisputeExpired event for every dispute if successful.
+     *
+     * Reverts if:
+     * - Number of disputes exceeds maximum allowed number per batch
+     * - for any dispute:
+     *   - exchange does not exist
+     *   - exchange is not in a disputed state
+     *   - dispute is still valid
+     *   - dispute is in some state other than resolving
+     *
+     * @param _exchangeIds - the array of ids of the associated exchanges
+     */
+    function expireDisputeBatch(uint256[] calldata _exchangeIds) external override
+    {
+        // limit maximum number of disputes to avoid running into block gas limit in a loop
+        require(_exchangeIds.length <= protocolLimits().maxDisputesPerBatch, TOO_MANY_DISPUTES);
+
+        for (uint256 i = 0; i < _exchangeIds.length; i++) {        
+            // create offer and update structs values to represent true state
+            expireDispute(_exchangeIds[i]);
+        }
     }
 
     /**
@@ -250,7 +276,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
             (, Offer storage offer) = fetchOffer(exchange.offerId);
 
             // get seller id to check if caller is the seller
-            (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);     
+            (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
 
             // variable to store who the expected signer is
             address expectedSigner;
@@ -366,14 +392,14 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // get dispute resolver id to check if caller is the dispute resolver
-        uint256 disputeResolverId = protocolLookups().disputeResolverIdByOperator[msg.sender];
+        uint256 disputeResolverId = protocolLookups().disputeResolverIdByOperator[msgSender()];
         require(disputeResolverId == protocolEntities().disputeResolutionTerms[offer.id].disputeResolverId, NOT_DISPUTE_RESOLVER_OPERATOR);
 
         // finalize the dispute
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Decided, _buyerPercent);
 
         // Notify watchers of state change
-        emit DisputeDecided(_exchangeId, _buyerPercent, msg.sender);
+        emit DisputeDecided(_exchangeId, _buyerPercent, msgSender());
     }
 
     /**

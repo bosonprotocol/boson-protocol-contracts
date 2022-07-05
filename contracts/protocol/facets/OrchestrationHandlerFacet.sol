@@ -452,7 +452,7 @@ contract OrchestrationHandlerFacet is AccountBase, OfferBase, GroupBase, TwinBas
      */
     function checkAndCreateSeller(Seller memory _seller) internal {
         // Caller should be the operator, specified in seller
-        require(_seller.operator == msg.sender, NOT_OPERATOR);
+        require(_seller.operator == msgSender(), NOT_OPERATOR);
 
         // create seller and update structs values to represent true state
         createSellerInternal(_seller);

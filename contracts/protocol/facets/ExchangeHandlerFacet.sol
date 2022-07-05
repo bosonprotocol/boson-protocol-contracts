@@ -78,7 +78,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         (uint256 buyerId, Buyer storage buyer) = getValidBuyer(_buyer);
 
         // Encumber funds before creating the exchange
-        FundsLib.encumberFunds(_offerId, buyerId, msgSender());
+        FundsLib.encumberFunds(_offerId, buyerId);
 
         // Create and store a new exchange
         uint256 exchangeId = protocolCounters().nextExchangeId++;
@@ -185,7 +185,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         // Get seller id associated with caller
         bool sellerExists;
         uint256 sellerId;
-        (sellerExists, sellerId) = getSellerIdByOperator(msg.sender);
+        (sellerExists, sellerId) = getSellerIdByOperator(msgSender());
 
         // Only seller's operator may call
         require(sellerExists && offer.sellerId == sellerId, NOT_OPERATOR);
@@ -520,7 +520,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                         abi.encodeWithSignature(
                             "transferFrom(address,address,uint256)",
                             seller.operator,
-                            msg.sender,
+                            msgSender(),
                             1
                         )
                     );
@@ -534,7 +534,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                             abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,bytes)",
                             seller.operator,
-                            msg.sender,
+                            msgSender(),
                             pointer,
                             ""
                         ));
@@ -547,7 +547,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                             abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
                             seller.operator,
-                            msg.sender,
+                            msgSender(),
                             twin.tokenId,
                             1,
                             ""

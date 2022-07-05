@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol"; // TODO remove this import!!! add allowance() to ITwinToken
-
 import { IBosonTwinEvents } from "../../interfaces/events/IBosonTwinEvents.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
@@ -32,11 +30,11 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
     internal
     {
         // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+        (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
         require(exists, NOT_OPERATOR);
 
         // Protocol must be approved to transfer seller’s tokens
-        require(isProtocolApproved(_twin.tokenAddress, msg.sender, address(this)), NO_TRANSFER_APPROVED);
+        require(isProtocolApproved(_twin.tokenAddress, msgSender(), address(this)), NO_TRANSFER_APPROVED);
 
         if(_twin.tokenType == TokenType.NonFungibleToken) {
             require(_twin.lastTokenId >= _twin.tokenId, ERC721_INVALID_RANGE);
@@ -76,7 +74,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
     ) internal view returns (bool _approved){
         require(_tokenAddress != address(0), UNSUPPORTED_TOKEN);
 
-        try IERC20(_tokenAddress).allowance(
+        try ITwinToken(_tokenAddress).allowance(
             _operator,
             _protocol
         ) returns(uint256 _allowance) {

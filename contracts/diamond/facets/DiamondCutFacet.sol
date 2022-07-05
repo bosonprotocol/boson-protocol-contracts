@@ -5,6 +5,7 @@ import { BosonConstants } from "../../domain/BosonConstants.sol";
 import { IDiamondCut } from "../../interfaces/diamond/IDiamondCut.sol";
 import { DiamondLib } from "../DiamondLib.sol";
 import { JewelerLib } from "../JewelerLib.sol";
+import { EIP712Lib } from "../../protocol/libs/EIP712Lib.sol";
 
 /**
  * @title DiamondCutFacet
@@ -42,7 +43,7 @@ contract DiamondCutFacet is BosonConstants, IDiamondCut {
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
 
         // Ensure the caller has the UPGRADER role
-        require(ds.accessController.hasRole(UPGRADER, msg.sender), "Caller must have UPGRADER role");
+        require(ds.accessController.hasRole(UPGRADER, EIP712Lib.msgSender()), "Caller must have UPGRADER role");
 
         // Make the cuts
         JewelerLib.diamondCut(_facetCuts, _init, _calldata);

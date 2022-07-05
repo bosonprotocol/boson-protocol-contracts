@@ -219,7 +219,7 @@ describe("DisputeDates", function () {
         // Get plain object
         clone = disputeDates.clone();
 
-        // Is an Dispute instance
+        // Is an DisputeDates instance
         expect(clone instanceof DisputeDates).is.true;
 
         // Key values all match
@@ -232,7 +232,7 @@ describe("DisputeDates", function () {
         // Get plain object
         object = disputeDates.toObject();
 
-        // Not an Dispute instance
+        // Not an DisputeDates instance
         expect(object instanceof DisputeDates).is.false;
 
         // Key values all match
