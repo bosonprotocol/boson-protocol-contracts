@@ -380,6 +380,19 @@
     {
       "inputs": [
         {
+          "internalType": "uint256[]",
+          "name": "_exchangeIds",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "expireDisputeBatch",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "uint256",
           "name": "_exchangeId",
           "type": "uint256"
