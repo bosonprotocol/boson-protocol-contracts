@@ -116,6 +116,8 @@ library ProtocolLib {
         mapping(uint256 => mapping(address => uint256)) availableFunds;
         // seller/buyer id => all tokens with balance > 0
         mapping(uint256 => address[]) tokenList;
+        // seller id => cloneAddress
+        mapping(uint256 => address) cloneAddress;
     }
 
     // Incrementing ID counters

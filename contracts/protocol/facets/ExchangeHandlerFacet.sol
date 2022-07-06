@@ -100,7 +100,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         offer.quantityAvailable--;
 
         // Issue voucher
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolAddresses().voucherAddress);
+        IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
         bosonVoucher.issueVoucher(exchangeId, buyer);
 
         // Notify watchers of state change
@@ -300,7 +300,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         exchange.state = ExchangeState.Redeemed;
 
         // Burn the voucher
-        burnVoucher(_exchangeId);
+        burnVoucher(exchange);
 
         // Transfer any bundled twins to buyer
         transferTwins(exchange);
@@ -460,7 +460,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         _exchange.finalizedDate = block.timestamp;
 
         // Burn the voucher if canceling or revoking
-        if (_targetState != ExchangeState.Completed) burnVoucher(_exchange.id);
+        if (_targetState != ExchangeState.Completed) burnVoucher(_exchange);
 
         // Release the funds
         FundsLib.releaseFunds(_exchange.id);
@@ -469,13 +469,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
     /**
      * @notice Burn the voucher associated with a given exchange
      *
-     * @param _exchangeId - the id of the exchange
+     * @param _exchange - the pointer to the exchange
      */
-    function burnVoucher(uint256 _exchangeId)
+    function burnVoucher(Exchange storage _exchange)
     internal
     {
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolAddresses().voucherAddress);
-        bosonVoucher.burnVoucher(_exchangeId);
+        (,Offer storage offer) = fetchOffer(_exchange.offerId);
+        IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
+        bosonVoucher.burnVoucher(_exchange.id);
     }
 
     /**
