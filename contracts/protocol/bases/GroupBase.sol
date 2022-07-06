@@ -70,7 +70,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
 
     }
 
-       /**
+    /**
      * @dev this might change, depending on how checks at the time of the commit will be implemented
      * @notice Validates that condition parameters make sense 
      *
@@ -94,11 +94,13 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         } else if (_condition.method ==  EvaluationMethod.Threshold) {
             valid = (
                 _condition.tokenAddress != address(0) &&
-                _condition.maxCommits > 0
+                _condition.maxCommits > 0 &&
+                _condition.threshold > 0
             );
         } else if (_condition.method ==  EvaluationMethod.SpecificToken) {
             valid = (
                 _condition.tokenAddress != address(0) &&
+                _condition.threshold == 0 &&
                 _condition.maxCommits > 0
             );
         }
