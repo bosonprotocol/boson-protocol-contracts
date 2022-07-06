@@ -28,8 +28,11 @@ async function deployProtocolClientProxies(protocolClients, protocolClientArgs, 
 
   // Deploy the ClientProxy for BosonVoucher
   const ClientProxy = await ethers.getContractFactory("ClientProxy");
-  const clientProxy = await ClientProxy.deploy(...protocolClientArgs, bosonVoucherImpl.address, { gasLimit });
+  const clientProxy = await ClientProxy.deploy({ gasLimit });
   await clientProxy.deployed();
+
+  // init instead of constructors
+  await clientProxy.init(...protocolClientArgs, bosonVoucherImpl.address)
 
   return [clientProxy];
 }

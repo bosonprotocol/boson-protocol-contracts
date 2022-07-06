@@ -13,7 +13,7 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { getEvent } = require("../../scripts/util/test-utils.js");
+const { getEvent, calculateContractAddress } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
 const { mockOffer } = require("../utils/mock.js");
 
@@ -53,6 +53,7 @@ describe("IBosonAccountHandler", function () {
   let protocolFeePercentage, protocolFeeFlatBoson;
   let offerId;
   let bosonVoucher, clients;
+  let expectedCloneAddress;
 
   before(async function () {
     // get interface Ids
@@ -213,6 +214,9 @@ describe("IBosonAccountHandler", function () {
 
       // How that seller looks as a returned struct
       sellerStruct = seller.toStruct();
+
+      // expected address of the first clone
+      expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
     });
 
     context("👉 createSeller()", async function () {
@@ -220,7 +224,7 @@ describe("IBosonAccountHandler", function () {
         // Create a seller, testing for the event
         await expect(accountHandler.connect(admin).createSeller(seller))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, admin.address);
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, admin.address);
       });
 
       it("should update state", async function () {
@@ -245,7 +249,7 @@ describe("IBosonAccountHandler", function () {
         // Create a seller, testing for the event
         await expect(accountHandler.connect(admin).createSeller(seller))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(nextAccountId, sellerStruct, admin.address);
+          .withArgs(nextAccountId, sellerStruct, expectedCloneAddress, admin.address);
 
         // wrong seller id should not exist
         [exists] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -268,7 +272,23 @@ describe("IBosonAccountHandler", function () {
         // Create a seller, testing for the event
         await expect(accountHandler.connect(admin).createSeller(seller))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(nextAccountId, sellerStruct, admin.address);
+          .withArgs(nextAccountId, sellerStruct, expectedCloneAddress,admin.address);
+      });
+
+      it("every seller should get a different clone address", async function () {
+        // Create a seller, testing for the event
+        await expect(accountHandler.connect(admin).createSeller(seller))
+          .to.emit(accountHandler, "SellerCreated")
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, admin.address);
+
+        // second seller
+        expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
+        seller = new Seller(++id, other1.address, other1.address, other1.address, other1.address, active);
+         
+        // Create a seller, testing for the event
+        await expect(accountHandler.connect(other1).createSeller(seller))
+          .to.emit(accountHandler, "SellerCreated")
+          .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, other1.address);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -594,10 +614,13 @@ describe("IBosonAccountHandler", function () {
 
         seller2Struct = seller2.toStruct();
 
+        // expected address of the second clone
+        expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
+
         //Create seller2, testing for the event
         await expect(accountHandler.connect(rando).createSeller(seller2))
           .to.emit(accountHandler, "SellerCreated")
-          .withArgs(seller2.id, seller2Struct, rando.address);
+          .withArgs(seller2.id, seller2Struct, expectedCloneAddress, rando.address);
 
         //Update first seller
         seller.operator = rando.address;
@@ -713,11 +736,12 @@ describe("IBosonAccountHandler", function () {
           seller.treasury = other4.address;
           seller.active = true;
           sellerStruct = seller.toStruct();
+          expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
 
           //Create second seller
           await expect(accountHandler.connect(rando).createSeller(seller))
             .to.emit(accountHandler, "SellerCreated")
-            .withArgs(nextAccountId, sellerStruct, rando.address);
+            .withArgs(nextAccountId, sellerStruct, expectedCloneAddress, rando.address);
 
           //Set operator address value to be same as first seller created in Seller Methods beforeEach
           seller.operator = operator.address; //already being used by seller 1

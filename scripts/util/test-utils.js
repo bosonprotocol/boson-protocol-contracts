@@ -1,5 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const {keccak256, RLP} = ethers.utils;
 
 function getEvent(receipt, factory, eventName) {
   let found = false;
@@ -117,8 +118,23 @@ function calculateProtocolFee(price, protocolFeePercentage) {
   return ethers.BigNumber.from(price).mul(protocolFeePercentage).div("10000").toString();
 }
 
+function calculateContractAddress(senderAddress, senderNonce) {  
+  const nonce = ethers.BigNumber.from(senderNonce);
+  const nonceHex = nonce.eq(0) ? '0x' : nonce.toHexString();
+
+  const input_arr = [senderAddress, nonceHex];
+  const rlp_encoded = RLP.encode(input_arr);
+
+  const contract_address_long = keccak256(rlp_encoded);
+
+  const contract_address = '0x' + contract_address_long.substring(26); //Trim the first 24 characters.
+
+  return ethers.utils.getAddress(contract_address);
+}
+
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
 exports.prepareDataSignatureParameters = prepareDataSignatureParameters;
 exports.calculateVoucherExpiry = calculateVoucherExpiry;
 exports.calculateProtocolFee = calculateProtocolFee;
+exports.calculateContractAddress = calculateContractAddress;

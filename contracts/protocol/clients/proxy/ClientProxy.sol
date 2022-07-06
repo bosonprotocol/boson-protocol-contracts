@@ -37,11 +37,11 @@ contract ClientProxy is IBosonClient, BosonConstants, Proxy {
         _;
     }
 
-    constructor(
+    function init(
         address _accessController,
         address _protocolAddress,
         address _impl
-    ) payable {
+    ) external payable {
 
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();

@@ -18,7 +18,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
-const { getEvent, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
+const { getEvent, calculateProtocolFee, calculateContractAddress } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { oneMonth } = require("../utils/constants");
 const { mockTwin, mockOffer, mockDisputeResolver } = require("../utils/mock");
@@ -240,7 +240,7 @@ describe("IBosonOrchestrationHandler", function () {
           orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
         )
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, operator.address)
+          .withArgs(seller.id, sellerStruct, calculateContractAddress(orchestrationHandler.address, "1"), operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
       });
@@ -289,7 +289,7 @@ describe("IBosonOrchestrationHandler", function () {
           orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
         )
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(nextAccountId, sellerStruct, operator.address)
+          .withArgs(nextAccountId, sellerStruct, calculateContractAddress(orchestrationHandler.address, "1"), operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
@@ -2224,7 +2224,7 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, operator.address)
+          .withArgs(seller.id, sellerStruct, calculateContractAddress(orchestrationHandler.address, "1"), operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
@@ -2302,7 +2302,7 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct)
+          .withArgs(seller.id, calculateContractAddress(orchestrationHandler.address, "1"), sellerStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
@@ -2361,7 +2361,7 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, operator.address)
+          .withArgs(seller.id, sellerStruct, calculateContractAddress(orchestrationHandler.address, "1"), operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
@@ -2469,7 +2469,7 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, operator.address)
+          .withArgs(seller.id, sellerStruct, calculateContractAddress(orchestrationHandler.address, "1"), operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
@@ -2573,7 +2573,7 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, operator.address)
+          .withArgs(seller.id, sellerStruct, calculateContractAddress(orchestrationHandler.address, "1"), operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
@@ -2714,7 +2714,7 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, operator.address)
+          .withArgs(sellerId, sellerStruct, calculateContractAddress(orchestrationHandler.address, "1"), operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 

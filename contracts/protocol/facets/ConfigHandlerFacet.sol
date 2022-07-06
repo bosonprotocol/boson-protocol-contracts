@@ -45,7 +45,10 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxTokensPerWithdrawal(_limits.maxTokensPerWithdrawal);
         setMaxFeesPerDisputeResolver(_limits.maxFeesPerDisputeResolver);
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
-        setMaxDisputesPerBatch(_limits.maxDisputesPerBatch);        
+        setMaxDisputesPerBatch(_limits.maxDisputesPerBatch);      
+
+        protocolAddresses().voucherImplementation = _addresses.voucherImplementation;
+        protocolAddresses().accessControler = _addresses.accessControler;
         
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();

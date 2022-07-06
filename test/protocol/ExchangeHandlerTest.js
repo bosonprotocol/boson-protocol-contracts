@@ -24,6 +24,7 @@ const {
   setNextBlockTimestamp,
   calculateVoucherExpiry,
   prepareDataSignatureParameters,
+  calculateContractAddress,
 } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
 
@@ -69,6 +70,7 @@ describe("IBosonExchangeHandler", function () {
   let disputeResolver, disputeResolverFees;
   let foreign20, foreign721, foreign1155;
   let twin20, twin721, twin1155, twinIds, bundle, balance, owner;
+  let expectedCloneAddress;
 
   before(async function () {
     // get interface Ids
@@ -115,8 +117,9 @@ describe("IBosonExchangeHandler", function () {
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
-    [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    [implementations, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
     [bosonVoucher] = clients;
+    [bvimplement] = implementations;
     await accessController.grantRole(Role.CLIENT, bosonVoucher.address);
 
     // Deploy the boson token
@@ -133,6 +136,8 @@ describe("IBosonExchangeHandler", function () {
         treasuryAddress: "0x0000000000000000000000000000000000000000",
         tokenAddress: bosonToken.address,
         voucherAddress: bosonVoucher.address,
+        voucherImplementation: bvimplement.address,
+        accessControler: accessController.address
       },
       // Protocol limits
       {
@@ -207,6 +212,7 @@ describe("IBosonExchangeHandler", function () {
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
       expect(seller.isValid()).is.true;
       await accountHandler.connect(admin).createSeller(seller);
+      expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(
@@ -301,6 +307,29 @@ describe("IBosonExchangeHandler", function () {
         // Get the next exchange id and ensure it was incremented by the creation of the offer
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
         expect(nextExchangeId).to.equal(++id);
+      });
+
+      it.only("should issue the voucher on the correct clone", async function () {
+        bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+        // Commit to offer, creating a new exchange
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+        
+        expect(tx)
+        .to.emit(bosonVoucherClone, "Transfer")
+        .withArgs(ethers.constants.Zero, buyer.address, "1");
+
+        // buyer should own 1 voucher on the clone address
+        expect(await bosonVoucherClone.balanceOf(buyer.address)).to.equal("1", "Balance should be 1");
+         
+        // token id 1 on voucher clone should belong to the buyer
+        expect(await bosonVoucherClone.ownerOf("1")).to.equal(buyer.address,"Wrong buyer address")      
+    
+        // original boson voucher should not have any vouchers
+        expect(await bosonVoucher.balanceOf(buyer.address)).to.equal("0", "Balance should be 0");
+
+        // original boson voucher should not have voucher with id 1
+        await expect(bosonVoucher.ownerOf("1")).to.revertedWith("ERC721: owner query for nonexistent token");
       });
 
       context("💔 Revert Reasons", async function () {

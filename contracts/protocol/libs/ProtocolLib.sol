@@ -26,6 +26,8 @@ library ProtocolLib {
         address payable tokenAddress;
         // Address of the Boson Protocol Voucher proxy
         address voucherAddress;
+        address voucherImplementation;
+        address accessControler;
     }
 
     // Protocol limits storage
