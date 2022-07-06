@@ -488,7 +488,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                         )
                     );
                     if (!success) {
-                        twin.supplyAvailable--;
+                        twin.supplyAvailable++;
                     }
                 } else if (twin.tokenType == TokenType.MultiToken && twin.supplyAvailable >= twin.amount) {
                     uint256 amount = twin.amount;

@@ -325,7 +325,7 @@ describe("IBosonTwinHandler", function () {
           await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(RevertReasons.INVALID_AMOUNT);
         });
 
-        it("Amount must not be zero if token is type is ERC1155", async function () {
+        it("Amount must not be zero if token type is ERC1155", async function () {
           // Mint a token and approve twinHandler contract to transfer it
           await foreign1155.connect(operator).mint(twin.tokenId, "1");
           await foreign1155.connect(operator).setApprovalForAll(twinHandler.address, true);
