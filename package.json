@@ -120,7 +120,7 @@
         "@nomiclabs/hardhat-waffle": "^2.0.2",
         "@nomiclabs/hardhat-web3": "^2.0.0",
         "@openzeppelin/test-helpers": "^0.5.15",
-        "@thinkanddev/solidoc": "git+https://github.com/Rhian/solidoc.git#fix/improve-layout",
+        "@thinkanddev/solidoc": "git+https://github.com/bosonprotocol/solidoc.git#fix/improve-layout",
         "chai": "^4.3.6",
         "dotenv": "^16.0.0",
         "eip55": "^2.1.0",
