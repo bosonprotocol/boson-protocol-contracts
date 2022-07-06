@@ -30,7 +30,7 @@ const { oneWeek, oneMonth } = require("../utils/constants");
 /**
  *  Test the Boson Exchange Handler interface
  */
-describe.only("IBosonExchangeHandler", function () {
+describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer,
@@ -836,12 +836,14 @@ describe.only("IBosonExchangeHandler", function () {
         // Create an ERC20 twin
         twin20 = mockTwin(foreign20.address);
         twin20.amount = "1";
+        twin20.supplyAvailable = "1";
         expect(twin20.isValid()).is.true;
 
         // Create an ERC721 twin
         twin721 = mockTwin(foreign721.address, TokenType.NonFungibleToken);
         twin721.id = "2";
         twin721.amount = "0";
+        twin721.supplyAvailable = "1";
 
         expect(twin721.isValid()).is.true;
 
@@ -850,6 +852,7 @@ describe.only("IBosonExchangeHandler", function () {
         twin1155.id = "3";
         twin1155.tokenId = "1";
         twin1155.amount = "1";
+        twin1155.supplyAvailable = "1";
 
         expect(twin1155.isValid()).is.true;
 
@@ -930,7 +933,7 @@ describe.only("IBosonExchangeHandler", function () {
           expect(owner).to.equal(buyer.address);
         });
 
-        it("should not revert if current tokenId is greater than lastTokenId", async function () {
+        it("should not revert if supplyAvailable is 0", async function () {
           // Deposit seller funds so the second commit will not revert for Insufficient available funds";
           await fundsHandler
             .connect(operator)

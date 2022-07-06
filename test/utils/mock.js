@@ -78,8 +78,8 @@ function mockTwin(tokenAddress, tokenType) {
   const sellerId = "1";
   const amount = "500";
   const tokenId = "0";
-  const lastTokenId = "0";
-  return new Twin(id, sellerId, amount, lastTokenId, tokenId, tokenAddress, tokenType);
+  const supplyAvailable = "0";
+  return new Twin(id, sellerId, amount, supplyAvailable, tokenId, tokenAddress, tokenType);
 }
 
 function mockDisputeResolver(operatorAddress, adminAddress, clerkAddress, treasuryAddress, active) {

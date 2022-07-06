@@ -13,18 +13,18 @@ class Twin {
             uint256 id;
             uint256 sellerId;
             uint256 amount; // ERC-1155 / ERC-20
-            uint256 lastTokenId; // ERC-721 (the last token id of the ERC-721 available range)
+            uint256 supplyAvailable; // ERC-721 (the last token id of the ERC-721 available range)
             uint256 tokenId; // ERC-1155 / ERC-721 (must be initialized with the initial pointer position of the ERC-721 ids available range)
             address tokenAddress;  // all
             TokenType tokenType
         }
     */
 
-  constructor(id, sellerId, amount, lastTokenId, tokenId, tokenAddress, tokenType) {
+  constructor(id, sellerId, amount, supplyAvailable, tokenId, tokenAddress, tokenType) {
     this.id = id;
     this.sellerId = sellerId;
     this.amount = amount;
-    this.lastTokenId = lastTokenId;
+    this.supplyAvailable = supplyAvailable;
     this.tokenId = tokenId;
     this.tokenAddress = tokenAddress;
     this.tokenType = tokenType;
@@ -36,8 +36,8 @@ class Twin {
    * @returns {Twin}
    */
   static fromObject(o) {
-    const { id, sellerId, amount, lastTokenId, tokenId, tokenAddress, tokenType } = o;
-    return new Twin(id, sellerId, amount, lastTokenId, tokenId, tokenAddress, tokenType);
+    const { id, sellerId, amount, supplyAvailable, tokenId, tokenAddress, tokenType } = o;
+    return new Twin(id, sellerId, amount, supplyAvailable, tokenId, tokenAddress, tokenType);
   }
 
   /**
@@ -46,16 +46,16 @@ class Twin {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let id, sellerId, amount, lastTokenId, tokenId, tokenAddress, tokenType;
+    let id, sellerId, amount, supplyAvailable, tokenId, tokenAddress, tokenType;
 
     // destructure struct
-    [id, sellerId, amount, lastTokenId, tokenId, tokenAddress, tokenType] = struct;
+    [id, sellerId, amount, supplyAvailable, tokenId, tokenAddress, tokenType] = struct;
 
     return Twin.fromObject({
       id: id.toString(),
       sellerId: sellerId.toString(),
       amount: amount.toString(),
-      lastTokenId: lastTokenId ? lastTokenId.toString() : "",
+      supplyAvailable: supplyAvailable ? supplyAvailable.toString() : "",
       tokenId: tokenId ? tokenId.toString() : "",
       tokenAddress,
       tokenType,
@@ -83,7 +83,7 @@ class Twin {
    * @returns {string}
    */
   toStruct() {
-    return [this.id, this.sellerId, this.amount, this.lastTokenId, this.tokenId, this.tokenAddress, this.tokenType];
+    return [this.id, this.sellerId, this.amount, this.supplyAvailable, this.tokenId, this.tokenAddress, this.tokenType];
   }
 
   /**
@@ -137,17 +137,17 @@ class Twin {
   }
 
   /**
-   * Is this Twin instance's lastTokenId field valid?
+   * Is this Twin instance's supplyAvailable field valid?
    * Must be an empty string or a string representation of a big number
    * @returns {boolean}
    */
-  lastTokenIdIsValid() {
+  supplyAvailableIsValid() {
     let valid = false;
-    let { lastTokenId } = this;
+    let { supplyAvailable } = this;
     try {
       valid =
-        typeof lastTokenId === "string" &&
-        (lastTokenId === "" || typeof ethers.BigNumber.from(lastTokenId) === "object");
+        typeof supplyAvailable === "string" &&
+        (supplyAvailable === "" || typeof ethers.BigNumber.from(supplyAvailable) === "object");
     } catch (e) {}
     return valid;
   }
@@ -202,7 +202,7 @@ class Twin {
       this.idIsValid() &&
       this.sellerIdIsValid() &&
       this.amountIsValid() &&
-      this.lastTokenIdIsValid() &&
+      this.supplyAvailableIsValid() &&
       this.tokenIdIsValid() &&
       this.tokenAddressIsValid() &&
       this.tokenTypeIsValid()

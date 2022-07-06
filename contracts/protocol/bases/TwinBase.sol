@@ -12,7 +12,6 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
  * @dev Provides methods for twin creation that can be shared accross facets
  */
 contract TwinBase is ProtocolBase, IBosonTwinEvents {
-
     /**
      * @notice Creates a Twin.
      *
@@ -24,24 +23,20 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
      */
-    function createTwinInternal(
-        Twin memory _twin
-    )
-    internal
-    {
+    function createTwinInternal(Twin memory _twin) internal {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
         require(exists, NOT_OPERATOR);
 
         // Protocol must be approved to transfer seller’s tokens
         require(isProtocolApproved(_twin.tokenAddress, msgSender(), address(this)), NO_TRANSFER_APPROVED);
-
-        if(_twin.tokenType == TokenType.NonFungibleToken) {
-            require(_twin.amount == 0,INVALID_TWIN_PROPERTY);
-            require(_twin.lastTokenId >= _twin.tokenId, ERC721_INVALID_RANGE);
-        } else if(_twin.tokenType == TokenType.FungibleToken || _twin.tokenType == TokenType.MultiToken) {
-            require(_twin.lastTokenId == 0, INVALID_TWIN_PROPERTY);
-            require(_twin.amount > 0, INVALID_AMOUNT);   
+        
+        // @TODO: checks Twin range if seller has others twins with the same token address
+        require(_twin.supplyAvailable > 0, INVALID_SUPPLY_AVAILABLE);
+        if (_twin.tokenType == TokenType.NonFungibleToken) {
+            require(_twin.amount == 0, INVALID_TWIN_PROPERTY);
+        } else if (_twin.tokenType == TokenType.FungibleToken || _twin.tokenType == TokenType.MultiToken) {
+            require(_twin.amount > 0, INVALID_AMOUNT);
         }
 
         // Get the next twinId and increment the counter
@@ -53,7 +48,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         // Set twin props individually since memory structs can't be copied to storage
         twin.id = _twin.id = twinId;
         twin.sellerId = _twin.sellerId = sellerId;
-        twin.lastTokenId = _twin.lastTokenId;
+        twin.supplyAvailable = _twin.supplyAvailable;
         twin.amount = _twin.amount;
         twin.tokenId = _twin.tokenId;
         twin.tokenAddress = _twin.tokenAddress;
@@ -75,14 +70,13 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         address _tokenAddress,
         address _operator,
         address _protocol
-    ) internal view returns (bool _approved){
+    ) internal view returns (bool _approved) {
         require(_tokenAddress != address(0), UNSUPPORTED_TOKEN);
 
-        try ITwinToken(_tokenAddress).allowance(
-            _operator,
-            _protocol
-        ) returns(uint256 _allowance) {
-            if (_allowance > 0) {_approved = true; }
+        try ITwinToken(_tokenAddress).allowance(_operator, _protocol) returns (uint256 _allowance) {
+            if (_allowance > 0) {
+                _approved = true;
+            }
         } catch {
             try ITwinToken(_tokenAddress).isApprovedForAll(_operator, _protocol) returns (bool _isApproved) {
                 _approved = _isApproved;
@@ -91,5 +85,4 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             }
         }
     }
-
 }

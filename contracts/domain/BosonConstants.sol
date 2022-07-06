@@ -87,7 +87,7 @@ contract BosonConstants {
     string internal constant TWIN_TRANSFER_FAILED = "Twin could not be transferred";
     string internal constant UNSUPPORTED_TOKEN = "Unsupported token";
     string internal constant TWIN_HAS_BUNDLES = "Twin has bundles";
-    string internal constant ERC721_INVALID_RANGE = "lastTokenId must be equal or greater than tokenId";
+    string internal constant INVALID_SUPPLY_AVAILABLE = "supplyAvailable can't be zero";
     string internal constant INVALID_AMOUNT = "Amount must be greater than zero if token is ERC20 or ERC1155";
     string internal constant INVALID_TWIN_PROPERTY = "Invalid property for selected token type";
 
