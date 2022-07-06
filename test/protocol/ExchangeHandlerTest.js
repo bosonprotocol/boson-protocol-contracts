@@ -30,7 +30,7 @@ const { oneWeek, oneMonth } = require("../utils/constants");
 /**
  *  Test the Boson Exchange Handler interface
  */
-describe("IBosonExchangeHandler", function () {
+describe.only("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer,
@@ -841,6 +841,8 @@ describe("IBosonExchangeHandler", function () {
         // Create an ERC721 twin
         twin721 = mockTwin(foreign721.address, TokenType.NonFungibleToken);
         twin721.id = "2";
+        twin721.amount = "0";
+
         expect(twin721.isValid()).is.true;
 
         // Create an ERC1155 twin
