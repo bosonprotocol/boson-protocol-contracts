@@ -157,7 +157,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         require(exists, NO_SUCH_GROUP);
 
         // Get seller id, we assume seller id exists if offer exists
-        (, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+        (, uint256 sellerId) = getSellerIdByOperator(msgSender());
 
         // Caller's seller id must match group seller id
         require(sellerId == group.sellerId, NOT_OPERATOR);

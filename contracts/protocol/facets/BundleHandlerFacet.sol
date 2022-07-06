@@ -225,7 +225,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         require(exists, NO_SUCH_BUNDLE);
 
         // Get seller id, we assume seller id exists if bundle exists
-        (, sellerId) = getSellerIdByOperator(msg.sender);
+        (, sellerId) = getSellerIdByOperator(msgSender());
 
         // Caller's seller id must match bundle seller id
         require(sellerId == bundle.sellerId, NOT_OPERATOR);
@@ -358,7 +358,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         require(exists, NO_SUCH_BUNDLE);
 
         // Get seller id
-        (, uint256 sellerId) = getSellerIdByOperator(msg.sender);
+        (, uint256 sellerId) = getSellerIdByOperator(msgSender());
         // Caller's seller id must match bundle seller id
         require(sellerId == bundle.sellerId, NOT_OPERATOR);
 

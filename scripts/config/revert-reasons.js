@@ -46,12 +46,17 @@ exports.RevertReasons = {
   SELLER_ADDRESS_MUST_BE_UNIQUE: "Seller address cannot be assigned to another seller Id",
   BUYER_ADDRESS_MUST_BE_UNIQUE: "Buyer address cannot be assigned to another buyer Id",
   DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE: "Dispute Resolver address cannot be assigned to another dispute resolver Id",
-  NOT_ADMIN: "Not seller's admin",
+  NOT_ADMIN: "Not admin",
   NOT_BUYER_WALLET: "Not buyer's wallet address",
   NO_SUCH_BUYER: "No such buyer",
   WALLET_OWNS_VOUCHERS: "Wallet address owns vouchers",
-  NOT_DISPUTE_RESOLVER_WALLET: "Not dispute resolver's wallet address",
+  NOT_DISPUTE_RESOLVER_OPERATOR: "Not dispute resolver's operator address",
   NO_SUCH_DISPUTE_RESOLVER: "No such dispute resolver",
+  INVALID_ESCALATION_PERIOD: "Invalid escalation period",
+  INVALID_AMOUNT_DISPUTE_RESOLVER_FEES:
+    "Dispute resolver fees are not present or exceeds maximum dispute resolver fees in a single transaction",
+  DUPLICATE_DISPUTE_RESOLVER_FEES: "Duplicate dispute resolver fee",
+  DISPUTE_RESOLVER_FEE_NOT_FOUND: "Dispute resolver fee not found",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",
@@ -59,6 +64,7 @@ exports.RevertReasons = {
   TWIN_TRANSFER_FAILED: "Twin could not be transferred",
   UNSUPPORTED_TOKEN: "Unsupported token",
   TWIN_HAS_BUNDLES: "Twin has bundles",
+  ERC721_INVALID_RANGE: "lastTokenId must be equal or greater than tokenId",
 
   // Bundle related
   NO_SUCH_BUNDLE: "No such bundle",
@@ -109,6 +115,7 @@ exports.RevertReasons = {
   INVALID_BUYER_PERCENT: "Invalid buyer percent",
   DISPUTE_STILL_VALID: "Dispute still valid",
   INVALID_DISPUTE_TIMEOUT: "Invalid dispute timeout",
+  TOO_MANY_DISPUTES: "Exceeded maximum disputes in a single transaction",
 
   // Config related
   PROTOCOL_FEE_PERCENTAGE_INVALID: "Percentage representation must be less than 10000",

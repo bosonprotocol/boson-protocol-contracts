@@ -9,16 +9,18 @@ const { deployProtocolHandlerFacets } = require("../../../scripts/util/deploy-pr
 const Buyer = require("../../../scripts/domain/Buyer");
 const Role = require("../../../scripts/domain/Role");
 const Seller = require("../../../scripts/domain/Seller");
-const DisputeResolver = require("../../../scripts/domain/DisputeResolver");
 const { mockOffer } = require("../../utils/mock.js");
 const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
 const { expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
+const { oneMonth } = require("../../utils/constants");
+const { mockDisputeResolver } = require("../../utils/mock");
 
 describe("IBosonVoucher", function () {
   let interfaceId;
   let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler;
-  let deployer, protocol, buyer, rando, operator, admin, clerk, treasury;
+  let deployer, protocol, buyer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
+  let disputeResolver, disputeResolverFees;
 
   before(async function () {
     // Get interface id
@@ -28,7 +30,8 @@ describe("IBosonVoucher", function () {
 
   beforeEach(async function () {
     // Set signers (fake protocol address to test issue and burn voucher without protocol dependencie)
-    [deployer, protocol, buyer, rando, operator, admin, clerk, treasury] = await ethers.getSigners();
+    [deployer, protocol, buyer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR] =
+      await ethers.getSigners();
 
     // Deploy diamond
     const [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -73,8 +76,11 @@ describe("IBosonVoucher", function () {
         maxOffersPerBundle: 0,
         maxOffersPerBatch: 0,
         maxTokensPerWithdrawal: 0,
+        maxFeesPerDisputeResolver: 100,
+        maxEscalationResponsePeriod: oneMonth,
+        maxDisputesPerBatch: 100,
       },
-      // Protocol fees
+      //Protocol fees
       {
         percentage: 200, // 2%
         flatBoson: protocolFeeFlatBoson,
@@ -144,7 +150,23 @@ describe("IBosonVoucher", function () {
       const seller = new Seller("1", operator.address, admin.address, clerk.address, treasury.address, true);
 
       await accountHandler.connect(admin).createSeller(seller);
-      await accountHandler.connect(admin).createDisputeResolver(new DisputeResolver("2", rando.address, true));
+
+      // Create a valid dispute resolver
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
+      expect(disputeResolver.isValid()).is.true;
+
+      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
+      disputeResolverFees = [];
+
+      // Register and activate the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+      await accountHandler.connect(deployer).activateDisputeResolver("2");
 
       const { offer, offerDates, offerDurations } = await mockOffer();
       await offerHandler

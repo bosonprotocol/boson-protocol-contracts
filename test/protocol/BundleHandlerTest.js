@@ -5,7 +5,6 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
-const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Bundle = require("../../scripts/domain/Bundle");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -15,7 +14,8 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { mockOffer, mockTwin } = require("../utils/mock");
+const { mockOffer, mockTwin, mockDisputeResolver } = require("../utils/mock");
+const { oneMonth } = require("../utils/constants");
 
 /**
  *  Test the Boson Bundle Handler interface
@@ -23,7 +23,7 @@ const { mockOffer, mockTwin } = require("../utils/mock");
 describe("IBosonBundleHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, admin, clerk, treasury, buyer, other1;
+  let deployer, rando, operator, admin, clerk, treasury, buyer, operatorDR, adminDR, clerkDR, treasuryDR;
   let erc165,
     protocolDiamond,
     accessController,
@@ -43,7 +43,7 @@ describe("IBosonBundleHandler", function () {
     clients,
     invalidTwinId;
   let offerHandler, bundleHandlerFacet_Factory;
-  let seller, active;
+  let seller, active, nextAccountId;
   let bundleStruct;
   let twinIdsToAdd, twinIdsToRemove, offerIdsToAdd, offerIdsToRemove;
   let bundle, bundleId, bundleIds, offerIds, twinId, twinIds, nextBundleId, invalidBundleId, bundleInstance;
@@ -51,7 +51,7 @@ describe("IBosonBundleHandler", function () {
   let offerId, invalidOfferId, price, sellerDeposit;
   let offerDates, offerDurations;
   let protocolFeePercentage, protocolFeeFlatBoson;
-  let disputeResolver;
+  let disputeResolver, disputeResolverFees;
 
   before(async function () {
     // get interface Ids
@@ -70,7 +70,8 @@ describe("IBosonBundleHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, buyer, other1] = await ethers.getSigners();
+    [deployer, operator, admin, clerk, treasury, rando, buyer, operatorDR, adminDR, clerkDR, treasuryDR] =
+      await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -118,6 +119,9 @@ describe("IBosonBundleHandler", function () {
         maxOffersPerBundle: 100,
         maxOffersPerBatch: 100,
         maxTokensPerWithdrawal: 100,
+        maxFeesPerDisputeResolver: 100,
+        maxEscalationResponsePeriod: oneMonth,
+        maxDisputesPerBatch: 100,
       },
       // Protocol fees
       {
@@ -165,7 +169,7 @@ describe("IBosonBundleHandler", function () {
     beforeEach(async function () {
       // create a seller
       // Required constructor params
-      id = "1"; // argument sent to contract for createSeller will be ignored
+      id = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
       active = true;
 
       // Create a valid seller, then set fields in tests directly
@@ -173,13 +177,24 @@ describe("IBosonBundleHandler", function () {
       expect(seller.isValid()).is.true;
       await accountHandler.connect(admin).createSeller(seller);
 
+      id = ++nextAccountId;
+
       // Create a valid dispute resolver
-      active = true;
-      disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
       expect(disputeResolver.isValid()).is.true;
 
-      // Register the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
+      disputeResolverFees = [];
+
+      // Register and activate the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+      await accountHandler.connect(deployer).activateDisputeResolver(id);
 
       // create 5 twins
       for (let i = 0; i < 5; i++) {

@@ -719,7 +719,7 @@ describe("IBosonGroupHandler", function () {
         expect(returnedGroup.condition.toString() === condition.toString()).is.true;
       });
 
-      context("💔 Revert Reasons", async function () {
+      context.only("💔 Revert Reasons", async function () {
         it("Group does not exist", async function () {
           // Set invalid id
           group.id = "444";
@@ -766,10 +766,30 @@ describe("IBosonGroupHandler", function () {
           );
         });
 
-        it("Condition 'SpecificToken' has has zero token contract address", async function () {
+        it("Condition 'Threshold' has zero max commits", async function () {
+          method = EvaluationMethod.Threshold;
+          condition.maxCommits = "0";
+
+          // Attempt to update the group, expecting revert
+          await expect(groupHandler.connect(operator).setGroupCondition(group.id, condition)).to.revertedWith(
+            RevertReasons.INVALID_CONDITION_PARAMETERS
+          );
+        });
+
+        it("Condition 'SpecificToken' has zero token contract address", async function () {
           method = EvaluationMethod.SpecificToken;
           tokenAddress = ethers.constants.AddressZero;
           condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+
+          // Attempt to update the group, expecting revert
+          await expect(groupHandler.connect(operator).setGroupCondition(group.id, condition)).to.revertedWith(
+            RevertReasons.INVALID_CONDITION_PARAMETERS
+          );
+        });
+
+        it("Condition 'SpecificToken' has zero max commits", async function () {
+          method = EvaluationMethod.SpecificToken;
+          condition.maxCommits = "0";
 
           // Attempt to update the group, expecting revert
           await expect(groupHandler.connect(operator).setGroupCondition(group.id, condition)).to.revertedWith(

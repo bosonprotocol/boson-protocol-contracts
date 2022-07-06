@@ -9,6 +9,63 @@
         {
           "indexed": false,
           "internalType": "uint16",
+          "name": "maxDisputesPerBatch",
+          "type": "uint16"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MaxDisputesPerBatchChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "maxEscalationResponsePeriod",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MaxEscalationResponsePeriodChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint16",
+          "name": "maxFeesPerDisputeResolver",
+          "type": "uint16"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MaxFeesPerDisputeResolverChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint16",
           "name": "maxOffersPerBatch",
           "type": "uint16"
         },
@@ -66,7 +123,7 @@
         {
           "indexed": false,
           "internalType": "uint16",
-          "name": "maxOffersPerBundle",
+          "name": "maxTokensPerWithdrawal",
           "type": "uint16"
         },
         {

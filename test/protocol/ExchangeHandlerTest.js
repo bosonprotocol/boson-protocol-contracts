@@ -449,10 +449,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("should emit a BuyerCommitted event if user meets condition", async function () {
           // mint enough tokens for the buyer
-          for (let i = 0; i < Number(threshold) + 1; i++) {
-            tokenId = String(i + 1);
-            await foreign721.connect(buyer).mint(tokenId);
-          }
+          await foreign721.connect(buyer).mint(tokenId, threshold);
 
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
@@ -464,9 +461,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("should allow buyer to commit up to the max times for the group", async function () {
           // mint enough tokens for the buyer
-          for (let i = 0; i < Number(threshold); i++) {
-            await foreign721.connect(buyer).mint(String(i + 1));
-          }
+          await foreign721.connect(buyer).mint(tokenId, threshold);
 
           // Commit to offer the maximum number of times
           for (let i = 0; i < Number(maxCommits); i++) {
@@ -492,9 +487,7 @@ describe("IBosonExchangeHandler", function () {
 
           it("buyer has exhausted allowable commits", async function () {
             // mint enough tokens for the buyer
-            for (let i = 0; i < Number(threshold); i++) {
-              await foreign721.connect(buyer).mint(String(i + 1));
-            }
+            await foreign721.connect(buyer).mint(tokenId, threshold);
 
             // Commit to offer the maximum number of times
             for (let i = 0; i < Number(maxCommits); i++) {
@@ -614,7 +607,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("should emit a BuyerCommitted event if user meets condition", async function () {
           // mint correct token for the buyer
-          await foreign721.connect(buyer).mint(tokenId);
+          await foreign721.connect(buyer).mint(tokenId, "1");
 
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
@@ -626,7 +619,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("should allow buyer to commit up to the max times for the group", async function () {
           // mint correct token for the buyer
-          await foreign721.connect(buyer).mint(tokenId);
+          await foreign721.connect(buyer).mint(tokenId, "1");
 
           // Commit to offer the maximum number of times
           for (let i = 0; i < Number(maxCommits); i++) {
@@ -645,7 +638,7 @@ describe("IBosonExchangeHandler", function () {
 
           it("buyer does not meet condition for commit", async function () {
             // mint correct token but to another user
-            await foreign721.connect(rando).mint(tokenId);
+            await foreign721.connect(rando).mint(tokenId, "1");
 
             // Attempt to commit, expecting revert
             await expect(
@@ -655,7 +648,7 @@ describe("IBosonExchangeHandler", function () {
 
           it("buyer has exhausted allowable commits", async function () {
             // mint correct token for the buyer
-            await foreign721.connect(buyer).mint(tokenId);
+            await foreign721.connect(buyer).mint(tokenId, "1");
 
             // Commit to offer the maximum number of times
             for (let i = 0; i < Number(maxCommits); i++) {

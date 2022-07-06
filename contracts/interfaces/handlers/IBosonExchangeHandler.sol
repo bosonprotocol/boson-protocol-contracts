@@ -138,7 +138,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
      *
      * Returns true if
      * - Exchange state is Revoked, Canceled, or Completed
-     * - Exchange is disputed and dispute state is Retracted, Resolved, or Decided
+     * - Exchange is disputed and dispute state is Retracted, Resolved, Decided or Refused
      *
      * @param _exchangeId - the id of the exchange to check
      * @return exists - true if the exchange exists

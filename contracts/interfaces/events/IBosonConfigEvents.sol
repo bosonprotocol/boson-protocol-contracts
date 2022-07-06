@@ -18,5 +18,8 @@ interface IBosonConfigEvents {
     event MaxOffersPerBatchChanged(uint16 maxOffersPerBatch, address indexed executedBy);
     event MaxTwinsPerBundleChanged(uint16 maxTwinsPerBundle, address indexed executedBy);
     event MaxOffersPerBundleChanged(uint16 maxOffersPerBundle, address indexed executedBy);
-    event MaxTokensPerWithdrawalChanged(uint16 maxOffersPerBundle, address indexed executedBy);    
+    event MaxTokensPerWithdrawalChanged(uint16 maxTokensPerWithdrawal, address indexed executedBy);  
+    event MaxFeesPerDisputeResolverChanged(uint16 maxFeesPerDisputeResolver, address indexed executedBy); 
+    event MaxEscalationResponsePeriodChanged(uint256 maxEscalationResponsePeriod, address indexed executedBy);
+    event MaxDisputesPerBatchChanged(uint16 maxDisputesPerBatch, address indexed executedBy);
 }

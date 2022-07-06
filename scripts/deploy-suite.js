@@ -16,6 +16,7 @@ const {
   verifyOnTestEnv,
   writeContracts,
 } = require("./util/report-verify-deployments");
+const { oneMonth } = require("../test/utils/constants");
 
 /**
  * Deploy Boson Protocol V2 contract suite
@@ -40,6 +41,9 @@ function getConfig() {
   const maxOffersPerBundle = "100";
   const maxOffersPerBatch = "100";
   const maxTokensPerWithdrawal = "100";
+  const maxFeesPerDisputeResolver = 100;
+  const maxEscalationResponsePeriod = oneMonth;
+  const maxDisputesPerBatch = "100";
 
   // Boson Token (ERC-20) contract address
   const TOKEN = {
@@ -77,6 +81,9 @@ function getConfig() {
       maxOffersPerBundle,
       maxOffersPerBatch,
       maxTokensPerWithdrawal,
+      maxFeesPerDisputeResolver,
+      maxEscalationResponsePeriod,
+      maxDisputesPerBatch,
     },
     {
       percentage: feePercentage,

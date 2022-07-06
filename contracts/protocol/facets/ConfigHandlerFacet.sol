@@ -43,7 +43,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxOffersPerBundle(_limits.maxOffersPerBundle);
         setMaxOffersPerBatch(_limits.maxOffersPerBatch);
         setMaxTokensPerWithdrawal(_limits.maxTokensPerWithdrawal);
-        
+        setMaxFeesPerDisputeResolver(_limits.maxFeesPerDisputeResolver);
+        setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
+        setMaxDisputesPerBatch(_limits.maxDisputesPerBatch);        
         
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -72,7 +74,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolAddresses().tokenAddress = _tokenAddress;
-        emit TokenAddressChanged(_tokenAddress, msg.sender);
+        emit TokenAddressChanged(_tokenAddress, msgSender());
     }
 
     /**
@@ -100,7 +102,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolAddresses().treasuryAddress = _treasuryAddress;
-        emit TreasuryAddressChanged(_treasuryAddress, msg.sender);
+        emit TreasuryAddressChanged(_treasuryAddress, msgSender());
     }
 
     /**
@@ -128,7 +130,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolAddresses().voucherAddress = _voucherAddress;
-        emit VoucherAddressChanged(_voucherAddress, msg.sender);
+        emit VoucherAddressChanged(_voucherAddress, msgSender());
     }
 
     /**
@@ -168,7 +170,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         protocolFees().percentage = _protocolFeePercentage;
 
         // Notify watchers of state change
-        emit ProtocolFeePercentageChanged(_protocolFeePercentage, msg.sender);
+        emit ProtocolFeePercentageChanged(_protocolFeePercentage, msgSender());
     }
 
     /**
@@ -201,7 +203,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         protocolFees().flatBoson = _protocolFeeFlatBoson;
 
         // Notify watchers of state change
-        emit ProtocolFeeFlatBosonChanged(_protocolFeeFlatBoson, msg.sender);
+        emit ProtocolFeeFlatBosonChanged(_protocolFeeFlatBoson, msgSender());
     }
 
     /**
@@ -229,7 +231,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolLimits().maxOffersPerGroup = _maxOffersPerGroup;
-        emit MaxOffersPerGroupChanged(_maxOffersPerGroup, msg.sender);
+        emit MaxOffersPerGroupChanged(_maxOffersPerGroup, msgSender());
     }
 
     /**
@@ -257,7 +259,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolLimits().maxTwinsPerBundle = _maxTwinsPerBundle;
-        emit MaxTwinsPerBundleChanged(_maxTwinsPerBundle, msg.sender);
+        emit MaxTwinsPerBundleChanged(_maxTwinsPerBundle, msgSender());
     }
 
     /**
@@ -285,7 +287,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolLimits().maxOffersPerBundle = _maxOffersPerBundle;
-        emit MaxOffersPerBundleChanged(_maxOffersPerBundle, msg.sender);
+        emit MaxOffersPerBundleChanged(_maxOffersPerBundle, msgSender());
     }
 
     /**
@@ -313,7 +315,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolLimits().maxOffersPerBatch = _maxOffersPerBatch;
-        emit MaxOffersPerBatchChanged(_maxOffersPerBatch, msg.sender);
+        emit MaxOffersPerBatchChanged(_maxOffersPerBatch, msgSender());
     }
 
     /**
@@ -341,7 +343,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     onlyRole(ADMIN)
     {
         protocolLimits().maxTokensPerWithdrawal = _maxTokensPerWithdrawal;
-        emit MaxTokensPerWithdrawalChanged(_maxTokensPerWithdrawal, msg.sender);
+        emit MaxTokensPerWithdrawalChanged(_maxTokensPerWithdrawal, msgSender());
     }
 
     /**
@@ -354,5 +356,90 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     returns (uint16)
     {
         return protocolLimits().maxTokensPerWithdrawal;
+    }
+
+    /**
+     * @notice Sets the maximum number of dispute resolver fee structs that can be processed in a single transaction
+     *
+     * Emits a MaxFeesPerDisputeResolverChanged event.
+     *
+     * @param _maxFeesPerDisputeResolver - the maximum length of dispute resolver fees list when calling {AccountHandlerFacet.createDisputeResolver} or {AccountHandlerFacet.updateDisputeResolver}
+     */
+    function setMaxFeesPerDisputeResolver(uint16 _maxFeesPerDisputeResolver)
+    public
+    override
+    onlyRole(ADMIN)
+    {
+        protocolLimits().maxFeesPerDisputeResolver = _maxFeesPerDisputeResolver;
+        emit MaxFeesPerDisputeResolverChanged(_maxFeesPerDisputeResolver, msgSender());
+    }
+   
+    /**
+     * @notice Get the maximum number of dispute resolver fee structs that can be processed in a single transaction
+     */
+    function getMaxFeesPerDisputeResolver() 
+    external 
+    override
+    view 
+    returns (uint16)
+    {
+        return protocolLimits().maxFeesPerDisputeResolver;
+    }
+
+    /**
+     * @notice Sets the maximum escalation response period a dispute resolver can specify
+     *
+     * Emits a MaxEscalationResponsePeriodChanged event.
+     *
+     * @param _maxEscalationResponsePeriod - the maximum escalation response period that a {BosonTypes.DisputeResolver} can specify
+     */
+    function setMaxEscalationResponsePeriod(uint256 _maxEscalationResponsePeriod) 
+    public
+    override
+    onlyRole(ADMIN)
+    {
+        protocolLimits().maxEscalationResponsePeriod = _maxEscalationResponsePeriod;
+        emit MaxEscalationResponsePeriodChanged(_maxEscalationResponsePeriod, msgSender());
+    }
+
+   
+    /**
+     * @notice Get the maximum escalation response period a dispute resolver can specify
+     */
+    function getMaxEscalationResponsePeriod()
+    external
+    override
+    view
+    returns (uint256)
+    {
+        return protocolLimits().maxEscalationResponsePeriod;
+    }
+
+    /**
+     * @notice Sets the maximum numbers of disputes that can be expired in a single transaction
+     *
+     * Emits a MaxDisputesPerBatchChanged event.
+     *
+     * @param _maxDisputesPerBatch - the maximum number of disputes that can be expired
+     */
+    function setMaxDisputesPerBatch(uint16 _maxDisputesPerBatch)
+    public
+    override
+    onlyRole(ADMIN)
+    {
+        protocolLimits().maxDisputesPerBatch = _maxDisputesPerBatch;
+        emit MaxDisputesPerBatchChanged(_maxDisputesPerBatch, msgSender());
+    }
+
+    /**
+     * @notice Get the maximum disputes per batch
+     */
+    function getMaxDisputesPerBatch()
+    external
+    override
+    view
+    returns (uint16)
+    {
+        return protocolLimits().maxDisputesPerBatch;
     }
 }

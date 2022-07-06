@@ -15,41 +15,21 @@ jobs:
     name: test_deploy
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3
         with:
-          fetch-depth: 2 # we want 2 of the latest commit history to identify PR author
-      - name: Check Author Name of the PR that merged to main
-        run: |
-          LATEST_COMMIT_MESSAGE=$(git show -s --format=%s)
-
-          if [[ $LATEST_COMMIT_MESSAGE == *"Merge pull request #"* ]]; then
-            echo "AUTHOR_NAME=$(git log -n 2 --pretty=format:%an | tail -1)" >> "$GITHUB_ENV"
-          else
-            echo "AUTHOR_NAME=$(git log -n 1 --pretty=format:%an | tail -1)" >> "$GITHUB_ENV"
-          fi
-      - name: Check if we can generate a new automated PR
-        run: |
-          if [[ "$AUTHOR_NAME" == "GitHub Actions Bot" || "$AUTHOR_NAME" == "github-actions[bot]" ]]; then
-              echo "CAN_GENERATE_AUTOMATED_PR=false" >> "$GITHUB_ENV"
-          else
-              echo "CAN_GENERATE_AUTOMATED_PR=true" >> "$GITHUB_ENV"
-          fi
+          token: ${{ secrets.BSNORG_ACTIONS_SECRET }}
       - name: Setup node
-        if: env.CAN_GENERATE_AUTOMATED_PR == 'true'
         uses: actions/setup-node@v2.5.1
         with:
-          node-version: '16.14.x'
-          cache: 'npm'
+          node-version: "16.14.x"
+          cache: "npm"
       - name: Install packages
-        if: env.CAN_GENERATE_AUTOMATED_PR == 'true'
         run: npm install
       - name: Prepare Environment
-        if: env.CAN_GENERATE_AUTOMATED_PR == 'true'
         shell: bash
         run: |
           cp .env.example .env
       - name: Create required empty directories
-        if: env.CAN_GENERATE_AUTOMATED_PR == 'true'
         shell: bash
         run: |
           mkdir -p logs
@@ -57,28 +37,22 @@ jobs:
           mkdir -p addresses/abis
           mkdir -p addresses/abis/test
       - name: Deploy to internal test environment
-        if: env.CAN_GENERATE_AUTOMATED_PR == 'true'
         run: npm run deploy-suite:test
       - name: Upload test deploy output
-        if: env.CAN_GENERATE_AUTOMATED_PR == 'true'
         uses: actions/upload-artifact@v2
         with:
           name: test-deploy-contracts-logs
           path: logs/test.deploy.contracts.txt
       - name: Copy abis from artifacts directory to abis subfolder
-        if: env.CAN_GENERATE_AUTOMATED_PR == 'true'
         shell: bash
         run: |
           rsync -av --exclude='*.dbg.json' artifacts/contracts/interfaces addresses/abis/test/
-      - name: Create Automated Pull Request
-        if: env.CAN_GENERATE_AUTOMATED_PR == 'true'
-        uses: peter-evans/create-pull-request@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: Add json file with addresses for test environment.
-          committer: GitHub Actions Bot <noreply@github.com>
-          author: GitHub Actions Bot <noreply@github.com>
-          title: '[Test Environment] New deployed addresses'
-          body: >
-            This is an auto-generated PR. This PR contains addresses generated after deploy to the internal test environment.
-          labels: deployed addresses, automated pr
+      - name: Commit auto-generated files
+        run: |
+          git config --local user.email "bsn-ci@users.noreply.github.com"
+          git config --local user.name "GitHub Actions Bot"
+          git commit -a \
+            -m "[skip ci] Add json file with addresses for test environment" \
+            -m "[Test Environment] New deployed addresses" \
+            -m "This is an auto-generated commit. This commit contains addresses generated after deploy to the internal test environment."
+          git push

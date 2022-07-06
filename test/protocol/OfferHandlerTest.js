@@ -5,7 +5,6 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
-const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
@@ -18,14 +17,14 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
-const { mockOffer } = require("../utils/mock");
+const { mockOffer, mockDisputeResolver } = require("../utils/mock");
 /**
  *  Test the Boson Offer Handler interface
  */
 describe("IBosonOfferHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, admin, clerk, treasury, other1;
+  let deployer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
   let erc165,
     protocolDiamond,
     accessController,
@@ -36,7 +35,7 @@ describe("IBosonOfferHandler", function () {
     offerStruct,
     key,
     value;
-  let offer, nextOfferId, invalidOfferId, support, expected, exists;
+  let offer, nextOfferId, invalidOfferId, support, expected, exists, nextAccountId;
   let seller, active;
   let id, sellerId, price, voided;
   let validFrom,
@@ -55,7 +54,7 @@ describe("IBosonOfferHandler", function () {
     offerDurationsStructs,
     offerDurationsList;
   let protocolFeePercentage, protocolFeeFlatBoson;
-  let disputeResolver;
+  let disputeResolver, disputeResolverFees;
 
   before(async function () {
     // get interface Ids
@@ -64,7 +63,8 @@ describe("IBosonOfferHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, other1] = await ethers.getSigners();
+    [deployer, operator, admin, clerk, treasury, rando, operatorDR, adminDR, clerkDR, treasuryDR] =
+      await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -104,6 +104,9 @@ describe("IBosonOfferHandler", function () {
         maxOffersPerBundle: 100,
         maxOffersPerBatch: 100,
         maxTokensPerWithdrawal: 100,
+        maxFeesPerDisputeResolver: 100,
+        maxEscalationResponsePeriod: oneMonth,
+        maxDisputesPerBatch: 100,
       },
       // Protocol fees
       {
@@ -142,7 +145,7 @@ describe("IBosonOfferHandler", function () {
     beforeEach(async function () {
       // create a seller
       // Required constructor params
-      id = "1"; // argument sent to contract for createSeller will be ignored
+      id = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
 
       active = true;
 
@@ -153,12 +156,21 @@ describe("IBosonOfferHandler", function () {
       await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid dispute resolver
-      active = true;
-      disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
       expect(disputeResolver.isValid()).is.true;
 
-      // Register the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
+      disputeResolverFees = [];
+
+      // Register and activate the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+      await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
       // The first offer id
       nextOfferId = "1";
@@ -665,6 +677,22 @@ describe("IBosonOfferHandler", function () {
             RevertReasons.OFFER_PERIOD_INVALID
           );
         });
+
+        it("Offer has voucherRedeemableUntil set and new valid until date is greater than that", async function () {
+          // create a new offer with vouchers with fix expiration date
+          offer.id++;
+          offerDates.voucherRedeemableUntil = ethers.BigNumber.from(offerDates.validUntil).add(oneMonth).toString();
+          offerDurations.voucherValid = "0"; // only one of voucherRedeemableUntil and voucherValid can be non zero
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
+
+          // Set until date in the before offerDates.voucherRedeemableUntil
+          offerDates.validUntil = ethers.BigNumber.from(offerDates.voucherRedeemableUntil).add(oneWeek).toString(); // one week after voucherRedeemableUntil
+
+          // Attempt to update an offer, expecting revert
+          await expect(offerHandler.connect(operator).extendOffer(offer.id, offerDates.validUntil)).to.revertedWith(
+            RevertReasons.OFFER_PERIOD_INVALID
+          );
+        });
       });
     });
 
@@ -813,7 +841,7 @@ describe("IBosonOfferHandler", function () {
     beforeEach(async function () {
       // create a seller
       // Required constructor params
-      id = "1"; // argument sent to contract for createSeller will be ignored
+      id = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
 
       active = true;
 
@@ -824,13 +852,21 @@ describe("IBosonOfferHandler", function () {
       await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid dispute resolver
-      active = true;
-      disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
       expect(disputeResolver.isValid()).is.true;
 
-      // Register the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
+      disputeResolverFees = [];
 
+      // Register and activate the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+      await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
       // create 5 offers
       offers = [];
       offerStructs = [];
@@ -1370,7 +1406,7 @@ describe("IBosonOfferHandler", function () {
     context("👉 extendOfferBatch()", async function () {
       let offersToExtend, newValidUntilDate;
       beforeEach(async function () {
-        // Create an offer
+        // Create the offers
         await offerHandler.connect(operator).createOfferBatch(offers, offerDatesList, offerDurationsList);
 
         offersToExtend = ["1", "3", "5"];
@@ -1398,7 +1434,7 @@ describe("IBosonOfferHandler", function () {
           expect(offerStruct.validUntilDate).is.not.equal(newValidUntilDate);
         }
 
-        // Void offers
+        // Extend offers
         await offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate);
 
         for (const id of offersToExtend) {
@@ -1413,7 +1449,7 @@ describe("IBosonOfferHandler", function () {
           // Set invalid id
           offersToExtend = ["1", "432", "2"];
 
-          // Attempt to extend the offer, expecting revert
+          // Attempt to extend the offers, expecting revert
           await expect(
             offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
           ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
@@ -1421,7 +1457,7 @@ describe("IBosonOfferHandler", function () {
           // Set invalid id
           offersToExtend = ["1", "2", "0"];
 
-          // Attempt to extend the offer, expecting revert
+          // Attempt to extend the offers, expecting revert
           await expect(
             offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
           ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
@@ -1429,7 +1465,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Caller is not seller", async function () {
           // caller is not the operator of any seller
-          // Attempt to extend the offer, expecting revert
+          // Attempt to extend the offers, expecting revert
           await expect(offerHandler.connect(rando).extendOfferBatch(offersToExtend, newValidUntilDate)).to.revertedWith(
             RevertReasons.NOT_OPERATOR
           );
@@ -1438,7 +1474,7 @@ describe("IBosonOfferHandler", function () {
           seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, active);
           await accountHandler.connect(rando).createSeller(seller);
 
-          // Attempt to extend the offer, expecting revert
+          // Attempt to extend the offers, expecting revert
           await expect(offerHandler.connect(rando).extendOfferBatch(offersToExtend, newValidUntilDate)).to.revertedWith(
             RevertReasons.NOT_OPERATOR
           );
@@ -1448,7 +1484,7 @@ describe("IBosonOfferHandler", function () {
           // Void the offer first
           await offerHandler.connect(operator).voidOffer("3");
 
-          // Attempt to extend the offer, expecting revert
+          // Attempt to extend the offers, expecting revert
           await expect(
             offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
           ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
@@ -1465,7 +1501,7 @@ describe("IBosonOfferHandler", function () {
           // Make new the valid until date less than existing one
           newValidUntilDate = ethers.BigNumber.from(newValidUntilDate).sub("1").toString(); // less that validUntilDate of offer 5
 
-          // Attempt to extend the offer, expecting revert
+          // Attempt to extend the offers, expecting revert
           await expect(
             offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
@@ -1475,7 +1511,24 @@ describe("IBosonOfferHandler", function () {
           // Set until date in the past
           newValidUntilDate = ethers.BigNumber.from(offerDatesList[0].validFrom - (oneMonth / 1000) * 6).toString(); // 6 months ago
 
-          // Attempt to extend the offer, expecting revert
+          // Attempt to extend the offers, expecting revert
+          await expect(
+            offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
+          ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+        });
+
+        it("Offer has voucherRedeemableUntil set and new valid until date is greater than that", async function () {
+          // create a new offer with vouchers with fix expiration date
+          offer.id++;
+          offerDates.voucherRedeemableUntil = ethers.BigNumber.from(offerDates.validUntil).add(oneMonth).toString();
+          offerDurations.voucherValid = "0"; // only one of voucherRedeemableUntil and voucherValid can be non zero
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
+          offersToExtend.push(offer.id);
+
+          // Set until date in after the offerDates.voucherRedeemableUntil
+          newValidUntilDate = ethers.BigNumber.from(offerDates.voucherRedeemableUntil).add(oneWeek).toString(); // one week after voucherRedeemableUntil
+
+          // Attempt to extend the offers, expecting revert
           await expect(
             offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);

@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {NATIVE_NOT_ALLOWED, TOKEN_TRANSFER_FAILED, INSUFFICIENT_VALUE_SENT, INSUFFICIENT_AVAILABLE_FUNDS} from "../../domain/BosonConstants.sol";
 import {BosonTypes} from "../../domain/BosonTypes.sol";
+import {EIP712Lib} from "../libs/EIP712Lib.sol";
 import {ProtocolLib} from "../libs/ProtocolLib.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -29,9 +30,8 @@ library FundsLib {
      *
      * @param _offerId - id of the offer with the details
      * @param _buyerId - id of the buyer
-     * @param _msgSender - sender of the transaction
      */
-    function encumberFunds(uint256 _offerId, uint256 _buyerId, address _msgSender) internal {
+    function encumberFunds(uint256 _offerId, uint256 _buyerId) internal {
         // Load protocol entities storage
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
 
@@ -50,7 +50,7 @@ library FundsLib {
             require(msg.value == 0, NATIVE_NOT_ALLOWED);
 
             // if transfer is in ERC20 token, try to transfer the amount from buyer to the protocol
-            transferFundsToProtocol(exchangeToken, price, _msgSender);
+            transferFundsToProtocol(exchangeToken, price);
         }
 
         // decrease available funds
@@ -59,13 +59,13 @@ library FundsLib {
         decreaseAvailableFunds(sellerId, exchangeToken, sellerDeposit);
 
         // notify external observers
-        emit FundsEncumbered(_buyerId, exchangeToken, price, msg.sender);
-        emit FundsEncumbered(sellerId, exchangeToken, sellerDeposit, msg.sender);
+        emit FundsEncumbered(_buyerId, exchangeToken, price, EIP712Lib.msgSender());
+        emit FundsEncumbered(sellerId, exchangeToken, sellerDeposit, EIP712Lib.msgSender());
     }
 
     /**
      * @notice Takes in the exchange id and releases the funds to buyer and seller, depending on the state of the exchange.
-     * It is called only from finalizeExchange and ?? finalizeDispute ?? // TODO: update description whne dispute functions are done
+     * It is called only from finalizeExchange and finalizeDispute
      *
      * @param _exchangeId - exchange id
      */
@@ -120,14 +120,14 @@ library FundsLib {
                 sellerPayoff = pot - protocolFee;
             } else if (disputeState == BosonTypes.DisputeState.Refused) {
                 // REFUSED
-                // sellerPayoff is 0
-                buyerPayoff = pot;
+                sellerPayoff = sellerDeposit;
+                buyerPayoff = price;
             } else {
                 // RESOLVED or DECIDED
                 buyerPayoff = pot * dispute.buyerPercent/10000;
                 sellerPayoff = pot - buyerPayoff;
-            }           
-        }  
+            }
+        }
 
         // Store payoffs to availablefunds and notify the external observers
         address exchangeToken = offer.exchangeToken;
@@ -135,15 +135,15 @@ library FundsLib {
         uint256 buyerId = exchange.buyerId;
         if (sellerPayoff > 0) {
             increaseAvailableFunds(sellerId, exchangeToken, sellerPayoff);
-            emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff, msg.sender);
+            emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff, EIP712Lib.msgSender());
         } 
         if (buyerPayoff > 0) {
             increaseAvailableFunds(buyerId, exchangeToken, buyerPayoff);
-            emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff, msg.sender);
+            emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff, EIP712Lib.msgSender());
         }
         if (protocolFee > 0) {
             increaseAvailableFunds(0, exchangeToken, protocolFee);
-            emit ProtocolFeeCollected(_exchangeId, exchangeToken, protocolFee, msg.sender);
+            emit ProtocolFeeCollected(_exchangeId, exchangeToken, protocolFee, EIP712Lib.msgSender());
         }        
     }
 
@@ -156,11 +156,10 @@ library FundsLib {
      *
      * @param _tokenAddress - address of the token to be transferred
      * @param _amount - amount to be transferred
-     * @param _msgSender - sender of the transaction
      */
-    function transferFundsToProtocol(address _tokenAddress, uint256 _amount, address _msgSender) internal {
+    function transferFundsToProtocol(address _tokenAddress, uint256 _amount) internal {
         // transfer ERC20 tokens from the caller
-        try IERC20(_tokenAddress).transferFrom(_msgSender, address(this), _amount)  {
+        try IERC20(_tokenAddress).transferFrom(EIP712Lib.msgSender(), address(this), _amount)  {
         } catch (bytes memory error) {
             string memory reason = error.length == 0 ? TOKEN_TRANSFER_FAILED : string(error);
             revert(reason);
@@ -197,7 +196,7 @@ library FundsLib {
         }
 
         // notify the external observers
-        emit FundsWithdrawn(_entityId, _to, _tokenAddress, _amount, msg.sender);    
+        emit FundsWithdrawn(_entityId, _to, _tokenAddress, _amount, EIP712Lib.msgSender());
     }
 
     /**
