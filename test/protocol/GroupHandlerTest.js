@@ -5,7 +5,6 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
-const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
@@ -18,7 +17,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { getEvent, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
 const { oneMonth } = require("../utils/constants");
-const { mockOffer } = require("../utils/mock");
+const { mockOffer, mockDisputeResolver } = require("../utils/mock");
 
 /**
  *  Test the Boson Group Handler interface
@@ -26,11 +25,11 @@ const { mockOffer } = require("../utils/mock");
 describe("IBosonGroupHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury, other1;
+  let accounts, deployer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
   let erc165, protocolDiamond, accessController, accountHandler, offerHandler, groupHandler, bosonToken, key, value;
   let offer, support, expected, exists;
   let seller, active;
-  let id, sellerId;
+  let id, sellerId, nextAccountId;
   let offerDates;
   let offerDurations;
   let protocolFeePercentage, protocolFeeFlatBoson;
@@ -40,7 +39,7 @@ describe("IBosonGroupHandler", function () {
   let method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
   let groupStruct;
   let offerIdsToAdd, offerIdsToRemove;
-  let disputeResolver;
+  let disputeResolver, disputeResolverFees;
 
   before(async function () {
     // get interface Ids
@@ -49,14 +48,9 @@ describe("IBosonGroupHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
+    [deployer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR] =
+      await ethers.getSigners();
     accounts = await ethers.getSigners();
-    deployer = accounts[0];
-    operator = accounts[1];
-    admin = accounts[2];
-    clerk = accounts[3];
-    treasury = accounts[4];
-    rando = accounts[5];
-    other1 = accounts[6];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -91,6 +85,9 @@ describe("IBosonGroupHandler", function () {
         maxOffersPerBundle: 100,
         maxOffersPerBatch: 100,
         maxTokensPerWithdrawal: 100,
+        maxFeesPerDisputeResolver: 100,
+        maxEscalationResponsePeriod: oneMonth,
+        maxDisputesPerBatch: 100,
       },
       // Protocol fees
       {
@@ -128,7 +125,7 @@ describe("IBosonGroupHandler", function () {
     beforeEach(async function () {
       // create a seller
       // Required constructor params
-      id = "1"; // argument sent to contract for createSeller will be ignored
+      id = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
 
       active = true;
 
@@ -139,12 +136,21 @@ describe("IBosonGroupHandler", function () {
       await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid dispute resolver
-      active = true;
-      disputeResolver = new DisputeResolver(id.toString(), other1.address, active);
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
       expect(disputeResolver.isValid()).is.true;
 
-      // Register the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver);
+      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
+      disputeResolverFees = [];
+
+      // Register and activate the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+      await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
       // The first group id
       nextGroupId = "1";

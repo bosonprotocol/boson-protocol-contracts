@@ -91,7 +91,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         (uint256 buyerId, Buyer storage buyer) = getValidBuyer(_buyer);
 
         // Encumber funds before creating the exchange
-        FundsLib.encumberFunds(_offerId, buyerId, msgSender());
+        FundsLib.encumberFunds(_offerId, buyerId);
 
         // Create and store a new exchange
         uint256 exchangeId = protocolCounters().nextExchangeId++;
@@ -198,7 +198,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         // Get seller id associated with caller
         bool sellerExists;
         uint256 sellerId;
-        (sellerExists, sellerId) = getSellerIdByOperator(msg.sender);
+        (sellerExists, sellerId) = getSellerIdByOperator(msgSender());
 
         // Only seller's operator may call
         require(sellerExists && offer.sellerId == sellerId, NOT_OPERATOR);
@@ -361,7 +361,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * Returns true if
      * - Exchange state is Revoked, Canceled, or Completed
-     * - Exchange is disputed and dispute state is Retracted, Resolved, or Decided
+     * - Exchange is disputed and dispute state is Retracted, Resolved, Decided or Refused
      *
      * @param _exchangeId - the id of the exchange to check
      * @return exists - true if the exchange exists
@@ -390,7 +390,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
             isFinalized = (
                 dispute.state == DisputeState.Retracted ||
                 dispute.state == DisputeState.Resolved ||
-                dispute.state == DisputeState.Decided
+                dispute.state == DisputeState.Decided ||
+                dispute.state == DisputeState.Refused
             );
         } else {
             // Check for finalized exchange state
@@ -532,27 +533,26 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                         abi.encodeWithSignature(
                             "transferFrom(address,address,uint256)",
                             seller.operator,
-                            msg.sender,
+                            msgSender(),
                             1
                         )
                     );
                 } else if (twin.tokenType == TokenType.NonFungibleToken) {
-                    uint256 supply = twin.supplyIds.length;
-                    if (supply >= 1) {
-                        // Get the next token from the supply list
-                        uint256 tokenId = twin.supplyIds[supply-1];
-                        twin.supplyIds.pop();
-
+                    uint256 pointer = twin.tokenId;
+                    // @TODO TBD, needs to revisit
+                    if(pointer <= twin.lastTokenId) {
                         // ERC-721 style transfer
+                        twin.tokenId++;
                         (success, result) = twin.tokenAddress.call(
                             abi.encodeWithSignature(
-                                "safeTransferFrom(address,address,uint256,bytes)",
-                                seller.operator,
-                                msg.sender,
-                                tokenId,
-                                ""
-                            )
-                        );
+                            "safeTransferFrom(address,address,uint256,bytes)",
+                            seller.operator,
+                            msgSender(),
+                            pointer,
+                            ""
+                        ));
+                    } else {
+                        success = true;
                     }
                 } else if (twin.tokenType == TokenType.MultiToken){
                     // ERC-1155 style transfer
@@ -560,7 +560,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                             abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
                             seller.operator,
-                            msg.sender,
+                            msgSender(),
                             twin.tokenId,
                             1,
                             ""

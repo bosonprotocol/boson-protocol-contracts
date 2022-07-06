@@ -8,7 +8,6 @@ const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
 const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
-const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
@@ -22,14 +21,14 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { mockOffer, mockTwin } = require("../utils/mock");
+const { mockOffer, mockTwin, mockDisputeResolver } = require("../utils/mock");
 const {
   getEvent,
   setNextBlockTimestamp,
   calculateVoucherExpiry,
   prepareDataSignatureParameters,
 } = require("../../scripts/util/test-utils.js");
-const { oneWeek } = require("../utils/constants");
+const { oneWeek, oneMonth } = require("../utils/constants");
 
 /**
  *  Test the Boson Exchange Handler interface
@@ -37,7 +36,19 @@ const { oneWeek } = require("../utils/constants");
 describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, operator, admin, clerk, treasury, rando, buyer, newOwner, disputeResolver, fauxClient;
+  let deployer,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    rando,
+    buyer,
+    newOwner,
+    fauxClient,
+    operatorDR,
+    adminDR,
+    clerkDR,
+    treasuryDR;
   let erc165,
     protocolDiamond,
     accessController,
@@ -53,13 +64,13 @@ describe("IBosonExchangeHandler", function () {
   let id, buyerId, offerId, seller, sellerId, nextExchangeId, nextAccountId;
   let block, blockNumber, tx, txReceipt, event, clients;
   let support, newTime;
-  let price;
+  let price, sellerPool;
   let voucherRedeemableFrom;
   let fulfillmentPeriod, voucherValid;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state, exchangeStruct, response, exists, buyerStruct;
-  let active, sellerPool;
+  let disputeResolver, disputeResolverFees;
   let foreign20, foreign721, foreign1155;
   let twin20, twin721, twin1155, twinIds, bundle, balance, owner;
   let method, tokenType, tokenAddress, tokenId, threshold, maxCommits, groupId, offerIds, condition, group;
@@ -71,8 +82,21 @@ describe("IBosonExchangeHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, buyer, rando, newOwner, disputeResolver, fauxClient] =
-      await ethers.getSigners();
+    [
+      deployer,
+      operator,
+      admin,
+      clerk,
+      treasury,
+      buyer,
+      rando,
+      newOwner,
+      fauxClient,
+      operatorDR,
+      adminDR,
+      clerkDR,
+      treasuryDR,
+    ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -123,6 +147,9 @@ describe("IBosonExchangeHandler", function () {
         maxOffersPerBundle: 100,
         maxOffersPerBatch: 100,
         maxTokensPerWithdrawal: 100,
+        maxFeesPerDisputeResolver: 100,
+        maxEscalationResponsePeriod: oneMonth,
+        maxDisputesPerBatch: 100,
       },
       // Protocol fees
       {
@@ -182,7 +209,7 @@ describe("IBosonExchangeHandler", function () {
   context("📋 Exchange Handler Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
-      id = offerId = sellerId = "1";
+      id = offerId = sellerId = nextAccountId = "1";
       buyerId = "3"; // created after seller and dispute resolver
 
       // Create a valid seller
@@ -191,12 +218,21 @@ describe("IBosonExchangeHandler", function () {
       await accountHandler.connect(admin).createSeller(seller);
 
       // Create a valid dispute resolver
-      active = true;
-      const disputeResolverEntity = new DisputeResolver(id, disputeResolver.address, active);
-      expect(disputeResolverEntity.isValid()).is.true;
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
+      expect(disputeResolver.isValid()).is.true;
 
-      // Register the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolverEntity);
+      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
+      disputeResolverFees = [];
+
+      // Register and activate the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+      await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
       // Create the offer
       const { offer, offerDates, offerDurations } = await mockOffer();
@@ -1126,7 +1162,7 @@ describe("IBosonExchangeHandler", function () {
       beforeEach(async function () {
         // Mint some tokens to be bundled
         await foreign20.connect(operator).mint(operator.address, "500");
-        await foreign721.connect(operator).mint("1");
+        await foreign721.connect(operator).mint("0", "1");
         await foreign1155.connect(operator).mint("1", "500");
 
         // Approve the protocol diamond to transfer seller's tokens
@@ -1141,7 +1177,6 @@ describe("IBosonExchangeHandler", function () {
         // Create an ERC721 twin
         twin721 = mockTwin(foreign721.address, TokenType.NonFungibleToken);
         twin721.id = "2";
-        twin721.supplyIds = ["1"];
         expect(twin721.isValid()).is.true;
 
         // Create an ERC1155 twin
@@ -1216,15 +1251,32 @@ describe("IBosonExchangeHandler", function () {
 
         it("should transfer the twin", async function () {
           // Check the operator owns the ERC721
-          owner = await foreign721.ownerOf("1");
+          owner = await foreign721.ownerOf("0");
           expect(owner).to.equal(operator.address);
 
           // Redeem the voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
           // Check the buyer owns the ERC721
-          owner = await foreign721.ownerOf("1");
+          owner = await foreign721.ownerOf("0");
           expect(owner).to.equal(buyer.address);
+        });
+
+        it("should not revert if current tokenId is greater than lastTokenId", async function () {
+          // Deposit seller funds so the second commit will not revert for Insufficient available funds";
+          await fundsHandler
+            .connect(operator)
+            .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
+
+          // Redeem the first commit
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Commit to offer for the second time
+          // Offer quantity available (2) and twin tokenIds range (1) doesn't match
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Attempt to redeem the voucher, expecting revert
+          await expect(exchangeHandler.connect(buyer).redeemVoucher("2")).to.not.reverted;
         });
 
         context("💔 Revert Reasons", async function () {
@@ -1300,7 +1352,7 @@ describe("IBosonExchangeHandler", function () {
           expect(balance).to.equal(0);
 
           // Check the operator owns the ERC721
-          owner = await foreign721.ownerOf("1");
+          owner = await foreign721.ownerOf("0");
           expect(owner).to.equal(operator.address);
 
           // Check the buyer's balance of the ERC1155
@@ -1315,7 +1367,7 @@ describe("IBosonExchangeHandler", function () {
           expect(balance).to.equal(1);
 
           // Check the buyer owns the ERC721
-          owner = await foreign721.ownerOf("1");
+          owner = await foreign721.ownerOf("0");
           expect(owner).to.equal(buyer.address);
 
           // Check the buyer's balance of the ERC1155
@@ -1697,7 +1749,28 @@ describe("IBosonExchangeHandler", function () {
           await disputeHandler.connect(buyer).escalateDispute(exchange.id);
 
           // Decide Dispute
-          await disputeHandler.connect(disputeResolver).decideDispute(exchange.id, "1111");
+          await disputeHandler.connect(operatorDR).decideDispute(exchange.id, "1111");
+
+          // Now in Decided state, ask if exchange is finalized
+          [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
+
+          // It should be finalized
+          assert.equal(response, true, "Incorrectly reports unfinalized state");
+        });
+
+        it("should return true if exchange has a dispute in Refused state", async function () {
+          // Escalate the dispute
+          tx = await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
+          // Get the block timestamp of the confirmed tx and set escalatedDate
+          blockNumber = tx.blockNumber;
+          block = await ethers.provider.getBlock(blockNumber);
+          const escalatedDate = block.timestamp.toString();
+
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+
+          // Expire dispute
+          await disputeHandler.connect(rando).expireEscalatedDispute(exchange.id);
 
           // Now in Decided state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
