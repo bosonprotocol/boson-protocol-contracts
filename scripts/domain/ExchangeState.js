@@ -10,7 +10,7 @@ ExchangeState.Redeemed = 3;
 ExchangeState.Completed = 4;
 ExchangeState.Disputed = 5;
 
-ExchangeState.Modes = [
+ExchangeState.Types = [
   ExchangeState.Committed,
   ExchangeState.Revoked,
   ExchangeState.Canceled,

@@ -16,7 +16,7 @@ library ProtocolLib {
     bytes32 internal constant PROTOCOL_FEES_POSITION = keccak256("boson.protocol.fees");
     bytes32 internal constant PROTOCOL_COUNTERS_POSITION = keccak256("boson.protocol.counters");
     bytes32 internal constant PROTOCOL_INITIALIZERS_POSITION = keccak256("boson.protocol.initializers");
-    bytes32 internal constant PROTOCOL_META_TX_POSITION = keccak256("boson.protocol.metaTransactionsStorage");
+    bytes32 internal constant PROTOCOL_META_TX_POSITION = keccak256("boson.protocol.metaTransactions");
 
     // Protocol addresses storage
     struct ProtocolAddresses {
@@ -96,26 +96,28 @@ library ProtocolLib {
         mapping(uint256 => uint256[]) bundleIdsByTwin;
         // offer id => group id
         mapping(uint256 => uint256) groupIdByOffer;
-        //seller operator address => sellerId
+        // seller operator address => sellerId
         mapping(address => uint256) sellerIdByOperator;
-        //seller admin address => sellerId
+        // seller admin address => sellerId
         mapping(address => uint256) sellerIdByAdmin;
-        //seller clerk address => sellerId
+        // seller clerk address => sellerId
         mapping(address => uint256) sellerIdByClerk;
-        //buyer wallet address => buyerId
+        // buyer wallet address => buyerId
         mapping(address => uint256) buyerIdByWallet;
-        //dispute resolver operator address => disputeResolverId
+        // dispute resolver operator address => disputeResolverId
         mapping(address => uint256) disputeResolverIdByOperator;
-        //dispute resolver admin address => disputeResolverId
+        // dispute resolver admin address => disputeResolverId
         mapping(address => uint256) disputeResolverIdByAdmin;
-        //dispute resolver clerk address => disputeResolverId
+        // dispute resolver clerk address => disputeResolverId
         mapping(address => uint256) disputeResolverIdByClerk;
-        //dispute resolver id to fee token address => index of the token address
+        // dispute resolver id to fee token address => index of the token address
         mapping(uint256 => mapping(address => uint256)) disputeResolverFeeTokenIndex;
         // seller/buyer id => token address => amount
         mapping(uint256 => mapping(address => uint256)) availableFunds;
         // seller/buyer id => all tokens with balance > 0
         mapping(uint256 => address[]) tokenList;
+        // buyer address => groupId => commit count (addresses that have committed to conditional offers)
+        mapping(address => mapping(uint256 => uint256)) conditionalCommitsByAddress;
     }
 
     // Incrementing ID counters

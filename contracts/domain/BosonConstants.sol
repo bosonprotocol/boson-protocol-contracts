@@ -58,6 +58,7 @@ contract BosonConstants {
     string internal constant OFFER_HAS_EXPIRED = "Offer has expired";
     string internal constant OFFER_NOT_AVAILABLE = "Offer is not yet available";
     string internal constant OFFER_SOLD_OUT = "Offer has sold out";
+    string internal constant CANNOT_COMMIT = "Caller cannot commit";
     string internal constant EXCHANGE_FOR_OFFER_EXISTS = "Exchange for offer exists";
     string internal constant AMBIGUOUS_VOUCHER_EXPIRY =
         "Exactly one of voucherRedeemableUntil and voucherValid must be non zero";
@@ -68,7 +69,7 @@ contract BosonConstants {
     string internal constant INVALID_QUANTITY_AVAILABLE = "Invalid quantity available";
 
     // Revert Reasons: Group related
-    string internal constant NO_SUCH_GROUP = "No such offer";
+    string internal constant NO_SUCH_GROUP = "No such group";
     string internal constant OFFER_NOT_IN_GROUP = "Offer not part of the group";
     string internal constant TOO_MANY_OFFERS = "Exceeded maximum offers in a single transaction";
     string internal constant NOTHING_UPDATED = "Nothing updated";
