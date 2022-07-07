@@ -549,6 +549,11 @@
                   "type": "uint8"
                 },
                 {
+                  "internalType": "enum BosonTypes.TokenType",
+                  "name": "tokenType",
+                  "type": "uint8"
+                },
+                {
                   "internalType": "address",
                   "name": "tokenAddress",
                   "type": "address"
@@ -561,6 +566,11 @@
                 {
                   "internalType": "uint256",
                   "name": "threshold",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "maxCommits",
                   "type": "uint256"
                 }
               ],
@@ -624,6 +634,11 @@
                   "type": "uint8"
                 },
                 {
+                  "internalType": "enum BosonTypes.TokenType",
+                  "name": "tokenType",
+                  "type": "uint8"
+                },
+                {
                   "internalType": "address",
                   "name": "tokenAddress",
                   "type": "address"
@@ -636,6 +651,11 @@
                 {
                   "internalType": "uint256",
                   "name": "threshold",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "maxCommits",
                   "type": "uint256"
                 }
               ],
@@ -1487,6 +1507,11 @@
               "type": "uint8"
             },
             {
+              "internalType": "enum BosonTypes.TokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            },
+            {
               "internalType": "address",
               "name": "tokenAddress",
               "type": "address"
@@ -1499,6 +1524,11 @@
             {
               "internalType": "uint256",
               "name": "threshold",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxCommits",
               "type": "uint256"
             }
           ],
@@ -1638,6 +1668,11 @@
               "type": "uint8"
             },
             {
+              "internalType": "enum BosonTypes.TokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            },
+            {
               "internalType": "address",
               "name": "tokenAddress",
               "type": "address"
@@ -1650,6 +1685,11 @@
             {
               "internalType": "uint256",
               "name": "threshold",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxCommits",
               "type": "uint256"
             }
           ],
@@ -2232,6 +2272,11 @@
               "type": "uint8"
             },
             {
+              "internalType": "enum BosonTypes.TokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            },
+            {
               "internalType": "address",
               "name": "tokenAddress",
               "type": "address"
@@ -2244,6 +2289,11 @@
             {
               "internalType": "uint256",
               "name": "threshold",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxCommits",
               "type": "uint256"
             }
           ],
@@ -2420,6 +2470,11 @@
               "type": "uint8"
             },
             {
+              "internalType": "enum BosonTypes.TokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            },
+            {
               "internalType": "address",
               "name": "tokenAddress",
               "type": "address"
@@ -2432,6 +2487,11 @@
             {
               "internalType": "uint256",
               "name": "threshold",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxCommits",
               "type": "uint256"
             }
           ],
