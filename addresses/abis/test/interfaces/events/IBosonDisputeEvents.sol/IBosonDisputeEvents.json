@@ -196,6 +196,25 @@
       ],
       "name": "EscalatedDisputeExpired",
       "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "exchangeId",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "EscalatedDisputeRefused",
+      "type": "event"
     }
   ],
   "bytecode": "0x",

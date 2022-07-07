@@ -141,8 +141,8 @@ library FundsLib {
                 sellerPayoff = pot - protocolFee;
             } else if (disputeState == BosonTypes.DisputeState.Refused) {
                 // REFUSED
-                // sellerPayoff is 0
-                buyerPayoff = pot;
+                sellerPayoff = sellerDeposit;
+                buyerPayoff = price;
             } else {
                 // RESOLVED or DECIDED
                 buyerPayoff = (pot * dispute.buyerPercent) / 10000;

@@ -309,7 +309,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function setMaxDisputesPerBatch(uint16 _maxDisputesPerBatch) public override onlyRole(ADMIN) {
         protocolLimits().maxDisputesPerBatch = _maxDisputesPerBatch;
-        emit MaxDisputesPerBatchChanged(_maxDisputesPerBatch, msg.sender);
+        emit MaxDisputesPerBatchChanged(_maxDisputesPerBatch, msgSender());
     }
 
     /**
