@@ -599,6 +599,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         // Make sure buyer account is active
         require(buyer.active, MUST_BE_ACTIVE);
     }
+<<<<<<< HEAD
 
     /**
      * @notice Authorize the potential buyer to commit to an offer
@@ -706,3 +707,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
     }
 
 }
+=======
+}
+>>>>>>> main

@@ -236,7 +236,11 @@ describe("IBosonExchangeHandler", function () {
 
       // Create the offer
       const { offer, offerDates, offerDurations } = await mockOffer();
+<<<<<<< HEAD
       offer.quantityAvailable = "10";
+=======
+      offer.quantityAvailable = "2";
+>>>>>>> main
 
       // Check if domains are valid
       expect(offer.isValid()).is.true;
@@ -1259,7 +1263,11 @@ describe("IBosonExchangeHandler", function () {
           // Deposit seller funds so the second commit will not revert for Insufficient available funds";
           await fundsHandler
             .connect(operator)
+<<<<<<< HEAD
             .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
+=======
+            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+>>>>>>> main
 
           // Redeem the first commit
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);

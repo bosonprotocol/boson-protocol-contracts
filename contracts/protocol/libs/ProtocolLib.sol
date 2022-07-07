@@ -104,6 +104,7 @@ library ProtocolLib {
         mapping(address => uint256) sellerIdByClerk;
         // buyer wallet address => buyerId
         mapping(address => uint256) buyerIdByWallet;
+<<<<<<< HEAD
         // dispute resolver operator address => disputeResolverId
         mapping(address => uint256) disputeResolverIdByOperator;
         // dispute resolver admin address => disputeResolverId
@@ -111,6 +112,15 @@ library ProtocolLib {
         // dispute resolver clerk address => disputeResolverId
         mapping(address => uint256) disputeResolverIdByClerk;
         // dispute resolver id to fee token address => index of the token address
+=======
+        //dispute resolver operator address => disputeResolverId
+        mapping(address => uint256) disputeResolverIdByOperator;
+        //dispute resolver admin address => disputeResolverId
+        mapping(address => uint256) disputeResolverIdByAdmin;
+        //dispute resolver clerk address => disputeResolverId
+        mapping(address => uint256) disputeResolverIdByClerk;
+        //dispute resolver id to fee token address => index of the token address
+>>>>>>> main
         mapping(uint256 => mapping(address => uint256)) disputeResolverFeeTokenIndex;
         // seller/buyer id => token address => amount
         mapping(uint256 => mapping(address => uint256)) availableFunds;

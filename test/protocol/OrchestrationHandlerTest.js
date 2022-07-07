@@ -582,9 +582,14 @@ describe("IBosonOrchestrationHandler", function () {
         nextGroupId = "1";
 
         // Required constructor params for Condition
+<<<<<<< HEAD
         method = EvaluationMethod.Threshold;
         tokenAddress = other3.address; // just need an address
         tokenType = TokenType.MultiToken;
+=======
+        method = EvaluationMethod.AboveThreshold;
+        tokenAddress = other3.address; // just need an address
+>>>>>>> main
         tokenId = "5150";
         threshold = "1";
         maxCommits = "1";
@@ -1028,8 +1033,12 @@ describe("IBosonOrchestrationHandler", function () {
         offerDurationsStruct = offerDurations.toStruct();
 
         // Required constructor params for Condition
+<<<<<<< HEAD
         method = EvaluationMethod.Threshold;
         tokenType = TokenType.MultiToken;
+=======
+        method = EvaluationMethod.AboveThreshold;
+>>>>>>> main
         tokenAddress = other3.address; // just need an address
         tokenId = "5150";
         threshold = "1";
@@ -1873,8 +1882,12 @@ describe("IBosonOrchestrationHandler", function () {
         nextGroupId = "1";
 
         // Required constructor params for Condition
+<<<<<<< HEAD
         method = EvaluationMethod.Threshold;
         tokenType = TokenType.MultiToken;
+=======
+        method = EvaluationMethod.AboveThreshold;
+>>>>>>> main
         tokenAddress = other3.address; // just need an address
         tokenId = "5150";
         threshold = "1";
@@ -2201,8 +2214,12 @@ describe("IBosonOrchestrationHandler", function () {
         nextGroupId = "1";
 
         // Required constructor params for Condition
+<<<<<<< HEAD
         method = EvaluationMethod.Threshold;
         tokenType = TokenType.MultiToken;
+=======
+        method = EvaluationMethod.AboveThreshold;
+>>>>>>> main
         tokenAddress = other3.address; // just need an address
         tokenId = "5150";
         threshold = "1";
@@ -2518,8 +2535,12 @@ describe("IBosonOrchestrationHandler", function () {
         nextGroupId = "1";
 
         // Required constructor params for Condition
+<<<<<<< HEAD
         method = EvaluationMethod.Threshold;
         tokenType = TokenType.MultiToken;
+=======
+        method = EvaluationMethod.AboveThreshold;
+>>>>>>> main
         tokenAddress = other3.address; // just need an address
         tokenId = "5150";
         threshold = "1";
