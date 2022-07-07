@@ -702,7 +702,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
     returns (bool)
     {
         return (Token(_condition.tokenAddress).ownerOf(_condition.tokenId) == _buyer);
-
     }
 
 }
