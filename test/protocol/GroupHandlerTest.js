@@ -719,7 +719,7 @@ describe("IBosonGroupHandler", function () {
         expect(returnedGroup.condition.toString() === condition.toString()).is.true;
       });
 
-      context.only("💔 Revert Reasons", async function () {
+      context("💔 Revert Reasons", async function () {
         it("Group does not exist", async function () {
           // Set invalid id
           group.id = "444";
