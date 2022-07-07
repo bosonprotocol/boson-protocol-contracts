@@ -19,5 +19,8 @@ node_modules
 *.ipr
 .idea/**
 
+# Code IDE
+.vscode/
+
 # Test Coverage
 coverage*
