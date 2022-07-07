@@ -69,11 +69,10 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
     ) internal view returns (bool _approved) {
         require(_tokenAddress != address(0), UNSUPPORTED_TOKEN);
 
-        try ITwinToken(_tokenAddress).allowance(
-            _operator,
-            _protocol
-        ) returns(uint256 _allowance) {
-            if (_allowance > 0) {_approved = true; }
+        try ITwinToken(_tokenAddress).allowance(_operator, _protocol) returns (uint256 _allowance) {
+            if (_allowance > 0) {
+                _approved = true;
+            }
         } catch {
             try ITwinToken(_tokenAddress).isApprovedForAll(_operator, _protocol) returns (bool _isApproved) {
                 _approved = _isApproved;
