@@ -70,10 +70,9 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * @notice Validates that condition parameters make sense
      *
      * Reverts if:
-     *
-     * - evaluation method None has fields different from 0
-     * - evaluation method AboveThreshold contract address is zero address
-     * - evaluation method SpecificToken contract address is zero address
+     * - EvaluationMethod.None and has fields different from 0
+     * - EvaluationMethod.Threshold and token address or maxCommits is zero
+     * - EvaluationMethod.SpecificToken and token address or maxCommits is zero
      *
      * @param _condition - fully populated condition struct
      * @return valid - validity of condition
@@ -81,11 +80,24 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      */
     function validateCondition(Condition memory _condition) internal pure returns (bool valid) {
         if (_condition.method == EvaluationMethod.None) {
-            valid = _condition.tokenAddress == address(0) && _condition.tokenId == 0 && _condition.threshold == 0;
-        } else if (_condition.method == EvaluationMethod.AboveThreshold) {
-            valid = _condition.tokenAddress != address(0);
-        } else if (_condition.method == EvaluationMethod.SpecificToken) {
-            valid = _condition.tokenAddress != address(0);
+            valid  = (
+                _condition.tokenAddress == address(0) &&
+                _condition.tokenId == 0 &&
+                _condition.threshold == 0 &&
+                _condition.maxCommits == 0
+            );
+        } else if (_condition.method ==  EvaluationMethod.Threshold) {
+            valid = (
+                _condition.tokenAddress != address(0) &&
+                _condition.maxCommits > 0 &&
+                _condition.threshold > 0
+            );
+        } else if (_condition.method ==  EvaluationMethod.SpecificToken) {
+            valid = (
+                _condition.tokenAddress != address(0) &&
+                _condition.threshold == 0 &&
+                _condition.maxCommits > 0
+            );
         }
     }
 
