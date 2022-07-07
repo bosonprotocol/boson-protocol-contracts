@@ -80,24 +80,14 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      */
     function validateCondition(Condition memory _condition) internal pure returns (bool valid) {
         if (_condition.method == EvaluationMethod.None) {
-            valid  = (
-                _condition.tokenAddress == address(0) &&
+            valid = (_condition.tokenAddress == address(0) &&
                 _condition.tokenId == 0 &&
                 _condition.threshold == 0 &&
-                _condition.maxCommits == 0
-            );
-        } else if (_condition.method ==  EvaluationMethod.Threshold) {
-            valid = (
-                _condition.tokenAddress != address(0) &&
-                _condition.maxCommits > 0 &&
-                _condition.threshold > 0
-            );
-        } else if (_condition.method ==  EvaluationMethod.SpecificToken) {
-            valid = (
-                _condition.tokenAddress != address(0) &&
-                _condition.threshold == 0 &&
-                _condition.maxCommits > 0
-            );
+                _condition.maxCommits == 0);
+        } else if (_condition.method == EvaluationMethod.Threshold) {
+            valid = (_condition.tokenAddress != address(0) && _condition.maxCommits > 0 && _condition.threshold > 0);
+        } else if (_condition.method == EvaluationMethod.SpecificToken) {
+            valid = (_condition.tokenAddress != address(0) && _condition.threshold == 0 && _condition.maxCommits > 0);
         }
     }
 
