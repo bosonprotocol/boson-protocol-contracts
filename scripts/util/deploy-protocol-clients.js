@@ -1,5 +1,6 @@
 const { deployProtocolClientImpls } = require("./deploy-protocol-client-impls.js");
 const { deployProtocolClientProxies } = require("./deploy-protocol-client-proxies.js");
+const { deployProtocolClientBeacons } = require("./deploy-protocol-client-beacons.js");
 const { castProtocolClientProxies } = require("./cast-protocol-client-proxies.js");
 
 /**
@@ -21,13 +22,16 @@ async function deployProtocolClients(protocolClientArgs, gasLimit) {
   // Deploy Protocol Client implementation contracts
   const protocolClientImpls = await deployProtocolClientImpls(gasLimit);
 
+  // Deploy Protocol Client beacon contracts
+  const protocolClientBeacons = await deployProtocolClientBeacons(protocolClientImpls, protocolClientArgs, gasLimit);
+
   // Deploy Protocol Client proxy contracts
-  const protocolClientProxies = await deployProtocolClientProxies(protocolClientImpls, protocolClientArgs, gasLimit);
+  const protocolClientProxies = await deployProtocolClientProxies(protocolClientBeacons, gasLimit);
 
   // Cast the proxies to their implementation interfaces
   const protocolClients = await castProtocolClientProxies(protocolClientProxies);
 
-  return [protocolClientImpls, protocolClientProxies, protocolClients];
+  return [protocolClientImpls, protocolClientBeacons, protocolClientProxies, protocolClients];
 }
 
 if (require.main === module) {

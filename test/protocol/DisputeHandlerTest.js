@@ -47,9 +47,9 @@ describe("IBosonDisputeHandler", function () {
     offerHandler,
     fundsHandler,
     disputeHandler;
-  let bosonVoucher, bosonToken, gasLimit;
+  let bosonToken, gasLimit;
   let id, buyerId, offer, offerId, seller, sellerId, nextAccountId;
-  let block, blockNumber, tx, clients;
+  let block, blockNumber, tx;
   let support, newTime;
   let price, quantityAvailable, resolutionPeriod, fulfillmentPeriod, sellerDeposit;
   let voucherRedeemableFrom, offerDates, offerDurations;
@@ -114,9 +114,9 @@ describe("IBosonDisputeHandler", function () {
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
-    [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
-    [bosonVoucher] = clients;
-    await accessController.grantRole(Role.CLIENT, bosonVoucher.address);
+    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [beacon] = beacons;
+    const [proxy] = proxies;
 
     // Deploy the boson token
     [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
@@ -131,7 +131,8 @@ describe("IBosonDisputeHandler", function () {
       {
         treasuryAddress: "0x0000000000000000000000000000000000000000",
         tokenAddress: bosonToken.address,
-        voucherAddress: bosonVoucher.address,
+        voucherBeaconAddress: beacon.address,
+        voucherProxyAddress: proxy.address,
       },
       // Protocol limits
       {

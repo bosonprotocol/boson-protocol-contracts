@@ -56,8 +56,10 @@ describe("IBosonVoucher", function () {
     ]);
 
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
-    const [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
-    [bosonVoucher] = clients;
+    const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    bosonVoucher = bv;
+    const [beacon] = beacons;
+    const [proxy] = proxies;
 
     const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
 
@@ -67,7 +69,8 @@ describe("IBosonVoucher", function () {
       {
         treasuryAddress: ethers.constants.AddressZero,
         tokenAddress: ethers.constants.AddressZero,
-        voucherAddress: bosonVoucher.address,
+        voucherBeaconAddress: beacon.address,
+        voucherProxyAddress: proxy.address,
       },
       // Protocol limits
       {

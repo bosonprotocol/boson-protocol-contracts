@@ -240,7 +240,12 @@ describe("IBosonOrchestrationHandler", function () {
           orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
         )
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, calculateContractAddress(orchestrationHandler.address, "1"), operator.address)
+          .withArgs(
+            seller.id,
+            sellerStruct,
+            calculateContractAddress(orchestrationHandler.address, "1"),
+            operator.address
+          )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
       });
@@ -289,7 +294,12 @@ describe("IBosonOrchestrationHandler", function () {
           orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
         )
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(nextAccountId, sellerStruct, calculateContractAddress(orchestrationHandler.address, "1"), operator.address)
+          .withArgs(
+            nextAccountId,
+            sellerStruct,
+            calculateContractAddress(orchestrationHandler.address, "1"),
+            operator.address
+          )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
@@ -2224,7 +2234,12 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, calculateContractAddress(orchestrationHandler.address, "1"), operator.address)
+          .withArgs(
+            seller.id,
+            sellerStruct,
+            calculateContractAddress(orchestrationHandler.address, "1"),
+            operator.address
+          )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
@@ -2302,7 +2317,12 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, calculateContractAddress(orchestrationHandler.address, "1"), sellerStruct, operator.address)
+          .withArgs(
+            seller.id,
+            calculateContractAddress(orchestrationHandler.address, "1"),
+            sellerStruct,
+            operator.address
+          )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
@@ -2361,7 +2381,12 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, calculateContractAddress(orchestrationHandler.address, "1"), operator.address)
+          .withArgs(
+            seller.id,
+            sellerStruct,
+            calculateContractAddress(orchestrationHandler.address, "1"),
+            operator.address
+          )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
@@ -2469,7 +2494,12 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, calculateContractAddress(orchestrationHandler.address, "1"), operator.address)
+          .withArgs(
+            seller.id,
+            sellerStruct,
+            calculateContractAddress(orchestrationHandler.address, "1"),
+            operator.address
+          )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
@@ -2573,7 +2603,12 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, calculateContractAddress(orchestrationHandler.address, "1"), operator.address)
+          .withArgs(
+            seller.id,
+            sellerStruct,
+            calculateContractAddress(orchestrationHandler.address, "1"),
+            operator.address
+          )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 
@@ -2714,7 +2749,12 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(sellerId, sellerStruct, calculateContractAddress(orchestrationHandler.address, "1"), operator.address)
+          .withArgs(
+            sellerId,
+            sellerStruct,
+            calculateContractAddress(orchestrationHandler.address, "1"),
+            operator.address
+          )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
 

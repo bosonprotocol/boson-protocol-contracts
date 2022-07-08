@@ -20,28 +20,21 @@ const ethers = hre.ethers;
  * @param gasLimit - gasLimit for transactions
  * @returns {Promise<(*|*|*)[]>}
  */
-async function deployProtocolClientProxies(protocolClients, protocolClientArgs, gasLimit) {
-  let bosonVoucherImpl;
+async function deployProtocolClientProxies(protocolClients, gasLimit) {
+  let bosonVoucherBeacon;
 
   // Destructure the protocol client implementations
-  [bosonVoucherImpl] = protocolClients;
+  [bosonVoucherBeacon] = protocolClients;
 
   // Deploy the ClientProxy for BosonVoucher
-  const ClientBeacon = await ethers.getContractFactory("BosonVoucherBeacon");
-  const clientBeacon = await ClientBeacon.deploy(...protocolClientArgs, bosonVoucherImpl.address, { gasLimit });
-  await clientBeacon.deployed();
-
-    // Deploy the ClientProxy for BosonVoucher
-    const ClientProxy = await ethers.getContractFactory("ClientProxy");
-    const clientProxy = await ClientProxy.deploy({ gasLimit });
-    await clientProxy.deployed();
+  const ClientProxy = await ethers.getContractFactory("ClientProxy");
+  const clientProxy = await ClientProxy.deploy({ gasLimit });
+  await clientProxy.deployed();
 
   // init instead of constructors
-  await clientProxy.initialize(clientBeacon.address)
-  // await clientProxy.initialize(clientBeacon.address, ...protocolClientArgs)
+  await clientProxy.initialize(bosonVoucherBeacon.address);
 
-
-  return [clientBeacon, clientProxy];
+  return [clientProxy];
 }
 
 if (require.main === module) {

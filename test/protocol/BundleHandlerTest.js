@@ -32,7 +32,6 @@ describe("IBosonBundleHandler", function () {
     bundleHandler,
     exchangeHandler,
     fundsHandler,
-    bosonVoucher,
     bosonToken,
     twin,
     support,
@@ -40,7 +39,6 @@ describe("IBosonBundleHandler", function () {
     sellerId,
     key,
     value,
-    clients,
     invalidTwinId;
   let offerHandler, bundleHandlerFacet_Factory;
   let seller, active, nextAccountId;
@@ -94,8 +92,9 @@ describe("IBosonBundleHandler", function () {
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
-    [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
-    [bosonVoucher] = clients;
+    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [beacon] = beacons;
+    const [proxy] = proxies;
 
     // Deploy the boson token
     [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
@@ -110,7 +109,8 @@ describe("IBosonBundleHandler", function () {
       {
         treasuryAddress: ethers.constants.AddressZero,
         tokenAddress: bosonToken.address,
-        voucherAddress: bosonVoucher.address,
+        voucherBeaconAddress: beacon.address,
+        voucherProxyAddress: proxy.address,
       },
       // Protocol limits
       {

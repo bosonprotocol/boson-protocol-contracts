@@ -162,8 +162,9 @@ async function main() {
 
   // Deploy the Protocol Client implementation/proxy pairs
   const protocolClientArgs = [accessController.address, protocolDiamond.address];
-  const [impls, proxies, clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
+  const [impls, beacons, proxies, clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
   const [bosonVoucherImpl] = impls;
+  const [bosonVoucherBeacon] = beacons;
   const [bosonVoucherProxy] = proxies;
   const [bosonVoucher] = clients;
 
@@ -172,6 +173,7 @@ async function main() {
 
   // Report and prepare for verification
   deploymentComplete("BosonVoucher Logic", bosonVoucherImpl.address, [], contracts);
+  deploymentComplete("BosonVoucher Beacon", bosonVoucherBeacon.address, [], contracts);
   deploymentComplete("BosonVoucher Proxy", bosonVoucherProxy.address, bosonVoucherProxyArgs, contracts);
 
   console.log(`\n🌐️Configuring and granting roles...`);
@@ -189,7 +191,6 @@ async function main() {
 
   // Add roles to contracts and addresses that need it
   await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-  await accessController.grantRole(Role.CLIENT, bosonVoucher.address);
 
   console.log(`✅ Granted roles to appropriate contract and addresses.`);
 
