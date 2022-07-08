@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {BosonTypes} from "../../domain/BosonTypes.sol";
-import {IBosonOfferEvents} from "../events/IBosonOfferEvents.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
 
 /**
  * @title IBosonOfferHandler
@@ -12,7 +12,6 @@ import {IBosonOfferEvents} from "../events/IBosonOfferEvents.sol";
  * The ERC-165 identifier for this interface is: 0xf411945f
  */
 interface IBosonOfferHandler is IBosonOfferEvents {
-
     /**
      * @notice Creates an offer
      *
@@ -37,7 +36,11 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      */
-    function createOffer(BosonTypes.Offer memory _offer, BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations) external;
+    function createOffer(
+        BosonTypes.Offer memory _offer,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations
+    ) external;
 
     /**
      * @notice Creates a batch of offers.
@@ -66,7 +69,11 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @param _offerDates - the array of fully populated offer dates structs
      * @param _offerDurations - the array of fully populated offer durations structs
      */
-    function createOfferBatch(BosonTypes.Offer[] calldata _offers, BosonTypes.OfferDates[] calldata _offerDates, BosonTypes.OfferDurations[] calldata _offerDurations) external;
+    function createOfferBatch(
+        BosonTypes.Offer[] calldata _offers,
+        BosonTypes.OfferDates[] calldata _offerDates,
+        BosonTypes.OfferDurations[] calldata _offerDurations
+    ) external;
 
     /**
      * @notice Voids a given offer
@@ -148,7 +155,15 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @return offerDates - the offer dates details. See {BosonTypes.OfferDates}
      * @return offerDurations - the offer durations details. See {BosonTypes.OfferDurations}
      */
-    function getOffer(uint256 _offerId) external view returns (bool exists, BosonTypes.Offer memory offer, BosonTypes.OfferDates calldata offerDates, BosonTypes.OfferDurations calldata offerDurations);
+    function getOffer(uint256 _offerId)
+        external
+        view
+        returns (
+            bool exists,
+            BosonTypes.Offer memory offer,
+            BosonTypes.OfferDates calldata offerDates,
+            BosonTypes.OfferDurations calldata offerDurations
+        );
 
     /**
      * @notice Gets the next offer id.
@@ -167,5 +182,4 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @return offerVoided - true if voided, false otherwise
      */
     function isOfferVoided(uint256 _offerId) external view returns (bool exists, bool offerVoided);
-
 }

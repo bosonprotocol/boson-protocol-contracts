@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {BosonTypes} from "../../domain/BosonTypes.sol";
-import {IBosonExchangeEvents} from "../events/IBosonExchangeEvents.sol";
-import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { IBosonExchangeEvents } from "../events/IBosonExchangeEvents.sol";
+import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
 
 /**
  * @title IBosonExchangeHandler
@@ -13,7 +13,6 @@ import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
  * The ERC-165 identifier for this interface is: 0x619e9d29
  */
 interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
-
     /**
      * @notice Commit to an offer (first step of an exchange)
      *
@@ -98,8 +97,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
      *
      * @param _exchangeId - the id of the exchange
      */
-    function expireVoucher(uint256 _exchangeId)
-    external;
+    function expireVoucher(uint256 _exchangeId) external;
 
     /**
      * @notice Redeem a voucher.
@@ -144,10 +142,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
      * @return exists - true if the exchange exists
      * @return isFinalized - true if the exchange is finalized
      */
-    function isExchangeFinalized(uint256 _exchangeId)
-    external
-    view
-    returns(bool exists, bool isFinalized);
+    function isExchangeFinalized(uint256 _exchangeId) external view returns (bool exists, bool isFinalized);
 
     /**
      * @notice Gets the details about a given exchange.

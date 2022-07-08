@@ -21,7 +21,6 @@ import { EIP712Lib } from "../../protocol/libs/EIP712Lib.sol";
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract DiamondCutFacet is BosonConstants, IDiamondCut {
-
     /**
      * @notice Cut facets of the Diamond
      *
@@ -35,10 +34,11 @@ contract DiamondCutFacet is BosonConstants, IDiamondCut {
      * @param _init The address of the contract or facet to execute _calldata
      * @param _calldata A function call, including function selector and arguments
      */
-    function diamondCut(FacetCut[] calldata _facetCuts, address _init, bytes calldata _calldata)
-    external
-    override
-    {
+    function diamondCut(
+        FacetCut[] calldata _facetCuts,
+        address _init,
+        bytes calldata _calldata
+    ) external override {
         // Get the diamond storage slot
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
 
@@ -47,6 +47,5 @@ contract DiamondCutFacet is BosonConstants, IDiamondCut {
 
         // Make the cuts
         JewelerLib.diamondCut(_facetCuts, _init, _calldata);
-
     }
 }
