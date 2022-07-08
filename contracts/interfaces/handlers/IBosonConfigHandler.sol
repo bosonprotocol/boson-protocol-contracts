@@ -41,19 +41,19 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      */
     function getTreasuryAddress() external view returns (address payable);
 
-    /**
-     * @notice Sets the address of the Voucher NFT address (proxy)
-     *
-     * Emits a VoucherAddressChanged event.
-     *
-     * @param _voucher - the address of the nft contract
-     */
-    function setVoucherAddress(address _voucher) external;
+    // /**
+    //  * @notice Sets the address of the Voucher NFT address (proxy)
+    //  *
+    //  * Emits a VoucherAddressChanged event.
+    //  *
+    //  * @param _voucher - the address of the nft contract
+    //  */
+    // function setVoucherAddress(address _voucher) external;
 
-    /**
-     * @notice The Voucher address getter
-     */
-    function getVoucherAddress() external view returns (address);
+    // /**
+    //  * @notice The Voucher address getter
+    //  */
+    // function getVoucherAddress() external view returns (address);
 
     /**
      * @notice Sets the protocol fee percentage.

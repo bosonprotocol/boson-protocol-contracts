@@ -146,10 +146,9 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
      */
     function cloneBosonVoucher() internal returns (address cloneAddress) {
         // load voucher contract address
-        bytes20 targetBytes = bytes20(protocolAddresses().voucherAddress);
+        bytes20 targetBytes = bytes20(protocolAddresses().voucherProxyAddress);
 
-        address voucherImplementation = protocolAddresses().voucherImplementation;
-        address accessControler = protocolAddresses().accessControler;
+
 
         // create a minimal clone
         assembly {
@@ -160,13 +159,13 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
             cloneAddress := create(0, clone, 0x37)
         }
 
+        address voucherBeaconAddress = protocolAddresses().voucherBeaconAddress;
+
         
                         cloneAddress.call(
                             abi.encodeWithSignature(
-                            "init(address,address,address)",
-                            accessControler,
-                            address(this),
-                            voucherImplementation                        
+                            "initialize(address)",
+                            voucherBeaconAddress                       
                         ));
 
     }

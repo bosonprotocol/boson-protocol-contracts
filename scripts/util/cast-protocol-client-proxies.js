@@ -22,7 +22,7 @@ async function castProtocolClientProxies(protocolClientProxies) {
   let bosonVoucherProxy;
 
   // Destructure the protocol client proxies
-  [bosonVoucherProxy] = protocolClientProxies;
+  [, bosonVoucherProxy] = protocolClientProxies;
 
   // Cast the Proxies to the appropriate interfaces for further interaction
   const bosonVoucher = await ethers.getContractAt("BosonVoucher", bosonVoucherProxy.address);

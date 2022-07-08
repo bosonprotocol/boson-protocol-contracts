@@ -117,8 +117,9 @@ describe("IBosonExchangeHandler", function () {
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
-    [implementations, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    [implementations, proxies, clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
     [bosonVoucher] = clients;
+    [beacon, proxyRef] = proxies;
     [bvimplement] = implementations;
     await accessController.grantRole(Role.CLIENT, bosonVoucher.address);
 
@@ -136,8 +137,8 @@ describe("IBosonExchangeHandler", function () {
         treasuryAddress: "0x0000000000000000000000000000000000000000",
         tokenAddress: bosonToken.address,
         voucherAddress: bosonVoucher.address,
-        voucherImplementation: bvimplement.address,
-        accessControler: accessController.address
+        voucherBeaconAddress: beacon.address,
+        voucherProxyAddress: proxyRef.address
       },
       // Protocol limits
       {
@@ -330,6 +331,14 @@ describe("IBosonExchangeHandler", function () {
 
         // original boson voucher should not have voucher with id 1
         await expect(bosonVoucher.ownerOf("1")).to.revertedWith("ERC721: owner query for nonexistent token");
+
+
+                // original boson voucher should not have any vouchers
+                expect(await bvimplement.balanceOf(buyer.address)).to.equal("0", "Balance should be 0");
+
+                // // original boson voucher should not have voucher with id 1
+                await expect(bvimplement.ownerOf("1")).to.revertedWith("ERC721: owner query for nonexistent token");
+        
       });
 
       context("💔 Revert Reasons", async function () {

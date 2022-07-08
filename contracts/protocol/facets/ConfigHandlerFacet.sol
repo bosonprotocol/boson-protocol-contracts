@@ -35,7 +35,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         // Initialize protocol config params
         setTokenAddress(_addresses.tokenAddress);
         setTreasuryAddress(_addresses.treasuryAddress);
-        setVoucherAddress(_addresses.voucherAddress);
+        // setVoucherAddress(_addresses.voucherAddress);
         setProtocolFeePercentage(_fees.percentage);
         setProtocolFeeFlatBoson(_fees.flatBoson);
         setMaxOffersPerGroup(_limits.maxOffersPerGroup);
@@ -47,8 +47,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
         setMaxDisputesPerBatch(_limits.maxDisputesPerBatch);      
 
-        protocolAddresses().voucherImplementation = _addresses.voucherImplementation;
-        protocolAddresses().accessControler = _addresses.accessControler;
+        protocolAddresses().voucherBeaconAddress = _addresses.voucherBeaconAddress;
+        protocolAddresses().voucherProxyAddress = _addresses.voucherProxyAddress;
         
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -120,33 +120,33 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         return protocolAddresses().treasuryAddress;
     }
 
-    /**
-     * @notice Sets the address of the Boson Protocol Voucher NFT contract (proxy)
-     *
-     * Emits a VoucherAddressChanged event.
-     *
-     * @param _voucherAddress - the address of the nft contract (proxy)
-     */
-    function setVoucherAddress(address _voucherAddress)
-    public
-    override
-    onlyRole(ADMIN)
-    {
-        protocolAddresses().voucherAddress = _voucherAddress;
-        emit VoucherAddressChanged(_voucherAddress, msgSender());
-    }
+    // /**
+    //  * @notice Sets the address of the Boson Protocol Voucher NFT contract (proxy)
+    //  *
+    //  * Emits a VoucherAddressChanged event.
+    //  *
+    //  * @param _voucherAddress - the address of the nft contract (proxy)
+    //  */
+    // function setVoucherAddress(address _voucherAddress)
+    // public
+    // override
+    // onlyRole(ADMIN)
+    // {
+    //     protocolAddresses().voucherAddress = _voucherAddress;
+    //     emit VoucherAddressChanged(_voucherAddress, msgSender());
+    // }
 
-    /**
-     * @notice The Boson Protocol Voucher NFT contract (proxy) getter
-     */
-    function getVoucherAddress()
-    external
-    override
-    view
-    returns (address)
-    {
-        return protocolAddresses().voucherAddress;
-    }
+    // /**
+    //  * @notice The Boson Protocol Voucher NFT contract (proxy) getter
+    //  */
+    // function getVoucherAddress()
+    // external
+    // override
+    // view
+    // returns (address)
+    // {
+    //     return protocolAddresses().voucherAddress;
+    // }
 
     /**
      * @notice Sets the protocol fee percentage.
