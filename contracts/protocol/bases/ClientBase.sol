@@ -6,6 +6,7 @@ import {IBosonExchangeHandler} from "../../interfaces/handlers/IBosonExchangeHan
 import {BosonConstants} from "../../domain/BosonConstants.sol";
 import {BosonTypes} from "../../domain/BosonTypes.sol";
 import {ClientLib} from "../libs/ClientLib.sol";
+import { IBosonVoucherBeacon } from "../../interfaces/clients/IBosonVoucherBeacon.sol";
 
 
 /**
@@ -43,9 +44,10 @@ abstract contract ClientBase is BosonTypes, BosonConstants {
     view
     returns (bool exists, Offer memory offer)
     {
-        ClientLib.ProxyStorage memory ps = ClientLib.proxyStorage();
-        (, Exchange memory exchange) = IBosonExchangeHandler(ps.protocolDiamond).getExchange(_exchangeId);
-        (exists, offer, , ) = IBosonOfferHandler(ps.protocolDiamond).getOffer(exchange.offerId);
+        address protocolDiamond = IBosonVoucherBeacon(ClientLib._beacon()).getProtocolAddress();
+        
+        (, Exchange memory exchange) = IBosonExchangeHandler(protocolDiamond).getExchange(_exchangeId);
+        (exists, offer, , ) = IBosonOfferHandler(protocolDiamond).getOffer(exchange.offerId);
     }
 
     /**
@@ -57,8 +59,8 @@ abstract contract ClientBase is BosonTypes, BosonConstants {
     function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer)
     internal
     {
-        ClientLib.ProxyStorage memory ps = ClientLib.proxyStorage();
-        IBosonExchangeHandler(ps.protocolDiamond).onVoucherTransferred(_exchangeId, _newBuyer);
+        address protocolDiamond = IBosonVoucherBeacon(ClientLib._beacon()).getProtocolAddress();
+        IBosonExchangeHandler(protocolDiamond).onVoucherTransferred(_exchangeId, _newBuyer);
     }
 
 }

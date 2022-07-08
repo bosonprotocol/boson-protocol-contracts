@@ -66,10 +66,4 @@ interface IBosonVoucherBeacon is IBosonVoucherBeaconEvents {
      */
     function getProtocolAddress() external view returns (address);
 
-     /**
-     * @notice Gets the address of the ProtocolDiamond contract.
-     *
-     * @return the address of the ProtocolDiamond contract
-     */
-    function getAddresses() external view returns(IAccessControlUpgradeable, address);
 }

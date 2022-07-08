@@ -164,11 +164,11 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         }
 
         // Initialize the clone
-        IInitializableClone(cloneAddress).initialize(pa.voucherBeaconAddress, DiamondLib.diamondStorage().accessController, address(this));
+        IInitializableClone(cloneAddress).initialize(pa.voucherBeaconAddress);
     }
 }
 
 
 interface IInitializableClone {
-    function initialize(address _beaconAddress, IAccessControlUpgradeable accessController, address protocolAddress) external;
+    function initialize(address _beaconAddress) external;
 }

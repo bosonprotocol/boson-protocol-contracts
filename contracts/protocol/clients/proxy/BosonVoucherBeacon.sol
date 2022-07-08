@@ -12,6 +12,9 @@ import { ClientLib } from "../../libs/ClientLib.sol";
  * @notice Helps minimal proxies
  */
 contract BosonVoucherBeacon is IBosonVoucherBeacon, BosonConstants {
+    IAccessControlUpgradeable private accessController;
+    address private protocolDiamond;
+    address private impl;
 
     /**
      * @dev Modifier that checks that the caller has a specific role.
@@ -30,18 +33,14 @@ contract BosonVoucherBeacon is IBosonVoucherBeacon, BosonConstants {
         address _protocolAddress,
         address _implementation
     ) {
-
-        // Get the ProxyStorage struct
-        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
-
         // Store the AccessController address
-        ps.accessController = IAccessControlUpgradeable(_accessController);
+        accessController = IAccessControlUpgradeable(_accessController);
 
         // Store the Protocol Diamond address
-        ps.protocolDiamond = _protocolAddress;
+        protocolDiamond = _protocolAddress;
 
         // Store the implementation address
-        ps.implementation = _implementation;
+        impl = _implementation;
     }
 
     /**
@@ -53,12 +52,8 @@ contract BosonVoucherBeacon is IBosonVoucherBeacon, BosonConstants {
     view
     override
     returns (address) {
-
-        // Get the ProxyStorage struct
-        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
-
         // Return the current implementation address
-        return ps.implementation;
+        return impl;
 
     }
 
@@ -70,17 +65,13 @@ contract BosonVoucherBeacon is IBosonVoucherBeacon, BosonConstants {
     onlyRole(UPGRADER)
     override
     {
-        // Get the ProxyStorage struct
-        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
-
         // Store the implementation address
-        ps.implementation = _implementation;
+        impl = _implementation;
 
         // Notify watchers of state change
         emit Upgraded(_implementation, msg.sender);
 
     }
-
 
     /**
      * @notice Set the Boson Protocol AccessController
@@ -94,11 +85,8 @@ contract BosonVoucherBeacon is IBosonVoucherBeacon, BosonConstants {
     onlyRole(UPGRADER)
     override
     {
-        // Get the ProxyStorage struct
-        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
-
         // Store the AccessController address
-        ps.accessController = IAccessControlUpgradeable(_accessController);
+        accessController = IAccessControlUpgradeable(_accessController);
 
         // Notify watchers of state change
         emit AccessControllerAddressChanged(_accessController, msg.sender);
@@ -115,11 +103,8 @@ contract BosonVoucherBeacon is IBosonVoucherBeacon, BosonConstants {
     override
     returns(IAccessControlUpgradeable)
     {
-        // Get the ProxyStorage struct
-        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
-
         // Return the current AccessController address
-        return ps.accessController;
+        return accessController;
     }
 
     /**
@@ -134,11 +119,8 @@ contract BosonVoucherBeacon is IBosonVoucherBeacon, BosonConstants {
     onlyRole(UPGRADER)
     override
     {
-        // Get the ProxyStorage struct
-        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
-
         // Store the ProtocolDiamond address
-        ps.protocolDiamond = _protocolAddress;
+        protocolDiamond = _protocolAddress;
 
         // Notify watchers of state change
         emit ProtocolAddressChanged(_protocolAddress, msg.sender);
@@ -155,30 +137,8 @@ contract BosonVoucherBeacon is IBosonVoucherBeacon, BosonConstants {
     view
     returns(address)
     {
-        // Get the ProxyStorage struct
-        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
-
         // Return the current ProtocolDiamond address
-        return ps.protocolDiamond;
+        return protocolDiamond;
     }
-
-    /**
-     * @notice Gets the address of the ProtocolDiamond contract.
-     *
-     * @return the address of the ProtocolDiamond contract
-     */
-    function getAddresses()
-    public
-    override
-    view
-    returns(IAccessControlUpgradeable, address)
-    {
-        // Get the ProxyStorage struct
-        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
-
-        // Return the current ProtocolDiamond address
-        return (ps.accessController, ps.protocolDiamond);
-    }
-
 
 }
