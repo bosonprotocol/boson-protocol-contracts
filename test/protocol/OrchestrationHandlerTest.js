@@ -71,7 +71,7 @@ describe("IBosonOrchestrationHandler", function () {
   let bundle, bundleStruct, bundleId, nextBundleId;
   let bosonToken;
   let foreign721, foreign1155, fallbackError;
-  let disputeResolutionTermsStruct;
+  let disputeResolutionTerms, disputeResolutionTermsStruct;
 
   before(async function () {
     // get interface Ids
@@ -236,10 +236,7 @@ describe("IBosonOrchestrationHandler", function () {
       offerDurationsStruct = offerDurations.toStruct();
 
       // Set despute resolution terms
-      const disputeResolutionTerms = new DisputeResolutionTerms(
-        disputeResolverId,
-        disputeResolver.escalationResponsePeriod
-      );
+      disputeResolutionTerms = new DisputeResolutionTerms(disputeResolverId, disputeResolver.escalationResponsePeriod);
       disputeResolutionTermsStruct = disputeResolutionTerms.toStruct();
     });
 
@@ -283,12 +280,15 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+          .connect(rando)
+          .getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
         let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
         let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(offer)) {
@@ -299,6 +299,9 @@ describe("IBosonOrchestrationHandler", function () {
         }
         for ([key, value] of Object.entries(offerDurations)) {
           expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(disputeResolutionTerms)) {
+          expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
       });
 
@@ -816,12 +819,15 @@ describe("IBosonOrchestrationHandler", function () {
           .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition);
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+          .connect(rando)
+          .getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
         let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
         let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(offer)) {
@@ -832,6 +838,9 @@ describe("IBosonOrchestrationHandler", function () {
         }
         for ([key, value] of Object.entries(offerDurations)) {
           expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(disputeResolutionTerms)) {
+          expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the group as a struct
@@ -1379,12 +1388,15 @@ describe("IBosonOrchestrationHandler", function () {
           .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId);
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+          .connect(rando)
+          .getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
         let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
         let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(offer)) {
@@ -1395,6 +1407,9 @@ describe("IBosonOrchestrationHandler", function () {
         }
         for ([key, value] of Object.entries(offerDurations)) {
           expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(disputeResolutionTerms)) {
+          expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the group as a struct
@@ -1909,12 +1924,15 @@ describe("IBosonOrchestrationHandler", function () {
           .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin);
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+          .connect(rando)
+          .getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
         let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
         let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(offer)) {
@@ -1925,6 +1943,9 @@ describe("IBosonOrchestrationHandler", function () {
         }
         for ([key, value] of Object.entries(offerDurations)) {
           expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(disputeResolutionTerms)) {
+          expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the twin as a struct
@@ -2563,12 +2584,15 @@ describe("IBosonOrchestrationHandler", function () {
           );
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+          .connect(rando)
+          .getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
         let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
         let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(offer)) {
@@ -2579,6 +2603,9 @@ describe("IBosonOrchestrationHandler", function () {
         }
         for ([key, value] of Object.entries(offerDurations)) {
           expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(disputeResolutionTerms)) {
+          expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the group as a struct
@@ -2954,12 +2981,15 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+          .connect(rando)
+          .getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
         let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
         let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(offer)) {
@@ -2970,6 +3000,9 @@ describe("IBosonOrchestrationHandler", function () {
         }
         for ([key, value] of Object.entries(offerDurations)) {
           expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(disputeResolutionTerms)) {
+          expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the group as a struct
@@ -3122,12 +3155,15 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+          .connect(rando)
+          .getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
         let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
         let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(offer)) {
@@ -3138,6 +3174,9 @@ describe("IBosonOrchestrationHandler", function () {
         }
         for ([key, value] of Object.entries(offerDurations)) {
           expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(disputeResolutionTerms)) {
+          expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the twin as a struct
@@ -3369,12 +3408,15 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+          .connect(rando)
+          .getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
         let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
         let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(offer)) {
@@ -3385,6 +3427,9 @@ describe("IBosonOrchestrationHandler", function () {
         }
         for ([key, value] of Object.entries(offerDurations)) {
           expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(disputeResolutionTerms)) {
+          expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the group as a struct

@@ -9,7 +9,7 @@ import {IBosonOfferEvents} from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xf411945f
+ * The ERC-165 identifier for this interface is: 0x701befef
  */
 interface IBosonOfferHandler is IBosonOfferEvents {
 
@@ -151,8 +151,9 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @return offer - the offer details. See {BosonTypes.Offer}
      * @return offerDates - the offer dates details. See {BosonTypes.OfferDates}
      * @return offerDurations - the offer durations details. See {BosonTypes.OfferDurations}
+     * @return disputeResolutionTerms - the details about the dispute resolution terms. See {BosonTypes.DisputeResolutionTerms}
      */
-    function getOffer(uint256 _offerId) external view returns (bool exists, BosonTypes.Offer memory offer, BosonTypes.OfferDates calldata offerDates, BosonTypes.OfferDurations calldata offerDurations);
+    function getOffer(uint256 _offerId) external view returns (bool exists, BosonTypes.Offer memory offer, BosonTypes.OfferDates memory offerDates, BosonTypes.OfferDurations memory offerDurations, BosonTypes.DisputeResolutionTerms memory disputeResolutionTerms);
 
     /**
      * @notice Gets the next offer id.

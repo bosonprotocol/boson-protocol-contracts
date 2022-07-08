@@ -59,8 +59,10 @@ describe("IBosonOfferHandler", function () {
   let disputeResolver,
     disputeResolverFees,
     disputeResolverId,
+    disputeResolutionTerms,
     disputeResolutionTermsStruct,
-    disputeResolutionTermsStructs;
+    disputeResolutionTermsStructs,
+    disputeResolutionTermsList;
 
   before(async function () {
     // get interface Ids
@@ -200,10 +202,7 @@ describe("IBosonOfferHandler", function () {
       price = offer.price;
 
       // Set despute resolution terms
-      const disputeResolutionTerms = new DisputeResolutionTerms(
-        disputeResolverId,
-        disputeResolver.escalationResponsePeriod
-      );
+      disputeResolutionTerms = new DisputeResolutionTerms(disputeResolverId, disputeResolver.escalationResponsePeriod);
       disputeResolutionTermsStruct = disputeResolutionTerms.toStruct();
     });
 
@@ -228,12 +227,15 @@ describe("IBosonOfferHandler", function () {
         await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+          .connect(rando)
+          .getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
         let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
         let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Returned values should match the input in createOffer
         for ([key, value] of Object.entries(offer)) {
@@ -244,6 +246,9 @@ describe("IBosonOfferHandler", function () {
         }
         for ([key, value] of Object.entries(offerDurations)) {
           expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(disputeResolutionTerms)) {
+          expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
       });
 
@@ -836,11 +841,13 @@ describe("IBosonOfferHandler", function () {
         offer = Offer.fromStruct(offerStruct);
         offerDates = OfferDates.fromStruct(offerDatesStruct);
         offerDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        disputeResolutionTerms = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Validate
         expect(offer.isValid()).to.be.true;
         expect(offerDates.isValid()).to.be.true;
         expect(offerDurations.isValid()).to.be.true;
+        expect(disputeResolutionTerms.isValid()).to.be.true;
       });
     });
 
@@ -981,7 +988,8 @@ describe("IBosonOfferHandler", function () {
       offerDatesStructs = [];
       offerDurationsList = [];
       offerDurationsStructs = [];
-      disputeResolverIds = new Array(101).fill(disputeResolverId);
+      disputeResolverIds = new Array(5).fill(disputeResolverId);
+      disputeResolutionTermsList = [];
       disputeResolutionTermsStructs = [];
 
       for (let i = 0; i < 5; i++) {
@@ -1021,6 +1029,7 @@ describe("IBosonOfferHandler", function () {
           disputeResolverId,
           disputeResolver.escalationResponsePeriod
         );
+        disputeResolutionTermsList.push(disputeResolutionTerms);
         disputeResolutionTermsStructs.push(disputeResolutionTerms.toStruct());
       }
 
@@ -1038,6 +1047,7 @@ describe("IBosonOfferHandler", function () {
       offers[4].price = offers[4].sellerDeposit = offers[4].buyerCancelPenalty = offers[4].protocolFee = "0";
       offerStructs[4] = offers[4].toStruct();
       disputeResolverIds[4] = "0";
+      disputeResolutionTermsList[4] = new DisputeResolutionTerms("0", "0");
       disputeResolutionTermsStructs[4] = new DisputeResolutionTerms("0", "0").toStruct();
     });
 
@@ -1105,7 +1115,7 @@ describe("IBosonOfferHandler", function () {
 
         for (let i = 0; i < 5; i++) {
           // Get the offer as a struct
-          [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler
+          [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
             .connect(rando)
             .getOffer(`${i + 1}`);
 
@@ -1113,6 +1123,7 @@ describe("IBosonOfferHandler", function () {
           let returnedOffer = Offer.fromStruct(offerStruct);
           let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
           let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+          let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
           // Returned values should match the input in createOfferBatch
           for ([key, value] of Object.entries(offers[i])) {
@@ -1123,6 +1134,9 @@ describe("IBosonOfferHandler", function () {
           }
           for ([key, value] of Object.entries(offerDurationsList[i])) {
             expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+          }
+          for ([key, value] of Object.entries(disputeResolutionTermsList[i])) {
+            expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
           }
         }
       });

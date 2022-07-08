@@ -239,16 +239,18 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @return offer - the offer details. See {BosonTypes.Offer}
      * @return offerDates - the offer dates details. See {BosonTypes.OfferDates}
      * @return offerDurations - the offer durations details. See {BosonTypes.OfferDurations}
+     * @return disputeResolutionTerms - the details about the dispute resolution terms. See {BosonTypes.DisputeResolutionTerms}
      */
     function getOffer(uint256 _offerId)
     external
     override
     view
-    returns(bool exists, Offer memory offer, OfferDates memory offerDates, OfferDurations memory offerDurations) {
+    returns(bool exists, Offer memory offer, OfferDates memory offerDates, OfferDurations memory offerDurations, DisputeResolutionTerms memory disputeResolutionTerms) {
         (exists, offer) = fetchOffer(_offerId);
         if (exists) {
             offerDates = fetchOfferDates(_offerId);
             offerDurations = fetchOfferDurations(_offerId);
+            disputeResolutionTerms = fetchDisputeResolutionTerms(_offerId);
         }
     }
 
