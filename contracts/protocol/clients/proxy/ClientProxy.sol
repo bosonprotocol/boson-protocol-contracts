@@ -3,8 +3,6 @@ pragma solidity ^0.8.0;
 
 import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
 import { IBosonVoucherBeacon } from "../../../interfaces/clients/IBosonVoucherBeacon.sol";
-import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
-import { BosonConstants } from "../../../domain/BosonConstants.sol";
 import { ClientLib } from "../../libs/ClientLib.sol";
 import { EIP712Lib } from "../../libs/EIP712Lib.sol";
 import { Proxy } from "./Proxy.sol";
@@ -25,106 +23,54 @@ import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable
  * future upgradability.
  */
 contract ClientProxy is Proxy, Initializable {
-        /**
+    /**
      * @dev The storage slot of the UpgradeableBeacon contract which defines the implementation for this proxy.
      * This is bytes32(uint256(keccak256('eip1967.proxy.beacon')) - 1)) and is validated in the constructor.
      */
     bytes32 internal constant _BEACON_SLOT = 0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50;
 
-
-    struct AddressSlot {
+    struct BeaconSlot {
         address value;
     }
 
     /**
-     * @dev Returns an `AddressSlot` with member `value` located at `slot`.
+     * @dev Returns an `BeaconSlot` with member `value`.
      */
-    function getBeaconSlot() internal pure returns (AddressSlot storage r) {
+    function getBeaconSlot() internal pure returns (BeaconSlot storage r) {
         /// @solidity memory-safe-assembly
         assembly {
             r.slot := _BEACON_SLOT
         }
     }
 
-    function initialize(address _beaconAddress, IAccessControlUpgradeable accessController, address protocolAddress) external initializer() {
-        // todo make initializable
+    function initialize(address _beaconAddress, IAccessControlUpgradeable _accessController, address _protocolAddress) external initializer() {
         _setBeacon(_beaconAddress);
-
-        // Get the ProxyStorage struct
-        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
-
-        // Store the AccessController address
-        ps.accessController = accessController;
-
-        // Store the Protocol Diamond address
-        ps.protocolDiamond = protocolAddress;
+        _setAddresses(_accessController, _protocolAddress);
     }
 
     function _beforeFallback() internal override {
-        // store in storage
+        // Retrieve the latest values of accessControler and protocolAddress from the beacon
 
-       IAccessControlUpgradeable accessController = IBosonVoucherBeacon(_beacon()).getAccessController();
-       address protocolAddress =  IBosonVoucherBeacon(_beacon()).getProtocolAddress();
-
-        // Get the ProxyStorage struct
-        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
-
-        // Store the AccessController address
-        ps.accessController = accessController;
-
-        // Store the Protocol Diamond address
-        ps.protocolDiamond = protocolAddress;
-
+       (IAccessControlUpgradeable accessController, address protocolAddress) = IBosonVoucherBeacon(_beacon()).getAddresses();
+       
+        _setAddresses(accessController, protocolAddress);
+        // probably better that storing is to retireve these two inside the client lib
+        // also probably better for view calls
+        // and we don't need initialize
     }
-
-    // /**
-    //  * @dev Modifier that checks that the caller has a specific role.
-    //  *
-    //  * Reverts if caller doesn't have role.
-    //  *
-    //  * See: {AccessController.hasRole}
-    //  */
-    // modifier onlyRole(bytes32 role) {
-    //     require(ClientLib.hasRole(role), "Access denied, caller doesn't have role");
-    //     _;
-    // }
-
-    // function init(
-    //     address _accessController,
-    //     address _protocolAddress,
-    //     address _impl
-    // ) external payable {
-
-    //     // Get the ProxyStorage struct
-    //     ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
-
-    //     // Store the AccessController address
-    //     ps.accessController = IAccessControlUpgradeable(_accessController);
-
-    //     // Store the Protocol Diamond address
-    //     ps.protocolDiamond = _protocolAddress;
-
-    //     // Store the implementation address
-    //     ps.implementation = _impl;
-
-    // }
 
     /**
      * @dev Returns the address to which the fallback function
      * and {_fallback} should delegate.
+     * Implementation address is supplied by the beacon
      */
     function _implementation()
     internal
     view
     override
     returns (address) {
-
-        // // Get the ProxyStorage struct
-        // IBosonVoucherBeacon().implementation();
-
         // Return the current implementation address
         return IBosonVoucherBeacon(_beacon()).implementation();
-
     }
 
     function _beacon() internal view returns (address) {
@@ -132,9 +78,19 @@ contract ClientProxy is Proxy, Initializable {
     }
 
     function _setBeacon(address _beaconAddress) internal {
-        AddressSlot storage addressSlot = getBeaconSlot();
-        addressSlot.value = _beaconAddress;
+        BeaconSlot storage beaconSlot = getBeaconSlot();
+        beaconSlot.value = _beaconAddress;
     }
-    
 
+    function _setAddresses(IAccessControlUpgradeable accessController, address protocolAddress) internal {
+         // Get the ProxyStorage struct
+        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
+
+        // Store the AccessController address
+        ps.accessController = accessController;
+
+        // Store the Protocol Diamond address
+        ps.protocolDiamond = protocolAddress;
+
+    }
 }

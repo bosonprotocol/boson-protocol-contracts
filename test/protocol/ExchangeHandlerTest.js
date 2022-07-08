@@ -599,7 +599,7 @@ describe("IBosonExchangeHandler", function () {
           .withArgs(offerId, exchange.id, buyer.address);
       });
 
-      it.only("should emit an VoucherCanceled event when new owner (not a buyer) calls", async function () {
+      it("should emit an VoucherCanceled event when new owner (not a buyer) calls", async function () {
         // Transfer voucher to new owner
         bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
@@ -1183,7 +1183,7 @@ describe("IBosonExchangeHandler", function () {
         assert.equal(exchange.buyerId, nextAccountId, "Exchange.buyerId not updated");
       });
 
-      it.only("should be triggered when a voucher is transferred", async function () {
+      it("should be triggered when a voucher is transferred", async function () {
         bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
         // Transfer voucher, expecting event

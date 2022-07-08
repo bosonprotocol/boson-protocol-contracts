@@ -162,5 +162,23 @@ contract BosonVoucherBeacon is IBosonVoucherBeacon, BosonConstants {
         return ps.protocolDiamond;
     }
 
+    /**
+     * @notice Gets the address of the ProtocolDiamond contract.
+     *
+     * @return the address of the ProtocolDiamond contract
+     */
+    function getAddresses()
+    public
+    override
+    view
+    returns(IAccessControlUpgradeable, address)
+    {
+        // Get the ProxyStorage struct
+        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
+
+        // Return the current ProtocolDiamond address
+        return (ps.accessController, ps.protocolDiamond);
+    }
+
 
 }

@@ -6,6 +6,7 @@ import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 import { DiamondLib } from  "../../diamond/DiamondLib.sol";
 import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
+import { ClientProxy } from "../clients/proxy/ClientProxy.sol";
 
 /**
  * @title AccountBase
@@ -147,10 +148,11 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
      * @return cloneAddress - the address of newly created clone
      */
     function cloneBosonVoucher() internal returns (address cloneAddress) {
+        // 
+        ProtocolLib.ProtocolAddresses storage pa = protocolAddresses();
+        
         // load voucher contract address
-        bytes20 targetBytes = bytes20(protocolAddresses().voucherProxyAddress);
-
-
+        bytes20 targetBytes = bytes20(pa.voucherProxyAddress);
 
         // create a minimal clone
         assembly {
@@ -161,16 +163,12 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
             cloneAddress := create(0, clone, 0x37)
         }
 
-        address voucherBeaconAddress = protocolAddresses().voucherBeaconAddress;
- IAccessControlUpgradeable accessController = DiamondLib.diamondStorage().accessController;
-        
-                        cloneAddress.call(
-                            abi.encodeWithSignature(
-                            "initialize(address,address,address)",
-                            voucherBeaconAddress,
-                            accessController,
-                            address(this)            
-                        ));
-
+        // Initialize the clone
+        IInitializableClone(cloneAddress).initialize(pa.voucherBeaconAddress, DiamondLib.diamondStorage().accessController, address(this));
     }
+}
+
+
+interface IInitializableClone {
+    function initialize(address _beaconAddress, IAccessControlUpgradeable accessController, address protocolAddress) external;
 }

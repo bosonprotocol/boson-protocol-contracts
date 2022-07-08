@@ -35,7 +35,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         // Initialize protocol config params
         setTokenAddress(_addresses.tokenAddress);
         setTreasuryAddress(_addresses.treasuryAddress);
-        // setVoucherAddress(_addresses.voucherAddress);
+        setVoucherBeaconAddress(_addresses.voucherBeaconAddress);
+        setVoucherProxyAddress(_addresses.voucherProxyAddress);
         setProtocolFeePercentage(_fees.percentage);
         setProtocolFeeFlatBoson(_fees.flatBoson);
         setMaxOffersPerGroup(_limits.maxOffersPerGroup);
@@ -46,9 +47,6 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxFeesPerDisputeResolver(_limits.maxFeesPerDisputeResolver);
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
         setMaxDisputesPerBatch(_limits.maxDisputesPerBatch);      
-
-        protocolAddresses().voucherBeaconAddress = _addresses.voucherBeaconAddress;
-        protocolAddresses().voucherProxyAddress = _addresses.voucherProxyAddress;
         
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -120,33 +118,61 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         return protocolAddresses().treasuryAddress;
     }
 
-    // /**
-    //  * @notice Sets the address of the Boson Protocol Voucher NFT contract (proxy)
-    //  *
-    //  * Emits a VoucherAddressChanged event.
-    //  *
-    //  * @param _voucherAddress - the address of the nft contract (proxy)
-    //  */
-    // function setVoucherAddress(address _voucherAddress)
-    // public
-    // override
-    // onlyRole(ADMIN)
-    // {
-    //     protocolAddresses().voucherAddress = _voucherAddress;
-    //     emit VoucherAddressChanged(_voucherAddress, msgSender());
-    // }
+    /**
+     * @notice Sets the address of the Boson Voucher beacon contract.
+     *
+     * Emits a VoucherBeaconAddressChanged event.
+     *
+     * @param _voucherBeaconAddress - the address of the Boson Voucher beacon contract.
+     */
+    function setVoucherBeaconAddress(address _voucherBeaconAddress)
+    public
+    override
+    onlyRole(ADMIN)
+    {
+        protocolAddresses().voucherBeaconAddress = _voucherBeaconAddress;
+        emit VoucherBeaconAddressChanged(_voucherBeaconAddress, msgSender());
+    }
 
-    // /**
-    //  * @notice The Boson Protocol Voucher NFT contract (proxy) getter
-    //  */
-    // function getVoucherAddress()
-    // external
-    // override
-    // view
-    // returns (address)
-    // {
-    //     return protocolAddresses().voucherAddress;
-    // }
+    /**
+     * @notice The voucherBeaconAddress getter
+     */
+    function getVoucherBeaconAddress()
+    external
+    override
+    view
+    returns (address)
+    {
+        return protocolAddresses().voucherBeaconAddress;
+    }
+
+    /**
+     * @notice Sets the address of the Boson Voucher reference proxy implementation
+     *
+     * Emits a VoucherProxyAddressChanged event.
+     *
+     * @param _voucherProxyAddress - the address of the reference proxy implementation
+     */
+    function setVoucherProxyAddress(address _voucherProxyAddress)
+    public
+    override
+    onlyRole(ADMIN)
+    {
+        protocolAddresses().voucherProxyAddress = _voucherProxyAddress;
+        emit VoucherProxyAddressChanged(_voucherProxyAddress, msgSender());
+    }
+
+    /**
+     * @notice The voucherProxyAddress getter
+     */
+    function getVoucherProxyAddress()
+    external
+    override
+    view
+    returns (address)
+    {
+        return protocolAddresses().voucherProxyAddress;
+    }
 
     /**
      * @notice Sets the protocol fee percentage.
