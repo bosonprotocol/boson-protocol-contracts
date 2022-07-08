@@ -955,8 +955,8 @@ describe("IBosonOfferHandler", function () {
     beforeEach(async function () {
       // create a seller
       // Required constructor params
-      id = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
-
+      id = sellerId= nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
+      
       active = true;
 
       // Create a valid seller, then set fields in tests directly
@@ -988,13 +988,13 @@ describe("IBosonOfferHandler", function () {
       offerDatesStructs = [];
       offerDurationsList = [];
       offerDurationsStructs = [];
-      disputeResolverIds = new Array(5).fill(disputeResolverId);
+      disputeResolverIds = [];
       disputeResolutionTermsList = [];
       disputeResolutionTermsStructs = [];
 
       for (let i = 0; i < 5; i++) {
         // Mock offer, offerDates and offerDurations
-        ({ offer, offerDates, offerDurations } = await mockOffer());
+        ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
 
         // Set unique offer properties based on index
         offer.id = `${i + 1}`;
@@ -1025,6 +1025,7 @@ describe("IBosonOfferHandler", function () {
         offerDurationsList.push(offerDurations);
         offerDurationsStructs.push(offerDurations.toStruct());
 
+        disputeResolverIds.push(disputeResolverId);
         const disputeResolutionTerms = new DisputeResolutionTerms(
           disputeResolverId,
           disputeResolver.escalationResponsePeriod
@@ -1052,7 +1053,7 @@ describe("IBosonOfferHandler", function () {
     });
 
     context("👉 createOfferBatch()", async function () {
-      it("should emit an OfferCreated events for all offers", async function () {
+      it("should emit an OfferCreated events for all offers", async function () {       
         // Create an offer, testing for the event
         await expect(
           offerHandler
@@ -1575,6 +1576,28 @@ describe("IBosonOfferHandler", function () {
 
           // Make dispute durations shorter
           offerDurationsList = offerDurationsList.slice(0, -2);
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler
+              .connect(operator)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds)
+          ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
+        });
+
+        it("Number of dispute resolvers does not match the number of offers", async function () {
+          // Make dispute durations longer
+          disputeResolverIds.push(disputeResolverId);
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler
+              .connect(operator)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds)
+          ).to.revertedWith(RevertReasons.ARRAY_LENGTH_MISMATCH);
+
+          // Make dispute durations shorter
+          disputeResolverIds = disputeResolverIds.slice(0, -2);
 
           // Attempt to Create an offer, expecting revert
           await expect(

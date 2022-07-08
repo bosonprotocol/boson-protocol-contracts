@@ -97,9 +97,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     {
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offers.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
-        // number of offer dates structs and offer durations structs must match the number of offers
-        require(_offers.length == _offerDates.length, ARRAY_LENGTH_MISMATCH);
-        require(_offers.length == _offerDurations.length, ARRAY_LENGTH_MISMATCH);
+        // number of offer dates structs, offer durations structs and _disputeResolverIds must match the number of offers
+        require(_offers.length == _offerDates.length && _offers.length == _offerDurations.length &&  _offers.length == _disputeResolverIds.length, ARRAY_LENGTH_MISMATCH);
 
         for (uint256 i = 0; i < _offers.length; i++) {        
             // create offer and update structs values to represent true state
