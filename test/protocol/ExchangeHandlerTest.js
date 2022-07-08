@@ -930,23 +930,6 @@ describe("IBosonExchangeHandler", function () {
           expect(owner).to.equal(buyer.address);
         });
 
-        it("should not revert if supplyAvailable is 0", async function () {
-          // Deposit seller funds so the second commit will not revert for Insufficient available funds";
-          await fundsHandler
-            .connect(operator)
-            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
-
-          // Redeem the first commit
-          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
-
-          // Commit to offer for the second time
-          // Offer quantity available (2) and twin tokenIds range (1) doesn't match
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-          // Attempt to redeem the voucher, expecting revert
-          await expect(exchangeHandler.connect(buyer).redeemVoucher("2")).to.not.reverted;
-        });
-
         // Skip these tests because we decide that for now we shouldn't revert redeemVoucher if twin transfer failed otherwise buyer will lose cancellation penalty
         context.skip("💔 Revert Reasons", async function () {
           it("unable to transfer the twin", async function () {

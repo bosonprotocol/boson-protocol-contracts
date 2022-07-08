@@ -314,7 +314,7 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
-        it("Amount must not be zero if token type is ERC20", async function () {
+        it("Amount must not be zero if token type is FungibleToken", async function () {
           // Approving the twinHandler contract to transfer seller's tokens
           await bosonToken.connect(operator).approve(twinHandler.address, 1);
 
@@ -325,7 +325,7 @@ describe("IBosonTwinHandler", function () {
           await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(RevertReasons.INVALID_AMOUNT);
         });
 
-        it("Amount must not be zero if token type is ERC1155", async function () {
+        it("Amount must not be zero if token type is MultiToken", async function () {
           // Mint a token and approve twinHandler contract to transfer it
           await foreign1155.connect(operator).mint(twin.tokenId, "1");
           await foreign1155.connect(operator).setApprovalForAll(twinHandler.address, true);
@@ -337,7 +337,7 @@ describe("IBosonTwinHandler", function () {
           await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(RevertReasons.INVALID_AMOUNT);
         });
 
-        it("amount should be zero if token type is ERC721", async function () {
+        it("amount should be zero if token type is NonFungibleToken", async function () {
           twin.tokenAddress = foreign721.address;
           twin.tokenType = TokenType.NonFungibleToken;
           twin.amount = "1";

@@ -470,13 +470,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                             amount
                         )
                     );
-                    if (!success) {
-                        twin.supplyAvailable += amount;
-                    }
-                } else if (twin.tokenType == TokenType.NonFungibleToken && twin.supplyAvailable > 0) {
-                    uint256 tokenId = twin.tokenId;
+               } else if (twin.tokenType == TokenType.NonFungibleToken && twin.supplyAvailable > 0) {
+                    uint256 tokenId = twin.tokenId + twin.supplyAvailable - 1;
                     // ERC-721 style transfer
-                    twin.tokenId++;
                     twin.supplyAvailable--;
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
@@ -487,9 +483,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                             ""
                         )
                     );
-                    if (!success) {
-                        twin.supplyAvailable++;
-                    }
                 } else if (twin.tokenType == TokenType.MultiToken && twin.supplyAvailable >= twin.amount) {
                     uint256 amount = twin.amount;
                     // ERC-1155 style transfer
@@ -504,9 +497,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                             ""
                         )
                     );
-                    if (!success) {
-                        twin.supplyAvailable += amount;
-                    }
                 }
             }
             // @TODO comment the line below because we assume that for now we'll not revert the redeem if Twin transfer failed.

@@ -35,8 +35,8 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         require(_twin.supplyAvailable > 0, INVALID_SUPPLY_AVAILABLE);
         if (_twin.tokenType == TokenType.NonFungibleToken) {
             require(_twin.amount == 0, INVALID_TWIN_PROPERTY);
-        } else if (_twin.tokenType == TokenType.FungibleToken || _twin.tokenType == TokenType.MultiToken) {
-            require(_twin.amount > 0, INVALID_AMOUNT);
+        } else  {
+          require(_twin.amount > 0, INVALID_AMOUNT);
         }
 
         // Get the next twinId and increment the counter
