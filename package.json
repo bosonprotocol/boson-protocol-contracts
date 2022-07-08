@@ -23,9 +23,9 @@
   "scripts": {
     "build": "npx hardhat compile",
     "test": "npx hardhat test",
-    "check:contracts": "solhint contracts/**/*.sol && solhint contracts/**/**/*.sol && prettier --list-different contracts/**",
+    "check:contracts": "solhint contracts/**/*.sol && prettier --list-different contracts/**",
     "check:scripts": "eslint test/** && prettier --list-different test/** && eslint scripts/** && prettier --list-different scripts/**",
-    "tidy:contracts": "solhint --fix contracts/**/*.sol && solhint --fix contracts/**/**/*.sol && prettier --write contracts/**",
+    "tidy:contracts": "solhint --fix contracts/**/*.sol && prettier --write contracts/**",
     "tidy:scripts": "eslint --fix test/** && prettier --write test/** && eslint --fix scripts/** && prettier --write scripts/**",
     "size": "npx hardhat size-contracts",
     "coverage": "npx hardhat coverage",
