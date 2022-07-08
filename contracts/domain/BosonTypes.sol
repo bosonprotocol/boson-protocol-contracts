@@ -10,7 +10,7 @@ pragma solidity ^0.8.0;
 contract BosonTypes {
     enum EvaluationMethod {
         None,
-        AboveThreshold,
+        Threshold,
         SpecificToken
     }
 
@@ -120,9 +120,11 @@ contract BosonTypes {
 
     struct Condition {
         EvaluationMethod method;
+        TokenType tokenType;
         address tokenAddress;
         uint256 tokenId;
         uint256 threshold;
+        uint256 maxCommits;
     }
 
     struct Exchange {

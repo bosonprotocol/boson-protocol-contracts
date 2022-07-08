@@ -10,7 +10,7 @@ DisputeState.Escalated = 3;
 DisputeState.Decided = 4;
 DisputeState.Refused = 5;
 
-DisputeState.Modes = [
+DisputeState.Types = [
   DisputeState.Resolving,
   DisputeState.Retracted,
   DisputeState.Resolved,

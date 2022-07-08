@@ -19,9 +19,9 @@ Done or in progress are:
   - 👉 Protocol facet contracts and interfaces
   
 ## Developers
-  - [Setup](docs/setup.md) - Get going quickly on your local system.
-  - [Tasks](docs/tasks.md) - Build, test, analyse, and deploy.
-  - [Architecture](docs/architecture.md) - Start with the big picture.
-  - [Domain Model](docs/domain.md) - Entities and their relationships.
-  - [State Machines](docs/state-machines.md) - State Machines in the Core Exchange Mechanism.
+  - [Setup](docs/setup.md) - Get going quickly on your local system
+  - [Tasks](docs/tasks.md) - Build, test, analyse, and deploy
+  - [Architecture](docs/architecture.md) - Start with the big picture
+  - [Domain Model](docs/domain.md) - Entities and their relationships
+  - [State Machines](docs/state-machines.md) - State Machines in the Core Exchange Mechanism
   
