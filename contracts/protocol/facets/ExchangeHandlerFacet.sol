@@ -511,7 +511,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                         )
                     );
                 }
-                require(success, TWIN_TRANSFER_FAILED);
+                // @TODO comment the line below because we assume that for now we'll not revert the redeem if Twin transfer failed.
+                // require(success, TWIN_TRANSFER_FAILED);
             }
         }
     }
