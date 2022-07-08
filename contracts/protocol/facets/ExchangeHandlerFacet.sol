@@ -9,6 +9,15 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 
+interface Token {
+    function balanceOf(address account) external view returns (uint256); //ERC-721 and ERC-20
+    function ownerOf(uint256 _tokenId) external view returns (address); //ERC-721
+}
+
+interface MultiToken {
+    function balanceOf(address account, uint256 id) external view returns (uint256);
+}
+
 /**
  * @title ExchangeHandlerFacet
  *
@@ -36,6 +45,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      * - offer's quantity available is zero
      * - buyer address is zero
      * - buyer account is inactive
+     * - buyer is token-gated (conditional commit requirements not met or already used)
      * - offer price is in native token and buyer caller does not send enough
      * - offer price is in some ERC20 token and caller also send native currency
      * - if contract at token address does not support erc20 function transferFrom
@@ -62,6 +72,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         require(!offer.voided, OFFER_HAS_BEEN_VOIDED);
         require(block.timestamp < offerDates.validUntil, OFFER_HAS_EXPIRED);
         require(offer.quantityAvailable > 0, OFFER_SOLD_OUT);
+
+        // Authorize the buyer to commit if offer is in a conditional group
+        require(authorizeCommit(_buyer, offer), CANNOT_COMMIT);
 
         // Fetch or create buyer
         (uint256 buyerId, Buyer storage buyer) = getValidBuyer(_buyer);
@@ -459,9 +472,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                 bool success;
                 bytes memory result;
                 if (twin.tokenType == TokenType.FungibleToken && twin.supplyAvailable >= twin.amount) {
+                    // ERC-20 style transfer
                     uint256 amount = twin.amount;
                     twin.supplyAvailable -= amount;
-                    // ERC-20 style transfer
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
                             "transferFrom(address,address,uint256)",
@@ -471,8 +484,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                         )
                     );
                } else if (twin.tokenType == TokenType.NonFungibleToken && twin.supplyAvailable > 0) {
-                    uint256 tokenId = twin.tokenId + twin.supplyAvailable - 1;
                     // ERC-721 style transfer
+                    uint256 tokenId = twin.tokenId + twin.supplyAvailable - 1;
                     twin.supplyAvailable--;
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
@@ -484,8 +497,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                         )
                     );
                 } else if (twin.tokenType == TokenType.MultiToken && twin.supplyAvailable >= twin.amount) {
-                    uint256 amount = twin.amount;
                     // ERC-1155 style transfer
+                    uint256 amount = twin.amount;
                     twin.supplyAvailable -= amount;
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
@@ -531,4 +544,109 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         // Make sure buyer account is active
         require(buyer.active, MUST_BE_ACTIVE);
     }
+
+    /**
+     * @notice Authorize the potential buyer to commit to an offer
+     *
+     * Anyone can commit to an unconditional offer, and no state change occurs here.
+     *
+     * However, if the offer is conditional, we must:
+     *   - determine if the buyer is allowed to commit
+     *   - increment the count of commits to the group made by the buyer address
+     *
+     * Conditions are associated with offers via groups. One or more offers can be
+     * placed in a group and a single condition applied to the entire group. Thus:
+     *   - If a buyer commits to one offer in a group with a condition, it counts
+     *     against their allowable commits for the whole group.
+     *   - If the buyer has already committed the maximum number of times for the
+     *     group, they can't commit again to any of its offers.
+     *
+     * The buyer is allowed to commit if no group or condition is set for this offer.
+     *
+     * @param _buyer buyer address
+     * @param _offer the offer
+     *
+     * @return bool true if buyer is authorized to commit
+     */
+    function authorizeCommit(address _buyer, Offer storage _offer)
+    internal
+    returns (bool)
+    {
+        // Allow by default
+        bool allow = true;
+
+        // For there to be a condition, there must be a group.
+        (bool exists, uint256 groupId) = getGroupIdByOffer(_offer.id);
+        if (exists) {
+
+            // Get the group
+            (,Group storage group) = fetchGroup(groupId);
+
+            // If a condition is set, investigate, otherwise all buyers are allowed
+            if (group.condition.method != EvaluationMethod.None) {
+
+                // How many times has this address committed to offers in the group?
+                uint256 commitCount = protocolLookups().conditionalCommitsByAddress[_buyer][groupId];
+
+                // Evaluate condition if buyer hasn't exhausted their allowable commits, otherwise disallow
+                if (commitCount < group.condition.maxCommits) {
+
+                    // Buyer is allowed if they meet the group's condition
+                    allow = (group.condition.method == EvaluationMethod.Threshold)
+                        ? holdsThreshold(_buyer, group.condition)
+                        : holdsSpecificToken(_buyer, group.condition);
+
+                    // Increment number of commits to the group for this address if they are allowed to commit
+                    if (allow) protocolLookups().conditionalCommitsByAddress[_buyer][groupId] = ++commitCount;
+
+                } else {
+
+                    // Buyer has exhausted their allowable commits
+                    allow = false;
+
+                }
+
+            }
+
+        }
+
+        return allow;
+    }
+
+    /**
+     * @notice Does the buyer have the required balance of the conditional token?
+     *
+     * @param _buyer address of potential buyer
+     * @param _condition the condition to be evaluated
+     *
+     * @return bool true if buyer meets the condition
+     */
+    function holdsThreshold(address _buyer, Condition storage _condition)
+    internal
+    view
+    returns (bool)
+    {
+        return
+        ((_condition.tokenType == TokenType.MultiToken)
+            ? MultiToken(_condition.tokenAddress).balanceOf(_buyer, _condition.tokenId)
+            : Token(_condition.tokenAddress).balanceOf(_buyer)
+        ) >= _condition.threshold;
+    }
+
+    /**
+     * @notice Does the buyer own a specific non-fungible token Id?
+     *
+     * @param _buyer  address of potential buyer
+     * @param _condition the condition to be evaluated
+     *
+     * @return bool true if buyer meets the condition
+     */
+    function holdsSpecificToken(address _buyer, Condition storage _condition)
+    internal
+    view
+    returns (bool)
+    {
+        return (Token(_condition.tokenAddress).ownerOf(_condition.tokenId) == _buyer);
+    }
+
 }
