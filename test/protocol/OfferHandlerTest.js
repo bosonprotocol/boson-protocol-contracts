@@ -955,8 +955,8 @@ describe("IBosonOfferHandler", function () {
     beforeEach(async function () {
       // create a seller
       // Required constructor params
-      id = sellerId= nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
-      
+      id = sellerId = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
+
       active = true;
 
       // Create a valid seller, then set fields in tests directly
@@ -1053,7 +1053,7 @@ describe("IBosonOfferHandler", function () {
     });
 
     context("👉 createOfferBatch()", async function () {
-      it("should emit an OfferCreated events for all offers", async function () {       
+      it("should emit an OfferCreated events for all offers", async function () {
         // Create an offer, testing for the event
         await expect(
           offerHandler
