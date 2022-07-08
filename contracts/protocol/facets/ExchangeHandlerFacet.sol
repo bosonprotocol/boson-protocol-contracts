@@ -324,7 +324,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      */
     function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer)
     external
-    onlyRole(CLIENT)
     override
     {
         // Get the exchange, should be in committed state
@@ -332,6 +331,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
 
         // Make sure that the voucher is still valid
         require(block.timestamp <= exchange.voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
+
+        (, Offer storage offer) = fetchOffer(exchange.offerId);
+        require(msg.sender == protocolLookups().cloneAddress[offer.sellerId], ACCESS_DENIED);
 
         // Fetch or create buyer
         (uint256 buyerId,) = getValidBuyer(_newBuyer);

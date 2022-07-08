@@ -8,6 +8,7 @@ import { BosonConstants } from "../../../domain/BosonConstants.sol";
 import { ClientLib } from "../../libs/ClientLib.sol";
 import { EIP712Lib } from "../../libs/EIP712Lib.sol";
 import { Proxy } from "./Proxy.sol";
+import { Initializable } from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @title ClientProxy
@@ -23,7 +24,7 @@ import { Proxy } from "./Proxy.sol";
  * Each Protocol client contract will be deployed behind its own proxy for
  * future upgradability.
  */
-contract ClientProxy is Proxy {
+contract ClientProxy is Proxy, Initializable {
         /**
      * @dev The storage slot of the UpgradeableBeacon contract which defines the implementation for this proxy.
      * This is bytes32(uint256(keccak256('eip1967.proxy.beacon')) - 1)) and is validated in the constructor.
@@ -45,9 +46,18 @@ contract ClientProxy is Proxy {
         }
     }
 
-    function initialize(address _beaconAddress) external {
+    function initialize(address _beaconAddress, IAccessControlUpgradeable accessController, address protocolAddress) external initializer() {
         // todo make initializable
         _setBeacon(_beaconAddress);
+
+        // Get the ProxyStorage struct
+        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
+
+        // Store the AccessController address
+        ps.accessController = accessController;
+
+        // Store the Protocol Diamond address
+        ps.protocolDiamond = protocolAddress;
     }
 
     function _beforeFallback() internal override {

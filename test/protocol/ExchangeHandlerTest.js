@@ -310,7 +310,7 @@ describe("IBosonExchangeHandler", function () {
         expect(nextExchangeId).to.equal(++id);
       });
 
-      it.only("should issue the voucher on the correct clone", async function () {
+      it("should issue the voucher on the correct clone", async function () {
         bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
         // Commit to offer, creating a new exchange
@@ -599,8 +599,10 @@ describe("IBosonExchangeHandler", function () {
           .withArgs(offerId, exchange.id, buyer.address);
       });
 
-      it("should emit an VoucherCanceled event when new owner (not a buyer) calls", async function () {
+      it.only("should emit an VoucherCanceled event when new owner (not a buyer) calls", async function () {
         // Transfer voucher to new owner
+        bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
         await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
 
         // Cancel the voucher, expecting event
@@ -1181,7 +1183,9 @@ describe("IBosonExchangeHandler", function () {
         assert.equal(exchange.buyerId, nextAccountId, "Exchange.buyerId not updated");
       });
 
-      it("should be triggered when a voucher is transferred", async function () {
+      it.only("should be triggered when a voucher is transferred", async function () {
+        bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
         // Transfer voucher, expecting event
         await expect(bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id)).to.emit(
           exchangeHandler,
@@ -1215,6 +1219,9 @@ describe("IBosonExchangeHandler", function () {
       it("should not be triggered when a voucher is burned", async function () {
         // Grant PROTOCOL role to EOA address for test
         await accessController.grantRole(Role.PROTOCOL, rando.address);
+
+        bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
 
         // Burn voucher, expecting no event
         await expect(bosonVoucher.connect(rando).burnVoucher(exchange.id)).to.not.emit(

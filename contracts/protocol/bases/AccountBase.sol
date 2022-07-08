@@ -4,6 +4,8 @@ pragma solidity ^0.8.0;
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
+import { DiamondLib } from  "../../diamond/DiamondLib.sol";
+import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
 
 /**
  * @title AccountBase
@@ -160,12 +162,14 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         }
 
         address voucherBeaconAddress = protocolAddresses().voucherBeaconAddress;
-
+ IAccessControlUpgradeable accessController = DiamondLib.diamondStorage().accessController;
         
                         cloneAddress.call(
                             abi.encodeWithSignature(
-                            "initialize(address)",
-                            voucherBeaconAddress                       
+                            "initialize(address,address,address)",
+                            voucherBeaconAddress,
+                            accessController,
+                            address(this)            
                         ));
 
     }

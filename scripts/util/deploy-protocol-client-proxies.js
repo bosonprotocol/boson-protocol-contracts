@@ -37,7 +37,7 @@ async function deployProtocolClientProxies(protocolClients, protocolClientArgs, 
     await clientProxy.deployed();
 
   // init instead of constructors
-  await clientProxy.initialize(clientBeacon.address)
+  await clientProxy.initialize(clientBeacon.address, ...protocolClientArgs)
 
   return [clientBeacon, clientProxy];
 }
