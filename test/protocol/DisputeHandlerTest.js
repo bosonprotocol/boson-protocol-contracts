@@ -1395,9 +1395,9 @@ describe("IBosonDisputeHandler", function () {
             );
           });
 
-          it("Dispute escalation period has elapsed", async function () {
+          it.only("Dispute escalation response period has elapsed", async function () {
             // Set time past escalation period
-            await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
             // Attempt to decide the dispute, expecting revert
             await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
@@ -1427,9 +1427,9 @@ describe("IBosonDisputeHandler", function () {
           timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
         });
 
-        it("should emit a EscalatedDisputeExpired event", async function () {
+        it.only("should emit a EscalatedDisputeExpired event", async function () {
           // Set time forward past the dispute escalation period
-          await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
           // Expire the escalated dispute, testing for the event
           await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId))
@@ -1664,9 +1664,9 @@ describe("IBosonDisputeHandler", function () {
             );
           });
 
-          it("Dispute escalation period has elapsed", async function () {
+          it.only("Dispute escalation response period has elapsed", async function () {
             // Set time forward past the dispute escalation period
-            await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
             // Attempt to refuse the escalated dispute, expecting revert
             await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(

@@ -338,7 +338,9 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         require(dispute.state == DisputeState.Resolving, INVALID_STATE);
 
         // fetch the escalation period from the storage
-        uint256 escalationResponsePeriod = protocolEntities().disputeResolutionTerms[exchange.offerId].escalationResponsePeriod;
+        uint256 escalationResponsePeriod = protocolEntities()
+            .disputeResolutionTerms[exchange.offerId]
+            .escalationResponsePeriod;
 
         // store the time of escalation
         disputeDates.escalated = block.timestamp;
@@ -395,7 +397,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - dispute is in some state other than escalated
-     * - dispute escalation period has elapsed
+     * - dispute escalation response period has elapsed
      * - caller is not the dispute resolver for this dispute
      *
      * @param _exchangeId - the id of the associated exchange
@@ -420,7 +422,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - dispute is in some state other than escalated
-     * - dispute escalation period has elapsed
+     * - dispute escalation response period has elapsed
      * - caller is not the dispute resolver for this dispute
      *
      * @param _exchangeId - the id of the associated exchange

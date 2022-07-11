@@ -169,7 +169,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - dispute is in some state other than escalated
-     * - dispute escalation period has elapsed
+     * - dispute escalation response period has elapsed
      * - caller is not the dispute resolver for this dispute
      *
      * @param _exchangeId - the id of the associated exchange
