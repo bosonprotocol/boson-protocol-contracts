@@ -61,7 +61,7 @@ describe("IBosonExchangeHandler", function () {
     twinHandler,
     bundleHandler,
     groupHandler;
-  let bosonVoucher, bosonToken, voucherImplementation;
+  let bosonVoucher, voucherImplementation;
   let bosonVoucherClone, bosonVoucherCloneAddress;
   let id, buyerId, offerId, seller, sellerId, nextExchangeId, nextAccountId;
   let block, blockNumber, tx, txReceipt, event;
@@ -142,7 +142,7 @@ describe("IBosonExchangeHandler", function () {
       // Protocol addresses
       {
         treasuryAddress: ethers.constants.AddressZero,
-        tokenAddress: bosonToken.address,
+        tokenAddress: ethers.constants.AddressZero,
         voucherBeaconAddress: beacon.address,
         voucherProxyAddress: proxy.address,
       },
