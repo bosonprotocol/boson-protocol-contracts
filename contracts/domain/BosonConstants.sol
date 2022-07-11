@@ -87,7 +87,7 @@ contract BosonConstants {
     string internal constant NO_TRANSFER_APPROVED = "No transfer approved";
     string internal constant TWIN_TRANSFER_FAILED = "Twin could not be transferred";
     string internal constant UNSUPPORTED_TOKEN = "Unsupported token";
-    string internal constant TWIN_HAS_BUNDLES = "Twin has bundles";
+    string internal constant BUNDLE_FOR_TWIN_EXISTS = "Bundle for twin exists";
     string internal constant ERC721_INVALID_RANGE = "lastTokenId must be equal or greater than tokenId";
 
     // Revert Reasons: Bundle related
@@ -95,8 +95,8 @@ contract BosonConstants {
     string internal constant TWIN_NOT_IN_BUNDLE = "Twin not part of the bundle";
     string internal constant OFFER_NOT_IN_BUNDLE = "Offer not part of the bundle";
     string internal constant TOO_MANY_TWINS = "Exceeded maximum twins in a single transaction";
-    string internal constant TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE = "Twin already exists in the same bundle";
     string internal constant BUNDLE_OFFER_MUST_BE_UNIQUE = "Offer must be unique to a bundle";
+    string internal constant BUNDLE_TWIN_MUST_BE_UNIQUE = "Twin must be unique to a bundle";
     string internal constant EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS = "Exchange for the bundled offers exists";
 
     // Revert Reasons: Funds related

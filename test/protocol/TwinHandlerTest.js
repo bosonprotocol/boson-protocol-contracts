@@ -483,7 +483,7 @@ describe("IBosonTwinHandler", function () {
           await expect(twinHandler.connect(rando).removeTwin(twin.id)).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
-        it("Twin has bundles", async function () {
+        it("Bundle for twin exists", async function () {
           // Bundle: Required constructor params
           bundleId = "1";
           offerIds = [];
@@ -495,7 +495,7 @@ describe("IBosonTwinHandler", function () {
 
           // Attempt to Remove a twin, expecting revert
           await expect(twinHandler.connect(operator).removeTwin(twin.id)).to.revertedWith(
-            RevertReasons.TWIN_HAS_BUNDLES
+            RevertReasons.BUNDLE_FOR_TWIN_EXISTS
           );
         });
       });

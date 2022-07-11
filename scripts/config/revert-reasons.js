@@ -63,16 +63,16 @@ exports.RevertReasons = {
   NO_TRANSFER_APPROVED: "No transfer approved",
   TWIN_TRANSFER_FAILED: "Twin could not be transferred",
   UNSUPPORTED_TOKEN: "Unsupported token",
-  TWIN_HAS_BUNDLES: "Twin has bundles",
   ERC721_INVALID_RANGE: "lastTokenId must be equal or greater than tokenId",
+  BUNDLE_FOR_TWIN_EXISTS: "Bundle for twin exists",
 
   // Bundle related
   NO_SUCH_BUNDLE: "No such bundle",
   TWIN_NOT_IN_BUNDLE: "Twin not part of the bundle",
   OFFER_NOT_IN_BUNDLE: "Offer not part of the bundle",
   TOO_MANY_TWINS: "Exceeded maximum twins in a single transaction",
-  TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE: "Twin already exists in the same bundle",
   BUNDLE_OFFER_MUST_BE_UNIQUE: "Offer must be unique to a bundle",
+  BUNDLE_TWIN_MUST_BE_UNIQUE: "Twin must be unique to a bundle",
 
   // Exchange related
   NO_SUCH_EXCHANGE: "No such exchange",

@@ -20,7 +20,7 @@ const { oneMonth } = require("../utils/constants");
 /**
  *  Test the Boson Bundle Handler interface
  */
-describe("IBosonBundleHandler", function () {
+describe.only("IBosonBundleHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer, rando, operator, admin, clerk, treasury, buyer, operatorDR, adminDR, clerkDR, treasuryDR;
@@ -46,7 +46,7 @@ describe("IBosonBundleHandler", function () {
   let seller, active, nextAccountId;
   let bundleStruct;
   let twinIdsToAdd, twinIdsToRemove, offerIdsToAdd, offerIdsToRemove;
-  let bundle, bundleId, bundleIds, offerIds, twinId, twinIds, nextBundleId, invalidBundleId, bundleInstance;
+  let bundle, bundleId, offerIds, twinId, twinIds, nextBundleId, invalidBundleId, bundleInstance;
   let offer, exists, expected;
   let offerId, invalidOfferId, price, sellerDeposit;
   let offerDates, offerDurations;
@@ -316,34 +316,6 @@ describe("IBosonBundleHandler", function () {
         assert.equal(returnedBundle.twinIds, bundle.twinIds.toString(), "Twin ids should be empty");
       });
 
-      it("Twin is already part of another bundle", async function () {
-        // create first bundle
-        await bundleHandler.connect(operator).createBundle(bundle);
-
-        // Set offer that is NOT already part of another bundle
-        bundle.offerIds = ["1"];
-        // Set twin that is already part of another bundle
-        bundle.twinIds = ["1", "2", "4"];
-
-        const expectedNextBundleId = (parseInt(nextBundleId) + 1).toString();
-        const expectedBundle = bundle.clone();
-        expectedBundle.id = expectedNextBundleId;
-
-        // create another bundle
-        const tx = await bundleHandler.connect(operator).createBundle(bundle);
-        const txReceipt = await tx.wait();
-
-        const event = getEvent(txReceipt, bundleHandlerFacet_Factory, "BundleCreated");
-
-        bundleInstance = Bundle.fromStruct(event.bundle);
-        // Validate the instance
-        expect(bundleInstance.isValid()).to.be.true;
-
-        assert.equal(event.bundleId.toString(), expectedNextBundleId, "Bundle Id is incorrect");
-        assert.equal(event.sellerId.toString(), expectedBundle.sellerId, "Seller Id is incorrect");
-        assert.equal(bundleInstance.toString(), expectedBundle.toString(), "Bundle struct is incorrect");
-      });
-
       it("should ignore any provided seller and assign seller id of msg.sender", async function () {
         // set some other sellerId
         bundle.sellerId = "123";
@@ -473,7 +445,7 @@ describe("IBosonBundleHandler", function () {
 
         // Attempt to create a bundle, expecting revert
         await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
-          RevertReasons.TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE
+          RevertReasons.BUNDLE_TWIN_MUST_BE_UNIQUE
         );
       });
 
@@ -500,6 +472,25 @@ describe("IBosonBundleHandler", function () {
         // Attempt to Create a bundle, expecting revert
         await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
           RevertReasons.EXCHANGE_FOR_OFFER_EXISTS
+        );
+      });
+
+      it("Twin is already part of another bundle", async function () {
+        // create first bundle
+        await bundleHandler.connect(operator).createBundle(bundle);
+
+        // Set offer that is NOT already part of another bundle
+        bundle.offerIds = ["1"];
+        // Set twin that is already part of another bundle
+        bundle.twinIds = ["1", "2", "4"];
+
+        const expectedNextBundleId = (parseInt(nextBundleId) + 1).toString();
+        const expectedBundle = bundle.clone();
+        expectedBundle.id = expectedNextBundleId;
+
+        // Attempt to Create a bundle, expecting revert
+        await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
+          RevertReasons.BUNDLE_TWIN_MUST_BE_UNIQUE
         );
       });
     });
@@ -564,6 +555,7 @@ describe("IBosonBundleHandler", function () {
       it("should be incremented after a bundle is created", async function () {
         // Create another bundle
         bundle.offerIds = ["1", "4"];
+        bundle.twinIds = ["1"];
         await bundleHandler.connect(operator).createBundle(bundle);
 
         // What we expect the next bundle id to be
@@ -628,7 +620,7 @@ describe("IBosonBundleHandler", function () {
         let expectedNewBundleId = "2";
         const newBundle = bundle.clone();
         newBundle.id = expectedNewBundleId;
-        newBundle.twinIds = ["3"];
+        newBundle.twinIds = ["1"];
         newBundle.offerIds = ["1"];
         const tx = await bundleHandler.connect(operator).createBundle(newBundle); // creates new bundle of id 2
         const txReceipt = await tx.wait();
@@ -637,7 +629,7 @@ describe("IBosonBundleHandler", function () {
 
         // Add a new twin to bundle of id 1.
         let bundleIdToAddTwin = bundle.id;
-        twinIdsToAdd = ["1"];
+        twinIdsToAdd = ["4"];
 
         // Bundle with id 1 does not have this twin.
         [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleIdToAddTwin);
@@ -677,29 +669,6 @@ describe("IBosonBundleHandler", function () {
         for ([key, value] of Object.entries(bundle)) {
           expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
         }
-      });
-
-      it("Twin is already part of another bundle", async function () {
-        // Create a new bundle with twinIds.
-        const newBundle = bundle.clone();
-        newBundle.twinIds = ["1"];
-        newBundle.offerIds = ["1"];
-        await bundleHandler.connect(operator).createBundle(newBundle);
-
-        // Add Same twinIds to the first bundle, testing for the event
-        const tx = await bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd);
-        const txReceipt = await tx.wait();
-
-        const event = getEvent(txReceipt, bundleHandlerFacet_Factory, "BundleUpdated");
-
-        const bundleInstance = Bundle.fromStruct(event.bundle);
-        // Validate the instance
-        expect(bundleInstance.isValid()).to.be.true;
-
-        assert.equal(event.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
-        assert.equal(event.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
-        assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
-        assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
       });
 
       context("💔 Revert Reasons", async function () {
@@ -795,7 +764,7 @@ describe("IBosonBundleHandler", function () {
 
           // Attempt to add same twin again into the same bundle, expecting revert
           await expect(bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd)).to.revertedWith(
-            RevertReasons.TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE
+            RevertReasons.BUNDLE_TWIN_MUST_BE_UNIQUE
           );
         });
 
@@ -805,7 +774,20 @@ describe("IBosonBundleHandler", function () {
 
           // Attempt to add twins to a bundle, expecting revert
           await expect(bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd)).to.revertedWith(
-            RevertReasons.TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE
+            RevertReasons.BUNDLE_TWIN_MUST_BE_UNIQUE
+          );
+        });
+
+        it("Twin is already part of another bundle", async function () {
+          // Create a new bundle with twinIds.
+          const newBundle = bundle.clone();
+          newBundle.twinIds = ["1"];
+          newBundle.offerIds = ["1"];
+          await bundleHandler.connect(operator).createBundle(newBundle);
+
+          // Attempt to add same twinIds to the frist bundle, expecting revert
+          await expect(bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd)).to.revertedWith(
+            RevertReasons.BUNDLE_TWIN_MUST_BE_UNIQUE
           );
         });
       });
@@ -921,10 +903,11 @@ describe("IBosonBundleHandler", function () {
           );
         });
 
-        it("Twin is not a part of the bundle", async function () {
+        it.only("Twin is not a part of the bundle", async function () {
           // inexisting twin
           twinIdsToRemove = ["6"];
-
+          const tx = await bundleHandler.getBundleIdByTwin("6");
+          console.log(tx);
           // Attempt to remove twins from the bundle, expecting revert
           await expect(
             bundleHandler.connect(operator).removeTwinsFromBundle(bundle.id, twinIdsToRemove)
@@ -1000,6 +983,8 @@ describe("IBosonBundleHandler", function () {
         const newBundle = bundle.clone();
         newBundle.id = expectedNewBundleId;
         newBundle.offerIds = ["4"];
+        // Twin must be unique to a bundle
+        newBundle.twinIds = ["1"];
         const tx = await bundleHandler.connect(operator).createBundle(newBundle); // creates new bundle of id 2
         const txReceipt = await tx.wait();
         const event = getEvent(txReceipt, bundleHandler, "BundleCreated");
@@ -1116,6 +1101,8 @@ describe("IBosonBundleHandler", function () {
         it("Offer is already part of another bundle", async function () {
           // create another bundle
           bundle.offerIds = ["1"];
+          // Twin must be unique to a bundle";
+          bundle.twinIds = ["1"];
           await bundleHandler.connect(operator).createBundle(bundle);
 
           // Attempt to add offers to a bundle, expecting revert
@@ -1206,6 +1193,8 @@ describe("IBosonBundleHandler", function () {
         const newBundle = bundle.clone();
         newBundle.id = expectedNewBundleId;
         newBundle.offerIds = ["5"];
+        //Twin must be unique to a bundle"
+        newBundle.twinIds = ["1"];
         const tx = await bundleHandler.connect(operator).createBundle(newBundle); // creates new bundle of id 2
         const txReceipt = await tx.wait();
         const event = getEvent(txReceipt, bundleHandler, "BundleCreated");
@@ -1287,6 +1276,9 @@ describe("IBosonBundleHandler", function () {
           // create an offer and add it to another bundle
           await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
           bundle.offerIds = ["6"];
+
+          // Twin must be unique to a bundle
+          bundle.twinIds = ["1"];
           await bundleHandler.connect(operator).createBundle(bundle);
 
           // Attempt to remove offers from a bundle, expecting revert
@@ -1369,7 +1361,7 @@ describe("IBosonBundleHandler", function () {
       });
     });
 
-    context("👉 getBundleIdsByTwin()", async function () {
+    context("👉 getBundleIdByTwin()", async function () {
       beforeEach(async function () {
         // Create a twin with id 6
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
@@ -1384,7 +1376,7 @@ describe("IBosonBundleHandler", function () {
 
       it("should return true for exists if bundle id is found", async function () {
         // Get the exists flag
-        [exists] = await bundleHandler.connect(rando).getBundleIdsByTwin(bundle.twinIds[0]);
+        [exists] = await bundleHandler.connect(rando).getBundleIdByTwin(bundle.twinIds[0]);
 
         // Validate
         expect(exists).to.be.true;
@@ -1394,32 +1386,24 @@ describe("IBosonBundleHandler", function () {
         invalidTwinId = "666";
 
         // Get the exists flag
-        [exists] = await bundleHandler.connect(rando).getBundleIdsByTwin(invalidTwinId);
+        [exists] = await bundleHandler.connect(rando).getBundleIdByTwin(invalidTwinId);
 
         // Validate
         expect(exists).to.be.false;
       });
 
-      it("should return the bundle ids if found", async function () {
-        // Create new bundle of id 2
-        let expectedNewBundleId = "2";
-        const newBundle = bundle.clone();
-        newBundle.id = expectedNewBundleId;
-        newBundle.twinIds = [twinId];
-        newBundle.offerIds = ["1"];
-        await bundleHandler.connect(operator).createBundle(newBundle); // creates new bundle of id 2
-
-        // Add the same Twin id to another bundle
+      it("should return the bundle id if found", async function () {
+        // Add Twin id to bundle
         twinIdsToAdd = [twinId];
         await bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd);
 
-        const expectedBundleIds = [newBundle.id, bundle.id];
+        const expectedBundleId = bundle.id;
 
         // Get the bundle id
-        [, bundleIds] = await bundleHandler.connect(rando).getBundleIdsByTwin(twinId);
+        [, bundleId] = await bundleHandler.connect(rando).getBundleIdByTwin(twinId);
 
         // Validate
-        assert.equal(bundleIds.toString(), expectedBundleIds.toString(), "Bundle Ids are incorrect");
+        assert.equal(bundleId.toString(), expectedBundleId.toString(), "Bundle Ids are incorrect");
       });
     });
 
@@ -1453,8 +1437,8 @@ describe("IBosonBundleHandler", function () {
         [exists] = await bundleHandler.connect(rando).getBundleIdByOffer(bundle.offerIds[0]);
         expect(exists).to.be.true;
 
-        // Expect the bundleIdsByTwin mapping to be found.
-        [exists] = await bundleHandler.connect(rando).getBundleIdsByTwin(bundle.twinIds[0]);
+        // Expect the bundleIdByTwin mapping to be found.
+        [exists] = await bundleHandler.connect(rando).getBundleIdByTwin(bundle.twinIds[0]);
         expect(exists).to.be.true;
 
         // Remove the bundle, testing for the event.
@@ -1470,8 +1454,8 @@ describe("IBosonBundleHandler", function () {
         [exists] = await bundleHandler.connect(rando).getBundleIdByOffer(bundle.offerIds[0]);
         expect(exists).to.be.false;
 
-        // Expect the bundleIdsByTwin mapping to be not found.
-        [exists] = await bundleHandler.connect(rando).getBundleIdsByTwin(bundle.twinIds[0]);
+        // Expect the bundleIdByTwin mapping to be not found.
+        [exists] = await bundleHandler.connect(rando).getBundleIdByTwin(bundle.twinIds[0]);
         expect(exists).to.be.false;
       });
 

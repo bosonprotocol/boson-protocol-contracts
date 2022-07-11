@@ -481,18 +481,18 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
-     * @notice Gets the bundle ids for a given twin id.
+     * @notice Gets the bundle id for a given twin id.
      *
      * @param _twinId - the twin Id.
-     * @return exists - whether the bundle Ids exist
-     * @return bundleIds  - the bundle Ids.
+     * @return exists - whether the bundle Id exist
+     * @return bundleId  - the bundle Id.
      */
-    function fetchBundleIdsByTwin(uint256 _twinId) internal view returns (bool exists, uint256[] memory bundleIds) {
-        // Get the bundle Ids
-        bundleIds = protocolLookups().bundleIdsByTwin[_twinId];
+    function fetchBundleIdByTwin(uint256 _twinId) internal view returns (bool exists, uint256 bundleId) {
+        // Get the bundle Id
+        bundleId = protocolLookups().bundleIdByTwin[_twinId];
 
         // Determine existence
-        exists = (bundleIds.length > 0);
+        exists = (bundleId > 0);
     }
 
     /**
