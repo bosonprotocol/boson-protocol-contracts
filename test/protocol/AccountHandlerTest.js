@@ -1236,7 +1236,7 @@ describe("IBosonAccountHandler", function () {
     });
   });
 
-   // All supported Dispute Resolver methods
+  // All supported Dispute Resolver methods
   context("📋 Dispute Resolver Methods", async function () {
     beforeEach(async function () {
       // The first dispute resolver id
@@ -2412,7 +2412,7 @@ describe("IBosonAccountHandler", function () {
   });
 
   // All supported Agent methods
-  context.only("📋 Agent Methods", async function () {
+  context("📋 Agent Methods", async function () {
     beforeEach(async function () {
       // The first agent id
       nextAccountId = "1";
@@ -2460,8 +2460,8 @@ describe("IBosonAccountHandler", function () {
 
         // Create an agent, testing for the event
         await expect(accountHandler.connect(rando).createAgent(agent))
-         .to.emit(accountHandler, "AgentCreated")
-         .withArgs(nextAccountId, agentStruct, rando.address);
+          .to.emit(accountHandler, "AgentCreated")
+          .withArgs(nextAccountId, agentStruct, rando.address);
 
         // wrong agent id should not exist
         [exists] = await accountHandler.connect(rando).getAgent(agent.id);
@@ -2496,6 +2496,42 @@ describe("IBosonAccountHandler", function () {
             RevertReasons.AGENT_ADDRESS_MUST_BE_UNIQUE
           );
         });
+      });
+    });
+    context("👉 getAgent()", async function () {
+      beforeEach(async function () {
+        // Create a agent
+        await accountHandler.connect(rando).createAgent(agent);
+
+        // id of the current agent and increment nextAccountId
+        id = nextAccountId++;
+      });
+
+      it("should return true for exists if agent is found", async function () {
+        // Get the exists flag
+        [exists] = await accountHandler.connect(rando).getAgent(id);
+
+        // Validate
+        expect(exists).to.be.true;
+      });
+
+      it("should return false for exists if agent is not found", async function () {
+        // Get the exists flag
+        [exists] = await accountHandler.connect(rando).getAgent(invalidAccountId);
+
+        // Validate
+        expect(exists).to.be.false;
+      });
+
+      it("should return the details of the agent as a struct if found", async function () {
+        // Get the agent as a struct
+        [, agentStruct] = await accountHandler.connect(rando).getAgent(id);
+
+        // Parse into entity
+        agent = Agent.fromStruct(agentStruct);
+
+        // Validate
+        expect(agent.isValid()).to.be.true;
       });
     });
   });
