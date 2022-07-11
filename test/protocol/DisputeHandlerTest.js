@@ -1395,7 +1395,7 @@ describe("IBosonDisputeHandler", function () {
             );
           });
 
-          it.only("Dispute escalation response period has elapsed", async function () {
+          it("Dispute escalation response period has elapsed", async function () {
             // Set time past escalation period
             await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
@@ -1427,7 +1427,7 @@ describe("IBosonDisputeHandler", function () {
           timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
         });
 
-        it.only("should emit a EscalatedDisputeExpired event", async function () {
+        it("should emit a EscalatedDisputeExpired event", async function () {
           // Set time forward past the dispute escalation period
           await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
@@ -1664,7 +1664,7 @@ describe("IBosonDisputeHandler", function () {
             );
           });
 
-          it.only("Dispute escalation response period has elapsed", async function () {
+          it("Dispute escalation response period has elapsed", async function () {
             // Set time forward past the dispute escalation period
             await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
