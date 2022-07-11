@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {IERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
+import {IERC721MetadataUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 import {BosonTypes} from "../../domain/BosonTypes.sol";
 
 /**
@@ -11,7 +12,7 @@ import {BosonTypes} from "../../domain/BosonTypes.sol";
  *
  * The ERC-165 identifier for this interface is: 0x17c286ab
  */
-interface IBosonVoucher is IERC721Upgradeable {
+interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
 
     /**
      * @notice Issue a voucher to a buyer

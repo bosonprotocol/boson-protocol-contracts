@@ -57,7 +57,7 @@ describe("IBosonVoucher", function () {
 
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
     const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, gasLimit);
-    bosonVoucher = bv;
+    [bosonVoucher] = bv;
     const [beacon] = beacons;
     const [proxy] = proxies;
 

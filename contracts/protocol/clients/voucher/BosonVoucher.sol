@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import {IERC721MetadataUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 import {IERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 
 import {IBosonVoucher} from "../../../interfaces/clients/IBosonVoucher.sol";
@@ -102,7 +103,7 @@ contract BosonVoucher is IBosonVoucher, ClientBase, ERC721Upgradeable {
     function tokenURI(uint256 _exchangeId)
     public
     view
-    override
+    override(ERC721Upgradeable,IERC721MetadataUpgradeable)
     returns (string memory)
     {
         (bool exists, Offer memory offer) = getBosonOffer(_exchangeId);
