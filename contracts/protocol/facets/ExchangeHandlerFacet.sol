@@ -11,6 +11,7 @@ import { FundsLib } from "../libs/FundsLib.sol";
 
 interface Token {
     function balanceOf(address account) external view returns (uint256); //ERC-721 and ERC-20
+
     function ownerOf(uint256 _tokenId) external view returns (address); //ERC-721
 }
 
@@ -568,29 +569,23 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * @return bool true if buyer is authorized to commit
      */
-    function authorizeCommit(address _buyer, Offer storage _offer)
-    internal
-    returns (bool)
-    {
+    function authorizeCommit(address _buyer, Offer storage _offer) internal returns (bool) {
         // Allow by default
         bool allow = true;
 
         // For there to be a condition, there must be a group.
         (bool exists, uint256 groupId) = getGroupIdByOffer(_offer.id);
         if (exists) {
-
             // Get the group
-            (,Group storage group) = fetchGroup(groupId);
+            (, Group storage group) = fetchGroup(groupId);
 
             // If a condition is set, investigate, otherwise all buyers are allowed
             if (group.condition.method != EvaluationMethod.None) {
-
                 // How many times has this address committed to offers in the group?
                 uint256 commitCount = protocolLookups().conditionalCommitsByAddress[_buyer][groupId];
 
                 // Evaluate condition if buyer hasn't exhausted their allowable commits, otherwise disallow
                 if (commitCount < group.condition.maxCommits) {
-
                     // Buyer is allowed if they meet the group's condition
                     allow = (group.condition.method == EvaluationMethod.Threshold)
                         ? holdsThreshold(_buyer, group.condition)
@@ -598,16 +593,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
 
                     // Increment number of commits to the group for this address if they are allowed to commit
                     if (allow) protocolLookups().conditionalCommitsByAddress[_buyer][groupId] = ++commitCount;
-
                 } else {
-
                     // Buyer has exhausted their allowable commits
                     allow = false;
-
                 }
-
             }
-
         }
 
         return allow;
@@ -621,16 +611,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * @return bool true if buyer meets the condition
      */
-    function holdsThreshold(address _buyer, Condition storage _condition)
-    internal
-    view
-    returns (bool)
-    {
+    function holdsThreshold(address _buyer, Condition storage _condition) internal view returns (bool) {
         return
-        ((_condition.tokenType == TokenType.MultiToken)
-            ? MultiToken(_condition.tokenAddress).balanceOf(_buyer, _condition.tokenId)
-            : Token(_condition.tokenAddress).balanceOf(_buyer)
-        ) >= _condition.threshold;
+            (
+                (_condition.tokenType == TokenType.MultiToken)
+                    ? MultiToken(_condition.tokenAddress).balanceOf(_buyer, _condition.tokenId)
+                    : Token(_condition.tokenAddress).balanceOf(_buyer)
+            ) >= _condition.threshold;
     }
 
     /**
@@ -641,12 +628,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * @return bool true if buyer meets the condition
      */
-    function holdsSpecificToken(address _buyer, Condition storage _condition)
-    internal
-    view
-    returns (bool)
-    {
+    function holdsSpecificToken(address _buyer, Condition storage _condition) internal view returns (bool) {
         return (Token(_condition.tokenAddress).ownerOf(_condition.tokenId) == _buyer);
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
 }

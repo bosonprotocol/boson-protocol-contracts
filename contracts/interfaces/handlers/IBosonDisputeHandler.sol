@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {BosonTypes} from "../../domain/BosonTypes.sol";
-import {IBosonDisputeEvents} from "../events/IBosonDisputeEvents.sol";
-import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { IBosonDisputeEvents } from "../events/IBosonDisputeEvents.sol";
+import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
 
 /**
  * @title IBosonDisputeHandler
@@ -13,7 +13,6 @@ import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
  * The ERC-165 identifier for this interface is: 0x88b4cc7b
  */
 interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
-
     /**
      * @notice Raise a dispute
      *
@@ -25,7 +24,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * - exchange is not in a redeemed state
      * - the complaint is blank
      * - fulfillment period has elapsed already
-     * 
+     *
      * @param _exchangeId - the id of the associated offer
      * @param _complaint - the buyer's complaint description
      */
@@ -65,7 +64,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @param _newDisputeTimeout - new date when resolution period ends
      */
     function extendDisputeTimeout(uint256 _exchangeId, uint256 _newDisputeTimeout) external;
-    
+
     /**
      * @notice Expire the dispute and release the funds
      *
@@ -98,7 +97,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      */
     function expireDisputeBatch(uint256[] calldata _exchangeIds) external;
 
-     /**
+    /**
      * @notice Resolve a dispute by providing the information about the split. Callable by the buyer or seller, but they must provide the resolution signed by the other party
      *
      * Emits a DisputeResolved event if successful.
@@ -119,9 +118,13 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @param _sigS - s part of the signer's signature.
      * @param _sigV - v part of the signer's signature.
      */
-    function resolveDispute(uint256 _exchangeId, uint256 _buyerPercent, bytes32 _sigR,
+    function resolveDispute(
+        uint256 _exchangeId,
+        uint256 _buyerPercent,
+        bytes32 _sigR,
         bytes32 _sigS,
-        uint8 _sigV) external;
+        uint8 _sigV
+    ) external;
 
     /**
      * @notice Puts the dispute into escalated state
@@ -197,10 +200,14 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @return disputeDates - the dispute dates details {BosonTypes.DisputeDates}
      */
     function getDispute(uint256 _exchangeId)
-    external
-    view
-    returns(bool exists, BosonTypes.Dispute memory dispute, BosonTypes.DisputeDates memory disputeDates);
-       
+        external
+        view
+        returns (
+            bool exists,
+            BosonTypes.Dispute memory dispute,
+            BosonTypes.DisputeDates memory disputeDates
+        );
+
     /**
      * @notice Gets the state of a given dispute.
      *
@@ -208,7 +215,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @return exists - true if the dispute exists
      * @return state - the dispute state. See {BosonTypes.DisputeState}
      */
-    function getDisputeState(uint256 _exchangeId) external view returns(bool exists, BosonTypes.DisputeState state);
+    function getDisputeState(uint256 _exchangeId) external view returns (bool exists, BosonTypes.DisputeState state);
 
     /**
      * @notice Gets the timeout of a given dispute.
@@ -217,10 +224,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @return exists - true if the dispute exists
      * @return timeout - the end of resolution period
      */
-    function getDisputeTimeout(uint256 _exchangeId)
-    external
-    view
-    returns(bool exists, uint256 timeout);
+    function getDisputeTimeout(uint256 _exchangeId) external view returns (bool exists, uint256 timeout);
 
     /**
      * @notice Is the given dispute in a finalized state?
@@ -232,5 +236,5 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * @return exists - true if the dispute exists
      * @return isFinalized - true if the dispute is finalized
      */
-    function isDisputeFinalized(uint256 _exchangeId) external view returns(bool exists, bool isFinalized);
+    function isDisputeFinalized(uint256 _exchangeId) external view returns (bool exists, bool isFinalized);
 }

@@ -10,7 +10,8 @@ import { INVALID_SIGNATURE } from "../../domain/BosonConstants.sol";
  * @dev Provides the domain seperator and chain id.
  */
 library EIP712Lib {
-    bytes32 internal constant EIP712_DOMAIN_TYPEHASH = keccak256(bytes("EIP712Domain(string name,string version,address verifyingContract,bytes32 salt)"));
+    bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
+        keccak256(bytes("EIP712Domain(string name,string version,address verifyingContract,bytes32 salt)"));
 
     /**
      * @notice Get the domain separator
@@ -19,9 +20,16 @@ library EIP712Lib {
      * @param _version -  The version of the protocol.
      */
     function domainSeparator(string memory _name, string memory _version) internal view returns (bytes32) {
-        return keccak256(
-            abi.encode(EIP712_DOMAIN_TYPEHASH, keccak256(bytes(_name)), keccak256(bytes(_version)), address(this), getChainID())
-        );
+        return
+            keccak256(
+                abi.encode(
+                    EIP712_DOMAIN_TYPEHASH,
+                    keccak256(bytes(_name)),
+                    keccak256(bytes(_version)),
+                    address(this),
+                    getChainID()
+                )
+            );
     }
 
     /**

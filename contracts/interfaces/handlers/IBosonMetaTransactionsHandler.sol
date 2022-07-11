@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {BosonTypes} from "../../domain/BosonTypes.sol";
-import {IBosonMetaTransactionsEvents} from "../events/IBosonMetaTransactionsEvents.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { IBosonMetaTransactionsEvents } from "../events/IBosonMetaTransactionsEvents.sol";
 
 /**
  * @title IBosonMetaTransactionsHandler
@@ -12,13 +12,12 @@ import {IBosonMetaTransactionsEvents} from "../events/IBosonMetaTransactionsEven
  * The ERC-165 identifier for this interface is: 0x369a01ef
  */
 interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
-
     /**
      * @notice Checks nonce and returns true if used already.
      *
      * @param _nonce - the nonce that we want to check.
      */
-    function isUsedNonce(uint256 _nonce) external view returns(bool);
+    function isUsedNonce(uint256 _nonce) external view returns (bool);
 
     /**
      * @notice Handles the incoming meta transaction.

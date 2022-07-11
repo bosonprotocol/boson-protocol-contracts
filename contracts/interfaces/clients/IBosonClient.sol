@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
-import {IBosonClientEvents} from "../events/IBosonClientEvents.sol";
+import { IBosonClientEvents } from "../events/IBosonClientEvents.sol";
 
 /**
  * @title IBosonClient
@@ -23,7 +23,6 @@ import {IBosonClientEvents} from "../events/IBosonClientEvents.sol";
  * The ERC-165 identifier for this interface is: 0xc4c6c36b
  */
 interface IBosonClient is IBosonClientEvents {
-
     /**
      * @dev Set the implementation address
      */

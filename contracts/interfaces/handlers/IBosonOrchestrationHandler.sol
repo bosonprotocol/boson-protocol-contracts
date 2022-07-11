@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {BosonTypes} from "../../domain/BosonTypes.sol";
-import {IBosonAccountEvents} from "../events/IBosonAccountEvents.sol";
-import {IBosonGroupEvents} from "../events/IBosonGroupEvents.sol";
-import {IBosonOfferEvents} from "../events/IBosonOfferEvents.sol";
-import {IBosonTwinEvents} from "../events/IBosonTwinEvents.sol";
-import {IBosonBundleEvents} from "../events/IBosonBundleEvents.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
+import { IBosonGroupEvents } from "../events/IBosonGroupEvents.sol";
+import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
+import { IBosonTwinEvents } from "../events/IBosonTwinEvents.sol";
+import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
 
 /**
  * @title IBosonOrchestrationHandler
@@ -15,7 +15,13 @@ import {IBosonBundleEvents} from "../events/IBosonBundleEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0x7e9447cc
  */
-interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, IBosonOfferEvents, IBosonTwinEvents, IBosonBundleEvents {
+interface IBosonOrchestrationHandler is
+    IBosonAccountEvents,
+    IBosonGroupEvents,
+    IBosonOfferEvents,
+    IBosonTwinEvents,
+    IBosonBundleEvents
+{
     /**
      * @notice Creates a seller and an offer in a single transaction.
      *
@@ -46,7 +52,12 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      */
-    function createSellerAndOffer(BosonTypes.Seller calldata _seller, BosonTypes.Offer memory _offer, BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations) external;
+    function createSellerAndOffer(
+        BosonTypes.Seller calldata _seller,
+        BosonTypes.Offer memory _offer,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations
+    ) external;
 
     /**
      * @notice Takes an offer and a condition, creates an offer, then a group with that offer and the given condition.
@@ -77,12 +88,12 @@ interface IBosonOrchestrationHandler is IBosonAccountEvents, IBosonGroupEvents, 
      */
     function createOfferWithCondition(
         BosonTypes.Offer memory _offer,
-        BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations,
         BosonTypes.Condition memory _condition
-    )
-    external;
+    ) external;
 
-     /**
+    /**
      * @notice Takes an offer and group ID, creates an offer and adds it to the existing group with given id
      *
      * Emits an OfferCreated and a GroupUpdated event if successful.
@@ -113,10 +124,10 @@ s    *   - Buyer cancel penalty is greater than price
      */
     function createOfferAddToGroup(
         BosonTypes.Offer memory _offer,
-        BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _groupId
-    )
-    external;
+    ) external;
 
     /**
      * @notice Takes an offer and a twin, creates an offer, creates a twin, then a bundle with that offer and the given twin
@@ -148,10 +159,10 @@ s    *   - Buyer cancel penalty is greater than price
      */
     function createOfferAndTwinWithBundle(
         BosonTypes.Offer memory _offer,
-        BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations,
         BosonTypes.Twin memory _twin
-    )
-    external;
+    ) external;
 
     /**
      * @notice Takes an offer, a condition and a twin, creates an offer, then a group with that offer and the given condition, then creates a twin, then a bundle with that offer and the given twin
@@ -185,11 +196,11 @@ s    *   - Buyer cancel penalty is greater than price
      */
     function createOfferWithConditionAndTwinAndBundle(
         BosonTypes.Offer memory _offer,
-        BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations,
         BosonTypes.Condition memory _condition,
         BosonTypes.Twin memory _twin
-    )
-    external;
+    ) external;
 
     /**
      * @notice Takes a seller, an offer and a condition, creates a seller, creates an offer, then a group with that offer and the given condition.
@@ -227,10 +238,10 @@ s    *   - Buyer cancel penalty is greater than price
     function createSellerAndOfferWithCondition(
         BosonTypes.Seller memory _seller,
         BosonTypes.Offer memory _offer,
-        BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations,
         BosonTypes.Condition memory _condition
-    )
-    external;
+    ) external;
 
     /**
      * @notice Takes a seller, an offer and a twin, creates a seller, creates an offer, creates a twin, then a bundle with that offer and the given twin
@@ -269,10 +280,10 @@ s    *   - Buyer cancel penalty is greater than price
     function createSellerAndOfferAndTwinWithBundle(
         BosonTypes.Seller memory _seller,
         BosonTypes.Offer memory _offer,
-        BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations,
         BosonTypes.Twin memory _twin
-    )
-    external;
+    ) external;
 
     /**
      * @notice Takes a seller, an offer, a condition and a twin, creates a sellerm an offer, then a group with that offer and the given condition, then creates a twin, then a bundle with that offer and the given twin
@@ -313,9 +324,9 @@ s    *   - Buyer cancel penalty is greater than price
     function createSellerAndOfferWithConditionAndTwinAndBundle(
         BosonTypes.Seller memory _seller,
         BosonTypes.Offer memory _offer,
-        BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations,
         BosonTypes.Condition memory _condition,
         BosonTypes.Twin memory _twin
-    )
-    external;
+    ) external;
 }
