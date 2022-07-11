@@ -336,11 +336,17 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
         require(msg.sender == protocolLookups().cloneAddress[offer.sellerId], ACCESS_DENIED);
 
+        // Increase voucher counter for old buyer
+        protocolLookups().voucherCount[exchange.buyerId]--;
+
         // Fetch or create buyer
         (uint256 buyerId,) = getValidBuyer(_newBuyer);
 
         // Update buyer id for the exchange
         exchange.buyerId = buyerId;
+
+        // Increase voucher counter for new buyer
+        protocolLookups().voucherCount[buyerId]++;        
 
         // Notify watchers of state change
         emit VoucherTransferred(exchange.offerId, _exchangeId, buyerId, msgSender());
