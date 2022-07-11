@@ -1109,7 +1109,7 @@ describe("IBosonExchangeHandler", function () {
       });
     });
 
-    context.skip("👉 onVoucherTransferred()", async function () {
+    context("👉 onVoucherTransferred()", async function () {
       beforeEach(async function () {
         // Commit to offer, retrieving the event
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -1127,8 +1127,9 @@ describe("IBosonExchangeHandler", function () {
         // Get the struct
         exchangeStruct = exchange.toStruct();
 
-        // Grant CLIENT role to an EOA for testing
-        await accessController.grantRole(Role.CLIENT, fauxClient.address);
+        // Client used for tests
+        bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
       });
 
       it("should emit an VoucherTransferred event when called by CLIENT-roled address", async function () {
@@ -1136,9 +1137,9 @@ describe("IBosonExchangeHandler", function () {
         nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
         // Call onVoucherTransferred, expecting event
-        await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(exchange.id, newOwner.address))
+        await expect(bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id))
           .to.emit(exchangeHandler, "VoucherTransferred")
-          .withArgs(offerId, exchange.id, nextAccountId, fauxClient.address);
+          .withArgs(offerId, exchange.id, nextAccountId, bosonVoucher.address);
       });
 
       it("should update exchange when new buyer (with existing, active account) is passed", async function () {
@@ -1149,7 +1150,8 @@ describe("IBosonExchangeHandler", function () {
         await accountHandler.connect(newOwner).createBuyer(new Buyer("0", newOwner.address, true));
 
         // Call onVoucherTransferred
-        await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(exchange.id, newOwner.address));
+        await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
+        // await exchangeHandler.connect(fauxClient).onVoucherTransferred(exchange.id, newOwner.address);
 
         // Get the exchange
         [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
@@ -1167,7 +1169,8 @@ describe("IBosonExchangeHandler", function () {
         nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
         // Call onVoucherTransferred
-        await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(exchange.id, newOwner.address));
+        await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
+        // await exchangeHandler.connect(fauxClient).onVoucherTransferred(exchange.id, newOwner.address);
 
         // Get the exchange
         [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
@@ -1181,8 +1184,6 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("should be triggered when a voucher is transferred", async function () {
-        bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
         // Transfer voucher, expecting event
         await expect(bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id)).to.emit(
           exchangeHandler,
@@ -1274,8 +1275,7 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
-        // TODO: Include this test when AccountHandlerFacet.updateBuyer is implemented
-        it.skip("New buyer's existing account is deactivated", async function () {
+        it("New buyer's existing account is deactivated", async function () {
           // Get the next buyer id
           nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
@@ -1286,7 +1286,7 @@ describe("IBosonExchangeHandler", function () {
           await accountHandler.connect(newOwner).updateBuyer(new Buyer(nextAccountId, newOwner.address, false));
 
           // Attempt to call onVoucherTransferred, expecting revert
-          await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(id, newOwner.address)).to.revertedWith(
+          await expect(bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, id)).to.revertedWith(
             RevertReasons.MUST_BE_ACTIVE
           );
         });
