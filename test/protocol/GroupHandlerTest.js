@@ -39,7 +39,7 @@ describe("IBosonGroupHandler", function () {
   let method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
   let groupStruct;
   let offerIdsToAdd, offerIdsToRemove;
-  let disputeResolver, disputeResolverFees;
+  let disputeResolver, disputeResolverFees, disputeResolverId;
 
   before(async function () {
     // get interface Ids
@@ -159,7 +159,7 @@ describe("IBosonGroupHandler", function () {
       // create 5 offers
       for (let i = 0; i < 5; i++) {
         // Mock offer, offerDates and offerDurations
-        ({ offer, offerDates, offerDurations } = await mockOffer());
+        ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
 
         // Set unique offer properties based on index
         offer.id = `${i + 1}`;
@@ -177,7 +177,7 @@ describe("IBosonGroupHandler", function () {
         expect(offerDurations.isValid()).is.true;
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
       }
 
       // Required constructor params for Condition
@@ -310,7 +310,7 @@ describe("IBosonGroupHandler", function () {
           // create another seller and an offer
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           await accountHandler.connect(rando).createSeller(seller);
-          await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations); // creates an offer with id 6
+          await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId); // creates an offer with id 6
 
           // add offer belonging to another seller
           group.offerIds = ["2", "6"];
@@ -478,7 +478,7 @@ describe("IBosonGroupHandler", function () {
           // create another seller and an offer
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           await accountHandler.connect(rando).createSeller(seller);
-          await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations); // creates an offer with id 6
+          await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId); // creates an offer with id 6
 
           // add offer belonging to another seller
           offerIdsToAdd = ["1", "6"];
@@ -632,7 +632,7 @@ describe("IBosonGroupHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_NOT_IN_GROUP);
 
           // create an offer and add it to another group
-          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
           group.offerIds = ["6"];
           await groupHandler.connect(operator).createGroup(group);
 

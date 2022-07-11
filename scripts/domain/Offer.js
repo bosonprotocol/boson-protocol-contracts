@@ -17,7 +17,6 @@ class Offer {
             uint256 buyerCancelPenalty;
             uint256 quantityAvailable;
             address exchangeToken;
-            uint256 disputeResolverId;
             string metadataUri;
             string metadataHash;
             bool voided;
@@ -33,7 +32,6 @@ class Offer {
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
-    disputeResolverId,
     metadataUri,
     metadataHash,
     voided
@@ -46,7 +44,6 @@ class Offer {
     this.buyerCancelPenalty = buyerCancelPenalty;
     this.quantityAvailable = quantityAvailable;
     this.exchangeToken = exchangeToken;
-    this.disputeResolverId = disputeResolverId;
     this.metadataUri = metadataUri;
     this.metadataHash = metadataHash;
     this.voided = voided;
@@ -67,7 +64,6 @@ class Offer {
       buyerCancelPenalty,
       quantityAvailable,
       exchangeToken,
-      disputeResolverId,
       metadataUri,
       metadataHash,
       voided,
@@ -82,7 +78,6 @@ class Offer {
       buyerCancelPenalty,
       quantityAvailable,
       exchangeToken,
-      disputeResolverId,
       metadataUri,
       metadataHash,
       voided
@@ -103,7 +98,6 @@ class Offer {
       buyerCancelPenalty,
       quantityAvailable,
       exchangeToken,
-      disputeResolverId,
       metadataUri,
       metadataHash,
       voided;
@@ -118,7 +112,6 @@ class Offer {
       buyerCancelPenalty,
       quantityAvailable,
       exchangeToken,
-      disputeResolverId,
       metadataUri,
       metadataHash,
       voided,
@@ -133,7 +126,6 @@ class Offer {
       buyerCancelPenalty: buyerCancelPenalty.toString(),
       quantityAvailable: quantityAvailable.toString(),
       exchangeToken,
-      disputeResolverId: disputeResolverId.toString(),
       metadataUri,
       metadataHash,
       voided,
@@ -170,7 +162,6 @@ class Offer {
       this.buyerCancelPenalty,
       this.quantityAvailable,
       this.exchangeToken,
-      this.disputeResolverId,
       this.metadataUri,
       this.metadataHash,
       this.voided,
@@ -300,22 +291,6 @@ class Offer {
   }
 
   /**
-   * Is this Offer instance's disputeResolverId field valid?
-   * Must be a string representation of a big number
-   * Use "0x000.." for chain base currency, e.g., ETH
-   *
-   * @returns {boolean}
-   */
-  disputeResolverIdIsValid() {
-    let valid = false;
-    let { disputeResolverId } = this;
-    try {
-      valid = typeof disputeResolverId === "string" && typeof ethers.BigNumber.from(disputeResolverId) === "object";
-    } catch (e) {}
-    return valid;
-  }
-
-  /**
    * Is this Offer instance's metadataUri field valid?
    * Always present, must be a string
    *
@@ -372,7 +347,6 @@ class Offer {
       this.buyerCancelPenaltyIsValid() &&
       this.quantityAvailableIsValid() &&
       this.exchangeTokenIsValid() &&
-      this.disputeResolverIdIsValid() &&
       this.metadataUriIsValid() &&
       this.metadataHashIsValid() &&
       this.voidedIsValid()

@@ -18,7 +18,6 @@ describe("Offer", function () {
     protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
-    disputeResolverId,
     exchangeToken,
     metadataUri,
     metadataHash,
@@ -39,7 +38,6 @@ describe("Offer", function () {
     buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
     quantityAvailable = "1";
     exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-    disputeResolverId = "1"; // random valid address
     metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
     metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
     voided = false;
@@ -57,7 +55,6 @@ describe("Offer", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
-        disputeResolverId,
         metadataUri,
         metadataHash,
         voided
@@ -70,7 +67,6 @@ describe("Offer", function () {
       expect(offer.buyerCancelPenaltyIsValid()).is.true;
       expect(offer.quantityAvailableIsValid()).is.true;
       expect(offer.exchangeTokenIsValid()).is.true;
-      expect(offer.disputeResolverIdIsValid()).is.true;
       expect(offer.metadataUriIsValid()).is.true;
       expect(offer.metadataHashIsValid()).is.true;
       expect(offer.voidedIsValid()).is.true;
@@ -90,7 +86,6 @@ describe("Offer", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
-        disputeResolverId,
         metadataUri,
         metadataHash,
         voided
@@ -309,33 +304,6 @@ describe("Offer", function () {
       expect(offer.isValid()).is.true;
     });
 
-    it("Always present, disputeResolverId must be the string representation of a BigNumber", async function () {
-      // Invalid field value
-      offer.disputeResolverId = "zedzdeadbaby";
-      expect(offer.disputeResolverIdIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.disputeResolverId = new Date();
-      expect(offer.disputeResolverIdIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.disputeResolverId = 12;
-      expect(offer.disputeResolverIdIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Valid field value
-      offer.disputeResolverId = "0";
-      expect(offer.disputeResolverIdIsValid()).is.true;
-      expect(offer.isValid()).is.true;
-
-      // Valid field value
-      offer.disputeResolverId = "126";
-      expect(offer.disputeResolverIdIsValid()).is.true;
-      expect(offer.isValid()).is.true;
-    });
-
     it("Always present, metadataUri must be a non-empty string", async function () {
       // Invalid field value
       offer.metadataUri = 12;
@@ -408,7 +376,6 @@ describe("Offer", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
-        disputeResolverId,
         metadataUri,
         metadataHash,
         voided
@@ -425,7 +392,6 @@ describe("Offer", function () {
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
-        disputeResolverId,
         metadataUri,
         metadataHash,
         voided,
@@ -456,7 +422,6 @@ describe("Offer", function () {
           offer.buyerCancelPenalty,
           offer.quantityAvailable,
           offer.exchangeToken,
-          offer.disputeResolverId,
           offer.metadataUri,
           offer.metadataHash,
           offer.voided,

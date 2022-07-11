@@ -350,6 +350,21 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
+     * @notice Fetches the dispute resolution terms from storage by offer id
+     *
+     * @param _offerId - the id of the offer
+     * @return disputeResolutionTerms - the details about the dispute resolution terms. See {BosonTypes.DisputeResolutionTerms}
+     */
+    function fetchDisputeResolutionTerms(uint256 _offerId)
+        internal
+        view
+        returns (BosonTypes.DisputeResolutionTerms storage disputeResolutionTerms)
+    {
+        // Get the disputeResolutionTerms's slot
+        disputeResolutionTerms = protocolEntities().disputeResolutionTerms[_offerId];
+    }
+
+    /**
      * @notice Fetches a given group from storage by id
      *
      * @param _groupId - the id of the group

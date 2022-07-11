@@ -1111,7 +1111,6 @@ describe("IBosonAccountHandler", function () {
 
           // Mock the offer
           let { offer, offerDates, offerDurations } = await mockOffer();
-          offer.disputeResolverId = disputeResolver.id;
 
           // Check if domains are valid
           expect(offer.isValid()).is.true;
@@ -1119,7 +1118,7 @@ describe("IBosonAccountHandler", function () {
           expect(offerDurations.isValid()).is.true;
 
           // Create the offer
-          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolver.id);
 
           offerId = offer.id;
           const sellerDeposit = offer.sellerDeposit;
