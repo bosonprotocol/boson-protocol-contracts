@@ -47,30 +47,20 @@ contract BosonVoucherBeacon is IBosonVoucherBeacon, BosonConstants {
      * @dev Returns the address to which the fallback function
      * and {_fallback} should delegate.
      */
-    function implementation()
-    external
-    view
-    override
-    returns (address) {
+    function implementation() external view override returns (address) {
         // Return the current implementation address
         return impl;
-
     }
 
     /**
      * @dev Set the implementation address
      */
-    function setImplementation(address _implementation)
-    external
-    onlyRole(UPGRADER)
-    override
-    {
+    function setImplementation(address _implementation) external override onlyRole(UPGRADER) {
         // Store the implementation address
         impl = _implementation;
 
         // Notify watchers of state change
         emit Upgraded(_implementation, msg.sender);
-
     }
 
     /**
@@ -80,11 +70,7 @@ contract BosonVoucherBeacon is IBosonVoucherBeacon, BosonConstants {
      *
      * @param _accessController - the Boson Protocol AccessController address
      */
-    function setAccessController(address _accessController)
-    external
-    onlyRole(UPGRADER)
-    override
-    {
+    function setAccessController(address _accessController) external override onlyRole(UPGRADER) {
         // Store the AccessController address
         accessController = IAccessControlUpgradeable(_accessController);
 
@@ -97,12 +83,7 @@ contract BosonVoucherBeacon is IBosonVoucherBeacon, BosonConstants {
      *
      * @return the address of the AccessController contract
      */
-    function getAccessController()
-    public
-    view
-    override
-    returns(IAccessControlUpgradeable)
-    {
+    function getAccessController() public view override returns (IAccessControlUpgradeable) {
         // Return the current AccessController address
         return accessController;
     }
@@ -114,11 +95,7 @@ contract BosonVoucherBeacon is IBosonVoucherBeacon, BosonConstants {
      *
      * @param _protocolAddress - the ProtocolDiamond address
      */
-    function setProtocolAddress(address _protocolAddress)
-    external
-    onlyRole(UPGRADER)
-    override
-    {
+    function setProtocolAddress(address _protocolAddress) external override onlyRole(UPGRADER) {
         // Store the ProtocolDiamond address
         protocolDiamond = _protocolAddress;
 
@@ -131,14 +108,8 @@ contract BosonVoucherBeacon is IBosonVoucherBeacon, BosonConstants {
      *
      * @return the address of the ProtocolDiamond contract
      */
-    function getProtocolAddress()
-    public
-    override
-    view
-    returns(address)
-    {
+    function getProtocolAddress() public view override returns (address) {
         // Return the current ProtocolDiamond address
         return protocolDiamond;
     }
-
 }

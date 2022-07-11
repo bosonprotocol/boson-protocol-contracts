@@ -12,14 +12,10 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
  * @notice Handles groups within the protocol
  */
 contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
-
     /**
      * @notice Facet Initializer
      */
-    function initialize()
-    public
-    onlyUnInitialized(type(IBosonGroupHandler).interfaceId)
-    {
+    function initialize() public onlyUnInitialized(type(IBosonGroupHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonGroupHandler).interfaceId);
     }
 
@@ -30,7 +26,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      *
      * Reverts if:
      *
-     * - caller is not an operator 
+     * - caller is not an operator
      * - any of offers belongs to different seller
      * - any of offers does not exist
      * - offer exists in a different group
@@ -38,12 +34,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      *
      * @param _group - the fully populated struct with group id set to 0x0
      */
-    function createGroup(
-        Group memory _group
-    )
-    external
-    override
-    {
+    function createGroup(Group memory _group) external override {
         createGroupInternal(_group);
     }
 
@@ -53,7 +44,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * Emits a GroupUpdated event if successful.
      *
      * Reverts if:
-     * 
+     *
      * - caller is not the seller
      * - offer ids is an empty list
      * - number of offers exceeds maximum allowed number per group
@@ -61,18 +52,12 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * - any of offers belongs to different seller
      * - any of offers does not exist
      * - offer exists in a different group
-     * - offer ids contains duplicated offers 
+     * - offer ids contains duplicated offers
      *
      * @param _groupId  - the id of the group to be updated
      * @param _offerIds - array of offer ids to be added to the group
      */
-    function addOffersToGroup(
-        uint256 _groupId,
-        uint256[] calldata _offerIds
-    )
-    external
-    override
-    {
+    function addOffersToGroup(uint256 _groupId, uint256[] calldata _offerIds) external override {
         addOffersToGroupInternal(_groupId, _offerIds);
     }
 
@@ -82,7 +67,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * Emits a GroupUpdated event if successful.
      *
      * Reverts if:
-     * 
+     *
      * - caller is not the seller
      * - offer ids is an empty list
      * - number of offers exceeds maximum allowed number per group
@@ -92,19 +77,13 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @param _groupId  - the id of the group to be updated
      * @param _offerIds - array of offer ids to be removed to the group
      */
-    function removeOffersFromGroup(
-        uint256 _groupId,
-        uint256[] calldata _offerIds
-    )
-    external
-    override
-    {
+    function removeOffersFromGroup(uint256 _groupId, uint256[] calldata _offerIds) external override {
         // check if group can be updated
         (uint256 sellerId, Group storage group) = preUpdateChecks(_groupId, _offerIds);
 
-        for (uint i = 0; i < _offerIds.length; i++) {
-            uint offerId = _offerIds[i];
-            
+        for (uint256 i = 0; i < _offerIds.length; i++) {
+            uint256 offerId = _offerIds[i];
+
             // Offer should belong to the group
             (, uint256 groupId) = getGroupIdByOffer(offerId);
             require(_groupId == groupId, OFFER_NOT_IN_GROUP);
@@ -115,45 +94,40 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
             // remove from the group struct
             uint256 offerIdsLength = group.offerIds.length;
 
-            for (uint j = 0; j < offerIdsLength; j++) {
-                if (group.offerIds[j] == offerId) {                    
+            for (uint256 j = 0; j < offerIdsLength; j++) {
+                if (group.offerIds[j] == offerId) {
                     group.offerIds[j] = group.offerIds[offerIdsLength - 1];
                     group.offerIds.pop();
                     break;
                 }
             }
         }
-             
+
         // Notify watchers of state change
         emit GroupUpdated(_groupId, sellerId, group, msgSender());
     }
 
-      /**
+    /**
      * @notice Sets the condition of an existing group.
      *
      * Emits a GroupUpdated event if successful.
      *
      * Reverts if:
-     * 
+     *
      * - condition includes invalid combination of fields
      * - seller does not match caller
      * - group does not exist
      *
      * @param _groupId - the id of the group to set the condition
      * @param _condition - fully populated condition struct
-     * 
+     *
      */
-    function setGroupCondition(
-        uint256 _groupId,
-        Condition calldata _condition
-    )
-    external
-    override {
+    function setGroupCondition(uint256 _groupId, Condition calldata _condition) external override {
         // validate condition parameters
         require(validateCondition(_condition), INVALID_CONDITION_PARAMETERS);
-        
+
         // verify group exists
-        (bool exists,Group storage group) = fetchGroup(_groupId);
+        (bool exists, Group storage group) = fetchGroup(_groupId);
         require(exists, NO_SUCH_GROUP);
 
         // Get seller id, we assume seller id exists if offer exists
@@ -163,7 +137,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         require(sellerId == group.sellerId, NOT_OPERATOR);
 
         group.condition = _condition;
-      
+
         // Notify watchers of state change
         emit GroupUpdated(group.id, sellerId, group, msgSender());
     }
@@ -175,28 +149,18 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @return exists - the group was found
      * @return group - the group details. See {BosonTypes.Group}
      */
-    function getGroup(uint256 _groupId)
-    external
-    override
-    view
-    returns(bool exists, Group memory group) {
+    function getGroup(uint256 _groupId) external view override returns (bool exists, Group memory group) {
         return fetchGroup(_groupId);
     }
 
-     /**
+    /**
      * @notice Gets the next group id.
      *
      * Does not increment the counter.
      *
      * @return nextGroupId - the next group id
      */
-    function getNextGroupId()
-    public
-    override
-    view
-    returns(uint256 nextGroupId) {
-
+    function getNextGroupId() public view override returns (uint256 nextGroupId) {
         nextGroupId = protocolCounters().nextGroupId;
-
     }
 }

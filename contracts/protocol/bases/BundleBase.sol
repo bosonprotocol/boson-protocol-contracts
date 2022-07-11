@@ -43,7 +43,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         // Get the next bundle and increment the counter
         uint256 bundleId = protocolCounters().nextBundleId++;
 
-        for (uint i = 0; i < _bundle.offerIds.length; i++) {
+        for (uint256 i = 0; i < _bundle.offerIds.length; i++) {
             // make sure all offers exist and belong to the seller
             getValidOffer(_bundle.offerIds[i]);
 
@@ -58,14 +58,14 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             protocolLookups().bundleIdByOffer[_bundle.offerIds[i]] = bundleId;
         }
 
-        for (uint i = 0; i < _bundle.twinIds.length; i++) {
+        for (uint256 i = 0; i < _bundle.twinIds.length; i++) {
             // make sure all twins exist and belong to the seller
             getValidTwin(_bundle.twinIds[i]);
 
             // A twin can belong to multiple bundles
             (bool bundlesForTwinExist, uint256[] memory bundleIds) = fetchBundleIdsByTwin(_bundle.twinIds[i]);
             if (bundlesForTwinExist) {
-                for (uint j = 0; j < bundleIds.length; j++) {
+                for (uint256 j = 0; j < bundleIds.length; j++) {
                     require((bundleIds[j] != bundleId), TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE);
                 }
             }

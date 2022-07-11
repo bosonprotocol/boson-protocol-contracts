@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import {IERC721MetadataUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
-import {IERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
+import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
+import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 
-import {IBosonVoucher} from "../../../interfaces/clients/IBosonVoucher.sol";
-import {IBosonClient} from "../../../interfaces/clients/IBosonClient.sol";
-import {ClientBase} from "../../bases/ClientBase.sol";
+import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
+import { IBosonClient } from "../../../interfaces/clients/IBosonClient.sol";
+import { ClientBase } from "../../bases/ClientBase.sol";
 
 /**
  * @title BosonVoucher
@@ -18,15 +18,13 @@ import {ClientBase} from "../../bases/ClientBase.sol";
  * - Newly minted voucher NFTs are automatically transferred to the buyer
  */
 contract BosonVoucher is IBosonVoucher, ClientBase, ERC721Upgradeable {
-
     string internal constant VOUCHER_NAME = "Boson Voucher";
     string internal constant VOUCHER_SYMBOL = "BOSON_VOUCHER";
 
     /**
      * @notice Initializer
      */
-    function initialize()
-    public {
+    function initialize() public {
         __ERC721_init_unchained(VOUCHER_NAME, VOUCHER_SYMBOL);
     }
 
@@ -39,11 +37,7 @@ contract BosonVoucher is IBosonVoucher, ClientBase, ERC721Upgradeable {
      * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
      * @param _buyer - the buyer of the vouchers
      */
-    function issueVoucher(uint256 _exchangeId, Buyer calldata _buyer)
-    external
-    override
-    onlyRole(PROTOCOL)
-    {
+    function issueVoucher(uint256 _exchangeId, Buyer calldata _buyer) external override onlyRole(PROTOCOL) {
         // Mint the voucher, sending it to the buyer
         _mint(_buyer.wallet, _exchangeId);
     }
@@ -55,11 +49,7 @@ contract BosonVoucher is IBosonVoucher, ClientBase, ERC721Upgradeable {
      *
      * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
      */
-    function burnVoucher(uint256 _exchangeId)
-    external
-    override
-    onlyRole(PROTOCOL)
-    {
+    function burnVoucher(uint256 _exchangeId) external override onlyRole(PROTOCOL) {
         _burn(_exchangeId);
     }
 
@@ -77,16 +67,14 @@ contract BosonVoucher is IBosonVoucher, ClientBase, ERC721Upgradeable {
      * to respond.
      */
     function supportsInterface(bytes4 interfaceId)
-    public
-    view
-    override(ERC721Upgradeable, IERC165Upgradeable)
-    returns (bool)
+        public
+        view
+        override(ERC721Upgradeable, IERC165Upgradeable)
+        returns (bool)
     {
-        return (
-            interfaceId == type(IBosonVoucher).interfaceId ||
+        return (interfaceId == type(IBosonVoucher).interfaceId ||
             interfaceId == type(IBosonClient).interfaceId ||
-            super.supportsInterface(interfaceId)
-        );
+            super.supportsInterface(interfaceId));
     }
 
     /**
@@ -101,10 +89,10 @@ contract BosonVoucher is IBosonVoucher, ClientBase, ERC721Upgradeable {
      * @return the uri for the associated offer's off-chain metadata (blank if not found)
      */
     function tokenURI(uint256 _exchangeId)
-    public
-    view
-    override(ERC721Upgradeable,IERC721MetadataUpgradeable)
-    returns (string memory)
+        public
+        view
+        override(ERC721Upgradeable, IERC721MetadataUpgradeable)
+        returns (string memory)
     {
         (bool exists, Offer memory offer) = getBosonOffer(_exchangeId);
         return exists ? offer.metadataUri : "";
@@ -134,5 +122,4 @@ contract BosonVoucher is IBosonVoucher, ClientBase, ERC721Upgradeable {
             onVoucherTransferred(tokenId, payable(to));
         }
     }
-
 }

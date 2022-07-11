@@ -20,12 +20,11 @@ import { Proxy } from "./Proxy.sol";
  * future upgradability.
  */
 contract ClientProxy is Proxy {
-   
     /**
      * @dev Initialize the contract after the deployment.
      * This function is callable only once
      */
-    function initialize(address _beaconAddress) external initializer() {
+    function initialize(address _beaconAddress) external initializer {
         // set the beacon address
         ClientLib.getBeaconSlot().value = _beaconAddress;
     }
@@ -34,7 +33,6 @@ contract ClientProxy is Proxy {
      * @dev Indicates that the contract has been initialized.
      */
     bool private _initialized;
-
 
     modifier initializer() {
         require(!_initialized, "Initializable: contract is already initialized");
@@ -47,13 +45,8 @@ contract ClientProxy is Proxy {
      * and {_fallback} should delegate.
      * Implementation address is supplied by the beacon
      */
-    function _implementation()
-    internal
-    view
-    override
-    returns (address) {
+    function _implementation() internal view override returns (address) {
         // Return the current implementation address
         return IBosonVoucherBeacon(ClientLib._beacon()).implementation();
     }
-
 }

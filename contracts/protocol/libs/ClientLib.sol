@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IAccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
+import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
 import { IBosonVoucherBeacon } from "../../interfaces/clients/IBosonVoucherBeacon.sol";
 
 /**
@@ -12,7 +12,6 @@ import { IBosonVoucherBeacon } from "../../interfaces/clients/IBosonVoucherBeaco
  * - Defines hasRole function
  */
 library ClientLib {
-
     /**
      * @dev The storage slot of the UpgradeableBeacon contract which defines the implementation for this proxy.
      * This is bytes32(uint256(keccak256('eip1967.proxy.beacon')) - 1)) and is validated in the constructor.
@@ -54,5 +53,4 @@ library ClientLib {
         // forward the check to accessController
         return accessController.hasRole(role, msg.sender);
     }
-
 }

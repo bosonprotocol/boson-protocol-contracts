@@ -13,6 +13,7 @@ const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
+const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const TokenType = require("../../scripts/domain/TokenType");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -58,7 +59,7 @@ describe("IBosonOrchestrationHandler", function () {
   let offer, nextOfferId, support, exists;
   let nextAccountId;
   let seller, sellerStruct, active;
-  let disputeResolver, disputeResolverFees;
+  let disputeResolver, disputeResolverFees, disputeResolverId;
   let id, sellerId;
   let offerDates, offerDatesStruct;
   let offerDurations, offerDurationsStruct;
@@ -70,6 +71,7 @@ describe("IBosonOrchestrationHandler", function () {
   let bundle, bundleStruct, bundleId, nextBundleId;
   let bosonToken;
   let foreign721, foreign1155, fallbackError;
+  let disputeResolutionTerms, disputeResolutionTermsStruct;
 
   before(async function () {
     // get interface Ids
@@ -218,8 +220,8 @@ describe("IBosonOrchestrationHandler", function () {
       nextOfferId = "1";
 
       // Mock offer, offerDates and offerDurations
-      ({ offer, offerDates, offerDurations } = await mockOffer());
-      offer.disputeResolverId = "1";
+      ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+      disputeResolverId = "1";
       offer.sellerId = "2";
       offerDates.validFrom = ethers.BigNumber.from(Date.now()).toString();
       offerDates.validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString();
@@ -233,13 +235,19 @@ describe("IBosonOrchestrationHandler", function () {
       offerStruct = offer.toStruct();
       offerDatesStruct = offerDates.toStruct();
       offerDurationsStruct = offerDurations.toStruct();
+
+      // Set despute resolution terms
+      disputeResolutionTerms = new DisputeResolutionTerms(disputeResolverId, disputeResolver.escalationResponsePeriod);
+      disputeResolutionTermsStruct = disputeResolutionTerms.toStruct();
     });
 
     context("👉 createSellerAndOffer()", async function () {
       it("should emit a SellerCreated and OfferCreated events", async function () {
         // Create a seller and an offer, testing for the event
         await expect(
-          orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+          orchestrationHandler
+            .connect(operator)
+            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(
@@ -249,12 +257,22 @@ describe("IBosonOrchestrationHandler", function () {
             operator.address
           )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("should update state", async function () {
         // Create a seller and an offer
-        await orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations);
+        await orchestrationHandler
+          .connect(operator)
+          .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId);
 
         // Get the seller as a struct
         [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
@@ -268,12 +286,15 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+          .connect(rando)
+          .getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
         let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
         let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(offer)) {
@@ -285,6 +306,9 @@ describe("IBosonOrchestrationHandler", function () {
         for ([key, value] of Object.entries(offerDurations)) {
           expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
         }
+        for ([key, value] of Object.entries(disputeResolutionTerms)) {
+          expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
+        }
       });
 
       it("should ignore any provided id and assign the next available", async function () {
@@ -293,7 +317,9 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer, testing for the event
         await expect(
-          orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+          orchestrationHandler
+            .connect(operator)
+            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(
@@ -303,7 +329,15 @@ describe("IBosonOrchestrationHandler", function () {
             operator.address
           )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, offer.sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // wrong seller id should not exist
         [exists] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -328,10 +362,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer, testing for the event
         await expect(
-          orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+          orchestrationHandler
+            .connect(operator)
+            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("should ignore any provided protocol fee and calculate the correct one", async function () {
@@ -340,10 +384,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer, testing for the event
         await expect(
-          orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+          orchestrationHandler
+            .connect(operator)
+            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("If exchange token is $BOSON, fee should be flat boson fee", async function () {
@@ -353,23 +407,44 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer, testing for the event
         await expect(
-          orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+          orchestrationHandler
+            .connect(operator)
+            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("For absolute zero offers, dispute resolver can be unspecified", async function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
-        offer.disputeResolverId = "0";
+        disputeResolverId = "0";
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
 
         // Create a seller and an offer, testing for the event
         await expect(
-          orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+          orchestrationHandler
+            .connect(operator)
+            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("Should allow creation of an offer with unlimited supply", async function () {
@@ -378,10 +453,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create a seller and an offer, testing for the event
         await expect(
-          orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+          orchestrationHandler
+            .connect(operator)
+            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       context("💔 Revert Reasons", async function () {
@@ -390,7 +475,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
 
@@ -399,7 +486,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
 
           seller.clerk = clerk.address;
@@ -407,7 +496,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
@@ -420,7 +511,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller with non-unique operator, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
           seller.admin = admin.address;
@@ -428,7 +521,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller with non-unique admin, expecting revert
           await expect(
-            orchestrationHandler.connect(other1).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(other1)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
           seller.clerk = clerk.address;
@@ -436,14 +531,18 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller with non-unique clerk, expecting revert
           await expect(
-            orchestrationHandler.connect(other1).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(other1)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
 
         it("Caller is not operator the specified in seller", async function () {
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(rando).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(rando)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
@@ -454,7 +553,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -463,7 +564,9 @@ describe("IBosonOrchestrationHandler", function () {
           offerDates.validUntil = ethers.BigNumber.from(Date.now() - oneMonth * 6).toString(); // 6 months ago
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -473,7 +576,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
         });
 
@@ -483,7 +588,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
@@ -494,7 +601,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
@@ -505,7 +614,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
@@ -516,7 +627,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
@@ -528,7 +641,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
@@ -538,7 +653,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
         });
 
@@ -548,7 +665,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
         });
 
@@ -558,28 +677,79 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.INVALID_QUANTITY_AVAILABLE);
         });
 
         it("Dispute resolver wallet is not registered", async function () {
           // Set some address that is not registered as a dispute resolver
-          offer.disputeResolverId = "16";
+          disputeResolverId = "16";
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("Dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+
+          // Set some address that is not registered as a dispute resolver
+          disputeResolverId = ++nextAccountId;
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
         it("For absolute zero offer, specified dispute resolver is not registered", async function () {
           // Prepare an absolute zero offer, but specify dispute resolver
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
-          offer.disputeResolverId = "16";
+          disputeResolverId = "16";
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createSellerAndOffer(seller, offer, offerDates, offerDurations)
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("For absolute zero offer, specified dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+
+          // Prepare an absolute zero offer, but specify dispute resolver
+          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
+          disputeResolverId = ++nextAccountId;
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
       });
@@ -623,12 +793,20 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferWithCondition(offer, offerDates, offerDurations, condition);
+          .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition);
 
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -649,15 +827,18 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition
         await orchestrationHandler
           .connect(operator)
-          .createOfferWithCondition(offer, offerDates, offerDurations, condition);
+          .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition);
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+          .connect(rando)
+          .getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
         let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
         let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(offer)) {
@@ -668,6 +849,9 @@ describe("IBosonOrchestrationHandler", function () {
         }
         for ([key, value] of Object.entries(offerDurations)) {
           expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(disputeResolutionTerms)) {
+          expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the group as a struct
@@ -688,12 +872,20 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferWithCondition(offer, offerDates, offerDurations, condition);
+          .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition);
 
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -716,12 +908,20 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferWithCondition(offer, offerDates, offerDurations, condition);
+          .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition);
 
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -743,10 +943,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition, testing for the events
         await expect(
-          orchestrationHandler.connect(operator).createOfferWithCondition(offer, offerDates, offerDurations, condition)
+          orchestrationHandler
+            .connect(operator)
+            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("If exchange token is $BOSON, fee should be flat boson fee", async function () {
@@ -756,23 +966,44 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition, testing for the events
         await expect(
-          orchestrationHandler.connect(operator).createOfferWithCondition(offer, offerDates, offerDurations, condition)
+          orchestrationHandler
+            .connect(operator)
+            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("For absolute zero offers, dispute resolver can be unspecified", async function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
-        offer.disputeResolverId = "0";
+        disputeResolverId = "0";
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
 
         // Create an offer with condition, testing for the events
         await expect(
-          orchestrationHandler.connect(operator).createOfferWithCondition(offer, offerDates, offerDurations, condition)
+          orchestrationHandler
+            .connect(operator)
+            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("Should allow creation of an offer with unlimited supply", async function () {
@@ -781,17 +1012,29 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer with condition, testing for the events
         await expect(
-          orchestrationHandler.connect(operator).createOfferWithCondition(offer, offerDates, offerDurations, condition)
+          orchestrationHandler
+            .connect(operator)
+            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to create an offer with condition, expecting revert
           await expect(
-            orchestrationHandler.connect(rando).createOfferWithCondition(offer, offerDates, offerDurations, condition)
+            orchestrationHandler
+              .connect(rando)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
           ).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
@@ -804,7 +1047,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -816,7 +1059,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -828,7 +1071,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
           ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
         });
 
@@ -840,7 +1083,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
@@ -853,7 +1096,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
@@ -866,7 +1109,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
@@ -879,7 +1122,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
@@ -893,7 +1136,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
@@ -905,7 +1148,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
           ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
         });
 
@@ -917,7 +1160,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
         });
 
@@ -929,32 +1172,77 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
           ).to.revertedWith(RevertReasons.INVALID_QUANTITY_AVAILABLE);
         });
 
         it("Dispute resolver wallet is not registered", async function () {
           // Set some address that is not registered as a dispute resolver
-          offer.disputeResolverId = "16";
+          disputeResolverId = "16";
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("Dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+
+          // Set some address that is not registered as a dispute resolver
+          disputeResolverId = ++nextAccountId;
+
+          // Attempt to create an offer with condition, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
         it("For absolute zero offer, specified dispute resolver is not registered", async function () {
           // Prepare an absolute zero offer, but specify dispute resolver
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
-          offer.disputeResolverId = "16";
+          disputeResolverId = "16";
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("For absolute zero offer, specified dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+
+          // Prepare an absolute zero offer, but specify dispute resolver
+          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
+          disputeResolverId = ++nextAccountId;
+
+          // Attempt to create an offer with condition, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -967,7 +1255,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
 
@@ -981,7 +1269,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
 
@@ -995,7 +1283,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, condition)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
           ).to.revertedWith(RevertReasons.INVALID_CONDITION_PARAMETERS);
         });
       });
@@ -1012,18 +1300,19 @@ describe("IBosonOrchestrationHandler", function () {
         // create 3 offers
         for (let i = 0; i < 3; i++) {
           // Mock offer, offerDates and offerDurations
-          ({ offer, offerDates, offerDurations } = await mockOffer());
+          ({ offer, offerDates, offerDurations, disputeResolverId, disputeResolverId } = await mockOffer());
           offer.id = `${i + 1}`;
           offer.price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
           offer.sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
           offer.protocolFee = calculateProtocolFee(offer.price, protocolFeePercentage);
           offer.buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
           offer.quantityAvailable = `${(i + 1) * 2}`;
-          offer.disputeResolverId = "1";
           offer.sellerId = "2"; // "1" is dispute resolver
 
           offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
           offerDates.validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
+
+          disputeResolverId = "1";
 
           // Check if domains are valid
           expect(offer.isValid()).is.true;
@@ -1031,7 +1320,7 @@ describe("IBosonOrchestrationHandler", function () {
           expect(offerDurations.isValid()).is.true;
 
           // Create the offer
-          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
 
           nextOfferId++;
         }
@@ -1074,12 +1363,20 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, add it to the group, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId);
+          .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId);
 
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1099,15 +1396,18 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, add it to the group
         await orchestrationHandler
           .connect(operator)
-          .createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId);
+          .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId);
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+          .connect(rando)
+          .getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
         let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
         let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(offer)) {
@@ -1118,6 +1418,9 @@ describe("IBosonOrchestrationHandler", function () {
         }
         for ([key, value] of Object.entries(offerDurations)) {
           expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(disputeResolutionTerms)) {
+          expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the group as a struct
@@ -1138,12 +1441,20 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, add it to the group, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId);
+          .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId);
 
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1166,12 +1477,20 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, add it to the group, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId);
+          .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId);
 
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1193,10 +1512,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, add it to the group, testing for the events
         await expect(
-          orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+          orchestrationHandler
+            .connect(operator)
+            .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("If exchange token is $BOSON, fee should be flat boson fee", async function () {
@@ -1206,23 +1535,44 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, add it to the group, testing for the events
         await expect(
-          orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+          orchestrationHandler
+            .connect(operator)
+            .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("For absolute zero offers, dispute resolver can be unspecified", async function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
-        offer.disputeResolverId = "0";
+        disputeResolverId = "0";
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
 
         // Create an offer, add it to the group, testing for the events
         await expect(
-          orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+          orchestrationHandler
+            .connect(operator)
+            .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("Should allow creation of an offer with unlimited supply", async function () {
@@ -1231,17 +1581,29 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, add it to the group, testing for the events
         await expect(
-          orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+          orchestrationHandler
+            .connect(operator)
+            .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(rando).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+            orchestrationHandler
+              .connect(rando)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
           ).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
@@ -1252,7 +1614,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -1262,7 +1626,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -1272,7 +1638,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
           ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
         });
 
@@ -1282,7 +1650,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
@@ -1295,7 +1665,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
@@ -1306,7 +1678,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
@@ -1319,7 +1693,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
@@ -1331,7 +1707,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
@@ -1341,7 +1719,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
           ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
         });
 
@@ -1351,7 +1731,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
         });
 
@@ -1361,28 +1743,79 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
           ).to.revertedWith(RevertReasons.INVALID_QUANTITY_AVAILABLE);
         });
 
         it("Dispute resolver wallet is not registered", async function () {
           // Set some address that is not registered as a dispute resolver
-          offer.disputeResolverId = "16";
+          disputeResolverId = "16";
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("Dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+
+          // Set some address that is not registered as a dispute resolver
+          disputeResolverId = ++nextAccountId;
+
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
         it("For absolute zero offer, specified dispute resolver is not registered", async function () {
           // Prepare an absolute zero offer, but specify dispute resolver
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
-          offer.disputeResolverId = "16";
+          disputeResolverId = "16";
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("For absolute zero offer, specified dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+
+          // Prepare an absolute zero offer, but specify dispute resolver
+          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
+          disputeResolverId = ++nextAccountId;
+
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -1394,7 +1827,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, invalidGroupId)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, invalidGroupId)
           ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
 
           // Set invalid id
@@ -1404,14 +1837,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, invalidGroupId)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, invalidGroupId)
           ).to.revertedWith(RevertReasons.NO_SUCH_GROUP);
         });
 
         it("Caller is not the seller of the group", async function () {
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
-            orchestrationHandler.connect(rando).createOfferAddToGroup(offer, offerDates, offerDurations, nextGroupId)
+            orchestrationHandler
+              .connect(rando)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
           ).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
       });
@@ -1454,12 +1889,20 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, a twin and a bundle, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin);
+          .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin);
 
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1489,15 +1932,18 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, a twin and a bundle
         await orchestrationHandler
           .connect(operator)
-          .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin);
+          .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin);
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+          .connect(rando)
+          .getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
         let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
         let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(offer)) {
@@ -1508,6 +1954,9 @@ describe("IBosonOrchestrationHandler", function () {
         }
         for ([key, value] of Object.entries(offerDurations)) {
           expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(disputeResolutionTerms)) {
+          expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the twin as a struct
@@ -1540,12 +1989,20 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, a twin and a bundle, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin);
+          .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin);
 
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1583,12 +2040,20 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer, a twin and a bundle, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin);
+          .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin);
 
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1624,10 +2089,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
-          orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+          orchestrationHandler
+            .connect(operator)
+            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("If exchange token is $BOSON, fee should be flat boson fee", async function () {
@@ -1637,23 +2112,44 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
-          orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+          orchestrationHandler
+            .connect(operator)
+            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("For absolute zero offers, dispute resolver can be unspecified", async function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
-        offer.disputeResolverId = "0";
+        disputeResolverId = "0";
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
-          orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+          orchestrationHandler
+            .connect(operator)
+            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("Should allow creation of an offer with unlimited supply", async function () {
@@ -1662,17 +2158,29 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
-          orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+          orchestrationHandler
+            .connect(operator)
+            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(rando).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+            orchestrationHandler
+              .connect(rando)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
@@ -1683,7 +2191,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -1693,7 +2203,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -1703,7 +2215,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
         });
 
@@ -1713,7 +2227,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
@@ -1724,7 +2240,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
@@ -1735,7 +2253,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
@@ -1746,7 +2266,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
@@ -1758,7 +2280,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
@@ -1768,7 +2292,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
         });
 
@@ -1778,7 +2304,9 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
         });
 
@@ -1788,28 +2316,79 @@ describe("IBosonOrchestrationHandler", function () {
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.INVALID_QUANTITY_AVAILABLE);
         });
 
         it("Dispute resolver wallet is not registered", async function () {
           // Set some address that is not registered as a dispute resolver
-          offer.disputeResolverId = "16";
+          disputeResolverId = "16";
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("Dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+
+          // Set some address that is not registered as a dispute resolver
+          disputeResolverId = ++nextAccountId;
+
+          // Attempt to create an offer, twin and bundle, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
         it("For absolute zero offer, specified dispute resolver is not registered", async function () {
           // Prepare an absolute zero offer, but specify dispute resolver
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
-          offer.disputeResolverId = "16";
+          disputeResolverId = "16";
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("For absolute zero offer, specified dispute resolver is not active", async function () {
+          // create another dispute resolver, but don't activate it
+          disputeResolver = await mockDisputeResolver(
+            rando.address,
+            rando.address,
+            rando.address,
+            rando.address,
+            false
+          );
+          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+
+          // Prepare an absolute zero offer, but specify dispute resolver
+          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
+          disputeResolverId = ++nextAccountId;
+
+          // Attempt to create an offer, twin and bundle, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -1821,7 +2400,9 @@ describe("IBosonOrchestrationHandler", function () {
           twin.tokenAddress = bosonToken.address;
 
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
         });
 
@@ -1830,7 +2411,9 @@ describe("IBosonOrchestrationHandler", function () {
           twin.tokenAddress = foreign721.address;
 
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
         });
 
@@ -1839,7 +2422,9 @@ describe("IBosonOrchestrationHandler", function () {
           twin.tokenAddress = foreign1155.address;
 
           await expect(
-            orchestrationHandler.connect(operator).createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.NO_TRANSFER_APPROVED);
         });
 
@@ -1850,7 +2435,7 @@ describe("IBosonOrchestrationHandler", function () {
             await expect(
               orchestrationHandler
                 .connect(operator)
-                .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+                .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
             ).to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
           });
 
@@ -1860,7 +2445,7 @@ describe("IBosonOrchestrationHandler", function () {
             await expect(
               orchestrationHandler
                 .connect(operator)
-                .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+                .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
             ).to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
           });
 
@@ -1870,7 +2455,7 @@ describe("IBosonOrchestrationHandler", function () {
             await expect(
               orchestrationHandler
                 .connect(operator)
-                .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, twin)
+                .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
             ).to.be.revertedWith(RevertReasons.UNSUPPORTED_TOKEN);
           });
         });
@@ -1940,12 +2525,27 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, twin and bundle
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferWithConditionAndTwinAndBundle(offer, offerDates, offerDurations, condition, twin);
+          .createOfferWithConditionAndTwinAndBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            condition,
+            twin
+          );
 
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -1985,15 +2585,25 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, twin and bundle
         await orchestrationHandler
           .connect(operator)
-          .createOfferWithConditionAndTwinAndBundle(offer, offerDates, offerDurations, condition, twin);
+          .createOfferWithConditionAndTwinAndBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            condition,
+            twin
+          );
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+          .connect(rando)
+          .getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
         let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
         let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(offer)) {
@@ -2004,6 +2614,9 @@ describe("IBosonOrchestrationHandler", function () {
         }
         for ([key, value] of Object.entries(offerDurations)) {
           expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(disputeResolutionTerms)) {
+          expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the group as a struct
@@ -2047,12 +2660,27 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, twin and bundle
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferWithConditionAndTwinAndBundle(offer, offerDates, offerDurations, condition, twin);
+          .createOfferWithConditionAndTwinAndBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            condition,
+            twin
+          );
 
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2100,12 +2728,27 @@ describe("IBosonOrchestrationHandler", function () {
         // Create an offer with condition, twin and bundle
         const tx = await orchestrationHandler
           .connect(operator)
-          .createOfferWithConditionAndTwinAndBundle(offer, offerDates, offerDurations, condition, twin);
+          .createOfferWithConditionAndTwinAndBundle(
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            condition,
+            twin
+          );
 
         // OfferCreated event
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2153,10 +2796,25 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createOfferWithConditionAndTwinAndBundle(offer, offerDates, offerDurations, condition, twin)
+            .createOfferWithConditionAndTwinAndBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolverId,
+              condition,
+              twin
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("If exchange token is $BOSON, fee should be flat boson fee", async function () {
@@ -2168,25 +2826,56 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createOfferWithConditionAndTwinAndBundle(offer, offerDates, offerDurations, condition, twin)
+            .createOfferWithConditionAndTwinAndBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolverId,
+              condition,
+              twin
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("For absolute zero offers, dispute resolver can be unspecified", async function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
-        offer.disputeResolverId = "0";
+        disputeResolverId = "0";
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
 
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createOfferWithConditionAndTwinAndBundle(offer, offerDates, offerDurations, condition, twin)
+            .createOfferWithConditionAndTwinAndBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolverId,
+              condition,
+              twin
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
 
       it("Should allow creation of an offer with unlimited supply", async function () {
@@ -2197,10 +2886,25 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createOfferWithConditionAndTwinAndBundle(offer, offerDates, offerDurations, condition, twin)
+            .createOfferWithConditionAndTwinAndBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolverId,
+              condition,
+              twin
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offer.toStruct(), offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
       });
     });
 
@@ -2239,7 +2943,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller and an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferWithCondition(seller, offer, offerDates, offerDurations, condition);
+          .createSellerAndOfferWithCondition(seller, offer, offerDates, offerDurations, disputeResolverId, condition);
 
         // SellerCreated and OfferCreated events
         await expect(tx)
@@ -2251,7 +2955,15 @@ describe("IBosonOrchestrationHandler", function () {
             operator.address
           )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2271,7 +2983,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller and an offer with condition
         await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferWithCondition(seller, offer, offerDates, offerDurations, condition);
+          .createSellerAndOfferWithCondition(seller, offer, offerDates, offerDurations, disputeResolverId, condition);
 
         // Get the seller as a struct
         [, sellerStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -2285,12 +2997,15 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+          .connect(rando)
+          .getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
         let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
         let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(offer)) {
@@ -2301,6 +3016,9 @@ describe("IBosonOrchestrationHandler", function () {
         }
         for ([key, value] of Object.entries(offerDurations)) {
           expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(disputeResolutionTerms)) {
+          expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the group as a struct
@@ -2322,7 +3040,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller and an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferWithCondition(seller, offer, offerDates, offerDurations, condition);
+          .createSellerAndOfferWithCondition(seller, offer, offerDates, offerDurations, disputeResolverId, condition);
 
         // SellerCreated and OfferCreated events
         await expect(tx)
@@ -2334,7 +3052,15 @@ describe("IBosonOrchestrationHandler", function () {
             operator.address
           )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2386,7 +3112,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferAndTwinWithBundle(seller, offer, offerDates, offerDurations, twin);
+          .createSellerAndOfferAndTwinWithBundle(seller, offer, offerDates, offerDurations, disputeResolverId, twin);
 
         // SellerCreated and OfferCreated events
         await expect(tx)
@@ -2398,7 +3124,15 @@ describe("IBosonOrchestrationHandler", function () {
             operator.address
           )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2433,7 +3167,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
         await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferAndTwinWithBundle(seller, offer, offerDates, offerDurations, twin);
+          .createSellerAndOfferAndTwinWithBundle(seller, offer, offerDates, offerDurations, disputeResolverId, twin);
 
         // Get the seller as a struct
         [, sellerStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -2447,12 +3181,15 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+          .connect(rando)
+          .getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
         let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
         let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(offer)) {
@@ -2463,6 +3200,9 @@ describe("IBosonOrchestrationHandler", function () {
         }
         for ([key, value] of Object.entries(offerDurations)) {
           expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(disputeResolutionTerms)) {
+          expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the twin as a struct
@@ -2499,7 +3239,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferAndTwinWithBundle(seller, offer, offerDates, offerDurations, twin);
+          .createSellerAndOfferAndTwinWithBundle(seller, offer, offerDates, offerDurations, disputeResolverId, twin);
 
         // SellerCreated and OfferCreated events
         await expect(tx)
@@ -2511,7 +3251,15 @@ describe("IBosonOrchestrationHandler", function () {
             operator.address
           )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2608,6 +3356,7 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
+            disputeResolverId,
             condition,
             twin
           );
@@ -2622,7 +3371,15 @@ describe("IBosonOrchestrationHandler", function () {
             operator.address
           )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();
@@ -2670,6 +3427,7 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
+            disputeResolverId,
             condition,
             twin
           );
@@ -2686,12 +3444,15 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the offer as a struct
-        [, offerStruct, offerDatesStruct, offerDurationsStruct] = await offerHandler.connect(rando).getOffer(offer.id);
+        [, offerStruct, offerDatesStruct, offerDurationsStruct, disputeResolutionTermsStruct] = await offerHandler
+          .connect(rando)
+          .getOffer(offer.id);
 
         // Parse into entities
         let returnedOffer = Offer.fromStruct(offerStruct);
         let returnedOfferDates = OfferDates.fromStruct(offerDatesStruct);
         let returnedOfferDurations = OfferDurations.fromStruct(offerDurationsStruct);
+        let returnedDisputeResolutionTermsStruct = DisputeResolutionTerms.fromStruct(disputeResolutionTermsStruct);
 
         // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(offer)) {
@@ -2702,6 +3463,9 @@ describe("IBosonOrchestrationHandler", function () {
         }
         for ([key, value] of Object.entries(offerDurations)) {
           expect(JSON.stringify(returnedOfferDurations[key]) === JSON.stringify(value)).is.true;
+        }
+        for ([key, value] of Object.entries(disputeResolutionTerms)) {
+          expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the group as a struct
@@ -2754,6 +3518,7 @@ describe("IBosonOrchestrationHandler", function () {
             offer,
             offerDates,
             offerDurations,
+            disputeResolverId,
             condition,
             twin
           );
@@ -2768,7 +3533,15 @@ describe("IBosonOrchestrationHandler", function () {
             operator.address
           )
           .to.emit(orchestrationHandler, "OfferCreated")
-          .withArgs(nextOfferId, sellerId, offerStruct, offerDatesStruct, offerDurationsStruct, operator.address);
+          .withArgs(
+            nextOfferId,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
 
         // Events with structs that contain arrays must be tested differently
         const txReceipt = await tx.wait();

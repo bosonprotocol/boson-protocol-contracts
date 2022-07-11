@@ -45,7 +45,6 @@ async function mockOffer() {
   const buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
   const quantityAvailable = "1";
   const exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
-  const disputeResolverId = "2";
   const metadataHash = "QmYXc12ov6F2MZVZwPs5XeCBbf61cW3wKRk8h3D5NTYj4T"; // not an actual metadataHash, just some data for tests
   const metadataUri = `https://ipfs.io/ipfs/${metadataHash}`;
   const voided = false;
@@ -60,7 +59,6 @@ async function mockOffer() {
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
-    disputeResolverId,
     metadataUri,
     metadataHash,
     voided
@@ -68,8 +66,9 @@ async function mockOffer() {
 
   const offerDates = await mockOfferDates();
   const offerDurations = mockOfferDurations();
+  const disputeResolverId = "2";
 
-  return { offer, offerDates, offerDurations };
+  return { offer, offerDates, offerDurations, disputeResolverId };
 }
 
 function mockTwin(tokenAddress, tokenType) {

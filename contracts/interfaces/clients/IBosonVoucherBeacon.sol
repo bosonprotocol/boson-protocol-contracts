@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
-import {IBosonVoucherBeaconEvents} from "../events/IBosonVoucherBeaconEvents.sol";
+import { IBosonVoucherBeaconEvents } from "../events/IBosonVoucherBeaconEvents.sol";
 
 /**
  * @title IBosonClient
@@ -23,7 +23,6 @@ import {IBosonVoucherBeaconEvents} from "../events/IBosonVoucherBeaconEvents.sol
  * The ERC-165 identifier for this interface is: 0xc4c6c36b
  */
 interface IBosonVoucherBeacon is IBosonVoucherBeaconEvents {
-
     /**
      * @dev Set the implementation address
      */
@@ -65,5 +64,4 @@ interface IBosonVoucherBeacon is IBosonVoucherBeaconEvents {
      * @return the address of the ProtocolDiamond
      */
     function getProtocolAddress() external view returns (address);
-
 }

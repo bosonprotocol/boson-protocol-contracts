@@ -242,7 +242,7 @@ describe("IBosonExchangeHandler", function () {
       await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
       // Create the offer
-      const { offer, offerDates, offerDurations } = await mockOffer();
+      const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
       offer.quantityAvailable = "10";
 
       // Check if domains are valid
@@ -251,7 +251,7 @@ describe("IBosonExchangeHandler", function () {
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
-      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
+      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
 
       // Set used variables
       price = offer.price;

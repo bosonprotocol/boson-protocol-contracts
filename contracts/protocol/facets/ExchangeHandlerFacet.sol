@@ -11,6 +11,7 @@ import { FundsLib } from "../libs/FundsLib.sol";
 
 interface Token {
     function balanceOf(address account) external view returns (uint256); //ERC-721 and ERC-20
+
     function ownerOf(uint256 _tokenId) external view returns (address); //ERC-721
 }
 
@@ -24,14 +25,10 @@ interface MultiToken {
  * @notice Handles exchanges associated with offers within the protocol
  */
 contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
-
     /**
      * @notice Facet Initializer
      */
-    function initialize()
-    public
-    onlyUnInitialized(type(IBosonExchangeHandler).interfaceId)
-    {
+    function initialize() public onlyUnInitialized(type(IBosonExchangeHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonExchangeHandler).interfaceId);
     }
 
@@ -59,14 +56,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
      */
-    function commitToOffer(
-        address payable _buyer,
-        uint256 _offerId
-    )
-    external
-    payable
-    override
-    {
+    function commitToOffer(address payable _buyer, uint256 _offerId) external payable override {
         // Make sure buyer address is not zero address
         require(_buyer != address(0), INVALID_ADDRESS);
 
@@ -102,8 +92,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         exchange.state = ExchangeState.Committed;
         exchange.voucher.committedDate = block.timestamp;
 
-        // Store the time the voucher expires // TODO: implement the start and and based on new requirements 
-        uint256 startDate = (block.timestamp >= offerDates.voucherRedeemableFrom) ? block.timestamp : offerDates.voucherRedeemableFrom;
+        // Store the time the voucher expires // TODO: implement the start and and based on new requirements
+        uint256 startDate = (block.timestamp >= offerDates.voucherRedeemableFrom)
+            ? block.timestamp
+            : offerDates.voucherRedeemableFrom;
         exchange.voucher.validUntilDate = startDate + fetchOfferDurations(_offerId).voucherValid;
 
         // Map the offerId to the exchangeId as one-to-many
@@ -135,17 +127,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * @param _exchangeId - the id of the exchange to complete
      */
-    function completeExchange(uint256 _exchangeId)
-    external
-    override
-    {
+    function completeExchange(uint256 _exchangeId) external override {
         // Get the exchange, should be in redeemed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
         uint256 offerId = exchange.offerId;
 
         // Get the offer, which will definitely exist
         Offer storage offer;
-        (,offer) = fetchOffer(offerId);
+        (, offer) = fetchOffer(offerId);
 
         // Get seller id associated with caller
         bool sellerExists;
@@ -185,16 +174,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * @param _exchangeId - the id of the exchange
      */
-    function revokeVoucher(uint256 _exchangeId)
-    external
-    override
-    {
+    function revokeVoucher(uint256 _exchangeId) external override {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Get the offer, which will definitely exist
         Offer storage offer;
-        (,offer) = fetchOffer(exchange.offerId);
+        (, offer) = fetchOffer(exchange.offerId);
 
         // Get seller id associated with caller
         bool sellerExists;
@@ -224,10 +210,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * @param _exchangeId - the id of the exchange
      */
-    function cancelVoucher(uint256 _exchangeId)
-    external
-    override
-    {
+    function cancelVoucher(uint256 _exchangeId) external override {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -254,10 +237,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * @param _exchangeId - the id of the exchange
      */
-    function expireVoucher(uint256 _exchangeId)
-    external
-    override
-    {
+    function expireVoucher(uint256 _exchangeId) external override {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -289,10 +269,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * @param _exchangeId - the id of the exchange
      */
-    function redeemVoucher(uint256 _exchangeId)
-    external
-    override
-    {
+    function redeemVoucher(uint256 _exchangeId) external override {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
         uint256 offerId = exchange.offerId;
@@ -303,7 +280,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         // Make sure the voucher is redeemable
         require(
             block.timestamp >= fetchOfferDates(offerId).voucherRedeemableFrom &&
-            block.timestamp <= exchange.voucher.validUntilDate,
+                block.timestamp <= exchange.voucher.validUntilDate,
             VOUCHER_NOT_REDEEMABLE
         );
 
@@ -336,10 +313,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      * @param _exchangeId - the id of the exchange
      * @param _newBuyer - the address of the new buyer
      */
-    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer)
-    external
-    override
-    {
+    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) external override {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -353,13 +327,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         protocolLookups().voucherCount[exchange.buyerId]--;
 
         // Fetch or create buyer
-        (uint256 buyerId,) = getValidBuyer(_newBuyer);
+        (uint256 buyerId, ) = getValidBuyer(_newBuyer);
 
         // Update buyer id for the exchange
         exchange.buyerId = buyerId;
 
         // Increase voucher counter for new buyer
-        protocolLookups().voucherCount[buyerId]++;        
+        protocolLookups().voucherCount[buyerId]++;
 
         // Notify watchers of state change
         emit VoucherTransferred(exchange.offerId, _exchangeId, buyerId, msgSender());
@@ -376,11 +350,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      * @return exists - true if the exchange exists
      * @return isFinalized - true if the exchange is finalized
      */
-    function isExchangeFinalized(uint256 _exchangeId)
-    external
-    override
-    view
-    returns(bool exists, bool isFinalized) {
+    function isExchangeFinalized(uint256 _exchangeId) external view override returns (bool exists, bool isFinalized) {
         Exchange storage exchange;
 
         // Get the exchange
@@ -396,19 +366,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
             (, dispute, ) = fetchDispute(_exchangeId);
 
             // Check for finalized dispute state
-            isFinalized = (
-                dispute.state == DisputeState.Retracted ||
+            isFinalized = (dispute.state == DisputeState.Retracted ||
                 dispute.state == DisputeState.Resolved ||
                 dispute.state == DisputeState.Decided ||
-                dispute.state == DisputeState.Refused
-            );
+                dispute.state == DisputeState.Refused);
         } else {
             // Check for finalized exchange state
-            isFinalized = (
-                exchange.state == ExchangeState.Revoked ||
+            isFinalized = (exchange.state == ExchangeState.Revoked ||
                 exchange.state == ExchangeState.Canceled ||
-                exchange.state == ExchangeState.Completed
-            );
+                exchange.state == ExchangeState.Completed);
         }
     }
 
@@ -419,11 +385,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      * @return exists - true if the exchange exists
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
      */
-    function getExchange(uint256 _exchangeId)
-    external
-    override
-    view
-    returns(bool exists, Exchange memory exchange) {
+    function getExchange(uint256 _exchangeId) external view override returns (bool exists, Exchange memory exchange) {
         return fetchExchange(_exchangeId);
     }
 
@@ -434,11 +396,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      * @return exists - true if the exchange exists
      * @return state - the exchange state. See {BosonTypes.ExchangeStates}
      */
-    function getExchangeState(uint256 _exchangeId)
-    external
-    override
-    view
-    returns(bool exists, ExchangeState state) {
+    function getExchangeState(uint256 _exchangeId) external view override returns (bool exists, ExchangeState state) {
         Exchange memory exchange;
         (exists, exchange) = fetchExchange(_exchangeId);
         if (exists) state = exchange.state;
@@ -451,11 +409,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * @return nextExchangeId - the next exchange Id
      */
-    function getNextExchangeId()
-    external
-    override
-    view
-    returns (uint256 nextExchangeId) {
+    function getNextExchangeId() external view override returns (uint256 nextExchangeId) {
         nextExchangeId = protocolCounters().nextExchangeId;
     }
 
@@ -465,14 +419,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      * Target state must be Completed, Revoked, or Canceled.
      * Sets finalizedDate and releases funds associated with the exchange
      */
-    function finalizeExchange(Exchange storage _exchange, ExchangeState _targetState)
-    internal
-    {
+    function finalizeExchange(Exchange storage _exchange, ExchangeState _targetState) internal {
         // Make sure target state is a final state
         require(
             _targetState == ExchangeState.Completed ||
-            _targetState == ExchangeState.Revoked ||
-            _targetState == ExchangeState.Canceled
+                _targetState == ExchangeState.Revoked ||
+                _targetState == ExchangeState.Canceled
         );
 
         // Set the exchange state to the target state
@@ -493,14 +445,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * @param _exchange - the pointer to the exchange
      */
-    function burnVoucher(Exchange storage _exchange)
-    internal
-    {
+    function burnVoucher(Exchange storage _exchange) internal {
         // decrease the voucher count
         protocolLookups().voucherCount[_exchange.buyerId]--;
 
         // burn the voucher
-        (,Offer storage offer) = fetchOffer(_exchange.offerId);
+        (, Offer storage offer) = fetchOffer(_exchange.offerId);
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
         bosonVoucher.burnVoucher(_exchange.id);
     }
@@ -513,15 +463,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * @param _exchange - the exchange
      */
-    function transferTwins(Exchange storage _exchange)
-    internal
-    {
+    function transferTwins(Exchange storage _exchange) internal {
         // See if there is an associated bundle
         (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
 
         // Transfer the twins
         if (exists) {
-
             // Get storage location for bundle
             (, Bundle storage bundle) = fetchBundle(bundleId);
 
@@ -529,13 +476,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
             uint256[] storage twinIds = bundle.twinIds;
 
             // Get seller account
-            (,Seller storage seller) = fetchSeller(bundle.sellerId);
+            (, Seller storage seller) = fetchSeller(bundle.sellerId);
 
             // Visit the twins
             for (uint256 i = 0; i < twinIds.length; i++) {
-
                 // Get the twin
-                (,Twin storage twin) = fetchTwin(twinIds[i]);
+                (, Twin storage twin) = fetchTwin(twinIds[i]);
 
                 // Transfer the token from the seller's operator to the buyer
                 // N.B. Using call here so as to normalize the revert reason
@@ -554,24 +500,25 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                 } else if (twin.tokenType == TokenType.NonFungibleToken) {
                     uint256 pointer = twin.tokenId;
                     // @TODO TBD, needs to revisit
-                    if(pointer <= twin.lastTokenId) {
+                    if (pointer <= twin.lastTokenId) {
                         // ERC-721 style transfer
                         twin.tokenId++;
                         (success, result) = twin.tokenAddress.call(
                             abi.encodeWithSignature(
-                            "safeTransferFrom(address,address,uint256,bytes)",
-                            seller.operator,
-                            msgSender(),
-                            pointer,
-                            ""
-                        ));
+                                "safeTransferFrom(address,address,uint256,bytes)",
+                                seller.operator,
+                                msgSender(),
+                                pointer,
+                                ""
+                            )
+                        );
                     } else {
                         success = true;
                     }
-                } else if (twin.tokenType == TokenType.MultiToken){
+                } else if (twin.tokenType == TokenType.MultiToken) {
                     // ERC-1155 style transfer
                     (success, result) = twin.tokenAddress.call(
-                            abi.encodeWithSignature(
+                        abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
                             seller.operator,
                             msgSender(),
@@ -595,7 +542,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      * @return buyerId - the buyer id
      * @return buyer - the buyer account
      */
-    function getValidBuyer(address payable _buyer) internal returns(uint256 buyerId, Buyer storage buyer){
+    function getValidBuyer(address payable _buyer) internal returns (uint256 buyerId, Buyer storage buyer) {
         // Find or create the account associated with the specified buyer address
         bool exists;
         (exists, buyerId) = getBuyerIdByWallet(_buyer);
@@ -608,7 +555,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         }
 
         // Fetch the existing buyer account
-        (,buyer) = fetchBuyer(buyerId);
+        (, buyer) = fetchBuyer(buyerId);
 
         // Make sure buyer account is active
         require(buyer.active, MUST_BE_ACTIVE);
@@ -637,29 +584,23 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * @return bool true if buyer is authorized to commit
      */
-    function authorizeCommit(address _buyer, Offer storage _offer)
-    internal
-    returns (bool)
-    {
+    function authorizeCommit(address _buyer, Offer storage _offer) internal returns (bool) {
         // Allow by default
         bool allow = true;
 
         // For there to be a condition, there must be a group.
         (bool exists, uint256 groupId) = getGroupIdByOffer(_offer.id);
         if (exists) {
-
             // Get the group
-            (,Group storage group) = fetchGroup(groupId);
+            (, Group storage group) = fetchGroup(groupId);
 
             // If a condition is set, investigate, otherwise all buyers are allowed
             if (group.condition.method != EvaluationMethod.None) {
-
                 // How many times has this address committed to offers in the group?
                 uint256 commitCount = protocolLookups().conditionalCommitsByAddress[_buyer][groupId];
 
                 // Evaluate condition if buyer hasn't exhausted their allowable commits, otherwise disallow
                 if (commitCount < group.condition.maxCommits) {
-
                     // Buyer is allowed if they meet the group's condition
                     allow = (group.condition.method == EvaluationMethod.Threshold)
                         ? holdsThreshold(_buyer, group.condition)
@@ -667,16 +608,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
 
                     // Increment number of commits to the group for this address if they are allowed to commit
                     if (allow) protocolLookups().conditionalCommitsByAddress[_buyer][groupId] = ++commitCount;
-
                 } else {
-
                     // Buyer has exhausted their allowable commits
                     allow = false;
-
                 }
-
             }
-
         }
 
         return allow;
@@ -690,16 +626,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * @return bool true if buyer meets the condition
      */
-    function holdsThreshold(address _buyer, Condition storage _condition)
-    internal
-    view
-    returns (bool)
-    {
+    function holdsThreshold(address _buyer, Condition storage _condition) internal view returns (bool) {
         return
-        ((_condition.tokenType == TokenType.MultiToken)
-            ? MultiToken(_condition.tokenAddress).balanceOf(_buyer, _condition.tokenId)
-            : Token(_condition.tokenAddress).balanceOf(_buyer)
-        ) >= _condition.threshold;
+            (
+                (_condition.tokenType == TokenType.MultiToken)
+                    ? MultiToken(_condition.tokenAddress).balanceOf(_buyer, _condition.tokenId)
+                    : Token(_condition.tokenAddress).balanceOf(_buyer)
+            ) >= _condition.threshold;
     }
 
     /**
@@ -710,12 +643,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * @return bool true if buyer meets the condition
      */
-    function holdsSpecificToken(address _buyer, Condition storage _condition)
-    internal
-    view
-    returns (bool)
-    {
+    function holdsSpecificToken(address _buyer, Condition storage _condition) internal view returns (bool) {
         return (Token(_condition.tokenAddress).ownerOf(_condition.tokenId) == _buyer);
     }
-
 }

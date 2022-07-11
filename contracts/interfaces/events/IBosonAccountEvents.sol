@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {BosonTypes} from "../../domain/BosonTypes.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
 
 /**
  * @title IBosonAccountEvents
@@ -9,13 +9,39 @@ import {BosonTypes} from "../../domain/BosonTypes.sol";
  * @notice Events related to management of accounts within the protocol.
  */
 interface IBosonAccountEvents {
-    event SellerCreated(uint256 indexed sellerId, BosonTypes.Seller seller, address voucherCloneAddress, address indexed executedBy);
+    event SellerCreated(
+        uint256 indexed sellerId,
+        BosonTypes.Seller seller,
+        address voucherCloneAddress,
+        address indexed executedBy
+    );
     event SellerUpdated(uint256 indexed sellerId, BosonTypes.Seller seller, address indexed executedBy);
     event BuyerCreated(uint256 indexed buyerId, BosonTypes.Buyer buyer, address indexed executedBy);
-    event BuyerUpdated(uint256 indexed buyerId, BosonTypes.Buyer buyer,  address indexed executedBy);
-    event DisputeResolverCreated(uint256 indexed disputeResolverId, BosonTypes.DisputeResolver disputeResolver,  BosonTypes.DisputeResolverFee[] disputeResolverFees, address indexed executedBy);
-    event DisputeResolverUpdated(uint256 indexed disputeResolverId, BosonTypes.DisputeResolver disputeResolver, address indexed executedBy);
-    event DisputeResolverFeesAdded(uint256 indexed disputeResolverId, BosonTypes.DisputeResolverFee[] disputeResolverFees, address indexed executedBy);
-    event DisputeResolverFeesRemoved(uint256 indexed disputeResolverId, address[] feeTokensRemoved, address indexed executedBy);
-    event DisputeResolverActivated(uint256 indexed disputeResolverId, BosonTypes.DisputeResolver disputeResolver, address indexed executedBy);
+    event BuyerUpdated(uint256 indexed buyerId, BosonTypes.Buyer buyer, address indexed executedBy);
+    event DisputeResolverCreated(
+        uint256 indexed disputeResolverId,
+        BosonTypes.DisputeResolver disputeResolver,
+        BosonTypes.DisputeResolverFee[] disputeResolverFees,
+        address indexed executedBy
+    );
+    event DisputeResolverUpdated(
+        uint256 indexed disputeResolverId,
+        BosonTypes.DisputeResolver disputeResolver,
+        address indexed executedBy
+    );
+    event DisputeResolverFeesAdded(
+        uint256 indexed disputeResolverId,
+        BosonTypes.DisputeResolverFee[] disputeResolverFees,
+        address indexed executedBy
+    );
+    event DisputeResolverFeesRemoved(
+        uint256 indexed disputeResolverId,
+        address[] feeTokensRemoved,
+        address indexed executedBy
+    );
+    event DisputeResolverActivated(
+        uint256 indexed disputeResolverId,
+        BosonTypes.DisputeResolver disputeResolver,
+        address indexed executedBy
+    );
 }

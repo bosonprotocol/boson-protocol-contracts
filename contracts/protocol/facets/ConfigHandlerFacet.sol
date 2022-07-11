@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { IBosonConfigHandler } from  "../../interfaces/handlers/IBosonConfigHandler.sol";
-import { DiamondLib } from  "../../diamond/DiamondLib.sol";
-import { ProtocolBase } from  "../bases/ProtocolBase.sol";
-import { ProtocolLib } from  "../libs/ProtocolLib.sol";
+import { IBosonConfigHandler } from "../../interfaces/handlers/IBosonConfigHandler.sol";
+import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import { ProtocolBase } from "../bases/ProtocolBase.sol";
+import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
 /**
@@ -13,7 +13,6 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
  * @notice Handles management of various protocol-related settings.
  */
 contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
-
     /**
      * @notice Facet Initializer
      *
@@ -25,10 +24,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         ProtocolLib.ProtocolAddresses calldata _addresses,
         ProtocolLib.ProtocolLimits calldata _limits,
         ProtocolLib.ProtocolFees calldata _fees
-    )
-    public
-    onlyUnInitialized(type(IBosonConfigHandler).interfaceId)
-    {
+    ) public onlyUnInitialized(type(IBosonConfigHandler).interfaceId) {
         // Register supported interfaces
         DiamondLib.addSupportedInterface(type(IBosonConfigHandler).interfaceId);
 
@@ -46,8 +42,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxTokensPerWithdrawal(_limits.maxTokensPerWithdrawal);
         setMaxFeesPerDisputeResolver(_limits.maxFeesPerDisputeResolver);
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
-        setMaxDisputesPerBatch(_limits.maxDisputesPerBatch);      
-        
+        setMaxDisputesPerBatch(_limits.maxDisputesPerBatch);
+
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
         pc.nextAccountId = 1;
@@ -69,11 +65,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _tokenAddress - the address of the token contract
      */
-    function setTokenAddress(address payable _tokenAddress)
-    public
-    override
-    onlyRole(ADMIN)
-    {
+    function setTokenAddress(address payable _tokenAddress) public override onlyRole(ADMIN) {
         protocolAddresses().tokenAddress = _tokenAddress;
         emit TokenAddressChanged(_tokenAddress, msgSender());
     }
@@ -81,12 +73,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice The tokenAddress getter
      */
-    function getTokenAddress()
-    external
-    override
-    view
-    returns (address payable)
-    {
+    function getTokenAddress() external view override returns (address payable) {
         return protocolAddresses().tokenAddress;
     }
 
@@ -97,11 +84,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _treasuryAddress - the address of the multi-sig wallet
      */
-    function setTreasuryAddress(address payable _treasuryAddress)
-    public
-    override
-    onlyRole(ADMIN)
-    {
+    function setTreasuryAddress(address payable _treasuryAddress) public override onlyRole(ADMIN) {
         protocolAddresses().treasuryAddress = _treasuryAddress;
         emit TreasuryAddressChanged(_treasuryAddress, msgSender());
     }
@@ -109,12 +92,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice The treasuryAddress getter
      */
-    function getTreasuryAddress()
-    external
-    override
-    view
-    returns (address payable)
-    {
+    function getTreasuryAddress() external view override returns (address payable) {
         return protocolAddresses().treasuryAddress;
     }
 
@@ -125,11 +103,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _voucherBeaconAddress - the address of the Boson Voucher beacon contract.
      */
-    function setVoucherBeaconAddress(address _voucherBeaconAddress)
-    public
-    override
-    onlyRole(ADMIN)
-    {
+    function setVoucherBeaconAddress(address _voucherBeaconAddress) public override onlyRole(ADMIN) {
         protocolAddresses().voucherBeaconAddress = _voucherBeaconAddress;
         emit VoucherBeaconAddressChanged(_voucherBeaconAddress, msgSender());
     }
@@ -137,12 +111,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice The voucherBeaconAddress getter
      */
-    function getVoucherBeaconAddress()
-    external
-    override
-    view
-    returns (address)
-    {
+    function getVoucherBeaconAddress() external view override returns (address) {
         return protocolAddresses().voucherBeaconAddress;
     }
 
@@ -153,11 +122,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _voucherProxyAddress - the address of the reference proxy implementation
      */
-    function setVoucherProxyAddress(address _voucherProxyAddress)
-    public
-    override
-    onlyRole(ADMIN)
-    {
+    function setVoucherProxyAddress(address _voucherProxyAddress) public override onlyRole(ADMIN) {
         protocolAddresses().voucherProxyAddress = _voucherProxyAddress;
         emit VoucherProxyAddressChanged(_voucherProxyAddress, msgSender());
     }
@@ -165,12 +130,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice The voucherProxyAddress getter
      */
-    function getVoucherProxyAddress()
-    external
-    override
-    view
-    returns (address)
-    {
+    function getVoucherProxyAddress() external view override returns (address) {
         return protocolAddresses().voucherProxyAddress;
     }
 
@@ -186,14 +146,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setProtocolFeePercentage(uint16 _protocolFeePercentage)
-    public
-    override
-    onlyRole(ADMIN)
-    {
+    function setProtocolFeePercentage(uint16 _protocolFeePercentage) public override onlyRole(ADMIN) {
         // Make sure percentage is less than 10000
-        require(_protocolFeePercentage <= 10000,
-            PROTOCOL_FEE_PERCENTAGE_INVALID);
+        require(_protocolFeePercentage <= 10000, PROTOCOL_FEE_PERCENTAGE_INVALID);
 
         // Store fee percentage
         protocolFees().percentage = _protocolFeePercentage;
@@ -205,17 +160,11 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Get the protocol fee percentage
      */
-    function getProtocolFeePercentage()
-    external
-    override
-    view
-    returns (uint16)
-    {
+    function getProtocolFeePercentage() external view override returns (uint16) {
         return protocolFees().percentage;
     }
-    
 
-     /**
+    /**
      * @notice Sets the flat protocol fee for exchanges in $BOSON.
      *
      * Emits a ProtocolFeeFlatBosonChanged event.
@@ -223,11 +172,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _protocolFeeFlatBoson - Flat fee taken for exchanges in $BOSON
      *
      */
-    function setProtocolFeeFlatBoson(uint256 _protocolFeeFlatBoson)
-    public
-    override
-    onlyRole(ADMIN)
-    {
+    function setProtocolFeeFlatBoson(uint256 _protocolFeeFlatBoson) public override onlyRole(ADMIN) {
         // Store fee percentage
         protocolFees().flatBoson = _protocolFeeFlatBoson;
 
@@ -238,27 +183,18 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Get the protocol fee percentage
      */
-    function getProtocolFeeFlatBoson()
-    external
-    override
-    view
-    returns (uint256)
-    {
+    function getProtocolFeeFlatBoson() external view override returns (uint256) {
         return protocolFees().flatBoson;
     }
 
-     /**
+    /**
      * @notice Sets the maximum numbers of offers that can be added to a group in a single transaction
      *
      * Emits a MaxOffersPerGroupChanged event.
      *
      * @param _maxOffersPerGroup - the maximum length of {BosonTypes.Group.offerIds}
      */
-    function setMaxOffersPerGroup(uint16 _maxOffersPerGroup)
-    public
-    override
-    onlyRole(ADMIN)
-    {
+    function setMaxOffersPerGroup(uint16 _maxOffersPerGroup) public override onlyRole(ADMIN) {
         protocolLimits().maxOffersPerGroup = _maxOffersPerGroup;
         emit MaxOffersPerGroupChanged(_maxOffersPerGroup, msgSender());
     }
@@ -266,27 +202,18 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Get the maximum offers per group
      */
-    function getMaxOffersPerGroup()
-    external
-    override
-    view
-    returns (uint16)
-    {
+    function getMaxOffersPerGroup() external view override returns (uint16) {
         return protocolLimits().maxOffersPerGroup;
     }
 
-     /**
+    /**
      * @notice Sets the maximum numbers of twins that can be added to a bundle in a single transaction
      *
      * Emits a MaxTwinsPerBundleChanged event.
      *
      * @param _maxTwinsPerBundle - the maximum length of {BosonTypes.Bundle.twinIds}
      */
-    function setMaxTwinsPerBundle(uint16 _maxTwinsPerBundle)
-    public
-    override
-    onlyRole(ADMIN)
-    {
+    function setMaxTwinsPerBundle(uint16 _maxTwinsPerBundle) public override onlyRole(ADMIN) {
         protocolLimits().maxTwinsPerBundle = _maxTwinsPerBundle;
         emit MaxTwinsPerBundleChanged(_maxTwinsPerBundle, msgSender());
     }
@@ -294,12 +221,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Get the maximum twins per bundle
      */
-    function getMaxTwinsPerBundle()
-    external
-    override
-    view
-    returns (uint16)
-    {
+    function getMaxTwinsPerBundle() external view override returns (uint16) {
         return protocolLimits().maxTwinsPerBundle;
     }
 
@@ -310,11 +232,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxOffersPerBundle - the maximum length of {BosonTypes.Bundle.offerIds}
      */
-    function setMaxOffersPerBundle(uint16 _maxOffersPerBundle)
-    public
-    override
-    onlyRole(ADMIN)
-    {
+    function setMaxOffersPerBundle(uint16 _maxOffersPerBundle) public override onlyRole(ADMIN) {
         protocolLimits().maxOffersPerBundle = _maxOffersPerBundle;
         emit MaxOffersPerBundleChanged(_maxOffersPerBundle, msgSender());
     }
@@ -322,27 +240,18 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Get the maximum offers per bundle
      */
-    function getMaxOffersPerBundle()
-    external
-    override
-    view
-    returns (uint16)
-    {
+    function getMaxOffersPerBundle() external view override returns (uint16) {
         return protocolLimits().maxOffersPerBundle;
     }
 
-     /**
+    /**
      * @notice Sets the maximum numbers of offers that can be created in a single transaction
      *
      * Emits a MaxOffersPerBatchChanged event.
      *
      * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Offer[]}
      */
-    function setMaxOffersPerBatch(uint16 _maxOffersPerBatch)
-    public
-    override
-    onlyRole(ADMIN)
-    {
+    function setMaxOffersPerBatch(uint16 _maxOffersPerBatch) public override onlyRole(ADMIN) {
         protocolLimits().maxOffersPerBatch = _maxOffersPerBatch;
         emit MaxOffersPerBatchChanged(_maxOffersPerBatch, msgSender());
     }
@@ -350,15 +259,10 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Get the maximum offers per batch
      */
-    function getMaxOffersPerBatch()
-    external
-    override
-    view
-    returns (uint16)
-    {
+    function getMaxOffersPerBatch() external view override returns (uint16) {
         return protocolLimits().maxOffersPerBatch;
     }
-    
+
     /**
      * @notice Sets the maximum numbers of tokens that can be withdrawn in a single transaction
      *
@@ -366,11 +270,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxTokensPerWithdrawal - the maximum length of token list when calling {FundsHandlerFacet.withdraw}
      */
-    function setMaxTokensPerWithdrawal(uint16 _maxTokensPerWithdrawal)
-    public
-    override
-    onlyRole(ADMIN)
-    {
+    function setMaxTokensPerWithdrawal(uint16 _maxTokensPerWithdrawal) public override onlyRole(ADMIN) {
         protocolLimits().maxTokensPerWithdrawal = _maxTokensPerWithdrawal;
         emit MaxTokensPerWithdrawalChanged(_maxTokensPerWithdrawal, msgSender());
     }
@@ -378,12 +278,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Get the maximum tokens per withdrawal
      */
-    function getMaxTokensPerWithdrawal()
-    external
-    override
-    view
-    returns (uint16)
-    {
+    function getMaxTokensPerWithdrawal() external view override returns (uint16) {
         return protocolLimits().maxTokensPerWithdrawal;
     }
 
@@ -394,24 +289,15 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxFeesPerDisputeResolver - the maximum length of dispute resolver fees list when calling {AccountHandlerFacet.createDisputeResolver} or {AccountHandlerFacet.updateDisputeResolver}
      */
-    function setMaxFeesPerDisputeResolver(uint16 _maxFeesPerDisputeResolver)
-    public
-    override
-    onlyRole(ADMIN)
-    {
+    function setMaxFeesPerDisputeResolver(uint16 _maxFeesPerDisputeResolver) public override onlyRole(ADMIN) {
         protocolLimits().maxFeesPerDisputeResolver = _maxFeesPerDisputeResolver;
         emit MaxFeesPerDisputeResolverChanged(_maxFeesPerDisputeResolver, msgSender());
     }
-   
+
     /**
      * @notice Get the maximum number of dispute resolver fee structs that can be processed in a single transaction
      */
-    function getMaxFeesPerDisputeResolver() 
-    external 
-    override
-    view 
-    returns (uint16)
-    {
+    function getMaxFeesPerDisputeResolver() external view override returns (uint16) {
         return protocolLimits().maxFeesPerDisputeResolver;
     }
 
@@ -422,25 +308,15 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxEscalationResponsePeriod - the maximum escalation response period that a {BosonTypes.DisputeResolver} can specify
      */
-    function setMaxEscalationResponsePeriod(uint256 _maxEscalationResponsePeriod) 
-    public
-    override
-    onlyRole(ADMIN)
-    {
+    function setMaxEscalationResponsePeriod(uint256 _maxEscalationResponsePeriod) public override onlyRole(ADMIN) {
         protocolLimits().maxEscalationResponsePeriod = _maxEscalationResponsePeriod;
         emit MaxEscalationResponsePeriodChanged(_maxEscalationResponsePeriod, msgSender());
     }
 
-   
     /**
      * @notice Get the maximum escalation response period a dispute resolver can specify
      */
-    function getMaxEscalationResponsePeriod()
-    external
-    override
-    view
-    returns (uint256)
-    {
+    function getMaxEscalationResponsePeriod() external view override returns (uint256) {
         return protocolLimits().maxEscalationResponsePeriod;
     }
 
@@ -451,11 +327,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxDisputesPerBatch - the maximum number of disputes that can be expired
      */
-    function setMaxDisputesPerBatch(uint16 _maxDisputesPerBatch)
-    public
-    override
-    onlyRole(ADMIN)
-    {
+    function setMaxDisputesPerBatch(uint16 _maxDisputesPerBatch) public override onlyRole(ADMIN) {
         protocolLimits().maxDisputesPerBatch = _maxDisputesPerBatch;
         emit MaxDisputesPerBatchChanged(_maxDisputesPerBatch, msgSender());
     }
@@ -463,12 +335,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Get the maximum disputes per batch
      */
-    function getMaxDisputesPerBatch()
-    external
-    override
-    view
-    returns (uint16)
-    {
+    function getMaxDisputesPerBatch() external view override returns (uint16) {
         return protocolLimits().maxDisputesPerBatch;
     }
 }

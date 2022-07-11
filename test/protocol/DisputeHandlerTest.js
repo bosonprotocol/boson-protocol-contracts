@@ -66,7 +66,7 @@ describe("IBosonDisputeHandler", function () {
     disputesToExpire;
   let disputeDates, disputeDatesStruct;
   let exists, response;
-  let disputeResolver, active, disputeResolverFees;
+  let disputeResolver, active, disputeResolverFees, disputeResolverId;
   let buyerPercent;
   let resolutionType, customSignatureType, message, r, s, v;
   let returnedDispute, returnedDisputeDates;
@@ -219,7 +219,7 @@ describe("IBosonDisputeHandler", function () {
       await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
       // Mock offer
-      ({ offer, offerDates, offerDurations } = await mockOffer());
+      ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
       offer.quantityAvailable = "5";
 
       // Check if domains are valid
@@ -228,7 +228,7 @@ describe("IBosonDisputeHandler", function () {
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
-      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations);
+      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
 
       // Set used variables
       price = offer.price;
@@ -1184,7 +1184,7 @@ describe("IBosonDisputeHandler", function () {
           // Escalate the dispute, testing for the event
           await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId))
             .to.emit(disputeHandler, "DisputeEscalated")
-            .withArgs(exchangeId, offer.disputeResolverId, buyer.address);
+            .withArgs(exchangeId, disputeResolverId, buyer.address);
         });
 
         it("should update state", async function () {
@@ -1440,7 +1440,7 @@ describe("IBosonDisputeHandler", function () {
 
         it("should update state", async function () {
           // Set time forward past the dispute escalation period
-          await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
           // Expire the dispute
           tx = await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
