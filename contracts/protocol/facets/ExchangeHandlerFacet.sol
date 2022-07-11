@@ -484,7 +484,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                             amount
                         )
                     );
-               } else if (twin.tokenType == TokenType.NonFungibleToken && twin.supplyAvailable > 0) {
+                } else if (twin.tokenType == TokenType.NonFungibleToken && twin.supplyAvailable > 0) {
                     // ERC-721 style transfer
                     uint256 tokenId = twin.tokenId + twin.supplyAvailable - 1;
                     twin.supplyAvailable--;
@@ -631,8 +631,4 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
     function holdsSpecificToken(address _buyer, Condition storage _condition) internal view returns (bool) {
         return (Token(_condition.tokenAddress).ownerOf(_condition.tokenId) == _buyer);
     }
-<<<<<<< HEAD
-
-=======
->>>>>>> main
 }
