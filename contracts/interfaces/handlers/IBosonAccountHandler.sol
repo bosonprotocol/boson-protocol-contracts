@@ -61,6 +61,20 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     ) external;
 
     /**
+     * @notice Creates a marketplace agent
+     *
+     * Emits an AgentCreated event if successful.
+     *
+     * Reverts if:
+     * - Wallet address is zero address
+     * - Active is not true
+     * - Wallet address is not unique to this agent
+     *
+     * @param _agent - the fully populated struct with agent id set to 0x0
+     */
+    function createAgent(BosonTypes.Agent memory _agent) external;
+
+    /**
      * @notice Updates a seller
      *
      * Emits a SellerUpdated event if successful.

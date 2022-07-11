@@ -128,6 +128,22 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
+     * @notice Creates a marketplace agent
+     *
+     * Emits an AgentCreated event if successful.
+     *
+     * Reverts if:
+     * - Wallet address is zero address
+     * - Active is not true
+     * - Wallet address is not unique to this agent
+     *
+     * @param _agent - the fully populated struct with agent id set to 0x0
+     */
+    function createAgent(Agent memory _agent) external override {
+        createAgentInternal(_agent);
+    }
+
+    /**
      * @notice Updates a seller. All fields should be filled, even those staying the same.
      *
      * Emits a SellerUpdated event if successful.
