@@ -311,31 +311,79 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("should issue the voucher on the correct clone", async function () {
-        // Cast expectedCloneAddress to IBosonVoucher
+        // Cast expectedCloneAddress to IBosonVoucher (existing clone)
         bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+        // Create a new seller to get new clone
+        sellerId = "3"; // "1" is the first seller, "2" is DR
+        seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, true);
+        expect(seller.isValid()).is.true;
+        await accountHandler.connect(rando).createSeller(seller);
+        expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
+        const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+        // Create an offer with new seller
+
+        const { offer, offerDates, offerDurations } = await mockOffer();
+
+        // Create the offer
+        await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations);
+        // Deposit seller funds so the commit will succeed
+        await fundsHandler
+          .connect(rando)
+          .depositFunds(sellerId, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
+        const buyer2 = newOwner;
 
         // Commit to offer, creating a new exchange
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+        const tx2 = await exchangeHandler.connect(deployer).commitToOffer(buyer2.address, ++offerId, { value: price });
 
         expect(tx).to.emit(bosonVoucherClone, "Transfer").withArgs(ethers.constants.Zero, buyer.address, "1");
+        expect(tx2).to.emit(bosonVoucherClone2, "Transfer").withArgs(ethers.constants.Zero, buyer2.address, "2");
 
-        // buyer should own 1 voucher on the clone address
-        expect(await bosonVoucherClone.balanceOf(buyer.address)).to.equal("1", "Balance should be 1");
+        // buyer should own 1 voucher on the clone1 address and buyer2 should own 1 voucher on clone2
+        expect(await bosonVoucherClone.balanceOf(buyer.address)).to.equal("1", "Clone 1: buyer 1 balance should be 1");
+        expect(await bosonVoucherClone.balanceOf(buyer2.address)).to.equal("0", "Clone 1: buyer 2 balance should be 0");
+        expect(await bosonVoucherClone2.balanceOf(buyer.address)).to.equal("0", "Clone 2: buyer 1 balance should be 0");
+        expect(await bosonVoucherClone2.balanceOf(buyer2.address)).to.equal(
+          "1",
+          "Clone 2: buyer 2 balance should be 1"
+        );
 
-        // token id 1 on voucher clone should belong to the buyer
-        expect(await bosonVoucherClone.ownerOf("1")).to.equal(buyer.address, "Wrong buyer address");
+        // Make sure that vouchers belong to correct buyers and that exist on the correct clone
+        expect(await bosonVoucherClone.ownerOf("1")).to.equal(buyer.address, "Voucher 1: Wrong buyer address");
+        await expect(bosonVoucherClone.ownerOf("2")).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+        expect(await bosonVoucherClone2.ownerOf("2")).to.equal(buyer2.address, "Voucher 2: Wrong buyer address");
+        await expect(bosonVoucherClone2.ownerOf("1")).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
 
-        // original boson voucher should not have any vouchers
-        expect(await bosonVoucher.balanceOf(buyer.address)).to.equal("0", "Balance should be 0");
+        // referecne boson voucher proxy should not have any vouchers
+        expect(await bosonVoucher.balanceOf(buyer.address)).to.equal(
+          "0",
+          "Reference proxy: buyer 1 balance should be 0"
+        );
+        expect(await bosonVoucher.balanceOf(buyer2.address)).to.equal(
+          "0",
+          "Reference proxy: buyer 2 balance should be 0"
+        );
 
-        // original boson voucher should not have voucher with id 1
-        await expect(bosonVoucher.ownerOf("1")).to.revertedWith("ERC721: owner query for nonexistent token");
+        // referecne boson voucher should not have vouchers with id 1 and 2
+        await expect(bosonVoucher.ownerOf("1")).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+        await expect(bosonVoucher.ownerOf("2")).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
 
-        // original boson voucher should not have any vouchers
-        expect(await voucherImplementation.balanceOf(buyer.address)).to.equal("0", "Balance should be 0");
+        // boson voucher implemenation should not have any vouchers
+        expect(await voucherImplementation.balanceOf(buyer.address)).to.equal(
+          "0",
+          "Voucher implementation: buyer 1 balance should be 0"
+        );
+        expect(await voucherImplementation.balanceOf(buyer2.address)).to.equal(
+          "0",
+          "Voucher implementation: buyer 2 balance should be 0"
+        );
 
-        // original boson voucher should not have voucher with id 1
-        await expect(voucherImplementation.ownerOf("1")).to.revertedWith("ERC721: owner query for nonexistent token");
+        // oboson voucher implemenation should not have vouchers with id 1 and 2
+        await expect(voucherImplementation.ownerOf("1")).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+        await expect(voucherImplementation.ownerOf("2")).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
       });
 
       context("💔 Revert Reasons", async function () {
@@ -1218,9 +1266,6 @@ describe("IBosonExchangeHandler", function () {
         // Grant PROTOCOL role to EOA address for test
         await accessController.grantRole(Role.PROTOCOL, rando.address);
 
-        bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
-
         // Burn voucher, expecting no event
         await expect(bosonVoucher.connect(rando).burnVoucher(exchange.id)).to.not.emit(
           exchangeHandler,
@@ -1231,17 +1276,36 @@ describe("IBosonExchangeHandler", function () {
       context("💔 Revert Reasons", async function () {
         /**
          * Reverts if
-         * - Caller does not have CLIENT role
+         * - Caller is not a clone address, associated with the seller
          * - Exchange does not exist
          * - Exchange is not in committed state
          * - Voucher has expired
          * - New buyer's existing account is deactivated
          */
 
-        it("Caller does not have CLIENT role", async function () {
+        it("Caller is not a clone address", async function () {
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(
             exchangeHandler.connect(rando).onVoucherTransferred(exchange.id, newOwner.address)
+          ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+        });
+
+        it("Caller is not a clone address, associated with the seller", async function () {
+          // Create a new seller to get new clone
+          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, true);
+          expect(seller.isValid()).is.true;
+          await accountHandler.connect(rando).createSeller(seller);
+          expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
+          const bosonVoucher2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+          // For the sake of test, mint token on bv2 with the id of token on bv1
+          // Temporarily grant PROTOCOL role to deployer account
+          await accessController.grantRole(Role.PROTOCOL, deployer.address);
+          await bosonVoucher2.issueVoucher(exchange.id, new Buyer(buyerId, buyer.address, true));
+
+          // Attempt to call onVoucherTransferred, expecting revert
+          await expect(
+            bosonVoucher2.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id)
           ).to.revertedWith(RevertReasons.ACCESS_DENIED);
         });
 
