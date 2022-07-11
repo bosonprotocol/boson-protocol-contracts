@@ -237,6 +237,15 @@ interface IBosonAccountHandler is IBosonAccountEvents {
         );
 
     /**
+     * @notice Gets the details about an agent.
+     *
+     * @param _agentId - the id of the agent to check
+     * @return exists - the agent was found
+     * @return agent - the agent details. See {BosonTypes.Agent}
+     */
+    function getAgent(uint256 _agentId) external view returns (bool exists, BosonTypes.Agent memory agent);
+
+    /**
      * @notice Gets the next account Id that can be assigned to an account.
      *
      *  Does not increment the counter.
