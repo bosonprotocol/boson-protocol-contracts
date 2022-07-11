@@ -11,6 +11,9 @@ const Buyer = require("../../scripts/domain/Buyer");
 const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
+const Group = require("../../scripts/domain/Group");
+const Condition = require("../../scripts/domain/Condition");
+const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -59,10 +62,12 @@ describe("IBosonExchangeHandler", function () {
     bundleHandler;
   let bosonVoucher, bosonToken, voucherImplementation;
   let bosonVoucherClone, bosonVoucherCloneAddress;
+    bundleHandler,
+    groupHandler;
   let id, buyerId, offerId, seller, sellerId, nextExchangeId, nextAccountId;
   let block, blockNumber, tx, txReceipt, event;
   let support, newTime;
-  let price, sellerDeposit;
+  let price, sellerPool;
   let voucherRedeemableFrom;
   let fulfillmentPeriod, voucherValid;
   let protocolFeePercentage, protocolFeeFlatBoson;
@@ -72,6 +77,7 @@ describe("IBosonExchangeHandler", function () {
   let foreign20, foreign721, foreign1155;
   let twin20, twin721, twin1155, twinIds, bundle, balance, owner;
   let expectedCloneAddress;
+  let method, tokenType, tokenAddress, tokenId, threshold, maxCommits, groupId, offerIds, condition, group;
 
   before(async function () {
     // get interface Ids
@@ -114,6 +120,7 @@ describe("IBosonExchangeHandler", function () {
       "DisputeHandlerFacet",
       "TwinHandlerFacet",
       "BundleHandlerFacet",
+      "GroupHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -124,8 +131,8 @@ describe("IBosonExchangeHandler", function () {
     const [proxy] = proxies;
     [voucherImplementation] = implementations;
 
-    // Deploy the boson token
-    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+    // Deploy the mock tokens
+    [foreign20, foreign721, foreign1155] = await deployMockTokens(gasLimit, ["Foreign20", "Foreign721", "Foreign1155"]);
 
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
@@ -135,7 +142,7 @@ describe("IBosonExchangeHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: "0x0000000000000000000000000000000000000000",
+        treasuryAddress: ethers.constants.AddressZero,
         tokenAddress: bosonToken.address,
         voucherBeaconAddress: beacon.address,
         voucherProxyAddress: proxy.address,
@@ -184,6 +191,9 @@ describe("IBosonExchangeHandler", function () {
 
     // Cast Diamond to IBundleHandler
     bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
+
+    // Cast Diamond to IGroupHandler
+    groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamond.address);
 
     // Deploy the mock tokens
     [foreign20, foreign721, foreign1155] = await deployMockTokens(gasLimit, ["Foreign20", "Foreign721", "Foreign1155"]);
@@ -234,7 +244,7 @@ describe("IBosonExchangeHandler", function () {
 
       // Create the offer
       const { offer, offerDates, offerDurations } = await mockOffer();
-      offer.quantityAvailable = "2";
+      offer.quantityAvailable = "10";
 
       // Check if domains are valid
       expect(offer.isValid()).is.true;
@@ -246,10 +256,10 @@ describe("IBosonExchangeHandler", function () {
 
       // Set used variables
       price = offer.price;
-      sellerDeposit = offer.sellerDeposit;
       voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
       voucherValid = offerDurations.voucherValid;
       fulfillmentPeriod = offerDurations.fulfillmentPeriod;
+      sellerPool = ethers.utils.parseUnits("15", "ether").toString();
 
       // Required voucher constructor params
       committedDate = "0";
@@ -268,7 +278,7 @@ describe("IBosonExchangeHandler", function () {
       // Deposit seller funds so the commit will succeed
       await fundsHandler
         .connect(operator)
-        .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+        .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
     });
 
     context("👉 commitToOffer()", async function () {
@@ -357,7 +367,7 @@ describe("IBosonExchangeHandler", function () {
         expect(await bosonVoucherClone2.ownerOf("2")).to.equal(buyer2.address, "Voucher 2: Wrong buyer address");
         await expect(bosonVoucherClone2.ownerOf("1")).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
 
-        // referecne boson voucher proxy should not have any vouchers
+        // reference boson voucher proxy should not have any vouchers
         expect(await bosonVoucher.balanceOf(buyer.address)).to.equal(
           "0",
           "Reference proxy: buyer 1 balance should be 0"
@@ -413,6 +423,327 @@ describe("IBosonExchangeHandler", function () {
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
           ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+        });
+      });
+    });
+
+    context("👉 commitToOffer() with condition", async function () {
+      context("✋ Threshold ERC20", async function () {
+        beforeEach(async function () {
+          // Required constructor params for Condition
+          method = EvaluationMethod.Threshold;
+          tokenType = TokenType.FungibleToken;
+          tokenAddress = foreign20.address;
+          tokenId = "0";
+          threshold = "50";
+          maxCommits = "3";
+
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          // Create Condition
+          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, sellerId, offerIds, condition);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(operator).createGroup(group);
+        });
+
+        it("should emit a BuyerCommitted event if user meets condition", async function () {
+          // mint enough tokens for the buyer
+          await foreign20.connect(buyer).mint(buyer.address, threshold);
+
+          // Commit to offer.
+          // We're only concerned that the event is emitted, indicating the condition was met
+          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })).to.emit(
+            exchangeHandler,
+            "BuyerCommitted"
+          );
+        });
+
+        it("should allow buyer to commit up to the max times for the group", async function () {
+          // mint enough tokens for the buyer
+          await foreign20.connect(buyer).mint(buyer.address, threshold);
+
+          // Commit to offer the maximum number of times
+          for (let i = 0; i < Number(maxCommits); i++) {
+            // We're only concerned that the event is emitted, indicating the commit was allowed
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+            ).to.emit(exchangeHandler, "BuyerCommitted");
+          }
+        });
+
+        context("💔 Revert Reasons", async function () {
+          /*
+           * Reverts if:
+           * - buyer does not meet conditions for commit
+           */
+
+          it("buyer does not meet condition for commit", async function () {
+            // Attempt to commit, expecting revert
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+          });
+
+          it("buyer has exhausted allowable commits", async function () {
+            // mint a token for the buyer
+            await foreign20.connect(buyer).mint(buyer.address, threshold);
+
+            // Commit to offer the maximum number of times
+            for (let i = 0; i < Number(maxCommits); i++) {
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            }
+
+            // Attempt to commit again after maximum commits has been reached
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+          });
+        });
+      });
+
+      context("✋ Threshold ERC721", async function () {
+        beforeEach(async function () {
+          // Required constructor params for Condition
+          method = EvaluationMethod.Threshold;
+          tokenType = TokenType.NonFungibleToken;
+          tokenAddress = foreign721.address;
+          tokenId = "0";
+          threshold = "5";
+          maxCommits = "3";
+
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          // Create Condition
+          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, sellerId, offerIds, condition);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(operator).createGroup(group);
+        });
+
+        it("should emit a BuyerCommitted event if user meets condition", async function () {
+          // mint enough tokens for the buyer
+          await foreign721.connect(buyer).mint(tokenId, threshold);
+
+          // Commit to offer.
+          // We're only concerned that the event is emitted, indicating the condition was met
+          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })).to.emit(
+            exchangeHandler,
+            "BuyerCommitted"
+          );
+        });
+
+        it("should allow buyer to commit up to the max times for the group", async function () {
+          // mint enough tokens for the buyer
+          await foreign721.connect(buyer).mint(tokenId, threshold);
+
+          // Commit to offer the maximum number of times
+          for (let i = 0; i < Number(maxCommits); i++) {
+            // We're only concerned that the event is emitted, indicating the commit was allowed
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+            ).to.emit(exchangeHandler, "BuyerCommitted");
+          }
+        });
+
+        context("💔 Revert Reasons", async function () {
+          /*
+           * Reverts if:
+           * - buyer does not meet conditions for commit
+           */
+
+          it("buyer does not meet condition for commit", async function () {
+            // Attempt to commit, expecting revert
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+          });
+
+          it("buyer has exhausted allowable commits", async function () {
+            // mint enough tokens for the buyer
+            await foreign721.connect(buyer).mint(tokenId, threshold);
+
+            // Commit to offer the maximum number of times
+            for (let i = 0; i < Number(maxCommits); i++) {
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            }
+
+            // Attempt to commit again after maximum commits has been reached
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+          });
+        });
+      });
+
+      context("✋ Threshold ERC1155", async function () {
+        beforeEach(async function () {
+          // Required constructor params for Condition
+          method = EvaluationMethod.Threshold;
+          tokenType = TokenType.MultiToken;
+          tokenAddress = foreign1155.address;
+          tokenId = "1";
+          threshold = "20";
+          maxCommits = "3";
+
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          // Create Condition
+          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, sellerId, offerIds, condition);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(operator).createGroup(group);
+        });
+
+        it("should emit a BuyerCommitted event if user meets condition", async function () {
+          // mint enough tokens for the buyer
+          await foreign1155.connect(buyer).mint(tokenId, threshold);
+
+          // Commit to offer.
+          // We're only concerned that the event is emitted, indicating the condition was met
+          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })).to.emit(
+            exchangeHandler,
+            "BuyerCommitted"
+          );
+        });
+
+        it("should allow buyer to commit up to the max times for the group", async function () {
+          // mint enough tokens for the buyer
+          await foreign1155.connect(buyer).mint(tokenId, threshold);
+
+          // Commit to offer the maximum number of times
+          for (let i = 0; i < Number(maxCommits); i++) {
+            // We're only concerned that the event is emitted, indicating the commit was allowed
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+            ).to.emit(exchangeHandler, "BuyerCommitted");
+          }
+        });
+
+        context("💔 Revert Reasons", async function () {
+          /*
+           * Reverts if:
+           * - buyer does not meet conditions for commit
+           */
+
+          it("buyer does not meet condition for commit", async function () {
+            // Attempt to commit, expecting revert
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+          });
+
+          it("buyer has exhausted allowable commits", async function () {
+            // mint enough tokens for the buyer
+            await foreign1155.connect(buyer).mint(tokenId, threshold);
+
+            // Commit to offer the maximum number of times
+            for (let i = 0; i < Number(maxCommits); i++) {
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            }
+
+            // Attempt to commit again after maximum commits has been reached
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+          });
+        });
+      });
+
+      context("✋ SpecificToken ERC721", async function () {
+        beforeEach(async function () {
+          // Required constructor params for Condition
+          method = EvaluationMethod.SpecificToken;
+          tokenType = TokenType.NonFungibleToken;
+          tokenAddress = foreign721.address;
+          tokenId = "12";
+          threshold = "0";
+          maxCommits = "3";
+
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          // Create Condition
+          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, sellerId, offerIds, condition);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(operator).createGroup(group);
+        });
+
+        it("should emit a BuyerCommitted event if user meets condition", async function () {
+          // mint correct token for the buyer
+          await foreign721.connect(buyer).mint(tokenId, "1");
+
+          // Commit to offer.
+          // We're only concerned that the event is emitted, indicating the condition was met
+          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })).to.emit(
+            exchangeHandler,
+            "BuyerCommitted"
+          );
+        });
+
+        it("should allow buyer to commit up to the max times for the group", async function () {
+          // mint correct token for the buyer
+          await foreign721.connect(buyer).mint(tokenId, "1");
+
+          // Commit to offer the maximum number of times
+          for (let i = 0; i < Number(maxCommits); i++) {
+            // We're only concerned that the event is emitted, indicating the commit was allowed
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+            ).to.emit(exchangeHandler, "BuyerCommitted");
+          }
+        });
+
+        context("💔 Revert Reasons", async function () {
+          /*
+           * Reverts if:
+           * - buyer does not meet conditions for commit
+           */
+
+          it("buyer does not meet condition for commit", async function () {
+            // mint correct token but to another user
+            await foreign721.connect(rando).mint(tokenId, "1");
+
+            // Attempt to commit, expecting revert
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+          });
+
+          it("buyer has exhausted allowable commits", async function () {
+            // mint correct token for the buyer
+            await foreign721.connect(buyer).mint(tokenId, "1");
+
+            // Commit to offer the maximum number of times
+            for (let i = 0; i < Number(maxCommits); i++) {
+              await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+            }
+
+            // Attempt to commit again after maximum commits has been reached
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+            ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
+          });
         });
       });
     });
@@ -1014,7 +1345,7 @@ describe("IBosonExchangeHandler", function () {
           // Deposit seller funds so the second commit will not revert for Insufficient available funds";
           await fundsHandler
             .connect(operator)
-            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+            .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
 
           // Redeem the first commit
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
@@ -1218,7 +1549,6 @@ describe("IBosonExchangeHandler", function () {
 
         // Call onVoucherTransferred
         await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
-        // await exchangeHandler.connect(fauxClient).onVoucherTransferred(exchange.id, newOwner.address);
 
         // Get the exchange
         [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);

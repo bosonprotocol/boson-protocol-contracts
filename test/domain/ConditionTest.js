@@ -3,6 +3,7 @@ const ethers = hre.ethers;
 const { expect } = require("chai");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
+const TokenType = require("../../scripts/domain/TokenType");
 
 /**
  *  Test the Condition domain entity
@@ -10,7 +11,7 @@ const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 describe("Condition", function () {
   // Suite-wide scope
   let condition, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let accounts, method, tokenAddress, tokenId, threshold;
+  let accounts, method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
 
   context("📋 Constructor", async function () {
     beforeEach(async function () {
@@ -20,17 +21,22 @@ describe("Condition", function () {
 
       // Required constructor params
       method = EvaluationMethod.None;
+      tokenType = TokenType.MultiToken;
       tokenId = "1";
       threshold = "1";
+      maxCommits = "3";
     });
 
     it("Should allow creation of valid, fully populated Condition instance", async function () {
       // Create a valid condition
-      condition = new Condition(method, tokenAddress, tokenId, threshold);
+      condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
       expect(condition.methodIsValid()).is.true;
+      expect(condition.tokenTypeIsValid()).is.true;
       expect(condition.tokenAddressIsValid()).is.true;
       expect(condition.tokenIdIsValid()).is.true;
       expect(condition.thresholdIsValid()).is.true;
+      expect(condition.maxCommitsIsValid()).is.true;
+      expect(condition.isValid()).is.true;
     });
   });
 
@@ -40,7 +46,7 @@ describe("Condition", function () {
       method = EvaluationMethod.SpecificToken;
 
       // Create a valid condition, then set fields in tests directly
-      condition = new Condition(method, tokenAddress, tokenId, threshold);
+      condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
       expect(condition.isValid()).is.true;
     });
 
@@ -66,7 +72,7 @@ describe("Condition", function () {
       expect(condition.isValid()).is.false;
 
       // Valid field value
-      condition.method = EvaluationMethod.AboveThreshold;
+      condition.method = EvaluationMethod.Threshold;
       expect(condition.methodIsValid()).is.true;
       expect(condition.isValid()).is.true;
     });
@@ -146,27 +152,56 @@ describe("Condition", function () {
       expect(condition.thresholdIsValid()).is.true;
       expect(condition.isValid()).is.true;
     });
+
+    it("Always present, maxCommits must be the string representation of a BigNumber", async function () {
+      // Invalid field value
+      condition.maxCommits = "zedzdeadbaby";
+      expect(condition.maxCommitsIsValid()).is.false;
+      expect(condition.isValid()).is.false;
+
+      // Invalid field value
+      condition.maxCommits = new Date();
+      expect(condition.maxCommitsIsValid()).is.false;
+      expect(condition.isValid()).is.false;
+
+      // Invalid field value
+      condition.maxCommits = 12;
+      expect(condition.maxCommitsIsValid()).is.false;
+      expect(condition.isValid()).is.false;
+
+      // Valid field value
+      condition.maxCommits = "0";
+      expect(condition.maxCommitsIsValid()).is.true;
+      expect(condition.isValid()).is.true;
+
+      // Valid field value
+      condition.maxCommits = "126";
+      expect(condition.maxCommitsIsValid()).is.true;
+      expect(condition.isValid()).is.true;
+    });
   });
 
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Required constructor params
-      method = EvaluationMethod.AboveThreshold;
+      method = EvaluationMethod.Threshold;
 
       // Create a valid condition, then set fields in tests directly
-      condition = new Condition(method, tokenAddress, tokenId, threshold);
+      condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
       expect(condition.isValid()).is.true;
 
       // Get plain object
       object = {
         method,
+        tokenType,
         tokenAddress,
         tokenId,
         threshold,
+        maxCommits,
       };
 
       // Struct representation
-      struct = [method, tokenAddress, tokenId, threshold];
+      struct = [method, tokenType, tokenAddress, tokenId, threshold, maxCommits];
     });
 
     context("👉 Static", async function () {
