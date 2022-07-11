@@ -332,11 +332,11 @@ describe("IBosonExchangeHandler", function () {
         const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
         // Create an offer with new seller
-
-        const { offer, offerDates, offerDurations } = await mockOffer();
+        const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
 
         // Create the offer
-        await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations);
+        await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+
         // Deposit seller funds so the commit will succeed
         await fundsHandler
           .connect(rando)
