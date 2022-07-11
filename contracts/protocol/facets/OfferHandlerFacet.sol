@@ -11,14 +11,10 @@ import { OfferBase } from "../bases/OfferBase.sol";
  * @notice Handles offers within the protocol
  */
 contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
-
     /**
      * @notice Facet Initializer
      */
-    function initialize()
-    public
-    onlyUnInitialized(type(IBosonOfferHandler).interfaceId)
-    {
+    function initialize() public onlyUnInitialized(type(IBosonOfferHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonOfferHandler).interfaceId);
     }
 
@@ -50,12 +46,10 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      */
     function createOffer(
         Offer memory _offer,
-        OfferDates calldata _offerDates, OfferDurations calldata _offerDurations,
+        OfferDates calldata _offerDates,
+        OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId
-    )
-    external
-    override
-    {    
+    ) external override {
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId);
     }
 
@@ -90,22 +84,26 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      */
     function createOfferBatch(
         Offer[] calldata _offers,
-        OfferDates[] calldata _offerDates, OfferDurations[] calldata _offerDurations, uint256[] calldata _disputeResolverIds
-    )
-    external
-    override
-    {
+        OfferDates[] calldata _offerDates,
+        OfferDurations[] calldata _offerDurations,
+        uint256[] calldata _disputeResolverIds
+    ) external override {
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offers.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
         // number of offer dates structs, offer durations structs and _disputeResolverIds must match the number of offers
-        require(_offers.length == _offerDates.length && _offers.length == _offerDurations.length &&  _offers.length == _disputeResolverIds.length, ARRAY_LENGTH_MISMATCH);
+        require(
+            _offers.length == _offerDates.length &&
+                _offers.length == _offerDurations.length &&
+                _offers.length == _disputeResolverIds.length,
+            ARRAY_LENGTH_MISMATCH
+        );
 
-        for (uint256 i = 0; i < _offers.length; i++) {        
+        for (uint256 i = 0; i < _offers.length; i++) {
             // create offer and update structs values to represent true state
             createOfferInternal(_offers[i], _offerDates[i], _offerDurations[i], _disputeResolverIds[i]);
         }
-    }   
-    
+    }
+
     /**
      * @notice Voids a given offer.
      *
@@ -122,10 +120,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * @param _offerId - the id of the offer to check
      */
-    function voidOffer(uint256 _offerId)
-    public
-    override
-    {
+    function voidOffer(uint256 _offerId) public override {
         // Get offer, make sure the caller is the operator
         Offer storage offer = getValidOffer(_offerId);
 
@@ -134,7 +129,6 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
 
         // Notify listeners of state change
         emit OfferVoided(_offerId, offer.sellerId, msgSender());
-
     }
 
     /**
@@ -154,13 +148,10 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * @param _offerIds - the id of the offer to check
      */
-    function voidOfferBatch(uint256[] calldata _offerIds)
-    external
-    override
-    {
+    function voidOfferBatch(uint256[] calldata _offerIds) external override {
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offerIds.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
-        for (uint i = 0; i < _offerIds.length; i++) { 
+        for (uint256 i = 0; i < _offerIds.length; i++) {
             voidOffer(_offerIds[i]);
         }
     }
@@ -179,24 +170,19 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *  @param _offerId - the id of the offer to check
      *  @param _validUntilDate - new valid until date
      */
-    function extendOffer(
-        uint256 _offerId, uint _validUntilDate
-    )
-    public
-    override
-    {
+    function extendOffer(uint256 _offerId, uint256 _validUntilDate) public override {
         // Make sure the caller is the operator, offer exists and is not voided
         Offer storage offer = getValidOffer(_offerId);
 
         // Fetch the offer dates
-        OfferDates storage offerDates = fetchOfferDates(_offerId); 
+        OfferDates storage offerDates = fetchOfferDates(_offerId);
 
         // New valid until date must be greater than existing one
         require(offerDates.validUntil < _validUntilDate, OFFER_PERIOD_INVALID);
 
         // If voucherRedeemableUntil is set, _validUntilDate must be less or equal than that
         if (offerDates.voucherRedeemableUntil > 0) {
-            require(_validUntilDate <=  offerDates.voucherRedeemableUntil, OFFER_PERIOD_INVALID);
+            require(_validUntilDate <= offerDates.voucherRedeemableUntil, OFFER_PERIOD_INVALID);
         }
 
         // Update the valid until property
@@ -225,7 +211,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external override {
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offerIds.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
-        for (uint i = 0; i < _offerIds.length; i++) { 
+        for (uint256 i = 0; i < _offerIds.length; i++) {
             extendOffer(_offerIds[i], _validUntilDate);
         }
     }
@@ -241,10 +227,17 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @return disputeResolutionTerms - the details about the dispute resolution terms. See {BosonTypes.DisputeResolutionTerms}
      */
     function getOffer(uint256 _offerId)
-    external
-    override
-    view
-    returns(bool exists, Offer memory offer, OfferDates memory offerDates, OfferDurations memory offerDurations, DisputeResolutionTerms memory disputeResolutionTerms) {
+        external
+        view
+        override
+        returns (
+            bool exists,
+            Offer memory offer,
+            OfferDates memory offerDates,
+            OfferDurations memory offerDurations,
+            DisputeResolutionTerms memory disputeResolutionTerms
+        )
+    {
         (exists, offer) = fetchOffer(_offerId);
         if (exists) {
             offerDates = fetchOfferDates(_offerId);
@@ -260,14 +253,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * @return nextOfferId - the next offer id
      */
-    function getNextOfferId()
-    public
-    override
-    view
-    returns(uint256 nextOfferId) {
-
+    function getNextOfferId() public view override returns (uint256 nextOfferId) {
         nextOfferId = protocolCounters().nextOfferId;
-
     }
 
     /**
@@ -277,14 +264,9 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @return exists - the offer was found
      * @return offerVoided - true if voided, false otherwise
      */
-    function isOfferVoided(uint256 _offerId)
-    public
-    override
-    view
-    returns(bool exists, bool offerVoided) {
+    function isOfferVoided(uint256 _offerId) public view override returns (bool exists, bool offerVoided) {
         Offer memory offer;
         (exists, offer) = fetchOffer(_offerId);
         offerVoided = offer.voided;
     }
-
 }

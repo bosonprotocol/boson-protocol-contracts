@@ -65,7 +65,7 @@ library ProtocolLib {
         // offer id => offer durations
         mapping(uint256 => BosonTypes.OfferDurations) offerDurations;
         // offer id => dispute resolution terms
-        mapping(uint256 => BosonTypes.DisputeResolutionTerms) disputeResolutionTerms;       
+        mapping(uint256 => BosonTypes.DisputeResolutionTerms) disputeResolutionTerms;
         // exchange id => exchange
         mapping(uint256 => BosonTypes.Exchange) exchanges;
         // exchange id => dispute
@@ -151,7 +151,7 @@ library ProtocolLib {
         // map function name to input type
         mapping(string => BosonTypes.MetaTxInputType) inputType;
         // map input type => hash info
-        mapping (BosonTypes.MetaTxInputType => BosonTypes.HashInfo) hashInfo;
+        mapping(BosonTypes.MetaTxInputType => BosonTypes.HashInfo) hashInfo;
     }
 
     // Individual facet initialization states
@@ -202,7 +202,7 @@ library ProtocolLib {
      * @return pl the protocol lookups slot
      */
     function protocolLookups() internal pure returns (ProtocolLookups storage pl) {
-        bytes32 position = PROTOCOL_LOOKUPS_POSITION; 
+        bytes32 position = PROTOCOL_LOOKUPS_POSITION;
         assembly {
             pl.slot := position
         }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {BosonTypes} from "../../domain/BosonTypes.sol";
-import {IBosonOfferEvents} from "../events/IBosonOfferEvents.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
 
 /**
  * @title IBosonOfferHandler
@@ -12,7 +12,6 @@ import {IBosonOfferEvents} from "../events/IBosonOfferEvents.sol";
  * The ERC-165 identifier for this interface is: 0x701befef
  */
 interface IBosonOfferHandler is IBosonOfferEvents {
-
     /**
      * @notice Creates an offer
      *
@@ -39,7 +38,12 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      */
-    function createOffer(BosonTypes.Offer memory _offer, BosonTypes.OfferDates calldata _offerDates, BosonTypes.OfferDurations calldata _offerDurations, uint256 _disputeResolverId) external;
+    function createOffer(
+        BosonTypes.Offer memory _offer,
+        BosonTypes.OfferDates calldata _offerDates,
+        BosonTypes.OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId
+    ) external;
 
     /**
      * @notice Creates a batch of offers.
@@ -70,7 +74,12 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @param _offerDurations - the array of fully populated offer durations structs
      * @param _disputeResolverIds - the array of ids of chosen dispute resolvers (can be 0)
      */
-    function createOfferBatch(BosonTypes.Offer[] calldata _offers, BosonTypes.OfferDates[] calldata _offerDates, BosonTypes.OfferDurations[] calldata _offerDurations, uint256[] calldata _disputeResolverIds) external;
+    function createOfferBatch(
+        BosonTypes.Offer[] calldata _offers,
+        BosonTypes.OfferDates[] calldata _offerDates,
+        BosonTypes.OfferDurations[] calldata _offerDurations,
+        uint256[] calldata _disputeResolverIds
+    ) external;
 
     /**
      * @notice Voids a given offer
@@ -153,7 +162,16 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @return offerDurations - the offer durations details. See {BosonTypes.OfferDurations}
      * @return disputeResolutionTerms - the details about the dispute resolution terms. See {BosonTypes.DisputeResolutionTerms}
      */
-    function getOffer(uint256 _offerId) external view returns (bool exists, BosonTypes.Offer memory offer, BosonTypes.OfferDates memory offerDates, BosonTypes.OfferDurations memory offerDurations, BosonTypes.DisputeResolutionTerms memory disputeResolutionTerms);
+    function getOffer(uint256 _offerId)
+        external
+        view
+        returns (
+            bool exists,
+            BosonTypes.Offer memory offer,
+            BosonTypes.OfferDates memory offerDates,
+            BosonTypes.OfferDurations memory offerDurations,
+            BosonTypes.DisputeResolutionTerms memory disputeResolutionTerms
+        );
 
     /**
      * @notice Gets the next offer id.
@@ -172,5 +190,4 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @return offerVoided - true if voided, false otherwise
      */
     function isOfferVoided(uint256 _offerId) external view returns (bool exists, bool offerVoided);
-
 }

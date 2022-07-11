@@ -12,14 +12,10 @@ import { TwinBase } from "../bases/TwinBase.sol";
  * @notice Manages digital twinning associated with exchanges within the protocol
  */
 contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
-
     /**
      * @notice Facet Initializer
      */
-    function initialize()
-    public
-    onlyUnInitialized(type(IBosonTwinHandler).interfaceId)
-    {
+    function initialize() public onlyUnInitialized(type(IBosonTwinHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonTwinHandler).interfaceId);
     }
 
@@ -34,12 +30,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
      */
-    function createTwin(
-        Twin memory _twin
-    )
-    external
-    override
-    {
+    function createTwin(Twin memory _twin) external override {
         createTwinInternal(_twin);
     }
 
@@ -50,11 +41,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      * @return exists - the twin was found
      * @return twin - the twin details. See {BosonTypes.Twin}
      */
-    function getTwin(uint256 _twinId)
-    external
-    override
-    view
-    returns(bool exists, Twin memory twin) {
+    function getTwin(uint256 _twinId) external view override returns (bool exists, Twin memory twin) {
         return fetchTwin(_twinId);
     }
 
@@ -65,14 +52,8 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      *
      * @return nextTwinId - the next twin id
      */
-    function getNextTwinId()
-    public
-    override
-    view
-    returns(uint256 nextTwinId) {
-
+    function getNextTwinId() public view override returns (uint256 nextTwinId) {
         nextTwinId = protocolCounters().nextTwinId;
-
     }
 
     /**

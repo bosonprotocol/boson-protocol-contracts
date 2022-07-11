@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {ProtocolLib} from "../libs/ProtocolLib.sol";
-import {DiamondLib} from "../../diamond/DiamondLib.sol";
-import {BosonTypes} from "../../domain/BosonTypes.sol";
-import {BosonConstants} from "../../domain/BosonConstants.sol";
-import {EIP712Lib} from "../libs/EIP712Lib.sol";
+import { ProtocolLib } from "../libs/ProtocolLib.sol";
+import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { BosonConstants } from "../../domain/BosonConstants.sol";
+import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
 /**
  * @title ProtocolBase
@@ -83,7 +83,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
         pl = ProtocolLib.protocolLookups();
     }
 
-     /**
+    /**
      * @dev Get the Protocol Fees slot
      *
      * @return pf the Protocol Fees slot
@@ -186,7 +186,11 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the dispute resolver Id exists
      * @return disputeResolverId  - the dispute resolver  Id
      */
-    function getDisputeResolverIdByOperator(address _operator) internal view returns (bool exists, uint256 disputeResolverId) {
+    function getDisputeResolverIdByOperator(address _operator)
+        internal
+        view
+        returns (bool exists, uint256 disputeResolverId)
+    {
         // Get the dispute resolver Id
         disputeResolverId = protocolLookups().disputeResolverIdByOperator[_operator];
 
@@ -201,7 +205,11 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the dispute resolver Id exists
      * @return disputeResolverId  - the dispute resolver Id
      */
-    function getDisputeResolverIdByAdmin(address _admin) internal view returns (bool exists, uint256 disputeResolverId) {
+    function getDisputeResolverIdByAdmin(address _admin)
+        internal
+        view
+        returns (bool exists, uint256 disputeResolverId)
+    {
         // Get the dispute resolver Id
         disputeResolverId = protocolLookups().disputeResolverIdByAdmin[_admin];
 
@@ -216,7 +224,11 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the dispute resolver Id exists
      * @return disputeResolverId  - the dispute resolver Id
      */
-    function getDisputeResolverIdByClerk(address _clerk) internal view returns (bool exists, uint256 disputeResolverId) {
+    function getDisputeResolverIdByClerk(address _clerk)
+        internal
+        view
+        returns (bool exists, uint256 disputeResolverId)
+    {
         // Get the dispute resolver Id
         disputeResolverId = protocolLookups().disputeResolverIdByClerk[_clerk];
 
@@ -277,7 +289,15 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      */
-    function fetchDisputeResolver(uint256 _disputeResolverId) internal view returns (bool exists, BosonTypes.DisputeResolver storage disputeResolver, BosonTypes.DisputeResolverFee[] storage disputeResolverFees) {
+    function fetchDisputeResolver(uint256 _disputeResolverId)
+        internal
+        view
+        returns (
+            bool exists,
+            BosonTypes.DisputeResolver storage disputeResolver,
+            BosonTypes.DisputeResolverFee[] storage disputeResolverFees
+        )
+    {
         // Get the dispute resolver's slot
         disputeResolver = protocolEntities().disputeResolvers[_disputeResolverId];
 
@@ -320,7 +340,11 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @param _offerId - the id of the offer
      * @return offerDurations - the offer durations details. See {BosonTypes.OfferDurations}
      */
-    function fetchOfferDurations(uint256 _offerId) internal view returns (BosonTypes.OfferDurations storage offerDurations) {
+    function fetchOfferDurations(uint256 _offerId)
+        internal
+        view
+        returns (BosonTypes.OfferDurations storage offerDurations)
+    {
         // Get the offer's slot
         offerDurations = protocolEntities().offerDurations[_offerId];
     }
@@ -331,7 +355,11 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @param _offerId - the id of the offer
      * @return disputeResolutionTerms - the details about the dispute resolution terms. See {BosonTypes.DisputeResolutionTerms}
      */
-    function fetchDisputeResolutionTerms(uint256 _offerId) internal view returns (BosonTypes.DisputeResolutionTerms storage disputeResolutionTerms) {
+    function fetchDisputeResolutionTerms(uint256 _offerId)
+        internal
+        view
+        returns (BosonTypes.DisputeResolutionTerms storage disputeResolutionTerms)
+    {
         // Get the disputeResolutionTerms's slot
         disputeResolutionTerms = protocolEntities().disputeResolutionTerms[_offerId];
     }
@@ -358,11 +386,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exists - whether the exchange exists
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
      */
-    function fetchExchange(uint256 _exchangeId)
-        internal
-        view
-        returns (bool exists, Exchange storage exchange)
-    {
+    function fetchExchange(uint256 _exchangeId) internal view returns (bool exists, Exchange storage exchange) {
         // Get the exchange's slot
         exchange = protocolEntities().exchanges[_exchangeId];
 
@@ -378,9 +402,13 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return dispute - the dispute details. See {BosonTypes.Dispute}
      */
     function fetchDispute(uint256 _exchangeId)
-    internal
-    view
-    returns (bool exists, Dispute storage dispute, DisputeDates storage disputeDates)
+        internal
+        view
+        returns (
+            bool exists,
+            Dispute storage dispute,
+            DisputeDates storage disputeDates
+        )
     {
         // Get the dispute's slot
         dispute = protocolEntities().disputes[_exchangeId];
@@ -390,7 +418,6 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
 
         // Determine existence
         exists = (_exchangeId > 0 && dispute.exchangeId == _exchangeId);
-    
     }
 
     /**
@@ -403,7 +430,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     function fetchTwin(uint256 _twinId) internal view returns (bool exists, Twin storage twin) {
         // Get the twin's slot
         twin = protocolEntities().twins[_twinId];
- 
+
         // Determine existence
         exists = (_twinId > 0 && twin.id == _twinId);
     }
@@ -506,10 +533,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      *
      * @param _currentBuyer - id of current buyer associated with the exchange
      */
-    function checkBuyer(uint256 _currentBuyer)
-    internal
-    view
-    {
+    function checkBuyer(uint256 _currentBuyer) internal view {
         // Get the caller's buyer account id
         uint256 buyerId;
         (, buyerId) = getBuyerIdByWallet(msgSender());
@@ -530,9 +554,9 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return exchange - the exchange
      */
     function getValidExchange(uint256 _exchangeId, ExchangeState _expectedState)
-    internal
-    view
-    returns(Exchange storage exchange)
+        internal
+        view
+        returns (Exchange storage exchange)
     {
         // Get the exchange
         bool exchangeExists;

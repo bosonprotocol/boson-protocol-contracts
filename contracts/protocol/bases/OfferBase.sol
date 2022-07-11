@@ -37,7 +37,12 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      */
-    function createOfferInternal(Offer memory _offer, OfferDates calldata _offerDates, OfferDurations calldata _offerDurations, uint256 _disputeResolverId) internal {
+    function createOfferInternal(
+        Offer memory _offer,
+        OfferDates calldata _offerDates,
+        OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId
+    ) internal {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
         require(exists, NOT_OPERATOR);
@@ -56,15 +61,15 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      *
      * @dev Rationale for the checks that are not obvious.
      * 1. voucher expiration date is either
-     *   -  _offerDates.voucherRedeemableUntil  [fixed voucher expiration date] 
+     *   -  _offerDates.voucherRedeemableUntil  [fixed voucher expiration date]
      *   - max([commitment time], _offerDates.voucherRedeemableFrom) + offerDurations.voucherValid [fixed voucher expiration duration]
      * This is calculated during the commitToOffer. To avoid any ambiguity, we make sure that exactly one of _offerDates.voucherRedeemableUntil
      * and offerDurations.voucherValid is defined.
-     * 2. Checks that include _offer.sellerDeposit, protocolFee, offer.buyerCancelPenalty and _offer.price  
+     * 2. Checks that include _offer.sellerDeposit, protocolFee, offer.buyerCancelPenalty and _offer.price
      * Exchange can have one of multiple final states and different states have different seller and buyer payoffs. If offer parameters are
      * not set appropriately, it's possible for some payoffs to become negative or unfair to some participant. By making the checks at the time
      * of the offer creation we ensure that all payoffs are possible and fair.
-     * 
+     *
      *
      * Reverts if:
      * - Valid from date is greater than valid until date
@@ -86,7 +91,12 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      */
-    function storeOffer(Offer memory _offer, OfferDates calldata _offerDates, OfferDurations calldata _offerDurations, uint256 _disputeResolverId) internal {
+    function storeOffer(
+        Offer memory _offer,
+        OfferDates calldata _offerDates,
+        OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId
+    ) internal {
         // validFrom date must be less than validUntil date
         require(_offerDates.validFrom < _offerDates.validUntil, OFFER_PERIOD_INVALID);
 
@@ -118,19 +128,23 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // specified resolver must be registered and active, except for absolute zero offers with unspecified dispute resolver
         DisputeResolutionTerms memory disputeResolutionTerms;
         if (_offer.price != 0 || _offer.sellerDeposit != 0 || _disputeResolverId != 0) {
-            (bool exists, DisputeResolver storage disputeResolver,) = fetchDisputeResolver(_disputeResolverId);
+            (bool exists, DisputeResolver storage disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
             require(exists && disputeResolver.active, INVALID_DISPUTE_RESOLVER);
 
             // store DR terms
-            disputeResolutionTerms = DisputeResolutionTerms(_disputeResolverId, disputeResolver.escalationResponsePeriod);
+            disputeResolutionTerms = DisputeResolutionTerms(
+                _disputeResolverId,
+                disputeResolver.escalationResponsePeriod
+            );
             protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
         }
 
         // Calculate and set the protocol fee
-        uint256 protocolFee = _offer.exchangeToken == protocolAddresses().tokenAddress ? 
-            protocolFees().flatBoson : protocolFees().percentage*_offer.price/10000;
+        uint256 protocolFee = _offer.exchangeToken == protocolAddresses().tokenAddress
+            ? protocolFees().flatBoson
+            : (protocolFees().percentage * _offer.price) / 10000;
         _offer.protocolFee = protocolFee;
-        
+
         // condition for succesfull payout when exchange final state is canceled
         require(_offer.buyerCancelPenalty <= _offer.price, OFFER_PENALTY_INVALID);
 
@@ -167,6 +181,14 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offerDurations.resolutionPeriod = _offerDurations.resolutionPeriod;
 
         // Notify watchers of state change
-        emit OfferCreated(_offer.id, _offer.sellerId, _offer, _offerDates, _offerDurations, disputeResolutionTerms, msgSender());
+        emit OfferCreated(
+            _offer.id,
+            _offer.sellerId,
+            _offer,
+            _offerDates,
+            _offerDurations,
+            disputeResolutionTerms,
+            msgSender()
+        );
     }
 }

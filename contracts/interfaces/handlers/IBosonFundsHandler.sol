@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {BosonTypes} from "../../domain/BosonTypes.sol";
-import {IBosonFundsEvents} from "../events/IBosonFundsEvents.sol";
-import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { IBosonFundsEvents } from "../events/IBosonFundsEvents.sol";
+import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
 
 /**
  * @title IBosonFundsHandler
@@ -13,7 +13,6 @@ import {IBosonFundsLibEvents} from "../events/IBosonFundsEvents.sol";
  * The ERC-165 identifier for this interface is: 0x18834247
  */
 interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
-
     /**
      * @notice Receives funds from the caller and stores it to the seller id, so they can be used during the commitToOffer
      *
@@ -28,7 +27,11 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
      * @param _tokenAddress - contract address of token that is being deposited (0 for native currency)
      * @param _amount - amount to be credited
      */
-     function depositFunds(uint256 _sellerId, address _tokenAddress, uint256 _amount) external payable;
+    function depositFunds(
+        uint256 _sellerId,
+        address _tokenAddress,
+        uint256 _amount
+    ) external payable;
 
     /**
      * @notice For a given seller or buyer id it returns the information about the funds that can use as a sellerDeposit and/or be withdrawn
@@ -53,7 +56,11 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
      * @param _tokenList - list of contract addresses of tokens that are being withdrawn
      * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
      */
-    function withdrawFunds(uint256 _entityId, address[] calldata _tokenList, uint256[] calldata _tokenAmounts) external;
+    function withdrawFunds(
+        uint256 _entityId,
+        address[] calldata _tokenList,
+        uint256[] calldata _tokenAmounts
+    ) external;
 
     /**
      * @notice Withdraw the protocol fees
