@@ -202,9 +202,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         //Check that current wallet address does not own any vouchers, if changing wallet address
         if(buyer.wallet != _buyer.wallet) {
-            // IBosonVoucher bosonVoucher = IBosonVoucher(protocolAddresses().voucherAddress);
-            // require(bosonVoucher.balanceOf(buyer.wallet) == 0, WALLET_OWNS_VOUCHERS);
-            // TODO: HOW TO SOLVE THIS WHEN EVERY SELLER HAS ITS OWN PROXY?
+            require(protocolLookups().voucherCount[_buyer.id] == 0, WALLET_OWNS_VOUCHERS);
         }
       
         //check that the wallet address is unique to one buyer Id if new

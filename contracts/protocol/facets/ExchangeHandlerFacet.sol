@@ -100,6 +100,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         offer.quantityAvailable--;
 
         // Issue voucher
+        protocolLookups().voucherCount[buyerId]++;
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
         bosonVoucher.issueVoucher(exchangeId, buyer);
 
@@ -476,6 +477,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
     function burnVoucher(Exchange storage _exchange)
     internal
     {
+        // decrease the voucher count
+        protocolLookups().voucherCount[_exchange.buyerId]--;
+
+        // burn the voucher
         (,Offer storage offer) = fetchOffer(_exchange.offerId);
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
         bosonVoucher.burnVoucher(_exchange.id);

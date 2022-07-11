@@ -120,6 +120,8 @@ library ProtocolLib {
         mapping(uint256 => address[]) tokenList;
         // seller id => cloneAddress
         mapping(uint256 => address) cloneAddress;
+        // buyer id => number of active vouchers
+        mapping(uint256 => uint256) voucherCount;
     }
 
     // Incrementing ID counters
