@@ -59,11 +59,10 @@ describe("IBosonExchangeHandler", function () {
     fundsHandler,
     disputeHandler,
     twinHandler,
-    bundleHandler;
-  let bosonVoucher, bosonToken, voucherImplementation;
-  let bosonVoucherClone, bosonVoucherCloneAddress;
     bundleHandler,
     groupHandler;
+  let bosonVoucher, bosonToken, voucherImplementation;
+  let bosonVoucherClone, bosonVoucherCloneAddress;
   let id, buyerId, offerId, seller, sellerId, nextExchangeId, nextAccountId;
   let block, blockNumber, tx, txReceipt, event;
   let support, newTime;
@@ -341,7 +340,7 @@ describe("IBosonExchangeHandler", function () {
         // Deposit seller funds so the commit will succeed
         await fundsHandler
           .connect(rando)
-          .depositFunds(sellerId, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+          .depositFunds(sellerId, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
 
         const buyer2 = newOwner;
 
