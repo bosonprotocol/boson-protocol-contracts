@@ -46,6 +46,7 @@ exports.RevertReasons = {
   SELLER_ADDRESS_MUST_BE_UNIQUE: "Seller address cannot be assigned to another seller Id",
   BUYER_ADDRESS_MUST_BE_UNIQUE: "Buyer address cannot be assigned to another buyer Id",
   DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE: "Dispute Resolver address cannot be assigned to another dispute resolver Id",
+  AGENT_ADDRESS_MUST_BE_UNIQUE:"Agent address cannot be assigned to another agent Id",
   NOT_ADMIN: "Not admin",
   NOT_BUYER_WALLET: "Not buyer's wallet address",
   NO_SUCH_BUYER: "No such buyer",

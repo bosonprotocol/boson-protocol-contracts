@@ -6,6 +6,7 @@ const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
+const Agent = require("../../scripts/domain/Agent");
 const { DisputeResolverFee, DisputeResolverFeeList } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -48,6 +49,7 @@ describe("IBosonAccountHandler", function () {
     disputeResolverFees2,
     feeTokenAddressesToRemove;
   let metadataUriDR;
+  let agent, agentStruct;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
   let protocolFeePercentage, protocolFeeFlatBoson;
@@ -1234,7 +1236,7 @@ describe("IBosonAccountHandler", function () {
     });
   });
 
-  // All supported Dispute Resolver methods
+   // All supported Dispute Resolver methods
   context("📋 Dispute Resolver Methods", async function () {
     beforeEach(async function () {
       // The first dispute resolver id
@@ -2403,6 +2405,95 @@ describe("IBosonAccountHandler", function () {
           // Attempt to activate the dispute resolver, expecting revert
           await expect(accountHandler.connect(admin).activateDisputeResolver(disputeResolver.id)).to.revertedWith(
             RevertReasons.ACCESS_DENIED
+          );
+        });
+      });
+    });
+  });
+
+  // All supported Agent methods
+  context.only("📋 Agent Methods", async function () {
+    beforeEach(async function () {
+      // The first agent id
+      nextAccountId = "1";
+      invalidAccountId = "666";
+
+      // Required constructor params
+      id = "1"; // argument sent to contract for createAgent will be ignored
+
+      active = true;
+
+      // Create a valid agent, then set fields in tests directly
+      agent = new Agent(id, other1.address, active);
+      expect(agent.isValid()).is.true;
+
+      // How that agent looks as a returned struct
+      agentStruct = agent.toStruct();
+    });
+
+    context("👉 createAgent()", async function () {
+      it("should emit a AgentCreated event", async function () {
+        // Create an agent, testing for the event
+        await expect(accountHandler.connect(rando).createAgent(agent))
+          .to.emit(accountHandler, "AgentCreated")
+          .withArgs(agent.id, agentStruct, rando.address);
+      });
+
+      it("should update state", async function () {
+        // Create an agent
+        await accountHandler.connect(rando).createAgent(agent);
+
+        // Get the agent as a struct
+        [, agentStruct] = await accountHandler.connect(rando).getAgent(id);
+
+        // Parse into entity
+        let returnedAgent = Agent.fromStruct(agentStruct);
+
+        // Returned values should match the input in createAgent
+        for ([key, value] of Object.entries(agent)) {
+          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should ignore any provided id and assign the next available", async function () {
+        agent.id = "444";
+
+        // Create an agent, testing for the event
+        await expect(accountHandler.connect(rando).createAgent(agent))
+         .to.emit(accountHandler, "AgentCreated")
+         .withArgs(nextAccountId, agentStruct, rando.address);
+
+        // wrong agent id should not exist
+        [exists] = await accountHandler.connect(rando).getAgent(agent.id);
+        expect(exists).to.be.false;
+
+        // next agent id should exist
+        [exists] = await accountHandler.connect(rando).getAgent(nextAccountId);
+        expect(exists).to.be.true;
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("active is false", async function () {
+          agent.active = false;
+
+          // Attempt to Create an Agent, expecting revert
+          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
+        });
+
+        it("addresses are the zero address", async function () {
+          agent.wallet = ethers.constants.AddressZero;
+
+          // Attempt to Create an Agent, expecting revert
+          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+        });
+
+        it("wallet address is not unique to this agentId", async function () {
+          // Create an agent
+          await accountHandler.connect(rando).createAgent(agent);
+
+          // Attempt to create another buyer with same wallet address
+          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(
+            RevertReasons.AGENT_ADDRESS_MUST_BE_UNIQUE
           );
         });
       });
