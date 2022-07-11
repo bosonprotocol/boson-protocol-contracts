@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {BosonTypes} from "../../domain/BosonTypes.sol";
-import {IBosonAccountEvents} from "../events/IBosonAccountEvents.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
 
 /**
  * @title IBosonAccountHandler
@@ -12,7 +12,6 @@ import {IBosonAccountEvents} from "../events/IBosonAccountEvents.sol";
  * The ERC-165 identifier for this interface is: 0x2cf25a22
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
-
     /**
      * @notice Creates a seller
      *
@@ -56,7 +55,10 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
      * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency. Can be empty.
      */
-    function createDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver, BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees) external;
+    function createDisputeResolver(
+        BosonTypes.DisputeResolver memory _disputeResolver,
+        BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees
+    ) external;
 
     /**
      * @notice Updates a seller
@@ -90,10 +92,10 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function updateBuyer(BosonTypes.Buyer memory _buyer) external;
 
     /**
-     * @notice Updates a dispute resolver, not including DisputeResolverFees or active flag. 
+     * @notice Updates a dispute resolver, not including DisputeResolverFees or active flag.
      * All DisputeResolver fields should be filled, even those staying the same.
      * Use removeFeesFromDisputeResolver
-     * 
+     *
      * Emits a DisputeResolverUpdated event if successful.
      *
      * Reverts if:
@@ -108,7 +110,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
 
     /**
      * @notice Add DisputeResolverFees to an existing dispute resolver
-     * 
+     *
      * Emits a DisputeResolverFeesAdded event if successful.
      *
      * Reverts if:
@@ -121,11 +123,14 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      */
-    function addFeesToDisputeResolver(uint256 _disputeResolverId, BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees) external;
+    function addFeesToDisputeResolver(
+        uint256 _disputeResolverId,
+        BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees
+    ) external;
 
     /**
      * @notice Remove DisputeResolverFees from  an existing dispute resolver
-     * 
+     *
      * Emits a DisputeResolverFeesRemoved event if successful.
      *
      * Reverts if:
@@ -142,7 +147,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
 
     /**
      * @notice Set the active flag for this Dispute Resolver to true. Only callable by the protocol ADMIN role.
-     * 
+     *
      * Emits a DisputeResolverActivated event if successful.
      *
      * Reverts if:
@@ -191,7 +196,14 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @return disputeResolver - the resolver details. See {BosonTypes.DisputeResolver}
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      */
-    function getDisputeResolver(uint256 _disputeResolverId) external view returns (bool exists, BosonTypes.DisputeResolver memory disputeResolver, BosonTypes.DisputeResolverFee[] memory disputeResolverFees);
+    function getDisputeResolver(uint256 _disputeResolverId)
+        external
+        view
+        returns (
+            bool exists,
+            BosonTypes.DisputeResolver memory disputeResolver,
+            BosonTypes.DisputeResolverFee[] memory disputeResolverFees
+        );
 
     /**
      * @notice Gets the details about a dispute resolver by an address associated with that seller: operator, admin, or clerk address.
@@ -204,7 +216,11 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function getDisputeResolverByAddress(address _associatedAddress)
         external
         view
-        returns (bool exists, BosonTypes.DisputeResolver memory disputeResolver, BosonTypes.DisputeResolverFee[] memory disputeResolverFees);
+        returns (
+            bool exists,
+            BosonTypes.DisputeResolver memory disputeResolver,
+            BosonTypes.DisputeResolverFee[] memory disputeResolverFees
+        );
 
     /**
      * @notice Gets the next account Id that can be assigned to an account.

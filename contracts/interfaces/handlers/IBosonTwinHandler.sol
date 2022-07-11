@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {BosonTypes} from "../../domain/BosonTypes.sol";
-import {IBosonTwinEvents} from "../events/IBosonTwinEvents.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { IBosonTwinEvents } from "../events/IBosonTwinEvents.sol";
 
 /**
  * @title IBosonTwinHandler
@@ -12,7 +12,6 @@ import {IBosonTwinEvents} from "../events/IBosonTwinEvents.sol";
  * The ERC-165 identifier for this interface is: 0x44f98e5d
  */
 interface IBosonTwinHandler is IBosonTwinEvents {
-
     /**
      * @notice Creates a Twin
      *
@@ -43,7 +42,6 @@ interface IBosonTwinHandler is IBosonTwinEvents {
      * @return nextTwinId - the next twin id
      */
     function getNextTwinId() external view returns (uint256 nextTwinId);
-
 
     /**
      * @notice Removes the twin.

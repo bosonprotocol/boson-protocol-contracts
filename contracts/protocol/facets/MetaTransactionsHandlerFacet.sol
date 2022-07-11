@@ -6,7 +6,7 @@ import { IBosonDisputeHandler } from "../../interfaces/handlers/IBosonDisputeHan
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonFundsHandler } from "../../interfaces/handlers/IBosonFundsHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
-import { ProtocolLib } from  "../libs/ProtocolLib.sol";
+import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
@@ -17,17 +17,42 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
  */
 contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, ProtocolBase {
     // Structs
-    bytes32 private constant META_TRANSACTION_TYPEHASH = keccak256(bytes("MetaTransaction(uint256 nonce,address from,address contractAddress,string functionName,bytes functionSignature)"));
+    bytes32 private constant META_TRANSACTION_TYPEHASH =
+        keccak256(
+            bytes(
+                "MetaTransaction(uint256 nonce,address from,address contractAddress,string functionName,bytes functionSignature)"
+            )
+        );
     bytes32 private constant OFFER_DETAILS_TYPEHASH = keccak256("MetaTxOfferDetails(address buyer,uint256 offerId)");
-    bytes32 private constant META_TX_COMMIT_TO_OFFER_TYPEHASH = keccak256("MetaTxCommitToOffer(uint256 nonce,address from,address contractAddress,string functionName,MetaTxOfferDetails offerDetails)MetaTxOfferDetails(address buyer,uint256 offerId)");
+    bytes32 private constant META_TX_COMMIT_TO_OFFER_TYPEHASH =
+        keccak256(
+            "MetaTxCommitToOffer(uint256 nonce,address from,address contractAddress,string functionName,MetaTxOfferDetails offerDetails)MetaTxOfferDetails(address buyer,uint256 offerId)"
+        );
     bytes32 private constant EXCHANGE_DETAILS_TYPEHASH = keccak256("MetaTxExchangeDetails(uint256 exchangeId)");
-    bytes32 private constant META_TX_EXCHANGE_TYPEHASH = keccak256("MetaTxExchange(uint256 nonce,address from,address contractAddress,string functionName,MetaTxExchangeDetails exchangeDetails)MetaTxExchangeDetails(uint256 exchangeId)");
-    bytes32 private constant FUND_DETAILS_TYPEHASH = keccak256("MetaTxFundDetails(uint256 entityId,address[] tokenList,uint256[] tokenAmounts)");
-    bytes32 private constant META_TX_FUNDS_TYPEHASH = keccak256("MetaTxFund(uint256 nonce,address from,address contractAddress,string functionName,MetaTxFundDetails fundDetails)MetaTxFundDetails(uint256 entityId,address[] tokenList,uint256[] tokenAmounts)");
-    bytes32 private constant DISPUTE_DETAILS_TYPEHASH = keccak256("MetaTxDisputeDetails(uint256 exchangeId,string complaint)");
-    bytes32 private constant META_TX_DISPUTES_TYPEHASH = keccak256("MetaTxDispute(uint256 nonce,address from,address contractAddress,string functionName,MetaTxDisputeDetails disputeDetails)MetaTxDisputeDetails(uint256 exchangeId,string complaint)");
-    bytes32 private constant DISPUTE_RESOLUTION_DETAILS_TYPEHASH = keccak256("MetaTxDisputeResolutionDetails(uint256 exchangeId,uint256 buyerPercent,bytes32 sigR,bytes32 sigS,uint8 sigV)");
-    bytes32 private constant META_TX_DISPUTE_RESOLUTIONS_TYPEHASH = keccak256("MetaTxDisputeResolution(uint256 nonce,address from,address contractAddress,string functionName,MetaTxDisputeResolutionDetails disputeResolutionDetails)MetaTxDisputeResolutionDetails(uint256 exchangeId,uint256 buyerPercent,bytes32 sigR,bytes32 sigS,uint8 sigV)");
+    bytes32 private constant META_TX_EXCHANGE_TYPEHASH =
+        keccak256(
+            "MetaTxExchange(uint256 nonce,address from,address contractAddress,string functionName,MetaTxExchangeDetails exchangeDetails)MetaTxExchangeDetails(uint256 exchangeId)"
+        );
+    bytes32 private constant FUND_DETAILS_TYPEHASH =
+        keccak256("MetaTxFundDetails(uint256 entityId,address[] tokenList,uint256[] tokenAmounts)");
+    bytes32 private constant META_TX_FUNDS_TYPEHASH =
+        keccak256(
+            "MetaTxFund(uint256 nonce,address from,address contractAddress,string functionName,MetaTxFundDetails fundDetails)MetaTxFundDetails(uint256 entityId,address[] tokenList,uint256[] tokenAmounts)"
+        );
+    bytes32 private constant DISPUTE_DETAILS_TYPEHASH =
+        keccak256("MetaTxDisputeDetails(uint256 exchangeId,string complaint)");
+    bytes32 private constant META_TX_DISPUTES_TYPEHASH =
+        keccak256(
+            "MetaTxDispute(uint256 nonce,address from,address contractAddress,string functionName,MetaTxDisputeDetails disputeDetails)MetaTxDisputeDetails(uint256 exchangeId,string complaint)"
+        );
+    bytes32 private constant DISPUTE_RESOLUTION_DETAILS_TYPEHASH =
+        keccak256(
+            "MetaTxDisputeResolutionDetails(uint256 exchangeId,uint256 buyerPercent,bytes32 sigR,bytes32 sigS,uint8 sigV)"
+        );
+    bytes32 private constant META_TX_DISPUTE_RESOLUTIONS_TYPEHASH =
+        keccak256(
+            "MetaTxDisputeResolution(uint256 nonce,address from,address contractAddress,string functionName,MetaTxDisputeResolutionDetails disputeResolutionDetails)MetaTxDisputeResolutionDetails(uint256 exchangeId,uint256 buyerPercent,bytes32 sigR,bytes32 sigS,uint8 sigV)"
+        );
     // Function names
     string private constant COMMIT_TO_OFFER = "commitToOffer(address,uint256)";
     string private constant CANCEL_VOUCHER = "cancelVoucher(uint256)";
@@ -65,7 +90,10 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         pmti.hashInfo[MetaTxInputType.Funds] = HashInfo(META_TX_FUNDS_TYPEHASH, hashFundDetails);
         pmti.hashInfo[MetaTxInputType.Exchange] = HashInfo(META_TX_EXCHANGE_TYPEHASH, hashExchangeDetails);
         pmti.hashInfo[MetaTxInputType.RaiseDispute] = HashInfo(META_TX_DISPUTES_TYPEHASH, hashDisputeDetails);
-        pmti.hashInfo[MetaTxInputType.ResolveDispute] = HashInfo(META_TX_DISPUTE_RESOLUTIONS_TYPEHASH, hashDisputeResolutionDetails);
+        pmti.hashInfo[MetaTxInputType.ResolveDispute] = HashInfo(
+            META_TX_DISPUTE_RESOLUTIONS_TYPEHASH,
+            hashDisputeResolutionDetails
+        );
     }
 
     /**
@@ -117,10 +145,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      */
     function hashOfferDetails(bytes memory _offerDetails) internal pure returns (bytes32) {
         (address buyer, uint256 offerId) = abi.decode(_offerDetails, (address, uint256));
-        return
-            keccak256(
-                abi.encode(OFFER_DETAILS_TYPEHASH, buyer, offerId)
-            );
+        return keccak256(abi.encode(OFFER_DETAILS_TYPEHASH, buyer, offerId));
     }
 
     /**
@@ -129,11 +154,8 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @param _exchangeDetails - the exchange details
      */
     function hashExchangeDetails(bytes memory _exchangeDetails) internal pure returns (bytes32) {
-        (uint256 exchangeId) = abi.decode(_exchangeDetails, (uint256));
-        return
-            keccak256(
-                abi.encode(EXCHANGE_DETAILS_TYPEHASH, exchangeId)
-            );
+        uint256 exchangeId = abi.decode(_exchangeDetails, (uint256));
+        return keccak256(abi.encode(EXCHANGE_DETAILS_TYPEHASH, exchangeId));
     }
 
     /**
@@ -142,7 +164,10 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @param _fundDetails - the fund details
      */
     function hashFundDetails(bytes memory _fundDetails) internal pure returns (bytes32) {
-        (uint256 entityId, address[] memory tokenList, uint256[] memory tokenAmounts) = abi.decode(_fundDetails, (uint256, address[], uint256[]));
+        (uint256 entityId, address[] memory tokenList, uint256[] memory tokenAmounts) = abi.decode(
+            _fundDetails,
+            (uint256, address[], uint256[])
+        );
         return
             keccak256(
                 abi.encode(
@@ -161,14 +186,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      */
     function hashDisputeDetails(bytes memory _disputeDetails) internal pure returns (bytes32) {
         (uint256 exchangeId, string memory complaint) = abi.decode(_disputeDetails, (uint256, string));
-        return
-            keccak256(
-                abi.encode(
-                    DISPUTE_DETAILS_TYPEHASH,
-                    exchangeId,
-                    keccak256(bytes(complaint))
-                )
-            );
+        return keccak256(abi.encode(DISPUTE_DETAILS_TYPEHASH, exchangeId, keccak256(bytes(complaint))));
     }
 
     /**
@@ -177,18 +195,11 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @param _disputeResolutionDetails - the dispute resolution details
      */
     function hashDisputeResolutionDetails(bytes memory _disputeResolutionDetails) internal pure returns (bytes32) {
-        (uint256 exchangeId, uint256 buyerPercent, bytes32 sigR, bytes32 sigS, uint8 sigV) = abi.decode(_disputeResolutionDetails, (uint256, uint256, bytes32, bytes32, uint8));
-        return
-            keccak256(
-                abi.encode(
-                    DISPUTE_RESOLUTION_DETAILS_TYPEHASH,
-                    exchangeId,
-                    buyerPercent,
-                    sigR,
-                    sigS,
-                    sigV
-                )
-            );
+        (uint256 exchangeId, uint256 buyerPercent, bytes32 sigR, bytes32 sigS, uint8 sigV) = abi.decode(
+            _disputeResolutionDetails,
+            (uint256, uint256, bytes32, bytes32, uint8)
+        );
+        return keccak256(abi.encode(DISPUTE_RESOLUTION_DETAILS_TYPEHASH, exchangeId, buyerPercent, sigR, sigS, sigV));
     }
 
     /**
@@ -231,9 +242,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      *
      * @param _functionName - the function name that we want to execute.
      */
-    function isSpecialFunction(
-        string memory _functionName
-    ) internal view returns (bool){
+    function isSpecialFunction(string memory _functionName) internal view returns (bool) {
         return protocolMetaTxInfo().inputType[_functionName] != MetaTxInputType.Generic;
     }
 

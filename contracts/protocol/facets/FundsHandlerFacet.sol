@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {IBosonFundsHandler} from "../../interfaces/handlers/IBosonFundsHandler.sol";
-import {DiamondLib} from "../../diamond/DiamondLib.sol";
-import {ProtocolBase} from "../bases/ProtocolBase.sol";
-import {ProtocolLib} from "../libs/ProtocolLib.sol";
-import {FundsLib} from "../libs/FundsLib.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { IBosonFundsHandler } from "../../interfaces/handlers/IBosonFundsHandler.sol";
+import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import { ProtocolBase } from "../bases/ProtocolBase.sol";
+import { ProtocolLib } from "../libs/ProtocolLib.sol";
+import { FundsLib } from "../libs/FundsLib.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /**
  * @title FundsHandlerFacet
@@ -15,14 +15,10 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
  * @notice Handles custody and withdrawal of buyer and seller funds
  */
 contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
-
     /**
      * @notice Facet Initializer
      */
-    function initialize()
-    public
-    onlyUnInitialized(type(IBosonFundsHandler).interfaceId)
-    {
+    function initialize() public onlyUnInitialized(type(IBosonFundsHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonFundsHandler).interfaceId);
     }
 
@@ -40,7 +36,11 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * @param _tokenAddress - contract address of token that is being deposited (0 for native currency)
      * @param _amount - amount to be credited
      */
-    function depositFunds(uint256 _sellerId, address _tokenAddress, uint256 _amount) external payable override {
+    function depositFunds(
+        uint256 _sellerId,
+        address _tokenAddress,
+        uint256 _amount
+    ) external payable override {
         //Check Seller exists in sellers mapping
         (bool exists, ) = fetchSeller(_sellerId);
 
@@ -59,9 +59,9 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         // increase available funds
         FundsLib.increaseAvailableFunds(_sellerId, _tokenAddress, _amount);
 
-        emit FundsDeposited(_sellerId, msgSender(), _tokenAddress, _amount);              
+        emit FundsDeposited(_sellerId, msgSender(), _tokenAddress, _amount);
     }
-    
+
     /**
      * @notice For a given seller or buyer id it returns the information about the funds that can use as a sellerDeposit and/or be withdrawn
      *
@@ -73,10 +73,10 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         address[] memory tokenList = protocolLookups().tokenList[_entityId];
         availableFunds = new Funds[](tokenList.length);
 
-        for (uint i = 0; i < tokenList.length; i++) {
+        for (uint256 i = 0; i < tokenList.length; i++) {
             address tokenAddress = tokenList[i];
             string memory tokenName;
-            
+
             if (tokenAddress == address(0)) {
                 // it tokenAddress is 0, it represents the native currency
                 tokenName = NATIVE_CURRENCY;
@@ -90,7 +90,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             }
 
             // retrieve available amount from the stroage
-            uint availableAmount = protocolLookups().availableFunds[_entityId][tokenAddress];
+            uint256 availableAmount = protocolLookups().availableFunds[_entityId][tokenAddress];
 
             // add entry to the return variable
             availableFunds[i] = Funds(tokenAddress, tokenName, availableAmount);
@@ -112,28 +112,32 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * @param _tokenList - list of contract addresses of tokens that are being withdrawn
      * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
      */
-    function withdrawFunds(uint256 _entityId, address[] calldata _tokenList, uint256[] calldata _tokenAmounts) external override {
+    function withdrawFunds(
+        uint256 _entityId,
+        address[] calldata _tokenList,
+        uint256[] calldata _tokenAmounts
+    ) external override {
         // address that will receive the funds
         address payable destinationAddress;
 
         // first check if the caller is a buyer
-        (bool exists, uint callerId) = getBuyerIdByWallet(msgSender());
-        if(exists && callerId == _entityId) {
+        (bool exists, uint256 callerId) = getBuyerIdByWallet(msgSender());
+        if (exists && callerId == _entityId) {
             // caller is a buyer
-           destinationAddress = payable(msgSender());
+            destinationAddress = payable(msgSender());
         } else {
             // check if the caller is a clerk
             (exists, callerId) = getSellerIdByClerk(msgSender());
-            if(exists && callerId == _entityId) {
+            if (exists && callerId == _entityId) {
                 // caller is a clerk. In this case funds are transferred to the treasury address
                 (, Seller storage seller) = fetchSeller(callerId);
                 destinationAddress = seller.treasury;
             } else {
-                // in this branch, caller is neither buyer or clerk or does not match the _entityId 
+                // in this branch, caller is neither buyer or clerk or does not match the _entityId
                 revert(NOT_AUTHORIZED);
             }
         }
-    
+
         withdrawFundsInternal(destinationAddress, _entityId, _tokenList, _tokenAmounts);
     }
 
@@ -151,7 +155,11 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * @param _tokenList - list of contract addresses of tokens that are being withdrawn
      * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
      */
-    function withdrawProtocolFees(address[] calldata _tokenList, uint256[] calldata _tokenAmounts) external override onlyRole(FEE_COLLECTOR) {
+    function withdrawProtocolFees(address[] calldata _tokenList, uint256[] calldata _tokenAmounts)
+        external
+        override
+        onlyRole(FEE_COLLECTOR)
+    {
         // withdraw the funds
         withdrawFundsInternal(payable(msgSender()), 0, _tokenList, _tokenAmounts);
     }
@@ -172,40 +180,43 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * @param _tokenList - list of contract addresses of tokens that are being withdrawn
      * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
      */
-    function withdrawFundsInternal(address payable _destinationAddress, uint256 _entityId, address[] calldata _tokenList, uint256[] calldata _tokenAmounts) internal {
-            
+    function withdrawFundsInternal(
+        address payable _destinationAddress,
+        uint256 _entityId,
+        address[] calldata _tokenList,
+        uint256[] calldata _tokenAmounts
+    ) internal {
         // make sure that the data is complete
         require(_tokenList.length == _tokenAmounts.length, TOKEN_AMOUNT_MISMATCH);
 
         // limit maximum number of tokens to avoid running into block gas limit in a loop
-        uint maxTokensPerWithdrawal = protocolLimits().maxTokensPerWithdrawal;
+        uint256 maxTokensPerWithdrawal = protocolLimits().maxTokensPerWithdrawal;
         require(_tokenList.length <= maxTokensPerWithdrawal, TOO_MANY_TOKENS);
 
         // two possible options: withdraw all, or withdraw only specified tokens and amounts
         if (_tokenList.length == 0) {
             // withdraw everything
-            
+
             // get list of all user's tokens
             address[] memory tokenList = protocolLookups().tokenList[_entityId];
 
             // make sure that at least something will be withdrawn
             require(tokenList.length != 0, NOTHING_TO_WITHDRAW);
-            
-            // make sure that tokenList is not too long
-            uint len = maxTokensPerWithdrawal <= tokenList.length ? maxTokensPerWithdrawal : tokenList.length;
 
-            for (uint i = 0; i < len; i++) {
+            // make sure that tokenList is not too long
+            uint256 len = maxTokensPerWithdrawal <= tokenList.length ? maxTokensPerWithdrawal : tokenList.length;
+
+            for (uint256 i = 0; i < len; i++) {
                 // get available fnds from storage
                 uint256 availableFunds = protocolLookups().availableFunds[_entityId][tokenList[i]];
-                FundsLib.transferFundsFromProtocol(_entityId, tokenList[i], _destinationAddress, availableFunds); 
+                FundsLib.transferFundsFromProtocol(_entityId, tokenList[i], _destinationAddress, availableFunds);
             }
         } else {
-            for (uint i = 0; i < _tokenList.length; i++) {
+            for (uint256 i = 0; i < _tokenList.length; i++) {
                 // make sure that at least something will be withdrawn
-                require(_tokenAmounts[i] > 0, NOTHING_TO_WITHDRAW);                
-                FundsLib.transferFundsFromProtocol(_entityId, _tokenList[i], _destinationAddress, _tokenAmounts[i]); 
+                require(_tokenAmounts[i] > 0, NOTHING_TO_WITHDRAW);
+                FundsLib.transferFundsFromProtocol(_entityId, _tokenList[i], _destinationAddress, _tokenAmounts[i]);
             }
         }
     }
-    
 }

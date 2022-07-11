@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import {BosonTypes} from "../../domain/BosonTypes.sol";
-import {IBosonConfigEvents} from "../events/IBosonConfigEvents.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
 
 /**
  * @title IBosonConfigHandler
@@ -12,7 +12,6 @@ import {IBosonConfigEvents} from "../events/IBosonConfigEvents.sol";
  * The ERC-165 identifier for this interface is: 0x52192fa6
  */
 interface IBosonConfigHandler is IBosonConfigEvents {
-
     /**
      * @notice Sets the address of the Boson Token (ERC-20) contract.
      *
@@ -72,7 +71,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      */
     function getProtocolFeePercentage() external view returns (uint16);
 
-     /**
+    /**
      * @notice Sets the flat protocol fee for exchanges in $BOSON.
      *
      * Emits a ProtocolFeeFlatBosonChanged event.
@@ -143,7 +142,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      */
     function getMaxOffersPerBundle() external view returns (uint16);
 
-     /**
+    /**
      * @notice Sets the maximum numbers of tokens that can be withdrawn in a single transaction
      *
      * Emits a mMxTokensPerWithdrawalChanged event.
@@ -180,13 +179,12 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      */
     function setMaxEscalationResponsePeriod(uint256 _maxEscalationResponsePeriod) external;
 
-   
     /**
      * @notice Get the maximum escalation response period a dispute resolver can specify
      */
     function getMaxEscalationResponsePeriod() external view returns (uint256);
 
-     /**
+    /**
      * @notice Sets the maximum numbers of disputes that can be expired in a single transaction
      *
      * Emits a MaxDisputesPerBatchChanged event.
@@ -198,5 +196,5 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     /**
      * @notice Get the maximum disputes per batch
      */
-    function getMaxDisputesPerBatch() external view returns (uint16);   
+    function getMaxDisputesPerBatch() external view returns (uint16);
 }

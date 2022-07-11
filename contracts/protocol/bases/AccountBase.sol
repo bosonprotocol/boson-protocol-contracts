@@ -45,7 +45,7 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         emit SellerCreated(sellerId, _seller, msgSender());
     }
 
-       /**
+    /**
      * @notice Creates a Buyer
      *
      * Emits an BuyerCreated event if successful.
@@ -57,9 +57,7 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
      *
      * @param _buyer - the fully populated struct with buyer id set to 0x0
      */
-    function createBuyerInternal(Buyer memory _buyer) 
-    internal
-    {
+    function createBuyerInternal(Buyer memory _buyer) internal {
         //Check for zero address
         require(_buyer.wallet != address(0), INVALID_ADDRESS);
 
@@ -84,10 +82,9 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
      *
      * @param _buyer - the fully populated struct with buyer id set
      */
-    function storeBuyer(Buyer memory _buyer) internal 
-    {
+    function storeBuyer(Buyer memory _buyer) internal {
         // Get storage location for buyer
-        (,Buyer storage buyer) = fetchBuyer(_buyer.id);
+        (, Buyer storage buyer) = fetchBuyer(_buyer.id);
 
         // Set buyer props individually since memory structs can't be copied to storage
         buyer.id = _buyer.id;
