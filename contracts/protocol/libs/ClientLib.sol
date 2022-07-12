@@ -2,41 +2,44 @@
 pragma solidity ^0.8.0;
 
 import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
-import { IBosonVoucherBeacon } from "../../interfaces/clients/IBosonVoucherBeacon.sol";
+import { IBosonConfigHandler } from "../../interfaces/handlers/IBosonConfigHandler.sol";
+import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
 /**
  * @title ClientLib
  *
- * - Defines BeaconSlot position
- * - Provides BeaconSlot accessor
+ * - Defines storage slot structure
+ * - Provides slot accessor
  * - Defines hasRole function
  */
 library ClientLib {
-    /**
-     * @dev The storage slot of the UpgradeableBeacon contract which defines the implementation for this proxy.
-     * This is bytes32(uint256(keccak256('eip1967.proxy.beacon')) - 1)) and is validated in the constructor.
-     */
-    bytes32 internal constant _BEACON_SLOT = 0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50;
-
-    struct BeaconSlot {
-        address value;
+    struct ProxyStorage {
+        // The AccessController address
+        IAccessControlUpgradeable accessController;
+        // The ProtocolDiamond address
+        address protocolDiamond;
+        // The client implementation address
+        address implementation;
     }
 
     /**
-     * @dev Returns an `BeaconSlot` with member `value`.
+     * @dev Storage slot with the address of the Boson Protocol AccessController
+     *
+     * This is obviously not a standard EIP-1967 slot. This is because that standard
+     * wants a single piece of data (implementation address) whereas we have several.
      */
-    function getBeaconSlot() internal pure returns (BeaconSlot storage r) {
-        /// @solidity memory-safe-assembly
+    bytes32 internal constant PROXY_SLOT = keccak256("Boson.Protocol.ClientProxy");
+
+    /**
+     * @notice Get the Proxy storage slot
+     *
+     * @return ps - Proxy storage slot cast to ProxyStorage
+     */
+    function proxyStorage() internal pure returns (ProxyStorage storage ps) {
+        bytes32 position = PROXY_SLOT;
         assembly {
-            r.slot := _BEACON_SLOT
+            ps.slot := position
         }
-    }
-
-    /**
-     * @dev Returns the address of the beacon
-     */
-    function _beacon() internal view returns (address) {
-        return getBeaconSlot().value;
     }
 
     /**
@@ -47,10 +50,7 @@ library ClientLib {
      * See: {AccessController.hasRole}
      */
     function hasRole(bytes32 role) internal view returns (bool) {
-        // retrieve accessController from Beacon
-        IAccessControlUpgradeable accessController = IBosonVoucherBeacon(_beacon()).getAccessController();
-
-        // forward the check to accessController
-        return accessController.hasRole(role, msg.sender);
+        ProxyStorage storage ps = proxyStorage();
+        return ps.accessController.hasRole(role, EIP712Lib.msgSender());
     }
 }

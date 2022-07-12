@@ -2,16 +2,16 @@
 pragma solidity ^0.8.0;
 
 import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
-import { IBosonVoucherBeacon } from "../../../interfaces/clients/IBosonVoucherBeacon.sol";
+import { IBosonClient } from "../../../interfaces/clients/IBosonClient.sol";
 import { BosonConstants } from "../../../domain/BosonConstants.sol";
-import { ClientLib } from "../../libs/ClientLib.sol";
+import { ClientLibBeacon } from "../../libs/ClientLibBeacon.sol";
 
 /**
  * @title Beacon
  *
  * @notice Helps minimal proxies
  */
-contract BosonVoucherBeacon is IBosonVoucherBeacon, BosonConstants {
+contract BosonBeacon is IBosonClient, BosonConstants {
     IAccessControlUpgradeable private accessController;
     address private protocolDiamond;
     address private impl;
@@ -24,7 +24,7 @@ contract BosonVoucherBeacon is IBosonVoucherBeacon, BosonConstants {
      * See: {AccessController.hasRole}
      */
     modifier onlyRole(bytes32 role) {
-        require(ClientLib.hasRole(role), "Access denied, caller doesn't have role");
+        require(accessController.hasRole(role, msg.sender), "Access denied, caller doesn't have role");
         _;
     }
 
@@ -47,7 +47,7 @@ contract BosonVoucherBeacon is IBosonVoucherBeacon, BosonConstants {
      * @dev Returns the address to which the fallback function
      * and {_fallback} should delegate.
      */
-    function implementation() external view override returns (address) {
+    function getImplementation() external view override returns (address) {
         // Return the current implementation address
         return impl;
     }

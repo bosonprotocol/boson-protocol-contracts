@@ -5,7 +5,8 @@ import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { BosonConstants } from "../../domain/BosonConstants.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
-import { ClientLib } from "../libs/ClientLib.sol";
+import { ClientLibBeacon } from "../libs/ClientLibBeacon.sol";
+import { IBosonClient } from "../../interfaces/clients/IBosonClient.sol";
 
 /**
  * @title ClientBase
@@ -13,9 +14,9 @@ import { ClientLib } from "../libs/ClientLib.sol";
  * @notice Extended by Boson Protocol contracts that need to communicate with the
  * ProtocolDiamond, but are NOT facets of the ProtocolDiamond.
  *
- * Boson client contracts include XXX
+ * Boson client contracts include BosonVoucher
  */
-abstract contract ClientBase is BosonTypes, BosonConstants {
+abstract contract ClientBaseBeacon is BosonTypes, BosonConstants {
     /**
      * @dev Modifier that checks that the caller has a specific role.
      *
@@ -25,7 +26,7 @@ abstract contract ClientBase is BosonTypes, BosonConstants {
      * See: {AccessController.hasRole}
      */
     modifier onlyRole(bytes32 role) {
-        require(ClientLib.hasRole(role), ACCESS_DENIED);
+        require(ClientLibBeacon.hasRole(role), ACCESS_DENIED);
         _;
     }
 
@@ -37,8 +38,20 @@ abstract contract ClientBase is BosonTypes, BosonConstants {
      * @return offer - the offer associated with the _offerId
      */
     function getBosonOffer(uint256 _exchangeId) internal view returns (bool exists, Offer memory offer) {
-        ClientLib.ProxyStorage memory ps = ClientLib.proxyStorage();
-        (, Exchange memory exchange) = IBosonExchangeHandler(ps.protocolDiamond).getExchange(_exchangeId);
-        (exists, offer, , , ) = IBosonOfferHandler(ps.protocolDiamond).getOffer(exchange.offerId);
+        address protocolDiamond = IBosonClient(ClientLibBeacon._beacon()).getProtocolAddress();
+
+        (, Exchange memory exchange) = IBosonExchangeHandler(protocolDiamond).getExchange(_exchangeId);
+        (exists, offer, , , ) = IBosonOfferHandler(protocolDiamond).getOffer(exchange.offerId);
+    }
+
+    /**
+     * @notice Inform protocol of new buyer associated with an exchange
+     *
+     * @param _exchangeId - the id of the exchange
+     * @param _newBuyer - the address of the new buyer
+     */
+    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) internal {
+        address protocolDiamond = IBosonClient(ClientLibBeacon._beacon()).getProtocolAddress();
+        IBosonExchangeHandler(protocolDiamond).onVoucherTransferred(_exchangeId, _newBuyer);
     }
 }

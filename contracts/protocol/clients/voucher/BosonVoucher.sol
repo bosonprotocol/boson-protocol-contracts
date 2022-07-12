@@ -7,7 +7,7 @@ import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/in
 
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { IBosonClient } from "../../../interfaces/clients/IBosonClient.sol";
-import { ClientBase } from "../../bases/ClientBase.sol";
+import { ClientBaseBeacon } from "../../bases/ClientBaseBeacon.sol";
 
 /**
  * @title BosonVoucher
@@ -17,7 +17,7 @@ import { ClientBase } from "../../bases/ClientBase.sol";
  * - Only PROTOCOL-roled addresses can issue vouchers, i.e., the ProtocolDiamond or an EOA for testing
  * - Newly minted voucher NFTs are automatically transferred to the buyer
  */
-contract BosonVoucher is IBosonVoucher, ClientBase, ERC721Upgradeable {
+contract BosonVoucher is IBosonVoucher, ClientBaseBeacon, ERC721Upgradeable {
     string internal constant VOUCHER_NAME = "Boson Voucher";
     string internal constant VOUCHER_SYMBOL = "BOSON_VOUCHER";
 

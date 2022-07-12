@@ -173,7 +173,7 @@ async function main() {
   const protocolClientArgs = [accessController.address, protocolDiamond.address];
   const [impls, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
   const [bosonVoucherImpl] = impls;
-  const [bosonVoucherBeacon] = beacons;
+  const [bosonBeacon] = beacons;
   const [bosonVoucherProxy] = proxies;
 
   // Gather the complete args that were used to create the proxies
@@ -181,7 +181,7 @@ async function main() {
 
   // Report and prepare for verification
   deploymentComplete("BosonVoucher Logic", bosonVoucherImpl.address, [], contracts);
-  deploymentComplete("BosonVoucher Beacon", bosonVoucherBeacon.address, [], contracts);
+  deploymentComplete("BosonVoucher Beacon", bosonBeacon.address, [], contracts);
   deploymentComplete("BosonVoucher Proxy", bosonVoucherProxy.address, bosonVoucherProxyArgs, contracts);
 
   console.log(`\n🌐️Configuring and granting roles...`);
@@ -193,7 +193,7 @@ async function main() {
   await accessController.renounceRole(Role.UPGRADER, deployer);
 
   // Add Voucher NFT addresses to protocol config
-  await bosonConfigHandler.setVoucherBeaconAddress(bosonVoucherBeacon.address);
+  await bosonConfigHandler.setVoucherBeaconAddress(bosonBeacon.address);
   await bosonConfigHandler.setVoucherProxyAddress(bosonVoucherProxy.address);
 
   console.log(`✅ ConfigHandlerFacet updated with remaining post-initialization config.`);
