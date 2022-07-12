@@ -61,11 +61,6 @@
               "type": "address"
             },
             {
-              "internalType": "uint256",
-              "name": "disputeResolverId",
-              "type": "uint256"
-            },
-            {
               "internalType": "string",
               "name": "metadataUri",
               "type": "string"
@@ -135,6 +130,24 @@
           "indexed": false,
           "internalType": "struct BosonTypes.OfferDurations",
           "name": "offerDurations",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "disputeResolverId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "escalationResponsePeriod",
+              "type": "uint256"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.DisputeResolutionTerms",
+          "name": "disputeResolutionTerms",
           "type": "tuple"
         },
         {

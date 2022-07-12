@@ -52,21 +52,24 @@ contract OrchestrationHandlerFacet is
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _seller - the fully populated seller struct
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      */
     function createSellerAndOffer(
         Seller memory _seller,
         Offer memory _offer,
         OfferDates calldata _offerDates,
-        OfferDurations calldata _offerDurations
+        OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId
     ) external override {
         checkAndCreateSeller(_seller);
-        createOfferInternal(_offer, _offerDates, _offerDurations);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId);
     }
 
     /**
@@ -88,22 +91,25 @@ contract OrchestrationHandlerFacet is
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      */
     function createOfferWithCondition(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         Condition memory _condition
     ) public override {
         // create offer and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId);
 
         // construct new group
         // - groupid is 0, and it is ignored
@@ -134,6 +140,7 @@ contract OrchestrationHandlerFacet is
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - when adding to the group if:
      *   - Group does not exists
@@ -142,16 +149,18 @@ contract OrchestrationHandlerFacet is
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _groupId - id of the group, where offer will be added
      */
     function createOfferAddToGroup(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         uint256 _groupId
     ) external override {
         // create offer and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId);
 
         // create an array with offer ids and add it to the group
         uint256[] memory _offerIds = new uint256[](1);
@@ -178,6 +187,7 @@ contract OrchestrationHandlerFacet is
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
@@ -185,16 +195,18 @@ contract OrchestrationHandlerFacet is
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _twin - the fully populated twin struct
      */
     function createOfferAndTwinWithBundle(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         Twin memory _twin
     ) public override {
         // create seller and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId);
 
         // create twin and pack everything into a bundle
         createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
@@ -219,6 +231,7 @@ contract OrchestrationHandlerFacet is
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      * - when creating twin if
@@ -227,6 +240,7 @@ contract OrchestrationHandlerFacet is
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      */
@@ -234,11 +248,12 @@ contract OrchestrationHandlerFacet is
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         Condition memory _condition,
         Twin memory _twin
     ) public override {
         // create offer with condition first
-        createOfferWithCondition(_offer, _offerDates, _offerDurations, _condition);
+        createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition);
         // create twin and pack everything into a bundle
         createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
     }
@@ -300,6 +315,7 @@ contract OrchestrationHandlerFacet is
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      *
@@ -307,6 +323,7 @@ contract OrchestrationHandlerFacet is
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      */
     function createSellerAndOfferWithCondition(
@@ -314,10 +331,11 @@ contract OrchestrationHandlerFacet is
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         Condition memory _condition
     ) external override {
         checkAndCreateSeller(_seller);
-        createOfferWithCondition(_offer, _offerDates, _offerDurations, _condition);
+        createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition);
     }
 
     /**
@@ -344,6 +362,7 @@ contract OrchestrationHandlerFacet is
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
@@ -352,6 +371,7 @@ contract OrchestrationHandlerFacet is
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _twin - the fully populated twin struct
      */
     function createSellerAndOfferAndTwinWithBundle(
@@ -359,10 +379,11 @@ contract OrchestrationHandlerFacet is
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         Twin memory _twin
     ) external override {
         checkAndCreateSeller(_seller);
-        createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _twin);
+        createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin);
     }
 
     /**
@@ -389,6 +410,7 @@ contract OrchestrationHandlerFacet is
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
      * - when creating twin if
@@ -398,6 +420,7 @@ contract OrchestrationHandlerFacet is
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      */
@@ -406,11 +429,19 @@ contract OrchestrationHandlerFacet is
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId,
         Condition memory _condition,
         Twin memory _twin
     ) external override {
         checkAndCreateSeller(_seller);
-        createOfferWithConditionAndTwinAndBundle(_offer, _offerDates, _offerDurations, _condition, _twin);
+        createOfferWithConditionAndTwinAndBundle(
+            _offer,
+            _offerDates,
+            _offerDurations,
+            _disputeResolverId,
+            _condition,
+            _twin
+        );
     }
 
     /**

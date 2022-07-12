@@ -9,7 +9,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xf411945f
+ * The ERC-165 identifier for this interface is: 0x701befef
  */
 interface IBosonOfferHandler is IBosonOfferEvents {
     /**
@@ -30,16 +30,19 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      * - Buyer cancel penalty is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to 0x0
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      */
     function createOffer(
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
-        BosonTypes.OfferDurations calldata _offerDurations
+        BosonTypes.OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId
     ) external;
 
     /**
@@ -63,16 +66,19 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      *
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
      * @param _offerDates - the array of fully populated offer dates structs
      * @param _offerDurations - the array of fully populated offer durations structs
+     * @param _disputeResolverIds - the array of ids of chosen dispute resolvers (can be 0)
      */
     function createOfferBatch(
         BosonTypes.Offer[] calldata _offers,
         BosonTypes.OfferDates[] calldata _offerDates,
-        BosonTypes.OfferDurations[] calldata _offerDurations
+        BosonTypes.OfferDurations[] calldata _offerDurations,
+        uint256[] calldata _disputeResolverIds
     ) external;
 
     /**
@@ -154,6 +160,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @return offer - the offer details. See {BosonTypes.Offer}
      * @return offerDates - the offer dates details. See {BosonTypes.OfferDates}
      * @return offerDurations - the offer durations details. See {BosonTypes.OfferDurations}
+     * @return disputeResolutionTerms - the details about the dispute resolution terms. See {BosonTypes.DisputeResolutionTerms}
      */
     function getOffer(uint256 _offerId)
         external
@@ -161,8 +168,9 @@ interface IBosonOfferHandler is IBosonOfferEvents {
         returns (
             bool exists,
             BosonTypes.Offer memory offer,
-            BosonTypes.OfferDates calldata offerDates,
-            BosonTypes.OfferDurations calldata offerDurations
+            BosonTypes.OfferDates memory offerDates,
+            BosonTypes.OfferDurations memory offerDurations,
+            BosonTypes.DisputeResolutionTerms memory disputeResolutionTerms
         );
 
     /**
