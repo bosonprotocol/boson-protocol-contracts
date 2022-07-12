@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
 import { IBosonClient } from "../../../interfaces/clients/IBosonClient.sol";
 import { BosonConstants } from "../../../domain/BosonConstants.sol";
-import { ClientLibBeacon } from "../../libs/ClientLibBeacon.sol";
+import { ClientLib } from "../../libs/ClientLib.sol";
 
 /**
  * @title Beacon
@@ -12,10 +12,6 @@ import { ClientLibBeacon } from "../../libs/ClientLibBeacon.sol";
  * @notice Helps minimal proxies
  */
 contract BosonBeacon is IBosonClient, BosonConstants {
-    IAccessControlUpgradeable private accessController;
-    address private protocolDiamond;
-    address private impl;
-
     /**
      * @dev Modifier that checks that the caller has a specific role.
      *
@@ -24,43 +20,59 @@ contract BosonBeacon is IBosonClient, BosonConstants {
      * See: {AccessController.hasRole}
      */
     modifier onlyRole(bytes32 role) {
-        require(accessController.hasRole(role, msg.sender), "Access denied, caller doesn't have role");
+        require(ClientLib.hasRole(role), "Access denied, caller doesn't have role");
         _;
     }
 
     constructor(
         address _accessController,
         address _protocolAddress,
-        address _implementation
-    ) {
+        address _impl
+    ) payable {
+        // Get the ProxyStorage struct
+        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
+
         // Store the AccessController address
-        accessController = IAccessControlUpgradeable(_accessController);
+        ps.accessController = IAccessControlUpgradeable(_accessController);
 
         // Store the Protocol Diamond address
-        protocolDiamond = _protocolAddress;
+        ps.protocolDiamond = _protocolAddress;
 
         // Store the implementation address
-        impl = _implementation;
+        ps.implementation = _impl;
     }
 
     /**
      * @dev Returns the address to which the fallback function
      * and {_fallback} should delegate.
      */
-    function getImplementation() external view override returns (address) {
+    function _implementation() internal view virtual returns (address) {
+        // Get the ProxyStorage struct
+        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
+
         // Return the current implementation address
-        return impl;
+        return ps.implementation;
     }
 
     /**
      * @dev Set the implementation address
      */
-    function setImplementation(address _implementation) external override onlyRole(UPGRADER) {
+    function setImplementation(address _impl) external override onlyRole(UPGRADER) {
+        // Get the ProxyStorage struct
+        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
+
         // Store the implementation address
-        impl = _implementation;
+        ps.implementation = _impl;
 
         // Notify watchers of state change
-        emit Upgraded(_implementation, msg.sender);
+        emit Upgraded(_impl, msg.sender);
+    }
+
+    /**
+     * @dev Get the implementation address
+     */
+    function getImplementation() external view override returns (address) {
+        return _implementation();
     }
 
     /**
@@ -71,8 +83,11 @@ contract BosonBeacon is IBosonClient, BosonConstants {
      * @param _accessController - the Boson Protocol AccessController address
      */
     function setAccessController(address _accessController) external override onlyRole(UPGRADER) {
+        // Get the ProxyStorage struct
+        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
+
         // Store the AccessController address
-        accessController = IAccessControlUpgradeable(_accessController);
+        ps.accessController = IAccessControlUpgradeable(_accessController);
 
         // Notify watchers of state change
         emit AccessControllerAddressChanged(_accessController, msg.sender);
@@ -84,8 +99,11 @@ contract BosonBeacon is IBosonClient, BosonConstants {
      * @return the address of the AccessController contract
      */
     function getAccessController() public view override returns (IAccessControlUpgradeable) {
+        // Get the ProxyStorage struct
+        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
+
         // Return the current AccessController address
-        return accessController;
+        return ps.accessController;
     }
 
     /**
@@ -96,8 +114,11 @@ contract BosonBeacon is IBosonClient, BosonConstants {
      * @param _protocolAddress - the ProtocolDiamond address
      */
     function setProtocolAddress(address _protocolAddress) external override onlyRole(UPGRADER) {
+        // Get the ProxyStorage struct
+        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
+
         // Store the ProtocolDiamond address
-        protocolDiamond = _protocolAddress;
+        ps.protocolDiamond = _protocolAddress;
 
         // Notify watchers of state change
         emit ProtocolAddressChanged(_protocolAddress, msg.sender);
@@ -109,7 +130,10 @@ contract BosonBeacon is IBosonClient, BosonConstants {
      * @return the address of the ProtocolDiamond contract
      */
     function getProtocolAddress() public view override returns (address) {
+        // Get the ProxyStorage struct
+        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
+
         // Return the current ProtocolDiamond address
-        return protocolDiamond;
+        return ps.protocolDiamond;
     }
 }
