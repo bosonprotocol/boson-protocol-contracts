@@ -118,6 +118,6 @@ exports.RevertReasons = {
   INVALID_DISPUTE_TIMEOUT: "Invalid dispute timeout",
   TOO_MANY_DISPUTES: "Exceeded maximum disputes in a single transaction",
 
-  // Config related
-  PROTOCOL_FEE_PERCENTAGE_INVALID: "Percentage representation must be less than 10000",
+  // General
+  FEE_PERCENTAGE_INVALID: "Percentage representation must be less than 10000",
 };

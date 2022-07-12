@@ -81,6 +81,7 @@ contract BosonTypes {
 
     struct Agent {
         uint256 id;
+        uint256 feePercentage;
         address payable wallet;
         bool active;
     }

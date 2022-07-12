@@ -9,14 +9,16 @@ const eip55 = require("eip55");
 class Agent {
   /*
         struct Agent {
-            uint256 id;
-            address payable wallet;
-            bool active;
-        }
+        uint256 id;
+        uint256 feePercentage;
+        address payable wallet;
+        bool active;
+    }
     */
 
-  constructor(id, wallet, active) {
+  constructor(id, feePercentage, wallet, active) {
     this.id = id;
+    this.feePercentage = feePercentage;
     this.wallet = wallet;
     this.active = active;
   }
@@ -27,8 +29,8 @@ class Agent {
    * @returns {Agent}
    */
   static fromObject(o) {
-    const { id, wallet, active } = o;
-    return new Agent(id, wallet, active);
+    const { id, feePercentage, wallet, active } = o;
+    return new Agent(id, feePercentage, wallet, active);
   }
 
   /**
@@ -37,13 +39,14 @@ class Agent {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let id, wallet, active;
+    let id, feePercentage, wallet, active;
 
     // destructure struct
-    [id, wallet, active] = struct;
+    [id, feePercentage, wallet, active] = struct;
 
     return Agent.fromObject({
       id: id.toString(),
+      feePercentage: feePercentage.toString(),
       wallet,
       active,
     });
@@ -70,7 +73,7 @@ class Agent {
    * @returns {string}
    */
   toStruct() {
-    return [this.id, this.wallet, this.active];
+    return [this.id, this.feePercentage, this.wallet, this.active];
   }
 
   /**
@@ -91,6 +94,20 @@ class Agent {
     let { id } = this;
     try {
       valid = typeof id === "string" && typeof ethers.BigNumber.from(id) === "object";
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this Agent instance's feePercentage field valid?
+   * Must be a string representation of a big number
+   * @returns {boolean}
+   */
+  feePercentageIsValid() {
+    let valid = false;
+    let { feePercentage } = this;
+    try {
+      valid = typeof feePercentage === "string" && typeof ethers.BigNumber.from(feePercentage) === "object";
     } catch (e) {}
     return valid;
   }
@@ -127,7 +144,7 @@ class Agent {
    * @returns {boolean}
    */
   isValid() {
-    return this.idIsValid() && this.walletIsValid() && this.activeIsValid();
+    return this.idIsValid() && this.feePercentageIsValid() && this.walletIsValid() && this.activeIsValid();
   }
 }
 

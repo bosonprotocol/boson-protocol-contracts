@@ -136,6 +136,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - Wallet address is zero address
      * - Active is not true
      * - Wallet address is not unique to this agent
+     * - Fee percentage is greater than 10000 (100%)
      *
      * @param _agent - the fully populated struct with agent id set to 0x0
      */

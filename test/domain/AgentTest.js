@@ -9,7 +9,7 @@ const Agent = require("../../scripts/domain/Agent");
 describe("Agent", function () {
   // Suite-wide scope
   let accounts, agent, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let id, wallet, active;
+  let id, wallet, active, feePercentage;
 
   context("📋 Constructor", async function () {
     beforeEach(async function () {
@@ -20,14 +20,16 @@ describe("Agent", function () {
       // Required constructor params
       id = "0";
       active = true;
+      feePercentage = "500"; //5%
     });
 
     it("Should allow creation of valid, fully populated Agent instance", async function () {
       id = "250";
 
       // Create a valid agent
-      agent = new Agent(id, wallet, active);
+      agent = new Agent(id, feePercentage, wallet, active);
       expect(agent.idIsValid()).is.true;
+      expect(agent.feePercentageIsValid()).is.true;
       expect(agent.walletIsValid()).is.true;
       expect(agent.activeIsValid()).is.true;
       expect(agent.isValid()).is.true;
@@ -36,11 +38,17 @@ describe("Agent", function () {
 
   context("📋 Field validations", async function () {
     beforeEach(async function () {
+      // Get a list of accounts
+      accounts = await ethers.getSigners();
+      wallet = accounts[1].address;
+
       // Required constructor params
       id = "199";
+      active = true;
+      feePercentage = "500"; //5%
 
       // Create a valid agent, then set fields in tests directly
-      agent = new Agent(id, wallet, active);
+      agent = new Agent(id, feePercentage, wallet, active);
       expect(agent.isValid()).is.true;
     });
 
@@ -68,6 +76,33 @@ describe("Agent", function () {
       // Valid field value
       agent.id = "126";
       expect(agent.idIsValid()).is.true;
+      expect(agent.isValid()).is.true;
+    });
+
+    it("Always present, feePercentage must be the string representation of a BigNumber", async function () {
+      // Invalid field value
+      agent.feePercentage = "zedzdeadbaby";
+      expect(agent.feePercentageIsValid()).is.false;
+      expect(agent.isValid()).is.false;
+
+      // Invalid field value
+      agent.feePercentage = new Date();
+      expect(agent.feePercentageIsValid()).is.false;
+      expect(agent.isValid()).is.false;
+
+      // Invalid field value
+      agent.feePercentage = 12;
+      expect(agent.feePercentageIsValid()).is.false;
+      expect(agent.isValid()).is.false;
+
+      // Valid field value
+      agent.feePercentage = "0";
+      expect(agent.feePercentageIsValid()).is.true;
+      expect(agent.isValid()).is.true;
+
+      // Valid field value
+      agent.feePercentage = "126";
+      expect(agent.feePercentageIsValid()).is.true;
       expect(agent.isValid()).is.true;
     });
 
@@ -118,22 +153,29 @@ describe("Agent", function () {
 
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
+      // Get a list of accounts
+      accounts = await ethers.getSigners();
+      wallet = accounts[1].address;
+
       // Required constructor params
       id = "2";
+      active = true;
+      feePercentage = "500"; //5%
 
       // Create a valid agent, then set fields in tests directly
-      agent = new Agent(id, wallet, active);
+      agent = new Agent(id, feePercentage, wallet, active);
       expect(agent.isValid()).is.true;
 
       // Get plain object
       object = {
         id,
+        feePercentage,
         wallet,
         active,
       };
 
       // Struct representation
-      struct = [id, wallet, active];
+      struct = [id, feePercentage, wallet, active];
     });
 
     context("👉 Static", async function () {

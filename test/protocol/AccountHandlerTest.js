@@ -49,7 +49,7 @@ describe("IBosonAccountHandler", function () {
     disputeResolverFees2,
     feeTokenAddressesToRemove;
   let metadataUriDR;
-  let agent, agentStruct;
+  let agent, agentStruct, feePercentage;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
   let protocolFeePercentage, protocolFeeFlatBoson;
@@ -2420,11 +2420,12 @@ describe("IBosonAccountHandler", function () {
 
       // Required constructor params
       id = "1"; // argument sent to contract for createAgent will be ignored
+      feePercentage = "500"; //5%
 
       active = true;
 
       // Create a valid agent, then set fields in tests directly
-      agent = new Agent(id, other1.address, active);
+      agent = new Agent(id, feePercentage, other1.address, active);
       expect(agent.isValid()).is.true;
 
       // How that agent looks as a returned struct
@@ -2472,6 +2473,56 @@ describe("IBosonAccountHandler", function () {
         expect(exists).to.be.true;
       });
 
+      it("should allow feePercentage of 0", async function () {
+        // Create a valid agent with feePercentage = 0, as it is optional
+        agent = new Agent(id, "0", other1.address, active);
+        expect(agent.isValid()).is.true;
+
+        // How that agent looks as a returned struct
+        agentStruct = agent.toStruct();
+
+        // Create an agent, testing for the event
+        await expect(accountHandler.connect(rando).createAgent(agent))
+          .to.emit(accountHandler, "AgentCreated")
+          .withArgs(nextAccountId, agentStruct, rando.address);
+
+        // Get the agent as a struct
+        [, agentStruct] = await accountHandler.connect(rando).getAgent(id);
+
+        // Parse into entity
+        let returnedAgent = Agent.fromStruct(agentStruct);
+
+        // Returned values should match the input in createAgent
+        for ([key, value] of Object.entries(agent)) {
+          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should allow feePercentage of 100%", async function () {
+        // Create a valid agent with feePercentage = 10000 (100%). Not handy for seller, but technically possible
+        agent = new Agent(id, "10000", other1.address, active);
+        expect(agent.isValid()).is.true;
+
+        // How that agent looks as a returned struct
+        agentStruct = agent.toStruct();
+
+        // Create an agent, testing for the event
+        await expect(accountHandler.connect(rando).createAgent(agent))
+          .to.emit(accountHandler, "AgentCreated")
+          .withArgs(nextAccountId, agentStruct, rando.address);
+
+        // Get the agent as a struct
+        [, agentStruct] = await accountHandler.connect(rando).getAgent(id);
+
+        // Parse into entity
+        let returnedAgent = Agent.fromStruct(agentStruct);
+
+        // Returned values should match the input in createAgent
+        for ([key, value] of Object.entries(agent)) {
+          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
       context("💔 Revert Reasons", async function () {
         it("active is false", async function () {
           agent.active = false;
@@ -2496,8 +2547,20 @@ describe("IBosonAccountHandler", function () {
             RevertReasons.AGENT_ADDRESS_MUST_BE_UNIQUE
           );
         });
+
+        it("feePercentage is above 100%", async function () {
+          //Agent with feePercentage > 10000 (100%)
+          agent = new Agent(id, "10001", other1.address, active);
+          expect(agent.isValid()).is.true;
+
+          // Attempt to create another buyer with same wallet address
+          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(
+            RevertReasons.FEE_PERCENTAGE_INVALID
+          );
+        });
       });
     });
+
     context("👉 getAgent()", async function () {
       beforeEach(async function () {
         // Create a agent

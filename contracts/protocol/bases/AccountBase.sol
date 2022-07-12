@@ -86,6 +86,7 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
      * - Wallet address is zero address
      * - Active is not true
      * - Wallet address is not unique to this agent
+     * - Fee percentage is greater than 10000 (100%)
      *
      * @param _agent - the fully populated struct with agent id set to 0x0
      */
@@ -95,6 +96,9 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
 
         //Check active is not set to false
         require(_agent.active, MUST_BE_ACTIVE);
+
+        // Make sure percentage is less than or equal to 10000
+        require(_agent.feePercentage <= 10000, FEE_PERCENTAGE_INVALID);
 
         // Get the next account Id and increment the counter
         uint256 agentId = protocolCounters().nextAccountId++;
@@ -177,6 +181,7 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         agent.id = _agent.id;
         agent.wallet = _agent.wallet;
         agent.active = _agent.active;
+        agent.feePercentage = _agent.feePercentage;
 
         //Map the agent's wallet address to the agentId.
         protocolLookups().agentIdByWallet[_agent.wallet] = _agent.id;
