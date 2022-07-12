@@ -71,11 +71,11 @@ function getConfig() {
 
   // Beacon proxy contract address
   const BEACON_PROXY = {
-      mainnet: "0x0000000000000000000000000000000000000000",
-      ropsten: "0x0000000000000000000000000000000000000000",
-      hardhat: "0x0000000000000000000000000000000000000000",
-      test: "0x0000000000000000000000000000000000000000",
-    };
+    mainnet: "0x0000000000000000000000000000000000000000",
+    ropsten: "0x0000000000000000000000000000000000000000",
+    hardhat: "0x0000000000000000000000000000000000000000",
+    test: "0x0000000000000000000000000000000000000000",
+  };
 
   return [
     {
@@ -171,11 +171,10 @@ async function main() {
 
   // Deploy the Protocol Client implementation/proxy pairs
   const protocolClientArgs = [accessController.address, protocolDiamond.address];
-  const [impls, beacons, proxies, clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
+  const [impls, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
   const [bosonVoucherImpl] = impls;
   const [bosonVoucherBeacon] = beacons;
   const [bosonVoucherProxy] = proxies;
-  const [bosonVoucher] = clients;
 
   // Gather the complete args that were used to create the proxies
   const bosonVoucherProxyArgs = [...protocolClientArgs, bosonVoucherImpl.address];
@@ -195,7 +194,7 @@ async function main() {
 
   // Add Voucher NFT addresses to protocol config
   await bosonConfigHandler.setVoucherBeaconAddress(bosonVoucherBeacon.address);
-  await bosonConfigHandler.setVoucherProxyAddress(bosonVoucherProxy.address);  
+  await bosonConfigHandler.setVoucherProxyAddress(bosonVoucherProxy.address);
 
   console.log(`✅ ConfigHandlerFacet updated with remaining post-initialization config.`);
 
