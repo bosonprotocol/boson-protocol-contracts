@@ -64,7 +64,7 @@ describe("IBosonOrchestrationHandler", function () {
   let id, sellerId;
   let offerDates, offerDatesStruct;
   let offerDurations, offerDurationsStruct;
-  let protocolFeePercentage, protocolFeeFlatBoson;
+  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let group, groupStruct, nextGroupId;
   let method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
   let offerIds, condition;
@@ -120,6 +120,7 @@ describe("IBosonOrchestrationHandler", function () {
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
     protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
@@ -145,6 +146,7 @@ describe("IBosonOrchestrationHandler", function () {
         percentage: protocolFeePercentage,
         flatBoson: protocolFeeFlatBoson,
       },
+      buyerEscalationDepositPercentage,
     ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 

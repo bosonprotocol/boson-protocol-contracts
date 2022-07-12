@@ -56,7 +56,7 @@ describe("IBosonOfferHandler", function () {
     offerDurationsStructs,
     offerDurationsList,
     disputeResolverIds;
-  let protocolFeePercentage, protocolFeeFlatBoson;
+  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let disputeResolver,
     disputeResolverFees,
     disputeResolverId,
@@ -98,6 +98,7 @@ describe("IBosonOfferHandler", function () {
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
     protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
@@ -123,6 +124,7 @@ describe("IBosonOfferHandler", function () {
         percentage: protocolFeePercentage,
         flatBoson: protocolFeeFlatBoson,
       },
+      buyerEscalationDepositPercentage,
     ];
 
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);

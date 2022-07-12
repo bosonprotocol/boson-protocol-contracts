@@ -33,7 +33,7 @@ describe("IBosonGroupHandler", function () {
   let id, sellerId, nextAccountId;
   let offerDates;
   let offerDurations;
-  let protocolFeePercentage, protocolFeeFlatBoson;
+  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let group, nextGroupId, invalidGroupId;
   let offerIds, condition;
   let groupHandlerFacet_Factory;
@@ -70,6 +70,7 @@ describe("IBosonGroupHandler", function () {
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
     protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Add config Handler, so ids starts at 1
     const protocolConfig = [
@@ -95,6 +96,7 @@ describe("IBosonGroupHandler", function () {
         percentage: protocolFeePercentage,
         flatBoson: protocolFeeFlatBoson,
       },
+      buyerEscalationDepositPercentage,
     ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
