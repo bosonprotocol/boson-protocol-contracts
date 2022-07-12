@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import { IBosonBundleHandler } from "../../interfaces/handlers/IBosonBundleHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BundleBase } from "../bases/BundleBase.sol";
-import "hardhat/console.sol";
 
 /**
  * @title BundleHandlerFacet
@@ -142,10 +141,8 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             uint256 twinId = _twinIds[i];
 
             // Get the bundle associated to this Twin.
-            (bool bundleForTwinExist, ) = fetchBundleIdByTwin(twinId);
-            console.log("test", bundleForTwinExist);
-            // Revert here if no bundle found
-            require(bundleForTwinExist, TWIN_NOT_IN_BUNDLE);
+            (bool bundleForTwinExist, uint256 bundleId) = fetchBundleIdByTwin(twinId);
+            require(bundleForTwinExist && bundleId == _bundleId, TWIN_NOT_IN_BUNDLE);
 
             // remove bundleId from the bundleIdsByTwin mapping
             delete protocolLookups().bundleIdByTwin[twinId];
