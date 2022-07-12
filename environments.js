@@ -41,14 +41,6 @@ module.exports = {
         "keys": [process.env.DEPLOYER_TEST_KEY]
     },
 
-    // Ropsten testnet
-    //  - placeholder private key is first address of test HDWallet used in hardhat network config
-    //  - Replace key with multisig pk for deployment
-    "ropsten": {
-        "txNode": process.env.DEPLOYER_ROPSTEN_TXNODE,
-        "keys": [process.env.DEPLOYER_ROPSTEN_KEY]
-    },
-
     // Ethereum Mainnet
     //  - placeholder private key is first address of test HDWallet used in hardhat network config
     //  - Replace key with multisig pk for deployment

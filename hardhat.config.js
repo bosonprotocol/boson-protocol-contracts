@@ -22,11 +22,6 @@ module.exports = {
       accounts: environments.test.keys,
       gas: environments.gasLimit
     },
-    ropsten: {
-      url: environments.ropsten.txNode,
-      accounts: environments.ropsten.keys,
-      gas: environments.gasLimit
-    },
     mainnet: {
       url: environments.mainnet.txNode,
       accounts: environments.mainnet.keys,

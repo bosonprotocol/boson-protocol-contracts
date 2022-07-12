@@ -5,7 +5,7 @@
  * Scripts rely on these addresses to be up to date.
  */
 exports.ContractAddresses = {
-  ropsten: {
+  mumbai: {
     AccessController: "",
     ProtocolDiamond: "",
     VoucherProxy: "",
