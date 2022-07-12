@@ -487,49 +487,49 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                 // N.B. Using call here so as to normalize the revert reason
                 bool success;
                 bytes memory result;
-                if (twin.tokenType == TokenType.FungibleToken) {
+                if (twin.tokenType == TokenType.FungibleToken && twin.supplyAvailable >= twin.amount) {
                     // ERC-20 style transfer
+                    uint256 amount = twin.amount;
+                    twin.supplyAvailable -= amount;
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
                             "transferFrom(address,address,uint256)",
                             seller.operator,
                             msgSender(),
-                            1
+                            amount
                         )
                     );
-                } else if (twin.tokenType == TokenType.NonFungibleToken) {
-                    uint256 pointer = twin.tokenId;
-                    // @TODO TBD, needs to revisit
-                    if (pointer <= twin.lastTokenId) {
-                        // ERC-721 style transfer
-                        twin.tokenId++;
-                        (success, result) = twin.tokenAddress.call(
-                            abi.encodeWithSignature(
-                                "safeTransferFrom(address,address,uint256,bytes)",
-                                seller.operator,
-                                msgSender(),
-                                pointer,
-                                ""
-                            )
-                        );
-                    } else {
-                        success = true;
-                    }
-                } else if (twin.tokenType == TokenType.MultiToken) {
+                } else if (twin.tokenType == TokenType.NonFungibleToken && twin.supplyAvailable > 0) {
+                    // ERC-721 style transfer
+                    uint256 tokenId = twin.tokenId + twin.supplyAvailable - 1;
+                    twin.supplyAvailable--;
+                    (success, result) = twin.tokenAddress.call(
+                        abi.encodeWithSignature(
+                            "safeTransferFrom(address,address,uint256,bytes)",
+                            seller.operator,
+                            msgSender(),
+                            tokenId,
+                            ""
+                        )
+                    );
+                } else if (twin.tokenType == TokenType.MultiToken && twin.supplyAvailable >= twin.amount) {
                     // ERC-1155 style transfer
+                    uint256 amount = twin.amount;
+                    twin.supplyAvailable -= amount;
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
                             seller.operator,
                             msgSender(),
                             twin.tokenId,
-                            1,
+                            amount,
                             ""
                         )
                     );
                 }
-                require(success, TWIN_TRANSFER_FAILED);
             }
+            // @TODO comment the line below because we assume that for now we'll not revert the redeem if Twin transfer failed.
+            // require(success, TWIN_TRANSFER_FAILED);
         }
     }
 

@@ -248,7 +248,7 @@ describe("IBosonTwinHandler", function () {
         twin.tokenAddress = foreign1155.address;
 
         // Mint a token and approve twinHandler contract to transfer it
-        await foreign1155.connect(operator).mint(twin.tokenId, twin.supplyAvailable);
+        await foreign1155.connect(operator).mint(twin.tokenId, twin.amount);
         await foreign1155.connect(operator).setApprovalForAll(twinHandler.address, true);
 
         // Create a twin, testing for the event
@@ -299,18 +299,57 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
-        it("lastTokenId is lower than tokenId", async function () {
+        it("supplyAvailable is zero", async function () {
           // Mint a token and approve twinHandler contract to transfer it
           await foreign721.connect(operator).mint(twin.tokenId, "1");
           await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
 
-          twin.lastTokenId = "0";
+          twin.supplyAvailable = "0";
+          twin.amount = "0";
           twin.tokenId = "1";
           twin.tokenAddress = foreign721.address;
           twin.tokenType = TokenType.NonFungibleToken;
 
           await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
-            RevertReasons.ERC721_INVALID_RANGE
+            RevertReasons.INVALID_SUPPLY_AVAILABLE
+          );
+        });
+
+        it("Amount must not be zero if token type is FungibleToken", async function () {
+          // Approving the twinHandler contract to transfer seller's tokens
+          await bosonToken.connect(operator).approve(twinHandler.address, 1);
+
+          twin.amount = "0";
+          twin.tokenAddress = bosonToken.address;
+          twin.tokenType = TokenType.FungibleToken;
+
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(RevertReasons.INVALID_AMOUNT);
+        });
+
+        it("Amount must not be zero if token type is MultiToken", async function () {
+          // Mint a token and approve twinHandler contract to transfer it
+          await foreign1155.connect(operator).mint(twin.tokenId, "1");
+          await foreign1155.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+          twin.amount = "0";
+          twin.tokenAddress = foreign1155.address;
+          twin.tokenType = TokenType.MultiToken;
+
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(RevertReasons.INVALID_AMOUNT);
+        });
+
+        it("amount should be zero if token type is NonFungibleToken", async function () {
+          twin.tokenAddress = foreign721.address;
+          twin.tokenType = TokenType.NonFungibleToken;
+          twin.amount = "1";
+          twin.tokenId = "1";
+
+          // Mint a token and approve twinHandler contract to transfer it
+          await foreign721.connect(operator).mint(twin.tokenId, "1");
+          await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
+            RevertReasons.INVALID_TWIN_PROPERTY
           );
         });
 
