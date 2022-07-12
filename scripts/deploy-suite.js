@@ -61,19 +61,28 @@ function getConfig() {
     test: "0x0000000000000000000000000000000000000000",
   };
 
-  // Voucher contract address
-  const VOUCHER = {
+  // Boson voucher beacon contract address
+  const BEACON = {
     mainnet: "0x0000000000000000000000000000000000000000",
     ropsten: "0x0000000000000000000000000000000000000000",
     hardhat: "0x0000000000000000000000000000000000000000",
     test: "0x0000000000000000000000000000000000000000",
   };
 
+  // Beacon proxy contract address
+  const BEACON_PROXY = {
+      mainnet: "0x0000000000000000000000000000000000000000",
+      ropsten: "0x0000000000000000000000000000000000000000",
+      hardhat: "0x0000000000000000000000000000000000000000",
+      test: "0x0000000000000000000000000000000000000000",
+    };
+
   return [
     {
       tokenAddress: TOKEN[network],
       treasuryAddress: TREASURY[network],
-      voucherAddress: VOUCHER[network],
+      voucherBeaconAddress: BEACON[network],
+      voucherProxyAddress: BEACON_PROXY[network],
     },
     {
       maxOffersPerGroup,
@@ -185,7 +194,8 @@ async function main() {
   await accessController.renounceRole(Role.UPGRADER, deployer);
 
   // Add Voucher NFT addresses to protocol config
-  await bosonConfigHandler.setVoucherAddress(bosonVoucher.address);
+  await bosonConfigHandler.setVoucherBeaconAddress(bosonVoucherBeacon.address);
+  await bosonConfigHandler.setVoucherProxyAddress(bosonVoucherProxy.address);  
 
   console.log(`✅ ConfigHandlerFacet updated with remaining post-initialization config.`);
 
