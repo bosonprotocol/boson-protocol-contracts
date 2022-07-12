@@ -3,17 +3,19 @@ on:
   release:
     types: [prereleased]
 jobs:
-  ropsten_deploy:
+  mumbai_deploy:
     runs-on: ubuntu-latest
     env:
       DEPLOYER_GAS_LIMIT: ${{ secrets.DEPLOYER_GAS_LIMIT }}
-      DEPLOYER_ROPSTEN_TXNODE: ${{ secrets.DEPLOYER_ROPSTEN_TXNODE }}
-      DEPLOYER_ROPSTEN_KEY: ${{ secrets.DEPLOYER_ROPSTEN_KEY }}
-      DEPLOYER_ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
-    name: ropsten_deploy
+      DEPLOYER_MUMBAI_TXNODE: ${{ secrets.DEPLOYER_MUMBAI_TXNODE }}
+      DEPLOYER_MUMBAI_KEY: ${{ secrets.DEPLOYER_MUMBAI_KEY }}
+      DEPLOYER_POLYGONSCAN_API_KEY: ${{ secrets.POLYGONSCAN_API_KEY }}
+    name: mumbai_deploy
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2.4.0
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.BSNORG_ACTIONS_SECRET }}
       - name: Setup node
         uses: actions/setup-node@v2.5.1
         with:
@@ -28,9 +30,26 @@ jobs:
         shell: bash
         run: |
           mkdir -p logs
-      - run: npm run deploy-suite:ropsten
-      - name: Upload Ropsten deploy output
+          mkdir -p addresses
+          mkdir -p addresses/abis
+          mkdir -p addresses/abis/mumbai
+      - name: Deploy to mumbai testnet
+        run: npm run deploy-suite:mumbai
+      - name: Upload Mumbai deploy output
         uses: actions/upload-artifact@v2
         with:
-          name: ropsten-deploy-contracts-logs
-          path: logs/ropsten.deploy.contracts.txt
+          name: mumbai-deploy-contracts-logs
+          path: logs/mumbai.deploy.contracts.txt
+      - name: Copy abis from artifacts directory to abis subfolder
+        shell: bash
+        run: |
+          rsync -av --exclude='*.dbg.json' artifacts/contracts/interfaces addresses/abis/mumbai/
+      - name: Commit auto-generated files
+        run: |
+          git config --local user.email "bsn-ci@users.noreply.github.com"
+          git config --local user.name "GitHub Actions Bot"
+          git commit -a \
+            -m "[skip ci] Add json file with addresses for staging environment" \
+            -m "[Staging Environment] New deployed addresses" \
+            -m "This is an auto-generated commit. This commit contains addresses generated after deploy to the staging environment."
+          git push

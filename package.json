@@ -33,8 +33,10 @@
     "deploy-suite:test": "npx hardhat run --network test scripts/deploy-suite.js  >> logs/test.deploy.contracts.txt",
     "deploy-suite:ropsten": "npx hardhat run --network ropsten scripts/deploy-suite.js >> logs/ropsten.deploy.contracts.txt",
     "deploy-suite:mainnet": "npx hardhat run --network mainnet scripts/deploy-suite.js >> logs/mainnet.deploy.contracts.txt",
+    "deploy-suite:mumbai": "npx hardhat run --network mumbai scripts/deploy-suite.js >> logs/mumbai.deploy.contracts.txt",
     "manage-roles:ropsten": " npx hardhat --network ropsten run scripts/manage-roles.js >> logs/ropsten.manage.roles.txt",
-    "manage-roles:mainnet": " npx hardhat --network mainnet run scripts/manage-roles.js >> logs/mainnet.manage.roles.txt"
+    "manage-roles:mainnet": " npx hardhat --network mainnet run scripts/manage-roles.js >> logs/mainnet.manage.roles.txt",
+    "manage-roles:mumbai": " npx hardhat --network mumbai run scripts/manage-roles.js >> logs/mumbai.manage.roles.txt"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.4.2",
@@ -42,7 +44,7 @@
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.4",
-    "@nomiclabs/hardhat-etherscan": "^3.0.0",
+    "@nomiclabs/hardhat-etherscan": "^3.1.0",
     "@nomiclabs/hardhat-waffle": "^2.0.2",
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/test-helpers": "^0.5.15",
@@ -58,8 +60,8 @@
     "hardhat-gas-reporter": "^1.0.7",
     "prettier": "^2.6.1",
     "prettier-plugin-solidity": "^1.0.0-beta.19",
-    "solidity-coverage": "^0.7.18-eip165.0",
     "solhint": "^3.3.7",
+    "solidity-coverage": "^0.7.18-eip165.0",
     "web3": "^1.7.0"
   }
 }

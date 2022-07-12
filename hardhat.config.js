@@ -31,10 +31,18 @@ module.exports = {
       url: environments.mainnet.txNode,
       accounts: environments.mainnet.keys,
       gas: environments.gasLimit
+    },
+    mumbai: {
+      url: environments.mumbai.txNode,
+      accounts: environments.mumbai.keys,
+      gas: environments.gasLimit
     }
   },
   etherscan: {
-    apiKey: environments.etherscan.apiKey
+    apiKey: {
+      mainnet: environments.etherscan.apiKey,
+      polygonMumbai: environments.polygonscan.apiKey,
+    }
   },
   solidity: {
     version: "0.8.9",
