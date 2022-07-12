@@ -36,18 +36,21 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      * - Buyer cancel penalty is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      */
     function createOffer(
         Offer memory _offer,
         OfferDates calldata _offerDates,
-        OfferDurations calldata _offerDurations
+        OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId
     ) external override {
-        createOfferInternal(_offer, _offerDates, _offerDurations);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId);
     }
 
     /**
@@ -71,26 +74,33 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *   - Voided is set to true
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver with unspecified dispute resolver
+     *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Buyer cancel penalty is greater than price
      *
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
      * @param _offerDates - the array of fully populated offer dates structs
      * @param _offerDurations - the array of fully populated offer durations structs
+     * @param _disputeResolverIds - the array of ids of chosen dispute resolvers (can be 0)
      */
     function createOfferBatch(
         Offer[] calldata _offers,
         OfferDates[] calldata _offerDates,
-        OfferDurations[] calldata _offerDurations
+        OfferDurations[] calldata _offerDurations,
+        uint256[] calldata _disputeResolverIds
     ) external override {
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offers.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
-        // number of offer dates structs and offer durations structs must match the number of offers
-        require(_offers.length == _offerDates.length, ARRAY_LENGTH_MISMATCH);
-        require(_offers.length == _offerDurations.length, ARRAY_LENGTH_MISMATCH);
+        // number of offer dates structs, offer durations structs and _disputeResolverIds must match the number of offers
+        require(
+            _offers.length == _offerDates.length &&
+                _offers.length == _offerDurations.length &&
+                _offers.length == _disputeResolverIds.length,
+            ARRAY_LENGTH_MISMATCH
+        );
 
         for (uint256 i = 0; i < _offers.length; i++) {
             // create offer and update structs values to represent true state
-            createOfferInternal(_offers[i], _offerDates[i], _offerDurations[i]);
+            createOfferInternal(_offers[i], _offerDates[i], _offerDurations[i], _disputeResolverIds[i]);
         }
     }
 
@@ -214,6 +224,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @return offer - the offer details. See {BosonTypes.Offer}
      * @return offerDates - the offer dates details. See {BosonTypes.OfferDates}
      * @return offerDurations - the offer durations details. See {BosonTypes.OfferDurations}
+     * @return disputeResolutionTerms - the details about the dispute resolution terms. See {BosonTypes.DisputeResolutionTerms}
      */
     function getOffer(uint256 _offerId)
         external
@@ -223,13 +234,15 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
             bool exists,
             Offer memory offer,
             OfferDates memory offerDates,
-            OfferDurations memory offerDurations
+            OfferDurations memory offerDurations,
+            DisputeResolutionTerms memory disputeResolutionTerms
         )
     {
         (exists, offer) = fetchOffer(_offerId);
         if (exists) {
             offerDates = fetchOfferDates(_offerId);
             offerDurations = fetchOfferDurations(_offerId);
+            disputeResolutionTerms = fetchDisputeResolutionTerms(_offerId);
         }
     }
 

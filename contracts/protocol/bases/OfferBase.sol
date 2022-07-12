@@ -29,16 +29,19 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      * - Buyer cancel penalty is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      */
     function createOfferInternal(
         Offer memory _offer,
         OfferDates calldata _offerDates,
-        OfferDurations calldata _offerDurations
+        OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId
     ) internal {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
@@ -50,10 +53,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         _offer.id = offerId;
 
         // Store the offer
-        storeOffer(_offer, _offerDates, _offerDurations);
-
-        // Notify watchers of state change
-        emit OfferCreated(offerId, sellerId, _offer, _offerDates, _offerDurations, msgSender());
+        storeOffer(_offer, _offerDates, _offerDurations, _disputeResolverId);
     }
 
     /**
@@ -83,16 +83,19 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
+     * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      * - Buyer cancel penalty is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
+     * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      */
     function storeOffer(
         Offer memory _offer,
         OfferDates calldata _offerDates,
-        OfferDurations calldata _offerDurations
+        OfferDurations calldata _offerDurations,
+        uint256 _disputeResolverId
     ) internal {
         // validFrom date must be less than validUntil date
         require(_offerDates.validFrom < _offerDates.validUntil, OFFER_PERIOD_INVALID);
@@ -122,10 +125,18 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // quantity must be greater than zero
         require(_offer.quantityAvailable > 0, INVALID_QUANTITY_AVAILABLE);
 
-        // specified resolver must be registered, except for absolute zero offers with unspecified dispute resolver
-        if (_offer.price != 0 || _offer.sellerDeposit != 0 || _offer.disputeResolverId != 0) {
-            (bool exists, , ) = fetchDisputeResolver(_offer.disputeResolverId);
-            require(exists, INVALID_DISPUTE_RESOLVER);
+        // specified resolver must be registered and active, except for absolute zero offers with unspecified dispute resolver
+        DisputeResolutionTerms memory disputeResolutionTerms;
+        if (_offer.price != 0 || _offer.sellerDeposit != 0 || _disputeResolverId != 0) {
+            (bool exists, DisputeResolver storage disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
+            require(exists && disputeResolver.active, INVALID_DISPUTE_RESOLVER);
+
+            // store DR terms
+            disputeResolutionTerms = DisputeResolutionTerms(
+                _disputeResolverId,
+                disputeResolver.escalationResponsePeriod
+            );
+            protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
         }
 
         // Calculate and set the protocol fee
@@ -148,7 +159,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.protocolFee = _offer.protocolFee;
         offer.buyerCancelPenalty = _offer.buyerCancelPenalty;
         offer.quantityAvailable = _offer.quantityAvailable;
-        offer.disputeResolverId = _offer.disputeResolverId;
         offer.exchangeToken = _offer.exchangeToken;
         offer.metadataUri = _offer.metadataUri;
         offer.metadataHash = _offer.metadataHash;
@@ -169,5 +179,16 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offerDurations.fulfillmentPeriod = _offerDurations.fulfillmentPeriod;
         offerDurations.voucherValid = _offerDurations.voucherValid;
         offerDurations.resolutionPeriod = _offerDurations.resolutionPeriod;
+
+        // Notify watchers of state change
+        emit OfferCreated(
+            _offer.id,
+            _offer.sellerId,
+            _offer,
+            _offerDates,
+            _offerDurations,
+            disputeResolutionTerms,
+            msgSender()
+        );
     }
 }
