@@ -75,10 +75,10 @@ function mockTwin(tokenAddress, tokenType) {
   tokenType = tokenType ?? TokenType.FungibleToken;
   const id = "1";
   const sellerId = "1";
-  const supplyAvailable = "500";
+  const amount = "500";
   const tokenId = "0";
-  const lastTokenId = "0";
-  return new Twin(id, sellerId, supplyAvailable, lastTokenId, tokenId, tokenAddress, tokenType);
+  const supplyAvailable = "1";
+  return new Twin(id, sellerId, amount, supplyAvailable, tokenId, tokenAddress, tokenType);
 }
 
 function mockDisputeResolver(operatorAddress, adminAddress, clerkAddress, treasuryAddress, active) {
