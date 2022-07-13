@@ -62,16 +62,12 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             // make sure all twins exist and belong to the seller
             getValidTwin(_bundle.twinIds[i]);
 
-            // A twin can belong to multiple bundles
-            (bool bundlesForTwinExist, uint256[] memory bundleIds) = fetchBundleIdsByTwin(_bundle.twinIds[i]);
-            if (bundlesForTwinExist) {
-                for (uint256 j = 0; j < bundleIds.length; j++) {
-                    require((bundleIds[j] != bundleId), TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE);
-                }
-            }
+            // A twin can't belong to multiple bundles
+            (bool bundleForTwinExist, ) = fetchBundleIdByTwin(_bundle.twinIds[i]);
+            require(!bundleForTwinExist, BUNDLE_TWIN_MUST_BE_UNIQUE);
 
             // Push to bundleIdsByTwin mapping
-            protocolLookups().bundleIdsByTwin[_bundle.twinIds[i]].push(bundleId);
+            protocolLookups().bundleIdByTwin[_bundle.twinIds[i]] = bundleId;
         }
 
         // Get storage location for bundle

@@ -64,7 +64,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      * Reverts if:
      * - caller is not the seller.
      * - Twin does not exist.
-     * - Twin has bundles.
+     * - Bundle for twin exists
      *
      * @param _twinId - the id of the twin to check.
      */
@@ -79,8 +79,8 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         require(sellerId == twin.sellerId, NOT_OPERATOR);
 
         // Check if there are bundles for this twin
-        (bool bundlesForTwinExist, ) = fetchBundleIdsByTwin(_twinId);
-        require(!bundlesForTwinExist, TWIN_HAS_BUNDLES);
+        (bool bundleForTwinExist, ) = fetchBundleIdByTwin(_twinId);
+        require(!bundleForTwinExist, BUNDLE_FOR_TWIN_EXISTS);
 
         // delete struct
         delete protocolEntities().twins[_twinId];
