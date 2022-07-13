@@ -489,7 +489,7 @@ describe("IBosonConfigHandler", function () {
             protocolFeePercentage = 10001;
             await expect(
               configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage)
-            ).to.revertedWith(RevertReasons.PROTOCOL_FEE_PERCENTAGE_INVALID);
+            ).to.revertedWith(RevertReasons.FEE_PERCENTAGE_INVALID);
           });
         });
       });

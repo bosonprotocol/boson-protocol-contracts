@@ -44,4 +44,6 @@ interface IBosonAccountEvents {
         BosonTypes.DisputeResolver disputeResolver,
         address indexed executedBy
     );
+
+    event AgentCreated(uint256 indexed agentId, BosonTypes.Agent agent, address indexed executedBy);
 }

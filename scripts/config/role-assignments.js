@@ -15,7 +15,7 @@ const Role = require("../domain/Role");
  *  3. Save changes to the repo as a record of who has what roles
  */
 exports.RoleAssignments = {
-  ropsten: {
+  mumbai: {
     "Deployer / role admin address": {
       address: "",
       roles: [Role.ADMIN, Role.UPGRADER],
@@ -23,7 +23,7 @@ exports.RoleAssignments = {
 
     // For minting vouchers
     "ProtocolDiamond contract": {
-      address: ContractAddresses.ropsten.ProtocolDiamond,
+      address: ContractAddresses.mumbai.ProtocolDiamond,
       roles: [Role.PROTOCOL],
     },
   },

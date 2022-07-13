@@ -82,6 +82,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.DisputeResolver) disputeResolvers;
         // dispute resolver id => dispute resolver fee array
         mapping(uint256 => BosonTypes.DisputeResolverFee[]) disputeResolverFees;
+        // agent id => agent
+        mapping(uint256 => BosonTypes.Agent) agents;
         // group id => group
         mapping(uint256 => BosonTypes.Group) groups;
         // bundle id => bundle
@@ -116,6 +118,8 @@ library ProtocolLib {
         mapping(address => uint256) disputeResolverIdByClerk;
         // dispute resolver id to fee token address => index of the token address
         mapping(uint256 => mapping(address => uint256)) disputeResolverFeeTokenIndex;
+        // agent wallet address => agentId
+        mapping(address => uint256) agentIdByWallet;
         // seller/buyer id => token address => amount
         mapping(uint256 => mapping(address => uint256)) availableFunds;
         // seller/buyer id => all tokens with balance > 0

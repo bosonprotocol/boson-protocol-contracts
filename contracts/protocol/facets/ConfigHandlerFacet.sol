@@ -148,7 +148,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function setProtocolFeePercentage(uint16 _protocolFeePercentage) public override onlyRole(ADMIN) {
         // Make sure percentage is less than 10000
-        require(_protocolFeePercentage <= 10000, PROTOCOL_FEE_PERCENTAGE_INVALID);
+        require(_protocolFeePercentage <= 10000, FEE_PERCENTAGE_INVALID);
 
         // Store fee percentage
         protocolFees().percentage = _protocolFeePercentage;

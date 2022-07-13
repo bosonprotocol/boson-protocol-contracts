@@ -61,6 +61,21 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     ) external;
 
     /**
+     * @notice Creates a marketplace agent
+     *
+     * Emits an AgentCreated event if successful.
+     *
+     * Reverts if:
+     * - Wallet address is zero address
+     * - Active is not true
+     * - Wallet address is not unique to this agent
+     * - Fee percentage is greater than 10000 (100%)
+     *
+     * @param _agent - the fully populated struct with agent id set to 0x0
+     */
+    function createAgent(BosonTypes.Agent memory _agent) external;
+
+    /**
      * @notice Updates a seller
      *
      * Emits a SellerUpdated event if successful.
@@ -221,6 +236,15 @@ interface IBosonAccountHandler is IBosonAccountEvents {
             BosonTypes.DisputeResolver memory disputeResolver,
             BosonTypes.DisputeResolverFee[] memory disputeResolverFees
         );
+
+    /**
+     * @notice Gets the details about an agent.
+     *
+     * @param _agentId - the id of the agent to check
+     * @return exists - the agent was found
+     * @return agent - the agent details. See {BosonTypes.Agent}
+     */
+    function getAgent(uint256 _agentId) external view returns (bool exists, BosonTypes.Agent memory agent);
 
     /**
      * @notice Gets the next account Id that can be assigned to an account.
