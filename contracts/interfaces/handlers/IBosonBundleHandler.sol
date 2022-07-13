@@ -151,11 +151,11 @@ interface IBosonBundleHandler is IBosonBundleEvents {
     function getBundleIdByOffer(uint256 _offerId) external view returns (bool exists, uint256 bundleId);
 
     /**
-     * @notice Gets the bundle ids for a given twin id.
+     * @notice Gets the bundle id for a given twin id.
      *
      * @param _twinId - the twin Id.
-     * @return exists - whether the bundle Ids exist
-     * @return bundleIds  - the bundle Ids.
+     * @return exists - whether the bundle Id exist
+     * @return bundleId  - the bundle Id.
      */
-    function getBundleIdsByTwin(uint256 _twinId) external view returns (bool exists, uint256[] memory bundleIds);
+    function getBundleIdByTwin(uint256 _twinId) external view returns (bool exists, uint256 bundleId);
 }

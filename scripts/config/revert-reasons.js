@@ -64,7 +64,7 @@ exports.RevertReasons = {
   NO_TRANSFER_APPROVED: "No transfer approved",
   TWIN_TRANSFER_FAILED: "Twin could not be transferred",
   UNSUPPORTED_TOKEN: "Unsupported token",
-  TWIN_HAS_BUNDLES: "Twin has bundles",
+  BUNDLE_FOR_TWIN_EXISTS: "Bundle for twin exists",
   INVALID_SUPPLY_AVAILABLE: "supplyAvailable can't be zero",
   INVALID_AMOUNT: "Amount must be greater than zero if token is ERC20 or ERC1155",
   INVALID_TWIN_PROPERTY: "Invalid property for selected token type",
@@ -74,8 +74,8 @@ exports.RevertReasons = {
   TWIN_NOT_IN_BUNDLE: "Twin not part of the bundle",
   OFFER_NOT_IN_BUNDLE: "Offer not part of the bundle",
   TOO_MANY_TWINS: "Exceeded maximum twins in a single transaction",
-  TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE: "Twin already exists in the same bundle",
   BUNDLE_OFFER_MUST_BE_UNIQUE: "Offer must be unique to a bundle",
+  BUNDLE_TWIN_MUST_BE_UNIQUE: "Twin must be unique to a bundle",
 
   // Exchange related
   NO_SUCH_EXCHANGE: "No such exchange",

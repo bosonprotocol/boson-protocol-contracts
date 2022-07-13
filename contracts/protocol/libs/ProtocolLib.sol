@@ -96,8 +96,8 @@ library ProtocolLib {
         mapping(uint256 => uint256[]) exchangeIdsByOffer;
         // offer id => bundle id
         mapping(uint256 => uint256) bundleIdByOffer;
-        // twin id => bundle ids
-        mapping(uint256 => uint256[]) bundleIdsByTwin;
+        // twin id => bundle id
+        mapping(uint256 => uint256) bundleIdByTwin;
         // offer id => group id
         mapping(uint256 => uint256) groupIdByOffer;
         // seller operator address => sellerId
