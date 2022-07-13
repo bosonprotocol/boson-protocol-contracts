@@ -144,7 +144,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             (bool bundleForTwinExist, uint256 bundleId) = fetchBundleIdByTwin(twinId);
             require(bundleForTwinExist && bundleId == _bundleId, TWIN_NOT_IN_BUNDLE);
 
-            // remove bundleId from the bundleIdsByTwin mapping
+            // remove bundleId from the bundleIdByTwin mapping
             delete protocolLookups().bundleIdByTwin[twinId];
 
             // Also remove from the bundle struct

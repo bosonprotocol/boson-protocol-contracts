@@ -63,7 +63,6 @@ exports.RevertReasons = {
   NO_TRANSFER_APPROVED: "No transfer approved",
   TWIN_TRANSFER_FAILED: "Twin could not be transferred",
   UNSUPPORTED_TOKEN: "Unsupported token",
-  ERC721_INVALID_RANGE: "lastTokenId must be equal or greater than tokenId",
   BUNDLE_FOR_TWIN_EXISTS: "Bundle for twin exists",
   INVALID_SUPPLY_AVAILABLE: "supplyAvailable can't be zero",
   INVALID_AMOUNT: "Amount must be greater than zero if token is ERC20 or ERC1155",
