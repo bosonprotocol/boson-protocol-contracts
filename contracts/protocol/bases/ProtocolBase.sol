@@ -309,6 +309,21 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
+     * @notice Fetches a given agent from storage by id
+     *
+     * @param _agentId - the id of the agent
+     * @return exists - whether the agent exists
+     * @return agent - the agent details. See {BosonTypes.Agent}
+     */
+    function fetchAgent(uint256 _agentId) internal view returns (bool exists, BosonTypes.Agent storage agent) {
+        // Get the agent's slot
+        agent = protocolEntities().agents[_agentId];
+
+        // Determine existence
+        exists = (_agentId > 0 && agent.id == _agentId);
+    }
+
+    /**
      * @notice Fetches a given offer from storage by id
      *
      * @param _offerId - the id of the offer

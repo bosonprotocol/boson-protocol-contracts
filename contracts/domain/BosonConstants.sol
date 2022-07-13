@@ -38,6 +38,7 @@ contract BosonConstants {
     string internal constant BUYER_ADDRESS_MUST_BE_UNIQUE = "Buyer address cannot be assigned to another buyer Id";
     string internal constant DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE =
         "Dispute Resolver address cannot be assigned to another dispute resolver Id";
+    string internal constant AGENT_ADDRESS_MUST_BE_UNIQUE = "Agent address cannot be assigned to another agent Id";
     string internal constant NO_SUCH_BUYER = "No such buyer";
     string internal constant WALLET_OWNS_VOUCHERS = "Wallet address owns vouchers";
     string internal constant NO_SUCH_DISPUTE_RESOLVER = "No such dispute resolver";
@@ -128,8 +129,8 @@ contract BosonConstants {
     string internal constant INVALID_DISPUTE_TIMEOUT = "Invalid dispute timeout";
     string internal constant TOO_MANY_DISPUTES = "Exceeded maximum disputes in a single transaction";
 
-    // Revert Reasons: Config related
-    string internal constant PROTOCOL_FEE_PERCENTAGE_INVALID = "Percentage representation must be less than 10000";
+    // Revert Reasons: General
+    string internal constant FEE_PERCENTAGE_INVALID = "Percentage representation must be less than 10000";
 }
 
 // TODO: Refactor to use file level constants throughout or use custom Errors
