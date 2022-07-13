@@ -27,20 +27,20 @@ This deploys the built contracts to an internal geth node used as a test environ
 
 ```npm run deploy-suite:test```
 
-### Deploy to Ropsten
-This deploys the built contracts to Ropsten
+### Deploy to Mumbai
+This deploys the built contracts to Mumbai
 
-```npm run deploy-suite:ropsten```
+```npm run deploy-suite:mumbai```
 
 ### Deploy to Mainnet
 This deploys the built contracts to Mainnet
 
 ```npm run deploy-suite:mainnet```
 
-### Manage Roles on Ropsten
-This runs the `scripts/manage-roles.js` script against ropsten.
+### Manage Roles on Mumbai
+This runs the `scripts/manage-roles.js` script against mumbai.
 
-```npm run manage-roles:rinkeby```
+```npm run manage-roles:mumbai```
 
 ### Manage Roles on Mainnet
 This runs the `scripts/manage-roles.js` script against mainnet.

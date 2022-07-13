@@ -17,6 +17,11 @@ module.exports = {
         "apiKey": process.env.DEPLOYER_ETHERSCAN_API_KEY
     },
 
+    // Needed for verifying contract code on Polygonscan
+    "polygonscan": {
+        "apiKey": process.env.DEPLOYER_POLYGONSCAN_API_KEY
+    },
+
     // Needed for Gas Reporter
     "coinmarketcap": {
         "apiKey": process.env.GAS_REPORTER_COINMARKETCAP_API_KEY
@@ -36,22 +41,20 @@ module.exports = {
         "keys": [process.env.DEPLOYER_TEST_KEY]
     },
 
-    // Ropsten testnet
-    //  - placeholder private key is first address of test HDWallet used in hardhat network config
-    //  - Replace key with multisig pk for deployment
-    "ropsten": {
-        "txNode": process.env.DEPLOYER_ROPSTEN_TXNODE,
-        "keys": [process.env.DEPLOYER_ROPSTEN_KEY]
-    },
-
     // Ethereum Mainnet
     //  - placeholder private key is first address of test HDWallet used in hardhat network config
     //  - Replace key with multisig pk for deployment
     "mainnet": {
         "txNode": process.env.DEPLOYER_MAINNET_TXNODE,
         "keys": [process.env.DEPLOYER_MAINNET_KEY]
-    }
+    },
 
-   
+    // Polygon Mumbai testnet
+    //  - placeholder private key is first address of test HDWallet used in hardhat network config
+    //  - Replace key with multisig pk for deployment
+    "mumbai": {
+        "txNode": process.env.DEPLOYER_MUMBAI_TXNODE,
+        "keys": [process.env.DEPLOYER_MUMBAI_KEY]
+    }  
 
 };

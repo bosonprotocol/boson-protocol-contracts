@@ -38,6 +38,7 @@ contract BosonConstants {
     string internal constant BUYER_ADDRESS_MUST_BE_UNIQUE = "Buyer address cannot be assigned to another buyer Id";
     string internal constant DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE =
         "Dispute Resolver address cannot be assigned to another dispute resolver Id";
+    string internal constant AGENT_ADDRESS_MUST_BE_UNIQUE = "Agent address cannot be assigned to another agent Id";
     string internal constant NO_SUCH_BUYER = "No such buyer";
     string internal constant WALLET_OWNS_VOUCHERS = "Wallet address owns vouchers";
     string internal constant NO_SUCH_DISPUTE_RESOLVER = "No such dispute resolver";
@@ -87,16 +88,18 @@ contract BosonConstants {
     string internal constant NO_TRANSFER_APPROVED = "No transfer approved";
     string internal constant TWIN_TRANSFER_FAILED = "Twin could not be transferred";
     string internal constant UNSUPPORTED_TOKEN = "Unsupported token";
-    string internal constant TWIN_HAS_BUNDLES = "Twin has bundles";
-    string internal constant ERC721_INVALID_RANGE = "lastTokenId must be equal or greater than tokenId";
+    string internal constant BUNDLE_FOR_TWIN_EXISTS = "Bundle for twin exists";
+    string internal constant INVALID_SUPPLY_AVAILABLE = "supplyAvailable can't be zero";
+    string internal constant INVALID_AMOUNT = "Amount must be greater than zero if token is ERC20 or ERC1155";
+    string internal constant INVALID_TWIN_PROPERTY = "Invalid property for selected token type";
 
     // Revert Reasons: Bundle related
     string internal constant NO_SUCH_BUNDLE = "No such bundle";
     string internal constant TWIN_NOT_IN_BUNDLE = "Twin not part of the bundle";
     string internal constant OFFER_NOT_IN_BUNDLE = "Offer not part of the bundle";
     string internal constant TOO_MANY_TWINS = "Exceeded maximum twins in a single transaction";
-    string internal constant TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE = "Twin already exists in the same bundle";
     string internal constant BUNDLE_OFFER_MUST_BE_UNIQUE = "Offer must be unique to a bundle";
+    string internal constant BUNDLE_TWIN_MUST_BE_UNIQUE = "Twin must be unique to a bundle";
     string internal constant EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS = "Exchange for the bundled offers exists";
 
     // Revert Reasons: Funds related
@@ -126,8 +129,8 @@ contract BosonConstants {
     string internal constant INVALID_DISPUTE_TIMEOUT = "Invalid dispute timeout";
     string internal constant TOO_MANY_DISPUTES = "Exceeded maximum disputes in a single transaction";
 
-    // Revert Reasons: Config related
-    string internal constant PROTOCOL_FEE_PERCENTAGE_INVALID = "Percentage representation must be less than 10000";
+    // Revert Reasons: General
+    string internal constant FEE_PERCENTAGE_INVALID = "Percentage representation must be less than 10000";
 }
 
 // TODO: Refactor to use file level constants throughout or use custom Errors

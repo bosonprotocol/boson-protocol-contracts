@@ -6,6 +6,7 @@ const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
+const Agent = require("../../scripts/domain/Agent");
 const { DisputeResolverFee, DisputeResolverFeeList } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -48,6 +49,7 @@ describe("IBosonAccountHandler", function () {
     disputeResolverFees2,
     feeTokenAddressesToRemove;
   let metadataUriDR;
+  let agent, agentStruct, feePercentage;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
   let protocolFeePercentage, protocolFeeFlatBoson;
@@ -2405,6 +2407,194 @@ describe("IBosonAccountHandler", function () {
             RevertReasons.ACCESS_DENIED
           );
         });
+      });
+    });
+  });
+
+  // All supported Agent methods
+  context("📋 Agent Methods", async function () {
+    beforeEach(async function () {
+      // The first agent id
+      nextAccountId = "1";
+      invalidAccountId = "666";
+
+      // Required constructor params
+      id = "1"; // argument sent to contract for createAgent will be ignored
+      feePercentage = "500"; //5%
+
+      active = true;
+
+      // Create a valid agent, then set fields in tests directly
+      agent = new Agent(id, feePercentage, other1.address, active);
+      expect(agent.isValid()).is.true;
+
+      // How that agent looks as a returned struct
+      agentStruct = agent.toStruct();
+    });
+
+    context("👉 createAgent()", async function () {
+      it("should emit a AgentCreated event", async function () {
+        // Create an agent, testing for the event
+        await expect(accountHandler.connect(rando).createAgent(agent))
+          .to.emit(accountHandler, "AgentCreated")
+          .withArgs(agent.id, agentStruct, rando.address);
+      });
+
+      it("should update state", async function () {
+        // Create an agent
+        await accountHandler.connect(rando).createAgent(agent);
+
+        // Get the agent as a struct
+        [, agentStruct] = await accountHandler.connect(rando).getAgent(id);
+
+        // Parse into entity
+        let returnedAgent = Agent.fromStruct(agentStruct);
+
+        // Returned values should match the input in createAgent
+        for ([key, value] of Object.entries(agent)) {
+          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should ignore any provided id and assign the next available", async function () {
+        agent.id = "444";
+
+        // Create an agent, testing for the event
+        await expect(accountHandler.connect(rando).createAgent(agent))
+          .to.emit(accountHandler, "AgentCreated")
+          .withArgs(nextAccountId, agentStruct, rando.address);
+
+        // wrong agent id should not exist
+        [exists] = await accountHandler.connect(rando).getAgent(agent.id);
+        expect(exists).to.be.false;
+
+        // next agent id should exist
+        [exists] = await accountHandler.connect(rando).getAgent(nextAccountId);
+        expect(exists).to.be.true;
+      });
+
+      it("should allow feePercentage of 0", async function () {
+        // Create a valid agent with feePercentage = 0, as it is optional
+        agent = new Agent(id, "0", other1.address, active);
+        expect(agent.isValid()).is.true;
+
+        // How that agent looks as a returned struct
+        agentStruct = agent.toStruct();
+
+        // Create an agent, testing for the event
+        await expect(accountHandler.connect(rando).createAgent(agent))
+          .to.emit(accountHandler, "AgentCreated")
+          .withArgs(nextAccountId, agentStruct, rando.address);
+
+        // Get the agent as a struct
+        [, agentStruct] = await accountHandler.connect(rando).getAgent(id);
+
+        // Parse into entity
+        let returnedAgent = Agent.fromStruct(agentStruct);
+
+        // Returned values should match the input in createAgent
+        for ([key, value] of Object.entries(agent)) {
+          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should allow feePercentage of 100%", async function () {
+        // Create a valid agent with feePercentage = 10000 (100%). Not handy for seller, but technically possible
+        agent = new Agent(id, "10000", other1.address, active);
+        expect(agent.isValid()).is.true;
+
+        // How that agent looks as a returned struct
+        agentStruct = agent.toStruct();
+
+        // Create an agent, testing for the event
+        await expect(accountHandler.connect(rando).createAgent(agent))
+          .to.emit(accountHandler, "AgentCreated")
+          .withArgs(nextAccountId, agentStruct, rando.address);
+
+        // Get the agent as a struct
+        [, agentStruct] = await accountHandler.connect(rando).getAgent(id);
+
+        // Parse into entity
+        let returnedAgent = Agent.fromStruct(agentStruct);
+
+        // Returned values should match the input in createAgent
+        for ([key, value] of Object.entries(agent)) {
+          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("active is false", async function () {
+          agent.active = false;
+
+          // Attempt to Create an Agent, expecting revert
+          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
+        });
+
+        it("addresses are the zero address", async function () {
+          agent.wallet = ethers.constants.AddressZero;
+
+          // Attempt to Create an Agent, expecting revert
+          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+        });
+
+        it("wallet address is not unique to this agentId", async function () {
+          // Create an agent
+          await accountHandler.connect(rando).createAgent(agent);
+
+          // Attempt to create another buyer with same wallet address
+          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(
+            RevertReasons.AGENT_ADDRESS_MUST_BE_UNIQUE
+          );
+        });
+
+        it("feePercentage is above 100%", async function () {
+          //Agent with feePercentage > 10000 (100%)
+          agent = new Agent(id, "10001", other1.address, active);
+          expect(agent.isValid()).is.true;
+
+          // Attempt to create another buyer with same wallet address
+          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(
+            RevertReasons.FEE_PERCENTAGE_INVALID
+          );
+        });
+      });
+    });
+
+    context("👉 getAgent()", async function () {
+      beforeEach(async function () {
+        // Create a agent
+        await accountHandler.connect(rando).createAgent(agent);
+
+        // id of the current agent and increment nextAccountId
+        id = nextAccountId++;
+      });
+
+      it("should return true for exists if agent is found", async function () {
+        // Get the exists flag
+        [exists] = await accountHandler.connect(rando).getAgent(id);
+
+        // Validate
+        expect(exists).to.be.true;
+      });
+
+      it("should return false for exists if agent is not found", async function () {
+        // Get the exists flag
+        [exists] = await accountHandler.connect(rando).getAgent(invalidAccountId);
+
+        // Validate
+        expect(exists).to.be.false;
+      });
+
+      it("should return the details of the agent as a struct if found", async function () {
+        // Get the agent as a struct
+        [, agentStruct] = await accountHandler.connect(rando).getAgent(id);
+
+        // Parse into entity
+        agent = Agent.fromStruct(agentStruct);
+
+        // Validate
+        expect(agent.isValid()).to.be.true;
       });
     });
   });

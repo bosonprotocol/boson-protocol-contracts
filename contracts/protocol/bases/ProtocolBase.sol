@@ -309,6 +309,21 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
+     * @notice Fetches a given agent from storage by id
+     *
+     * @param _agentId - the id of the agent
+     * @return exists - whether the agent exists
+     * @return agent - the agent details. See {BosonTypes.Agent}
+     */
+    function fetchAgent(uint256 _agentId) internal view returns (bool exists, BosonTypes.Agent storage agent) {
+        // Get the agent's slot
+        agent = protocolEntities().agents[_agentId];
+
+        // Determine existence
+        exists = (_agentId > 0 && agent.id == _agentId);
+    }
+
+    /**
      * @notice Fetches a given offer from storage by id
      *
      * @param _offerId - the id of the offer
@@ -496,18 +511,18 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
-     * @notice Gets the bundle ids for a given twin id.
+     * @notice Gets the bundle id for a given twin id.
      *
      * @param _twinId - the twin Id.
-     * @return exists - whether the bundle Ids exist
-     * @return bundleIds  - the bundle Ids.
+     * @return exists - whether the bundle Id exist
+     * @return bundleId  - the bundle Id.
      */
-    function fetchBundleIdsByTwin(uint256 _twinId) internal view returns (bool exists, uint256[] memory bundleIds) {
-        // Get the bundle Ids
-        bundleIds = protocolLookups().bundleIdsByTwin[_twinId];
+    function fetchBundleIdByTwin(uint256 _twinId) internal view returns (bool exists, uint256 bundleId) {
+        // Get the bundle Id
+        bundleId = protocolLookups().bundleIdByTwin[_twinId];
 
         // Determine existence
-        exists = (bundleIds.length > 0);
+        exists = (bundleId > 0);
     }
 
     /**

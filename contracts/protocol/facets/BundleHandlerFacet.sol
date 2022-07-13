@@ -99,17 +99,12 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             // make sure twin exist and belong to the seller
             getValidTwin(twinId);
 
-            // Twin can already be associated with a different bundle, but it cannot be added to the same bundle twice.
-            (bool bundlesForTwinExist, uint256[] memory bundleIds) = fetchBundleIdsByTwin(twinId);
-            if (bundlesForTwinExist) {
-                for (uint256 j = 0; j < bundleIds.length; j++) {
-                    // Revert if bundleId already exists in the bundleIdsByTwin mapping
-                    require((bundleIds[j] != _bundleId), TWIN_ALREADY_EXISTS_IN_SAME_BUNDLE);
-                }
-            }
+            // Twin cannot be associated with a different bundle
+            (bool bundleForTwinExist, ) = fetchBundleIdByTwin(twinId);
+            require(!bundleForTwinExist, BUNDLE_TWIN_MUST_BE_UNIQUE);
 
-            // add to bundleIdsByTwin mapping
-            protocolLookups().bundleIdsByTwin[twinId].push(_bundleId);
+            // add to bundleIdByTwin mapping
+            protocolLookups().bundleIdByTwin[twinId] = _bundleId;
 
             // add to bundle struct
             bundle.twinIds.push(twinId);
@@ -145,23 +140,12 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         for (uint256 i = 0; i < _twinIds.length; i++) {
             uint256 twinId = _twinIds[i];
 
-            // Get all bundleIds that are associated to this Twin.
-            (bool bundlesForTwinExist, uint256[] memory bundleIds) = fetchBundleIdsByTwin(twinId);
+            // Get the bundle associated to this Twin.
+            (bool bundleForTwinExist, uint256 bundleId) = fetchBundleIdByTwin(twinId);
+            require(bundleForTwinExist && bundleId == _bundleId, TWIN_NOT_IN_BUNDLE);
 
-            // Revert here if no bundles found
-            require(bundlesForTwinExist, TWIN_NOT_IN_BUNDLE);
-
-            // remove bundleId from the bundleIdsByTwin mapping
-            bool foundMatchingBundle;
-            for (uint256 j = 0; j < bundleIds.length; j++) {
-                if (bundleIds[j] == _bundleId) {
-                    foundMatchingBundle = true;
-                    protocolLookups().bundleIdsByTwin[twinId][j] = bundleIds[bundleIds.length - 1];
-                    protocolLookups().bundleIdsByTwin[twinId].pop();
-                    break;
-                }
-            }
-            require(foundMatchingBundle, TWIN_NOT_IN_BUNDLE);
+            // remove bundleId from the bundleIdByTwin mapping
+            delete protocolLookups().bundleIdByTwin[twinId];
 
             // Also remove from the bundle struct
             uint256 twinIdsLength = bundle.twinIds.length;
@@ -358,27 +342,12 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             delete protocolLookups().bundleIdByOffer[offerIds[i]];
         }
 
-        // delete from bundleIdsByTwin mapping
+        // delete from bundleIdByTwin mapping
         uint256[] memory twinIds = bundle.twinIds;
+
         // loop over all the twins in the bundle
         for (uint256 j = 0; j < twinIds.length; j++) {
-            uint256 twinId = twinIds[j];
-            (bool bundlesForTwinExist, uint256[] memory bundleIds) = fetchBundleIdsByTwin(twinId);
-
-            if (bundlesForTwinExist) {
-                uint256 bundleIdsLength = bundleIds.length;
-                // loop over all the bundleIds associated with a twin
-                for (uint256 k = 0; k < bundleIdsLength; k++) {
-                    // If bundleId is found in the array, then pop it.
-                    if (protocolLookups().bundleIdsByTwin[twinId][k] == _bundleId) {
-                        protocolLookups().bundleIdsByTwin[twinId][k] = protocolLookups().bundleIdsByTwin[twinId][
-                            bundleIdsLength - 1
-                        ];
-                        protocolLookups().bundleIdsByTwin[twinId].pop();
-                        break;
-                    }
-                }
-            }
+            delete protocolLookups().bundleIdByTwin[twinIds[j]];
         }
 
         // delete from bundles mapping
@@ -420,18 +389,13 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
     }
 
     /**
-     * @notice Gets the bundle ids for a given twin id.
+     * @notice Gets the bundle id for a given twin id.
      *
      * @param _twinId - the twin Id.
-     * @return exists - whether the bundle Ids exist
-     * @return bundleIds  - the bundle Ids.
+     * @return exists - whether the bundle Id exist
+     * @return bundleId  - the bundle Id.
      */
-    function getBundleIdsByTwin(uint256 _twinId)
-        external
-        view
-        override
-        returns (bool exists, uint256[] memory bundleIds)
-    {
-        return fetchBundleIdsByTwin(_twinId);
+    function getBundleIdByTwin(uint256 _twinId) external view override returns (bool exists, uint256 bundleId) {
+        return fetchBundleIdByTwin(_twinId);
     }
 }
