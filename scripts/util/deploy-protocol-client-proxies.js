@@ -21,18 +21,18 @@ const ethers = hre.ethers;
  * @returns {Promise<(*|*|*)[]>}
  */
 async function deployProtocolClientProxies(protocolClients, gasLimit) {
-  let bosonBeacon;
+  let bosonClientBeacon;
 
   // Destructure the protocol client implementations
-  [bosonBeacon] = protocolClients;
+  [bosonClientBeacon] = protocolClients;
 
   // Deploy the ClientProxy for BosonVoucher
-  const ClientProxy = await ethers.getContractFactory("ClientProxyBeacon");
+  const ClientProxy = await ethers.getContractFactory("BeaconClientProxy");
   const clientProxy = await ClientProxy.deploy({ gasLimit });
   await clientProxy.deployed();
 
   // init instead of constructors
-  await clientProxy.initialize(bosonBeacon.address);
+  await clientProxy.initialize(bosonClientBeacon.address);
 
   return [clientProxy];
 }

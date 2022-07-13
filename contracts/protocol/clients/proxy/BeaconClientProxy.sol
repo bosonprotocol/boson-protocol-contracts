@@ -2,11 +2,11 @@
 pragma solidity ^0.8.0;
 
 import { IBosonClient } from "../../../interfaces/clients/IBosonClient.sol";
-import { ClientLibBeacon } from "../../libs/ClientLibBeacon.sol";
+import { BeaconClientLib } from "../../libs/BeaconClientLib.sol";
 import { Proxy } from "./Proxy.sol";
 
 /**
- * @title ClientProxyBeacon
+ * @title BeaconClientProxy
  *
  * @notice Delegates calls to a Boson Protocol Client implementation contract,
  * such that functions on it execute in the context (address, storage)
@@ -19,14 +19,14 @@ import { Proxy } from "./Proxy.sol";
  * Each Protocol client contract will be deployed behind its own proxy for
  * future upgradability.
  */
-contract ClientProxyBeacon is Proxy {
+contract BeaconClientProxy is Proxy {
     /**
      * @dev Initialize the contract after the deployment.
      * This function is callable only once
      */
     function initialize(address _beaconAddress) external initializer {
         // set the beacon address
-        ClientLibBeacon.getBeaconSlot().value = _beaconAddress;
+        BeaconClientLib.getBeaconSlot().value = _beaconAddress;
     }
 
     /**
@@ -47,6 +47,6 @@ contract ClientProxyBeacon is Proxy {
      */
     function _implementation() internal view override returns (address) {
         // Return the current implementation address
-        return IBosonClient(ClientLibBeacon._beacon()).getImplementation();
+        return IBosonClient(BeaconClientLib._beacon()).getImplementation();
     }
 }

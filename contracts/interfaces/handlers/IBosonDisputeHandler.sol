@@ -140,7 +140,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function escalateDispute(uint256 _exchangeId) external;
+    function escalateDispute(uint256 _exchangeId) external payable;
 
     /**
      * @notice Decide a dispute by providing the information about the split. Callable by the dispute resolver, specified in the offer

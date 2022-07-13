@@ -8,7 +8,7 @@ import { BosonConstants } from "../../../domain/BosonConstants.sol";
 import { ClientLib } from "../../libs/ClientLib.sol";
 import { EIP712Lib } from "../../libs/EIP712Lib.sol";
 import { Proxy } from "./Proxy.sol";
-import { BosonBeacon } from "./BosonBeacon.sol";
+import { BosonClientBeacon } from "./BosonClientBeacon.sol";
 
 /**
  * @title ClientProxy
@@ -24,18 +24,18 @@ import { BosonBeacon } from "./BosonBeacon.sol";
  * Each Protocol client contract will be deployed behind its own proxy for
  * future upgradability.
  */
-contract ClientProxy is BosonBeacon, Proxy {
+contract ClientProxy is BosonClientBeacon, Proxy {
     constructor(
         address _accessController,
         address _protocolAddress,
         address _impl
-    ) payable BosonBeacon(_accessController, _protocolAddress, _impl) {}
+    ) payable BosonClientBeacon(_accessController, _protocolAddress, _impl) {}
 
     /**
      * @dev Returns the address to which the fallback function
      * and {_fallback} should delegate.
      */
-    function _implementation() internal view override(BosonBeacon, Proxy) returns (address) {
+    function _implementation() internal view override(BosonClientBeacon, Proxy) returns (address) {
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
 

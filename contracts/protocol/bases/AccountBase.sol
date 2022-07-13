@@ -4,8 +4,6 @@ pragma solidity ^0.8.0;
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
-import { DiamondLib } from "../../diamond/DiamondLib.sol";
-import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
 
 /**
  * @title AccountBase
@@ -144,7 +142,7 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
      * @return cloneAddress - the address of newly created clone
      */
     function cloneBosonVoucher() internal returns (address cloneAddress) {
-        //
+        // Pointer to stored addresses
         ProtocolLib.ProtocolAddresses storage pa = protocolAddresses();
 
         // load voucher contract address

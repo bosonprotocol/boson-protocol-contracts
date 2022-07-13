@@ -5,13 +5,13 @@ import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/a
 import { IBosonClient } from "../../interfaces/clients/IBosonClient.sol";
 
 /**
- * @title ClientLibBeacon
+ * @title BeaconClientLib
  *
  * - Defines BeaconSlot position
  * - Provides BeaconSlot accessor
  * - Defines hasRole function
  */
-library ClientLibBeacon {
+library BeaconClientLib {
     /**
      * @dev The storage slot of the UpgradeableBeacon contract which defines the implementation for this proxy.
      * This is bytes32(uint256(keccak256('eip1967.proxy.beacon')) - 1)) and is validated in the constructor.

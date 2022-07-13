@@ -1596,7 +1596,7 @@ describe("IBosonExchangeHandler", function () {
       context("💔 Revert Reasons", async function () {
         /**
          * Reverts if
-         * - Caller is not a clone address, associated with the seller
+         * - Caller is not a clone address associated with the seller
          * - Exchange does not exist
          * - Exchange is not in committed state
          * - Voucher has expired
@@ -1610,7 +1610,7 @@ describe("IBosonExchangeHandler", function () {
           ).to.revertedWith(RevertReasons.ACCESS_DENIED);
         });
 
-        it("Caller is not a clone address, associated with the seller", async function () {
+        it("Caller is not a clone address associated with the seller", async function () {
           // Create a new seller to get new clone
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, true);
           expect(seller.isValid()).is.true;

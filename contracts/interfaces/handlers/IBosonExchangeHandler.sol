@@ -120,7 +120,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
      * @notice Inform protocol of new buyer associated with an exchange
      *
      * Reverts if
-     * - Caller is not a clone address, associated with the seller
+     * - Caller is not a clone address,associated with the seller
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Voucher has expired

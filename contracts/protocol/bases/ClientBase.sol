@@ -11,7 +11,9 @@ import { ClientLib } from "../libs/ClientLib.sol";
  * @title ClientBase
  *
  * @notice Extended by Boson Protocol contracts that need to communicate with the
- * ProtocolDiamond, but are NOT facets of the ProtocolDiamond.
+ * ProtocolDiamond, but are NOT facets of the ProtocolDiamond. This is used where it's expected that only one client
+ * will use the implementation. If it's expected that multiple client will use the same implementation, it's recommended
+ * to use `BeaconClientBase` instead
  *
  * Boson client contracts include XXX
  */

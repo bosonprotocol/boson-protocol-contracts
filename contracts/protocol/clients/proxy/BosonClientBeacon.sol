@@ -11,7 +11,7 @@ import { ClientLib } from "../../libs/ClientLib.sol";
  *
  * @notice Helps minimal proxies
  */
-contract BosonBeacon is IBosonClient, BosonConstants {
+contract BosonClientBeacon is IBosonClient, BosonConstants {
     /**
      * @dev Modifier that checks that the caller has a specific role.
      *
