@@ -68,6 +68,7 @@ contract BosonConstants {
     string internal constant INVALID_DISPUTE_DURATION = "Invalid dispute duration";
     string internal constant INVALID_DISPUTE_RESOLVER = "Invalid dispute resolver";
     string internal constant INVALID_QUANTITY_AVAILABLE = "Invalid quantity available";
+    string internal constant DR_UNSUPPORTED_FEE = "Dispute resolver does not accept this token";
 
     // Revert Reasons: Group related
     string internal constant NO_SUCH_GROUP = "No such group";
