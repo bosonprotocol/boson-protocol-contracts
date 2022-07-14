@@ -128,7 +128,11 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // specified resolver must be registered and active, except for absolute zero offers with unspecified dispute resolver
         DisputeResolutionTerms memory disputeResolutionTerms;
         if (_offer.price != 0 || _offer.sellerDeposit != 0 || _disputeResolverId != 0) {
-            (bool exists, DisputeResolver storage disputeResolver, DisputeResolverFee[] storage disputeResolverFees) = fetchDisputeResolver(_disputeResolverId);
+            (
+                bool exists,
+                DisputeResolver storage disputeResolver,
+                DisputeResolverFee[] storage disputeResolverFees
+            ) = fetchDisputeResolver(_disputeResolverId);
             require(exists && disputeResolver.active, INVALID_DISPUTE_RESOLVER);
 
             // get the index of DisputeResolverFee and make sure DR supports the exchangeToken

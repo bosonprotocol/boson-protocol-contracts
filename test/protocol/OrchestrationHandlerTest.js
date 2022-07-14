@@ -13,6 +13,7 @@ const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
+const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const TokenType = require("../../scripts/domain/TokenType");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -72,6 +73,7 @@ describe("IBosonOrchestrationHandler", function () {
   let bosonToken;
   let foreign721, foreign1155, fallbackError;
   let disputeResolutionTerms, disputeResolutionTermsStruct;
+  let DRFeeNative, DRFeeToken;
 
   before(async function () {
     // get interface Ids
@@ -199,8 +201,13 @@ describe("IBosonOrchestrationHandler", function () {
       );
       expect(disputeResolver.isValid()).is.true;
 
-      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
-      disputeResolverFees = [];
+      //Create DisputeResolverFee array so offer creation will succeed
+      DRFeeNative = "100";
+      DRFeeToken = "200";
+      disputeResolverFees = [
+        new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative),
+        new DisputeResolverFee(bosonToken.address, "Boson", DRFeeToken),
+      ];
 
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
@@ -236,7 +243,11 @@ describe("IBosonOrchestrationHandler", function () {
       offerDurationsStruct = offerDurations.toStruct();
 
       // Set despute resolution terms
-      disputeResolutionTerms = new DisputeResolutionTerms(disputeResolverId, disputeResolver.escalationResponsePeriod);
+      disputeResolutionTerms = new DisputeResolutionTerms(
+        disputeResolverId,
+        disputeResolver.escalationResponsePeriod,
+        DRFeeNative
+      );
       disputeResolutionTermsStruct = disputeResolutionTerms.toStruct();
     });
 
@@ -393,6 +404,11 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an offer with $BOSON as exchange token
         offer.exchangeToken = bosonToken.address;
         offer.protocolFee = protocolFeeFlatBoson;
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod,
+          DRFeeToken
+        ).toStruct();
 
         // Create a seller and an offer, testing for the event
         await expect(
@@ -416,7 +432,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0").toStruct();
 
         // Create a seller and an offer, testing for the event
         await expect(
@@ -952,6 +968,11 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an offer with $BOSON as exchange token
         offer.exchangeToken = bosonToken.address;
         offer.protocolFee = protocolFeeFlatBoson;
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod,
+          DRFeeToken
+        ).toStruct();
 
         // Create an offer with condition, testing for the events
         await expect(
@@ -975,7 +996,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0").toStruct();
 
         // Create an offer with condition, testing for the events
         await expect(
@@ -1521,6 +1542,11 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an offer with $BOSON as exchange token
         offer.exchangeToken = bosonToken.address;
         offer.protocolFee = protocolFeeFlatBoson;
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod,
+          DRFeeToken
+        ).toStruct();
 
         // Create an offer, add it to the group, testing for the events
         await expect(
@@ -1544,7 +1570,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0").toStruct();
 
         // Create an offer, add it to the group, testing for the events
         await expect(
@@ -2098,6 +2124,11 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an offer with $BOSON as exchange token
         offer.exchangeToken = bosonToken.address;
         offer.protocolFee = protocolFeeFlatBoson;
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod,
+          DRFeeToken
+        ).toStruct();
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
@@ -2121,7 +2152,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0").toStruct();
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
@@ -2810,6 +2841,11 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an offer with $BOSON as exchange token
         offer.exchangeToken = bosonToken.address;
         offer.protocolFee = protocolFeeFlatBoson;
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod,
+          DRFeeToken
+        ).toStruct();
 
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
@@ -2840,7 +2876,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0").toStruct();
 
         // Create an offer with condition, twin and bundle testing for the events
         await expect(

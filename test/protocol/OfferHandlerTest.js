@@ -8,6 +8,7 @@ const Seller = require("../../scripts/domain/Seller");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
+const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -63,6 +64,7 @@ describe("IBosonOfferHandler", function () {
     disputeResolutionTermsStruct,
     disputeResolutionTermsStructs,
     disputeResolutionTermsList;
+  let DRFeeNative, DRFeeToken;
 
   before(async function () {
     // get interface Ids
@@ -173,8 +175,13 @@ describe("IBosonOfferHandler", function () {
       );
       expect(disputeResolver.isValid()).is.true;
 
-      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
-      disputeResolverFees = [];
+      //Create DisputeResolverFee array so offer creation will succeed
+      DRFeeNative = "100";
+      DRFeeToken = "200";
+      disputeResolverFees = [
+        new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative),
+        new DisputeResolverFee(bosonToken.address, "Boson", DRFeeToken),
+      ];
 
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
@@ -202,7 +209,11 @@ describe("IBosonOfferHandler", function () {
       price = offer.price;
 
       // Set despute resolution terms
-      disputeResolutionTerms = new DisputeResolutionTerms(disputeResolverId, disputeResolver.escalationResponsePeriod);
+      disputeResolutionTerms = new DisputeResolutionTerms(
+        disputeResolverId,
+        disputeResolver.escalationResponsePeriod,
+        DRFeeNative
+      );
       disputeResolutionTermsStruct = disputeResolutionTerms.toStruct();
     });
 
@@ -342,6 +353,11 @@ describe("IBosonOfferHandler", function () {
         // Prepare an offer with $BOSON as exchange token
         offer.exchangeToken = bosonToken.address;
         offer.protocolFee = protocolFeeFlatBoson;
+        disputeResolutionTerms = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod,
+          DRFeeToken
+        );
 
         // Create a new offer
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId))
@@ -352,7 +368,7 @@ describe("IBosonOfferHandler", function () {
             offer.toStruct(),
             offerDatesStruct,
             offerDurationsStruct,
-            disputeResolutionTermsStruct,
+            disputeResolutionTerms.toStruct(),
             operator.address
           );
       });
@@ -361,7 +377,7 @@ describe("IBosonOfferHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0").toStruct();
 
         // Create a new offer
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId))
@@ -975,8 +991,13 @@ describe("IBosonOfferHandler", function () {
       );
       expect(disputeResolver.isValid()).is.true;
 
-      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
-      disputeResolverFees = [];
+      //Create DisputeResolverFee array so offer creation will succeed
+      DRFeeNative = "100";
+      DRFeeToken = "200";
+      disputeResolverFees = [
+        new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative),
+        new DisputeResolverFee(bosonToken.address, "Boson", DRFeeToken),
+      ];
 
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
@@ -1028,7 +1049,8 @@ describe("IBosonOfferHandler", function () {
         disputeResolverIds.push(disputeResolverId);
         const disputeResolutionTerms = new DisputeResolutionTerms(
           disputeResolverId,
-          disputeResolver.escalationResponsePeriod
+          disputeResolver.escalationResponsePeriod,
+          DRFeeNative
         );
         disputeResolutionTermsList.push(disputeResolutionTerms);
         disputeResolutionTermsStructs.push(disputeResolutionTerms.toStruct());
@@ -1043,13 +1065,19 @@ describe("IBosonOfferHandler", function () {
       offers[2].protocolFee = protocolFeeFlatBoson;
       offers[2].quantityAvailable = ethers.constants.MaxUint256.toString();
       offerStructs[2] = offers[2].toStruct();
+      disputeResolutionTermsList[2] = new DisputeResolutionTerms(
+        disputeResolverId,
+        disputeResolver.escalationResponsePeriod,
+        DRFeeToken
+      );
+      disputeResolutionTermsStructs[2] = disputeResolutionTermsList[2].toStruct();
 
       // absolute zero offer
       offers[4].price = offers[4].sellerDeposit = offers[4].buyerCancelPenalty = offers[4].protocolFee = "0";
       offerStructs[4] = offers[4].toStruct();
       disputeResolverIds[4] = "0";
-      disputeResolutionTermsList[4] = new DisputeResolutionTerms("0", "0");
-      disputeResolutionTermsStructs[4] = new DisputeResolutionTerms("0", "0").toStruct();
+      disputeResolutionTermsList[4] = new DisputeResolutionTerms("0", "0", "0");
+      disputeResolutionTermsStructs[4] = disputeResolutionTermsList[4].toStruct();
     });
 
     context("👉 createOfferBatch()", async function () {

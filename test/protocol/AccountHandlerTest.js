@@ -1105,6 +1105,7 @@ describe("IBosonAccountHandler", function () {
             new DisputeResolverFee(other1.address, "MockToken1", "100"),
             new DisputeResolverFee(other2.address, "MockToken2", "200"),
             new DisputeResolverFee(other3.address, "MockToken3", "300"),
+            new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
           ];
 
           // Register the dispute resolver
