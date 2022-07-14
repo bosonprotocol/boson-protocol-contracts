@@ -411,6 +411,44 @@ describe("IBosonOfferHandler", function () {
           );
       });
 
+      it("Should use the correct dispute resolver fee", async function () {
+        // Create an offer in native currency
+        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            offer.id,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
+
+        // create another offer, now with bosonToken as exchange token
+        offer.exchangeToken = bosonToken.address;
+        offer.id = "2";
+        offer.protocolFee = protocolFeeFlatBoson;
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod,
+          DRFeeToken
+        ).toStruct();
+
+        // Create an offer in boson token
+        await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId))
+          .to.emit(offerHandler, "OfferCreated")
+          .withArgs(
+            offer.id,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
@@ -611,6 +649,16 @@ describe("IBosonOfferHandler", function () {
           await expect(
             offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId)
           ).to.emit(offerHandler, "OfferCreated");
+        });
+
+        it("Dispute resolver does not accept fees in the exchange token", async function () {
+          // Set some address that is not part of dispute resolver fees
+          offer.exchangeToken = rando.address;
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId)
+          ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
         });
       });
     });
@@ -1567,6 +1615,18 @@ describe("IBosonOfferHandler", function () {
               .connect(operator)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds)
           ).to.emit(offerHandler, "OfferCreated");
+        });
+
+        it("For some offer, dispute resolver does not accept fees in the exchange token", async function () {
+          // Set some address that is not part of dispute resolver fees
+          offers[3].exchangeToken = rando.address;
+
+          // Attempt to Create offers, expecting revert
+          await expect(
+            offerHandler
+              .connect(operator)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds)
+          ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
         });
 
         it("Number of dispute dates does not match the number of offers", async function () {
