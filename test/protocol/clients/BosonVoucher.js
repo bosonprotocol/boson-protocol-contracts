@@ -9,6 +9,7 @@ const { deployProtocolHandlerFacets } = require("../../../scripts/util/deploy-pr
 const Buyer = require("../../../scripts/domain/Buyer");
 const Role = require("../../../scripts/domain/Role");
 const Seller = require("../../../scripts/domain/Seller");
+const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const { mockOffer } = require("../../utils/mock.js");
 const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
 const { expect } = require("chai");
@@ -164,8 +165,8 @@ describe("IBosonVoucher", function () {
       );
       expect(disputeResolver.isValid()).is.true;
 
-      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
-      disputeResolverFees = [];
+      //Create DisputeResolverFee array so offer creation will succeed
+      disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
 
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);

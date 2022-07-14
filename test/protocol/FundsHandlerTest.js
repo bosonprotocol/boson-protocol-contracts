@@ -5,6 +5,7 @@ const { gasLimit } = require("../../environments");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
+const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -352,8 +353,11 @@ describe("IBosonFundsHandler", function () {
         );
         expect(disputeResolver.isValid()).is.true;
 
-        //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
-        disputeResolverFees = [];
+        //Create DisputeResolverFee array so offer creation will succeed
+        disputeResolverFees = [
+          new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
+          new DisputeResolverFee(mockToken.address, "mockToken", "0"),
+        ];
 
         // Register and activate the dispute resolver
         await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
@@ -1212,10 +1216,14 @@ describe("IBosonFundsHandler", function () {
         treasuryDR.address,
         false
       );
+      disputeResolver.id = "2";
       expect(disputeResolver.isValid()).is.true;
 
-      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
-      disputeResolverFees = [];
+      //Create DisputeResolverFee array so offer creation will succeed
+      disputeResolverFees = [
+        new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
+        new DisputeResolverFee(mockToken.address, "mockToken", "0"),
+      ];
 
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
@@ -1455,6 +1463,13 @@ describe("IBosonFundsHandler", function () {
           // create an offer with a bad token contrat
           offerToken.exchangeToken = bosonToken.address;
           offerToken.id = "3";
+
+          // add to DR fees
+          await accountHandler
+            .connect(adminDR)
+            .addFeesToDisputeResolver(disputeResolver.id, [
+              new DisputeResolverFee(offerToken.exchangeToken, "BadContract", "0"),
+            ]);
           await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations, disputeResolverId);
 
           // Attempt to commit to an offer, expecting revert
@@ -1467,6 +1482,14 @@ describe("IBosonFundsHandler", function () {
           // create an offer with a bad token contrat
           offerToken.exchangeToken = admin.address;
           offerToken.id = "3";
+
+          // add to DR fees
+          await accountHandler
+            .connect(adminDR)
+            .addFeesToDisputeResolver(disputeResolver.id, [
+              new DisputeResolverFee(offerToken.exchangeToken, "NotAContract", "0"),
+            ]);
+
           await offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations, disputeResolverId);
 
           // Attempt to commit to an offer, expecting revert

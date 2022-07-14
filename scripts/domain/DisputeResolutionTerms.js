@@ -10,12 +10,14 @@ class DisputeResolutionTerms {
     struct DisputeResolutionTerms {
       uint256 disputeResolverId;
       uint256 escalationResponsePeriod;
+      uint256 feeAmount;
     }
   */
 
-  constructor(disputeResolverId, escalationResponsePeriod) {
+  constructor(disputeResolverId, escalationResponsePeriod, feeAmount) {
     this.disputeResolverId = disputeResolverId;
     this.escalationResponsePeriod = escalationResponsePeriod;
+    this.feeAmount = feeAmount;
   }
 
   /**
@@ -24,8 +26,8 @@ class DisputeResolutionTerms {
    * @returns {DisputeResolutionTerms}
    */
   static fromObject(o) {
-    const { disputeResolverId, escalationResponsePeriod } = o;
-    return new DisputeResolutionTerms(disputeResolverId, escalationResponsePeriod);
+    const { disputeResolverId, escalationResponsePeriod, feeAmount } = o;
+    return new DisputeResolutionTerms(disputeResolverId, escalationResponsePeriod, feeAmount);
   }
 
   /**
@@ -34,14 +36,15 @@ class DisputeResolutionTerms {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let disputeResolverId, escalationResponsePeriod;
+    let disputeResolverId, escalationResponsePeriod, feeAmount;
 
     // destructure struct
-    [disputeResolverId, escalationResponsePeriod] = struct;
+    [disputeResolverId, escalationResponsePeriod, feeAmount] = struct;
 
     return DisputeResolutionTerms.fromObject({
       disputeResolverId: disputeResolverId.toString(),
       escalationResponsePeriod: escalationResponsePeriod.toString(),
+      feeAmount: feeAmount.toString(),
     });
   }
 
@@ -66,7 +69,7 @@ class DisputeResolutionTerms {
    * @returns {string}
    */
   toStruct() {
-    return [this.disputeResolverId, this.escalationResponsePeriod];
+    return [this.disputeResolverId, this.escalationResponsePeriod, this.feeAmount];
   }
 
   /**
@@ -108,11 +111,28 @@ class DisputeResolutionTerms {
   }
 
   /**
+   * Is this DisputeResolutionTerms instance's feeAmount field valid?
+   * If present, must be a string representation of a big number, less than or equalt to 10000
+   * @returns {boolean}
+   */
+  feeAmountIsValid() {
+    let valid = false;
+    let { feeAmount } = this;
+    try {
+      valid =
+        typeof feeAmount === "string" &&
+        typeof ethers.BigNumber.from(feeAmount) === "object" &&
+        ethers.BigNumber.from(feeAmount).lte("10000");
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
    * Is this DisputeResolutionTerms instance valid?
    * @returns {boolean}
    */
   isValid() {
-    return this.disputeResolverIdIsValid() && this.escalationResponsePeriodIsValid();
+    return this.disputeResolverIdIsValid() && this.escalationResponsePeriodIsValid() && this.feeAmountIsValid();
   }
 }
 

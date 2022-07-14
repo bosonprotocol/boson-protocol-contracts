@@ -32,6 +32,7 @@ exports.RevertReasons = {
   INVALID_DISPUTE_DURATION: "Invalid dispute duration",
   INVALID_DISPUTE_RESOLVER: "Invalid dispute resolver",
   INVALID_QUANTITY_AVAILABLE: "Invalid quantity available",
+  DR_UNSUPPORTED_FEE: "Dispute resolver does not accept this token",
 
   // Group related
   NO_SUCH_GROUP: "No such group",
