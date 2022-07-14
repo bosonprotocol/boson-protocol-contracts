@@ -237,7 +237,7 @@ describe("IBosonDisputeHandler", function () {
       voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
       resolutionPeriod = offerDurations.resolutionPeriod;
       fulfillmentPeriod = offerDurations.fulfillmentPeriod;
-      escalationPeriod = oneWeek;
+      escalationPeriod = disputeResolver.escalationResponsePeriod;
 
       // Deposit seller funds so the commit will succeed
       const fundsToDeposit = ethers.BigNumber.from(sellerDeposit).mul(quantityAvailable);
@@ -492,7 +492,7 @@ describe("IBosonDisputeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
           escalatedDate = block.timestamp.toString();
 
-          await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
           // Attempt to retract the dispute, expecting revert
           await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWith(
@@ -1396,9 +1396,9 @@ describe("IBosonDisputeHandler", function () {
             );
           });
 
-          it("Dispute escalation period has elapsed", async function () {
+          it("Dispute escalation response period has elapsed", async function () {
             // Set time past escalation period
-            await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
             // Attempt to decide the dispute, expecting revert
             await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
@@ -1430,7 +1430,7 @@ describe("IBosonDisputeHandler", function () {
 
         it("should emit a EscalatedDisputeExpired event", async function () {
           // Set time forward past the dispute escalation period
-          await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+          await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
           // Expire the escalated dispute, testing for the event
           await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId))
@@ -1665,9 +1665,9 @@ describe("IBosonDisputeHandler", function () {
             );
           });
 
-          it("Dispute escalation period has elapsed", async function () {
+          it("Dispute escalation response period has elapsed", async function () {
             // Set time forward past the dispute escalation period
-            await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
             // Attempt to refuse the escalated dispute, expecting revert
             await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
@@ -1949,7 +1949,7 @@ describe("IBosonDisputeHandler", function () {
             block = await ethers.provider.getBlock(blockNumber);
             escalatedDate = block.timestamp.toString();
 
-            await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
             // Expire dispute
             await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);

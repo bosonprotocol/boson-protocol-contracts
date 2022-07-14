@@ -13,7 +13,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { setNextBlockTimestamp, getEvent, prepareDataSignatureParameters } = require("../../scripts/util/test-utils.js");
-const { oneMonth, oneWeek } = require("../utils/constants");
+const { oneMonth } = require("../utils/constants");
 const { mockOffer, mockDisputeResolver } = require("../utils/mock");
 
 /**
@@ -2118,7 +2118,7 @@ describe("IBosonFundsHandler", function () {
             block = await ethers.provider.getBlock(blockNumber);
             escalatedDate = block.timestamp.toString();
 
-            await setNextBlockTimestamp(Number(escalatedDate) + Number(oneWeek));
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(disputeResolver.escalationResponsePeriod));
           });
 
           it("should emit a FundsReleased event", async function () {
