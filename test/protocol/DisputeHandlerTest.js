@@ -1170,7 +1170,7 @@ describe("IBosonDisputeHandler", function () {
         });
       });
 
-      context("👉 escalateDispute()", async function () {
+      context.only("👉 escalateDispute()", async function () {
         beforeEach(async function () {
           // Raise a dispute
           tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId, complaint);
