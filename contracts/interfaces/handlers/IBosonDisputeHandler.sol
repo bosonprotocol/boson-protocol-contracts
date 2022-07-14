@@ -153,7 +153,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * - exchange is not in the disputed state
      * - caller is not the dispute resolver for this dispute
      * - dispute state is not escalated
-     * - dispute escalation period has elapsed
+     * - dispute escalation response period has elapsed
      *
      * @param _exchangeId  - exchange id to resolve dispute
      * @param _buyerPercent - percentage of the pot that goes to the buyer
@@ -169,7 +169,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - dispute is in some state other than escalated
-     * - dispute escalation period has elapsed
+     * - dispute escalation response period has elapsed
      * - caller is not the dispute resolver for this dispute
      *
      * @param _exchangeId - the id of the associated exchange

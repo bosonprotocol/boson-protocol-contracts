@@ -337,12 +337,14 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Make sure the dispute is in the resolving state
         require(dispute.state == DisputeState.Resolving, INVALID_STATE);
 
-        // TODO: fetch the escalation period from the storage
-        uint256 escalationPeriod = 1000 weeks; // only for tests
+        // fetch the escalation period from the storage
+        uint256 escalationResponsePeriod = protocolEntities()
+            .disputeResolutionTerms[exchange.offerId]
+            .escalationResponsePeriod;
 
         // store the time of escalation
         disputeDates.escalated = block.timestamp;
-        disputeDates.timeout = block.timestamp + escalationPeriod;
+        disputeDates.timeout = block.timestamp + escalationResponsePeriod;
 
         // Set the dispute state
         dispute.state = DisputeState.Escalated;
@@ -365,7 +367,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * - exchange is not in the disputed state
      * - caller is not the dispute resolver for this dispute
      * - dispute state is not escalated
-     * - dispute escalation period has elapsed
+     * - dispute escalation response period has elapsed
      *
      * @param _exchangeId  - exchange id to resolve dispute
      * @param _buyerPercent - percentage of the pot that goes to the buyer
@@ -395,7 +397,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - dispute is in some state other than escalated
-     * - dispute escalation period has elapsed
+     * - dispute escalation response period has elapsed
      * - caller is not the dispute resolver for this dispute
      *
      * @param _exchangeId - the id of the associated exchange
@@ -420,7 +422,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - dispute is in some state other than escalated
-     * - dispute escalation period has elapsed
+     * - dispute escalation response period has elapsed
      * - caller is not the dispute resolver for this dispute
      *
      * @param _exchangeId - the id of the associated exchange
