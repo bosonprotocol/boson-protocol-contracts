@@ -67,7 +67,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         for (uint256 i = 0; i < _bundle.twinIds.length; i++) {
             // make sure all twins exist and belong to the seller
             Twin memory twin = getValidTwin(_bundle.twinIds[i]);
-            
+
             // A twin can't belong to multiple bundles
             (bool bundleForTwinExist, ) = fetchBundleIdByTwin(_bundle.twinIds[i]);
             require(!bundleForTwinExist, BUNDLE_TWIN_MUST_BE_UNIQUE);
@@ -75,14 +75,19 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             // Push to bundleIdsByTwin mapping
             protocolLookups().bundleIdByTwin[_bundle.twinIds[i]] = bundleId;
 
-            if(_bundle.offerIds.length > 0) {
-              if(twin.tokenType == TokenType.NonFungibleToken) {
-                  require(offersTotalQuantityAvailable <= twin.supplyAvailable, INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS);
-              } else {
-                  require(offersTotalQuantityAvailable * twin.amount <= twin.supplyAvailable, INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS);
-              }
+            if (_bundle.offerIds.length > 0) {
+                if (twin.tokenType == TokenType.NonFungibleToken) {
+                    require(
+                        offersTotalQuantityAvailable <= twin.supplyAvailable,
+                        INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
+                    );
+                } else {
+                    require(
+                        offersTotalQuantityAvailable * twin.amount <= twin.supplyAvailable,
+                        INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
+                    );
+                }
             }
-
         }
 
         // Get storage location for bundle

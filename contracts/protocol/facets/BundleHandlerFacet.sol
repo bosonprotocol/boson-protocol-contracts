@@ -94,11 +94,11 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             BundleUpdateAttribute.TWIN
         );
 
-       // Sum of offers quantity available
+        // Sum of offers quantity available
         uint256 offersTotalQuantityAvailable;
 
         // Calculate the bundle offers total quantity available.
-        for(uint256 i = 0; i < bundle.offerIds.length; i++) {
+        for (uint256 i = 0; i < bundle.offerIds.length; i++) {
             Offer memory offer = getValidOffer(bundle.offerIds[i]);
 
             offersTotalQuantityAvailable += offer.quantityAvailable;
@@ -112,13 +112,19 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             // Twin cannot be associated with a different bundle
             (bool bundleForTwinExist, ) = fetchBundleIdByTwin(twinId);
             require(!bundleForTwinExist, BUNDLE_TWIN_MUST_BE_UNIQUE);
-              
-            if(bundle.offerIds.length > 0) {
-              if(twin.tokenType == TokenType.NonFungibleToken) {
-                  require(offersTotalQuantityAvailable <= twin.supplyAvailable, INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS);
-              } else {
-                  require(offersTotalQuantityAvailable * twin.amount <= twin.supplyAvailable, INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS);
-              }
+
+            if (bundle.offerIds.length > 0) {
+                if (twin.tokenType == TokenType.NonFungibleToken) {
+                    require(
+                        offersTotalQuantityAvailable <= twin.supplyAvailable,
+                        INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
+                    );
+                } else {
+                    require(
+                        offersTotalQuantityAvailable * twin.amount <= twin.supplyAvailable,
+                        INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
+                    );
+                }
             }
 
             // add to bundleIdByTwin mapping
@@ -416,5 +422,4 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
     function getBundleIdByTwin(uint256 _twinId) external view override returns (bool exists, uint256 bundleId) {
         return fetchBundleIdByTwin(_twinId);
     }
-
 }
