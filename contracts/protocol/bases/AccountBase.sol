@@ -200,8 +200,8 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         // Pointer to stored addresses
         ProtocolLib.ProtocolAddresses storage pa = protocolAddresses();
 
-        // load voucher contract address
-        bytes20 targetBytes = bytes20(pa.voucherProxyAddress);
+        // Load beacon proxy contract address
+        bytes20 targetBytes = bytes20(pa.beaconProxyAddress);
 
         // create a minimal clone
         assembly {

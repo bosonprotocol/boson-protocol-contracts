@@ -57,16 +57,16 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     /**
      * @notice Sets the address of the Boson Voucher reference proxy implementation
      *
-     * Emits a VoucherProxyAddressChanged event.
+     * Emits a BeaconProxyAddressChanged event.
      *
-     * @param _voucherProxyAddress - the address of the reference proxy implementation
+     * @param _beaconProxyAddress - the address of the reference proxy implementation
      */
-    function setVoucherProxyAddress(address _voucherProxyAddress) external;
+    function setBeaconProxyAddress(address _beaconProxyAddress) external;
 
     /**
-     * @notice The voucherProxyAddress getter
+     * @notice The beaconProxyAddress getter
      */
-    function getVoucherProxyAddress() external view returns (address);
+    function getBeaconProxyAddress() external view returns (address);
 
     /**
      * @notice Sets the protocol fee percentage.

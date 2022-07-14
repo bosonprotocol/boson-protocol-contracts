@@ -32,7 +32,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setTokenAddress(_addresses.tokenAddress);
         setTreasuryAddress(_addresses.treasuryAddress);
         setVoucherBeaconAddress(_addresses.voucherBeaconAddress);
-        setVoucherProxyAddress(_addresses.voucherProxyAddress);
+        setBeaconProxyAddress(_addresses.beaconProxyAddress);
         setProtocolFeePercentage(_fees.percentage);
         setProtocolFeeFlatBoson(_fees.flatBoson);
         setMaxOffersPerGroup(_limits.maxOffersPerGroup);
@@ -118,20 +118,20 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the address of the Boson Voucher reference proxy implementation
      *
-     * Emits a VoucherProxyAddressChanged event.
+     * Emits a BeaconProxyAddressChanged event.
      *
-     * @param _voucherProxyAddress - the address of the reference proxy implementation
+     * @param _beaconProxyAddress - the address of the reference proxy implementation
      */
-    function setVoucherProxyAddress(address _voucherProxyAddress) public override onlyRole(ADMIN) {
-        protocolAddresses().voucherProxyAddress = _voucherProxyAddress;
-        emit VoucherProxyAddressChanged(_voucherProxyAddress, msgSender());
+    function setBeaconProxyAddress(address _beaconProxyAddress) public override onlyRole(ADMIN) {
+        protocolAddresses().beaconProxyAddress = _beaconProxyAddress;
+        emit BeaconProxyAddressChanged(_beaconProxyAddress, msgSender());
     }
 
     /**
-     * @notice The voucherProxyAddress getter
+     * @notice The beaconProxyAddress getter
      */
-    function getVoucherProxyAddress() external view override returns (address) {
-        return protocolAddresses().voucherProxyAddress;
+    function getBeaconProxyAddress() external view override returns (address) {
+        return protocolAddresses().beaconProxyAddress;
     }
 
     /**

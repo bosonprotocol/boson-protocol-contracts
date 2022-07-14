@@ -110,7 +110,7 @@ describe("IBosonBundleHandler", function () {
         treasuryAddress: ethers.constants.AddressZero,
         tokenAddress: bosonToken.address,
         voucherBeaconAddress: beacon.address,
-        voucherProxyAddress: proxy.address,
+        beaconProxyAddress: proxy.address,
       },
       // Protocol limits
       {

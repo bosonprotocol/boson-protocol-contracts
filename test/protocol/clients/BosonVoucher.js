@@ -70,7 +70,7 @@ describe("IBosonVoucher", function () {
         treasuryAddress: ethers.constants.AddressZero,
         tokenAddress: ethers.constants.AddressZero,
         voucherBeaconAddress: beacon.address,
-        voucherProxyAddress: proxy.address,
+        beaconProxyAddress: proxy.address,
       },
       // Protocol limits
       {

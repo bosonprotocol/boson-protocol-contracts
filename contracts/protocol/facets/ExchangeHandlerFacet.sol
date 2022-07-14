@@ -321,9 +321,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         require(block.timestamp <= exchange.voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
 
         (, Offer storage offer) = fetchOffer(exchange.offerId);
+
+        // Make sure that the voucher was issued on the clone that is making a call
         require(msg.sender == protocolLookups().cloneAddress[offer.sellerId], ACCESS_DENIED);
 
-        // Increase voucher counter for old buyer
+        // Decrease voucher counter for old buyer
         protocolLookups().voucherCount[exchange.buyerId]--;
 
         // Fetch or create buyer

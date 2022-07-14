@@ -82,7 +82,7 @@ function getConfig() {
       tokenAddress: TOKEN[network],
       treasuryAddress: TREASURY[network],
       voucherBeaconAddress: BEACON[network],
-      voucherProxyAddress: BEACON_PROXY[network],
+      beaconProxyAddress: BEACON_PROXY[network],
     },
     {
       maxOffersPerGroup,
@@ -194,7 +194,7 @@ async function main() {
 
   // Add Voucher NFT addresses to protocol config
   await bosonConfigHandler.setVoucherBeaconAddress(bosonClientBeacon.address);
-  await bosonConfigHandler.setVoucherProxyAddress(bosonVoucherProxy.address);
+  await bosonConfigHandler.setBeaconProxyAddress(bosonVoucherProxy.address);
 
   console.log(`✅ ConfigHandlerFacet updated with remaining post-initialization config.`);
 

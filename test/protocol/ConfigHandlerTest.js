@@ -75,7 +75,7 @@ describe("IBosonConfigHandler", function () {
             tokenAddress: token.address,
             treasuryAddress: treasury.address,
             voucherBeaconAddress: beacon.address,
-            voucherProxyAddress: proxy.address,
+            beaconProxyAddress: proxy.address,
           },
           // Protocol limits
           {
@@ -104,7 +104,7 @@ describe("IBosonConfigHandler", function () {
           .withArgs(treasury.address, deployer.address)
           .to.emit(configHandler, "VoucherBeaconAddressChanged")
           .withArgs(beacon.address, deployer.address)
-          .to.emit(configHandler, "VoucherProxyAddressChanged")
+          .to.emit(configHandler, "BeaconProxyAddressChanged")
           .withArgs(proxy.address, deployer.address)
           .to.emit(configHandler, "ProtocolFeePercentageChanged")
           .withArgs(protocolFeePercentage, deployer.address)
@@ -139,7 +139,7 @@ describe("IBosonConfigHandler", function () {
           treasuryAddress: treasury.address,
           tokenAddress: token.address,
           voucherBeaconAddress: beacon.address,
-          voucherProxyAddress: proxy.address,
+          beaconProxyAddress: proxy.address,
         },
         // Protocol limits
         {
@@ -424,7 +424,7 @@ describe("IBosonConfigHandler", function () {
         });
       });
 
-      context("👉 setVoucherProxyAddress()", async function () {
+      context("👉 setBeaconProxyAddress()", async function () {
         beforeEach(async function () {
           // set new value for proxy address
           proxy = accounts[9];
@@ -432,23 +432,23 @@ describe("IBosonConfigHandler", function () {
 
         it("should emit a VoucherAddressChanged event", async function () {
           // Set new proxy address, testing for the event
-          await expect(configHandler.connect(deployer).setVoucherProxyAddress(proxy.address))
-            .to.emit(configHandler, "VoucherProxyAddressChanged")
+          await expect(configHandler.connect(deployer).setBeaconProxyAddress(proxy.address))
+            .to.emit(configHandler, "BeaconProxyAddressChanged")
             .withArgs(proxy.address, deployer.address);
         });
 
         it("should update state", async function () {
           // Set new proxy address
-          await configHandler.connect(deployer).setVoucherProxyAddress(proxy.address);
+          await configHandler.connect(deployer).setBeaconProxyAddress(proxy.address);
 
           // Verify that new value is stored
-          expect(await configHandler.connect(rando).getVoucherProxyAddress()).to.equal(proxy.address);
+          expect(await configHandler.connect(rando).getBeaconProxyAddress()).to.equal(proxy.address);
         });
 
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new proxy address, expecting revert
-            await expect(configHandler.connect(rando).setVoucherProxyAddress(proxy.address)).to.revertedWith(
+            await expect(configHandler.connect(rando).setBeaconProxyAddress(proxy.address)).to.revertedWith(
               RevertReasons.ACCESS_DENIED
             );
           });
@@ -636,7 +636,7 @@ describe("IBosonConfigHandler", function () {
           beacon.address,
           "Invalid voucher address"
         );
-        expect(await configHandler.connect(rando).getVoucherProxyAddress()).to.equal(
+        expect(await configHandler.connect(rando).getBeaconProxyAddress()).to.equal(
           proxy.address,
           "Invalid voucher address"
         );

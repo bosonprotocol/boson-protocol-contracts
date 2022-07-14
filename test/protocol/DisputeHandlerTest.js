@@ -132,7 +132,7 @@ describe("IBosonDisputeHandler", function () {
         treasuryAddress: "0x0000000000000000000000000000000000000000",
         tokenAddress: bosonToken.address,
         voucherBeaconAddress: beacon.address,
-        voucherProxyAddress: proxy.address,
+        beaconProxyAddress: proxy.address,
       },
       // Protocol limits
       {

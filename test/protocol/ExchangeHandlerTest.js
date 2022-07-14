@@ -144,7 +144,7 @@ describe("IBosonExchangeHandler", function () {
         treasuryAddress: ethers.constants.AddressZero,
         tokenAddress: ethers.constants.AddressZero,
         voucherBeaconAddress: beacon.address,
-        voucherProxyAddress: proxy.address,
+        beaconProxyAddress: proxy.address,
       },
       // Protocol limits
       {
@@ -390,7 +390,7 @@ describe("IBosonExchangeHandler", function () {
           "Voucher implementation: buyer 2 balance should be 0"
         );
 
-        // oboson voucher implemenation should not have vouchers with id 1 and 2
+        // boson voucher implemenation should not have vouchers with id 1 and 2
         await expect(voucherImplementation.ownerOf("1")).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
         await expect(voucherImplementation.ownerOf("2")).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
       });
@@ -977,8 +977,8 @@ describe("IBosonExchangeHandler", function () {
       it("should emit an VoucherCanceled event when new owner (not a buyer) calls", async function () {
         // Transfer voucher to new owner
         bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
-        await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
+        bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
+        await bosonVoucherClone.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
 
         // Cancel the voucher, expecting event
         await expect(exchangeHandler.connect(newOwner).cancelVoucher(exchange.id))
@@ -1498,7 +1498,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Client used for tests
         bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
+        bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
       });
 
       it("should emit an VoucherTransferred event when called by CLIENT-roled address", async function () {
@@ -1506,9 +1506,9 @@ describe("IBosonExchangeHandler", function () {
         nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
         // Call onVoucherTransferred, expecting event
-        await expect(bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id))
+        await expect(bosonVoucherClone.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id))
           .to.emit(exchangeHandler, "VoucherTransferred")
-          .withArgs(offerId, exchange.id, nextAccountId, bosonVoucher.address);
+          .withArgs(offerId, exchange.id, nextAccountId, bosonVoucherClone.address);
       });
 
       it("should update exchange when new buyer (with existing, active account) is passed", async function () {
@@ -1519,8 +1519,7 @@ describe("IBosonExchangeHandler", function () {
         await accountHandler.connect(newOwner).createBuyer(new Buyer("0", newOwner.address, true));
 
         // Call onVoucherTransferred
-        await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
-        // await exchangeHandler.connect(fauxClient).onVoucherTransferred(exchange.id, newOwner.address);
+        await bosonVoucherClone.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
 
         // Get the exchange
         [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
@@ -1538,7 +1537,7 @@ describe("IBosonExchangeHandler", function () {
         nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
         // Call onVoucherTransferred
-        await bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
+        await bosonVoucherClone.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
 
         // Get the exchange
         [exists, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
@@ -1553,10 +1552,9 @@ describe("IBosonExchangeHandler", function () {
 
       it("should be triggered when a voucher is transferred", async function () {
         // Transfer voucher, expecting event
-        await expect(bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id)).to.emit(
-          exchangeHandler,
-          "VoucherTransferred"
-        );
+        await expect(
+          bosonVoucherClone.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id)
+        ).to.emit(exchangeHandler, "VoucherTransferred");
       });
 
       it("should not be triggered when a voucher is issued", async function () {
@@ -1576,7 +1574,7 @@ describe("IBosonExchangeHandler", function () {
         await accessController.grantRole(Role.PROTOCOL, rando.address);
 
         // Issue voucher, expecting no event
-        await expect(bosonVoucher.connect(rando).issueVoucher(nextExchangeId, buyerStruct)).to.not.emit(
+        await expect(bosonVoucherClone.connect(rando).issueVoucher(nextExchangeId, buyerStruct)).to.not.emit(
           exchangeHandler,
           "VoucherTransferred"
         );
@@ -1587,7 +1585,7 @@ describe("IBosonExchangeHandler", function () {
         await accessController.grantRole(Role.PROTOCOL, rando.address);
 
         // Burn voucher, expecting no event
-        await expect(bosonVoucher.connect(rando).burnVoucher(exchange.id)).to.not.emit(
+        await expect(bosonVoucherClone.connect(rando).burnVoucher(exchange.id)).to.not.emit(
           exchangeHandler,
           "VoucherTransferred"
         );
@@ -1616,16 +1614,16 @@ describe("IBosonExchangeHandler", function () {
           expect(seller.isValid()).is.true;
           await accountHandler.connect(rando).createSeller(seller);
           expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
-          const bosonVoucher2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+          const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
           // For the sake of test, mint token on bv2 with the id of token on bv1
           // Temporarily grant PROTOCOL role to deployer account
           await accessController.grantRole(Role.PROTOCOL, deployer.address);
-          await bosonVoucher2.issueVoucher(exchange.id, new Buyer(buyerId, buyer.address, true));
+          await bosonVoucherClone2.issueVoucher(exchange.id, new Buyer(buyerId, buyer.address, true));
 
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(
-            bosonVoucher2.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id)
+            bosonVoucherClone2.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id)
           ).to.revertedWith(RevertReasons.ACCESS_DENIED);
         });
 
@@ -1670,9 +1668,9 @@ describe("IBosonExchangeHandler", function () {
           await accountHandler.connect(newOwner).updateBuyer(new Buyer(nextAccountId, newOwner.address, false));
 
           // Attempt to call onVoucherTransferred, expecting revert
-          await expect(bosonVoucher.connect(buyer).transferFrom(buyer.address, newOwner.address, id)).to.revertedWith(
-            RevertReasons.MUST_BE_ACTIVE
-          );
+          await expect(
+            bosonVoucherClone.connect(buyer).transferFrom(buyer.address, newOwner.address, id)
+          ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
       });
     });
