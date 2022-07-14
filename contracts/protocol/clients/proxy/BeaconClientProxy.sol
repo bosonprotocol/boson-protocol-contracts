@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { IBosonClient } from "../../../interfaces/clients/IBosonClient.sol";
+import { IClientExternalAddresses } from "../../../interfaces/clients/IClientExternalAddresses.sol";
 import { BeaconClientLib } from "../../libs/BeaconClientLib.sol";
 import { Proxy } from "./Proxy.sol";
 
@@ -47,6 +47,6 @@ contract BeaconClientProxy is Proxy {
      */
     function _implementation() internal view override returns (address) {
         // Return the current implementation address
-        return IBosonClient(BeaconClientLib._beacon()).getImplementation();
+        return IClientExternalAddresses(BeaconClientLib._beacon()).getImplementation();
     }
 }

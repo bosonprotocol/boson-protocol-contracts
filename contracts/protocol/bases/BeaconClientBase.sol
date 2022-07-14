@@ -6,7 +6,7 @@ import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeH
 import { BosonConstants } from "../../domain/BosonConstants.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { BeaconClientLib } from "../libs/BeaconClientLib.sol";
-import { IBosonClient } from "../../interfaces/clients/IBosonClient.sol";
+import { IClientExternalAddresses } from "../../interfaces/clients/IClientExternalAddresses.sol";
 
 /**
  * @title BeaconClientBase
@@ -39,7 +39,7 @@ abstract contract BeaconClientBase is BosonTypes, BosonConstants {
      * @return offer - the offer associated with the _offerId
      */
     function getBosonOffer(uint256 _exchangeId) internal view returns (bool exists, Offer memory offer) {
-        address protocolDiamond = IBosonClient(BeaconClientLib._beacon()).getProtocolAddress();
+        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
 
         (, Exchange memory exchange) = IBosonExchangeHandler(protocolDiamond).getExchange(_exchangeId);
         (exists, offer, , , ) = IBosonOfferHandler(protocolDiamond).getOffer(exchange.offerId);
@@ -52,7 +52,7 @@ abstract contract BeaconClientBase is BosonTypes, BosonConstants {
      * @param _newBuyer - the address of the new buyer
      */
     function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) internal {
-        address protocolDiamond = IBosonClient(BeaconClientLib._beacon()).getProtocolAddress();
+        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
         IBosonExchangeHandler(protocolDiamond).onVoucherTransferred(_exchangeId, _newBuyer);
     }
 }

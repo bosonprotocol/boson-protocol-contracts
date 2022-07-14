@@ -13,7 +13,7 @@ import "./handlers/IBosonOfferHandler.sol";
 import "./handlers/IBosonOrchestrationHandler.sol";
 import "./handlers/IBosonTwinHandler.sol";
 import "./clients/IBosonVoucher.sol";
-import "./clients/IBosonClient.sol";
+import "./clients/IClientExternalAddresses.sol";
 import "./diamond/IDiamondCut.sol";
 import "./diamond/IDiamondLoupe.sol";
 
@@ -79,7 +79,7 @@ contract SupportedInterfaces {
         id = type(IBosonVoucher).interfaceId;
     }
 
-    function getIBosonClient() public pure returns (bytes4 id) {
-        id = type(IBosonClient).interfaceId;
+    function getIClientExternalAddresses() public pure returns (bytes4 id) {
+        id = type(IClientExternalAddresses).interfaceId;
     }
 }

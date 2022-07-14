@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
-import { IBosonClient } from "../../interfaces/clients/IBosonClient.sol";
+import { IClientExternalAddresses } from "../../interfaces/clients/IClientExternalAddresses.sol";
 
 /**
  * @title BeaconClientLib
@@ -48,7 +48,7 @@ library BeaconClientLib {
      */
     function hasRole(bytes32 role) internal view returns (bool) {
         // retrieve accessController from Beacon
-        IAccessControlUpgradeable accessController = IBosonClient(_beacon()).getAccessController();
+        IAccessControlUpgradeable accessController = IClientExternalAddresses(_beacon()).getAccessController();
 
         // forward the check to accessController
         return accessController.hasRole(role, msg.sender);

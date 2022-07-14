@@ -6,7 +6,6 @@ import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
-import { IBosonClient } from "../../../interfaces/clients/IBosonClient.sol";
 import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
 
 /**

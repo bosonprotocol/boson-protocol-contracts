@@ -2,13 +2,12 @@
 pragma solidity ^0.8.0;
 
 import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
-import { IBosonClient } from "../../../interfaces/clients/IBosonClient.sol";
 import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
 import { BosonConstants } from "../../../domain/BosonConstants.sol";
 import { ClientLib } from "../../libs/ClientLib.sol";
 import { EIP712Lib } from "../../libs/EIP712Lib.sol";
 import { Proxy } from "./Proxy.sol";
-import { BosonClientBeacon } from "./BosonClientBeacon.sol";
+import { ClientExternalAddressesBase } from "./../../bases/ClientExternalAddressesBase.sol";
 
 /**
  * @title ClientProxy
@@ -24,18 +23,18 @@ import { BosonClientBeacon } from "./BosonClientBeacon.sol";
  * Each Protocol client contract will be deployed behind its own proxy for
  * future upgradability.
  */
-contract ClientProxy is BosonClientBeacon, Proxy {
+contract ClientProxy is ClientExternalAddressesBase, Proxy {
     constructor(
         address _accessController,
         address _protocolAddress,
         address _impl
-    ) payable BosonClientBeacon(_accessController, _protocolAddress, _impl) {}
+    ) payable ClientExternalAddressesBase(_accessController, _protocolAddress, _impl) {}
 
     /**
      * @dev Returns the address to which the fallback function
      * and {_fallback} should delegate.
      */
-    function _implementation() internal view override(BosonClientBeacon, Proxy) returns (address) {
+    function _implementation() internal view override(ClientExternalAddressesBase, Proxy) returns (address) {
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
 
