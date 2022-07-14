@@ -50,8 +50,16 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             // make sure all offers exist and belong to the seller
             Offer memory offer = getValidOffer(_bundle.offerIds[i]);
 
-            // Calculate the bundle offers total quantity available.
-            offersTotalQuantityAvailable += offer.quantityAvailable;
+            // Unchecked because we're handling overflow below
+            unchecked {
+                // Calculate the bundle offers total quantity available.
+                offersTotalQuantityAvailable += offer.quantityAvailable;
+            }
+
+            // offersTotalQuantityAvailable should be MAX_UINT if overflow happens
+            if (offersTotalQuantityAvailable < offer.quantityAvailable) {
+                offersTotalQuantityAvailable = MAX_UINT;
+            }
 
             (bool bundleByOfferExists, ) = fetchBundleIdByOffer(_bundle.offerIds[i]);
             require(!bundleByOfferExists, BUNDLE_OFFER_MUST_BE_UNIQUE);
@@ -76,7 +84,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             protocolLookups().bundleIdByTwin[_bundle.twinIds[i]] = bundleId;
 
             if (_bundle.offerIds.length > 0) {
-                if (twin.tokenType == TokenType.NonFungibleToken) {
+                if (twin.tokenType == TokenType.NonFungibleToken || offersTotalQuantityAvailable == MAX_UINT) {
                     require(
                         offersTotalQuantityAvailable <= twin.supplyAvailable,
                         INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS

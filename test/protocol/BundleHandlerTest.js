@@ -508,11 +508,24 @@ describe("IBosonBundleHandler", function () {
         });
 
         it("Insufficient Twin supply to cover bundle offers", async function () {
-          let expectedNewTwinId = 6;
-          twin.supplyAvailable = 1;
+          let expectedNewTwinId = "6";
+          twin.supplyAvailable = "1";
           await twinHandler.connect(operator).createTwin(twin); // creates a twin with id 6
 
-          bundle.twinIds = [1, expectedNewTwinId];
+          bundle.twinIds = ["1", expectedNewTwinId];
+          await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
+            RevertReasons.INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
+          );
+        });
+
+        it("Offers quantity is unlimited but twin supply is not", async function () {
+          const newOffer = offer.clone();
+          newOffer.quantityAvailable = ethers.constants.MaxUint256.toString();
+          let expectedNewOfferId = "6";
+
+          await offerHandler.connect(operator).createOffer(newOffer, offerDates, offerDurations, disputeResolverId);
+
+          bundle.offerIds = [expectedNewOfferId];
           await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
             RevertReasons.INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
           );
@@ -823,6 +836,20 @@ describe("IBosonBundleHandler", function () {
 
           twinIdsToAdd = [expectedNewTwinId];
           await expect(bundleHandler.connect(operator).addTwinsToBundle(bundle.id, twinIdsToAdd)).to.revertedWith(
+            RevertReasons.INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
+          );
+        });
+
+        it("Offers quantity is unlimited but twin supply is not", async function () {
+          const newOffer = offer.clone();
+          newOffer.quantityAvailable = ethers.constants.MaxUint256.toString();
+          let expectedNewOfferId = "6";
+
+          await offerHandler.connect(operator).createOffer(newOffer, offerDates, offerDurations, disputeResolverId);
+
+          await bundleHandler.connect(operator).addOffersToBundle(bundle.id, [expectedNewOfferId]);
+
+          await expect(bundleHandler.connect(operator).addTwinsToBundle(bundle.id, ["1"])).to.revertedWith(
             RevertReasons.INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
           );
         });
@@ -1162,7 +1189,7 @@ describe("IBosonBundleHandler", function () {
 
         //Create a new Twin with supply enough to cover 4 offers
         twin.supplyAvailable = 4000;
-        let expectedNewTwinId = 6;
+        let expectedNewTwinId = "6";
 
         await twinHandler.connect(operator).createTwin(twin);
 

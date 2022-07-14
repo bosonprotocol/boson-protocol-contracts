@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { IBosonBundleHandler } from "../../interfaces/handlers/IBosonBundleHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BundleBase } from "../bases/BundleBase.sol";
+import "hardhat/console.sol";
 
 /**
  * @title BundleHandlerFacet
@@ -101,7 +102,15 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         for (uint256 i = 0; i < bundle.offerIds.length; i++) {
             Offer memory offer = getValidOffer(bundle.offerIds[i]);
 
-            offersTotalQuantityAvailable += offer.quantityAvailable;
+            // Unchecked because we're handling overflow below
+            unchecked {
+                offersTotalQuantityAvailable += offer.quantityAvailable;
+            }
+
+            // offersTotalQuantityAvailable should be MAX_UINT if overflow happens
+            if (offersTotalQuantityAvailable < offer.quantityAvailable) {
+                offersTotalQuantityAvailable = MAX_UINT;
+            }
         }
 
         for (uint256 i = 0; i < _twinIds.length; i++) {
@@ -114,7 +123,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             require(!bundleForTwinExist, BUNDLE_TWIN_MUST_BE_UNIQUE);
 
             if (bundle.offerIds.length > 0) {
-                if (twin.tokenType == TokenType.NonFungibleToken) {
+                if (twin.tokenType == TokenType.NonFungibleToken || offersTotalQuantityAvailable == MAX_UINT) {
                     require(
                         offersTotalQuantityAvailable <= twin.supplyAvailable,
                         INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
