@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { IBosonBundleEvents } from "../../interfaces/events/IBosonBundleEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
+import "hardhat/console.sol";
 
 /**
  * @title BundleBase
@@ -42,10 +43,15 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
 
         // Get the next bundle and increment the counter
         uint256 bundleId = protocolCounters().nextBundleId++;
+        // Sum of offers quantity available
+        uint256 offersTotalQuantityAvailable;
 
         for (uint256 i = 0; i < _bundle.offerIds.length; i++) {
             // make sure all offers exist and belong to the seller
-            getValidOffer(_bundle.offerIds[i]);
+            Offer memory offer = getValidOffer(_bundle.offerIds[i]);
+
+            // Calculate the bundle offers total quantity available.
+            offersTotalQuantityAvailable += offer.quantityAvailable;
 
             (bool bundleByOfferExists, ) = fetchBundleIdByOffer(_bundle.offerIds[i]);
             require(!bundleByOfferExists, BUNDLE_OFFER_MUST_BE_UNIQUE);
@@ -60,14 +66,23 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
 
         for (uint256 i = 0; i < _bundle.twinIds.length; i++) {
             // make sure all twins exist and belong to the seller
-            getValidTwin(_bundle.twinIds[i]);
-
+            Twin memory twin = getValidTwin(_bundle.twinIds[i]);
+            
             // A twin can't belong to multiple bundles
             (bool bundleForTwinExist, ) = fetchBundleIdByTwin(_bundle.twinIds[i]);
             require(!bundleForTwinExist, BUNDLE_TWIN_MUST_BE_UNIQUE);
 
             // Push to bundleIdsByTwin mapping
             protocolLookups().bundleIdByTwin[_bundle.twinIds[i]] = bundleId;
+
+            if(_bundle.offerIds.length > 0) {
+              if(twin.tokenType == TokenType.NonFungibleToken) {
+                  require(offersTotalQuantityAvailable <= twin.supplyAvailable, INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS);
+              } else {
+                  require(offersTotalQuantityAvailable * twin.amount <= twin.supplyAvailable, INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS);
+              }
+            }
+
         }
 
         // Get storage location for bundle

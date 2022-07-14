@@ -77,7 +77,7 @@ function mockTwin(tokenAddress, tokenType) {
   const sellerId = "1";
   const amount = "500";
   const tokenId = "0";
-  const supplyAvailable = "1";
+  const supplyAvailable = "1500";
   return new Twin(id, sellerId, amount, supplyAvailable, tokenId, tokenAddress, tokenType);
 }
 
