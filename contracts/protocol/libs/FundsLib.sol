@@ -64,16 +64,7 @@ library FundsLib {
         uint256 price = offer.price;
 
         // validate buyer inputs
-        if (exchangeToken == address(0)) {
-            // if transfer is in the native currency, msg.value must match offer price
-            require(msg.value == price, INSUFFICIENT_VALUE_SENT);
-        } else {
-            // when price is in an erc20 token, transferring the native currency is not allowed
-            require(msg.value == 0, NATIVE_NOT_ALLOWED);
-
-            // if transfer is in ERC20 token, try to transfer the amount from buyer to the protocol
-            transferFundsToProtocol(exchangeToken, price);
-        }
+        validateIncomingPayment(exchangeToken, price);
 
         // decrease available funds
         uint256 sellerId = offer.sellerId;
@@ -83,6 +74,32 @@ library FundsLib {
         // notify external observers
         emit FundsEncumbered(_buyerId, exchangeToken, price, EIP712Lib.msgSender());
         emit FundsEncumbered(sellerId, exchangeToken, sellerDeposit, EIP712Lib.msgSender());
+    }
+
+    /**
+     * @notice Validates that incoming payments matches expectation. If token is a native currency, just make sure
+     * msg.value is correct. If token is ERC20, transfer the value from the sender to the protocol
+     *
+     * Reverts if:
+     * - offer price is in native token and buyer caller does not send enough
+     * - offer price is in some ERC20 token and caller also send native currency
+     * - if contract at token address does not support erc20 function transferFrom
+     * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     *
+     * @param _exchangeToken - address of the token (0x for native currency)
+     * @param _value - value expected to receive
+     */
+    function validateIncomingPayment(address _exchangeToken, uint256 _value) internal {
+        if (_exchangeToken == address(0)) {
+            // if transfer is in the native currency, msg.value must match offer price
+            require(msg.value == _value, INSUFFICIENT_VALUE_SENT);
+        } else {
+            // when price is in an erc20 token, transferring the native currency is not allowed
+            require(msg.value == 0, NATIVE_NOT_ALLOWED);
+
+            // if transfer is in ERC20 token, try to transfer the amount from buyer to the protocol
+            transferFundsToProtocol(_exchangeToken, _value);
+        }
     }
 
     /**

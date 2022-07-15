@@ -23,7 +23,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     function initialize(
         ProtocolLib.ProtocolAddresses calldata _addresses,
         ProtocolLib.ProtocolLimits calldata _limits,
-        ProtocolLib.ProtocolFees calldata _fees
+        ProtocolLib.ProtocolFees calldata _fees,
+        uint16 _buyerEscalationDepositPercentage
     ) public onlyUnInitialized(type(IBosonConfigHandler).interfaceId) {
         // Register supported interfaces
         DiamondLib.addSupportedInterface(type(IBosonConfigHandler).interfaceId);
@@ -42,6 +43,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxFeesPerDisputeResolver(_limits.maxFeesPerDisputeResolver);
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
         setMaxDisputesPerBatch(_limits.maxDisputesPerBatch);
+        setBuyerEscalationDepositPercentage(_buyerEscalationDepositPercentage);
 
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -317,5 +319,39 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getMaxDisputesPerBatch() external view override returns (uint16) {
         return protocolLimits().maxDisputesPerBatch;
+    }
+
+    /**
+     * @notice Sets the buyer escalation fee percentage.
+     *
+     * Emits a BuyerEscalationFeePercentageChanged event.
+     *
+     * Reverts if the _buyerEscalationDepositPercentage is greater than 10000.
+     *
+     * @param _buyerEscalationDepositPercentage - the percentage of the DR fee that will be charged to buyer if they want to escalate the dispute
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
+     */
+    function setBuyerEscalationDepositPercentage(uint16 _buyerEscalationDepositPercentage)
+        public
+        override
+        onlyRole(ADMIN)
+    {
+        // Make sure percentage is less than 10000
+        require(_buyerEscalationDepositPercentage <= 10000, FEE_PERCENTAGE_INVALID);
+
+        // Store fee percentage
+        protocolLookups().buyerEscalationDepositPercentage = _buyerEscalationDepositPercentage;
+
+        // Notify watchers of state change
+        emit BuyerEscalationFeePercentageChanged(_buyerEscalationDepositPercentage, msgSender());
+    }
+
+    /**
+     * @notice Get the buyer escalation fee percentage.
+     */
+    function getBuyerEscalationDepositPercentage() external view override returns (uint16) {
+        return protocolLookups().buyerEscalationDepositPercentage;
     }
 }

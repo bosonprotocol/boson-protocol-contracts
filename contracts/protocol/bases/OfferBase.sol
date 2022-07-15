@@ -141,11 +141,14 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             uint256 feeIndex = protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_offer.exchangeToken];
             require(feeIndex > 0, DR_UNSUPPORTED_FEE);
 
+            uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
+
             // store DR terms
             disputeResolutionTerms = DisputeResolutionTerms(
                 _disputeResolverId,
                 disputeResolver.escalationResponsePeriod,
-                disputeResolverFees[feeIndex - 1].feeAmount
+                feeAmount,
+                (feeAmount * protocolLookups().buyerEscalationDepositPercentage) / 10000
             );
             protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
         }
