@@ -8,12 +8,9 @@ The V2 architecture takes a completely different approach versus V1. Considering
 * **Modularity** - simpler to reason about, test, and replace parts of. Once development begins and for as long as possible thereafter, we must be able to move fast, incorporate new functionality without disturbing the existing architecture or misplacing responsibilities.
 * **Durability** - We need developer adoption for broad ecosystem penetration. Developers like project dependencies that don't burn down and rebuild so much. V3 is on the horizon, and as a living, engaged protocol, it must be able to adapt to the prevailing environment while minimizing friction to continued adoption.
 
-### Protocol Diamond
-![Protocol Diamond](images/Boson_Protocol_V2_-_Protocol_Diamond.png)
-Our modular approach is based on [EIP-2939 Diamond MultiFacet Proxy](https://eips.ethereum.org/EIPS/eip-2535).
-
 ### Protocol Diamond and Facets
-The V2 protocol is built around the [EIP-2535](https://eips.ethereum.org/EIPS/eip-2535) Diamond Multi-Facet Proxy specification.
+![Protocol Diamond](images/Boson_Protocol_V2_-_Protocol_Diamond.png)
+Our modular approach is based on [EIP-2535 Diamond MultiFacet Proxy](https://eips.ethereum.org/EIPS/eip-2535).
 
 #### Diamond, you say?
 If you aren't familiar with proxies or the Diamond in particular, a good analogy is a modular stereo system.
