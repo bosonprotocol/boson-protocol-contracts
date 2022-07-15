@@ -75,29 +75,14 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         }
 
         for (uint256 i = 0; i < _bundle.twinIds.length; i++) {
-            // make sure all twins exist and belong to the seller
-            Twin memory twin = getValidTwin(_bundle.twinIds[i]);
+            uint256 twinId = _bundle.twinIds[i];
 
             // A twin can't belong to multiple bundles
             (bool bundleForTwinExist, ) = fetchBundleIdByTwin(_bundle.twinIds[i]);
             require(!bundleForTwinExist, BUNDLE_TWIN_MUST_BE_UNIQUE);
 
             if (_bundle.offerIds.length > 0) {
-                // twin is NonFungibleToken or bundle has an unlimited offer
-                if (twin.tokenType == TokenType.NonFungibleToken || offersTotalQuantityAvailable == type(uint256).max) {
-                    // the sum of all offers quantity should be less or equal twin supply
-                    require(
-                        offersTotalQuantityAvailable <= twin.supplyAvailable,
-                        INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
-                    );
-                } else {
-                    // twin is FungibleToken or MultiToken
-                    // the sum of all offers quantity plus twin amount should be less or equal twin supply
-                    require(
-                        offersTotalQuantityAvailable * twin.amount <= twin.supplyAvailable,
-                        INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
-                    );
-                }
+                bundleSupplyChecks(offersTotalQuantityAvailable, twinId);
             }
 
             // Push to bundleIdsByTwin mapping
@@ -139,5 +124,31 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
 
         // Caller's seller id must match twin seller id
         require(sellerId == twin.sellerId, NOT_OPERATOR);
+    }
+
+    /**
+     * @notice Make sure twin has enough supply to cover all bundled offers
+     *
+     * Reverts if:
+     * - offers total quantity is greater than twin supply when token is NonFungible
+     * - offers total quantity multiplied by twin amount is greater than twin supply when token is Fungible or Multitoken
+     *
+     */
+    function bundleSupplyChecks(uint256 offersTotalQuantity, uint256 _twinId) internal {
+        // make sure twin exist and belong to the seller
+        Twin memory twin = getValidTwin(_twinId);
+
+        // twin is NonFungibleToken or bundle has an unlimited offer
+        if (twin.tokenType == TokenType.NonFungibleToken || offersTotalQuantity == type(uint256).max) {
+            // the sum of all offers quantity should be less or equal twin supply
+            require(offersTotalQuantity <= twin.supplyAvailable, INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS);
+        } else {
+            // twin is FungibleToken or MultiToken
+            // the sum of all offers quantity multiplied by twin amount should be less or equal twin supply
+            require(
+                offersTotalQuantity * twin.amount <= twin.supplyAvailable,
+                INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
+            );
+        }
     }
 }

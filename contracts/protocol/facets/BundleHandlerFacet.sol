@@ -118,29 +118,12 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
 
         for (uint256 i = 0; i < _twinIds.length; i++) {
             uint256 twinId = _twinIds[i];
-            // make sure twin exist and belong to the seller
-            Twin memory twin = getValidTwin(twinId);
-
             // Twin cannot be associated with a different bundle
             (bool bundleForTwinExist, ) = fetchBundleIdByTwin(twinId);
             require(!bundleForTwinExist, BUNDLE_TWIN_MUST_BE_UNIQUE);
 
             if (bundle.offerIds.length > 0) {
-                // twin is NonFungibleToken or bundle has an unlimited offer
-                if (twin.tokenType == TokenType.NonFungibleToken || offersTotalQuantityAvailable == type(uint256).max) {
-                    // the sum of all offers quantity should be less or equal twin supply
-                    require(
-                        offersTotalQuantityAvailable <= twin.supplyAvailable,
-                        INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
-                    );
-                } else {
-                    // twin is FungibleToken or MultiToken
-                    // the sum of all offers quantity multiplied by twin amount should be less or equal twin supply
-                    require(
-                        offersTotalQuantityAvailable * twin.amount <= twin.supplyAvailable,
-                        INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
-                    );
-                }
+                bundleSupplyChecks(offersTotalQuantityAvailable, twinId);
             }
 
             // add to bundleIdByTwin mapping
@@ -273,10 +256,21 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             BundleUpdateAttribute.OFFER
         );
 
+        uint256 offersTotalQuantityAvailable;
+
         for (uint256 i = 0; i < _offerIds.length; i++) {
             uint256 offerId = _offerIds[i];
             // make sure offer exist and belong to the seller
-            getValidOffer(offerId);
+            Offer memory offer = getValidOffer(offerId);
+
+            // Unchecked because we're handling overflow below
+            unchecked {
+                offersTotalQuantityAvailable += offer.quantityAvailable;
+            }
+            // offersTotalQuantityAvailable should be max uint if overflow happens
+            if (offersTotalQuantityAvailable < offer.quantityAvailable) {
+                offersTotalQuantityAvailable = type(uint256).max;
+            }
 
             // make sure exchange does not already exist for this offer id.
             (bool exchangeIdsForOfferExists, ) = getExchangeIdsByOffer(offerId);
@@ -291,6 +285,10 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
 
             // add to bundle struct
             bundle.offerIds.push(offerId);
+        }
+
+        for (uint256 i = 0; i < bundle.twinIds.length; i++) {
+            bundleSupplyChecks(offersTotalQuantityAvailable, bundle.twinIds[i]);
         }
 
         // Notify watchers of state change
