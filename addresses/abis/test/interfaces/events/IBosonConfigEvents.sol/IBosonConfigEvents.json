@@ -9,6 +9,25 @@
         {
           "indexed": false,
           "internalType": "uint16",
+          "name": "buyerEscalationFeePercentage",
+          "type": "uint16"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "BuyerEscalationFeePercentageChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint16",
           "name": "maxDisputesPerBatch",
           "type": "uint16"
         },
