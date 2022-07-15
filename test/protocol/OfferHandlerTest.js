@@ -27,16 +27,7 @@ describe("IBosonOfferHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
-  let erc165,
-    protocolDiamond,
-    accessController,
-    accountHandler,
-    offerHandler,
-    bosonVoucher,
-    bosonToken,
-    offerStruct,
-    key,
-    value;
+  let erc165, protocolDiamond, accessController, accountHandler, offerHandler, bosonToken, offerStruct, key, value;
   let offer, nextOfferId, invalidOfferId, support, expected, exists, nextAccountId;
   let seller, active;
   let id, sellerId, price, voided;
@@ -90,7 +81,9 @@ describe("IBosonOfferHandler", function () {
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
-    [, , [bosonVoucher]] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [beacon] = beacons;
+    const [proxy] = proxies;
 
     // Deploy the boson token
     [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
@@ -106,7 +99,8 @@ describe("IBosonOfferHandler", function () {
       {
         treasuryAddress: "0x0000000000000000000000000000000000000000",
         tokenAddress: bosonToken.address,
-        voucherAddress: bosonVoucher.address,
+        voucherBeaconAddress: beacon.address,
+        beaconProxyAddress: proxy.address,
       },
       // Protocol limits
       {

@@ -11,9 +11,11 @@ import { ClientLib } from "../libs/ClientLib.sol";
  * @title ClientBase
  *
  * @notice Extended by Boson Protocol contracts that need to communicate with the
- * ProtocolDiamond, but are NOT facets of the ProtocolDiamond.
+ * ProtocolDiamond, but are NOT facets of the ProtocolDiamond. This is used where it's expected that only one client
+ * will use the implementation. If it's expected that multiple client will use the same implementation, it's recommended
+ * to use `BeaconClientBase` instead
  *
- * Boson client contracts include BosonVoucher
+ * Boson client contracts include XXX
  */
 abstract contract ClientBase is BosonTypes, BosonConstants {
     /**
@@ -40,16 +42,5 @@ abstract contract ClientBase is BosonTypes, BosonConstants {
         ClientLib.ProxyStorage memory ps = ClientLib.proxyStorage();
         (, Exchange memory exchange) = IBosonExchangeHandler(ps.protocolDiamond).getExchange(_exchangeId);
         (exists, offer, , , ) = IBosonOfferHandler(ps.protocolDiamond).getOffer(exchange.offerId);
-    }
-
-    /**
-     * @notice Inform protocol of new buyer associated with an exchange
-     *
-     * @param _exchangeId - the id of the exchange
-     * @param _newBuyer - the address of the new buyer
-     */
-    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) internal {
-        ClientLib.ProxyStorage memory ps = ClientLib.proxyStorage();
-        IBosonExchangeHandler(ps.protocolDiamond).onVoucherTransferred(_exchangeId, _newBuyer);
     }
 }

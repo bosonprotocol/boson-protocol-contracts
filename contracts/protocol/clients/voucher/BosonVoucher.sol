@@ -2,11 +2,11 @@
 pragma solidity ^0.8.0;
 
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
-import { IBosonClient } from "../../../interfaces/clients/IBosonClient.sol";
-import { ClientBase } from "../../bases/ClientBase.sol";
+import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
 
 /**
  * @title BosonVoucher
@@ -16,7 +16,7 @@ import { ClientBase } from "../../bases/ClientBase.sol";
  * - Only PROTOCOL-roled addresses can issue vouchers, i.e., the ProtocolDiamond or an EOA for testing
  * - Newly minted voucher NFTs are automatically transferred to the buyer
  */
-contract BosonVoucher is IBosonVoucher, ClientBase, ERC721Upgradeable {
+contract BosonVoucher is IBosonVoucher, BeaconClientBase, ERC721Upgradeable {
     string internal constant VOUCHER_NAME = "Boson Voucher";
     string internal constant VOUCHER_SYMBOL = "BOSON_VOUCHER";
 
@@ -71,9 +71,7 @@ contract BosonVoucher is IBosonVoucher, ClientBase, ERC721Upgradeable {
         override(ERC721Upgradeable, IERC165Upgradeable)
         returns (bool)
     {
-        return (interfaceId == type(IBosonVoucher).interfaceId ||
-            interfaceId == type(IBosonClient).interfaceId ||
-            super.supportsInterface(interfaceId));
+        return (interfaceId == type(IBosonVoucher).interfaceId || super.supportsInterface(interfaceId));
     }
 
     /**
@@ -87,7 +85,12 @@ contract BosonVoucher is IBosonVoucher, ClientBase, ERC721Upgradeable {
      * @param _exchangeId - id of the voucher's associated exchange
      * @return the uri for the associated offer's off-chain metadata (blank if not found)
      */
-    function tokenURI(uint256 _exchangeId) public view override returns (string memory) {
+    function tokenURI(uint256 _exchangeId)
+        public
+        view
+        override(ERC721Upgradeable, IERC721MetadataUpgradeable)
+        returns (string memory)
+    {
         (bool exists, Offer memory offer) = getBosonOffer(_exchangeId);
         return exists ? offer.metadataUri : "";
     }

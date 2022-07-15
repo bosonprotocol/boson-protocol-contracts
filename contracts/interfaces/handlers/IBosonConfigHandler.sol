@@ -9,7 +9,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xe8f761d4
+ * The ERC-165 identifier for this interface is: 0x7ce319fe
  */
 interface IBosonConfigHandler is IBosonConfigEvents {
     /**
@@ -41,18 +41,32 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     function getTreasuryAddress() external view returns (address payable);
 
     /**
-     * @notice Sets the address of the Voucher NFT address (proxy)
+     * @notice Sets the address of the Boson Voucher beacon contract.
      *
-     * Emits a VoucherAddressChanged event.
+     * Emits a VoucherBeaconAddressChanged event.
      *
-     * @param _voucher - the address of the nft contract
+     * @param _voucherBeaconAddress - the address of the Boson Voucher beacon contract.
      */
-    function setVoucherAddress(address _voucher) external;
+    function setVoucherBeaconAddress(address _voucherBeaconAddress) external;
 
     /**
-     * @notice The Voucher address getter
+     * @notice The voucherBeaconAddress getter
      */
-    function getVoucherAddress() external view returns (address);
+    function getVoucherBeaconAddress() external view returns (address);
+
+    /**
+     * @notice Sets the address of the Boson Voucher reference proxy implementation
+     *
+     * Emits a BeaconProxyAddressChanged event.
+     *
+     * @param _beaconProxyAddress - the address of the reference proxy implementation
+     */
+    function setBeaconProxyAddress(address _beaconProxyAddress) external;
+
+    /**
+     * @notice The beaconProxyAddress getter
+     */
+    function getBeaconProxyAddress() external view returns (address);
 
     /**
      * @notice Sets the protocol fee percentage.

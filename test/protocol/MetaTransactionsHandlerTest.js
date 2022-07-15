@@ -42,8 +42,6 @@ describe("IBosonMetaTransactionsHandler", function () {
     result;
   let metaTransactionsHandler, nonce, functionSignature;
   let seller, offerId, id, buyerId, nextAccountId;
-  let clients;
-  let bosonVoucher;
   let validOfferDetails,
     offerType,
     metaTransactionType,
@@ -109,8 +107,9 @@ describe("IBosonMetaTransactionsHandler", function () {
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
-    [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
-    [bosonVoucher] = clients;
+    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [beacon] = beacons;
+    const [proxy] = proxies;
 
     // Deploy the boson token
     [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
@@ -126,7 +125,8 @@ describe("IBosonMetaTransactionsHandler", function () {
       {
         treasuryAddress: ethers.constants.AddressZero,
         tokenAddress: bosonToken.address,
-        voucherAddress: bosonVoucher.address,
+        voucherBeaconAddress: beacon.address,
+        beaconProxyAddress: proxy.address,
       },
       // Protocol limits
       {

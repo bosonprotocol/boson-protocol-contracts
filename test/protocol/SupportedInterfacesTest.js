@@ -100,9 +100,9 @@ describe("SupportedInterfaces", function () {
     });
 
     context("👉 Protocol Clients", async function () {
-      it("getIBosonClient() should return expected id", async function () {
-        const expected = InterfaceIds.IBosonClient;
-        const actual = await supportedInterfaces.getIBosonClient();
+      it("getIClientExternalAddresses() should return expected id", async function () {
+        const expected = InterfaceIds.IClientExternalAddresses;
+        const actual = await supportedInterfaces.getIClientExternalAddresses();
         assert.equal(actual, expected);
       });
 
