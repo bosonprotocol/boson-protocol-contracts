@@ -1350,11 +1350,9 @@ describe("IBosonDisputeHandler", function () {
           it("Insufficient native currency sent", async function () {
             // Attempt to escalate the dispute, expecting revert
             await expect(
-              disputeHandler
-                .connect(buyer)
-                .escalateDispute(exchangeId, {
-                  value: ethers.BigNumber.from(buyerEscalationDepositNative).sub("1").toString(),
-                })
+              disputeHandler.connect(buyer).escalateDispute(exchangeId, {
+                value: ethers.BigNumber.from(buyerEscalationDepositNative).sub("1").toString(),
+              })
             ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_SENT);
           });
 
@@ -1363,11 +1361,9 @@ describe("IBosonDisputeHandler", function () {
 
             // Attempt to escalate the dispute, expecting revert
             await expect(
-              disputeHandler
-                .connect(buyer)
-                .escalateDispute(exchangeId, {
-                  value: ethers.BigNumber.from(buyerEscalationDepositNative).sub("1").toString(),
-                })
+              disputeHandler.connect(buyer).escalateDispute(exchangeId, {
+                value: ethers.BigNumber.from(buyerEscalationDepositNative).sub("1").toString(),
+              })
             ).to.revertedWith(RevertReasons.NATIVE_NOT_ALLOWED);
           });
 
