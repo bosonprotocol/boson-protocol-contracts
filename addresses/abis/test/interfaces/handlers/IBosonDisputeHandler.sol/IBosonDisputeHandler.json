@@ -380,7 +380,7 @@
       ],
       "name": "escalateDispute",
       "outputs": [],
-      "stateMutability": "nonpayable",
+      "stateMutability": "payable",
       "type": "function"
     },
     {
