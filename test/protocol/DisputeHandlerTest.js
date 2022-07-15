@@ -17,7 +17,11 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { setNextBlockTimestamp, prepareDataSignatureParameters } = require("../../scripts/util/test-utils.js");
+const {
+  setNextBlockTimestamp,
+  prepareDataSignatureParameters,
+  applyPercentage,
+} = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
 const { mockOffer, mockDisputeResolver } = require("../utils/mock");
 
@@ -71,6 +75,7 @@ describe("IBosonDisputeHandler", function () {
   let buyerPercent;
   let resolutionType, customSignatureType, message, r, s, v;
   let returnedDispute, returnedDisputeDates;
+  let DRFeeNative, DRFeeToken, buyerEscalationDepositNative, buyerEscalationDepositToken;
 
   before(async function () {
     // get interface Ids
@@ -214,7 +219,8 @@ describe("IBosonDisputeHandler", function () {
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+      DRFeeNative = ethers.utils.parseUnits("1", "ether").toString();
+      disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative)];
 
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
@@ -1170,7 +1176,41 @@ describe("IBosonDisputeHandler", function () {
         });
       });
 
-      context.only("👉 escalateDispute()", async function () {
+      context("👉 escalateDispute()", async function () {
+        async function createDisputeExchangeWithToken() {
+          // utility function that deploys a mock token, creates a offer with it, creates an exchange and push it into escalated state
+          // deploy a mock token
+          const [mockToken] = await deployMockTokens(gasLimit, ["Foreign20"]);
+
+          // add to DR fees
+          DRFeeToken = ethers.utils.parseUnits("2", "ether").toString();
+          await accountHandler
+            .connect(adminDR)
+            .addFeesToDisputeResolver(disputeResolverId, [
+              new DisputeResolverFee(mockToken.address, "MockToken", DRFeeToken),
+            ]);
+
+          // create an offer with a mock token contract
+          offer.exchangeToken = mockToken.address;
+          offer.sellerDeposit = offer.price = offer.buyerCancelPenalty = "0";
+          offer.id++;
+
+          // create an offer with erc20 exchange token
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+
+          // mint tokens to buyer and approve the protocol
+          buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
+          await mockToken.mint(buyer.address, buyerEscalationDepositToken);
+          await mockToken.connect(buyer).approve(protocolDiamond.address, buyerEscalationDepositToken);
+
+          // Commit to offer and put exchange all the way to dispute
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
+          await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
+          await disputeHandler.connect(buyer).raiseDispute(exchangeId, complaint);
+
+          return mockToken;
+        }
+
         beforeEach(async function () {
           // Raise a dispute
           tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId, complaint);
@@ -1180,18 +1220,25 @@ describe("IBosonDisputeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
           disputedDate = block.timestamp.toString();
           timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+
+          buyerEscalationDepositNative = applyPercentage(DRFeeNative, buyerEscalationDepositPercentage);
         });
 
         it("should emit a DisputeEscalated event", async function () {
           // Escalate the dispute, testing for the event
-          await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId))
+          await expect(
+            disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+          )
             .to.emit(disputeHandler, "DisputeEscalated")
             .withArgs(exchangeId, disputeResolverId, buyer.address);
         });
 
         it("should update state", async function () {
+          // Protocol balance before
+          const escrowBalanceBefore = await ethers.provider.getBalance(protocolDiamond.address);
+
           // Escalate the dispute
-          tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
+          tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
           // Get the block timestamp of the confirmed tx and set escalatedDate
           blockNumber = tx.blockNumber;
@@ -1222,6 +1269,32 @@ describe("IBosonDisputeHandler", function () {
 
           // It should match DisputeState.Escalated
           assert.equal(response, DisputeState.Escalated, "Dispute state is incorrect");
+
+          // Protocol balance should increase for buyer escalation deposit
+          const escrowBalanceAfter = await ethers.provider.getBalance(protocolDiamond.address);
+          expect(escrowBalanceAfter.sub(escrowBalanceBefore)).to.equal(
+            buyerEscalationDepositNative,
+            "Escrow balance mismatch"
+          );
+        });
+
+        it("should be possible to pay escalation deposit in ERC20 token", async function () {
+          const mockToken = await createDisputeExchangeWithToken();
+
+          // Protocol balance before
+          const escrowBalanceBefore = await mockToken.balanceOf(protocolDiamond.address);
+
+          // Escalate the dispute, testing for the event
+          await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId))
+            .to.emit(disputeHandler, "DisputeEscalated")
+            .withArgs(exchangeId, disputeResolverId, buyer.address);
+
+          // Protocol balance should increase for buyer escalation deposit
+          const escrowBalanceAfter = await mockToken.balanceOf(protocolDiamond.address);
+          expect(escrowBalanceAfter.sub(escrowBalanceBefore)).to.equal(
+            buyerEscalationDepositToken,
+            "Escrow balance mismatch"
+          );
         });
 
         context("💔 Revert Reasons", async function () {
@@ -1271,6 +1344,65 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to escalate the dispute, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
               RevertReasons.INVALID_STATE
+            );
+          });
+
+          it("Insufficient native currency sent", async function () {
+            // Attempt to escalate the dispute, expecting revert
+            await expect(
+              disputeHandler
+                .connect(buyer)
+                .escalateDispute(exchangeId, {
+                  value: ethers.BigNumber.from(buyerEscalationDepositNative).sub("1").toString(),
+                })
+            ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_SENT);
+          });
+
+          it("Native currency sent together with ERC20 token transfer", async function () {
+            await createDisputeExchangeWithToken();
+
+            // Attempt to escalate the dispute, expecting revert
+            await expect(
+              disputeHandler
+                .connect(buyer)
+                .escalateDispute(exchangeId, {
+                  value: ethers.BigNumber.from(buyerEscalationDepositNative).sub("1").toString(),
+                })
+            ).to.revertedWith(RevertReasons.NATIVE_NOT_ALLOWED);
+          });
+
+          it("Token address is not a contract", async function () {
+            // prepare a disputed exchange
+            const mockToken = await createDisputeExchangeWithToken();
+
+            // self destruct a contract
+            await mockToken.destruct();
+
+            // Attempt to commit to an offer, expecting revert
+            await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
+              RevertReasons.EOA_FUNCTION_CALL
+            );
+          });
+
+          it("Token contract revert for another reason", async function () {
+            // prepare a disputed exchange
+            const mockToken = await createDisputeExchangeWithToken();
+
+            // get rid of some tokens, so buyer has insufficient funds
+            await mockToken.connect(buyer).transfer(other1.address, buyerEscalationDepositNative);
+
+            // Attempt to commit to an offer, expecting revert
+            await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
+              RevertReasons.ERC20_EXCEEDS_BALANCE
+            );
+
+            // not approved
+            await mockToken
+              .connect(buyer)
+              .approve(protocolDiamond.address, ethers.BigNumber.from(buyerEscalationDepositToken).sub("1").toString());
+            // Attempt to commit to an offer, expecting revert
+            await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
+              RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE
             );
           });
         });
