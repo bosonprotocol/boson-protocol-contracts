@@ -26,6 +26,9 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
      * - any of twins does not exist
      * - number of twins exceeds maximum allowed number per bundle
      * - duplicate twins added in same bundle
+     * - exchange already exists for the offer id in bundle
+     * - offers total quantity is greater than twin supply when token is NonFungible
+     * - offers total quantity multiplied by twin amount is greater than twin supply when token is Fungible or MultiToken
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
@@ -55,9 +58,9 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
                 offersTotalQuantityAvailable += offer.quantityAvailable;
             }
 
-            // offersTotalQuantityAvailable should be MAX_UINT if overflow happens
+            // offersTotalQuantityAvailable should be max uint if overflow happens
             if (offersTotalQuantityAvailable < offer.quantityAvailable) {
-                offersTotalQuantityAvailable = MAX_UINT;
+                offersTotalQuantityAvailable = type(uint256).max;
             }
 
             (bool bundleByOfferExists, ) = fetchBundleIdByOffer(_bundle.offerIds[i]);
@@ -79,12 +82,9 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             (bool bundleForTwinExist, ) = fetchBundleIdByTwin(_bundle.twinIds[i]);
             require(!bundleForTwinExist, BUNDLE_TWIN_MUST_BE_UNIQUE);
 
-            // Push to bundleIdsByTwin mapping
-            protocolLookups().bundleIdByTwin[_bundle.twinIds[i]] = bundleId;
-
             if (_bundle.offerIds.length > 0) {
                 // twin is NonFungibleToken or bundle has an unlimited offer
-                if (twin.tokenType == TokenType.NonFungibleToken || offersTotalQuantityAvailable == MAX_UINT) {
+                if (twin.tokenType == TokenType.NonFungibleToken || offersTotalQuantityAvailable == type(uint256).max) {
                     // the sum of all offers quantity should be less or equal twin supply
                     require(
                         offersTotalQuantityAvailable <= twin.supplyAvailable,
@@ -99,6 +99,9 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
                     );
                 }
             }
+
+            // Push to bundleIdsByTwin mapping
+            protocolLookups().bundleIdByTwin[_bundle.twinIds[i]] = bundleId;
         }
 
         // Get storage location for bundle

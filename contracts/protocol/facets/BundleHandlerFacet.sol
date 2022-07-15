@@ -39,6 +39,8 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * - number of twins exceeds maximum allowed number per bundle
      * - duplicate twins added in same bundle
      * - exchange already exists for the offer id in bundle
+     * - offers total quantity is greater than twin supply when token is nonfungible
+     * - offers total quantity multiplied by twin amount is greater than twin supply when token is fungible or multitoken
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
@@ -82,6 +84,8 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * - any of twins does not exist
      * - twin already exists in the same bundle
      * - twin ids contains duplicated twins
+     * - offers total quantity is greater than twin supply when token is nonfungible
+     * - offers total quantity multiplied by twin amount is greater than twin supply when token is fungible or multitoken
      *
      * @param _bundleId  - the id of the bundle to be updated
      * @param _twinIds - array of twin ids to be added to the bundle
@@ -106,9 +110,9 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
                 offersTotalQuantityAvailable += offer.quantityAvailable;
             }
 
-            // offersTotalQuantityAvailable should be MAX_UINT if overflow happens
+            // offersTotalQuantityAvailable should be max uint if overflow happens
             if (offersTotalQuantityAvailable < offer.quantityAvailable) {
-                offersTotalQuantityAvailable = MAX_UINT;
+                offersTotalQuantityAvailable = type(uint256).max;
             }
         }
 
@@ -123,7 +127,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
 
             if (bundle.offerIds.length > 0) {
                 // twin is NonFungibleToken or bundle has an unlimited offer
-                if (twin.tokenType == TokenType.NonFungibleToken || offersTotalQuantityAvailable == MAX_UINT) {
+                if (twin.tokenType == TokenType.NonFungibleToken || offersTotalQuantityAvailable == type(uint256).max) {
                     // the sum of all offers quantity should be less or equal twin supply
                     require(
                         offersTotalQuantityAvailable <= twin.supplyAvailable,
@@ -131,7 +135,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
                     );
                 } else {
                     // twin is FungibleToken or MultiToken
-                    // the sum of all offers quantity plus twin amount should be less or equal twin supply
+                    // the sum of all offers quantity multiplied by twin amount should be less or equal twin supply
                     require(
                         offersTotalQuantityAvailable * twin.amount <= twin.supplyAvailable,
                         INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS

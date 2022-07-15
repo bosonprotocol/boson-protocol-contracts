@@ -133,9 +133,6 @@ contract BosonConstants {
 
     // Revert Reasons: General
     string internal constant FEE_PERCENTAGE_INVALID = "Percentage representation must be less than 10000";
-
-    // Max uint 256 value
-    uint256 internal constant MAX_UINT = 2**256 - 1;
 }
 
 // TODO: Refactor to use file level constants throughout or use custom Errors
