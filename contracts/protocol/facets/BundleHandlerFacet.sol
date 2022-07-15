@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import { IBosonBundleHandler } from "../../interfaces/handlers/IBosonBundleHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BundleBase } from "../bases/BundleBase.sol";
-import "hardhat/console.sol";
 
 /**
  * @title BundleHandlerFacet
@@ -123,12 +122,16 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             require(!bundleForTwinExist, BUNDLE_TWIN_MUST_BE_UNIQUE);
 
             if (bundle.offerIds.length > 0) {
+                // twin is NonFungibleToken or bundle has an unlimited offer
                 if (twin.tokenType == TokenType.NonFungibleToken || offersTotalQuantityAvailable == MAX_UINT) {
+                    // the sum of all offers quantity should be less or equal twin supply
                     require(
                         offersTotalQuantityAvailable <= twin.supplyAvailable,
                         INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
                     );
                 } else {
+                    // twin is FungibleToken or MultiToken
+                    // the sum of all offers quantity plus twin amount should be less or equal twin supply
                     require(
                         offersTotalQuantityAvailable * twin.amount <= twin.supplyAvailable,
                         INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS

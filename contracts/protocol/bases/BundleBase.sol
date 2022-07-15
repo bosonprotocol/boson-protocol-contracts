@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import { IBosonBundleEvents } from "../../interfaces/events/IBosonBundleEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
-import "hardhat/console.sol";
 
 /**
  * @title BundleBase
@@ -84,12 +83,16 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             protocolLookups().bundleIdByTwin[_bundle.twinIds[i]] = bundleId;
 
             if (_bundle.offerIds.length > 0) {
+                // twin is NonFungibleToken or bundle has an unlimited offer
                 if (twin.tokenType == TokenType.NonFungibleToken || offersTotalQuantityAvailable == MAX_UINT) {
+                    // the sum of all offers quantity should be less or equal twin supply
                     require(
                         offersTotalQuantityAvailable <= twin.supplyAvailable,
                         INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
                     );
                 } else {
+                    // twin is FungibleToken or MultiToken
+                    // the sum of all offers quantity plus twin amount should be less or equal twin supply
                     require(
                         offersTotalQuantityAvailable * twin.amount <= twin.supplyAvailable,
                         INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
