@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
-const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
+const { applyPercentage } = require("../../scripts/util/test-utils.js");
 
 /**
  *  Test the Offer domain entity
@@ -34,7 +34,7 @@ describe("Offer", function () {
     id = sellerId = "0";
     price = ethers.utils.parseUnits("1.5", "ether").toString();
     sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-    protocolFee = calculateProtocolFee(price, protocolFeePercentage);
+    protocolFee = applyPercentage(price, protocolFeePercentage);
     buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
     quantityAvailable = "1";
     exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency

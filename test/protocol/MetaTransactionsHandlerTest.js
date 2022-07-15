@@ -55,7 +55,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let offer, offerDates, offerDurations;
   let sellerDeposit, price;
   let voucherRedeemableFrom;
-  let protocolFeePercentage, protocolFeeFlatBoson;
+  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
   let disputeResolver, active, disputeResolverFees, disputeResolverId;
@@ -118,6 +118,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
     protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Add config Handler
     const protocolConfig = [
@@ -143,6 +144,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         percentage: protocolFeePercentage,
         flatBoson: protocolFeeFlatBoson,
       },
+      buyerEscalationDepositPercentage,
     ];
 
     // Deploy the Config facet, initializing the protocol config

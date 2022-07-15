@@ -124,6 +124,8 @@ library ProtocolLib {
         mapping(uint256 => address[]) tokenList;
         // buyer address => groupId => commit count (addresses that have committed to conditional offers)
         mapping(address => mapping(uint256 => uint256)) conditionalCommitsByAddress;
+        // buyer escalation deposit percentage
+        uint16 buyerEscalationDepositPercentage;
     }
 
     // Incrementing ID counters

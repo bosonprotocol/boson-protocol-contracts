@@ -130,7 +130,7 @@ contract BosonConstants {
     string internal constant INVALID_DISPUTE_TIMEOUT = "Invalid dispute timeout";
     string internal constant TOO_MANY_DISPUTES = "Exceeded maximum disputes in a single transaction";
 
-    // Revert Reasons: General
+    // Revert Reasons: Config related
     string internal constant FEE_PERCENTAGE_INVALID = "Percentage representation must be less than 10000";
 }
 

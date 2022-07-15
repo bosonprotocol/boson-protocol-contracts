@@ -9,7 +9,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x52192fa6
+ * The ERC-165 identifier for this interface is: 0xe8f761d4
  */
 interface IBosonConfigHandler is IBosonConfigEvents {
     /**
@@ -197,4 +197,23 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Get the maximum disputes per batch
      */
     function getMaxDisputesPerBatch() external view returns (uint16);
+
+    /**
+     * @notice Sets the buyer escalation fee percentage.
+     *
+     * Emits a BuyerEscalationFeePercentageChanged event.
+     *
+     * Reverts if the _buyerEscalationDepositPercentage is greater than 10000.
+     *
+     * @param _buyerEscalationDepositPercentage - the percentage of the DR fee that will be charged to buyer if they want to escalate the dispute
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
+     */
+    function setBuyerEscalationDepositPercentage(uint16 _buyerEscalationDepositPercentage) external;
+
+    /**
+     * @notice Get the buyer escalation fee percentage.
+     */
+    function getBuyerEscalationDepositPercentage() external view returns (uint16);
 }

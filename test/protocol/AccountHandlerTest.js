@@ -52,7 +52,7 @@ describe("IBosonAccountHandler", function () {
   let agent, agentStruct, feePercentage;
   let expected, nextAccountId;
   let support, invalidAccountId, id, key, value, exists;
-  let protocolFeePercentage, protocolFeeFlatBoson;
+  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let offerId;
   let bosonVoucher, clients;
 
@@ -137,6 +137,7 @@ describe("IBosonAccountHandler", function () {
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
     protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
@@ -162,6 +163,7 @@ describe("IBosonAccountHandler", function () {
         percentage: protocolFeePercentage,
         flatBoson: protocolFeeFlatBoson,
       },
+      buyerEscalationDepositPercentage,
     ];
 
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
