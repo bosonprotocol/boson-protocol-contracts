@@ -16,7 +16,7 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { getEvent, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
+const { getEvent, applyPercentage } = require("../../scripts/util/test-utils.js");
 const { oneMonth } = require("../utils/constants");
 const { mockOffer, mockDisputeResolver } = require("../utils/mock");
 
@@ -33,7 +33,7 @@ describe("IBosonGroupHandler", function () {
   let id, sellerId, nextAccountId;
   let offerDates;
   let offerDurations;
-  let protocolFeePercentage, protocolFeeFlatBoson;
+  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let group, nextGroupId, invalidGroupId;
   let offerIds, condition;
   let groupHandlerFacet_Factory;
@@ -70,6 +70,7 @@ describe("IBosonGroupHandler", function () {
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
     protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Add config Handler, so ids starts at 1
     const protocolConfig = [
@@ -96,6 +97,7 @@ describe("IBosonGroupHandler", function () {
         percentage: protocolFeePercentage,
         flatBoson: protocolFeeFlatBoson,
       },
+      buyerEscalationDepositPercentage,
     ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
@@ -167,7 +169,7 @@ describe("IBosonGroupHandler", function () {
         offer.id = `${i + 1}`;
         offer.price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
         offer.sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
-        offer.protocolFee = calculateProtocolFee(offer.price, protocolFeePercentage);
+        offer.protocolFee = applyPercentage(offer.price, protocolFeePercentage);
         offer.buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
         offer.quantityAvailable = `${(i + 1) * 2}`;
         offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();

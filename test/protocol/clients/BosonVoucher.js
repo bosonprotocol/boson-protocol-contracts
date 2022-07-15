@@ -63,6 +63,7 @@ describe("IBosonVoucher", function () {
     const [proxy] = proxies;
 
     const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    const buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
@@ -89,6 +90,7 @@ describe("IBosonVoucher", function () {
         percentage: 200, // 2%
         flatBoson: protocolFeeFlatBoson,
       },
+      buyerEscalationDepositPercentage,
     ];
 
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);

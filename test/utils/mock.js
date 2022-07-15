@@ -6,7 +6,7 @@ const OfferDurations = require("../../scripts/domain/OfferDurations");
 const Twin = require("../../scripts/domain/Twin.js");
 const TokenType = require("../../scripts/domain/TokenType.js");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
-const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
+const { applyPercentage } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("./constants.js");
 
 function mockOfferDurations() {
@@ -41,7 +41,7 @@ async function mockOffer() {
   const sellerId = "1"; // argument sent to contract for createOffer will be ignored
   const price = ethers.utils.parseUnits("1.5", "ether").toString();
   const sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-  const protocolFee = calculateProtocolFee(price, "200");
+  const protocolFee = applyPercentage(price, "200");
   const buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
   const quantityAvailable = "1";
   const exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency

@@ -70,7 +70,7 @@ describe("IBosonExchangeHandler", function () {
   let price, sellerPool;
   let voucherRedeemableFrom;
   let fulfillmentPeriod, voucherValid;
-  let protocolFeePercentage, protocolFeeFlatBoson;
+  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state, exchangeStruct, response, exists, buyerStruct;
   let disputeResolver, disputeResolverFees;
@@ -137,6 +137,7 @@ describe("IBosonExchangeHandler", function () {
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
     protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
@@ -163,6 +164,7 @@ describe("IBosonExchangeHandler", function () {
         percentage: protocolFeePercentage,
         flatBoson: protocolFeeFlatBoson,
       },
+      buyerEscalationDepositPercentage,
     ];
 
     // Deploy the Config facet, initializing the protocol config

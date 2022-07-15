@@ -17,7 +17,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { calculateProtocolFee } = require("../../scripts/util/test-utils.js");
+const { applyPercentage } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
 const { mockOffer, mockDisputeResolver } = require("../utils/mock");
 /**
@@ -47,7 +47,7 @@ describe("IBosonOfferHandler", function () {
     offerDurationsStructs,
     offerDurationsList,
     disputeResolverIds;
-  let protocolFeePercentage, protocolFeeFlatBoson;
+  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let disputeResolver,
     disputeResolverFees,
     disputeResolverId,
@@ -91,6 +91,7 @@ describe("IBosonOfferHandler", function () {
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
     protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
@@ -117,6 +118,7 @@ describe("IBosonOfferHandler", function () {
         percentage: protocolFeePercentage,
         flatBoson: protocolFeeFlatBoson,
       },
+      buyerEscalationDepositPercentage,
     ];
 
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
@@ -206,7 +208,8 @@ describe("IBosonOfferHandler", function () {
       disputeResolutionTerms = new DisputeResolutionTerms(
         disputeResolverId,
         disputeResolver.escalationResponsePeriod,
-        DRFeeNative
+        DRFeeNative,
+        applyPercentage(DRFeeNative, buyerEscalationDepositPercentage)
       );
       disputeResolutionTermsStruct = disputeResolutionTerms.toStruct();
     });
@@ -327,7 +330,7 @@ describe("IBosonOfferHandler", function () {
         await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
 
         offer.id = await offerHandler.getNextOfferId();
-        offer.protocolFee = calculateProtocolFee(price, protocolFeePercentage);
+        offer.protocolFee = applyPercentage(price, protocolFeePercentage);
 
         // Create a new offer
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId))
@@ -350,7 +353,8 @@ describe("IBosonOfferHandler", function () {
         disputeResolutionTerms = new DisputeResolutionTerms(
           disputeResolverId,
           disputeResolver.escalationResponsePeriod,
-          DRFeeToken
+          DRFeeToken,
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
         );
 
         // Create a new offer
@@ -371,7 +375,7 @@ describe("IBosonOfferHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0").toStruct();
 
         // Create a new offer
         await expect(offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId))
@@ -426,7 +430,8 @@ describe("IBosonOfferHandler", function () {
         disputeResolutionTermsStruct = new DisputeResolutionTerms(
           disputeResolverId,
           disputeResolver.escalationResponsePeriod,
-          DRFeeToken
+          DRFeeToken,
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
         ).toStruct();
 
         // Create an offer in boson token
@@ -1063,7 +1068,7 @@ describe("IBosonOfferHandler", function () {
         offer.id = `${i + 1}`;
         offer.price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
         offer.sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
-        offer.protocolFee = calculateProtocolFee(offer.price, protocolFeePercentage);
+        offer.protocolFee = applyPercentage(offer.price, protocolFeePercentage);
         offer.buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
         offer.quantityAvailable = `${(i + 1) * 2}`;
 
@@ -1092,7 +1097,8 @@ describe("IBosonOfferHandler", function () {
         const disputeResolutionTerms = new DisputeResolutionTerms(
           disputeResolverId,
           disputeResolver.escalationResponsePeriod,
-          DRFeeNative
+          DRFeeNative,
+          applyPercentage(DRFeeNative, buyerEscalationDepositPercentage)
         );
         disputeResolutionTermsList.push(disputeResolutionTerms);
         disputeResolutionTermsStructs.push(disputeResolutionTerms.toStruct());
@@ -1110,7 +1116,8 @@ describe("IBosonOfferHandler", function () {
       disputeResolutionTermsList[2] = new DisputeResolutionTerms(
         disputeResolverId,
         disputeResolver.escalationResponsePeriod,
-        DRFeeToken
+        DRFeeToken,
+        applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
       );
       disputeResolutionTermsStructs[2] = disputeResolutionTermsList[2].toStruct();
 
@@ -1118,7 +1125,7 @@ describe("IBosonOfferHandler", function () {
       offers[4].price = offers[4].sellerDeposit = offers[4].buyerCancelPenalty = offers[4].protocolFee = "0";
       offerStructs[4] = offers[4].toStruct();
       disputeResolverIds[4] = "0";
-      disputeResolutionTermsList[4] = new DisputeResolutionTerms("0", "0", "0");
+      disputeResolutionTermsList[4] = new DisputeResolutionTerms("0", "0", "0", "0");
       disputeResolutionTermsStructs[4] = disputeResolutionTermsList[4].toStruct();
     });
 

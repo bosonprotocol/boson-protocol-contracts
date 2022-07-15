@@ -137,6 +137,10 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * - caller is not the buyer
      * - dispute is already expired
      * - dispute is not in a resolving state
+     * - offer price is in native token and buyer caller does not send enough
+     * - offer price is in some ERC20 token and caller also send native currency
+     * - if contract at token address does not support erc20 function transferFrom
+     * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      *
      * @param _exchangeId - the id of the associated exchange
      */

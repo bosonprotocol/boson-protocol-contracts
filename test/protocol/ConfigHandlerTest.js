@@ -22,7 +22,8 @@ describe("IBosonConfigHandler", function () {
     maxTokensPerWithdrawal,
     maxFeesPerDisputeResolver,
     maxEscalationResponsePeriod,
-    maxDisputesPerBatch;
+    maxDisputesPerBatch,
+    buyerEscalationDepositPercentage;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
 
@@ -58,6 +59,7 @@ describe("IBosonConfigHandler", function () {
     maxFeesPerDisputeResolver = 100;
     maxEscalationResponsePeriod = oneMonth;
     maxDisputesPerBatch = 100;
+    buyerEscalationDepositPercentage = 100;
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
@@ -93,6 +95,7 @@ describe("IBosonConfigHandler", function () {
             percentage: protocolFeePercentage,
             flatBoson: protocolFeeFlatBoson,
           },
+          buyerEscalationDepositPercentage,
         ];
 
         const { cutTransaction } = await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
@@ -124,6 +127,8 @@ describe("IBosonConfigHandler", function () {
           .withArgs(maxFeesPerDisputeResolver, deployer.address)
           .to.emit(configHandler, "MaxEscalationResponsePeriodChanged")
           .withArgs(maxEscalationResponsePeriod, deployer.address)
+          .to.emit(configHandler, "MaxDisputesPerBatchChanged")
+          .withArgs(maxDisputesPerBatch, deployer.address)
           .to.emit(configHandler, "MaxDisputesPerBatchChanged")
           .withArgs(maxDisputesPerBatch, deployer.address);
       });
@@ -157,6 +162,7 @@ describe("IBosonConfigHandler", function () {
           percentage: protocolFeePercentage,
           flatBoson: protocolFeeFlatBoson,
         },
+        buyerEscalationDepositPercentage,
       ];
       await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
     });
@@ -457,19 +463,19 @@ describe("IBosonConfigHandler", function () {
 
       context("👉 setProtocolFeePercentage()", async function () {
         beforeEach(async function () {
-          // set new value for treasury address
+          // set new value for protocol fee precentage
           protocolFeePercentage = 10000;
         });
 
         it("should emit a ProtocolFeePercentageChanged event", async function () {
-          // Set new treasury address, testing for the event
+          // Set new protocol fee precentage address, testing for the event
           await expect(configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage))
             .to.emit(configHandler, "ProtocolFeePercentageChanged")
             .withArgs(protocolFeePercentage, deployer.address);
         });
 
         it("should update state", async function () {
-          // Set new voucher address
+          // Set new protocol fee precentage
           await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
 
           // Verify that new value is stored
@@ -478,7 +484,7 @@ describe("IBosonConfigHandler", function () {
 
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
-            // Attempt to set new voucher address, expecting revert
+            // Attempt to set new protocol fee precentage, expecting revert
             await expect(configHandler.connect(rando).setProtocolFeePercentage(protocolFeePercentage)).to.revertedWith(
               RevertReasons.ACCESS_DENIED
             );
@@ -619,6 +625,49 @@ describe("IBosonConfigHandler", function () {
           });
         });
       });
+
+      context("👉 setBuyerEscalationDepositPercentage()", async function () {
+        beforeEach(async function () {
+          // set new value for buyer escalation deposit percentage
+          buyerEscalationDepositPercentage = 50;
+        });
+
+        it("should emit a BuyerEscalationFeePercentageChanged event", async function () {
+          // Set new buyer escalation deposit percentage, testing for the event
+          await expect(
+            configHandler.connect(deployer).setBuyerEscalationDepositPercentage(buyerEscalationDepositPercentage)
+          )
+            .to.emit(configHandler, "BuyerEscalationFeePercentageChanged")
+            .withArgs(buyerEscalationDepositPercentage, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new buyer escalation deposit percentage
+          await configHandler.connect(deployer).setBuyerEscalationDepositPercentage(buyerEscalationDepositPercentage);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getBuyerEscalationDepositPercentage()).to.equal(
+            buyerEscalationDepositPercentage
+          );
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new buyer escalation deposit percentage, expecting revert
+            await expect(
+              configHandler.connect(rando).setBuyerEscalationDepositPercentage(buyerEscalationDepositPercentage)
+            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          });
+
+          it("protocolFeePercentage must be less than 10000", async function () {
+            // Attempt to set new buyer escalation deposit percentage, expecting revert
+            buyerEscalationDepositPercentage = 10001;
+            await expect(
+              configHandler.connect(deployer).setBuyerEscalationDepositPercentage(buyerEscalationDepositPercentage)
+            ).to.revertedWith(RevertReasons.FEE_PERCENTAGE_INVALID);
+          });
+        });
+      });
     });
 
     context("📋 Getters", async function () {
@@ -679,6 +728,10 @@ describe("IBosonConfigHandler", function () {
         expect(await configHandler.connect(rando).getMaxDisputesPerBatch()).to.equal(
           maxDisputesPerBatch,
           "Invalid max disputes per batch"
+        );
+        expect(await configHandler.connect(rando).getBuyerEscalationDepositPercentage()).to.equal(
+          buyerEscalationDepositPercentage,
+          "Invalid buyer escalation deposit"
         );
       });
     });

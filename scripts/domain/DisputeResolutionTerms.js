@@ -11,13 +11,15 @@ class DisputeResolutionTerms {
       uint256 disputeResolverId;
       uint256 escalationResponsePeriod;
       uint256 feeAmount;
+      uint256 buyerEscalationDeposit;
     }
   */
 
-  constructor(disputeResolverId, escalationResponsePeriod, feeAmount) {
+  constructor(disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit) {
     this.disputeResolverId = disputeResolverId;
     this.escalationResponsePeriod = escalationResponsePeriod;
     this.feeAmount = feeAmount;
+    this.buyerEscalationDeposit = buyerEscalationDeposit;
   }
 
   /**
@@ -26,8 +28,8 @@ class DisputeResolutionTerms {
    * @returns {DisputeResolutionTerms}
    */
   static fromObject(o) {
-    const { disputeResolverId, escalationResponsePeriod, feeAmount } = o;
-    return new DisputeResolutionTerms(disputeResolverId, escalationResponsePeriod, feeAmount);
+    const { disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit } = o;
+    return new DisputeResolutionTerms(disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit);
   }
 
   /**
@@ -36,15 +38,16 @@ class DisputeResolutionTerms {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let disputeResolverId, escalationResponsePeriod, feeAmount;
+    let disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit;
 
     // destructure struct
-    [disputeResolverId, escalationResponsePeriod, feeAmount] = struct;
+    [disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit] = struct;
 
     return DisputeResolutionTerms.fromObject({
       disputeResolverId: disputeResolverId.toString(),
       escalationResponsePeriod: escalationResponsePeriod.toString(),
       feeAmount: feeAmount.toString(),
+      buyerEscalationDeposit: buyerEscalationDeposit.toString(),
     });
   }
 
@@ -69,7 +72,7 @@ class DisputeResolutionTerms {
    * @returns {string}
    */
   toStruct() {
-    return [this.disputeResolverId, this.escalationResponsePeriod, this.feeAmount];
+    return [this.disputeResolverId, this.escalationResponsePeriod, this.feeAmount, this.buyerEscalationDeposit];
   }
 
   /**
@@ -128,11 +131,31 @@ class DisputeResolutionTerms {
   }
 
   /**
+   * Is this DisputeResolutionTerms instance's buyerEscalationDeposit field valid?
+   * If present, must be a string representation of a big number
+   * @returns {boolean}
+   */
+  buyerEscalationDepositIsValid() {
+    let valid = false;
+    let { buyerEscalationDeposit } = this;
+    try {
+      valid =
+        typeof buyerEscalationDeposit === "string" && typeof ethers.BigNumber.from(buyerEscalationDeposit) === "object";
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
    * Is this DisputeResolutionTerms instance valid?
    * @returns {boolean}
    */
   isValid() {
-    return this.disputeResolverIdIsValid() && this.escalationResponsePeriodIsValid() && this.feeAmountIsValid();
+    return (
+      this.disputeResolverIdIsValid() &&
+      this.escalationResponsePeriodIsValid() &&
+      this.feeAmountIsValid() &&
+      this.buyerEscalationDepositIsValid()
+    );
   }
 }
 

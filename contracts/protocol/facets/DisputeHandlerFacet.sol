@@ -318,6 +318,10 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * - caller is not the buyer
      * - dispute is already expired
      * - dispute is not in a resolving state
+     * - offer price is in native token and buyer caller does not send enough
+     * - offer price is in some ERC20 token and caller also send native currency
+     * - if contract at token address does not support erc20 function transferFrom
+     * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      *
      * @param _exchangeId - the id of the associated exchange
      */
@@ -337,10 +341,17 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Make sure the dispute is in the resolving state
         require(dispute.state == DisputeState.Resolving, INVALID_STATE);
 
+        // Fetch the dispute resolution terms from the storage
+        DisputeResolutionTerms storage disputeResolutionTerms = fetchDisputeResolutionTerms(exchange.offerId);
+
+        // fetch offer to get info about dispute resolver id
+        (, Offer storage offer) = fetchOffer(exchange.offerId);
+
+        // make sure buyer sent enough funds to proceed
+        FundsLib.validateIncomingPayment(offer.exchangeToken, disputeResolutionTerms.buyerEscalationDeposit);
+
         // fetch the escalation period from the storage
-        uint256 escalationResponsePeriod = protocolEntities()
-            .disputeResolutionTerms[exchange.offerId]
-            .escalationResponsePeriod;
+        uint256 escalationResponsePeriod = disputeResolutionTerms.escalationResponsePeriod;
 
         // store the time of escalation
         disputeDates.escalated = block.timestamp;
@@ -349,11 +360,8 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Set the dispute state
         dispute.state = DisputeState.Escalated;
 
-        // fetch offer to get info about dispute resolver id
-        (, Offer storage offer) = fetchOffer(exchange.offerId);
-
         // Notify watchers of state change
-        emit DisputeEscalated(_exchangeId, fetchDisputeResolutionTerms(offer.id).disputeResolverId, msgSender());
+        emit DisputeEscalated(_exchangeId, disputeResolutionTerms.disputeResolverId, msgSender());
     }
 
     /**
