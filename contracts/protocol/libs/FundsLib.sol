@@ -156,20 +156,28 @@ library FundsLib {
                 BosonTypes.Dispute storage dispute = pe.disputes[_exchangeId];
                 BosonTypes.DisputeState disputeState = dispute.state;
 
-                if (disputeState == BosonTypes.DisputeState.Retracted) {
-                    // RETRACTED - same as "COMPLETED"
-                    protocolFee = offerFee.protocolFee;
-                    // buyerPayoff is 0
-                    agentFee = offerFee.agentFee;
-                    sellerPayoff = pot - protocolFee - agentFee;
-                } else if (disputeState == BosonTypes.DisputeState.Refused) {
-                    // REFUSED
-                    sellerPayoff = sellerDeposit;
-                    buyerPayoff = price;
-                } else {
-                    // RESOLVED or DECIDED
-                    buyerPayoff = (pot * dispute.buyerPercent) / 10000;
-                    sellerPayoff = pot - buyerPayoff;
+                {           
+                    // determine if buyerEscalationDeposit was encumbered or not
+                    // if dispute was escalated, disputeDates.escalated is populated
+                    uint256 buyerEscalationDeposit = pe.disputeDates[_exchangeId].escalated > 0
+                        ? pe.disputeResolutionTerms[exchange.offerId].buyerEscalationDeposit : 0;
+
+                    if (disputeState == BosonTypes.DisputeState.Retracted) {
+                        // RETRACTED - same as "COMPLETED"
+                        protocolFee = offerFee.protocolFee;
+                        // buyerPayoff is 0
+                        agentFee = offerFee.agentFee;
+                        sellerPayoff = pot - protocolFee - agentFee + buyerEscalationDeposit;
+                    } else if (disputeState == BosonTypes.DisputeState.Refused) {
+                        // REFUSED
+                        sellerPayoff = sellerDeposit;
+                        buyerPayoff = price + buyerEscalationDeposit;
+                    } else {
+                        // RESOLVED or DECIDED
+                        pot += buyerEscalationDeposit;
+                        buyerPayoff = (pot * dispute.buyerPercent) / 10000;
+                        sellerPayoff = pot - buyerPayoff;
+                    }
                 }
             }
         }
