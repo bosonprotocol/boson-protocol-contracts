@@ -997,6 +997,12 @@
           "type": "tuple"
         },
         {
+          "indexed": false,
+          "internalType": "address",
+          "name": "voucherCloneAddress",
+          "type": "address"
+        },
+        {
           "indexed": true,
           "internalType": "address",
           "name": "executedBy",

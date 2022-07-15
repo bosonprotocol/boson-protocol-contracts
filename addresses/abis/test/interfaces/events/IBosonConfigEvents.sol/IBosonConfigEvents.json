@@ -7,6 +7,25 @@
       "anonymous": false,
       "inputs": [
         {
+          "indexed": true,
+          "internalType": "address",
+          "name": "beaconProxyAddress",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "BeaconProxyAddressChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
           "indexed": false,
           "internalType": "uint16",
           "name": "buyerEscalationFeePercentage",
@@ -256,7 +275,7 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "voucher",
+          "name": "voucherBeaconAddress",
           "type": "address"
         },
         {
@@ -266,7 +285,7 @@
           "type": "address"
         }
       ],
-      "name": "VoucherAddressChanged",
+      "name": "VoucherBeaconAddressChanged",
       "type": "event"
     }
   ],
