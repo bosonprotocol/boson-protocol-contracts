@@ -46,6 +46,9 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             uint256 tokenId = _twin.tokenId;
             uint256 lastTokenId = tokenId + _twin.supplyAvailable - 1;
 
+            require(lastTokenId > tokenId, INVALID_TWIN_TOKEN_RANGE);
+
+            // Get all twin ids that belong to seller
             uint256[] memory twinIds = protocolLookups().twinIdsBySeller[sellerId];
 
             // Checks if token range isn't being used in any other twin of seller
@@ -59,14 +62,16 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
                 // Calculate twin range [tokenId...lastTokenId]
                 uint256 firstTokenRange = twin.tokenId;
                 uint256 lastTokenRange = twin.tokenId + twin.supplyAvailable - 1;
-                bool valid;
+                bool valid = false;
 
-                if (tokenId == firstTokenRange || lastTokenId == lastTokenRange) {
-                    valid = false;
-                } else if (tokenId > firstTokenRange && tokenId < lastTokenRange) {
-                    valid = false;
-                } else if (tokenId < firstTokenRange && lastTokenId > firstTokenRange) {
-                    valid = false;
+                // A valid range has:
+                // - the first and last ids of range lower than the looped twin tokenId (beginning of range) or
+                // - the first id of range greater than the last token id (end of range) of the looped twin
+
+                if (tokenId < firstTokenRange && lastTokenId < firstTokenRange) {
+                    valid = true;
+                } else if (tokenId > lastTokenRange) {
+                    valid = true;
                 }
 
                 require(valid, INVALID_TWIN_TOKEN_RANGE);
