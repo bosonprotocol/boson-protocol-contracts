@@ -50,7 +50,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
 
         for (uint256 i = 0; i < _bundle.offerIds.length; i++) {
             // make sure all offers exist and belong to the seller
-            Offer memory offer = getValidOffer(_bundle.offerIds[i]);
+            Offer storage offer = getValidOffer(_bundle.offerIds[i]);
 
             // Unchecked because we're handling overflow below
             unchecked {
@@ -78,7 +78,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
             uint256 twinId = _bundle.twinIds[i];
 
             // A twin can't belong to multiple bundles
-            (bool bundleForTwinExist, ) = fetchBundleIdByTwin(_bundle.twinIds[i]);
+            (bool bundleForTwinExist, ) = fetchBundleIdByTwin(twinId);
             require(!bundleForTwinExist, BUNDLE_TWIN_MUST_BE_UNIQUE);
 
             if (_bundle.offerIds.length > 0) {
