@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-
+import "hardhat/console.sol";
 import { IBosonTwinEvents } from "../../interfaces/events/IBosonTwinEvents.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
@@ -20,6 +20,10 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
      * Reverts if:
      * - seller does not exist
      * - Not approved to transfer the seller's token
+     * - supplyAvailable is zero
+     - - Twin is NonFungibleToken and amount was set
+     * - Twin is NonFungibleToken and range is already being used in another twin of the seller
+     * - Twin is FungibleToken or MultiToken and amount was not set
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
      */
@@ -31,11 +35,44 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         // Protocol must be approved to transfer seller’s tokens
         require(isProtocolApproved(_twin.tokenAddress, msgSender(), address(this)), NO_TRANSFER_APPROVED);
 
-        // @TODO: checks Twin range if seller has others twins with the same token address
+        // Twin supply must exist and can't be zero
         require(_twin.supplyAvailable > 0, INVALID_SUPPLY_AVAILABLE);
+
         if (_twin.tokenType == TokenType.NonFungibleToken) {
+            // If token is NonFungible amount should be zero
             require(_twin.amount == 0, INVALID_TWIN_PROPERTY);
+
+            // Calculate new twin range [tokenId...lastTokenId]
+            uint256 tokenId = _twin.tokenId;
+            uint256 lastTokenId = tokenId + _twin.supplyAvailable - 1;
+
+            uint256[] memory twinIds = protocolLookups().twinIdsBySeller[sellerId];
+
+            // Checks if token range isn't being used in any other twin of seller
+            for (uint256 i = 0; i < twinIds.length; i++) {
+                (, Twin memory twin) = fetchTwin(twinIds[i]);
+
+                if (twin.tokenType != TokenType.NonFungibleToken) {
+                    continue;
+                }
+
+                // Calculate twin range [tokenId...lastTokenId]
+                uint256 firstTokenRange = twin.tokenId;
+                uint256 lastTokenRange = twin.tokenId + twin.supplyAvailable - 1;
+                bool valid;
+
+                if (tokenId == firstTokenRange || lastTokenId == lastTokenRange) {
+                    valid = false;
+                } else if (tokenId > firstTokenRange && tokenId < lastTokenRange) {
+                    valid = false;
+                } else if (tokenId < firstTokenRange && lastTokenId > firstTokenRange) {
+                    valid = false;
+                }
+
+                require(valid, INVALID_TWIN_TOKEN_RANGE);
+            }
         } else {
+            // If token is Fungible or MultiToken amount should not be zero
             require(_twin.amount > 0, INVALID_AMOUNT);
         }
 
@@ -53,6 +90,9 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         twin.tokenId = _twin.tokenId;
         twin.tokenAddress = _twin.tokenAddress;
         twin.tokenType = _twin.tokenType;
+
+        // Add to twinIdsBySeller mapping
+        protocolLookups().twinIdsBySeller[sellerId].push(twinId);
 
         // Notify watchers of state change
         emit TwinCreated(twinId, sellerId, _twin, msgSender());

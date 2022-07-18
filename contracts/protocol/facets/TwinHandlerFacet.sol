@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-
+import "hardhat/console.sol";
 import { IBosonTwinHandler } from "../../interfaces/handlers/IBosonTwinHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
@@ -27,6 +27,10 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      * Reverts if:
      * - seller does not exist
      * - Not approved to transfer the seller's token
+     * - supplyAvailable is zero
+     * - Twin is NonFungibleToken and amount was set
+     * - Twin is NonFungibleToken and range is already being used in another twin of the seller
+     * - Twin is FungibleToken or MultiToken and amount was not set
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
      */
@@ -84,6 +88,16 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
 
         // delete struct
         delete protocolEntities().twins[_twinId];
+
+        // Also remove from twinIdsBySeller mapping
+        uint256[] storage twinIds = protocolLookups().twinIdsBySeller[sellerId];
+        for (uint256 j = 0; j < twinIds.length; j++) {
+            if (twinIds[j] == _twinId) {
+                twinIds[j] = twinIds[twinIds.length - 1];
+                twinIds.pop();
+                break;
+            }
+        }
 
         emit TwinDeleted(_twinId, twin.sellerId, msgSender());
     }

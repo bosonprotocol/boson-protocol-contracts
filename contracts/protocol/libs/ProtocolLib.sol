@@ -132,6 +132,8 @@ library ProtocolLib {
         mapping(address => mapping(uint256 => uint256)) conditionalCommitsByAddress;
         // buyer escalation deposit percentage
         uint16 buyerEscalationDepositPercentage;
+        // seller id => twin ids
+        mapping(uint256 => uint256[]) twinIdsBySeller;
     }
 
     // Incrementing ID counters
