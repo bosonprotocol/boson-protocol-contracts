@@ -151,6 +151,7 @@ describe("IBosonDisputeHandler", function () {
         maxFeesPerDisputeResolver: 100,
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
+        maxAllowedSellers: 100,
       },
       // Protocol fees
       {
@@ -223,8 +224,11 @@ describe("IBosonDisputeHandler", function () {
       DRFeeNative = ethers.utils.parseUnits("1", "ether").toString();
       disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative)];
 
+      // Make empty seller list, so every seller is allowed
+      const sellerAllowList = [];
+
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
       // buyer escalation deposit used in multiple tests

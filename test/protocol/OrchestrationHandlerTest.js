@@ -74,6 +74,7 @@ describe("IBosonOrchestrationHandler", function () {
   let foreign721, foreign1155, fallbackError;
   let disputeResolutionTerms, disputeResolutionTermsStruct;
   let DRFeeNative, DRFeeToken;
+  let sellerAllowList;
 
   before(async function () {
     // get interface Ids
@@ -141,6 +142,7 @@ describe("IBosonOrchestrationHandler", function () {
         maxFeesPerDisputeResolver: 100,
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
+        maxAllowedSellers: 100,
       },
       // Protocol fees
       {
@@ -212,8 +214,11 @@ describe("IBosonOrchestrationHandler", function () {
         new DisputeResolverFee(bosonToken.address, "Boson", DRFeeToken),
       ];
 
+      // Make empty seller list, so every seller is allowed
+      sellerAllowList = [];
+
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(nextAccountId);
 
       // The first seller id
@@ -773,7 +778,9 @@ describe("IBosonOrchestrationHandler", function () {
             rando.address,
             false
           );
-          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          await accountHandler
+            .connect(rando)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
           // Set some address that is not registered as a dispute resolver
           disputeResolverId = ++nextAccountId;
@@ -808,7 +815,9 @@ describe("IBosonOrchestrationHandler", function () {
             rando.address,
             false
           );
-          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          await accountHandler
+            .connect(rando)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
           // Prepare an absolute zero offer, but specify dispute resolver
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
@@ -1331,7 +1340,9 @@ describe("IBosonOrchestrationHandler", function () {
             rando.address,
             false
           );
-          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          await accountHandler
+            .connect(rando)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
           // Set some address that is not registered as a dispute resolver
           disputeResolverId = ++nextAccountId;
@@ -1366,7 +1377,9 @@ describe("IBosonOrchestrationHandler", function () {
             rando.address,
             false
           );
-          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          await accountHandler
+            .connect(rando)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
           // Prepare an absolute zero offer, but specify dispute resolver
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
@@ -1969,7 +1982,9 @@ describe("IBosonOrchestrationHandler", function () {
             rando.address,
             false
           );
-          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          await accountHandler
+            .connect(rando)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
           // Set some address that is not registered as a dispute resolver
           disputeResolverId = ++nextAccountId;
@@ -2004,7 +2019,9 @@ describe("IBosonOrchestrationHandler", function () {
             rando.address,
             false
           );
-          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          await accountHandler
+            .connect(rando)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
           // Prepare an absolute zero offer, but specify dispute resolver
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
@@ -2607,7 +2624,9 @@ describe("IBosonOrchestrationHandler", function () {
             rando.address,
             false
           );
-          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          await accountHandler
+            .connect(rando)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
           // Set some address that is not registered as a dispute resolver
           disputeResolverId = ++nextAccountId;
@@ -2642,7 +2661,9 @@ describe("IBosonOrchestrationHandler", function () {
             rando.address,
             false
           );
-          await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          await accountHandler
+            .connect(rando)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
           // Prepare an absolute zero offer, but specify dispute resolver
           offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";

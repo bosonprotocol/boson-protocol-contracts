@@ -23,6 +23,7 @@ describe("IBosonConfigHandler", function () {
     maxFeesPerDisputeResolver,
     maxEscalationResponsePeriod,
     maxDisputesPerBatch,
+    maxAllowedSellers,
     buyerEscalationDepositPercentage;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
@@ -59,6 +60,7 @@ describe("IBosonConfigHandler", function () {
     maxFeesPerDisputeResolver = 100;
     maxEscalationResponsePeriod = oneMonth;
     maxDisputesPerBatch = 100;
+    maxAllowedSellers = 100;
     buyerEscalationDepositPercentage = 100;
 
     // Cast Diamond to IERC165
@@ -89,6 +91,7 @@ describe("IBosonConfigHandler", function () {
             maxFeesPerDisputeResolver,
             maxEscalationResponsePeriod,
             maxDisputesPerBatch,
+            maxAllowedSellers,
           },
           //Protocol fees
           {
@@ -129,8 +132,10 @@ describe("IBosonConfigHandler", function () {
           .withArgs(maxEscalationResponsePeriod, deployer.address)
           .to.emit(configHandler, "MaxDisputesPerBatchChanged")
           .withArgs(maxDisputesPerBatch, deployer.address)
-          .to.emit(configHandler, "MaxDisputesPerBatchChanged")
-          .withArgs(maxDisputesPerBatch, deployer.address);
+          .to.emit(configHandler, "MaxAllowedSellersChanged")
+          .withArgs(maxAllowedSellers, deployer.address)
+          .to.emit(configHandler, "BuyerEscalationFeePercentageChanged")
+          .withArgs(buyerEscalationDepositPercentage, deployer.address);
       });
     });
   });
@@ -156,6 +161,7 @@ describe("IBosonConfigHandler", function () {
           maxFeesPerDisputeResolver,
           maxEscalationResponsePeriod,
           maxDisputesPerBatch,
+          maxAllowedSellers,
         },
         // Protocol fees
         {
@@ -668,6 +674,37 @@ describe("IBosonConfigHandler", function () {
           });
         });
       });
+
+      context("👉 setMaxAllowedSellers()", async function () {
+        beforeEach(async function () {
+          // set new value for max allowed sellers
+          maxAllowedSellers = 222;
+        });
+
+        it("should emit a MaxAllowedSellersChanged event", async function () {
+          // Set new max allowed sellers, testing for the event
+          await expect(configHandler.connect(deployer).setMaxAllowedSellers(maxAllowedSellers))
+            .to.emit(configHandler, "MaxAllowedSellersChanged")
+            .withArgs(maxAllowedSellers, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new max allowed sellers,
+          await configHandler.connect(deployer).setMaxAllowedSellers(maxAllowedSellers);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxAllowedSellers()).to.equal(maxAllowedSellers);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new max allowed sellers, expecting revert
+            await expect(configHandler.connect(rando).setMaxAllowedSellers(maxAllowedSellers)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
+          });
+        });
+      });
     });
 
     context("📋 Getters", async function () {
@@ -728,6 +765,10 @@ describe("IBosonConfigHandler", function () {
         expect(await configHandler.connect(rando).getMaxDisputesPerBatch()).to.equal(
           maxDisputesPerBatch,
           "Invalid max disputes per batch"
+        );
+        expect(await configHandler.connect(rando).getMaxAllowedSellers()).to.equal(
+          maxAllowedSellers,
+          "Invalid max allowed sellers"
         );
         expect(await configHandler.connect(rando).getBuyerEscalationDepositPercentage()).to.equal(
           buyerEscalationDepositPercentage,
