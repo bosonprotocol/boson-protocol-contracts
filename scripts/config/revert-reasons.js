@@ -32,6 +32,7 @@ exports.RevertReasons = {
   INVALID_DISPUTE_DURATION: "Invalid dispute duration",
   INVALID_DISPUTE_RESOLVER: "Invalid dispute resolver",
   INVALID_QUANTITY_AVAILABLE: "Invalid quantity available",
+  DR_UNSUPPORTED_FEE: "Dispute resolver does not accept this token",
 
   // Group related
   NO_SUCH_GROUP: "No such group",
@@ -104,6 +105,7 @@ exports.RevertReasons = {
   ERC20_INSUFFICIENT_ALLOWANCE: "ERC20: insufficient allowance",
   ERC20_PAUSED: "ERC20Pausable: token transfer while paused",
   EOA_FUNCTION_CALL: "Transaction reverted: function call to a non-contract account",
+  ERC721_NON_EXISTENT: "ERC721: owner query for nonexistent token",
 
   // Meta-Transactions related
   NONCE_USED_ALREADY: "Nonce used already",
@@ -122,6 +124,6 @@ exports.RevertReasons = {
   INVALID_DISPUTE_TIMEOUT: "Invalid dispute timeout",
   TOO_MANY_DISPUTES: "Exceeded maximum disputes in a single transaction",
 
-  // General
+  // Config related
   FEE_PERCENTAGE_INVALID: "Percentage representation must be less than 10000",
 };

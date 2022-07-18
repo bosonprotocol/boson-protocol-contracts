@@ -866,6 +866,16 @@
               "internalType": "uint256",
               "name": "escalationResponsePeriod",
               "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "feeAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "buyerEscalationDeposit",
+              "type": "uint256"
             }
           ],
           "indexed": false,
@@ -985,6 +995,12 @@
           "internalType": "struct BosonTypes.Seller",
           "name": "seller",
           "type": "tuple"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "voucherCloneAddress",
+          "type": "address"
         },
         {
           "indexed": true,

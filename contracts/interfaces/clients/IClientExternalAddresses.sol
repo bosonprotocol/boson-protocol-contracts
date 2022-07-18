@@ -2,27 +2,18 @@
 pragma solidity ^0.8.0;
 
 import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
-import { IBosonClientEvents } from "../events/IBosonClientEvents.sol";
+import { IClientExternalAddressesEvents } from "../events/IClientExternalAddressesEvents.sol";
 
 /**
- * @title IBosonClient
+ * @title IClientExternalAddresses
  *
- * @notice Delegates calls to a Boson Protocol client implementation contract,
- * such that functions on it execute in the context (address, storage)
- * of this proxy, allowing the implementation contract to be upgraded
- * without losing the accumulated state data.
+ * @notice ClientExternalAddresses is used to set and get addresses, used either by proxies or
+ * by protocol client
  *
- * Protocol clients are any contracts that communicate with the the ProtocolDiamond
- * from the outside, rather than acting as facets themselves. Protocol
- * client contracts will be deployed behind their own proxies for upgradeability.
- *
- * Example:
- * The BosonVoucher NFT contract acts as a client of the ProtocolDiamond when
- * accessing information about offers associated with the vouchers it maintains.
  *
  * The ERC-165 identifier for this interface is: 0xc4c6c36b
  */
-interface IBosonClient is IBosonClientEvents {
+interface IClientExternalAddresses is IClientExternalAddressesEvents {
     /**
      * @dev Set the implementation address
      */

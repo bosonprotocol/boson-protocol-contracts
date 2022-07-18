@@ -105,7 +105,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         offer.quantityAvailable--;
 
         // Issue voucher
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolAddresses().voucherAddress);
+        protocolLookups().voucherCount[buyerId]++;
+        IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
         bosonVoucher.issueVoucher(exchangeId, buyer);
 
         // Notify watchers of state change
@@ -290,7 +291,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         exchange.state = ExchangeState.Redeemed;
 
         // Burn the voucher
-        burnVoucher(_exchangeId);
+        burnVoucher(exchange);
 
         // Transfer any bundled twins to buyer
         transferTwins(exchange);
@@ -303,7 +304,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      * @notice Inform protocol of new buyer associated with an exchange
      *
      * Reverts if
-     * - Caller does not have CLIENT role
+     * - Caller is not a clone address associated with the seller
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Voucher has expired
@@ -312,18 +313,29 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      * @param _exchangeId - the id of the exchange
      * @param _newBuyer - the address of the new buyer
      */
-    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) external override onlyRole(CLIENT) {
+    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) external override {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Make sure that the voucher is still valid
         require(block.timestamp <= exchange.voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
 
+        (, Offer storage offer) = fetchOffer(exchange.offerId);
+
+        // Make sure that the voucher was issued on the clone that is making a call
+        require(msg.sender == protocolLookups().cloneAddress[offer.sellerId], ACCESS_DENIED);
+
+        // Decrease voucher counter for old buyer
+        protocolLookups().voucherCount[exchange.buyerId]--;
+
         // Fetch or create buyer
         (uint256 buyerId, ) = getValidBuyer(_newBuyer);
 
         // Update buyer id for the exchange
         exchange.buyerId = buyerId;
+
+        // Increase voucher counter for new buyer
+        protocolLookups().voucherCount[buyerId]++;
 
         // Notify watchers of state change
         emit VoucherTransferred(exchange.offerId, _exchangeId, buyerId, msgSender());
@@ -424,7 +436,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         _exchange.finalizedDate = block.timestamp;
 
         // Burn the voucher if canceling or revoking
-        if (_targetState != ExchangeState.Completed) burnVoucher(_exchange.id);
+        if (_targetState != ExchangeState.Completed) burnVoucher(_exchange);
 
         // Release the funds
         FundsLib.releaseFunds(_exchange.id);
@@ -433,11 +445,16 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
     /**
      * @notice Burn the voucher associated with a given exchange
      *
-     * @param _exchangeId - the id of the exchange
+     * @param _exchange - the pointer to the exchange
      */
-    function burnVoucher(uint256 _exchangeId) internal {
-        IBosonVoucher bosonVoucher = IBosonVoucher(protocolAddresses().voucherAddress);
-        bosonVoucher.burnVoucher(_exchangeId);
+    function burnVoucher(Exchange storage _exchange) internal {
+        // decrease the voucher count
+        protocolLookups().voucherCount[_exchange.buyerId]--;
+
+        // burn the voucher
+        (, Offer storage offer) = fetchOffer(_exchange.offerId);
+        IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
+        bosonVoucher.burnVoucher(_exchange.id);
     }
 
     /**

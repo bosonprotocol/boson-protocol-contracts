@@ -23,7 +23,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     function initialize(
         ProtocolLib.ProtocolAddresses calldata _addresses,
         ProtocolLib.ProtocolLimits calldata _limits,
-        ProtocolLib.ProtocolFees calldata _fees
+        ProtocolLib.ProtocolFees calldata _fees,
+        uint16 _buyerEscalationDepositPercentage
     ) public onlyUnInitialized(type(IBosonConfigHandler).interfaceId) {
         // Register supported interfaces
         DiamondLib.addSupportedInterface(type(IBosonConfigHandler).interfaceId);
@@ -31,7 +32,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         // Initialize protocol config params
         setTokenAddress(_addresses.tokenAddress);
         setTreasuryAddress(_addresses.treasuryAddress);
-        setVoucherAddress(_addresses.voucherAddress);
+        setVoucherBeaconAddress(_addresses.voucherBeaconAddress);
+        setBeaconProxyAddress(_addresses.beaconProxyAddress);
         setProtocolFeePercentage(_fees.percentage);
         setProtocolFeeFlatBoson(_fees.flatBoson);
         setMaxOffersPerGroup(_limits.maxOffersPerGroup);
@@ -42,6 +44,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxFeesPerDisputeResolver(_limits.maxFeesPerDisputeResolver);
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
         setMaxDisputesPerBatch(_limits.maxDisputesPerBatch);
+        setBuyerEscalationDepositPercentage(_buyerEscalationDepositPercentage);
 
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -96,22 +99,41 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     }
 
     /**
-     * @notice Sets the address of the Boson Protocol Voucher NFT contract (proxy)
+     * @notice Sets the address of the Boson Voucher beacon contract.
      *
-     * Emits a VoucherAddressChanged event.
+     * Emits a VoucherBeaconAddressChanged event.
      *
-     * @param _voucherAddress - the address of the nft contract (proxy)
+     * @param _voucherBeaconAddress - the address of the Boson Voucher beacon contract.
      */
-    function setVoucherAddress(address _voucherAddress) public override onlyRole(ADMIN) {
-        protocolAddresses().voucherAddress = _voucherAddress;
-        emit VoucherAddressChanged(_voucherAddress, msgSender());
+    function setVoucherBeaconAddress(address _voucherBeaconAddress) public override onlyRole(ADMIN) {
+        protocolAddresses().voucherBeaconAddress = _voucherBeaconAddress;
+        emit VoucherBeaconAddressChanged(_voucherBeaconAddress, msgSender());
     }
 
     /**
-     * @notice The Boson Protocol Voucher NFT contract (proxy) getter
+     * @notice The voucherBeaconAddress getter
      */
-    function getVoucherAddress() external view override returns (address) {
-        return protocolAddresses().voucherAddress;
+    function getVoucherBeaconAddress() external view override returns (address) {
+        return protocolAddresses().voucherBeaconAddress;
+    }
+
+    /**
+     * @notice Sets the address of the Boson Voucher reference proxy implementation
+     *
+     * Emits a BeaconProxyAddressChanged event.
+     *
+     * @param _beaconProxyAddress - the address of the reference proxy implementation
+     */
+    function setBeaconProxyAddress(address _beaconProxyAddress) public override onlyRole(ADMIN) {
+        protocolAddresses().beaconProxyAddress = _beaconProxyAddress;
+        emit BeaconProxyAddressChanged(_beaconProxyAddress, msgSender());
+    }
+
+    /**
+     * @notice The beaconProxyAddress getter
+     */
+    function getBeaconProxyAddress() external view override returns (address) {
+        return protocolAddresses().beaconProxyAddress;
     }
 
     /**
@@ -317,5 +339,39 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getMaxDisputesPerBatch() external view override returns (uint16) {
         return protocolLimits().maxDisputesPerBatch;
+    }
+
+    /**
+     * @notice Sets the buyer escalation fee percentage.
+     *
+     * Emits a BuyerEscalationFeePercentageChanged event.
+     *
+     * Reverts if the _buyerEscalationDepositPercentage is greater than 10000.
+     *
+     * @param _buyerEscalationDepositPercentage - the percentage of the DR fee that will be charged to buyer if they want to escalate the dispute
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
+     */
+    function setBuyerEscalationDepositPercentage(uint16 _buyerEscalationDepositPercentage)
+        public
+        override
+        onlyRole(ADMIN)
+    {
+        // Make sure percentage is less than 10000
+        require(_buyerEscalationDepositPercentage <= 10000, FEE_PERCENTAGE_INVALID);
+
+        // Store fee percentage
+        protocolLookups().buyerEscalationDepositPercentage = _buyerEscalationDepositPercentage;
+
+        // Notify watchers of state change
+        emit BuyerEscalationFeePercentageChanged(_buyerEscalationDepositPercentage, msgSender());
+    }
+
+    /**
+     * @notice Get the buyer escalation fee percentage.
+     */
+    function getBuyerEscalationDepositPercentage() external view override returns (uint16) {
+        return protocolLookups().buyerEscalationDepositPercentage;
     }
 }

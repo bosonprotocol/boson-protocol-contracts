@@ -10,6 +10,7 @@ const Seller = require("../../scripts/domain/Seller");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const Voucher = require("../../scripts/domain/Voucher");
+const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -41,8 +42,6 @@ describe("IBosonMetaTransactionsHandler", function () {
     result;
   let metaTransactionsHandler, nonce, functionSignature;
   let seller, offerId, id, buyerId, nextAccountId;
-  let clients;
-  let bosonVoucher;
   let validOfferDetails,
     offerType,
     metaTransactionType,
@@ -54,7 +53,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let offer, offerDates, offerDurations;
   let sellerDeposit, price;
   let voucherRedeemableFrom;
-  let protocolFeePercentage, protocolFeeFlatBoson;
+  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
   let disputeResolver, active, disputeResolverFees, disputeResolverId;
@@ -108,8 +107,9 @@ describe("IBosonMetaTransactionsHandler", function () {
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
-    [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
-    [bosonVoucher] = clients;
+    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [beacon] = beacons;
+    const [proxy] = proxies;
 
     // Deploy the boson token
     [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
@@ -117,6 +117,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
     protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Add config Handler
     const protocolConfig = [
@@ -124,7 +125,8 @@ describe("IBosonMetaTransactionsHandler", function () {
       {
         treasuryAddress: ethers.constants.AddressZero,
         tokenAddress: bosonToken.address,
-        voucherAddress: bosonVoucher.address,
+        voucherBeaconAddress: beacon.address,
+        beaconProxyAddress: proxy.address,
       },
       // Protocol limits
       {
@@ -142,6 +144,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         percentage: protocolFeePercentage,
         flatBoson: protocolFeeFlatBoson,
       },
+      buyerEscalationDepositPercentage,
     ];
 
     // Deploy the Config facet, initializing the protocol config
@@ -618,8 +621,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         );
         expect(disputeResolver.isValid()).is.true;
 
-        //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
-        disputeResolverFees = [];
+        //Create DisputeResolverFee array so offer creation will succeed
+        disputeResolverFees = [new DisputeResolverFee(mockToken.address, "mockToken", "0")];
 
         // Register and activate the dispute resolver
         await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
@@ -871,8 +874,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         );
         expect(disputeResolver.isValid()).is.true;
 
-        //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
-        disputeResolverFees = [];
+        //Create DisputeResolverFee array so offer creation will succeed
+        disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
 
         // Register and activate the dispute resolver
         await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
@@ -2237,8 +2240,11 @@ describe("IBosonMetaTransactionsHandler", function () {
         );
         expect(disputeResolver.isValid()).is.true;
 
-        //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
-        disputeResolverFees = [];
+        //Create DisputeResolverFee array so offer creation will succeed
+        disputeResolverFees = [
+          new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
+          new DisputeResolverFee(mockToken.address, "mockToken", "0"),
+        ];
 
         // Register and activate the dispute resolver
         await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);

@@ -13,6 +13,7 @@ const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
+const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const TokenType = require("../../scripts/domain/TokenType");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -20,7 +21,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
-const { getEvent, calculateProtocolFee } = require("../../scripts/util/test-utils.js");
+const { getEvent, applyPercentage, calculateContractAddress } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { oneMonth } = require("../utils/constants");
 const { mockTwin, mockOffer, mockDisputeResolver } = require("../utils/mock");
@@ -63,7 +64,7 @@ describe("IBosonOrchestrationHandler", function () {
   let id, sellerId;
   let offerDates, offerDatesStruct;
   let offerDurations, offerDurationsStruct;
-  let protocolFeePercentage, protocolFeeFlatBoson;
+  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let group, groupStruct, nextGroupId;
   let method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
   let offerIds, condition;
@@ -72,6 +73,7 @@ describe("IBosonOrchestrationHandler", function () {
   let bosonToken;
   let foreign721, foreign1155, fallbackError;
   let disputeResolutionTerms, disputeResolutionTermsStruct;
+  let DRFeeNative, DRFeeToken;
 
   before(async function () {
     // get interface Ids
@@ -118,14 +120,16 @@ describe("IBosonOrchestrationHandler", function () {
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
     protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: "0x0000000000000000000000000000000000000000",
+        treasuryAddress: ethers.constants.AddressZero,
         tokenAddress: bosonToken.address,
-        voucherAddress: "0x0000000000000000000000000000000000000000",
+        voucherBeaconAddress: ethers.constants.AddressZero,
+        beaconProxyAddress: ethers.constants.AddressZero,
       },
       // Protocol limits
       {
@@ -143,6 +147,7 @@ describe("IBosonOrchestrationHandler", function () {
         percentage: protocolFeePercentage,
         flatBoson: protocolFeeFlatBoson,
       },
+      buyerEscalationDepositPercentage,
     ];
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
@@ -199,8 +204,13 @@ describe("IBosonOrchestrationHandler", function () {
       );
       expect(disputeResolver.isValid()).is.true;
 
-      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
-      disputeResolverFees = [];
+      //Create DisputeResolverFee array so offer creation will succeed
+      DRFeeNative = "100";
+      DRFeeToken = "200";
+      disputeResolverFees = [
+        new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative),
+        new DisputeResolverFee(bosonToken.address, "Boson", DRFeeToken),
+      ];
 
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
@@ -236,7 +246,12 @@ describe("IBosonOrchestrationHandler", function () {
       offerDurationsStruct = offerDurations.toStruct();
 
       // Set despute resolution terms
-      disputeResolutionTerms = new DisputeResolutionTerms(disputeResolverId, disputeResolver.escalationResponsePeriod);
+      disputeResolutionTerms = new DisputeResolutionTerms(
+        disputeResolverId,
+        disputeResolver.escalationResponsePeriod,
+        DRFeeNative,
+        applyPercentage(DRFeeNative, buyerEscalationDepositPercentage)
+      );
       disputeResolutionTermsStruct = disputeResolutionTerms.toStruct();
     });
 
@@ -249,7 +264,12 @@ describe("IBosonOrchestrationHandler", function () {
             .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, operator.address)
+          .withArgs(
+            seller.id,
+            sellerStruct,
+            calculateContractAddress(orchestrationHandler.address, "1"),
+            operator.address
+          )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -316,7 +336,12 @@ describe("IBosonOrchestrationHandler", function () {
             .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(nextAccountId, sellerStruct, operator.address)
+          .withArgs(
+            nextAccountId,
+            sellerStruct,
+            calculateContractAddress(orchestrationHandler.address, "1"),
+            operator.address
+          )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -393,6 +418,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an offer with $BOSON as exchange token
         offer.exchangeToken = bosonToken.address;
         offer.protocolFee = protocolFeeFlatBoson;
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod,
+          DRFeeToken,
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+        ).toStruct();
 
         // Create a seller and an offer, testing for the event
         await expect(
@@ -416,7 +447,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0").toStruct();
 
         // Create a seller and an offer, testing for the event
         await expect(
@@ -455,6 +486,55 @@ describe("IBosonOrchestrationHandler", function () {
             offerDurationsStruct,
             disputeResolutionTermsStruct,
             operator.address
+          );
+      });
+
+      it("Should use the correct dispute resolver fee", async function () {
+        // Create an offer in native currency
+        await expect(
+          orchestrationHandler
+            .connect(operator)
+            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            offer.id,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
+
+        // create another offer, now with bosonToken as exchange token
+        seller = new Seller(++sellerId, rando.address, rando.address, rando.address, rando.address, active);
+        offer.exchangeToken = bosonToken.address;
+        offer.id = "2";
+        offer.protocolFee = protocolFeeFlatBoson;
+        offer.sellerId = seller.id;
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod,
+          DRFeeToken,
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+        ).toStruct();
+
+        // Create an offer in boson token
+        await expect(
+          orchestrationHandler
+            .connect(rando)
+            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            offer.id,
+            seller.id,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            rando.address
           );
       });
 
@@ -741,6 +821,18 @@ describe("IBosonOrchestrationHandler", function () {
               .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
+
+        it("Dispute resolver does not accept fees in the exchange token", async function () {
+          // Set some address that is not part of dispute resolver fees
+          offer.exchangeToken = rando.address;
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+          ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
+        });
       });
     });
 
@@ -952,6 +1044,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an offer with $BOSON as exchange token
         offer.exchangeToken = bosonToken.address;
         offer.protocolFee = protocolFeeFlatBoson;
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod,
+          DRFeeToken,
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+        ).toStruct();
 
         // Create an offer with condition, testing for the events
         await expect(
@@ -975,7 +1073,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0").toStruct();
 
         // Create an offer with condition, testing for the events
         await expect(
@@ -1008,6 +1106,53 @@ describe("IBosonOrchestrationHandler", function () {
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
+      });
+
+      it("Should use the correct dispute resolver fee", async function () {
+        // Create an offer with condition in native currency
+        await expect(
+          orchestrationHandler
+            .connect(operator)
+            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            offer.id,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
+
+        // create another offer, now with bosonToken as exchange token
+        offer.exchangeToken = bosonToken.address;
+        offer.id = "2";
+        offer.protocolFee = protocolFeeFlatBoson;
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod,
+          DRFeeToken,
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+        ).toStruct();
+
+        // Create an offer with condition in boson token
+        await expect(
+          orchestrationHandler
+            .connect(operator)
+            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            offer.id,
             sellerId,
             offer.toStruct(),
             offerDatesStruct,
@@ -1235,6 +1380,18 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
+        it("Dispute resolver does not accept fees in the exchange token", async function () {
+          // Set some address that is not part of dispute resolver fees
+          offer.exchangeToken = rando.address;
+
+          // Attempt to create an offer with condition, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
+          ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
+        });
+
         it("Condition 'None' has some values in other fields", async function () {
           method = EvaluationMethod.None;
           condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
@@ -1293,7 +1450,7 @@ describe("IBosonOrchestrationHandler", function () {
           offer.id = `${i + 1}`;
           offer.price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
           offer.sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
-          offer.protocolFee = calculateProtocolFee(offer.price, protocolFeePercentage);
+          offer.protocolFee = applyPercentage(offer.price, protocolFeePercentage);
           offer.buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
           offer.quantityAvailable = `${(i + 1) * 2}`;
           offer.sellerId = "2"; // "1" is dispute resolver
@@ -1521,6 +1678,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an offer with $BOSON as exchange token
         offer.exchangeToken = bosonToken.address;
         offer.protocolFee = protocolFeeFlatBoson;
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod,
+          DRFeeToken,
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+        ).toStruct();
 
         // Create an offer, add it to the group, testing for the events
         await expect(
@@ -1544,7 +1707,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0").toStruct();
 
         // Create an offer, add it to the group, testing for the events
         await expect(
@@ -1577,6 +1740,53 @@ describe("IBosonOrchestrationHandler", function () {
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
+      });
+
+      it("Should use the correct dispute resolver fee", async function () {
+        // Create an offer in native currency
+        await expect(
+          orchestrationHandler
+            .connect(operator)
+            .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            offer.id,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
+
+        // create another offer, now with bosonToken as exchange token
+        offer.exchangeToken = bosonToken.address;
+        offer.id++;
+        offer.protocolFee = protocolFeeFlatBoson;
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod,
+          DRFeeToken,
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+        ).toStruct();
+
+        // Create an offer in boson token
+        await expect(
+          orchestrationHandler
+            .connect(operator)
+            .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            offer.id,
             sellerId,
             offer.toStruct(),
             offerDatesStruct,
@@ -1806,6 +2016,18 @@ describe("IBosonOrchestrationHandler", function () {
               .connect(operator)
               .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("Dispute resolver does not accept fees in the exchange token", async function () {
+          // Set some address that is not part of dispute resolver fees
+          offer.exchangeToken = rando.address;
+
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
+          ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
         });
 
         it("Group does not exist", async function () {
@@ -2098,6 +2320,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an offer with $BOSON as exchange token
         offer.exchangeToken = bosonToken.address;
         offer.protocolFee = protocolFeeFlatBoson;
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod,
+          DRFeeToken,
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+        ).toStruct();
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
@@ -2121,7 +2349,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0").toStruct();
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
@@ -2156,6 +2384,53 @@ describe("IBosonOrchestrationHandler", function () {
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
+      });
+
+      it("Should use the correct dispute resolver fee", async function () {
+        // Create an offer in native currency
+        await expect(
+          orchestrationHandler
+            .connect(operator)
+            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            offer.id,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
+
+        // create another offer, now with bosonToken as exchange token
+        offer.exchangeToken = bosonToken.address;
+        offer.id = "2";
+        offer.protocolFee = protocolFeeFlatBoson;
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod,
+          DRFeeToken,
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+        ).toStruct();
+
+        // Create an offer in boson token
+        await expect(
+          orchestrationHandler
+            .connect(operator)
+            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            offer.id,
             sellerId,
             offer.toStruct(),
             offerDatesStruct,
@@ -2381,6 +2656,18 @@ describe("IBosonOrchestrationHandler", function () {
               .connect(operator)
               .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("Dispute resolver does not accept fees in the exchange token", async function () {
+          // Set some address that is not part of dispute resolver fees
+          offer.exchangeToken = rando.address;
+
+          // Attempt to create an offer, twin and bundle, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
+          ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
         });
 
         it("should revert if protocol is not approved to transfer the ERC20 token", async function () {
@@ -2812,6 +3099,12 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an offer with $BOSON as exchange token
         offer.exchangeToken = bosonToken.address;
         offer.protocolFee = protocolFeeFlatBoson;
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod,
+          DRFeeToken,
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+        ).toStruct();
 
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
@@ -2842,7 +3135,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Prepare an absolute zero offer
         offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
         disputeResolverId = "0";
-        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0").toStruct();
+        disputeResolutionTermsStruct = new DisputeResolutionTerms("0", "0", "0", "0").toStruct();
 
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
@@ -2899,6 +3192,67 @@ describe("IBosonOrchestrationHandler", function () {
             operator.address
           );
       });
+
+      it("Should use the correct dispute resolver fee", async function () {
+        // Create an offer in native currency
+        await expect(
+          orchestrationHandler
+            .connect(operator)
+            .createOfferWithConditionAndTwinAndBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolverId,
+              condition,
+              twin
+            )
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            offer.id,
+            sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
+
+        // create another offer, now with bosonToken as exchange token
+        offer.exchangeToken = bosonToken.address;
+        offer.id = "2";
+        offer.protocolFee = protocolFeeFlatBoson;
+        disputeResolutionTermsStruct = new DisputeResolutionTerms(
+          disputeResolverId,
+          disputeResolver.escalationResponsePeriod,
+          DRFeeToken,
+          applyPercentage(DRFeeToken, buyerEscalationDepositPercentage)
+        ).toStruct();
+
+        // Create an offer in boson token
+        await expect(
+          orchestrationHandler
+            .connect(operator)
+            .createOfferWithConditionAndTwinAndBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolverId,
+              condition,
+              twin
+            )
+        )
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            offer.id,
+            sellerId,
+            offer.toStruct(),
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
+      });
     });
 
     context("👉 createSellerAndOfferWithCondition()", async function () {
@@ -2941,7 +3295,12 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, operator.address)
+          .withArgs(
+            seller.id,
+            sellerStruct,
+            calculateContractAddress(orchestrationHandler.address, "1"),
+            operator.address
+          )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -3033,7 +3392,12 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct)
+          .withArgs(
+            seller.id,
+            calculateContractAddress(orchestrationHandler.address, "1"),
+            sellerStruct,
+            operator.address
+          )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -3100,7 +3464,12 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, operator.address)
+          .withArgs(
+            seller.id,
+            sellerStruct,
+            calculateContractAddress(orchestrationHandler.address, "1"),
+            operator.address
+          )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -3222,7 +3591,12 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, operator.address)
+          .withArgs(
+            seller.id,
+            sellerStruct,
+            calculateContractAddress(orchestrationHandler.address, "1"),
+            operator.address
+          )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -3337,7 +3711,12 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, operator.address)
+          .withArgs(
+            seller.id,
+            sellerStruct,
+            calculateContractAddress(orchestrationHandler.address, "1"),
+            operator.address
+          )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -3494,7 +3873,12 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, operator.address)
+          .withArgs(
+            sellerId,
+            sellerStruct,
+            calculateContractAddress(orchestrationHandler.address, "1"),
+            operator.address
+          )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,

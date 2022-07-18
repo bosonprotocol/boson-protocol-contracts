@@ -8,19 +8,28 @@ const { oneMonth } = require("../utils/constants");
 describe("DisputeResolutionTerms", function () {
   // Suite-wide scope
   let disputeResolutionTerms, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let disputeResolverId, escalationResponsePeriod;
+  let disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit;
 
   beforeEach(async function () {
     // Required constructor params
     disputeResolverId = "2";
     escalationResponsePeriod = oneMonth.toString();
+    feeAmount = "50";
+    buyerEscalationDeposit = "12345";
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated DisputeResolutionTerms instance", async function () {
-      disputeResolutionTerms = new DisputeResolutionTerms(disputeResolverId, escalationResponsePeriod);
+      disputeResolutionTerms = new DisputeResolutionTerms(
+        disputeResolverId,
+        escalationResponsePeriod,
+        feeAmount,
+        buyerEscalationDeposit
+      );
       expect(disputeResolutionTerms.disputeResolverIdIsValid()).is.true;
       expect(disputeResolutionTerms.escalationResponsePeriodIsValid()).is.true;
+      expect(disputeResolutionTerms.feeAmountIsValid()).is.true;
+      expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.true;
       expect(disputeResolutionTerms.isValid()).is.true;
     });
   });
@@ -28,7 +37,12 @@ describe("DisputeResolutionTerms", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid disputeResolutionTerms, then set fields in tests directly
-      disputeResolutionTerms = new DisputeResolutionTerms(disputeResolverId, escalationResponsePeriod);
+      disputeResolutionTerms = new DisputeResolutionTerms(
+        disputeResolverId,
+        escalationResponsePeriod,
+        feeAmount,
+        buyerEscalationDeposit
+      );
       expect(disputeResolutionTerms.isValid()).is.true;
     });
 
@@ -85,22 +99,88 @@ describe("DisputeResolutionTerms", function () {
       expect(disputeResolutionTerms.escalationResponsePeriodIsValid()).is.true;
       expect(disputeResolutionTerms.isValid()).is.true;
     });
+
+    it("Always present, feeAmount must be the string representation of a BigNumber and be less than or equal to 100000", async function () {
+      // Invalid field value
+      disputeResolutionTerms.feeAmount = "zedzdeadbaby";
+      expect(disputeResolutionTerms.feeAmountIsValid()).is.false;
+      expect(disputeResolutionTerms.isValid()).is.false;
+
+      // Invalid field value
+      disputeResolutionTerms.feeAmount = new Date();
+      expect(disputeResolutionTerms.feeAmountIsValid()).is.false;
+      expect(disputeResolutionTerms.isValid()).is.false;
+
+      // Invalid field value
+      disputeResolutionTerms.feeAmount = 12;
+      expect(disputeResolutionTerms.feeAmountIsValid()).is.false;
+      expect(disputeResolutionTerms.isValid()).is.false;
+
+      // Invalid field value
+      disputeResolutionTerms.feeAmount = "12345";
+      expect(disputeResolutionTerms.feeAmountIsValid()).is.false;
+      expect(disputeResolutionTerms.isValid()).is.false;
+
+      // Valid field value
+      disputeResolutionTerms.feeAmount = "0";
+      expect(disputeResolutionTerms.feeAmountIsValid()).is.true;
+      expect(disputeResolutionTerms.isValid()).is.true;
+
+      // Valid field value
+      disputeResolutionTerms.feeAmount = "126";
+      expect(disputeResolutionTerms.feeAmountIsValid()).is.true;
+      expect(disputeResolutionTerms.isValid()).is.true;
+    });
+
+    it("Always present, buyerEscalationDeposit must be the string representation of a BigNumber", async function () {
+      // Invalid field value
+      disputeResolutionTerms.buyerEscalationDeposit = "zedzdeadbaby";
+      expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.false;
+      expect(disputeResolutionTerms.isValid()).is.false;
+
+      // Invalid field value
+      disputeResolutionTerms.buyerEscalationDeposit = new Date();
+      expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.false;
+      expect(disputeResolutionTerms.isValid()).is.false;
+
+      // Invalid field value
+      disputeResolutionTerms.buyerEscalationDeposit = 12;
+      expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.false;
+      expect(disputeResolutionTerms.isValid()).is.false;
+
+      // Valid field value
+      disputeResolutionTerms.buyerEscalationDeposit = "0";
+      expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.true;
+      expect(disputeResolutionTerms.isValid()).is.true;
+
+      // Valid field value
+      disputeResolutionTerms.buyerEscalationDeposit = "126";
+      expect(disputeResolutionTerms.buyerEscalationDepositIsValid()).is.true;
+      expect(disputeResolutionTerms.isValid()).is.true;
+    });
   });
 
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid disputeResolutionTerms, then set fields in tests directly
-      disputeResolutionTerms = new DisputeResolutionTerms(disputeResolverId, escalationResponsePeriod);
+      disputeResolutionTerms = new DisputeResolutionTerms(
+        disputeResolverId,
+        escalationResponsePeriod,
+        feeAmount,
+        buyerEscalationDeposit
+      );
       expect(disputeResolutionTerms.isValid()).is.true;
 
       // Get plain object
       object = {
         disputeResolverId,
         escalationResponsePeriod,
+        feeAmount,
+        buyerEscalationDeposit,
       };
 
       // Struct representation
-      struct = [disputeResolverId, escalationResponsePeriod];
+      struct = [disputeResolverId, escalationResponsePeriod, feeAmount, buyerEscalationDeposit];
     });
 
     context("👉 Static", async function () {

@@ -89,6 +89,8 @@ contract BosonTypes {
     struct DisputeResolutionTerms {
         uint256 disputeResolverId;
         uint256 escalationResponsePeriod;
+        uint256 feeAmount;
+        uint256 buyerEscalationDeposit;
     }
 
     struct Offer {

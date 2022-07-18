@@ -24,8 +24,10 @@ library ProtocolLib {
         address payable treasuryAddress;
         // Address of the Boson Token (ERC-20 contract)
         address payable tokenAddress;
-        // Address of the Boson Protocol Voucher proxy
-        address voucherAddress;
+        // Address of the Boson Protocol Voucher beacon
+        address voucherBeaconAddress;
+        // Address of the Boson Beacon proxy implementation
+        address beaconProxyAddress;
     }
 
     // Protocol limits storage
@@ -122,8 +124,14 @@ library ProtocolLib {
         mapping(uint256 => mapping(address => uint256)) availableFunds;
         // seller/buyer id => all tokens with balance > 0
         mapping(uint256 => address[]) tokenList;
+        // seller id => cloneAddress
+        mapping(uint256 => address) cloneAddress;
+        // buyer id => number of active vouchers
+        mapping(uint256 => uint256) voucherCount;
         // buyer address => groupId => commit count (addresses that have committed to conditional offers)
         mapping(address => mapping(uint256 => uint256)) conditionalCommitsByAddress;
+        // buyer escalation deposit percentage
+        uint16 buyerEscalationDepositPercentage;
     }
 
     // Incrementing ID counters

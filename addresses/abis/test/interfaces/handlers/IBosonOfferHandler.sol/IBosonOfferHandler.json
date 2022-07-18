@@ -143,6 +143,16 @@
               "internalType": "uint256",
               "name": "escalationResponsePeriod",
               "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "feeAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "buyerEscalationDeposit",
+              "type": "uint256"
             }
           ],
           "indexed": false,
@@ -649,6 +659,16 @@
             {
               "internalType": "uint256",
               "name": "escalationResponsePeriod",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "feeAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "buyerEscalationDeposit",
               "type": "uint256"
             }
           ],

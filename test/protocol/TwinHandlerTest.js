@@ -47,7 +47,7 @@ describe("IBosonTwinHandler", function () {
     id,
     sellerId;
   let bundleId, offerIds, twinIds, bundle;
-  let protocolFeePercentage, protocolFeeFlatBoson;
+  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
 
   before(async function () {
     // get interface Ids
@@ -77,14 +77,16 @@ describe("IBosonTwinHandler", function () {
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
     protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Add config Handler, so twin id starts at 1
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: "0x0000000000000000000000000000000000000000",
+        treasuryAddress: ethers.constants.AddressZero,
         tokenAddress: bosonToken.address,
-        voucherAddress: "0x0000000000000000000000000000000000000000",
+        voucherBeaconAddress: ethers.constants.AddressZero,
+        beaconProxyAddress: ethers.constants.AddressZero,
       },
       // Protocol limits
       {
@@ -102,6 +104,7 @@ describe("IBosonTwinHandler", function () {
         percentage: protocolFeePercentage,
         flatBoson: protocolFeeFlatBoson,
       },
+      buyerEscalationDepositPercentage,
     ];
     // Deploy the Config facet, initializing the protocol config
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
