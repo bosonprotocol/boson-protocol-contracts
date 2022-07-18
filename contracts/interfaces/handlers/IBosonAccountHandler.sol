@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x2cf25a22
+ * The ERC-165 identifier for this interface is: 0x57a2ba2b
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -51,13 +51,16 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Number of DisputeResolverFee structs in array exceeds max
      * - DisputeResolverFee array contains duplicates
      * - EscalationResponsePeriod is invalid
+     * - Some seller id is already approved
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
      * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency. Can be empty.
+     * @param _sellerAllowList - list of ids of sellers that can chose this dispute resolver. If empty, there are no restrictions which seller can chose it.
      */
     function createDisputeResolver(
         BosonTypes.DisputeResolver memory _disputeResolver,
-        BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees
+        BosonTypes.DisputeResolverFee[] calldata _disputeResolverFees,
+        uint256[] calldata _sellerAllowList
     ) external;
 
     /**
@@ -107,7 +110,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function updateBuyer(BosonTypes.Buyer memory _buyer) external;
 
     /**
-     * @notice Updates a dispute resolver, not including DisputeResolverFees or active flag.
+     * @notice Updates a dispute resolver, not including DisputeResolverFees, allowed seller list or active flag.
      * All DisputeResolver fields should be filled, even those staying the same.
      * Use removeFeesFromDisputeResolver
      *
@@ -159,6 +162,40 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _feeTokenAddresses - list of adddresses of dispute resolver fee tokens to remove
      */
     function removeFeesFromDisputeResolver(uint256 _disputeResolverId, address[] calldata _feeTokenAddresses) external;
+
+    /**
+     * @notice Add seller id to set of ids allowed to chose the given dispute resolver
+     *
+     * Emits a AllowedSellersAdded event if successful.
+     *
+     * Reverts if:
+     * - Caller is not the admin address associated with the dispute resolver account
+     * - Dispute resolver does not exist
+     * - Number of seller ids in array exceeds max
+     * - Number of seller ids in array is zero
+     * - Some seller id is already approved
+     *
+     * @param _disputeResolverId - Id of the dispute resolver
+     * @param _sellerAllowList - List of seller ids to add to allowed list
+     */
+    function addSellerToAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external;
+
+    /**
+     * @notice Remove seller ids from set of ids allowed to chose the given dispute resolver
+     *
+     * Emits a AllowedSellersRemoved event if successful.
+     *
+     * Reverts if:
+     * - Caller is not the admin address associated with the dispute resolver account
+     * - Dispute resolver does not exist
+     * - Number of seller ids in array exceeds max
+     * - Number of seller ids structs in array is zero
+     * - Some seller id is not approved
+     *
+     * @param _disputeResolverId - Id of the dispute resolver
+     * @param _sellerAllowList - list of seller ids to remove from allowed list
+     */
+    function removeSellerFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external;
 
     /**
      * @notice Set the active flag for this Dispute Resolver to true. Only callable by the protocol ADMIN role.

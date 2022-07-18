@@ -48,6 +48,8 @@ library ProtocolLib {
         uint256 maxEscalationResponsePeriod;
         // limit how many disputes can be processed in single batch transaction
         uint16 maxDisputesPerBatch;
+        // limit how many sellers can be added to or removed from an allow list in a single transaction
+        uint16 maxAllowedSellers;
     }
 
     // Protocol fees storage
@@ -132,6 +134,10 @@ library ProtocolLib {
         mapping(address => mapping(uint256 => uint256)) conditionalCommitsByAddress;
         // buyer escalation deposit percentage
         uint16 buyerEscalationDepositPercentage;
+        // dispute resolver id => seller id => bool
+        mapping(uint256 => mapping(uint256 => bool)) isSellerAllowed;
+        // dispute resolver id => number of allowed sellers
+        mapping(uint256 => uint256) allowedSellerCount;
     }
 
     // Incrementing ID counters

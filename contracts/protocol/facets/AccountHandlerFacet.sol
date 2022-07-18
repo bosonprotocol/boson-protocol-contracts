@@ -59,13 +59,16 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - Number of DisputeResolverFee structs in array exceeds max
      * - DisputeResolverFee array contains duplicates
      * - EscalationResponsePeriod is invalid
+     * - Some seller id is already approved
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
      * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency. Can be empty.
+     * @param _sellerAllowList - list of ids of sellers that can chose this dispute resolver. If empty, there are no restrictions which seller can chose it.
      */
     function createDisputeResolver(
         DisputeResolver memory _disputeResolver,
-        DisputeResolverFee[] calldata _disputeResolverFees
+        DisputeResolverFee[] calldata _disputeResolverFees,
+        uint256[] calldata _sellerAllowList
     ) external override {
         //Check for zero address
         require(
@@ -122,6 +125,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         _disputeResolver.active = false;
 
         storeDisputeResolver(_disputeResolver);
+        storeSellerAllowList(disputeResolverId, _sellerAllowList);
 
         //Notify watchers of state change
         emit DisputeResolverCreated(_disputeResolver.id, _disputeResolver, _disputeResolverFees, msgSender());
@@ -244,7 +248,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
-     * @notice Updates a dispute resolver, not including DisputeResolverFees or active flag.
+     * @notice Updates a dispute resolver, not including DisputeResolverFees, allowed seller list or active flag.
      * All DisputeResolver fields should be filled, even those staying the same.
      * Use addFeesToDisputeResolver and removeFeesFromDisputeResolver
      *
@@ -432,6 +436,94 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
+     * @notice Add seller id to set of ids allowed to chose the given dispute resolver
+     *
+     * Emits a AllowedSellersAdded event if successful.
+     *
+     * Reverts if:
+     * - Caller is not the admin address associated with the dispute resolver account
+     * - Dispute resolver does not exist
+     * - Number of seller ids in array exceeds max
+     * - Number of seller ids in array is zero
+     * - Seller id is already approved
+     *
+     * @param _disputeResolverId - Id of the dispute resolver
+     * @param _sellerAllowList - List of seller ids to add to allowed list
+     */
+    function addSellerToAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external override {
+        // At least one seller id must be specified and the number of ids cannot exceed the maximum number of seller ids to avoid running into block gas limit in a loop
+        require(
+            _sellerAllowList.length > 0 && _sellerAllowList.length <= protocolLimits().maxAllowedSellers,
+            INVALID_AMOUNT_ALLOWED_SELLERS
+        );
+
+        bool exists;
+        DisputeResolver storage disputeResolver;
+
+        //Check Dispute Resolver and Dispute Resolver Fees from  disputeResolvers and disputeResolverFees mappings
+        (exists, disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
+
+        //Dispute Resolver  must already exist
+        require(exists, NO_SUCH_DISPUTE_RESOLVER);
+
+        //Check that msg.sender is the admin address for this dispute resolver
+        require(disputeResolver.admin == msgSender(), NOT_ADMIN);
+
+        storeSellerAllowList(_disputeResolverId, _sellerAllowList);
+
+        emit AllowedSellersAdded(_disputeResolverId, _sellerAllowList, msgSender());
+    }
+
+    /**
+     * @notice Remove seller ids from set of ids allowed to chose the given dispute resolver
+     *
+     * Emits a AllowedSellersRemoved event if successful.
+     *
+     * Reverts if:
+     * - Caller is not the admin address associated with the dispute resolver account
+     * - Dispute resolver does not exist
+     * - Number of seller ids in array exceeds max
+     * - Number of seller ids structs in array is zero
+     * - Seller id is not approved
+     *
+     * @param _disputeResolverId - Id of the dispute resolver
+     * @param _sellerAllowList - list of seller ids to remove from allowed list
+     */
+    function removeSellerFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList)
+        external
+        override
+    {
+        // At least one seller id must be specified and the number of ids cannot exceed the maximum number of seller ids to avoid running into block gas limit in a loop
+        require(
+            _sellerAllowList.length > 0 && _sellerAllowList.length <= protocolLimits().maxAllowedSellers,
+            INVALID_AMOUNT_ALLOWED_SELLERS
+        );
+
+        bool exists;
+        DisputeResolver storage disputeResolver;
+
+        //Check Dispute Resolver and Dispute Resolver Fees from  disputeResolvers and disputeResolverFees mappings
+        (exists, disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
+
+        //Dispute Resolver  must already exist
+        require(exists, NO_SUCH_DISPUTE_RESOLVER);
+
+        //Check that msg.sender is the admin address for this dispute resolver
+        require(disputeResolver.admin == msgSender(), NOT_ADMIN);
+
+        ProtocolLib.ProtocolLookups storage pl = protocolLookups();
+
+        for (uint256 i = 0; i < _sellerAllowList.length; i++) {
+            require(pl.isSellerAllowed[_disputeResolverId][i], SELLER_NOT_APPROVED);
+            pl.isSellerAllowed[_disputeResolverId][i] = false;
+            // delete pl.isSellerAllowed[_disputeResolverId][i]; gas estimate
+            pl.allowedSellerCount[_disputeResolverId]--;
+        }
+
+        emit AllowedSellersRemoved(_disputeResolverId, _sellerAllowList, msgSender());
+    }
+
+    /**
      * @notice Set the active flag for this Dispute Resolver to true. Only callable by the protocol ADMIN role.
      *
      * Emits a DisputeResolverActivated event if successful.
@@ -592,7 +684,6 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set
      */
-
     function storeDisputeResolver(DisputeResolver memory _disputeResolver) internal {
         // escalation period must be greater than zero and less than or equal to the max allowed
         require(
@@ -618,5 +709,21 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] = _disputeResolver.id;
         protocolLookups().disputeResolverIdByAdmin[_disputeResolver.admin] = _disputeResolver.id;
         protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] = _disputeResolver.id;
+    }
+
+    /**
+     * @notice Stores seller id to allowed list mapping in storage
+     *
+     * @param _disputeResolverId - id of dispute resolver that is giving the permission
+     * @param _sellerAllowList - list of sellers id, added to allow list
+     */
+    function storeSellerAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) internal {
+        ProtocolLib.ProtocolLookups storage pl = protocolLookups();
+
+        for (uint256 i = 0; i < _sellerAllowList.length; i++) {
+            require(!pl.isSellerAllowed[_disputeResolverId][i], SELLER_ALREADY_APPROVED);
+            pl.isSellerAllowed[_disputeResolverId][i] = true;
+            pl.allowedSellerCount[_disputeResolverId]++;
+        }
     }
 }
