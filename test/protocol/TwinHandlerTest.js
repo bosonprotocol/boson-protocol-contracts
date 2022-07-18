@@ -374,21 +374,21 @@ describe("IBosonTwinHandler", function () {
             RevertReasons.INVALID_TWIN_TOKEN_RANGE
           );
 
-          // Create an offer with ids range: ["0" ... "5"]
+          // Create an twin with ids range: ["0" ... "5"]
           twin.tokenId = "0";
           twin.supplyAvailable = "6";
           await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
             RevertReasons.INVALID_TWIN_TOKEN_RANGE
           );
 
-          // Create an offer with ids range: ["10" ... "15"]
+          // Create an twin with ids range: ["10" ... "15"]
           twin.tokenId = "10";
           twin.supplyAvailable = "5";
           await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
             RevertReasons.INVALID_TWIN_TOKEN_RANGE
           );
 
-          // Create an offer with ids range: ["6" ... "9"]
+          // Create an twin with ids range: ["6" ... "9"]
           twin.tokenId = "6";
           twin.supplyAvailable = "4";
           await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-import "hardhat/console.sol";
+
 import { IBosonTwinEvents } from "../../interfaces/events/IBosonTwinEvents.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
@@ -21,7 +21,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
      * - seller does not exist
      * - Not approved to transfer the seller's token
      * - supplyAvailable is zero
-     - - Twin is NonFungibleToken and amount was set
+     * - Twin is NonFungibleToken and amount was set
      * - Twin is NonFungibleToken and range is already being used in another twin of the seller
      * - Twin is FungibleToken or MultiToken and amount was not set
      *
@@ -55,7 +55,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             for (uint256 i = 0; i < twinIds.length; i++) {
                 (, Twin memory twin) = fetchTwin(twinIds[i]);
 
-                if (twin.tokenType != TokenType.NonFungibleToken) {
+                if (twin.tokenType != TokenType.NonFungibleToken || twin.tokenAddress != _twin.tokenAddress) {
                     continue;
                 }
 
