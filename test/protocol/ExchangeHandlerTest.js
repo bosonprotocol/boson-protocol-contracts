@@ -1243,7 +1243,7 @@ describe("IBosonExchangeHandler", function () {
       beforeEach(async function () {
         // Mint some tokens to be bundled
         await foreign20.connect(operator).mint(operator.address, "500");
-        await foreign721.connect(operator).mint("0", "1");
+        await foreign721.connect(operator).mint("0", "2");
         await foreign1155.connect(operator).mint("1", "500");
 
         // Approve the protocol diamond to transfer seller's tokens
@@ -1338,14 +1338,14 @@ describe("IBosonExchangeHandler", function () {
 
         it("should transfer the twin", async function () {
           // Check the operator owns the ERC721
-          owner = await foreign721.ownerOf("0");
+          owner = await foreign721.ownerOf("1");
           expect(owner).to.equal(operator.address);
 
           // Redeem the voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
           // Check the buyer owns the ERC721
-          owner = await foreign721.ownerOf("0");
+          owner = await foreign721.ownerOf("1");
           expect(owner).to.equal(buyer.address);
         });
 
@@ -1424,7 +1424,7 @@ describe("IBosonExchangeHandler", function () {
           expect(balance).to.equal(0);
 
           // Check the operator owns the ERC721
-          owner = await foreign721.ownerOf("0");
+          owner = await foreign721.ownerOf("1");
           expect(owner).to.equal(operator.address);
 
           // Check the buyer's balance of the ERC1155
@@ -1436,10 +1436,10 @@ describe("IBosonExchangeHandler", function () {
 
           // Check the buyer's balance of the ERC20
           balance = await foreign20.balanceOf(buyer.address);
-          expect(balance).to.equal(1);
+          expect(balance).to.equal(3);
 
           // Check the buyer owns the ERC721
-          owner = await foreign721.ownerOf("0");
+          owner = await foreign721.ownerOf("1");
           expect(owner).to.equal(buyer.address);
 
           // Check the buyer's balance of the ERC1155
