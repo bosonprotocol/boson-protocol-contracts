@@ -824,13 +824,33 @@ describe("IBosonExchangeHandler", function () {
           .withArgs(offerId, buyerId, exchange.id, operator.address);
       });
 
+      it("should emit an ExchangeCompleted event if anyone calls after fulfillment period", async function () {
+        // Set time forward to the offer's voucherRedeemableFrom
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+        // Redeem the voucher
+        await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+        // Get the current block info
+        blockNumber = await ethers.provider.getBlockNumber();
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Set time forward to run out the fulfillment period
+        newTime = ethers.BigNumber.from(block.timestamp).add(fulfillmentPeriod).add(1).toNumber();
+        await setNextBlockTimestamp(newTime);
+
+        // Complete exchange
+        await expect(exchangeHandler.connect(rando).completeExchange(exchange.id))
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchange.id, rando.address);
+      });
+
       context("💔 Revert Reasons", async function () {
         /*
          * Reverts if:
          * - Exchange does not exist
          * - Exchange is not in redeemed state
-         * - Caller is not buyer or seller's operator
-         * - Caller is seller's operator and offer fulfillment period has not elapsed
+         * - Caller is not buyer and offer fulfillment period has not elapsed
          */
 
         it("exchange id is invalid", async function () {
@@ -853,7 +873,7 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
-        it("caller is not buyer or seller's operator", async function () {
+        it("caller is not buyer and offer fulfillment period has not elapsed", async function () {
           // Set time forward to the offer's voucherRedeemableFrom
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
@@ -862,7 +882,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Attempt to complete the exchange, expecting revert
           await expect(exchangeHandler.connect(rando).completeExchange(exchange.id)).to.revertedWith(
-            RevertReasons.NOT_BUYER_OR_SELLER
+            RevertReasons.FULFILLMENT_PERIOD_NOT_ELAPSED
           );
         });
 

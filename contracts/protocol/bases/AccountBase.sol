@@ -30,11 +30,17 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         // Get the next account Id and increment the counter
         uint256 sellerId = protocolCounters().nextAccountId++;
 
-        //check that the addresses are unique to one seller Id
+        //check that the addresses are unique to one seller Id, accross all roles
         require(
             protocolLookups().sellerIdByOperator[_seller.operator] == 0 &&
+                protocolLookups().sellerIdByOperator[_seller.admin] == 0 &&
+                protocolLookups().sellerIdByOperator[_seller.clerk] == 0 &&
                 protocolLookups().sellerIdByAdmin[_seller.admin] == 0 &&
-                protocolLookups().sellerIdByClerk[_seller.clerk] == 0,
+                protocolLookups().sellerIdByAdmin[_seller.operator] == 0 &&
+                protocolLookups().sellerIdByAdmin[_seller.clerk] == 0 &&
+                protocolLookups().sellerIdByClerk[_seller.clerk] == 0 &&
+                protocolLookups().sellerIdByClerk[_seller.operator] == 0 &&
+                protocolLookups().sellerIdByClerk[_seller.admin] == 0,
             SELLER_ADDRESS_MUST_BE_UNIQUE
         );
 

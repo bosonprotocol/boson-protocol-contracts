@@ -279,13 +279,38 @@ describe("IBosonAccountHandler", function () {
         seller.clerk = other1.address;
         seller.treasury = other1.address;
 
-        //Create struct againw with new addresses
+        //Create struct again with new addresses
         sellerStruct = seller.toStruct();
 
         // Create a seller, testing for the event
         await expect(accountHandler.connect(admin).createSeller(seller))
           .to.emit(accountHandler, "SellerCreated")
           .withArgs(nextAccountId, sellerStruct, expectedCloneAddress, admin.address);
+      });
+
+      it("should be possible to use non-unique treasury address", async function () {
+        // Create a seller, testing for the event
+        await expect(accountHandler.connect(rando).createSeller(seller))
+          .to.emit(accountHandler, "SellerCreated")
+          .withArgs(nextAccountId, sellerStruct, expectedCloneAddress, rando.address);
+
+        nextAccountId++;
+
+        seller.id = nextAccountId;
+        seller.operator = other1.address;
+        seller.admin = other2.address;
+        seller.clerk = other3.address;
+
+        //Create struct again with new addresses
+        sellerStruct = seller.toStruct();
+
+        // expected address of the first clone
+        expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
+
+        // Create a seller, testing for the event
+        await expect(accountHandler.connect(rando).createSeller(seller))
+          .to.emit(accountHandler, "SellerCreated")
+          .withArgs(nextAccountId, sellerStruct, expectedCloneAddress, rando.address);
       });
 
       it("every seller should get a different clone address", async function () {
@@ -339,7 +364,7 @@ describe("IBosonAccountHandler", function () {
           );
         });
 
-        it("addresses are not unique to this seller Id", async function () {
+        it("addresses are not unique to this seller Id when address used for same role", async function () {
           // Create a seller
           await accountHandler.connect(admin).createSeller(seller);
 
@@ -361,6 +386,41 @@ describe("IBosonAccountHandler", function () {
 
           seller.clerk = clerk.address;
           seller.admin = other2.address;
+
+          // Attempt to Create a seller with non-unique clerk, expecting revert
+          await expect(accountHandler.connect(admin).createSeller(seller)).to.revertedWith(
+            RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
+          );
+        });
+
+        it("addresses are not unique to this seller Id when address used for different role", async function () {
+          // Create a seller
+          await accountHandler.connect(admin).createSeller(seller);
+
+          //Set seller 2's admin address to seller 1's operator address
+          seller.admin = operator.address;
+          seller.operator = other2.address;
+          seller.clerk = other3.address;
+
+          // Attempt to Create a seller with non-unique operator, expecting revert
+          await expect(accountHandler.connect(rando).createSeller(seller)).to.revertedWith(
+            RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
+          );
+
+          //Set seller 2's operator address to seller 1's clerk address
+          seller.admin = other1.address;
+          seller.operator = clerk.address;
+          seller.clerk = other3.address;
+
+          // Attempt to Create a seller with non-unique admin, expecting revert
+          await expect(accountHandler.connect(admin).createSeller(seller)).to.revertedWith(
+            RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
+          );
+
+          //Set seller 2's clerk address to seller 1's admin address
+          seller.admin = other1.address;
+          seller.operator = other2.address;
+          seller.clerk = admin.address;
 
           // Attempt to Create a seller with non-unique clerk, expecting revert
           await expect(accountHandler.connect(admin).createSeller(seller)).to.revertedWith(
@@ -691,6 +751,20 @@ describe("IBosonAccountHandler", function () {
         await expect(accountHandler.connect(admin).updateSeller(seller)).to.revertedWith(RevertReasons.NOT_ADMIN);
       });
 
+      it("should be possible to use non-unique treasury address", async function () {
+        seller.operator = other1.address;
+        seller.admin = other2.address;
+        seller.clerk = other3.address;
+
+        //Create struct again with new addresses
+        sellerStruct = seller.toStruct();
+
+        // Update a seller, testing for the event
+        await expect(accountHandler.connect(admin).updateSeller(seller))
+          .to.emit(accountHandler, "SellerUpdated")
+          .withArgs(seller.id, sellerStruct, admin.address);
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Seller does not exist", async function () {
           // Set invalid id
@@ -741,7 +815,7 @@ describe("IBosonAccountHandler", function () {
           );
         });
 
-        it("addresses are not unique to this seller Id", async function () {
+        it("addresses are not unique to this seller Id when addresses used for same role", async function () {
           seller.id = "2";
           seller.operator = other1.address;
           seller.admin = other2.address;
@@ -774,6 +848,48 @@ describe("IBosonAccountHandler", function () {
 
           seller.clerk = clerk.address; //already being used by seller 1
           seller.admin = other2.address;
+
+          // Attempt to Update a seller with non-unique clerk, expecting revert
+          await expect(accountHandler.connect(other2).updateSeller(seller)).to.revertedWith(
+            RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
+          );
+        });
+
+        it("addresses are not unique to this seller Id when address used for different role", async function () {
+          seller.id = "2";
+          seller.operator = other1.address;
+          seller.admin = other2.address;
+          seller.clerk = other3.address;
+          seller.treasury = other4.address;
+          seller.active = true;
+          sellerStruct = seller.toStruct();
+          expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
+
+          //Create second seller
+          await expect(accountHandler.connect(rando).createSeller(seller))
+            .to.emit(accountHandler, "SellerCreated")
+            .withArgs(nextAccountId, sellerStruct, expectedCloneAddress, rando.address);
+
+          //Set seller 2's admin address to seller 1's operator address
+          seller.admin = operator.address;
+
+          // Attempt to update seller 2 with non-unique operator, expecting revert
+          await expect(accountHandler.connect(other2).updateSeller(seller)).to.revertedWith(
+            RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
+          );
+
+          //Set seller 2's operator address to seller 1's clerk address
+          seller.admin = other2.address;
+          seller.operator = clerk.address;
+
+          // Attempt to update a seller with non-unique admin, expecting revert
+          await expect(accountHandler.connect(other2).updateSeller(seller)).to.revertedWith(
+            RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
+          );
+
+          //Set seller 2's clerk address to seller 1's admin address
+          seller.operator = other1.address;
+          seller.clerk = admin.address;
 
           // Attempt to Update a seller with non-unique clerk, expecting revert
           await expect(accountHandler.connect(other2).updateSeller(seller)).to.revertedWith(
@@ -1566,6 +1682,49 @@ describe("IBosonAccountHandler", function () {
         expect(exists).to.be.true;
       });
 
+      it("should be possible to use non-unique treasury address", async function () {
+        const tx = await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+        let valid = await isValidDisputeResolverEvent(
+          tx,
+          "DisputeResolverCreated",
+          disputeResolver.id,
+          expectedDisputeResolverStruct,
+          disputeResolverFeeList,
+          2,
+          rando.address
+        );
+        expect(valid).is.true;
+
+        nextAccountId++;
+
+        // Create a valid dispute resolver, then set fields in tests directly
+        disputeResolver2 = new DisputeResolver(
+          nextAccountId.toString(),
+          oneMonth.toString(),
+          other1.address,
+          other2.address,
+          other3.address,
+          treasury.address,
+          metadataUriDR,
+          false
+        );
+        expect(disputeResolver2.isValid()).is.true;
+
+        expectedDisputeResolverStruct = disputeResolver2.toStruct();
+
+        const tx2 = await accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees);
+        valid = await isValidDisputeResolverEvent(
+          tx2,
+          "DisputeResolverCreated",
+          disputeResolver2.id,
+          expectedDisputeResolverStruct,
+          disputeResolverFeeList,
+          2,
+          rando.address
+        );
+        expect(valid).is.true;
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Any address is the zero address", async function () {
           disputeResolver.operator = ethers.constants.AddressZero;
@@ -1600,7 +1759,7 @@ describe("IBosonAccountHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
-        it("Any address is not unique to this dispute resolver Id", async function () {
+        it("Any address is not unique to this dispute resolver Id for the the same role", async function () {
           id = await accountHandler.connect(rando).getNextAccountId();
 
           disputeResolver2 = new DisputeResolver(
@@ -1639,6 +1798,50 @@ describe("IBosonAccountHandler", function () {
           // Attempt to create another dispute resolver with same addresses
           await expect(
             accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
+          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
+        });
+
+        it("Any address is not unique to this dispute resolver Id for a different role", async function () {
+          id = await accountHandler.connect(rando).getNextAccountId();
+
+          //Set dispute resolver 2's admin address to dispute resolver 1's operator address
+          disputeResolver2 = new DisputeResolver(
+            id.toString(),
+            oneMonth.toString(),
+            other1.address,
+            operator.address,
+            other3.address,
+            other4.address,
+            metadataUriDR,
+            active
+          );
+          expect(disputeResolver2.isValid()).is.true;
+          disputeResolver2Struct = disputeResolver2.toStruct();
+
+          //Create dispute resolver 1
+          accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+
+          // Attempt to create another dispute resolver with non-unique admin address
+          await expect(
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees)
+          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
+
+          //Set dispute resolver 2's operator address to dispute resolver 1's clerk address
+          disputeResolver2.admin = other2.address;
+          disputeResolver2.operator = clerk.address;
+
+          // Attempt to create another dispute resolver with non-unique operator address
+          await expect(
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees)
+          ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
+
+          //Set dispute resolver 2's clerk address to dispute resolver 1's admin address
+          disputeResolver2.operator = other1.address;
+          disputeResolver2.clerk = admin.address;
+
+          // Attempt to create another dispute resolver with non-unique clerk address
+          await expect(
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees)
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
         });
 
@@ -2134,6 +2337,22 @@ describe("IBosonAccountHandler", function () {
         );
       });
 
+      it("should be possible to use non-unique treasury address", async function () {
+        // Update dispute resolver fields
+        disputeResolver.operator = other1.address;
+        disputeResolver.admin = other2.address;
+        disputeResolver.clerk = other3.address;
+        disputeResolver.active = false;
+        expect(disputeResolver.isValid()).is.true;
+
+        expectedDisputeResolverStruct = disputeResolver.toStruct();
+
+        //Update a dispute resolver, testing for the event
+        await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverUpdated")
+          .withArgs(disputeResolver.id, expectedDisputeResolverStruct, admin.address);
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Dispute resolver does not exist", async function () {
           // Set invalid id
@@ -2193,7 +2412,7 @@ describe("IBosonAccountHandler", function () {
           );
         });
 
-        it("Any address is not unique to this dispute resolver Id", async function () {
+        it("Any address is not unique to this dispute resolver Id for the same role", async function () {
           id = await accountHandler.connect(rando).getNextAccountId();
 
           disputeResolver2 = new DisputeResolver(
@@ -2233,11 +2452,49 @@ describe("IBosonAccountHandler", function () {
           await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
+        });
 
-          disputeResolver.treasury = other4.address;
+        it("Any address is not unique to this dispute resolver Id for a different role", async function () {
+          id = await accountHandler.connect(rando).getNextAccountId();
 
-          // Attempt to update dispute resolver 1 with non-unique treasury address, expecting revert
-          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          disputeResolver2 = new DisputeResolver(
+            id.toString(),
+            oneMonth.toString(),
+            other1.address,
+            other2.address,
+            other3.address,
+            other4.address,
+            metadataUriDR,
+            active
+          );
+
+          expect(disputeResolver2.isValid()).is.true;
+          //disputeResolver2Struct = disputeResolver2.toStruct();
+          await accountHandler.connect(admin).createDisputeResolver(disputeResolver2, disputeResolverFees);
+
+          //Set dispute resolver 2's admin address to dispute resolver 1's operator address
+          disputeResolver2.admin = operator.address;
+
+          // Attempt to update dispute resolver 1 with non-unique admin address, expecting revert
+          await expect(accountHandler.connect(other2).updateDisputeResolver(disputeResolver2)).to.revertedWith(
+            RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
+          );
+
+          //Set dispute resolver 2's operator address to dispute resolver 1's clerk address
+          disputeResolver2.admin = other2.address;
+          disputeResolver2.operator = clerk.address;
+
+          // Attempt to update dispute resolver 1 with non-unique operator address, expecting revert
+          await expect(accountHandler.connect(other2).updateDisputeResolver(disputeResolver2)).to.revertedWith(
+            RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
+          );
+
+          //Set dispute resolver 2's clerk address to dispute resolver 1's admin address
+          disputeResolver2.operator = other1.address;
+          disputeResolver2.clerk = admin.address;
+
+          // Attempt to update dispute resolver 1 with non-unique clerk address, expecting revert
+          await expect(accountHandler.connect(other2).updateDisputeResolver(disputeResolver2)).to.revertedWith(
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
         });

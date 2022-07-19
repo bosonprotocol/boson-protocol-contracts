@@ -87,11 +87,17 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         // Get the next account Id and increment the counter
         uint256 disputeResolverId = protocolCounters().nextAccountId++;
 
-        //check that the addresses are unique to one dispute resolver Id
+        //check that the addresses are unique to one dispute resolver Id, across all rolls
         require(
             protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] == 0 &&
+                protocolLookups().disputeResolverIdByOperator[_disputeResolver.admin] == 0 &&
+                protocolLookups().disputeResolverIdByOperator[_disputeResolver.clerk] == 0 &&
                 protocolLookups().disputeResolverIdByAdmin[_disputeResolver.admin] == 0 &&
-                protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] == 0,
+                protocolLookups().disputeResolverIdByAdmin[_disputeResolver.operator] == 0 &&
+                protocolLookups().disputeResolverIdByAdmin[_disputeResolver.clerk] == 0 &&
+                protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] == 0 &&
+                protocolLookups().disputeResolverIdByClerk[_disputeResolver.operator] == 0 &&
+                protocolLookups().disputeResolverIdByClerk[_disputeResolver.admin] == 0,
             DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
         );
 
@@ -185,14 +191,27 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         //Check that msg.sender is the admin address for this seller
         require(seller.admin == msgSender(), NOT_ADMIN);
 
-        //Check that the addresses are unique to one seller Id -- not used or are used by this seller id. Checking this seller id is necessary because one or more addresses may not change
+        //Check that the addresses are unique to one seller Id across all roles -- not used or are used by this seller id.
+        //Checking this seller id is necessary because one or more addresses may not change
         require(
             (protocolLookups().sellerIdByOperator[_seller.operator] == 0 ||
                 protocolLookups().sellerIdByOperator[_seller.operator] == _seller.id) &&
+                (protocolLookups().sellerIdByOperator[_seller.admin] == 0 ||
+                    protocolLookups().sellerIdByOperator[_seller.admin] == _seller.id) &&
+                (protocolLookups().sellerIdByOperator[_seller.clerk] == 0 ||
+                    protocolLookups().sellerIdByOperator[_seller.clerk] == _seller.id) &&
                 (protocolLookups().sellerIdByAdmin[_seller.admin] == 0 ||
                     protocolLookups().sellerIdByAdmin[_seller.admin] == _seller.id) &&
+                (protocolLookups().sellerIdByAdmin[_seller.operator] == 0 ||
+                    protocolLookups().sellerIdByAdmin[_seller.operator] == _seller.id) &&
+                (protocolLookups().sellerIdByAdmin[_seller.clerk] == 0 ||
+                    protocolLookups().sellerIdByAdmin[_seller.clerk] == _seller.id) &&
                 (protocolLookups().sellerIdByClerk[_seller.clerk] == 0 ||
-                    protocolLookups().sellerIdByClerk[_seller.clerk] == _seller.id),
+                    protocolLookups().sellerIdByClerk[_seller.clerk] == _seller.id) &&
+                (protocolLookups().sellerIdByClerk[_seller.operator] == 0 ||
+                    protocolLookups().sellerIdByClerk[_seller.operator] == _seller.id) &&
+                (protocolLookups().sellerIdByClerk[_seller.admin] == 0 ||
+                    protocolLookups().sellerIdByClerk[_seller.admin] == _seller.id),
             SELLER_ADDRESS_MUST_BE_UNIQUE
         );
 
@@ -295,14 +314,26 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         //Check that msg.sender is the admin address for this dispute resolver
         require(disputeResolver.admin == msgSender(), NOT_ADMIN);
 
-        //check that the addresses are unique to one dispute resolverId if new
+        //check that the addresses are unique to one dispute resolverId if new, across all roles
         require(
             (protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] == 0 ||
                 protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] == _disputeResolver.id) &&
+                (protocolLookups().disputeResolverIdByOperator[_disputeResolver.admin] == 0 ||
+                    protocolLookups().disputeResolverIdByOperator[_disputeResolver.admin] == _disputeResolver.id) &&
+                (protocolLookups().disputeResolverIdByOperator[_disputeResolver.clerk] == 0 ||
+                    protocolLookups().disputeResolverIdByOperator[_disputeResolver.clerk] == _disputeResolver.id) &&
                 (protocolLookups().disputeResolverIdByAdmin[_disputeResolver.admin] == 0 ||
                     protocolLookups().disputeResolverIdByAdmin[_disputeResolver.admin] == _disputeResolver.id) &&
+                (protocolLookups().disputeResolverIdByAdmin[_disputeResolver.operator] == 0 ||
+                    protocolLookups().disputeResolverIdByAdmin[_disputeResolver.operator] == _disputeResolver.id) &&
+                (protocolLookups().disputeResolverIdByAdmin[_disputeResolver.clerk] == 0 ||
+                    protocolLookups().disputeResolverIdByAdmin[_disputeResolver.clerk] == _disputeResolver.id) &&
                 (protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] == 0 ||
-                    protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] == _disputeResolver.id),
+                    protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] == _disputeResolver.id) &&
+                (protocolLookups().disputeResolverIdByClerk[_disputeResolver.operator] == 0 ||
+                    protocolLookups().disputeResolverIdByClerk[_disputeResolver.operator] == _disputeResolver.id) &&
+                (protocolLookups().disputeResolverIdByClerk[_disputeResolver.admin] == 0 ||
+                    protocolLookups().disputeResolverIdByClerk[_disputeResolver.admin] == _disputeResolver.id),
             DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
         );
 
