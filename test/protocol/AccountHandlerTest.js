@@ -1684,7 +1684,9 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should be possible to use non-unique treasury address", async function () {
-        const tx = await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+        const tx = await accountHandler
+          .connect(rando)
+          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
         let valid = await isValidDisputeResolverEvent(
           tx,
           "DisputeResolverCreated",
@@ -1711,7 +1713,9 @@ describe("IBosonAccountHandler", function () {
         expect(disputeResolver2.isValid()).is.true;
         expectedDisputeResolverStruct = disputeResolver2.toStruct();
 
-        const tx2 = await accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
+        const tx2 = await accountHandler
+          .connect(rando)
+          .createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
         valid = await isValidDisputeResolverEvent(
           tx2,
           "DisputeResolverCreated",
@@ -2470,7 +2474,9 @@ describe("IBosonAccountHandler", function () {
 
           expect(disputeResolver2.isValid()).is.true;
           //disputeResolver2Struct = disputeResolver2.toStruct();
-          await accountHandler.connect(admin).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
+          await accountHandler
+            .connect(admin)
+            .createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
 
           //Set dispute resolver 2's admin address to dispute resolver 1's operator address
           disputeResolver2.admin = operator.address;
