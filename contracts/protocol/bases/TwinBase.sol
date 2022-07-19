@@ -59,7 +59,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
                 // Get looped twin initial supply
                 uint256 initialSupply = protocolLookups().initialTwinSupply[currentTwinId];
 
-                // Should ignore if token is NonFungible or if is an different token address
+                // Should ignore if token is not TokenType.NonFungible or if is an different token address
                 if (
                     currentTwin.tokenType != TokenType.NonFungibleToken ||
                     currentTwin.tokenAddress != _twin.tokenAddress
