@@ -101,19 +101,12 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
         // Sum of offers quantity available
         uint256 offersTotalQuantityAvailable;
 
-        // Calculate the bundle offers total quantity available.
+        // Calculate bundle offers total quantity available.
         for (uint256 i = 0; i < bundle.offerIds.length; i++) {
-            Offer memory offer = getValidOffer(bundle.offerIds[i]);
-
-            // Unchecked because we're handling overflow below
-            unchecked {
-                offersTotalQuantityAvailable += offer.quantityAvailable;
-            }
-
-            // offersTotalQuantityAvailable should be max uint if overflow happens
-            if (offersTotalQuantityAvailable < offer.quantityAvailable) {
-                offersTotalQuantityAvailable = type(uint256).max;
-            }
+            offersTotalQuantityAvailable = calculateOffersTotalQuantity(
+                offersTotalQuantityAvailable,
+                bundle.offerIds[i]
+            );
         }
 
         for (uint256 i = 0; i < _twinIds.length; i++) {
@@ -260,17 +253,9 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
 
         for (uint256 i = 0; i < _offerIds.length; i++) {
             uint256 offerId = _offerIds[i];
-            // make sure offer exist and belong to the seller
-            Offer memory offer = getValidOffer(offerId);
 
-            // Unchecked because we're handling overflow below
-            unchecked {
-                offersTotalQuantityAvailable += offer.quantityAvailable;
-            }
-            // offersTotalQuantityAvailable should be max uint if overflow happens
-            if (offersTotalQuantityAvailable < offer.quantityAvailable) {
-                offersTotalQuantityAvailable = type(uint256).max;
-            }
+            // Calculate bundle offers total quantity available.
+            offersTotalQuantityAvailable = calculateOffersTotalQuantity(offersTotalQuantityAvailable, offerId);
 
             // make sure exchange does not already exist for this offer id.
             (bool exchangeIdsForOfferExists, ) = getExchangeIdsByOffer(offerId);

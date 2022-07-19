@@ -49,29 +49,20 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         uint256 offersTotalQuantityAvailable;
 
         for (uint256 i = 0; i < _bundle.offerIds.length; i++) {
-            // make sure all offers exist and belong to the seller
-            Offer storage offer = getValidOffer(_bundle.offerIds[i]);
+            uint256 offerId = _bundle.offerIds[i];
 
-            // Unchecked because we're handling overflow below
-            unchecked {
-                // Calculate the bundle offers total quantity available.
-                offersTotalQuantityAvailable += offer.quantityAvailable;
-            }
+            // Calculate bundle offers total quantity available.
+            offersTotalQuantityAvailable = calculateOffersTotalQuantity(offersTotalQuantityAvailable, offerId);
 
-            // offersTotalQuantityAvailable should be max uint if overflow happens
-            if (offersTotalQuantityAvailable < offer.quantityAvailable) {
-                offersTotalQuantityAvailable = type(uint256).max;
-            }
-
-            (bool bundleByOfferExists, ) = fetchBundleIdByOffer(_bundle.offerIds[i]);
+            (bool bundleByOfferExists, ) = fetchBundleIdByOffer(offerId);
             require(!bundleByOfferExists, BUNDLE_OFFER_MUST_BE_UNIQUE);
 
+            (bool exchangeIdsForOfferExists, ) = getExchangeIdsByOffer(offerId);
             // make sure exchange does not already exist for this offer id.
-            (bool exchangeIdsForOfferExists, ) = getExchangeIdsByOffer(_bundle.offerIds[i]);
             require(!exchangeIdsForOfferExists, EXCHANGE_FOR_OFFER_EXISTS);
 
             // Add to bundleIdByOffer mapping
-            protocolLookups().bundleIdByOffer[_bundle.offerIds[i]] = bundleId;
+            protocolLookups().bundleIdByOffer[offerId] = bundleId;
         }
 
         for (uint256 i = 0; i < _bundle.twinIds.length; i++) {
@@ -133,8 +124,10 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
      * - offers total quantity is greater than twin supply when token is NonFungible
      * - offers total quantity multiplied by twin amount is greater than twin supply when token is Fungible or Multitoken
      *
+     * @param offersTotalQuantity - sum of offers total quantity available
+     * @param _twinId - twin id to compare
      */
-    function bundleSupplyChecks(uint256 offersTotalQuantity, uint256 _twinId) internal {
+    function bundleSupplyChecks(uint256 offersTotalQuantity, uint256 _twinId) internal view {
         // make sure twin exist and belong to the seller
         Twin memory twin = getValidTwin(_twinId);
 
@@ -149,6 +142,33 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
                 offersTotalQuantity * twin.amount <= twin.supplyAvailable,
                 INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
             );
+        }
+    }
+
+    /**
+     *
+     * @notice Calculate bundle offers total quantity available.
+     * @param previuosTotal - previous sum of offers total quantity or initial value
+     * @param _offerId - offer id to add to total quantity
+     * @return offersTotalQuantity - previous sum of offers total quantity plus the current offer quantityAvailable
+     */
+    function calculateOffersTotalQuantity(uint256 previousTotal, uint256 _offerId)
+        internal
+        view
+        returns (uint256 offersTotalQuantity)
+    {
+        // make sure all offers exist and belong to the seller
+        Offer storage offer = getValidOffer(_offerId);
+
+        // Unchecked because we're handling overflow below
+        unchecked {
+            // Calculate the bundle offers total quantity available.
+            offersTotalQuantity = previousTotal + offer.quantityAvailable;
+        }
+
+        // offersTotalQuantity should be max uint if overflow happens
+        if (offersTotalQuantity < offer.quantityAvailable) {
+            offersTotalQuantity = type(uint256).max;
         }
     }
 }
