@@ -148,7 +148,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
     /**
      *
      * @notice Calculate bundle offers total quantity available.
-     * @param previuosTotal - previous sum of offers total quantity or initial value
+     * @param previousTotal - previous sum of offers total quantity or initial value
      * @param _offerId - offer id to add to total quantity
      * @return offersTotalQuantity - previous sum of offers total quantity plus the current offer quantityAvailable
      */
