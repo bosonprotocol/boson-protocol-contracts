@@ -134,6 +134,8 @@ library ProtocolLib {
         uint16 buyerEscalationDepositPercentage;
         // seller id => twin ids
         mapping(uint256 => uint256[]) twinIdsBySeller;
+        // twin id => initial twin supply
+        mapping(uint256 => uint256) initialTwinSupply;
     }
 
     // Incrementing ID counters

@@ -1247,20 +1247,21 @@ describe("IBosonExchangeHandler", function () {
         await foreign1155.connect(operator).mint("1", "500");
 
         // Approve the protocol diamond to transfer seller's tokens
-        await foreign20.connect(operator).approve(protocolDiamond.address, "1");
+        await foreign20.connect(operator).approve(protocolDiamond.address, "3");
         await foreign721.connect(operator).setApprovalForAll(protocolDiamond.address, true);
         await foreign1155.connect(operator).setApprovalForAll(protocolDiamond.address, true);
 
         // Create an ERC20 twin
         twin20 = mockTwin(foreign20.address);
-        twin20.amount = "1";
+        twin20.amount = "3";
+        twin20.supplyAvailable = "3";
         expect(twin20.isValid()).is.true;
 
         // Create an ERC721 twin
         twin721 = mockTwin(foreign721.address, TokenType.NonFungibleToken);
         twin721.id = "2";
         twin721.amount = "0";
-
+        twin721.supplyAvailable = "2";
         expect(twin721.isValid()).is.true;
 
         // Create an ERC1155 twin
@@ -1304,7 +1305,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Check the buyer's balance of the ERC20
           balance = await foreign20.balanceOf(buyer.address);
-          expect(balance).to.equal(1);
+          expect(balance).to.equal(3);
         });
 
         // Skip these tests because we decide that for now we shouldn't revert redeemVoucher if twin transfer failed otherwise buyer will lose cancellation penalty

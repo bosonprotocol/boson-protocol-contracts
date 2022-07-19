@@ -366,7 +366,7 @@ describe("IBosonTwinHandler", function () {
           await foreign721.connect(operator).mint(twin.tokenId, twin.supplyAvailable);
           await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
 
-          // Create first twin with ids range: [5...10]
+          // Create first twin with ids range: ["5"..."14"]
           await twinHandler.connect(operator).createTwin(twin);
 
           // Create another twin with exact same range
@@ -381,8 +381,8 @@ describe("IBosonTwinHandler", function () {
             RevertReasons.INVALID_TWIN_TOKEN_RANGE
           );
 
-          // Create an twin with ids range: ["10" ... "15"]
-          twin.tokenId = "10";
+          // Create an twin with ids range: ["14" ... "18"]
+          twin.tokenId = "14";
           twin.supplyAvailable = "5";
           await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
             RevertReasons.INVALID_TWIN_TOKEN_RANGE

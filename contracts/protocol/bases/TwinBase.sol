@@ -53,28 +53,27 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
 
             // Checks if token range isn't being used in any other twin of seller
             for (uint256 i = 0; i < twinIds.length; i++) {
-                (, Twin memory twin) = fetchTwin(twinIds[i]);
+                uint256 currentTwinId = twinIds[i];
+                (, Twin memory currentTwin) = fetchTwin(currentTwinId);
 
-                if (twin.tokenType != TokenType.NonFungibleToken || twin.tokenAddress != _twin.tokenAddress) {
+                // Get looped twin initial supply
+                uint256 initialSupply = protocolLookups().initialTwinSupply[currentTwinId];
+
+                // Should ignore if token is NonFungible or if is an different token address
+                if (
+                    currentTwin.tokenType != TokenType.NonFungibleToken ||
+                    currentTwin.tokenAddress != _twin.tokenAddress
+                ) {
                     continue;
                 }
 
-                // Calculate twin range [tokenId...lastTokenId]
-                uint256 firstTokenRange = twin.tokenId;
-                uint256 lastTokenRange = twin.tokenId + twin.supplyAvailable - 1;
-                bool valid = false;
-
                 // A valid range has:
-                // - the first and last ids of range lower than the looped twin tokenId (beginning of range) or
-                // - the first id of range greater than the last token id (end of range) of the looped twin
-
-                if (tokenId < firstTokenRange && lastTokenId < firstTokenRange) {
-                    valid = true;
-                } else if (tokenId > lastTokenRange) {
-                    valid = true;
-                }
-
-                require(valid, INVALID_TWIN_TOKEN_RANGE);
+                // - the first id of range greater than the last token id (tokenId + initialSupply - 1) of the looped twin or
+                // - the last id of range lower than the looped twin tokenId (beginning of range)
+                require(
+                    tokenId > currentTwin.tokenId + initialSupply - 1 || lastTokenId < currentTwin.tokenId,
+                    INVALID_TWIN_TOKEN_RANGE
+                );
             }
         } else {
             // If token is Fungible or MultiToken amount should not be zero
@@ -98,6 +97,8 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
 
         // Add to twinIdsBySeller mapping
         protocolLookups().twinIdsBySeller[sellerId].push(twinId);
+
+        protocolLookups().initialTwinSupply[twinId] = _twin.supplyAvailable;
 
         // Notify watchers of state change
         emit TwinCreated(twinId, sellerId, _twin, msgSender());

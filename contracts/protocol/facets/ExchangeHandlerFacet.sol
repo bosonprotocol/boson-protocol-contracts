@@ -489,6 +489,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                 // N.B. Using call here so as to normalize the revert reason
                 bool success;
                 bytes memory result;
+
                 if (twin.tokenType == TokenType.FungibleToken && twin.supplyAvailable >= twin.amount) {
                     // ERC-20 style transfer
                     uint256 amount = twin.amount;
