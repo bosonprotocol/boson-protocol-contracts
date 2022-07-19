@@ -529,6 +529,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
             uint256 sellerToRemoveIndex = pl.allowedSellerIndex[_disputeResolverId][_sellerAllowList[i]];
             require(sellerToRemoveIndex > 0, SELLER_NOT_APPROVED);
 
+            // remove index mapping
+            delete pl.allowedSellerIndex[_disputeResolverId][_sellerAllowList[i]];
+
             // reduce for 1 to get actual index value
             sellerToRemoveIndex--;
 
@@ -539,7 +542,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
                 uint256 lastSellerId = pl.allowedSellers[_disputeResolverId][lastIndex];
                 pl.allowedSellers[_disputeResolverId][sellerToRemoveIndex] = lastSellerId;
 
-                pl.allowedSellerIndex[_disputeResolverId][lastSellerId] = sellerToRemoveIndex;
+                pl.allowedSellerIndex[_disputeResolverId][lastSellerId] = sellerToRemoveIndex + 1;
             }
 
             // remove last element

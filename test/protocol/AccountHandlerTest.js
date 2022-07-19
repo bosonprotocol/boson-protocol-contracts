@@ -48,7 +48,7 @@ describe("IBosonAccountHandler", function () {
     disputeResolverFeeListStruct2,
     disputeResolverFees2,
     feeTokenAddressesToRemove;
-  let sellerAllowList, returnedSellerAllowList, idsToCheck, expectedStatus;
+  let sellerAllowList, returnedSellerAllowList, idsToCheck, expectedStatus, allowedSellersToAdd, allowedSellersToRemove;
   let metadataUriDR;
   let agent, agentStruct, feePercentage;
   let expected, nextAccountId;
@@ -2264,6 +2264,7 @@ describe("IBosonAccountHandler", function () {
 
     context("👉 addFeesToDisputeResolver()", async function () {
       beforeEach(async function () {
+        disputeResolver.id = (++id).toString();
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -2320,9 +2321,9 @@ describe("IBosonAccountHandler", function () {
         await accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFeesToAdd);
 
         // Get the dispute resolver data as structs
-        [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
-          .getDisputeResolver(id);
+          .getDisputeResolver(disputeResolver.id);
 
         // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
@@ -2340,6 +2341,8 @@ describe("IBosonAccountHandler", function () {
           expectedDisputeResolverFeeList.toString(),
           "Dispute Resolver Fee List is incorrect"
         );
+
+        expect(returnedSellerAllowList.toString()).to.eql(sellerAllowList.toString(), "Allowed list wrong");
       });
 
       context("💔 Revert Reasons", async function () {
@@ -2402,6 +2405,7 @@ describe("IBosonAccountHandler", function () {
 
     context("👉 removeFeesFromDisputeResolver()", async function () {
       beforeEach(async function () {
+        disputeResolver.id = (++id).toString();
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -2433,9 +2437,9 @@ describe("IBosonAccountHandler", function () {
           .removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove);
 
         // Get the dispute resolver data as structs
-        [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
-          .getDisputeResolver(id);
+          .getDisputeResolver(disputeResolver.id);
 
         // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
@@ -2456,6 +2460,8 @@ describe("IBosonAccountHandler", function () {
           expecteDdisputeResolverFeeList.toString(),
           "Dispute Resolver Fee List is incorrect"
         );
+
+        expect(returnedSellerAllowList.toString()).to.eql(sellerAllowList.toString(), "Allowed list wrong");
       });
 
       it("should update DisputeResolverFee state only if all DisputeResolverFees are removed", async function () {
@@ -2467,9 +2473,9 @@ describe("IBosonAccountHandler", function () {
           .removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove);
 
         // Get the dispute resolver data as structs
-        [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
-          .getDisputeResolver(id);
+          .getDisputeResolver(disputeResolver.id);
 
         // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
@@ -2490,6 +2496,8 @@ describe("IBosonAccountHandler", function () {
           expecteDdisputeResolverFeeList.toString(),
           "Dispute Resolver Fee List is incorrect"
         );
+
+        expect(returnedSellerAllowList.toString()).to.eql(sellerAllowList.toString(), "Allowed list wrong");
       });
 
       context("💔 Revert Reasons", async function () {
@@ -2546,6 +2554,357 @@ describe("IBosonAccountHandler", function () {
           await expect(
             accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_FEE_NOT_FOUND);
+        });
+      });
+    });
+
+    context("👉 addSellerToAllowList()", async function () {
+      beforeEach(async function () {
+        // make another seller with id = "4"
+        let seller4 = new Seller(
+          (++id).toString(),
+          other3.address,
+          other3.address,
+          other3.address,
+          other3.address,
+          active
+        );
+
+        await accountHandler.connect(admin).createSeller(seller4);
+
+        sellerAllowList = ["1", "3"];
+        allowedSellersToAdd = ["2", "4"];
+
+        disputeResolver.id = (++id).toString();
+
+        await accountHandler
+          .connect(rando)
+          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+        // How that dispute resolver looks as a returned struct
+        disputeResolverStruct = disputeResolver.toStruct();
+
+        expectedDisputeResolver = disputeResolver.clone();
+        expectedDisputeResolver.active = false;
+        expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
+      });
+
+      it("should emit an AllowedSellersAdded event", async function () {
+        // add sellers, test for event
+        expect(await accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd))
+          .to.emit(accountHandler, "AllowedSellersAdded")
+          .withArgs(disputeResolver.id, allowedSellersToAdd, admin.address);
+      });
+
+      it("should update SellerAllowList state only", async function () {
+        const expectedSellerAllowList = [...sellerAllowList, ...allowedSellersToAdd];
+
+        // Add seller ids to seller allow list
+        await accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd);
+
+        // Get the dispute resolver data as structs
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
+          .connect(rando)
+          .getDisputeResolver(id);
+
+        // Parse into entity
+        let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
+        let returnedDisputeResolverFeeList = DisputeResolverFeeList.fromStruct(disputeResolverFeeListStruct);
+        expect(returnedDisputeResolver.isValid()).is.true;
+        expect(returnedDisputeResolverFeeList.isValid()).is.true;
+
+        // Returned values should match expectedDisputeResolver
+        for ([key, value] of Object.entries(expectedDisputeResolver)) {
+          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
+        }
+
+        assert.equal(
+          returnedDisputeResolverFeeList.toString(),
+          disputeResolverFeeList.toString(),
+          "Dispute Resolver Fee List is incorrect"
+        );
+
+        expect(returnedSellerAllowList.toString()).to.eql(expectedSellerAllowList.toString(), "Allowed list wrong");
+
+        // check that mappings of allowed selleres were updated
+        idsToCheck = ["1", "2", "3", "4"];
+        expectedStatus = [true, true, true, true]; // 1 and 3 are allowed
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+
+        expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Dispute resolver does not exist", async function () {
+          // Set invalid id
+          disputeResolver.id = "444";
+
+          // Attempt to add sellers to the allow list, expecting revert
+          await expect(
+            accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd)
+          ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
+
+          // Set invalid id
+          disputeResolver.id = "0";
+
+          // Attempt to add sellers to the allow list, expecting revert
+          await expect(
+            accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd)
+          ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
+        });
+
+        it("Caller is not dispute resolver admin address", async function () {
+          // Attempt to add sellers to the allow list, expecting revert
+          await expect(
+            accountHandler.connect(rando).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd)
+          ).to.revertedWith(RevertReasons.NOT_ADMIN);
+        });
+
+        it("SellerAllowList empty", async function () {
+          allowedSellersToAdd = [];
+
+          // Attempt to add sellers to the allow list, expecting revert
+          await expect(
+            accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd)
+          ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
+        });
+
+        it("SellerAllowList above max", async function () {
+          allowedSellersToAdd = new Array(101).fill("1");
+
+          // Attempt to add sellers to the allow list, expecting revert
+          await expect(
+            accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd)
+          ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
+        });
+
+        it("Some seller does not exist", async function () {
+          // Add invalid id
+          allowedSellersToAdd = ["2", "4", "6"];
+
+          // Attempt to add sellers to the allow list, expecting revert
+          await expect(
+            accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd)
+          ).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
+        });
+
+        it("Seller id is already approved", async function () {
+          // New, but duplicated
+          allowedSellersToAdd = ["2", "4", "2"];
+
+          // Attempt to add sellers to the allow listr, expecting revert
+          await expect(
+            accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd)
+          ).to.revertedWith(RevertReasons.SELLER_ALREADY_APPROVED);
+
+          // Duplicate existing seller id
+          allowedSellersToAdd = ["2", "1"];
+
+          // Attempt to add sellers to the allow list, expecting revert
+          await expect(
+            accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd)
+          ).to.revertedWith(RevertReasons.SELLER_ALREADY_APPROVED);
+        });
+      });
+    });
+
+    context("👉 removeSellerFromAllowList()", async function () {
+      beforeEach(async function () {
+        // make another seller with id = "4"
+        const seller4 = new Seller(
+          (++id).toString(),
+          other3.address,
+          other3.address,
+          other3.address,
+          other3.address,
+          active
+        );
+
+        await accountHandler.connect(admin).createSeller(seller4);
+
+        sellerAllowList = ["1", "3", "2", "4"];
+        allowedSellersToRemove = ["1", "2"];
+
+        disputeResolver.id = (++id).toString();
+
+        await accountHandler
+          .connect(rando)
+          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+        // How that dispute resolver looks as a returned struct
+        disputeResolverStruct = disputeResolver.toStruct();
+
+        expectedDisputeResolver = disputeResolver.clone();
+        expectedDisputeResolver.active = false;
+        expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
+      });
+
+      it("should emit a AllowedSellersRemoved event", async function () {
+        await expect(
+          accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove)
+        )
+          .to.emit(accountHandler, "AllowedSellersRemoved")
+          .withArgs(disputeResolver.id, allowedSellersToRemove, admin.address);
+      });
+
+      it("should update SellerAllowList state only if some Allowed Sellers are removed", async function () {
+        // Remove fees from dispute resolver
+        await accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove);
+
+        // Get the dispute resolver data as structs
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
+          .connect(rando)
+          .getDisputeResolver(id);
+
+        // Parse into entity
+        let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
+        let returnedDisputeResolverFeeList = DisputeResolverFeeList.fromStruct(disputeResolverFeeListStruct);
+        expect(returnedDisputeResolver.isValid()).is.true;
+        expect(returnedDisputeResolverFeeList.isValid()).is.true;
+
+        // Returned values should match expectedDisputeResolver
+        for ([key, value] of Object.entries(expectedDisputeResolver)) {
+          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
+        }
+
+        assert.equal(
+          returnedDisputeResolverFeeList.toString(),
+          disputeResolverFeeList.toString(),
+          "Dispute Resolver Fee List is incorrect"
+        );
+
+        const expectedSellerAllowList = ["4", "3"];
+        expect(returnedSellerAllowList.toString()).to.eql(expectedSellerAllowList.toString(), "Allowed list wrong");
+
+        // check that mappings of allowed selleres were updated
+        idsToCheck = ["1", "2", "3", "4"];
+        expectedStatus = [false, false, true, true]; // 3 and 4 are allowed
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+
+        expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
+      });
+
+      it("should update SellerAllowList state only if all allowed sellers are removed", async function () {
+        allowedSellersToRemove = sellerAllowList;
+
+        // Remove fees from dispute resolver
+        await accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove);
+
+        // Get the dispute resolver data as structs
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
+          .connect(rando)
+          .getDisputeResolver(id);
+
+        // Parse into entity
+        let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
+        let returnedDisputeResolverFeeList = DisputeResolverFeeList.fromStruct(disputeResolverFeeListStruct);
+        expect(returnedDisputeResolver.isValid()).is.true;
+        expect(returnedDisputeResolverFeeList.isValid()).is.true;
+
+        // Returned values should match expectedDisputeResolver
+        for ([key, value] of Object.entries(expectedDisputeResolver)) {
+          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
+        }
+
+        assert.equal(
+          returnedDisputeResolverFeeList.toString(),
+          disputeResolverFeeList.toString(),
+          "Dispute Resolver Fee List is incorrect"
+        );
+
+        const expectedSellerAllowList = [];
+        expect(returnedSellerAllowList.toString()).to.eql(expectedSellerAllowList.toString(), "Allowed list wrong");
+
+        // make another seller with id = "6"
+        const seller6 = new Seller(
+          (++id).toString(),
+          other4.address,
+          other4.address,
+          other4.address,
+          other4.address,
+          active
+        );
+        await accountHandler.connect(admin).createSeller(seller6);
+
+        // check that mappings of allowed selleres were updated
+        idsToCheck = ["1", "2", "3", "4", "5", "6"];
+        expectedStatus = [true, true, true, true, false, true]; // everything was removed, so every seller is allowed. 5 is not a seller
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(disputeResolver.id, idsToCheck);
+
+        expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Dispute resolver does not exist", async function () {
+          // Set invalid id
+          disputeResolver.id = "444";
+
+          // Attempt to remove sellers from the allowed list, expecting revert
+          await expect(
+            accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove)
+          ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
+
+          // Set invalid id
+          disputeResolver.id = "0";
+
+          // Attempt to remove sellers from the allowed list, expecting revert
+          await expect(
+            accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove)
+          ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
+        });
+
+        it("Caller is not dispute resolver admin address", async function () {
+          // Attempt to remove sellers from the allowed list, expecting revert
+          await expect(
+            accountHandler.connect(rando).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove)
+          ).to.revertedWith(RevertReasons.NOT_ADMIN);
+        });
+
+        it("SellerAllowList empty", async function () {
+          allowedSellersToRemove = [];
+
+          // Attempt to remove sellers from the allowed list, expecting revert
+          await expect(
+            accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove)
+          ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
+        });
+
+        it("SellerAllowList above max", async function () {
+          allowedSellersToRemove = new Array(101).fill("1");
+
+          // Attempt to remove sellers from the allowed list, expecting revert
+          await expect(
+            accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove)
+          ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
+        });
+
+        it("Seller id is not approved", async function () {
+          // make another seller with id = "6"
+          const seller6 = new Seller(
+            (++id).toString(),
+            other4.address,
+            other4.address,
+            other4.address,
+            other4.address,
+            active
+          );
+          await accountHandler.connect(admin).createSeller(seller6);
+
+          // seller exists, it's not approved
+          allowedSellersToRemove = ["2", "4", "6"];
+
+          // Attempt to remove sellers from the allowed list, expecting revert
+          await expect(
+            accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove)
+          ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
+
+          // remove same id twice
+          allowedSellersToRemove = ["2", "4", "2"];
+
+          // Attempt to remove sellers from the allowed list, expecting revert
+          await expect(
+            accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove)
+          ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
         });
       });
     });
