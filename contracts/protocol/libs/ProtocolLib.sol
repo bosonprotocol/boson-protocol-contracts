@@ -134,10 +134,10 @@ library ProtocolLib {
         mapping(address => mapping(uint256 => uint256)) conditionalCommitsByAddress;
         // buyer escalation deposit percentage
         uint16 buyerEscalationDepositPercentage;
-        // dispute resolver id => seller id => bool
-        mapping(uint256 => mapping(uint256 => bool)) isSellerAllowed;
-        // dispute resolver id => number of allowed sellers
-        mapping(uint256 => uint256) allowedSellerCount;
+        // dispute resolver id => list of allowed sellers
+        mapping(uint256 => uint256[]) allowedSellers;
+        // dispute resolver id => seller id => index of allowed seller in allowedSellers
+        mapping(uint256 => mapping(uint256 => uint256)) allowedSellerIndex;
     }
 
     // Incrementing ID counters

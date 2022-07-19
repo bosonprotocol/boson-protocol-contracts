@@ -59,6 +59,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - Number of DisputeResolverFee structs in array exceeds max
      * - DisputeResolverFee array contains duplicates
      * - EscalationResponsePeriod is invalid
+     * - Some seller does not exist
      * - Some seller id is already approved
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
@@ -128,7 +129,13 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         storeSellerAllowList(disputeResolverId, _sellerAllowList);
 
         //Notify watchers of state change
-        emit DisputeResolverCreated(_disputeResolver.id, _disputeResolver, _disputeResolverFees, msgSender());
+        emit DisputeResolverCreated(
+            _disputeResolver.id,
+            _disputeResolver,
+            _disputeResolverFees,
+            _sellerAllowList,
+            msgSender()
+        );
     }
 
     /**
@@ -445,6 +452,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - Dispute resolver does not exist
      * - Number of seller ids in array exceeds max
      * - Number of seller ids in array is zero
+     * - Some seller does not exist
      * - Seller id is already approved
      *
      * @param _disputeResolverId - Id of the dispute resolver
@@ -514,10 +522,24 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         ProtocolLib.ProtocolLookups storage pl = protocolLookups();
 
         for (uint256 i = 0; i < _sellerAllowList.length; i++) {
-            require(pl.isSellerAllowed[_disputeResolverId][i], SELLER_NOT_APPROVED);
-            pl.isSellerAllowed[_disputeResolverId][i] = false;
-            // delete pl.isSellerAllowed[_disputeResolverId][i]; gas estimate
-            pl.allowedSellerCount[_disputeResolverId]--;
+            uint256 sellerToRemoveIndex = pl.allowedSellerIndex[_disputeResolverId][_sellerAllowList[i]];
+            require(sellerToRemoveIndex > 0, SELLER_NOT_APPROVED);
+
+            // reduce for 1 to get actual index value
+            sellerToRemoveIndex--;
+
+            uint256 lastIndex = pl.allowedSellers[_disputeResolverId].length - 1; // since allowedSellerIndex > 0, length at this point cannot be 0 therefore we don't worry about overflow
+
+            // if index to remove is not the last index we put the last element in its place
+            if (sellerToRemoveIndex != lastIndex) {
+                uint256 lastSellerId = pl.allowedSellers[_disputeResolverId][lastIndex];
+                pl.allowedSellers[_disputeResolverId][sellerToRemoveIndex] = lastSellerId;
+
+                pl.allowedSellerIndex[_disputeResolverId][lastSellerId] = sellerToRemoveIndex;
+            }
+
+            // remove last element
+            pl.allowedSellers[_disputeResolverId].pop();
         }
 
         emit AllowedSellersRemoved(_disputeResolverId, _sellerAllowList, msgSender());
@@ -609,6 +631,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * @return exists - the dispute resolver was found
      * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
+     * @return sellerAllowList - list of sellers that are allowed to chose this dispute resolver
      */
     function getDisputeResolver(uint256 _disputeResolverId)
         external
@@ -617,10 +640,14 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         returns (
             bool exists,
             DisputeResolver memory disputeResolver,
-            DisputeResolverFee[] memory disputeResolverFees
+            DisputeResolverFee[] memory disputeResolverFees,
+            uint256[] memory sellerAllowList
         )
     {
-        return fetchDisputeResolver(_disputeResolverId);
+        (exists, disputeResolver, disputeResolverFees) = fetchDisputeResolver(_disputeResolverId);
+        if (exists) {
+            sellerAllowList = protocolLookups().allowedSellers[_disputeResolverId];
+        }
     }
 
     /**
@@ -680,6 +707,41 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
+     * @notice Returns the inforamtion if given sellers are allowed to chose the given dispute resolver
+     *
+     * @param _disputeResolverId - id of dispute resolver to check
+     * @param _sellerIds - list of sellers ids to check
+     * @return sellerAllowed - array with indicator (true/false) if seller is allowed to chose the dispute resolver. Index in this array corresponds to indices of the incoming _sellerIds
+     */
+    function areSellersAllowed(uint256 _disputeResolverId, uint256[] calldata _sellerIds)
+        external
+        view
+        override
+        returns (bool[] memory sellerAllowed)
+    {
+        sellerAllowed = new bool[](_sellerIds.length);
+        ProtocolLib.ProtocolLookups storage pl = protocolLookups();
+
+        (bool exists, , ) = fetchDisputeResolver(_disputeResolverId);
+
+        // we populate sellerAllowed only if id really belongs to DR, otherwise return array filled with false
+        if (exists) {
+            if (pl.allowedSellers[_disputeResolverId].length == 0) {
+                // DR allows everyone, just make sure ids really belong to the sellers
+                for (uint256 i = 0; i < _sellerIds.length; i++) {
+                    (exists, ) = fetchSeller(_sellerIds[i]);
+                    sellerAllowed[i] = exists;
+                }
+            } else {
+                // DR is selective. Check for every seller if they are allowed for given _disputeResolverId
+                for (uint256 i = 0; i < _sellerIds.length; i++) {
+                    sellerAllowed[i] = pl.allowedSellerIndex[_disputeResolverId][_sellerIds[i]] > 0; // true if on the list, false otherwise
+                }
+            }
+        }
+    }
+
+    /**
      * @notice Stores DisputeResolver struct in storage
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set
@@ -714,16 +776,31 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     /**
      * @notice Stores seller id to allowed list mapping in storage
      *
+     * Reverts if:
+     * - Some seller does not exist
+     * - Some seller id is already approved
+     *
      * @param _disputeResolverId - id of dispute resolver that is giving the permission
-     * @param _sellerAllowList - list of sellers id, added to allow list
+     * @param _sellerAllowList - list of sellers ids added to allow list
      */
     function storeSellerAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) internal {
         ProtocolLib.ProtocolLookups storage pl = protocolLookups();
 
+        // loop over incoming seller ids and store them to the mapping
         for (uint256 i = 0; i < _sellerAllowList.length; i++) {
-            require(!pl.isSellerAllowed[_disputeResolverId][i], SELLER_ALREADY_APPROVED);
-            pl.isSellerAllowed[_disputeResolverId][i] = true;
-            pl.allowedSellerCount[_disputeResolverId]++;
+            uint256 sellerId = _sellerAllowList[i];
+            //Check Seller exists in sellers mapping
+            (bool exists, ) = fetchSeller(sellerId);
+
+            //Seller must already exist
+            require(exists, NO_SUCH_SELLER);
+
+            //Seller should not be approved already
+            require(pl.allowedSellerIndex[_disputeResolverId][sellerId] == 0, SELLER_ALREADY_APPROVED);
+
+            //Update the mappings
+            pl.allowedSellers[_disputeResolverId].push(sellerId);
+            pl.allowedSellerIndex[_disputeResolverId][sellerId] = pl.allowedSellers[_disputeResolverId].length; //Set index mapping. Should be index in allowedSellers array + 1
         }
     }
 }
