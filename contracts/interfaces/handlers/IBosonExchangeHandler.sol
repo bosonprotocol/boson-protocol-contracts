@@ -44,8 +44,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
      * Reverts if
      * - Exchange does not exist
      * - Exchange is not in redeemed state
-     * - Caller is not buyer or seller's operator
-     * - Caller is seller's operator and offer fulfillment period has not elapsed
+     * - Caller is not buyer and offer fulfillment period has not elapsed
      *
      * Emits
      * - ExchangeCompleted
