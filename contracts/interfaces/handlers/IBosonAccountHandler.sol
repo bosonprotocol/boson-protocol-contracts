@@ -51,8 +51,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Number of DisputeResolverFee structs in array exceeds max
      * - DisputeResolverFee array contains duplicates
      * - EscalationResponsePeriod is invalid
+     * - Number of seller ids in _sellerAllowList array exceeds max
      * - Some seller does not exist
-     * - Some seller id is already approved
+     * - Some seller id is duplicated
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
      * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency. Can be empty.

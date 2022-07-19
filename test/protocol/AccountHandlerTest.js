@@ -48,7 +48,7 @@ describe("IBosonAccountHandler", function () {
     disputeResolverFeeListStruct2,
     disputeResolverFees2,
     feeTokenAddressesToRemove;
-  let sellerAllowList;
+  let sellerAllowList, returnedSellerAllowList, idsToCheck, expectedStatus;
   let metadataUriDR;
   let agent, agentStruct, feePercentage;
   let expected, nextAccountId;
@@ -70,6 +70,7 @@ describe("IBosonAccountHandler", function () {
     disputeResolverStruct,
     disputeResolverFeeList,
     disputeResolverFeeListArrayPosition,
+    sellerAllowList,
     executedBy
   ) {
     let valid = true;
@@ -88,6 +89,11 @@ describe("IBosonAccountHandler", function () {
       }
       assert.equal(event.disputeResolverId.toString(), disputeResolverId, "Dispute Resolver Id is incorrect");
       assert.equal(event.executedBy, executedBy, "executedBy is incorrect");
+      assert.deepEqual(
+        event.sellerAllowList.map((v) => v.toString()),
+        sellerAllowList,
+        "sellerAllowList is incorrect"
+      );
 
       const disputeResolverFeeListStruct = event[disputeResolverFeeListArrayPosition]; //DisputeResolverFees[] is in element 2 of the event array
       const disputeResolverFeeListObject = DisputeResolverFeeList.fromStruct(disputeResolverFeeListStruct);
@@ -1310,14 +1316,30 @@ describe("IBosonAccountHandler", function () {
 
       disputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFees);
 
-      // Add seller to sellerAllowList
-      sellerAllowList = [seller.id];
+      // Create two additional sellers and create seller allow list
+      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
+      seller2 = new Seller((++id).toString(), other1.address, other1.address, other1.address, other1.address, active);
+      let seller3 = new Seller(
+        (++id).toString(),
+        other2.address,
+        other2.address,
+        other2.address,
+        other2.address,
+        active
+      );
+
+      await accountHandler.connect(admin).createSeller(seller);
+      await accountHandler.connect(admin).createSeller(seller2);
+      await accountHandler.connect(admin).createSeller(seller3);
+
+      // Make a sellerAllowList
+      sellerAllowList = ["3", "1"];
     });
 
     context("👉 createDisputeResolver()", async function () {
       beforeEach(async function () {
         expectedDisputeResolver = new DisputeResolver(
-          id,
+          (++id).toString(),
           oneMonth.toString(),
           operator.address,
           admin.address,
@@ -1336,10 +1358,11 @@ describe("IBosonAccountHandler", function () {
         const valid = await isValidDisputeResolverEvent(
           tx,
           "DisputeResolverCreated",
-          disputeResolver.id,
+          expectedDisputeResolver.id,
           expectedDisputeResolverStruct,
           disputeResolverFeeList,
           2,
+          sellerAllowList,
           rando.address
         );
         expect(valid).is.true;
@@ -1358,19 +1381,20 @@ describe("IBosonAccountHandler", function () {
           expectedDisputeResolverStruct,
           disputeResolverFeeList,
           2,
+          sellerAllowList,
           rando.address
         );
         expect(valid).is.true;
       });
 
-      it("should update state if Dispute Resolver Fees are supplied", async function () {
+      it("should update state if Dispute Resolver Fees and Seller Allow List are supplied", async function () {
         // Create a dispute resolver
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // Get the dispute resolver data as structs
-        [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
           .getDisputeResolver(id);
 
@@ -1390,11 +1414,21 @@ describe("IBosonAccountHandler", function () {
           disputeResolverFeeList.toString(),
           "Dispute Resolver Fee List is incorrect"
         );
+
+        expect(returnedSellerAllowList.toString()).to.eql(sellerAllowList.toString(), "Allowed list wrong");
+
+        // check that mappings of allowed selleres were updated
+        idsToCheck = ["1", "2", "3", "4"];
+        expectedStatus = [true, false, true, false]; // 1 and 3 are allowed
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+
+        expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
 
-      it("should update state if NO Dispute Resolver Fees are supplied", async function () {
+      it("should update state if NO Dispute Resolver Fees are supplied and seller allow list is empty", async function () {
         disputeResolverFees = [];
         disputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFees);
+        sellerAllowList = [];
 
         // Create a dispute resolver
         await accountHandler
@@ -1402,7 +1436,7 @@ describe("IBosonAccountHandler", function () {
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // Get the dispute resolver data as structs
-        [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
           .getDisputeResolver(id);
 
@@ -1422,6 +1456,15 @@ describe("IBosonAccountHandler", function () {
           disputeResolverFeeList.toString(),
           "Dispute Resolver Fee List is incorrect"
         );
+
+        expect(returnedSellerAllowList).to.eql(sellerAllowList, "Allowed list wrong");
+
+        // check that mappings of allowed selleres were updated
+        idsToCheck = ["1", "2", "3", "4"];
+        expectedStatus = [true, true, true, false]; // ids 1,2 and 3 are sellers so the should be allowed
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+
+        expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
 
       it("should allow same fee token to be specified for multiple dispute resolvers", async function () {
@@ -1509,6 +1552,7 @@ describe("IBosonAccountHandler", function () {
           expectedDisputeResolverStruct,
           disputeResolverFeeList,
           2,
+          sellerAllowList,
           rando.address
         );
         expect(valid).is.true;
@@ -1556,7 +1600,7 @@ describe("IBosonAccountHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
-        it.only("Any address is not unique to this dispute resolver Id", async function () {
+        it("Any address is not unique to this dispute resolver Id", async function () {
           id = await accountHandler.connect(rando).getNextAccountId();
 
           disputeResolver2 = new DisputeResolver(
@@ -1637,6 +1681,35 @@ describe("IBosonAccountHandler", function () {
             accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees2, sellerAllowList)
           ).to.revertedWith(RevertReasons.DUPLICATE_DISPUTE_RESOLVER_FEES);
         });
+
+        it("DisputeResolverFees above max", async function () {
+          sellerAllowList = new Array(101).fill("1");
+
+          // Attempt to Create a DisputeResolver, expecting revert
+          await expect(
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+          ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
+        });
+
+        it("Duplicate dispute resolver fees", async function () {
+          //Create new sellerAllowList array
+          sellerAllowList = ["3", "2", "8"];
+
+          // Create a dispute resolver
+          await expect(
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+          ).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
+        });
+
+        it("Some seller id is duplicated", async function () {
+          //Create new sellerAllowList array
+          sellerAllowList = ["1", "2", "1"];
+
+          // Create a dispute resolver
+          await expect(
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+          ).to.revertedWith(RevertReasons.SELLER_ALREADY_APPROVED);
+        });
       });
     });
 
@@ -1648,6 +1721,8 @@ describe("IBosonAccountHandler", function () {
           new DisputeResolverFee(other2.address, "MockToken2", "200"),
           new DisputeResolverFee(other3.address, "MockToken3", "300"),
         ];
+
+        sellerAllowList = ["1"];
 
         // Create a dispute resolver
         await accountHandler
@@ -1676,7 +1751,7 @@ describe("IBosonAccountHandler", function () {
 
       it("should return the details of the dispute resolver as structs if found", async function () {
         // Get the dispute resolver as a struct
-        [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
           .getDisputeResolver(id);
 
@@ -1687,6 +1762,74 @@ describe("IBosonAccountHandler", function () {
         // Validate
         expect(disputeResolver.isValid()).to.be.true;
         expect(disputeResolverFeeList.isValid()).to.be.true;
+
+        let valid =
+          Array.isArray(returnedSellerAllowList) &&
+          returnedSellerAllowList.reduce(
+            (previousAllowedSeller, currentAllowedSeller) =>
+              previousAllowedSeller && typeof ethers.BigNumber.from(currentAllowedSeller) === "object",
+            true
+          );
+        expect(valid).to.be.true;
+      });
+    });
+
+    context("👉 areSellersAllowed()", async function () {
+      beforeEach(async function () {
+        //Create DisputeResolverFee array
+        disputeResolverFees = [new DisputeResolverFee(other1.address, "MockToken1", "100")];
+
+        // id of the current dispute resolver
+        ++id;
+      });
+
+      it("Dispute resolver allows all sellers", async function () {
+        // Make a sellerAllowList
+        sellerAllowList = [];
+
+        // Create a dispute resolver
+        await accountHandler
+          .connect(rando)
+          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+        idsToCheck = ["1", "2", "3", "4"];
+        expectedStatus = [true, true, true, false]; // 1,2 and 3 are sellers, 4 is not a seller
+
+        // Get the statuese flag
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+
+        expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
+      });
+
+      it("Dispute resolver has an allow list", async function () {
+        // Make a sellerAllowList
+        sellerAllowList = ["3", "1"];
+
+        // Create a dispute resolver
+        await accountHandler
+          .connect(rando)
+          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+        idsToCheck = ["1", "2", "3", "4"];
+        expectedStatus = [true, false, true, false]; // 1 and 3 are allowed, 2 is not, 4 is not a seller
+
+        // Get the statuese flag
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+
+        expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
+      });
+
+      it("Dispute resolved does not exist", async function () {
+        // not DR id
+        id = "16";
+
+        idsToCheck = ["1", "2", "3", "4"];
+        expectedStatus = [false, false, false, false]; // since DR does not exist everything is false
+
+        // Get the statuese flag
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+
+        expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
     });
 
@@ -1899,6 +2042,7 @@ describe("IBosonAccountHandler", function () {
           expectedDisputeResolverStruct2,
           disputeResolverFeeList2,
           2,
+          sellerAllowList,
           rando.address
         );
         expect(valid).is.true;

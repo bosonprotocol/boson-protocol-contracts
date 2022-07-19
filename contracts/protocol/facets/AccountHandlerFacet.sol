@@ -59,8 +59,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - Number of DisputeResolverFee structs in array exceeds max
      * - DisputeResolverFee array contains duplicates
      * - EscalationResponsePeriod is invalid
+     * - Number of seller ids in _sellerAllowList array exceeds max
      * - Some seller does not exist
-     * - Some seller id is already approved
+     * - Some seller id is duplicated
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
      * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency. Can be empty.
@@ -79,6 +80,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
                 _disputeResolver.treasury != address(0),
             INVALID_ADDRESS
         );
+
+        // Make sure the gas block limit is not hit
+        require(_sellerAllowList.length <= protocolLimits().maxAllowedSellers, INVALID_AMOUNT_ALLOWED_SELLERS);
 
         // Get the next account Id and increment the counter
         uint256 disputeResolverId = protocolCounters().nextAccountId++;
