@@ -86,14 +86,14 @@ describe("IBosonAccountHandler", function () {
           "Dispute Resolver is incorrect"
         );
         expect(DisputeResolver.fromStruct(event.disputeResolver).isValid()).is.true;
+        assert.deepEqual(
+          event.sellerAllowList.map((v) => v.toString()),
+          sellerAllowList,
+          "sellerAllowList is incorrect"
+        );
       }
       assert.equal(event.disputeResolverId.toString(), disputeResolverId, "Dispute Resolver Id is incorrect");
       assert.equal(event.executedBy, executedBy, "executedBy is incorrect");
-      assert.deepEqual(
-        event.sellerAllowList.map((v) => v.toString()),
-        sellerAllowList,
-        "sellerAllowList is incorrect"
-      );
 
       const disputeResolverFeeListStruct = event[disputeResolverFeeListArrayPosition]; //DisputeResolverFees[] is in element 2 of the event array
       const disputeResolverFeeListObject = DisputeResolverFeeList.fromStruct(disputeResolverFeeListStruct);
@@ -1377,7 +1377,7 @@ describe("IBosonAccountHandler", function () {
         const valid = await isValidDisputeResolverEvent(
           tx,
           "DisputeResolverCreated",
-          disputeResolver.id,
+          expectedDisputeResolver.id,
           expectedDisputeResolverStruct,
           disputeResolverFeeList,
           2,
@@ -1476,7 +1476,7 @@ describe("IBosonAccountHandler", function () {
         // Get the dispute resolver data as structs
         [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
           .connect(rando)
-          .getDisputeResolver(id);
+          .getDisputeResolver(expectedDisputeResolver.id);
 
         // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
@@ -1496,7 +1496,7 @@ describe("IBosonAccountHandler", function () {
         );
 
         // Create a dispute resolver 2
-        id2 = nextAccountId++;
+        id2 = ++id;
         disputeResolver2 = new DisputeResolver(
           id2.toString(),
           oneMonth.toString(),
@@ -1527,8 +1527,8 @@ describe("IBosonAccountHandler", function () {
         expect(returnedDisputeResolverFeeList2.isValid()).is.true;
 
         // Returned values should match the expectedDisputeResolver
-        for ([key, value] of Object.entries(returnedDisputeResolver2)) {
-          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
+        for ([key, value] of Object.entries(disputeResolver2)) {
+          expect(JSON.stringify(returnedDisputeResolver2[key]) === JSON.stringify(value)).is.true;
         }
 
         assert.equal(
@@ -1548,7 +1548,7 @@ describe("IBosonAccountHandler", function () {
         const valid = await isValidDisputeResolverEvent(
           tx,
           "DisputeResolverCreated",
-          nextAccountId,
+          expectedDisputeResolver.id,
           expectedDisputeResolverStruct,
           disputeResolverFeeList,
           2,
@@ -1562,7 +1562,7 @@ describe("IBosonAccountHandler", function () {
         expect(exists).to.be.false;
 
         // next dispute resolver id should exist
-        [exists] = await accountHandler.connect(rando).getDisputeResolver(nextAccountId);
+        [exists] = await accountHandler.connect(rando).getDisputeResolver(id);
         expect(exists).to.be.true;
       });
 
@@ -1730,12 +1730,12 @@ describe("IBosonAccountHandler", function () {
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // id of the current dispute resolver and increment nextAccountId
-        id = nextAccountId++;
+        disputeResolver.id = ++id;
       });
 
       it("should return true for exists if dispute resolver is found", async function () {
         // Get the exists flag
-        [exists] = await accountHandler.connect(rando).getDisputeResolver(id);
+        [exists] = await accountHandler.connect(rando).getDisputeResolver(disputeResolver.id);
 
         // Validate
         expect(exists).to.be.true;
@@ -1753,7 +1753,7 @@ describe("IBosonAccountHandler", function () {
         // Get the dispute resolver as a struct
         [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
-          .getDisputeResolver(id);
+          .getDisputeResolver(disputeResolver.id);
 
         // Parse into entity
         disputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
@@ -1836,12 +1836,10 @@ describe("IBosonAccountHandler", function () {
     context("👉 updateDisputeResolver()", async function () {
       beforeEach(async function () {
         // Create a dispute resolver from objects in Dispute Resolver Methods beforeEach
+        disputeResolver.id = (++id).toString();
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-
-        // id of the current dispute resolver and increment nextAccountId
-        id = nextAccountId++;
 
         expectedDisputeResolver = disputeResolver.clone();
         expectedDisputeResolver.active = false;
@@ -1922,7 +1920,7 @@ describe("IBosonAccountHandler", function () {
 
         [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
           .connect(rando)
-          .getDisputeResolver(id);
+          .getDisputeResolver(expectedDisputeResolver.id);
 
         // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
@@ -2009,7 +2007,7 @@ describe("IBosonAccountHandler", function () {
 
       it("should update the correct dispute resolver", async function () {
         // Configure another dispute resolver
-        id2 = nextAccountId++;
+        id2 = ++id;
         disputeResolver2 = new DisputeResolver(
           id2.toString(),
           oneMonth.toString(),
@@ -2067,7 +2065,7 @@ describe("IBosonAccountHandler", function () {
 
         [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
           .connect(rando)
-          .getDisputeResolver(id);
+          .getDisputeResolver(expectedDisputeResolver.id);
 
         // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
@@ -2296,6 +2294,7 @@ describe("IBosonAccountHandler", function () {
           "dummy value",
           addedDisputeResolverFeeList,
           1,
+          [],
           admin.address
         );
 
@@ -2911,6 +2910,7 @@ describe("IBosonAccountHandler", function () {
 
     context("👉 activateDisputeResolver()", async function () {
       beforeEach(async function () {
+        disputeResolver.id = (++id).toString();
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
