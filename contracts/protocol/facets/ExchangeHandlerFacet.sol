@@ -119,8 +119,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      * Reverts if
      * - Exchange does not exist
      * - Exchange is not in redeemed state
-     * - Caller is not buyer or seller's operator
-     * - Caller is seller's operator and offer fulfillment period has not elapsed
+     * - Caller is not buyer and offer fulfillment period has not elapsed
      *
      * Emits
      * - ExchangeCompleted
@@ -136,22 +135,16 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         Offer storage offer;
         (, offer) = fetchOffer(offerId);
 
-        // Get seller id associated with caller
-        bool sellerExists;
-        uint256 sellerId;
-        (sellerExists, sellerId) = getSellerIdByOperator(msgSender());
+        // Is this the buyer?
+        bool buyerExists;
+        uint256 buyerId;
+        (buyerExists, buyerId) = getBuyerIdByWallet(msgSender());
 
-        // Seller may only call after fulfillment period elapses, buyer may call any time
-        if (sellerExists && offer.sellerId == sellerId) {
-            // Make sure the fulfillment period has elapsed
+        // Buyer may call any time. Seller or anyone else may call after fulfillment period elapses
+        // N.B. An existing buyer or seller may be the "anyone else" on an exchange they are not a part of
+        if (!buyerExists || buyerId != exchange.buyerId) {
             uint256 elapsed = block.timestamp - exchange.voucher.redeemedDate;
             require(elapsed >= fetchOfferDurations(offerId).fulfillmentPeriod, FULFILLMENT_PERIOD_NOT_ELAPSED);
-        } else {
-            // Is this the buyer?
-            bool buyerExists;
-            uint256 buyerId;
-            (buyerExists, buyerId) = getBuyerIdByWallet(msgSender());
-            require(buyerExists && buyerId == exchange.buyerId, NOT_BUYER_OR_SELLER);
         }
 
         // Finalize the exchange
