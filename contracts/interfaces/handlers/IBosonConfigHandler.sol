@@ -9,7 +9,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x52192fa6
+ * The ERC-165 identifier for this interface is: 0x7ce319fe
  */
 interface IBosonConfigHandler is IBosonConfigEvents {
     /**
@@ -41,18 +41,32 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     function getTreasuryAddress() external view returns (address payable);
 
     /**
-     * @notice Sets the address of the Voucher NFT address (proxy)
+     * @notice Sets the address of the Boson Voucher beacon contract.
      *
-     * Emits a VoucherAddressChanged event.
+     * Emits a VoucherBeaconAddressChanged event.
      *
-     * @param _voucher - the address of the nft contract
+     * @param _voucherBeaconAddress - the address of the Boson Voucher beacon contract.
      */
-    function setVoucherAddress(address _voucher) external;
+    function setVoucherBeaconAddress(address _voucherBeaconAddress) external;
 
     /**
-     * @notice The Voucher address getter
+     * @notice The voucherBeaconAddress getter
      */
-    function getVoucherAddress() external view returns (address);
+    function getVoucherBeaconAddress() external view returns (address);
+
+    /**
+     * @notice Sets the address of the Boson Voucher reference proxy implementation
+     *
+     * Emits a BeaconProxyAddressChanged event.
+     *
+     * @param _beaconProxyAddress - the address of the reference proxy implementation
+     */
+    function setBeaconProxyAddress(address _beaconProxyAddress) external;
+
+    /**
+     * @notice The beaconProxyAddress getter
+     */
+    function getBeaconProxyAddress() external view returns (address);
 
     /**
      * @notice Sets the protocol fee percentage.
@@ -197,4 +211,23 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Get the maximum disputes per batch
      */
     function getMaxDisputesPerBatch() external view returns (uint16);
+
+    /**
+     * @notice Sets the buyer escalation fee percentage.
+     *
+     * Emits a BuyerEscalationFeePercentageChanged event.
+     *
+     * Reverts if the _buyerEscalationDepositPercentage is greater than 10000.
+     *
+     * @param _buyerEscalationDepositPercentage - the percentage of the DR fee that will be charged to buyer if they want to escalate the dispute
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
+     */
+    function setBuyerEscalationDepositPercentage(uint16 _buyerEscalationDepositPercentage) external;
+
+    /**
+     * @notice Get the buyer escalation fee percentage.
+     */
+    function getBuyerEscalationDepositPercentage() external view returns (uint16);
 }

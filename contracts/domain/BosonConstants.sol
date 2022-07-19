@@ -68,6 +68,7 @@ contract BosonConstants {
     string internal constant INVALID_DISPUTE_DURATION = "Invalid dispute duration";
     string internal constant INVALID_DISPUTE_RESOLVER = "Invalid dispute resolver";
     string internal constant INVALID_QUANTITY_AVAILABLE = "Invalid quantity available";
+    string internal constant DR_UNSUPPORTED_FEE = "Dispute resolver does not accept this token";
 
     // Revert Reasons: Group related
     string internal constant NO_SUCH_GROUP = "No such group";
@@ -131,7 +132,7 @@ contract BosonConstants {
     string internal constant INVALID_DISPUTE_TIMEOUT = "Invalid dispute timeout";
     string internal constant TOO_MANY_DISPUTES = "Exceeded maximum disputes in a single transaction";
 
-    // Revert Reasons: General
+    // Revert Reasons: Config related
     string internal constant FEE_PERCENTAGE_INVALID = "Percentage representation must be less than 10000";
 }
 

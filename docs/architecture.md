@@ -8,16 +8,9 @@ The V2 architecture takes a completely different approach versus V1. Considering
 * **Modularity** - simpler to reason about, test, and replace parts of. Once development begins and for as long as possible thereafter, we must be able to move fast, incorporate new functionality without disturbing the existing architecture or misplacing responsibilities.
 * **Durability** - We need developer adoption for broad ecosystem penetration. Developers like project dependencies that don't burn down and rebuild so much. V3 is on the horizon, and as a living, engaged protocol, it must be able to adapt to the prevailing environment while minimizing friction to continued adoption.
 
-### Protocol Diamond
-![Protocol Diamond](images/Boson_Protocol_V2_-_Protocol_Diamond.png)
-Our modular approach is based on [EIP-2939 Diamond MultiFacet Proxy](https://eips.ethereum.org/EIPS/eip-2535).
-
-### Protocol Clients
-![Protocol Clients](images/Boson_Protocol_V2_-_Protocol_Clients.png)
-Clients need roled uni- or bi-directional access to the Protocol.
-
 ### Protocol Diamond and Facets
-The V2 protocol is built around the [EIP-2535](https://eips.ethereum.org/EIPS/eip-2535) Diamond Multi-Facet Proxy specification.
+![Protocol Diamond](images/Boson_Protocol_V2_-_Protocol_Diamond.png)
+Our modular approach is based on [EIP-2535 Diamond MultiFacet Proxy](https://eips.ethereum.org/EIPS/eip-2535).
 
 #### Diamond, you say?
 If you aren't familiar with proxies or the Diamond in particular, a good analogy is a modular stereo system.
@@ -48,21 +41,15 @@ This pattern gives us some distinct advantages, a few of which are:
 - **Easier to reason about contract storage**: When using Diamonds storage is a first class consideration. With developers working on different facets, it leads us to consider and declare the data that is maintained and visible to each facet in a uniform way. This means facets can share data while not clobbering each other in the shared storage slots of the Diamond proxy.
 
 ### Voucher NFT
-Given the utility of the Diamond discussed above, you may have questions:
+![Voucher NFT](images/Boson_Protocol_V2_-_Voucher_Clones.png)
+The Boson Voucher implementation is built around the OpenZeppelin [Beacon](https://docs.openzeppelin.com/contracts/4.x/api/proxy#beacon) and [ERC721](https://docs.openzeppelin.com/contracts/4.x/api/token/erc721) contracts.
 
-* Why is the VoucherNFT not just another facet? 
-* Why have it be a standalone contract with it's own 1-to-1 proxy for upgradeability?
+Every seller needs their own instance of the Boson Voucher NFT so that they can manage their collection separately on marketplaces like OpenSea. For this reason, it cannot exist behind the Protocol Diamond, as an ordinary upgradable Facet.
 
-There are two reasons for this. Or really, one implacable reason and one follow-on justification:
+Still, the Boson Voucher contract must be upgradeable. By using the Beacon Proxy pattern, it can be upgraded for all sellers with a single transaction.
 
-#### Incompatible inherited code
-Because of the way OpenZeppelin has currently implemented their upgradeable contracts, they are not safe to use behind a Diamond. 
+### Protocol Clients
+![Protocol Clients](images/Boson_Protocol_V2_-_Protocol_Clients.png)
+When contracts need roled access to the Protocol Diamond's functionality, either unidirectionally or bidirectionally, they can be implemented as upgradeable Protocol Clients. This pattern supports a Client that has a one-to-one relationship between its proxy and its logic implementation.
 
-The issue is that they define some storage members [directly in the contract](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/master/contracts/token/ERC1155/ERC1155Upgradeable.sol#L24) rather than specifying a non-conflicting, designated storage slot. 
-
-That would be fine if it were deployed in a 1-to-1 proxy relationship, because only another version of the same contract would access the data in the proxy storage after an upgrade. 
-
-However, as a facet of a Diamond the same assumption is not true. If more than one facet does this, updates to storage data will collide and be corrupted in an unpredictable way. This is because one such contract is not aware of the members another has declared, but they both map to the same zero-based, incrementing storage slots rather than a designated slot.
-
-#### Easier integration with marketplaces
-Vouchers will be traded on marketplaces, who expect to integrate with relatively standard, occasionally proxied NFT contracts. Should problems arise with voucher tokens, it will be much easier to analyse the simple, proxied NFT than the full protocol.
+Initially, the Boson Voucher NFT was implemented as an upgradable standalone contract with a one-to-one relationship to its proxy. When the requirement for sellers to have their own voucher collections came to pass, we switched to the Beacon pattern as described above. The pattern for roled, upgradeable standalone client support remains intact if not used at the moment.

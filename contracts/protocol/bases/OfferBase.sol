@@ -30,6 +30,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
@@ -83,6 +84,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
@@ -127,13 +129,25 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // specified resolver must be registered and active, except for absolute zero offers with unspecified dispute resolver
         DisputeResolutionTerms memory disputeResolutionTerms;
         if (_offer.price != 0 || _offer.sellerDeposit != 0 || _disputeResolverId != 0) {
-            (bool exists, DisputeResolver storage disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
+            (
+                bool exists,
+                DisputeResolver storage disputeResolver,
+                DisputeResolverFee[] storage disputeResolverFees
+            ) = fetchDisputeResolver(_disputeResolverId);
             require(exists && disputeResolver.active, INVALID_DISPUTE_RESOLVER);
+
+            // get the index of DisputeResolverFee and make sure DR supports the exchangeToken
+            uint256 feeIndex = protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_offer.exchangeToken];
+            require(feeIndex > 0, DR_UNSUPPORTED_FEE);
+
+            uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
 
             // store DR terms
             disputeResolutionTerms = DisputeResolutionTerms(
                 _disputeResolverId,
-                disputeResolver.escalationResponsePeriod
+                disputeResolver.escalationResponsePeriod,
+                feeAmount,
+                (feeAmount * protocolLookups().buyerEscalationDepositPercentage) / 10000
             );
             protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
         }

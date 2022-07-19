@@ -14,7 +14,7 @@ const { oneWeek, oneMonth } = require("../utils/constants");
 describe("IBosonConfigHandler", function () {
   // Common vars
   let InterfaceIds, support;
-  let accounts, deployer, rando, token, treasury, voucher;
+  let accounts, deployer, rando, token, treasury, beacon, proxy;
   let maxOffersPerGroup,
     maxTwinsPerBundle,
     maxOffersPerBundle,
@@ -22,7 +22,8 @@ describe("IBosonConfigHandler", function () {
     maxTokensPerWithdrawal,
     maxFeesPerDisputeResolver,
     maxEscalationResponsePeriod,
-    maxDisputesPerBatch;
+    maxDisputesPerBatch,
+    buyerEscalationDepositPercentage;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
 
@@ -38,7 +39,8 @@ describe("IBosonConfigHandler", function () {
     rando = accounts[1];
     token = accounts[2];
     treasury = accounts[3];
-    voucher = accounts[4];
+    beacon = accounts[4];
+    proxy = accounts[5];
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -57,6 +59,7 @@ describe("IBosonConfigHandler", function () {
     maxFeesPerDisputeResolver = 100;
     maxEscalationResponsePeriod = oneMonth;
     maxDisputesPerBatch = 100;
+    buyerEscalationDepositPercentage = 100;
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
@@ -73,7 +76,8 @@ describe("IBosonConfigHandler", function () {
           {
             tokenAddress: token.address,
             treasuryAddress: treasury.address,
-            voucherAddress: voucher.address,
+            voucherBeaconAddress: beacon.address,
+            beaconProxyAddress: proxy.address,
           },
           // Protocol limits
           {
@@ -91,6 +95,7 @@ describe("IBosonConfigHandler", function () {
             percentage: protocolFeePercentage,
             flatBoson: protocolFeeFlatBoson,
           },
+          buyerEscalationDepositPercentage,
         ];
 
         const { cutTransaction } = await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
@@ -100,8 +105,10 @@ describe("IBosonConfigHandler", function () {
           .withArgs(token.address, deployer.address)
           .to.emit(configHandler, "TreasuryAddressChanged")
           .withArgs(treasury.address, deployer.address)
-          .to.emit(configHandler, "VoucherAddressChanged")
-          .withArgs(voucher.address, deployer.address)
+          .to.emit(configHandler, "VoucherBeaconAddressChanged")
+          .withArgs(beacon.address, deployer.address)
+          .to.emit(configHandler, "BeaconProxyAddressChanged")
+          .withArgs(proxy.address, deployer.address)
           .to.emit(configHandler, "ProtocolFeePercentageChanged")
           .withArgs(protocolFeePercentage, deployer.address)
           .to.emit(configHandler, "ProtocolFeeFlatBosonChanged")
@@ -121,6 +128,8 @@ describe("IBosonConfigHandler", function () {
           .to.emit(configHandler, "MaxEscalationResponsePeriodChanged")
           .withArgs(maxEscalationResponsePeriod, deployer.address)
           .to.emit(configHandler, "MaxDisputesPerBatchChanged")
+          .withArgs(maxDisputesPerBatch, deployer.address)
+          .to.emit(configHandler, "MaxDisputesPerBatchChanged")
           .withArgs(maxDisputesPerBatch, deployer.address);
       });
     });
@@ -134,7 +143,8 @@ describe("IBosonConfigHandler", function () {
         {
           treasuryAddress: treasury.address,
           tokenAddress: token.address,
-          voucherAddress: voucher.address,
+          voucherBeaconAddress: beacon.address,
+          beaconProxyAddress: proxy.address,
         },
         // Protocol limits
         {
@@ -152,6 +162,7 @@ describe("IBosonConfigHandler", function () {
           percentage: protocolFeePercentage,
           flatBoson: protocolFeeFlatBoson,
         },
+        buyerEscalationDepositPercentage,
       ];
       await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
     });
@@ -388,31 +399,62 @@ describe("IBosonConfigHandler", function () {
         });
       });
 
-      context("👉 setVoucherAddress()", async function () {
+      context("👉 setVoucherBeaconAddress()", async function () {
         beforeEach(async function () {
-          // set new value for treasury address
-          voucher = accounts[5];
+          // set new value for beacon address
+          beacon = accounts[9];
         });
 
         it("should emit a VoucherAddressChanged event", async function () {
-          // Set new treasury address, testing for the event
-          await expect(configHandler.connect(deployer).setVoucherAddress(voucher.address))
-            .to.emit(configHandler, "VoucherAddressChanged")
-            .withArgs(voucher.address, deployer.address);
+          // Set new beacon address, testing for the event
+          await expect(configHandler.connect(deployer).setVoucherBeaconAddress(beacon.address))
+            .to.emit(configHandler, "VoucherBeaconAddressChanged")
+            .withArgs(beacon.address, deployer.address);
         });
 
         it("should update state", async function () {
-          // Set new voucher address
-          await configHandler.connect(deployer).setVoucherAddress(voucher.address);
+          // Set new beacon address
+          await configHandler.connect(deployer).setVoucherBeaconAddress(beacon.address);
 
           // Verify that new value is stored
-          expect(await configHandler.connect(rando).getVoucherAddress()).to.equal(voucher.address);
+          expect(await configHandler.connect(rando).getVoucherBeaconAddress()).to.equal(beacon.address);
         });
 
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
-            // Attempt to set new voucher address, expecting revert
-            await expect(configHandler.connect(rando).setVoucherAddress(voucher.address)).to.revertedWith(
+            // Attempt to set new beacon address, expecting revert
+            await expect(configHandler.connect(rando).setVoucherBeaconAddress(beacon.address)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
+          });
+        });
+      });
+
+      context("👉 setBeaconProxyAddress()", async function () {
+        beforeEach(async function () {
+          // set new value for proxy address
+          proxy = accounts[9];
+        });
+
+        it("should emit a VoucherAddressChanged event", async function () {
+          // Set new proxy address, testing for the event
+          await expect(configHandler.connect(deployer).setBeaconProxyAddress(proxy.address))
+            .to.emit(configHandler, "BeaconProxyAddressChanged")
+            .withArgs(proxy.address, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new proxy address
+          await configHandler.connect(deployer).setBeaconProxyAddress(proxy.address);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getBeaconProxyAddress()).to.equal(proxy.address);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new proxy address, expecting revert
+            await expect(configHandler.connect(rando).setBeaconProxyAddress(proxy.address)).to.revertedWith(
               RevertReasons.ACCESS_DENIED
             );
           });
@@ -421,19 +463,19 @@ describe("IBosonConfigHandler", function () {
 
       context("👉 setProtocolFeePercentage()", async function () {
         beforeEach(async function () {
-          // set new value for treasury address
+          // set new value for protocol fee precentage
           protocolFeePercentage = 10000;
         });
 
         it("should emit a ProtocolFeePercentageChanged event", async function () {
-          // Set new treasury address, testing for the event
+          // Set new protocol fee precentage address, testing for the event
           await expect(configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage))
             .to.emit(configHandler, "ProtocolFeePercentageChanged")
             .withArgs(protocolFeePercentage, deployer.address);
         });
 
         it("should update state", async function () {
-          // Set new voucher address
+          // Set new protocol fee precentage
           await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
 
           // Verify that new value is stored
@@ -442,7 +484,7 @@ describe("IBosonConfigHandler", function () {
 
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
-            // Attempt to set new voucher address, expecting revert
+            // Attempt to set new protocol fee precentage, expecting revert
             await expect(configHandler.connect(rando).setProtocolFeePercentage(protocolFeePercentage)).to.revertedWith(
               RevertReasons.ACCESS_DENIED
             );
@@ -583,6 +625,49 @@ describe("IBosonConfigHandler", function () {
           });
         });
       });
+
+      context("👉 setBuyerEscalationDepositPercentage()", async function () {
+        beforeEach(async function () {
+          // set new value for buyer escalation deposit percentage
+          buyerEscalationDepositPercentage = 50;
+        });
+
+        it("should emit a BuyerEscalationFeePercentageChanged event", async function () {
+          // Set new buyer escalation deposit percentage, testing for the event
+          await expect(
+            configHandler.connect(deployer).setBuyerEscalationDepositPercentage(buyerEscalationDepositPercentage)
+          )
+            .to.emit(configHandler, "BuyerEscalationFeePercentageChanged")
+            .withArgs(buyerEscalationDepositPercentage, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new buyer escalation deposit percentage
+          await configHandler.connect(deployer).setBuyerEscalationDepositPercentage(buyerEscalationDepositPercentage);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getBuyerEscalationDepositPercentage()).to.equal(
+            buyerEscalationDepositPercentage
+          );
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new buyer escalation deposit percentage, expecting revert
+            await expect(
+              configHandler.connect(rando).setBuyerEscalationDepositPercentage(buyerEscalationDepositPercentage)
+            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          });
+
+          it("protocolFeePercentage must be less than 10000", async function () {
+            // Attempt to set new buyer escalation deposit percentage, expecting revert
+            buyerEscalationDepositPercentage = 10001;
+            await expect(
+              configHandler.connect(deployer).setBuyerEscalationDepositPercentage(buyerEscalationDepositPercentage)
+            ).to.revertedWith(RevertReasons.FEE_PERCENTAGE_INVALID);
+          });
+        });
+      });
     });
 
     context("📋 Getters", async function () {
@@ -596,8 +681,12 @@ describe("IBosonConfigHandler", function () {
           "Invalid treasury address"
         );
         expect(await configHandler.connect(rando).getTokenAddress()).to.equal(token.address, "Invalid token address");
-        expect(await configHandler.connect(rando).getVoucherAddress()).to.equal(
-          voucher.address,
+        expect(await configHandler.connect(rando).getVoucherBeaconAddress()).to.equal(
+          beacon.address,
+          "Invalid voucher address"
+        );
+        expect(await configHandler.connect(rando).getBeaconProxyAddress()).to.equal(
+          proxy.address,
           "Invalid voucher address"
         );
         expect(await configHandler.connect(rando).getProtocolFeePercentage()).to.equal(
@@ -639,6 +728,10 @@ describe("IBosonConfigHandler", function () {
         expect(await configHandler.connect(rando).getMaxDisputesPerBatch()).to.equal(
           maxDisputesPerBatch,
           "Invalid max disputes per batch"
+        );
+        expect(await configHandler.connect(rando).getBuyerEscalationDepositPercentage()).to.equal(
+          buyerEscalationDepositPercentage,
+          "Invalid buyer escalation deposit"
         );
       });
     });

@@ -9,6 +9,7 @@ const { deployProtocolHandlerFacets } = require("../../../scripts/util/deploy-pr
 const Buyer = require("../../../scripts/domain/Buyer");
 const Role = require("../../../scripts/domain/Role");
 const Seller = require("../../../scripts/domain/Seller");
+const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const { mockOffer } = require("../../utils/mock.js");
 const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
 const { expect } = require("chai");
@@ -56,10 +57,13 @@ describe("IBosonVoucher", function () {
     ]);
 
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
-    const [, , clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
-    [bosonVoucher] = clients;
+    const [, beacons, proxies, bv] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    [bosonVoucher] = bv;
+    const [beacon] = beacons;
+    const [proxy] = proxies;
 
     const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    const buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
@@ -67,7 +71,8 @@ describe("IBosonVoucher", function () {
       {
         treasuryAddress: ethers.constants.AddressZero,
         tokenAddress: ethers.constants.AddressZero,
-        voucherAddress: bosonVoucher.address,
+        voucherBeaconAddress: beacon.address,
+        beaconProxyAddress: proxy.address,
       },
       // Protocol limits
       {
@@ -85,6 +90,7 @@ describe("IBosonVoucher", function () {
         percentage: 200, // 2%
         flatBoson: protocolFeeFlatBoson,
       },
+      buyerEscalationDepositPercentage,
     ];
 
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
@@ -161,8 +167,8 @@ describe("IBosonVoucher", function () {
       );
       expect(disputeResolver.isValid()).is.true;
 
-      //Create empty  DisputeResolverFee array because DR fees will be zero in the beginning;
-      disputeResolverFees = [];
+      //Create DisputeResolverFee array so offer creation will succeed
+      disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
 
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);

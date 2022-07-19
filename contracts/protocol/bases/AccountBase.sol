@@ -41,8 +41,12 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         _seller.id = sellerId;
         storeSeller(_seller);
 
+        // create clone and store its address cloneAddress
+        address voucherCloneAddress = cloneBosonVoucher();
+        protocolLookups().cloneAddress[sellerId] = voucherCloneAddress;
+
         // Notify watchers of state change
-        emit SellerCreated(sellerId, _seller, msgSender());
+        emit SellerCreated(sellerId, _seller, voucherCloneAddress, msgSender());
     }
 
     /**
@@ -186,4 +190,33 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         //Map the agent's wallet address to the agentId.
         protocolLookups().agentIdByWallet[_agent.wallet] = _agent.id;
     }
+
+    /**
+     * @notice Creates a minimal clone of the Boson Voucher Contract
+     *
+     * @return cloneAddress - the address of newly created clone
+     */
+    function cloneBosonVoucher() internal returns (address cloneAddress) {
+        // Pointer to stored addresses
+        ProtocolLib.ProtocolAddresses storage pa = protocolAddresses();
+
+        // Load beacon proxy contract address
+        bytes20 targetBytes = bytes20(pa.beaconProxyAddress);
+
+        // create a minimal clone
+        assembly {
+            let clone := mload(0x40)
+            mstore(clone, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
+            mstore(add(clone, 0x14), targetBytes)
+            mstore(add(clone, 0x28), 0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000)
+            cloneAddress := create(0, clone, 0x37)
+        }
+
+        // Initialize the clone
+        IInitializableClone(cloneAddress).initialize(pa.voucherBeaconAddress);
+    }
+}
+
+interface IInitializableClone {
+    function initialize(address _beaconAddress) external;
 }
