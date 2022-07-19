@@ -92,6 +92,7 @@ describe("IBosonAccountHandler", function () {
           "sellerAllowList is incorrect"
         );
       }
+
       assert.equal(event.disputeResolverId.toString(), disputeResolverId, "Dispute Resolver Id is incorrect");
       assert.equal(event.executedBy, executedBy, "executedBy is incorrect");
 
@@ -1683,23 +1684,22 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should be possible to use non-unique treasury address", async function () {
-        const tx = await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+        const tx = await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
         let valid = await isValidDisputeResolverEvent(
           tx,
           "DisputeResolverCreated",
-          disputeResolver.id,
+          expectedDisputeResolver.id,
           expectedDisputeResolverStruct,
           disputeResolverFeeList,
           2,
+          sellerAllowList,
           rando.address
         );
         expect(valid).is.true;
 
-        nextAccountId++;
-
         // Create a valid dispute resolver, then set fields in tests directly
         disputeResolver2 = new DisputeResolver(
-          nextAccountId.toString(),
+          (++id).toString(),
           oneMonth.toString(),
           other1.address,
           other2.address,
@@ -1709,10 +1709,9 @@ describe("IBosonAccountHandler", function () {
           false
         );
         expect(disputeResolver2.isValid()).is.true;
-
         expectedDisputeResolverStruct = disputeResolver2.toStruct();
 
-        const tx2 = await accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees);
+        const tx2 = await accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
         valid = await isValidDisputeResolverEvent(
           tx2,
           "DisputeResolverCreated",
@@ -1720,6 +1719,7 @@ describe("IBosonAccountHandler", function () {
           expectedDisputeResolverStruct,
           disputeResolverFeeList,
           2,
+          sellerAllowList,
           rando.address
         );
         expect(valid).is.true;
@@ -1819,11 +1819,11 @@ describe("IBosonAccountHandler", function () {
           disputeResolver2Struct = disputeResolver2.toStruct();
 
           //Create dispute resolver 1
-          accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+          accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
           // Attempt to create another dispute resolver with non-unique admin address
           await expect(
-            accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
 
           //Set dispute resolver 2's operator address to dispute resolver 1's clerk address
@@ -1832,7 +1832,7 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to create another dispute resolver with non-unique operator address
           await expect(
-            accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
 
           //Set dispute resolver 2's clerk address to dispute resolver 1's admin address
@@ -1841,7 +1841,7 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to create another dispute resolver with non-unique clerk address
           await expect(
-            accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
         });
 
@@ -2470,7 +2470,7 @@ describe("IBosonAccountHandler", function () {
 
           expect(disputeResolver2.isValid()).is.true;
           //disputeResolver2Struct = disputeResolver2.toStruct();
-          await accountHandler.connect(admin).createDisputeResolver(disputeResolver2, disputeResolverFees);
+          await accountHandler.connect(admin).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
 
           //Set dispute resolver 2's admin address to dispute resolver 1's operator address
           disputeResolver2.admin = operator.address;
