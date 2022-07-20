@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-
+import "hardhat/console.sol";
 import { IBosonBundleEvents } from "../../interfaces/events/IBosonBundleEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
@@ -134,10 +134,19 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         // twin is NonFungibleToken or bundle has an unlimited offer
         if (twin.tokenType == TokenType.NonFungibleToken || offersTotalQuantity == type(uint256).max) {
             // the sum of all offers quantity should be less or equal twin supply
+            if (offersTotalQuantity > twin.supplyAvailable) {
+                console.log(offersTotalQuantity);
+                console.log(twin.supplyAvailable);
+            }
             require(offersTotalQuantity <= twin.supplyAvailable, INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS);
         } else {
             // twin is FungibleToken or MultiToken
             // the sum of all offers quantity multiplied by twin amount should be less or equal twin supply
+            if (offersTotalQuantity * twin.amount > twin.supplyAvailable) {
+                console.log("2", offersTotalQuantity);
+                console.log(twin.supplyAvailable);
+            }
+
             require(
                 offersTotalQuantity * twin.amount <= twin.supplyAvailable,
                 INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
