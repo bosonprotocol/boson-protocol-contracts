@@ -158,6 +158,7 @@ describe("IBosonExchangeHandler", function () {
         maxFeesPerDisputeResolver: 100,
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
+        maxAllowedSellers: 100,
       },
       // Protocol fees
       {
@@ -240,8 +241,11 @@ describe("IBosonExchangeHandler", function () {
       //Create DisputeResolverFee array so offer creation will succeed
       disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
 
+      // Make empty seller list, so every seller is allowed
+      const sellerAllowList = [];
+
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
       // Create the offer
@@ -1263,24 +1267,27 @@ describe("IBosonExchangeHandler", function () {
       beforeEach(async function () {
         // Mint some tokens to be bundled
         await foreign20.connect(operator).mint(operator.address, "500");
-        await foreign721.connect(operator).mint("0", "1");
+        // Mint first two and last two tokens of range
+        await foreign721.connect(operator).mint("0", "2");
+        await foreign721.connect(operator).mint("8", "2");
         await foreign1155.connect(operator).mint("1", "500");
 
         // Approve the protocol diamond to transfer seller's tokens
-        await foreign20.connect(operator).approve(protocolDiamond.address, "1");
+        await foreign20.connect(operator).approve(protocolDiamond.address, "3");
         await foreign721.connect(operator).setApprovalForAll(protocolDiamond.address, true);
         await foreign1155.connect(operator).setApprovalForAll(protocolDiamond.address, true);
 
         // Create an ERC20 twin
         twin20 = mockTwin(foreign20.address);
-        twin20.amount = "1";
+        twin20.amount = "3";
+        twin20.supplyAvailable = "30";
         expect(twin20.isValid()).is.true;
 
         // Create an ERC721 twin
         twin721 = mockTwin(foreign721.address, TokenType.NonFungibleToken);
         twin721.id = "2";
         twin721.amount = "0";
-
+        twin721.supplyAvailable = "10";
         expect(twin721.isValid()).is.true;
 
         // Create an ERC1155 twin
@@ -1288,6 +1295,7 @@ describe("IBosonExchangeHandler", function () {
         twin1155.id = "3";
         twin1155.tokenId = "1";
         twin1155.amount = "1";
+        twin1155.supplyAvailable = "10";
 
         expect(twin1155.isValid()).is.true;
 
@@ -1324,7 +1332,7 @@ describe("IBosonExchangeHandler", function () {
 
           // Check the buyer's balance of the ERC20
           balance = await foreign20.balanceOf(buyer.address);
-          expect(balance).to.equal(1);
+          expect(balance).to.equal(3);
         });
 
         // Skip these tests because we decide that for now we shouldn't revert redeemVoucher if twin transfer failed otherwise buyer will lose cancellation penalty
@@ -1356,16 +1364,30 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("should transfer the twin", async function () {
-          // Check the operator owns the ERC721
-          owner = await foreign721.ownerOf("0");
+          // Check the operator owns the last ERC721 of twin range
+          owner = await foreign721.ownerOf("9");
           expect(owner).to.equal(operator.address);
+          [exists, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
           // Redeem the voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
-          // Check the buyer owns the ERC721
-          owner = await foreign721.ownerOf("0");
+          // Check the buyer owns the last ERC721 of twin range
+          owner = await foreign721.ownerOf("9");
           expect(owner).to.equal(buyer.address);
+
+          // Check the operator owns the last ERC721 of twin range
+          owner = await foreign721.ownerOf("8");
+          expect(owner).to.equal(operator.address);
+
+          // Commit to offer for the second time
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Redeem the second voucher for the second time / id = 2
+          await exchangeHandler.connect(buyer).redeemVoucher(++exchange.id);
+
+          // Check the buyer owns the last ERC721 of twin range
+          owner = await foreign721.ownerOf("8");
         });
 
         // Skip these tests because we decide that for now we shouldn't revert redeemVoucher if twin transfer failed otherwise buyer will lose cancellation penalty
@@ -1443,7 +1465,7 @@ describe("IBosonExchangeHandler", function () {
           expect(balance).to.equal(0);
 
           // Check the operator owns the ERC721
-          owner = await foreign721.ownerOf("0");
+          owner = await foreign721.ownerOf("9");
           expect(owner).to.equal(operator.address);
 
           // Check the buyer's balance of the ERC1155
@@ -1455,10 +1477,10 @@ describe("IBosonExchangeHandler", function () {
 
           // Check the buyer's balance of the ERC20
           balance = await foreign20.balanceOf(buyer.address);
-          expect(balance).to.equal(1);
+          expect(balance).to.equal(3);
 
           // Check the buyer owns the ERC721
-          owner = await foreign721.ownerOf("0");
+          owner = await foreign721.ownerOf("9");
           expect(owner).to.equal(buyer.address);
 
           // Check the buyer's balance of the ERC1155

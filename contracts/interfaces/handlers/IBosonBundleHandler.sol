@@ -65,6 +65,8 @@ interface IBosonBundleHandler is IBosonBundleEvents {
      * - any of twins does not exist
      * - twin already exists in the same bundle
      * - twin ids contains duplicated twins
+     * - offers total quantity is greater than twin supply when token is nonfungible
+     * - offers total quantity multiplied by twin amount is greater than twin supply when token is fungible or multitoken
      *
      * @param _bundleId  - the id of the bundle to be updated
      * @param _twinIds - array of twin ids to be added to the bundle

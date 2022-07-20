@@ -84,6 +84,7 @@ describe("IBosonVoucher", function () {
         maxFeesPerDisputeResolver: 100,
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
+        maxAllowedSellers: 100,
       },
       //Protocol fees
       {
@@ -170,8 +171,11 @@ describe("IBosonVoucher", function () {
       //Create DisputeResolverFee array so offer creation will succeed
       disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
 
+      // Make empty seller list, so every seller is allowed
+      const sellerAllowList = [];
+
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver("2");
 
       const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
@@ -189,6 +193,33 @@ describe("IBosonVoucher", function () {
     it("should return the correct tokenURI", async function () {
       const tokenURI = await bosonVoucher.tokenURI(1);
       expect(tokenURI).eq(metadataUri);
+    });
+  });
+
+  context("transferOwnership()", function () {
+    it("should issue a voucher with success", async function () {
+      await bosonVoucher.connect(protocol).transferOwnership(operator.address);
+
+      const ownable = await ethers.getContractAt("OwnableUpgradeable", bosonVoucher.address);
+      const owner = await ownable.owner();
+
+      expect(owner).eq(operator.address, "Wrong owner");
+    });
+
+    it("should revert if caller does not have PROTOCOL role", async function () {
+      await expect(bosonVoucher.connect(rando).transferOwnership(operator.address)).to.be.revertedWith(
+        RevertReasons.ACCESS_DENIED
+      );
+    });
+
+    it("Even the current owner cannot transfer the ownership", async function () {
+      // succesfully transfer to operator
+      await bosonVoucher.connect(protocol).transferOwnership(operator.address);
+
+      // owner tries to transfer, it should fail
+      await expect(bosonVoucher.connect(operator).transferOwnership(rando.address)).to.be.revertedWith(
+        RevertReasons.ACCESS_DENIED
+      );
     });
   });
 });

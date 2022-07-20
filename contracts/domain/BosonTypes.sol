@@ -184,6 +184,11 @@ contract BosonTypes {
         Dispute dispute;
     }
 
+    struct TokenRange {
+        uint256 start;
+        uint256 end;
+    }
+
     struct Twin {
         uint256 id;
         uint256 sellerId;

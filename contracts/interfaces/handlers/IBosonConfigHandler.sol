@@ -9,7 +9,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x7ce319fe
+ * The ERC-165 identifier for this interface is: 0xff6bd4ef
  */
 interface IBosonConfigHandler is IBosonConfigEvents {
     /**
@@ -211,6 +211,20 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Get the maximum disputes per batch
      */
     function getMaxDisputesPerBatch() external view returns (uint16);
+
+    /**
+     * @notice Sets the maximum numbers of seller ids that can be added to or removed from dispute resolver seller allow list in a single transaction
+     *
+     * Emits a MaxAllowedSellersChanged event.
+     *
+     * @param _maxAllowedSellers - the maximum number of seller ids that can be added or removed
+     */
+    function setMaxAllowedSellers(uint16 _maxAllowedSellers) external;
+
+    /**
+     * @notice Get the maximum number of seller ids that can be added or removed
+     */
+    function getMaxAllowedSellers() external view returns (uint16);
 
     /**
      * @notice Sets the buyer escalation fee percentage.

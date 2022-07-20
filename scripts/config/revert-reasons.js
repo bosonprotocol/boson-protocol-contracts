@@ -50,7 +50,9 @@ exports.RevertReasons = {
   AGENT_ADDRESS_MUST_BE_UNIQUE: "Agent address cannot be assigned to another agent Id",
   NOT_ADMIN: "Not admin",
   NOT_BUYER_WALLET: "Not buyer's wallet address",
+  NOT_AGENT_WALLET: "Not agent's wallet address",
   NO_SUCH_BUYER: "No such buyer",
+  NO_SUCH_AGENT: "No such agent",
   WALLET_OWNS_VOUCHERS: "Wallet address owns vouchers",
   NOT_DISPUTE_RESOLVER_OPERATOR: "Not dispute resolver's operator address",
   NO_SUCH_DISPUTE_RESOLVER: "No such dispute resolver",
@@ -60,6 +62,10 @@ exports.RevertReasons = {
   DUPLICATE_DISPUTE_RESOLVER_FEES: "Duplicate dispute resolver fee",
   DISPUTE_RESOLVER_FEE_NOT_FOUND: "Dispute resolver fee not found",
   INVALID_AUTH_TOKEN_TYPE: "Invalid AuthTokenType ",
+  SELLER_ALREADY_APPROVED: "Seller id is approved already",
+  SELLER_NOT_APPROVED: "Seller id is not approved",
+  INVALID_AMOUNT_ALLOWED_SELLERS:
+    "Allowed sellers not present or exceeds maximum allowed sellers in a single transaction",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",
@@ -70,6 +76,7 @@ exports.RevertReasons = {
   INVALID_SUPPLY_AVAILABLE: "supplyAvailable can't be zero",
   INVALID_AMOUNT: "Amount must be greater than zero if token is ERC20 or ERC1155",
   INVALID_TWIN_PROPERTY: "Invalid property for selected token type",
+  INVALID_TWIN_TOKEN_RANGE: "Token range is already being used in another Twin",
 
   // Bundle related
   NO_SUCH_BUNDLE: "No such bundle",
@@ -78,6 +85,8 @@ exports.RevertReasons = {
   TOO_MANY_TWINS: "Exceeded maximum twins in a single transaction",
   BUNDLE_OFFER_MUST_BE_UNIQUE: "Offer must be unique to a bundle",
   BUNDLE_TWIN_MUST_BE_UNIQUE: "Twin must be unique to a bundle",
+  INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS:
+    "Insufficient twin supplyAvailable to cover total quantity of bundle offers",
 
   // Exchange related
   NO_SUCH_EXCHANGE: "No such exchange",
@@ -122,6 +131,7 @@ exports.RevertReasons = {
   DISPUTE_STILL_VALID: "Dispute still valid",
   INVALID_DISPUTE_TIMEOUT: "Invalid dispute timeout",
   TOO_MANY_DISPUTES: "Exceeded maximum disputes in a single transaction",
+  ESCALATION_NOT_ALLOWED: "Disputes without dispute resolver cannot be escalated",
 
   // Config related
   FEE_PERCENTAGE_INVALID: "Percentage representation must be less than 10000",

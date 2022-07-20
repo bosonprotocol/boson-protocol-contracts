@@ -29,6 +29,7 @@ contract BosonConstants {
     string internal constant NOT_BUYER_OR_SELLER = "Not buyer or seller";
     string internal constant NOT_VOUCHER_HOLDER = "Not current voucher holder";
     string internal constant NOT_BUYER_WALLET = "Not buyer's wallet address";
+    string internal constant NOT_AGENT_WALLET = "Not agent's wallet address";
     string internal constant NOT_DISPUTE_RESOLVER_OPERATOR = "Not dispute resolver's operator address";
 
     // Revert Reasons: Account-related
@@ -40,6 +41,7 @@ contract BosonConstants {
         "Dispute Resolver address cannot be assigned to another dispute resolver Id";
     string internal constant AGENT_ADDRESS_MUST_BE_UNIQUE = "Agent address cannot be assigned to another agent Id";
     string internal constant NO_SUCH_BUYER = "No such buyer";
+    string internal constant NO_SUCH_AGENT = "No such agent";
     string internal constant WALLET_OWNS_VOUCHERS = "Wallet address owns vouchers";
     string internal constant NO_SUCH_DISPUTE_RESOLVER = "No such dispute resolver";
     string internal constant INVALID_ESCALATION_PERIOD = "Invalid escalation period";
@@ -48,6 +50,10 @@ contract BosonConstants {
     string internal constant DUPLICATE_DISPUTE_RESOLVER_FEES = "Duplicate dispute resolver fee";
     string internal constant DISPUTE_RESOLVER_FEE_NOT_FOUND = "Dispute resolver fee not found";
     string internal constant INVALID_AUTH_TOKEN_TYPE = "Invalid AuthTokenType ";
+    string internal constant SELLER_ALREADY_APPROVED = "Seller id is approved already";
+    string internal constant SELLER_NOT_APPROVED = "Seller id is not approved";
+    string internal constant INVALID_AMOUNT_ALLOWED_SELLERS =
+        "Allowed sellers not present or exceeds maximum allowed sellers in a single transaction";
 
     // Revert Reasons: Offer related
     string internal constant NO_SUCH_OFFER = "No such offer";
@@ -94,6 +100,7 @@ contract BosonConstants {
     string internal constant INVALID_SUPPLY_AVAILABLE = "supplyAvailable can't be zero";
     string internal constant INVALID_AMOUNT = "Amount must be greater than zero if token is ERC20 or ERC1155";
     string internal constant INVALID_TWIN_PROPERTY = "Invalid property for selected token type";
+    string internal constant INVALID_TWIN_TOKEN_RANGE = "Token range is already being used in another Twin";
 
     // Revert Reasons: Bundle related
     string internal constant NO_SUCH_BUNDLE = "No such bundle";
@@ -103,6 +110,8 @@ contract BosonConstants {
     string internal constant BUNDLE_OFFER_MUST_BE_UNIQUE = "Offer must be unique to a bundle";
     string internal constant BUNDLE_TWIN_MUST_BE_UNIQUE = "Twin must be unique to a bundle";
     string internal constant EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS = "Exchange for the bundled offers exists";
+    string internal constant INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS =
+        "Insufficient twin supplyAvailable to cover total quantity of bundle offers";
 
     // Revert Reasons: Funds related
     string internal constant NATIVE_WRONG_ADDRESS = "Native token address must be 0";
@@ -130,6 +139,7 @@ contract BosonConstants {
     string internal constant DISPUTE_STILL_VALID = "Dispute still valid";
     string internal constant INVALID_DISPUTE_TIMEOUT = "Invalid dispute timeout";
     string internal constant TOO_MANY_DISPUTES = "Exceeded maximum disputes in a single transaction";
+    string internal constant ESCALATION_NOT_ALLOWED = "Disputes without dispute resolver cannot be escalated";
 
     // Revert Reasons: Config related
     string internal constant FEE_PERCENTAGE_INVALID = "Percentage representation must be less than 10000";

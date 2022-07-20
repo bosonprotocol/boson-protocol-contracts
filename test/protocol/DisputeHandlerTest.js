@@ -151,6 +151,7 @@ describe("IBosonDisputeHandler", function () {
         maxFeesPerDisputeResolver: 100,
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
+        maxAllowedSellers: 100,
       },
       // Protocol fees
       {
@@ -223,8 +224,11 @@ describe("IBosonDisputeHandler", function () {
       DRFeeNative = ethers.utils.parseUnits("1", "ether").toString();
       disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative)];
 
+      // Make empty seller list, so every seller is allowed
+      const sellerAllowList = [];
+
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
       // buyer escalation deposit used in multiple tests
@@ -1346,6 +1350,27 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to escalate the dispute, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
               RevertReasons.INVALID_STATE
+            );
+          });
+
+          it("Dispute resolver is not specified (absolute zero offer)", async function () {
+            // Create and absolute zero offer without DR
+            // Prepare an absolute zero offer
+            offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
+            offer.id++;
+            disputeResolverId = "0";
+
+            // Create a new offer
+            await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+
+            // Commit to offer and put exchange all the way to dispute
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
+            await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
+            await disputeHandler.connect(buyer).raiseDispute(exchangeId, complaint);
+
+            // Attempt to escalate the dispute, expecting revert
+            await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
+              RevertReasons.ESCALATION_NOT_ALLOWED
             );
           });
 

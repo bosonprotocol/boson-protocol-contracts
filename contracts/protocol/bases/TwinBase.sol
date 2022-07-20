@@ -20,6 +20,10 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
      * Reverts if:
      * - seller does not exist
      * - Not approved to transfer the seller's token
+     * - supplyAvailable is zero
+     * - Twin is NonFungibleToken and amount was set
+     * - Twin is NonFungibleToken and range is already being used in another twin of the seller
+     * - Twin is FungibleToken or MultiToken and amount was not set
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
      */
@@ -31,11 +35,33 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         // Protocol must be approved to transfer seller’s tokens
         require(isProtocolApproved(_twin.tokenAddress, msgSender(), address(this)), NO_TRANSFER_APPROVED);
 
-        // @TODO: checks Twin range if seller has others twins with the same token address
+        // Twin supply must exist and can't be zero
         require(_twin.supplyAvailable > 0, INVALID_SUPPLY_AVAILABLE);
+
         if (_twin.tokenType == TokenType.NonFungibleToken) {
+            // If token is NonFungible amount should be zero
             require(_twin.amount == 0, INVALID_TWIN_PROPERTY);
+
+            // Calculate new twin range [tokenId...lastTokenId]
+            uint256 tokenId = _twin.tokenId;
+            uint256 lastTokenId = tokenId + _twin.supplyAvailable - 1;
+            require(lastTokenId >= tokenId, INVALID_TWIN_TOKEN_RANGE);
+
+            // Get all twin ids that belong to seller
+            TokenRange[] memory twinRanges = protocolLookups().twinRangesBySeller[sellerId][_twin.tokenAddress];
+
+            // Checks if token range isn't being used in any other twin of seller
+            for (uint256 i = 0; i < twinRanges.length; i++) {
+                // A valid range has:
+                // - the first id of range greater than the last token id (tokenId + initialSupply - 1) of the looped twin or
+                // - the last id of range lower than the looped twin tokenId (beginning of range)
+                require(tokenId > twinRanges[i].end || lastTokenId < twinRanges[i].start, INVALID_TWIN_TOKEN_RANGE);
+            }
+
+            // Add range to twinRangesBySeller mapping
+            protocolLookups().twinRangesBySeller[sellerId][_twin.tokenAddress].push(TokenRange(tokenId, lastTokenId));
         } else {
+            // If token is Fungible or MultiToken amount should not be zero
             require(_twin.amount > 0, INVALID_AMOUNT);
         }
 

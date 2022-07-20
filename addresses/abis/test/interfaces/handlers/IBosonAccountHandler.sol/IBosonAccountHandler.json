@@ -56,6 +56,56 @@
         {
           "indexed": true,
           "internalType": "uint256",
+          "name": "disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256[]",
+          "name": "addedSellers",
+          "type": "uint256[]"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "AllowedSellersAdded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256[]",
+          "name": "removedSellers",
+          "type": "uint256[]"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "AllowedSellersRemoved",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
           "name": "buyerId",
           "type": "uint256"
         },
@@ -280,6 +330,12 @@
           "internalType": "struct BosonTypes.DisputeResolverFee[]",
           "name": "disputeResolverFees",
           "type": "tuple[]"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256[]",
+          "name": "sellerAllowList",
+          "type": "uint256[]"
         },
         {
           "indexed": true,
@@ -596,6 +652,48 @@
     {
       "inputs": [
         {
+          "internalType": "uint256",
+          "name": "_disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "_sellerAllowList",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "addSellersToAllowList",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "_sellerIds",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "areSellersAllowed",
+      "outputs": [
+        {
+          "internalType": "bool[]",
+          "name": "sellerAllowed",
+          "type": "bool[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "components": [
             {
               "internalType": "uint256",
@@ -728,6 +826,11 @@
           "internalType": "struct BosonTypes.DisputeResolverFee[]",
           "name": "_disputeResolverFees",
           "type": "tuple[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "_sellerAllowList",
+          "type": "uint256[]"
         }
       ],
       "name": "createDisputeResolver",
@@ -950,6 +1053,11 @@
           "internalType": "struct BosonTypes.DisputeResolverFee[]",
           "name": "disputeResolverFees",
           "type": "tuple[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "sellerAllowList",
+          "type": "uint256[]"
         }
       ],
       "stateMutability": "view",
@@ -1038,6 +1146,11 @@
           "internalType": "struct BosonTypes.DisputeResolverFee[]",
           "name": "disputeResolverFees",
           "type": "tuple[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "sellerAllowList",
+          "type": "uint256[]"
         }
       ],
       "stateMutability": "view",
@@ -1182,6 +1295,24 @@
         }
       ],
       "name": "removeFeesFromDisputeResolver",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "_sellerAllowList",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "removeSellersFromAllowList",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

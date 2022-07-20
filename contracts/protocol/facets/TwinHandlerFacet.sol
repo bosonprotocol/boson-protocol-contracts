@@ -27,6 +27,10 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      * Reverts if:
      * - seller does not exist
      * - Not approved to transfer the seller's token
+     * - supplyAvailable is zero
+     * - Twin is NonFungibleToken and amount was set
+     * - Twin is NonFungibleToken and range is already being used in another twin of the seller
+     * - Twin is FungibleToken or MultiToken and amount was not set
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
      */
@@ -84,6 +88,16 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
 
         // delete struct
         delete protocolEntities().twins[_twinId];
+
+        // Also remove from twinRangesBySeller mapping
+        if (twin.tokenType == TokenType.NonFungibleToken) {
+            TokenRange[] storage twinRanges = protocolLookups().twinRangesBySeller[sellerId][twin.tokenAddress];
+            for (uint256 index = 0; index < twinRanges.length; index++) {
+                twinRanges[index] = twinRanges[twinRanges.length - 1];
+                twinRanges.pop();
+                break;
+            }
+        }
 
         emit TwinDeleted(_twinId, twin.sellerId, msgSender());
     }

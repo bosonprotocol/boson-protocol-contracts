@@ -44,6 +44,7 @@ function getConfig() {
   const maxFeesPerDisputeResolver = 100;
   const maxEscalationResponsePeriod = oneMonth;
   const maxDisputesPerBatch = "100";
+  const maxAllowedSellers = "100";
   const buyerEscalationDepositPercentage = "100"; // 1%
 
   // Boson Token (ERC-20) contract address
@@ -94,6 +95,7 @@ function getConfig() {
       maxFeesPerDisputeResolver,
       maxEscalationResponsePeriod,
       maxDisputesPerBatch,
+      maxAllowedSellers,
     },
     {
       percentage: feePercentage,
