@@ -75,6 +75,7 @@ exports.RevertReasons = {
   INVALID_SUPPLY_AVAILABLE: "supplyAvailable can't be zero",
   INVALID_AMOUNT: "Amount must be greater than zero if token is ERC20 or ERC1155",
   INVALID_TWIN_PROPERTY: "Invalid property for selected token type",
+  INVALID_TWIN_TOKEN_RANGE: "Token range is already being used in another Twin",
 
   // Bundle related
   NO_SUCH_BUNDLE: "No such bundle",

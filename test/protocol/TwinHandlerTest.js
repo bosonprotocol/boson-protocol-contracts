@@ -356,6 +356,47 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
+        it("Should revert if twin range is already being used in another twin", async function () {
+          twin.supplyAvailable = "10";
+          twin.amount = "0";
+          twin.tokenId = "5";
+          twin.tokenAddress = foreign721.address;
+          twin.tokenType = TokenType.NonFungibleToken;
+
+          // Mint a token and approve twinHandler contract to transfer it
+          await foreign721.connect(operator).mint(twin.tokenId, twin.supplyAvailable);
+          await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+          // Create first twin with ids range: ["5"..."14"]
+          await twinHandler.connect(operator).createTwin(twin);
+
+          // Create another twin with exact same range
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
+            RevertReasons.INVALID_TWIN_TOKEN_RANGE
+          );
+
+          // Create an twin with ids range: ["0" ... "5"]
+          twin.tokenId = "0";
+          twin.supplyAvailable = "6";
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
+            RevertReasons.INVALID_TWIN_TOKEN_RANGE
+          );
+
+          // Create an twin with ids range: ["14" ... "18"]
+          twin.tokenId = "14";
+          twin.supplyAvailable = "5";
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
+            RevertReasons.INVALID_TWIN_TOKEN_RANGE
+          );
+
+          // Create an twin with ids range: ["6" ... "9"]
+          twin.tokenId = "6";
+          twin.supplyAvailable = "4";
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
+            RevertReasons.INVALID_TWIN_TOKEN_RANGE
+          );
+        });
+
         context("Token address is unsupported", async function () {
           it("Token address is a zero address", async function () {
             twin.tokenAddress = ethers.constants.AddressZero;

@@ -99,6 +99,7 @@ contract BosonConstants {
     string internal constant INVALID_SUPPLY_AVAILABLE = "supplyAvailable can't be zero";
     string internal constant INVALID_AMOUNT = "Amount must be greater than zero if token is ERC20 or ERC1155";
     string internal constant INVALID_TWIN_PROPERTY = "Invalid property for selected token type";
+    string internal constant INVALID_TWIN_TOKEN_RANGE = "Token range is already being used in another Twin";
 
     // Revert Reasons: Bundle related
     string internal constant NO_SUCH_BUNDLE = "No such bundle";
