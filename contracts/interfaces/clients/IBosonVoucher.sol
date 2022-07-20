@@ -32,4 +32,10 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
      */
     function burnVoucher(uint256 _exchangeId) external;
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the protocol. Change is done by calling `updateSeller` on the protocol
+     */
+    function transferOwnership(address newOwner) external;
 }

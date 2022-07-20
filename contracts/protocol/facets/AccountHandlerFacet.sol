@@ -201,11 +201,19 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         );
 
         //Delete current mappings
-        delete protocolLookups().sellerIdByOperator[_seller.operator];
-        delete protocolLookups().sellerIdByAdmin[_seller.admin];
-        delete protocolLookups().sellerIdByClerk[_seller.clerk];
+        delete protocolLookups().sellerIdByOperator[seller.operator];
+        delete protocolLookups().sellerIdByAdmin[seller.admin];
+        delete protocolLookups().sellerIdByClerk[seller.clerk];
+
+        // store this address of existing seller operator to check if you have to transfer the ownership later
+        address oldSellerOperator = seller.operator;
 
         storeSeller(_seller);
+
+        // If operator changed, thasfer the ownership of NFT voucher
+        if (oldSellerOperator != _seller.operator) {
+            IBosonVoucher(protocolLookups().cloneAddress[seller.id]).transferOwnership(_seller.operator);
+        }
 
         // Notify watchers of state change
         emit SellerUpdated(_seller.id, _seller, msgSender());

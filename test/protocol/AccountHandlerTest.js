@@ -227,9 +227,19 @@ describe("IBosonAccountHandler", function () {
     context("👉 createSeller()", async function () {
       it("should emit a SellerCreated event", async function () {
         // Create a seller, testing for the event
-        await expect(accountHandler.connect(admin).createSeller(seller))
+        const tx = await accountHandler.connect(admin).createSeller(seller);
+
+        await expect(tx)
           .to.emit(accountHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct, expectedCloneAddress, admin.address);
+
+        // Voucher clone contract
+        const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
+
+        await expect(tx)
+          .to.emit(bosonVoucher, "OwnershipTransferred")
+          .withArgs(ethers.constants.AddressZero, operator.address);
       });
 
       it("should update state", async function () {
@@ -246,6 +256,12 @@ describe("IBosonAccountHandler", function () {
         for ([key, value] of Object.entries(seller)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
         }
+
+        // Voucher clone contract
+        const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
+
+        expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
       });
 
       it("should ignore any provided id and assign the next available", async function () {
@@ -569,7 +585,7 @@ describe("IBosonAccountHandler", function () {
         id = nextAccountId++;
       });
 
-      it("should emit a SellerUpdated event with correct values if values change", async function () {
+      it("should emit a SellerUpdated and OwnershipTransferred event with correct values if values change", async function () {
         seller.operator = other1.address;
         seller.admin = other2.address;
         seller.clerk = other3.address;
@@ -578,17 +594,30 @@ describe("IBosonAccountHandler", function () {
 
         sellerStruct = seller.toStruct();
 
+        const tx = await accountHandler.connect(admin).updateSeller(seller);
+
         // Update a seller, testing for the event
-        await expect(accountHandler.connect(admin).updateSeller(seller))
-          .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, sellerStruct, admin.address);
+        await expect(tx).to.emit(accountHandler, "SellerUpdated").withArgs(seller.id, sellerStruct, admin.address);
+
+        // Voucher clone contract
+        const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
+
+        await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred").withArgs(operator.address, other1.address);
       });
 
       it("should emit a SellerUpdated event with correct values if values stay the same", async function () {
+        const tx = await accountHandler.connect(admin).updateSeller(seller);
+
         // Update a seller, testing for the event
-        await expect(accountHandler.connect(admin).updateSeller(seller))
-          .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, sellerStruct, admin.address);
+        await expect(tx).to.emit(accountHandler, "SellerUpdated").withArgs(seller.id, sellerStruct, admin.address);
+
+        // Voucher clone contract
+        const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
+
+        // Since operator stayed the same, clone contract ownership should not be transferred
+        await expect(tx).to.not.emit(bosonVoucher, "OwnershipTransferred");
       });
 
       it("should update state of all fields exceipt Id", async function () {
@@ -613,6 +642,32 @@ describe("IBosonAccountHandler", function () {
         for ([key, value] of Object.entries(seller)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
         }
+
+        //Check that old addresses are no longer mapped. We don't map the treasury address.
+        [exists] = await accountHandler.connect(rando).getSellerByAddress(operator.address);
+        expect(exists).to.be.false;
+
+        [exists] = await accountHandler.connect(rando).getSellerByAddress(admin.address);
+        expect(exists).to.be.false;
+
+        [exists] = await accountHandler.connect(rando).getSellerByAddress(clerk.address);
+        expect(exists).to.be.false;
+
+        //Check that new addresses are mapped. We don't map the treasury address.
+        [exists] = await accountHandler.connect(rando).getSellerByAddress(seller.operator);
+        expect(exists).to.be.true;
+
+        [exists] = await accountHandler.connect(rando).getSellerByAddress(seller.admin);
+        expect(exists).to.be.true;
+
+        [exists] = await accountHandler.connect(rando).getSellerByAddress(seller.clerk);
+        expect(exists).to.be.true;
+
+        // Voucher clone contract
+        const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
+
+        expect(await bosonVoucher.owner()).to.equal(seller.operator, "Wrong voucher clone owner");
       });
 
       it("should update state correctly if values are the same", async function () {
@@ -629,6 +684,12 @@ describe("IBosonAccountHandler", function () {
         for ([key, value] of Object.entries(seller)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
         }
+
+        // Voucher clone contract
+        const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
+
+        expect(await bosonVoucher.owner()).to.equal(seller.operator, "Wrong voucher clone owner");
       });
 
       it("should update only active flag", async function () {
@@ -1946,6 +2007,26 @@ describe("IBosonAccountHandler", function () {
           disputeResolverFeeList.toString(),
           "Dispute Resolver Fee List is incorrect"
         );
+
+        //Check that old addresses are no longer mapped. We don't map the treasury address.
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(operator.address);
+        expect(exists).to.be.false;
+
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(admin.address);
+        expect(exists).to.be.false;
+
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(clerk.address);
+        expect(exists).to.be.false;
+
+        //Check that new addresses are mapped. We don't map the treasury address.
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(disputeResolver.operator);
+        expect(exists).to.be.true;
+
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(disputeResolver.admin);
+        expect(exists).to.be.true;
+
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(disputeResolver.clerk);
+        expect(exists).to.be.true;
       });
 
       it("should update state correctly if values are the same", async function () {

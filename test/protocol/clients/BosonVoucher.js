@@ -191,4 +191,31 @@ describe("IBosonVoucher", function () {
       expect(tokenURI).eq(metadataUri);
     });
   });
+
+  context("transferOwnership()", function () {
+    it("should issue a voucher with success", async function () {
+      await bosonVoucher.connect(protocol).transferOwnership(operator.address);
+
+      const ownable = await ethers.getContractAt("OwnableUpgradeable", bosonVoucher.address);
+      const owner = await ownable.owner();
+
+      expect(owner).eq(operator.address, "Wrong owner");
+    });
+
+    it("should revert if caller does not have PROTOCOL role", async function () {
+      await expect(bosonVoucher.connect(rando).transferOwnership(operator.address)).to.be.revertedWith(
+        RevertReasons.ACCESS_DENIED
+      );
+    });
+
+    it("Even the current owner cannot transfer the ownership", async function () {
+      // succesfully transfer to operator
+      await bosonVoucher.connect(protocol).transferOwnership(operator.address);
+
+      // owner tries to transfer, it should fail
+      await expect(bosonVoucher.connect(operator).transferOwnership(rando.address)).to.be.revertedWith(
+        RevertReasons.ACCESS_DENIED
+      );
+    });
+  });
 });

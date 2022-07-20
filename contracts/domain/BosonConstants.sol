@@ -103,6 +103,8 @@ contract BosonConstants {
     string internal constant BUNDLE_OFFER_MUST_BE_UNIQUE = "Offer must be unique to a bundle";
     string internal constant BUNDLE_TWIN_MUST_BE_UNIQUE = "Twin must be unique to a bundle";
     string internal constant EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS = "Exchange for the bundled offers exists";
+    string internal constant INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS =
+        "Insufficient twin supplyAvailable to cover total quantity of bundle offers";
 
     // Revert Reasons: Funds related
     string internal constant NATIVE_WRONG_ADDRESS = "Native token address must be 0";

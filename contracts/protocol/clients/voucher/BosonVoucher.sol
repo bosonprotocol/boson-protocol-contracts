@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
@@ -16,15 +17,18 @@ import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
  * - Only PROTOCOL-roled addresses can issue vouchers, i.e., the ProtocolDiamond or an EOA for testing
  * - Newly minted voucher NFTs are automatically transferred to the buyer
  */
-contract BosonVoucher is IBosonVoucher, BeaconClientBase, ERC721Upgradeable {
+contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
     string internal constant VOUCHER_NAME = "Boson Voucher";
     string internal constant VOUCHER_SYMBOL = "BOSON_VOUCHER";
 
     /**
      * @notice Initializer
      */
-    function initialize() public {
+    function initializeVoucher(address _newOwner) public initializer {
         __ERC721_init_unchained(VOUCHER_NAME, VOUCHER_SYMBOL);
+
+        // we dont call init on ownable, but rather just set the owneship to correct owner
+        _transferOwnership(_newOwner);
     }
 
     /**
@@ -118,5 +122,14 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, ERC721Upgradeable {
         if (from != address(0) && to != address(0)) {
             onVoucherTransferred(tokenId, payable(to));
         }
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the protocol. Change is done by calling `updateSeller` on the protocol
+     */
+    function transferOwnership(address newOwner) public override(IBosonVoucher, OwnableUpgradeable) onlyRole(PROTOCOL) {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        _transferOwnership(newOwner);
     }
 }
