@@ -20,6 +20,7 @@ library BeaconClientLib {
 
     struct BeaconSlot {
         address value;
+        bool initialized;
     }
 
     /**
