@@ -44,6 +44,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxFeesPerDisputeResolver(_limits.maxFeesPerDisputeResolver);
         setMaxEscalationResponsePeriod(_limits.maxEscalationResponsePeriod);
         setMaxDisputesPerBatch(_limits.maxDisputesPerBatch);
+        setMaxAllowedSellers(_limits.maxAllowedSellers);
         setBuyerEscalationDepositPercentage(_buyerEscalationDepositPercentage);
 
         // Initialize protocol counters
@@ -339,6 +340,25 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getMaxDisputesPerBatch() external view override returns (uint16) {
         return protocolLimits().maxDisputesPerBatch;
+    }
+
+    /**
+     * @notice Sets the maximum numbers of seller ids that can be added to or removed from dispute resolver seller allow list in a single transaction
+     *
+     * Emits a MaxAllowedSellersChanged event.
+     *
+     * @param _maxAllowedSellers - the maximum number of seller ids that can be added or removed
+     */
+    function setMaxAllowedSellers(uint16 _maxAllowedSellers) public override onlyRole(ADMIN) {
+        protocolLimits().maxAllowedSellers = _maxAllowedSellers;
+        emit MaxAllowedSellersChanged(_maxAllowedSellers, msgSender());
+    }
+
+    /**
+     * @notice Get the maximum number of seller ids that can be added or removed
+     */
+    function getMaxAllowedSellers() external view override returns (uint16) {
+        return protocolLimits().maxAllowedSellers;
     }
 
     /**
