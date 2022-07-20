@@ -1889,7 +1889,7 @@ describe("IBosonAccountHandler", function () {
           ).to.revertedWith(RevertReasons.DUPLICATE_DISPUTE_RESOLVER_FEES);
         });
 
-        it("DisputeResolverFees above max", async function () {
+        it("Number of seller ids above max", async function () {
           sellerAllowList = new Array(101).fill("1");
 
           // Attempt to Create a DisputeResolver, expecting revert
@@ -2820,7 +2820,7 @@ describe("IBosonAccountHandler", function () {
       });
     });
 
-    context("👉 addSellerToAllowList()", async function () {
+    context("👉 addSellersToAllowList()", async function () {
       beforeEach(async function () {
         // make another seller with id = "4"
         let seller4 = new Seller(
@@ -2853,7 +2853,7 @@ describe("IBosonAccountHandler", function () {
 
       it("should emit an AllowedSellersAdded event", async function () {
         // add sellers, test for event
-        expect(await accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd))
+        expect(await accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd))
           .to.emit(accountHandler, "AllowedSellersAdded")
           .withArgs(disputeResolver.id, allowedSellersToAdd, admin.address);
       });
@@ -2862,7 +2862,7 @@ describe("IBosonAccountHandler", function () {
         const expectedSellerAllowList = [...sellerAllowList, ...allowedSellersToAdd];
 
         // Add seller ids to seller allow list
-        await accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd);
+        await accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd);
 
         // Get the dispute resolver data as structs
         [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
@@ -2903,7 +2903,7 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
-            accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd)
+            accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
 
           // Set invalid id
@@ -2911,14 +2911,14 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
-            accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd)
+            accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
         });
 
         it("Caller is not dispute resolver admin address", async function () {
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
-            accountHandler.connect(rando).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd)
+            accountHandler.connect(rando).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
           ).to.revertedWith(RevertReasons.NOT_ADMIN);
         });
 
@@ -2927,7 +2927,7 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
-            accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd)
+            accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
         });
 
@@ -2936,7 +2936,7 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
-            accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd)
+            accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
         });
 
@@ -2946,7 +2946,7 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
-            accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd)
+            accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
           ).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
         });
 
@@ -2956,7 +2956,7 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to add sellers to the allow listr, expecting revert
           await expect(
-            accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd)
+            accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
           ).to.revertedWith(RevertReasons.SELLER_ALREADY_APPROVED);
 
           // Duplicate existing seller id
@@ -2964,13 +2964,13 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
-            accountHandler.connect(admin).addSellerToAllowList(disputeResolver.id, allowedSellersToAdd)
+            accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
           ).to.revertedWith(RevertReasons.SELLER_ALREADY_APPROVED);
         });
       });
     });
 
-    context("👉 removeSellerFromAllowList()", async function () {
+    context("👉 removeSellersFromAllowList()", async function () {
       beforeEach(async function () {
         // make another seller with id = "4"
         const seller4 = new Seller(
@@ -3003,7 +3003,7 @@ describe("IBosonAccountHandler", function () {
 
       it("should emit a AllowedSellersRemoved event", async function () {
         await expect(
-          accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove)
+          accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
         )
           .to.emit(accountHandler, "AllowedSellersRemoved")
           .withArgs(disputeResolver.id, allowedSellersToRemove, admin.address);
@@ -3011,7 +3011,7 @@ describe("IBosonAccountHandler", function () {
 
       it("should update SellerAllowList state only if some Allowed Sellers are removed", async function () {
         // Remove fees from dispute resolver
-        await accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove);
+        await accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove);
 
         // Get the dispute resolver data as structs
         [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
@@ -3050,7 +3050,7 @@ describe("IBosonAccountHandler", function () {
         allowedSellersToRemove = sellerAllowList;
 
         // Remove fees from dispute resolver
-        await accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove);
+        await accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove);
 
         // Get the dispute resolver data as structs
         [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
@@ -3103,7 +3103,7 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
-            accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove)
+            accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
 
           // Set invalid id
@@ -3111,14 +3111,14 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
-            accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove)
+            accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
         });
 
         it("Caller is not dispute resolver admin address", async function () {
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
-            accountHandler.connect(rando).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove)
+            accountHandler.connect(rando).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
           ).to.revertedWith(RevertReasons.NOT_ADMIN);
         });
 
@@ -3127,7 +3127,7 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
-            accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove)
+            accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
         });
 
@@ -3136,7 +3136,7 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
-            accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove)
+            accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
         });
 
@@ -3157,7 +3157,7 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
-            accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove)
+            accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
           ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
 
           // remove same id twice
@@ -3165,7 +3165,7 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
-            accountHandler.connect(admin).removeSellerFromAllowList(disputeResolver.id, allowedSellersToRemove)
+            accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
           ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
         });
       });

@@ -40,10 +40,10 @@ interface IBosonAccountEvents {
         address[] feeTokensRemoved,
         address indexed executedBy
     );
-    event AllowedSellersAdded(uint256 indexed disputeResolverId, uint256[] sellerAllowList, address indexed executedBy);
+    event AllowedSellersAdded(uint256 indexed disputeResolverId, uint256[] addedSellers, address indexed executedBy);
     event AllowedSellersRemoved(
         uint256 indexed disputeResolverId,
-        uint256[] sellerAllowList,
+        uint256[] removedSellers,
         address indexed executedBy
     );
     event DisputeResolverActivated(

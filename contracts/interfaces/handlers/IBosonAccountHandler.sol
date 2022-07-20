@@ -57,7 +57,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
      * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency. Can be empty.
-     * @param _sellerAllowList - list of ids of sellers that can chose this dispute resolver. If empty, there are no restrictions which seller can chose it.
+     * @param _sellerAllowList - list of ids of sellers that can choose this dispute resolver. If empty, there are no restrictions on which seller can chose it.
      */
     function createDisputeResolver(
         BosonTypes.DisputeResolver memory _disputeResolver,
@@ -166,7 +166,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function removeFeesFromDisputeResolver(uint256 _disputeResolverId, address[] calldata _feeTokenAddresses) external;
 
     /**
-     * @notice Add seller id to set of ids allowed to chose the given dispute resolver
+     * @notice Add seller ids to set of ids allowed to chose the given dispute resolver
      *
      * Emits a AllowedSellersAdded event if successful.
      *
@@ -181,7 +181,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _sellerAllowList - List of seller ids to add to allowed list
      */
-    function addSellerToAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external;
+    function addSellersToAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external;
 
     /**
      * @notice Remove seller ids from set of ids allowed to chose the given dispute resolver
@@ -199,7 +199,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _sellerAllowList - list of seller ids to remove from allowed list
      */
-    function removeSellerFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external;
+    function removeSellersFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external;
 
     /**
      * @notice Set the active flag for this Dispute Resolver to true. Only callable by the protocol ADMIN role.
@@ -270,6 +270,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @return exists - the dispute resolver was found
      * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
+     * @return sellerAllowList - list of sellers that are allowed to chose this dispute resolver
      */
     function getDisputeResolverByAddress(address _associatedAddress)
         external
@@ -277,7 +278,8 @@ interface IBosonAccountHandler is IBosonAccountEvents {
         returns (
             bool exists,
             BosonTypes.DisputeResolver memory disputeResolver,
-            BosonTypes.DisputeResolverFee[] memory disputeResolverFees
+            BosonTypes.DisputeResolverFee[] memory disputeResolverFees,
+            uint256[] memory sellerAllowList
         );
 
     /**

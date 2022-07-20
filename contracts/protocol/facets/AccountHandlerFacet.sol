@@ -65,7 +65,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set to 0x0
      * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency. Can be empty.
-     * @param _sellerAllowList - list of ids of sellers that can chose this dispute resolver. If empty, there are no restrictions which seller can chose it.
+     * @param _sellerAllowList - list of ids of sellers that can choose this dispute resolver. If empty, there are no restrictions on which seller can chose it.
      */
     function createDisputeResolver(
         DisputeResolver memory _disputeResolver,
@@ -478,7 +478,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
-     * @notice Add seller id to set of ids allowed to chose the given dispute resolver
+     * @notice Add seller ids to set of ids allowed to chose the given dispute resolver
      *
      * Emits a AllowedSellersAdded event if successful.
      *
@@ -493,7 +493,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _sellerAllowList - List of seller ids to add to allowed list
      */
-    function addSellerToAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external override {
+    function addSellersToAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external override {
         // At least one seller id must be specified and the number of ids cannot exceed the maximum number of seller ids to avoid running into block gas limit in a loop
         require(
             _sellerAllowList.length > 0 && _sellerAllowList.length <= protocolLimits().maxAllowedSellers,
@@ -503,7 +503,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         bool exists;
         DisputeResolver storage disputeResolver;
 
-        //Check Dispute Resolver and Dispute Resolver Fees from  disputeResolvers and disputeResolverFees mappings
+        //Check Dispute Resolver from disputeResolvers
         (exists, disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
 
         //Dispute Resolver  must already exist
@@ -532,7 +532,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _sellerAllowList - list of seller ids to remove from allowed list
      */
-    function removeSellerFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList)
+    function removeSellersFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList)
         external
         override
     {
@@ -545,7 +545,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         bool exists;
         DisputeResolver storage disputeResolver;
 
-        //Check Dispute Resolver and Dispute Resolver Fees from  disputeResolvers and disputeResolverFees mappings
+        //Check Dispute Resolver from disputeResolvers
         (exists, disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
 
         //Dispute Resolver  must already exist
@@ -572,7 +572,6 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
             if (sellerToRemoveIndex != lastIndex) {
                 uint256 lastSellerId = pl.allowedSellers[_disputeResolverId][lastIndex];
                 pl.allowedSellers[_disputeResolverId][sellerToRemoveIndex] = lastSellerId;
-
                 pl.allowedSellerIndex[_disputeResolverId][lastSellerId] = sellerToRemoveIndex + 1;
             }
 
@@ -672,7 +671,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * @return sellerAllowList - list of sellers that are allowed to chose this dispute resolver
      */
     function getDisputeResolver(uint256 _disputeResolverId)
-        external
+        public
         view
         override
         returns (
@@ -695,6 +694,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * @return exists - the dispute resolver  was found
      * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
+     * @return sellerAllowList - list of sellers that are allowed to chose this dispute resolver
      */
     function getDisputeResolverByAddress(address _associatedAddress)
         external
@@ -703,24 +703,25 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         returns (
             bool exists,
             DisputeResolver memory disputeResolver,
-            DisputeResolverFee[] memory disputeResolverFees
+            DisputeResolverFee[] memory disputeResolverFees,
+            uint256[] memory sellerAllowList
         )
     {
         uint256 disputeResolverId;
 
         (exists, disputeResolverId) = getDisputeResolverIdByOperator(_associatedAddress);
         if (exists) {
-            return fetchDisputeResolver(disputeResolverId);
+            return getDisputeResolver(disputeResolverId);
         }
 
         (exists, disputeResolverId) = getDisputeResolverIdByAdmin(_associatedAddress);
         if (exists) {
-            return fetchDisputeResolver(disputeResolverId);
+            return getDisputeResolver(disputeResolverId);
         }
 
         (exists, disputeResolverId) = getDisputeResolverIdByClerk(_associatedAddress);
         if (exists) {
-            return fetchDisputeResolver(disputeResolverId);
+            return getDisputeResolver(disputeResolverId);
         }
     }
 
