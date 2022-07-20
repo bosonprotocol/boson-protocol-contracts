@@ -230,4 +230,23 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Get the buyer escalation fee percentage.
      */
     function getBuyerEscalationDepositPercentage() external view returns (uint16);
+
+    /**
+     * @notice Sets the contract address for the given AuthTokenType
+     *
+     * Emits an AuthTokenContractChanged event.
+     *
+     * Reverts if _authTokenType is None
+     * Reverts if _authTokenContract is the zero address
+     *
+     * @param _authTokenType - the auth token type, as an Enum value
+     * @param _authTokenContract the address of the auth token contract (e.g. Lens or ENS contract address)
+     */
+    function setAuthTokenContract(BosonTypes.AuthTokenType _authTokenType, address _authTokenContract) external;
+
+    /**
+     * @notice Get the auth token address for the given AuthTokenType
+     * @param _authTokenType - the auth token type, as an Enum value
+     */
+    function getAuthTokenContract(BosonTypes.AuthTokenType _authTokenType) external view returns (address);
 }

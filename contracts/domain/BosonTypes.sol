@@ -47,6 +47,18 @@ contract BosonTypes {
         ResolveDispute
     }
 
+    enum AuthTokenType {
+       None,
+       Lens,
+       ENS
+    }
+
+    struct AuthToken {
+        uint256 id;
+        uint256 authTokenId;
+        AuthTokenType authTokenType;
+    }
+    
     struct Seller {
         uint256 id;
         address operator;

@@ -24,4 +24,5 @@ interface IBosonConfigEvents {
     event MaxEscalationResponsePeriodChanged(uint256 maxEscalationResponsePeriod, address indexed executedBy);
     event MaxDisputesPerBatchChanged(uint16 maxDisputesPerBatch, address indexed executedBy);
     event BuyerEscalationFeePercentageChanged(uint16 buyerEscalationFeePercentage, address indexed executedBy);
+    event AuthTokenContractChanged(BosonTypes.AuthTokenType indexed authTokenType, address indexed authTokenContract, address indexed executedBy);
 }
