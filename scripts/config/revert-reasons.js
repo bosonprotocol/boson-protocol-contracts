@@ -59,6 +59,10 @@ exports.RevertReasons = {
     "Dispute resolver fees are not present or exceeds maximum dispute resolver fees in a single transaction",
   DUPLICATE_DISPUTE_RESOLVER_FEES: "Duplicate dispute resolver fee",
   DISPUTE_RESOLVER_FEE_NOT_FOUND: "Dispute resolver fee not found",
+  SELLER_ALREADY_APPROVED: "Seller id is approved already",
+  SELLER_NOT_APPROVED: "Seller id is not approved",
+  INVALID_AMOUNT_ALLOWED_SELLERS:
+    "Allowed sellers not present or exceeds maximum allowed sellers in a single transaction",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",

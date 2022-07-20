@@ -22,6 +22,7 @@ interface IBosonAccountEvents {
         uint256 indexed disputeResolverId,
         BosonTypes.DisputeResolver disputeResolver,
         BosonTypes.DisputeResolverFee[] disputeResolverFees,
+        uint256[] sellerAllowList,
         address indexed executedBy
     );
     event DisputeResolverUpdated(
@@ -37,6 +38,12 @@ interface IBosonAccountEvents {
     event DisputeResolverFeesRemoved(
         uint256 indexed disputeResolverId,
         address[] feeTokensRemoved,
+        address indexed executedBy
+    );
+    event AllowedSellersAdded(uint256 indexed disputeResolverId, uint256[] addedSellers, address indexed executedBy);
+    event AllowedSellersRemoved(
+        uint256 indexed disputeResolverId,
+        uint256[] removedSellers,
         address indexed executedBy
     );
     event DisputeResolverActivated(

@@ -74,6 +74,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     tokenAmountsBuyer;
   let complaint, validDisputeDetails;
   let buyerPercent, validDisputeResolutionDetails, signatureSplits;
+  let sellerAllowList;
 
   before(async function () {
     // get interface Ids
@@ -138,6 +139,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         maxFeesPerDisputeResolver: 100,
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
+        maxAllowedSellers: 100,
       },
       // Protocol fees
       {
@@ -624,8 +626,13 @@ describe("IBosonMetaTransactionsHandler", function () {
         //Create DisputeResolverFee array so offer creation will succeed
         disputeResolverFees = [new DisputeResolverFee(mockToken.address, "mockToken", "0")];
 
+        // Make empty seller list, so every seller is allowed
+        sellerAllowList = [];
+
         // Register and activate the dispute resolver
-        await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+        await accountHandler
+          .connect(rando)
+          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
         await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
         // Valid offer domains
@@ -877,8 +884,13 @@ describe("IBosonMetaTransactionsHandler", function () {
         //Create DisputeResolverFee array so offer creation will succeed
         disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
 
+        // Make empty seller list, so every seller is allowed
+        sellerAllowList = [];
+
         // Register and activate the dispute resolver
-        await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+        await accountHandler
+          .connect(rando)
+          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
         await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
         // Create the offer
@@ -2246,8 +2258,13 @@ describe("IBosonMetaTransactionsHandler", function () {
           new DisputeResolverFee(mockToken.address, "mockToken", "0"),
         ];
 
+        // Make empty seller list, so every seller is allowed
+        sellerAllowList = [];
+
         // Register and activate the dispute resolver
-        await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+        await accountHandler
+          .connect(rando)
+          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
         await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
         const { offer, ...mo } = await mockOffer();
