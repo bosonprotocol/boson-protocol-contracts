@@ -56,6 +56,56 @@
         {
           "indexed": true,
           "internalType": "uint256",
+          "name": "disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256[]",
+          "name": "addedSellers",
+          "type": "uint256[]"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "AllowedSellersAdded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
+          "name": "disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256[]",
+          "name": "removedSellers",
+          "type": "uint256[]"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "AllowedSellersRemoved",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
           "name": "bundleId",
           "type": "uint256"
         },
@@ -411,6 +461,12 @@
           "internalType": "struct BosonTypes.DisputeResolverFee[]",
           "name": "disputeResolverFees",
           "type": "tuple[]"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256[]",
+          "name": "sellerAllowList",
+          "type": "uint256[]"
         },
         {
           "indexed": true,

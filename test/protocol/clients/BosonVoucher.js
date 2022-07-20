@@ -84,6 +84,7 @@ describe("IBosonVoucher", function () {
         maxFeesPerDisputeResolver: 100,
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
+        maxAllowedSellers: 100,
       },
       //Protocol fees
       {
@@ -170,8 +171,11 @@ describe("IBosonVoucher", function () {
       //Create DisputeResolverFee array so offer creation will succeed
       disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
 
+      // Make empty seller list, so every seller is allowed
+      const sellerAllowList = [];
+
       // Register and activate the dispute resolver
-      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees);
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver("2");
 
       const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();

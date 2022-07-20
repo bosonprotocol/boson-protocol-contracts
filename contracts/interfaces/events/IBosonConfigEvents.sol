@@ -23,5 +23,6 @@ interface IBosonConfigEvents {
     event MaxFeesPerDisputeResolverChanged(uint16 maxFeesPerDisputeResolver, address indexed executedBy);
     event MaxEscalationResponsePeriodChanged(uint256 maxEscalationResponsePeriod, address indexed executedBy);
     event MaxDisputesPerBatchChanged(uint16 maxDisputesPerBatch, address indexed executedBy);
+    event MaxAllowedSellersChanged(uint16 maxAllowedSellers, address indexed executedBy);
     event BuyerEscalationFeePercentageChanged(uint16 buyerEscalationFeePercentage, address indexed executedBy);
 }

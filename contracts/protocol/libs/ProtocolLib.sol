@@ -48,6 +48,8 @@ library ProtocolLib {
         uint256 maxEscalationResponsePeriod;
         // limit how many disputes can be processed in single batch transaction
         uint16 maxDisputesPerBatch;
+        // limit how many sellers can be added to or removed from an allow list in a single transaction
+        uint16 maxAllowedSellers;
     }
 
     // Protocol fees storage
@@ -134,6 +136,10 @@ library ProtocolLib {
         uint16 buyerEscalationDepositPercentage;
         // seller id => token address (only ERC721) => start and end of token ids range
         mapping(uint256 => mapping(address => BosonTypes.TokenRange[])) twinRangesBySeller;
+        // dispute resolver id => list of allowed sellers
+        mapping(uint256 => uint256[]) allowedSellers;
+        // dispute resolver id => seller id => index of allowed seller in allowedSellers
+        mapping(uint256 => mapping(uint256 => uint256)) allowedSellerIndex;
     }
 
     // Incrementing ID counters
