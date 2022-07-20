@@ -22,8 +22,9 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
      * - Seller is not active (if active == false)
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
+     * @param _contractURI - contract metadata URI
      */
-    function createSellerInternal(Seller memory _seller) internal {
+    function createSellerInternal(Seller memory _seller, string calldata _contractURI) internal {
         //Check active is not set to false
         require(_seller.active, MUST_BE_ACTIVE);
 
@@ -48,7 +49,7 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         storeSeller(_seller);
 
         // create clone and store its address cloneAddress
-        address voucherCloneAddress = cloneBosonVoucher(_seller.operator);
+        address voucherCloneAddress = cloneBosonVoucher(_seller.operator, _contractURI);
         protocolLookups().cloneAddress[sellerId] = voucherCloneAddress;
 
         // Notify watchers of state change
@@ -203,7 +204,7 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
      * @param _operator - address of the operator
      * @return cloneAddress - the address of newly created clone
      */
-    function cloneBosonVoucher(address _operator) internal returns (address cloneAddress) {
+    function cloneBosonVoucher(address _operator, string calldata _contractURI) internal returns (address cloneAddress) {
         // Pointer to stored addresses
         ProtocolLib.ProtocolAddresses storage pa = protocolAddresses();
 
@@ -221,12 +222,13 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
 
         // Initialize the clone
         IInitializableClone(cloneAddress).initialize(pa.voucherBeaconAddress);
-        IInitializableClone(cloneAddress).initializeVoucher(_operator);
+        IInitializableClone(cloneAddress).initializeVoucher(_operator, _contractURI);
     }
 }
 
 interface IInitializableClone {
     function initialize(address _beaconAddress) external;
 
-    function initializeVoucher(address _newOwner) external;
+    function initializeVoucher(address _newOwner, string calldata _newContractURI) external;
+
 }
