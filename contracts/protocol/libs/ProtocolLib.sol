@@ -132,10 +132,8 @@ library ProtocolLib {
         mapping(address => mapping(uint256 => uint256)) conditionalCommitsByAddress;
         // buyer escalation deposit percentage
         uint16 buyerEscalationDepositPercentage;
-        // seller id => twin ids
-        mapping(uint256 => uint256[]) twinIdsBySeller;
-        // twin id => initial twin supply
-        mapping(uint256 => uint256) initialTwinSupply;
+        // seller id => token address (only ERC721) => start and end of token ids range
+        mapping(uint256 => mapping(address => BosonTypes.TokenRange[])) twinRangesBySeller;
     }
 
     // Incrementing ID counters

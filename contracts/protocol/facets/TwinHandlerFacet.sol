@@ -89,12 +89,12 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         // delete struct
         delete protocolEntities().twins[_twinId];
 
-        // Also remove from twinIdsBySeller mapping
-        uint256[] storage twinIds = protocolLookups().twinIdsBySeller[sellerId];
-        for (uint256 j = 0; j < twinIds.length; j++) {
-            if (twinIds[j] == _twinId) {
-                twinIds[j] = twinIds[twinIds.length - 1];
-                twinIds.pop();
+        // Also remove from twinRangesBySeller mapping
+        if (twin.tokenType == TokenType.NonFungibleToken) {
+            TokenRange[] storage twinRanges = protocolLookups().twinRangesBySeller[sellerId][twin.tokenAddress];
+            for (uint256 index = 0; index < twinRanges.length; index++) {
+                twinRanges[index] = twinRanges[twinRanges.length - 1];
+                twinRanges.pop();
                 break;
             }
         }
