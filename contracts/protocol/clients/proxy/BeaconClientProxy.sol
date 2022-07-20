@@ -29,15 +29,10 @@ contract BeaconClientProxy is Proxy {
         BeaconClientLib.getBeaconSlot().value = _beaconAddress;
     }
 
-    /**
-     * @dev Indicates that the contract has been initialized.
-     */
-    bool private _initialized;
-
     modifier initializer() {
-        require(!_initialized, "Initializable: contract is already initialized");
+        require(!BeaconClientLib.getBeaconSlot().initialized, "Initializable: contract is already initialized");
         _;
-        _initialized = true;
+        BeaconClientLib.getBeaconSlot().initialized = true;
     }
 
     /**

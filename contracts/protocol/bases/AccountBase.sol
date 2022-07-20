@@ -48,7 +48,7 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         storeSeller(_seller);
 
         // create clone and store its address cloneAddress
-        address voucherCloneAddress = cloneBosonVoucher();
+        address voucherCloneAddress = cloneBosonVoucher(_seller.operator);
         protocolLookups().cloneAddress[sellerId] = voucherCloneAddress;
 
         // Notify watchers of state change
@@ -200,9 +200,10 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
     /**
      * @notice Creates a minimal clone of the Boson Voucher Contract
      *
+     * @param _operator - address of the operator
      * @return cloneAddress - the address of newly created clone
      */
-    function cloneBosonVoucher() internal returns (address cloneAddress) {
+    function cloneBosonVoucher(address _operator) internal returns (address cloneAddress) {
         // Pointer to stored addresses
         ProtocolLib.ProtocolAddresses storage pa = protocolAddresses();
 
@@ -220,9 +221,12 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
 
         // Initialize the clone
         IInitializableClone(cloneAddress).initialize(pa.voucherBeaconAddress);
+        IInitializableClone(cloneAddress).initializeVoucher(_operator);
     }
 }
 
 interface IInitializableClone {
     function initialize(address _beaconAddress) external;
+
+    function initializeVoucher(address _newOwner) external;
 }
