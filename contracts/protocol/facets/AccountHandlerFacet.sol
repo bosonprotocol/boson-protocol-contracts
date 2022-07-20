@@ -205,7 +205,15 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         delete protocolLookups().sellerIdByAdmin[seller.admin];
         delete protocolLookups().sellerIdByClerk[seller.clerk];
 
+        // store this address of existing seller operator to check if you have to transfer the ownership later
+        address oldSellerOperator = seller.operator;
+
         storeSeller(_seller);
+
+        // If operator changed, thasfer the ownership of NFT voucher
+        if (oldSellerOperator != _seller.operator) {
+            IBosonVoucher(protocolLookups().cloneAddress[seller.id]).transferOwnership(_seller.operator);
+        }
 
         // Notify watchers of state change
         emit SellerUpdated(_seller.id, _seller, msgSender());
