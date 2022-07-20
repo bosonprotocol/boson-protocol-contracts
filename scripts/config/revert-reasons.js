@@ -81,6 +81,8 @@ exports.RevertReasons = {
   TOO_MANY_TWINS: "Exceeded maximum twins in a single transaction",
   BUNDLE_OFFER_MUST_BE_UNIQUE: "Offer must be unique to a bundle",
   BUNDLE_TWIN_MUST_BE_UNIQUE: "Twin must be unique to a bundle",
+  INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS:
+    "Insufficient twin supplyAvailable to cover total quantity of bundle offers",
 
   // Exchange related
   NO_SUCH_EXCHANGE: "No such exchange",
