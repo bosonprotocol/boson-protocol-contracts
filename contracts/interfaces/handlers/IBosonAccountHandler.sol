@@ -129,6 +129,22 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver) external;
 
     /**
+     * @notice Updates an agent. All fields should be filled, even those staying the same.
+     *
+     * Emits a AgentUpdated event if successful.
+     *
+     * Reverts if:
+     * - Caller is not the wallet address associated with the agent account
+     * - Wallet address is zero address
+     * - Wallet address is not unique to this agent
+     * - Agent does not exist
+     * - Fee percentage is greater than 10000 (100%)
+     *
+     * @param _agent - the fully populated agent struct
+     */
+    function updateAgent(BosonTypes.Agent memory _agent) external;
+
+    /**
      * @notice Add DisputeResolverFees to an existing dispute resolver
      *
      * Emits a DisputeResolverFeesAdded event if successful.
