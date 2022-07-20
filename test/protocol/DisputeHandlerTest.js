@@ -1349,6 +1349,27 @@ describe("IBosonDisputeHandler", function () {
             );
           });
 
+          it("Dispute resolver is not specified (absolute zero offer)", async function () {
+            // Create and absolute zero offer without DR
+            // Prepare an absolute zero offer
+            offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
+            offer.id++;
+            disputeResolverId = "0";
+
+            // Create a new offer
+            await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+
+            // Commit to offer and put exchange all the way to dispute
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
+            await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
+            await disputeHandler.connect(buyer).raiseDispute(exchangeId, complaint);
+
+            // Attempt to escalate the dispute, expecting revert
+            await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
+              RevertReasons.ESCALATION_NOT_ALLOWED
+            );
+          });
+
           it("Insufficient native currency sent", async function () {
             // Attempt to escalate the dispute, expecting revert
             await expect(
