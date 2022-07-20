@@ -622,6 +622,26 @@ describe("IBosonAccountHandler", function () {
         for ([key, value] of Object.entries(seller)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
         }
+
+        //Check that old addresses are no longer mapped. We don't map the treasury address.
+        [exists] = await accountHandler.connect(rando).getSellerByAddress(operator.address);
+        expect(exists).to.be.false;
+
+        [exists] = await accountHandler.connect(rando).getSellerByAddress(admin.address);
+        expect(exists).to.be.false;
+
+        [exists] = await accountHandler.connect(rando).getSellerByAddress(clerk.address);
+        expect(exists).to.be.false;
+
+        //Check that new addresses are mapped. We don't map the treasury address.
+        [exists] = await accountHandler.connect(rando).getSellerByAddress(seller.operator);
+        expect(exists).to.be.true;
+
+        [exists] = await accountHandler.connect(rando).getSellerByAddress(seller.admin);
+        expect(exists).to.be.true;
+
+        [exists] = await accountHandler.connect(rando).getSellerByAddress(seller.clerk);
+        expect(exists).to.be.true;
       });
 
       it("should update state correctly if values are the same", async function () {
@@ -2119,6 +2139,26 @@ describe("IBosonAccountHandler", function () {
           disputeResolverFeeList.toString(),
           "Dispute Resolver Fee List is incorrect"
         );
+
+        //Check that old addresses are no longer mapped. We don't map the treasury address.
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(operator.address);
+        expect(exists).to.be.false;
+
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(admin.address);
+        expect(exists).to.be.false;
+
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(clerk.address);
+        expect(exists).to.be.false;
+
+        //Check that new addresses are mapped. We don't map the treasury address.
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(disputeResolver.operator);
+        expect(exists).to.be.true;
+
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(disputeResolver.admin);
+        expect(exists).to.be.true;
+
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(disputeResolver.clerk);
+        expect(exists).to.be.true;
       });
 
       it("should update state correctly if values are the same", async function () {
