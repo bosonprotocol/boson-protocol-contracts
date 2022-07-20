@@ -201,9 +201,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         );
 
         //Delete current mappings
-        delete protocolLookups().sellerIdByOperator[_seller.operator];
-        delete protocolLookups().sellerIdByAdmin[_seller.admin];
-        delete protocolLookups().sellerIdByClerk[_seller.clerk];
+        delete protocolLookups().sellerIdByOperator[seller.operator];
+        delete protocolLookups().sellerIdByAdmin[seller.admin];
+        delete protocolLookups().sellerIdByClerk[seller.clerk];
 
         storeSeller(_seller);
 
