@@ -402,16 +402,64 @@ describe("IBosonExchangeHandler", function () {
         await expect(voucherImplementation.ownerOf("2")).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
       });
 
+      it("should allow redemption period to be defined by date rather than duration", async function () {
+        // Create an offer specifying redemption period with end date rather than duration
+        const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+        offerDurations.voucherValid = "0";
+        offerDates.voucherRedeemableUntil = offerDates.validUntil; // all vouchers expire when offer expires
+
+        // Check if domain entities are valid
+        expect(offer.isValid()).is.true;
+        expect(offerDates.isValid()).is.true;
+        expect(offerDurations.isValid()).is.true;
+
+        // Create the offer
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+        exchange.offerId = offerId = "2"; // tested against second offer
+
+        // Commit to offer, retrieving the event
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+        txReceipt = await tx.wait();
+        event = getEvent(txReceipt, exchangeHandler, "BuyerCommitted");
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        exchange.voucher.committedDate = block.timestamp.toString();
+
+        // Update the validUntilDate date in the expected exchange struct
+        exchange.voucher.validUntilDate = offerDates.validUntil;
+
+        // Get the struct
+        exchangeStruct = exchange.toStruct();
+        assert.equal(event.exchangeId.toString(), id, "Exchange id is incorrect");
+        assert.equal(event.offerId.toString(), offerId, "Offer id is incorrect");
+        assert.equal(event.buyerId.toString(), buyerId, "Buyer id is incorrect");
+        assert.equal(
+          Exchange.fromStruct(event.exchange).toString(),
+          Exchange.fromStruct(exchangeStruct).toString(),
+          "Exchange struct is incorrect"
+        );
+      });
+
       context("💔 Revert Reasons", async function () {
         /*
          * Reverts if:
          * - offerId is invalid
-         * - offer has been voided                    // TODO
-         * - offer has expired                        // TODO
-         * - offer is not yet available for commits   // TODO
-         * - offer's quantity available is zero       // TODO
+         * - offer has been voided                    // TODO asap
+         * - offer has expired                        // TODO asap
+         * - offer is not yet available for commits   // TODO asap
+         * - offer's quantity available is zero       // TODO asap
          * - buyer address is zero
-         * - buyer account is inactive                // TODO
+         * - buyer account is inactive                // TODO when deactivateBuyer works
+         * - buyer is token-gated (conditional commit requirements not met or already used)  // TODO asap
+         * - offer price is in native token and buyer caller does not send enough  // TODO asap
+         * - offer price is in some ERC20 token and caller also send native currency  // TODO asap
+         * - contract at token address does not support erc20 function transferFrom  // TODO asap
+         * - calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)   // TODO asap
+         * - seller has less funds available than sellerDeposit  // TODO asap
          */
 
         it("buyer address is the zero address", async function () {

@@ -49,9 +49,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      * - buyer is token-gated (conditional commit requirements not met or already used)
      * - offer price is in native token and buyer caller does not send enough
      * - offer price is in some ERC20 token and caller also send native currency
-     * - if contract at token address does not support erc20 function transferFrom
-     * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - if seller has less funds available than sellerDeposit
+     * - contract at token address does not support erc20 function transferFrom
+     * - calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - seller has less funds available than sellerDeposit
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
@@ -92,11 +92,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         exchange.state = ExchangeState.Committed;
         exchange.voucher.committedDate = block.timestamp;
 
-        // Store the time the voucher expires // TODO: implement the start and and based on new requirements
+        // Determine the time after which the voucher can be redeemed
         uint256 startDate = (block.timestamp >= offerDates.voucherRedeemableFrom)
             ? block.timestamp
             : offerDates.voucherRedeemableFrom;
-        exchange.voucher.validUntilDate = startDate + fetchOfferDurations(_offerId).voucherValid;
+
+        // Determine the time after which the voucher can no longer be redeemed
+        exchange.voucher.validUntilDate = (offerDates.voucherRedeemableUntil > 0)
+            ? offerDates.voucherRedeemableUntil
+            : startDate + fetchOfferDurations(_offerId).voucherValid;
 
         // Map the offerId to the exchangeId as one-to-many
         protocolLookups().exchangeIdsByOffer[_offerId].push(exchangeId);
