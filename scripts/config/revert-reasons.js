@@ -128,6 +128,7 @@ exports.RevertReasons = {
   DISPUTE_STILL_VALID: "Dispute still valid",
   INVALID_DISPUTE_TIMEOUT: "Invalid dispute timeout",
   TOO_MANY_DISPUTES: "Exceeded maximum disputes in a single transaction",
+  ESCALATION_NOT_ALLOWED: "Disputes without dispute resolver cannot be escalated",
 
   // Config related
   FEE_PERCENTAGE_INVALID: "Percentage representation must be less than 10000",

@@ -318,6 +318,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * - caller is not the buyer
      * - dispute is already expired
      * - dispute is not in a resolving state
+     * - dispute resolver is not specified (absolute zero offer)
      * - offer price is in native token and buyer caller does not send enough
      * - offer price is in some ERC20 token and caller also send native currency
      * - if contract at token address does not support erc20 function transferFrom
@@ -343,6 +344,9 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // Fetch the dispute resolution terms from the storage
         DisputeResolutionTerms storage disputeResolutionTerms = fetchDisputeResolutionTerms(exchange.offerId);
+
+        // absolute zero offers can be without DR. In that case we prevent escalation
+        require(disputeResolutionTerms.disputeResolverId > 0, ESCALATION_NOT_ALLOWED);
 
         // fetch offer to get info about dispute resolver id
         (, Offer storage offer) = fetchOffer(exchange.offerId);
