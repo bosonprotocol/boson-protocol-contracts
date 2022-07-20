@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xd59469eb
+ * The ERC-165 identifier for this interface is: 0x3ef28879
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -127,6 +127,22 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _disputeResolver - the fully populated dispute resolver struct
      */
     function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver) external;
+
+    /**
+     * @notice Updates an agent. All fields should be filled, even those staying the same.
+     *
+     * Emits a AgentUpdated event if successful.
+     *
+     * Reverts if:
+     * - Caller is not the wallet address associated with the agent account
+     * - Wallet address is zero address
+     * - Wallet address is not unique to this agent
+     * - Agent does not exist
+     * - Fee percentage is greater than 10000 (100%)
+     *
+     * @param _agent - the fully populated agent struct
+     */
+    function updateAgent(BosonTypes.Agent memory _agent) external;
 
     /**
      * @notice Add DisputeResolverFees to an existing dispute resolver
