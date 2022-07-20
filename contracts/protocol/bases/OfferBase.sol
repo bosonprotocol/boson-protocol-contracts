@@ -48,7 +48,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
         require(exists, NOT_OPERATOR);
         _offer.sellerId = sellerId;
-
         // Get the next offerId and increment the counter
         uint256 offerId = protocolCounters().nextOfferId++;
         _offer.id = offerId;

@@ -39,6 +39,8 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * - number of twins exceeds maximum allowed number per bundle
      * - duplicate twins added in same bundle
      * - exchange already exists for the offer id in bundle
+     * - offers total quantity is greater than twin supply when token is nonfungible
+     * - offers total quantity multiplied by twin amount is greater than twin supply when token is fungible or multitoken
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
@@ -82,6 +84,8 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * - any of twins does not exist
      * - twin already exists in the same bundle
      * - twin ids contains duplicated twins
+     * - offers total quantity is greater than twin supply when token is nonfungible
+     * - offers total quantity multiplied by twin amount is greater than twin supply when token is fungible or multitoken
      *
      * @param _bundleId  - the id of the bundle to be updated
      * @param _twinIds - array of twin ids to be added to the bundle
@@ -94,14 +98,26 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             BundleUpdateAttribute.TWIN
         );
 
+        // Sum of offers quantity available
+        uint256 offersTotalQuantityAvailable;
+
+        // Calculate bundle offers total quantity available.
+        for (uint256 i = 0; i < bundle.offerIds.length; i++) {
+            offersTotalQuantityAvailable = calculateOffersTotalQuantity(
+                offersTotalQuantityAvailable,
+                bundle.offerIds[i]
+            );
+        }
+
         for (uint256 i = 0; i < _twinIds.length; i++) {
             uint256 twinId = _twinIds[i];
-            // make sure twin exist and belong to the seller
-            getValidTwin(twinId);
-
             // Twin cannot be associated with a different bundle
             (bool bundleForTwinExist, ) = fetchBundleIdByTwin(twinId);
             require(!bundleForTwinExist, BUNDLE_TWIN_MUST_BE_UNIQUE);
+
+            if (bundle.offerIds.length > 0) {
+                bundleSupplyChecks(offersTotalQuantityAvailable, twinId);
+            }
 
             // add to bundleIdByTwin mapping
             protocolLookups().bundleIdByTwin[twinId] = _bundleId;
@@ -233,10 +249,13 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
             BundleUpdateAttribute.OFFER
         );
 
+        uint256 offersTotalQuantityAvailable;
+
         for (uint256 i = 0; i < _offerIds.length; i++) {
             uint256 offerId = _offerIds[i];
-            // make sure offer exist and belong to the seller
-            getValidOffer(offerId);
+
+            // Calculate bundle offers total quantity available.
+            offersTotalQuantityAvailable = calculateOffersTotalQuantity(offersTotalQuantityAvailable, offerId);
 
             // make sure exchange does not already exist for this offer id.
             (bool exchangeIdsForOfferExists, ) = getExchangeIdsByOffer(offerId);
@@ -251,6 +270,10 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
 
             // add to bundle struct
             bundle.offerIds.push(offerId);
+        }
+
+        for (uint256 i = 0; i < bundle.twinIds.length; i++) {
+            bundleSupplyChecks(offersTotalQuantityAvailable, bundle.twinIds[i]);
         }
 
         // Notify watchers of state change

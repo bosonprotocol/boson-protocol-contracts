@@ -468,7 +468,7 @@ describe("IBosonOrchestrationHandler", function () {
       });
 
       it("Should allow creation of an offer with unlimited supply", async function () {
-        // Prepare an absolute zero offer
+        // Prepare an offer with unlimited supply
         offer.quantityAvailable = ethers.constants.MaxUint256.toString();
 
         // Create a seller and an offer, testing for the event
@@ -2370,8 +2370,10 @@ describe("IBosonOrchestrationHandler", function () {
       });
 
       it("Should allow creation of an offer with unlimited supply", async function () {
-        // Prepare an absolute zero offer
+        // Prepare an offer with unlimited supply
         offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+        // Twin supply should be unlimited as well
+        twin.supplyAvailable = ethers.constants.MaxUint256.toString();
 
         // Create an offer, a twin and a bundle, testing for the events
         await expect(
@@ -3161,8 +3163,10 @@ describe("IBosonOrchestrationHandler", function () {
       });
 
       it("Should allow creation of an offer with unlimited supply", async function () {
-        // Prepare an absolute zero offer
+        // Prepare an offer with unlimited supply
         offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+        // Twin supply should be unlimited as well
+        twin.supplyAvailable = ethers.constants.MaxUint256.toString();
 
         // Create an offer with condition, twin and bundle testing for the events
         await expect(
