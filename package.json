@@ -38,7 +38,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.4.2",
-    "@openzeppelin/contracts-upgradeable": "^4.4.2"
+    "@openzeppelin/contracts-upgradeable": "^4.7.1"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.4",
