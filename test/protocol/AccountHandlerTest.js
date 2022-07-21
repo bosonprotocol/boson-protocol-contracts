@@ -247,8 +247,11 @@ describe("IBosonAccountHandler", function () {
           .withArgs(seller.id, sellerStruct, expectedCloneAddress, admin.address);
 
         // Voucher clone contract
-        const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+        await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
+
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         await expect(tx)
           .to.emit(bosonVoucher, "OwnershipTransferred")
@@ -271,10 +274,12 @@ describe("IBosonAccountHandler", function () {
         }
 
         // Voucher clone contract
-        const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
       });
 
       it("should ignore any provided id and assign the next available", async function () {

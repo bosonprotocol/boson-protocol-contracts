@@ -21,6 +21,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { getEvent, applyPercentage, calculateContractAddress } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { oneMonth } = require("../utils/constants");
@@ -76,6 +77,8 @@ describe("IBosonOrchestrationHandler", function () {
   let DRFeeNative, DRFeeToken;
   let sellerAllowList;
   let contractURI;
+  let expectedCloneAddress, bosonVoucher;
+  let tx;
 
   before(async function () {
     // get interface Ids
@@ -124,14 +127,18 @@ describe("IBosonOrchestrationHandler", function () {
     protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
     buyerEscalationDepositPercentage = "1000"; // 10%
 
+    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
+    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    const [, [beacon], [proxy]] = await deployProtocolClients(protocolClientArgs, gasLimit);
+
     // Add config Handler, so offer id starts at 1
     const protocolConfig = [
       // Protocol addresses
       {
         treasuryAddress: ethers.constants.AddressZero,
         tokenAddress: bosonToken.address,
-        voucherBeaconAddress: ethers.constants.AddressZero,
-        beaconProxyAddress: ethers.constants.AddressZero,
+        voucherBeaconAddress: beacon.address,
+        beaconProxyAddress: proxy.address,
       },
       // Protocol limits
       {
@@ -267,18 +274,17 @@ describe("IBosonOrchestrationHandler", function () {
     context("👉 createSellerAndOffer()", async function () {
       it("should emit a SellerCreated and OfferCreated events", async function () {
         // Create a seller and an offer, testing for the event
-        await expect(
-          orchestrationHandler
-            .connect(operator)
-            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
-        )
+        tx = await orchestrationHandler
+          .connect(operator)
+          .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId);
+
+        expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+
+        await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(
-            seller.id,
-            sellerStruct,
-            calculateContractAddress(orchestrationHandler.address, "1"),
-            operator.address
-          )
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, operator.address);
+
+        await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -289,6 +295,17 @@ describe("IBosonOrchestrationHandler", function () {
             disputeResolutionTermsStruct,
             operator.address
           );
+
+        // Voucher clone contract
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+        await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
+
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+        await expect(tx)
+          .to.emit(bosonVoucher, "OwnershipTransferred")
+          .withArgs(ethers.constants.AddressZero, operator.address);
       });
 
       it("should update state", async function () {
@@ -332,6 +349,15 @@ describe("IBosonOrchestrationHandler", function () {
         for ([key, value] of Object.entries(disputeResolutionTerms)) {
           expect(JSON.stringify(returnedDisputeResolutionTermsStruct[key]) === JSON.stringify(value)).is.true;
         }
+
+        // Voucher clone contract
+        expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+        expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
       });
 
       it("should ignore any provided id and assign the next available", async function () {
@@ -3326,15 +3352,12 @@ describe("IBosonOrchestrationHandler", function () {
             condition
           );
 
+        expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(
-            seller.id,
-            sellerStruct,
-            calculateContractAddress(orchestrationHandler.address, "1"),
-            operator.address
-          )
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -3358,6 +3381,17 @@ describe("IBosonOrchestrationHandler", function () {
         assert.equal(eventGroupCreated.groupId.toString(), group.id, "Group Id is incorrect");
         assert.equal(eventGroupCreated.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
         assert.equal(groupInstance.toString(), group.toString(), "Group struct is incorrect");
+
+        // Voucher clone contract
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+        await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
+
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+        await expect(tx)
+          .to.emit(bosonVoucher, "OwnershipTransferred")
+          .withArgs(ethers.constants.AddressZero, operator.address);
       });
 
       it("should update state", async function () {
@@ -3420,6 +3454,15 @@ describe("IBosonOrchestrationHandler", function () {
         for ([key, value] of Object.entries(group)) {
           expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
         }
+
+        // Voucher clone contract
+        expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+        expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
       });
 
       it("should ignore any provided ids and assign the next available", async function () {
@@ -3519,15 +3562,12 @@ describe("IBosonOrchestrationHandler", function () {
             twin
           );
 
+        expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(
-            seller.id,
-            sellerStruct,
-            calculateContractAddress(orchestrationHandler.address, "1"),
-            operator.address
-          )
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -3563,6 +3603,17 @@ describe("IBosonOrchestrationHandler", function () {
         assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
         assert.equal(eventBundleCreated.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+
+        // Voucher clone contract
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+        await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
+
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+        await expect(tx)
+          .to.emit(bosonVoucher, "OwnershipTransferred")
+          .withArgs(ethers.constants.AddressZero, operator.address);
       });
 
       it("should update state", async function () {
@@ -3639,6 +3690,15 @@ describe("IBosonOrchestrationHandler", function () {
         for ([key, value] of Object.entries(bundle)) {
           expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
         }
+
+        // Voucher clone contract
+        expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+        expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
       });
 
       it("should ignore any provided ids and assign the next available", async function () {
@@ -3783,15 +3843,12 @@ describe("IBosonOrchestrationHandler", function () {
             twin
           );
 
+        expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(
-            seller.id,
-            sellerStruct,
-            calculateContractAddress(orchestrationHandler.address, "1"),
-            operator.address
-          )
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -3835,6 +3892,17 @@ describe("IBosonOrchestrationHandler", function () {
         assert.equal(eventBundleCreated.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
         assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
         assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+
+        // Voucher clone contract
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+        await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
+
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+        await expect(tx)
+          .to.emit(bosonVoucher, "OwnershipTransferred")
+          .withArgs(ethers.constants.AddressZero, operator.address);
       });
 
       it("should update state", async function () {
@@ -3923,6 +3991,15 @@ describe("IBosonOrchestrationHandler", function () {
         for ([key, value] of Object.entries(bundle)) {
           expect(JSON.stringify(returnedBundle[key]) === JSON.stringify(value)).is.true;
         }
+
+        // Voucher clone contract
+        expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+        expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
       });
 
       it("should ignore any provided ids and assign the next available", async function () {
