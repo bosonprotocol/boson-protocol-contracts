@@ -552,6 +552,21 @@ describe("IBosonTwinHandler", function () {
         expect(success).to.be.false;
       });
 
+      it("should make twin range available again if token type is NonFungible", async function () {
+        twin.tokenType = TokenType.NonFungibleToken;
+        twin.amount = "0";
+        const expectedNewTwinId = "2";
+
+        // Create a twin with range: [0,1499]
+        await twinHandler.connect(operator).createTwin(twin);
+
+        // Remove twin
+        await twinHandler.connect(operator).removeTwin(expectedNewTwinId);
+
+        // Twin range must be available and createTwin transaction with same range should succeed
+        await expect(twinHandler.connect(operator).createTwin(twin)).to.not.reverted;
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Twin does not exist", async function () {
           let nonExistantTwinId = "999";
