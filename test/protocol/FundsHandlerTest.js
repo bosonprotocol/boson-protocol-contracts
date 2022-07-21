@@ -1405,14 +1405,7 @@ describe("IBosonFundsHandler", function () {
 
       disputeResolverId = mo.disputeResolverId;
 
-      // Agents
-      // Create a valid agent,
-      agentId = "3";
-      agentFeePercentage = "500"; //5%
-      active = true;
-      agent = new Agent(agentId, agentFeePercentage, other.address, active);
-      expect(agent.isValid()).is.true;
-
+      agentId = "0";
       // Create both offers
       await Promise.all([
         offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId),
@@ -1442,12 +1435,19 @@ describe("IBosonFundsHandler", function () {
           value: `${2 * sellerDeposit}`,
         });
 
+      // Agents
+      // Create a valid agent,
+      agentId = "3";
+      agentFeePercentage = "500"; //5%
+      active = true;
+      agent = new Agent(agentId, agentFeePercentage, other.address, active);
+      expect(agent.isValid()).is.true;
+
       // Create an agent
       await accountHandler.connect(rando).createAgent(agent);
 
-      agentOffer = offer.clone();
+      agentOffer = offerToken.clone();
       agentOffer.id = "3";
-      agentOffer.exchangeToken = mockToken.address;
       agentOfferProtocolFee = mo.offerFees.protocolFee;
     });
 

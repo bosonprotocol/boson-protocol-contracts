@@ -218,8 +218,6 @@ describe("IBosonOfferHandler", function () {
       // Set used variables
       price = offer.price;
 
-      protocolFeePercentage = offerFees.protocolFee;
-      agentFee = offerFees.agentFee;
       offerFeesStruct = offerFees.toStruct();
 
       // Set despute resolution terms
@@ -749,6 +747,73 @@ describe("IBosonOfferHandler", function () {
               agentId,
               operator.address
             );
+        });
+
+        it("after the agent fee changes, new offers should have the new agent fee", async function () {
+          agent.feePercentage = "1000"; // 10%
+          await accountHandler.connect(other).updateAgent(agent);
+
+          offer.id = await offerHandler.getNextOfferId();
+          protocolFee = applyPercentage(price, protocolFeePercentage);
+          offerFees.protocolFee = protocolFee;
+
+          // Calculate the new agent fee amount.
+          agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+          offerFees.agentFee = agentFee;
+          offerFeesStruct = offerFees.toStruct();
+
+          // Create a new offer
+          await expect(
+            offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId)
+          )
+            .to.emit(offerHandler, "OfferCreated")
+            .withArgs(
+              nextOfferId,
+              offer.sellerId,
+              offer.toStruct(),
+              offerDatesStruct,
+              offerDurationsStruct,
+              disputeResolutionTermsStruct,
+              offerFeesStruct,
+              agentId,
+              operator.address
+            );
+        });
+
+        it("after the agent fee changes, old offers should have the same agent fee", async function () {
+          // Creating 1st offer
+          let oldOfferId = await offerHandler.getNextOfferId();
+
+          // Calculate the new agent fee amount.
+          let oldOfferAgentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+
+          // Create a new offer
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+          // change agent fee percentage and create a new offer
+          agent.feePercentage = "1000"; // 10%
+          await accountHandler.connect(other).updateAgent(agent);
+
+          // Creating 2nd offer
+          // Calculate the new agent fee amount.
+          let newOfferAgentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+
+          let newOfferId = await offerHandler.getNextOfferId();
+
+          // Create a new offer
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+          //Check offer agent fee for New offer.
+          [, , , , , offerFeesStruct] = await offerHandler.getOffer(newOfferId);
+          expect(offerFeesStruct.agentFee.toString()).is.equal(newOfferAgentFee);
+
+          //Check offer agent fee for old offer.
+          [, , , , , offerFeesStruct] = await offerHandler.getOffer(oldOfferId);
+          expect(offerFeesStruct.agentFee.toString()).is.equal(oldOfferAgentFee);
         });
 
         context("💔 Revert Reasons", async function () {
