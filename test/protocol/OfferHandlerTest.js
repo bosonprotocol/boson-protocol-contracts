@@ -62,9 +62,9 @@ describe("IBosonOfferHandler", function () {
     disputeResolutionTermsStructs,
     disputeResolutionTermsList;
   let DRFeeNative, DRFeeToken;
-  let sellerAllowList;
   let contractURI;
   let agent, agentId, agentFeePercentage, nonZeroAgentIds;
+  let sellerAllowList, allowedSellersToAdd;
 
   before(async function () {
     // get interface Ids
@@ -493,6 +493,17 @@ describe("IBosonOfferHandler", function () {
           );
       });
 
+      it("Should allow creation of an offer if DR has a sellerAllowList and seller is on it", async function () {
+        // add seller to allow list
+        allowedSellersToAdd = ["1"]; // existing seller is "1", DR is "2", new seller is "3"
+        await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
+
+        // Create an offer testing for the event
+        await expect(
+          offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId)
+        ).to.emit(offerHandler, "OfferCreated");
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
@@ -697,6 +708,20 @@ describe("IBosonOfferHandler", function () {
           await expect(
             offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId)
           ).to.emit(offerHandler, "OfferCreated");
+        });
+
+        it("Seller is not on dispute resolver's seller allow list", async function () {
+          // Create new seller so sellerAllowList can have an entry
+          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          await accountHandler.connect(rando).createSeller(seller);
+
+          allowedSellersToAdd = ["3"]; // DR is "1", existing seller is "2", new seller is "3"
+          await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId)
+          ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
         });
 
         it("Dispute resolver does not accept fees in the exchange token", async function () {
@@ -1241,6 +1266,9 @@ describe("IBosonOfferHandler", function () {
       );
       expect(disputeResolver.isValid()).is.true;
 
+      // Make empty seller list, so every seller is allowed
+      sellerAllowList = [];
+
       //Create DisputeResolverFee array so offer creation will succeed
       DRFeeNative = "100";
       DRFeeToken = "200";
@@ -1252,6 +1280,7 @@ describe("IBosonOfferHandler", function () {
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+
       // create 5 offers
       offers = [];
       offerStructs = [];
@@ -1598,6 +1627,19 @@ describe("IBosonOfferHandler", function () {
           );
       });
 
+      it("Should allow creation of an offer if DR has a sellerAllowList and seller is on it", async function () {
+        // add seller to allow list
+        allowedSellersToAdd = ["1"]; // existing seller is "1", DR is "2", new seller is "3"
+        await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
+
+        // Create an offer, testing for the event
+        await expect(
+          offerHandler
+            .connect(operator)
+            .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds)
+        ).to.emit(offerHandler, "OfferCreated");
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
@@ -1868,6 +1910,22 @@ describe("IBosonOfferHandler", function () {
               .connect(operator)
               .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
           ).to.emit(offerHandler, "OfferCreated");
+        });
+
+        it("For some offer seller is not on dispute resolver's seller allow list", async function () {
+          // Create new seller so sellerAllowList can have an entry
+          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          await accountHandler.connect(rando).createSeller(seller);
+
+          allowedSellersToAdd = ["3"];
+          await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler
+              .connect(operator)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds)
+          ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
         });
 
         it("For some offer, dispute resolver does not accept fees in the exchange token", async function () {

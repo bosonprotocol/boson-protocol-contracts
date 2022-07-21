@@ -77,11 +77,11 @@ describe("IBosonOrchestrationHandler", function () {
   let foreign721, foreign1155, fallbackError;
   let disputeResolutionTerms, disputeResolutionTermsStruct;
   let DRFeeNative, DRFeeToken;
-  let sellerAllowList;
   let contractURI;
   let expectedCloneAddress, bosonVoucher;
   let tx;
   let agent, agentId, agentFeePercentage;
+  let sellerAllowList, allowedSellersToAdd;
 
   before(async function () {
     // get interface Ids
@@ -895,6 +895,22 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
+        it("Seller is not on dispute resolver's seller allow list", async function () {
+          // Create new seller so sellerAllowList can have an entry
+          const newSeller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          await accountHandler.connect(rando).createSeller(newSeller);
+
+          allowedSellersToAdd = ["2"]; // DR is "1", new seller is "2"
+          await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+          ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
+        });
+
         it("Dispute resolver does not accept fees in the exchange token", async function () {
           // Set some address that is not part of dispute resolver fees
           offer.exchangeToken = rando.address;
@@ -1338,6 +1354,19 @@ describe("IBosonOrchestrationHandler", function () {
           );
       });
 
+      it("Should allow creation of an offer if DR has a sellerAllowList and seller is on it", async function () {
+        // add seller to allow list
+        allowedSellersToAdd = ["2"]; // DR is "1", existing seller is "2", new seller is "3"
+        await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
+
+        // Create an offer with condition, testing for the events
+        await expect(
+          orchestrationHandler
+            .connect(operator)
+            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
+        ).to.emit(orchestrationHandler, "OfferCreated");
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to create an offer with condition, expecting revert
@@ -1558,6 +1587,22 @@ describe("IBosonOrchestrationHandler", function () {
               .connect(operator)
               .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition, agentId)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("Seller is not on dispute resolver's seller allow list", async function () {
+          // Create new seller so sellerAllowList can have an entry
+          const newSeller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          await accountHandler.connect(rando).createSeller(newSeller);
+
+          allowedSellersToAdd = ["3"]; // DR is "1", existing seller is "2", new seller is "3"
+          await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
+
+          // Attempt to create an offer with condition, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
+          ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
         });
 
         it("Dispute resolver does not accept fees in the exchange token", async function () {
@@ -2070,6 +2115,19 @@ describe("IBosonOrchestrationHandler", function () {
           );
       });
 
+      it("Should allow creation of an offer if DR has a sellerAllowList and seller is on it", async function () {
+        // add seller to allow list
+        allowedSellersToAdd = ["2"]; // DR is "1", existing seller is "2", new seller is "3"
+        await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
+
+        // Create an offer in native currency
+        await expect(
+          orchestrationHandler
+            .connect(operator)
+            .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
+        ).to.emit(orchestrationHandler, "OfferCreated");
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to create an offer and add it to the group, expecting revert
@@ -2294,6 +2352,22 @@ describe("IBosonOrchestrationHandler", function () {
               .connect(operator)
               .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId, agentId)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("Seller is not on dispute resolver's seller allow list", async function () {
+          // Create new seller so sellerAllowList can have an entry
+          const newSeller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          await accountHandler.connect(rando).createSeller(newSeller);
+
+          allowedSellersToAdd = ["3"]; // DR is "1", existing seller is "2", new seller is "3"
+          await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
+
+          // Attempt to create an offer and add it to the group, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
+          ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
         });
 
         it("Dispute resolver does not accept fees in the exchange token", async function () {
@@ -2806,6 +2880,19 @@ describe("IBosonOrchestrationHandler", function () {
           );
       });
 
+      it("Should allow creation of an offer if DR has a sellerAllowList and seller is on it", async function () {
+        // add seller to allow list
+        allowedSellersToAdd = ["2"]; // DR is "1", existing seller is "2", new seller is "3"
+        await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
+
+        // Create an offer, a twin and a bundle, testing for the events
+        await expect(
+          orchestrationHandler
+            .connect(operator)
+            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
+        ).to.emit(orchestrationHandler, "OfferCreated");
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to create an offer, twin and bundle, expecting revert
@@ -3026,6 +3113,22 @@ describe("IBosonOrchestrationHandler", function () {
               .connect(operator)
               .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin, agentId)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
+        });
+
+        it("Seller is not on dispute resolver's seller allow list", async function () {
+          // Create new seller so sellerAllowList can have an entry
+          const newSeller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          await accountHandler.connect(rando).createSeller(newSeller);
+
+          allowedSellersToAdd = ["3"]; // DR is "1", existing seller is "2", new seller is "3"
+          await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
+
+          // Attempt to create an offer, twin and bundle, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
+          ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
         });
 
         it("Dispute resolver does not accept fees in the exchange token", async function () {
@@ -3721,6 +3824,27 @@ describe("IBosonOrchestrationHandler", function () {
             agentId,
             operator.address
           );
+      });
+
+      it("Should allow creation of an offer if DR has a sellerAllowList and seller is on it", async function () {
+        // add seller to allow list
+        allowedSellersToAdd = ["2"]; // DR is "1", existing seller is "2", new seller is "3"
+        await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
+
+        // Create an offer with condition, twin and bundle testing for the events
+        await expect(
+          orchestrationHandler
+            .connect(operator)
+            .createOfferWithConditionAndTwinAndBundle(
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolverId,
+              condition,
+              twin,
+              agentId
+            )
+        ).to.emit(orchestrationHandler, "OfferCreated");
       });
 
       context("When offers have non zero agent ids", async function () {
