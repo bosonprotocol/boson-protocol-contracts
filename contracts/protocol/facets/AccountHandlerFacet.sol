@@ -744,6 +744,29 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
+     * @notice Gets the details about a seller by an auth token associated with that seller.
+     *         A seller will have either an admin address or an auth token
+     *
+     * @param _associatedAuthToken - the auth token that may be associated with the seller. 
+     * @return exists - the seller was found
+     * @return seller - the seller details. See {BosonTypes.Seller}
+     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     *                     See {BosonTypes.AuthToken}
+     */
+    function getSellerByAuthToken(AuthToken calldata _associatedAuthToken)
+        external
+        view
+        returns (bool exists, Seller memory seller, AuthToken memory authToken)
+    {
+        uint256 sellerId;
+        
+       (exists, sellerId) = getSellerIdByAuthToken(_associatedAuthToken);
+        if (exists) {
+            return fetchSeller(sellerId);
+        }
+    }
+
+    /**
      * @notice Gets the details about a buyer.
      *
      * @param _buyerId - the id of the buyer to check

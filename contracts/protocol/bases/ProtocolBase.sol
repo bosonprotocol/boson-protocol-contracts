@@ -165,6 +165,21 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
+     * @notice Gets a seller Id from storage by auth token.  A seller will have either an admin address or an auth token
+     *
+     * @param _authToken - the potential _authToken of the seller. 
+     * @return exists - whether the seller Id exists
+     * @return sellerId  - the seller Id
+     */
+    function getSellerIdByAuthToken(AuthToken calldata _authToken) internal view returns (bool exists, uint256 sellerId) {
+        // Get the seller Id
+        sellerId = protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId];
+
+        // Determine existence
+        exists = (sellerId > 0);
+    }
+
+    /**
      * @notice Gets a buyer id from storage by wallet address
      *
      * @param _wallet - the wallet address of the buyer

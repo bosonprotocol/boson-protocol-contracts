@@ -262,6 +262,21 @@ interface IBosonAccountHandler is IBosonAccountEvents {
         returns (bool exists, BosonTypes.Seller memory seller,  BosonTypes.AuthToken memory authToken);
 
     /**
+     * @notice Gets the details about a seller by an auth token associated with that seller.
+     *         A seller will have either an admin address or an auth token
+     *
+     * @param _associatedAuthToken - the auth token that may be associated with the seller. 
+     * @return exists - the seller was found
+     * @return seller - the seller details. See {BosonTypes.Seller}
+     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     *                     See {BosonTypes.AuthToken}
+     */
+    function getSellerByAuthToken(BosonTypes.AuthToken calldata _associatedAuthToken)
+        external
+        view
+        returns (bool exists, BosonTypes.Seller memory seller,  BosonTypes.AuthToken memory authToken);
+
+    /**
      * @notice Gets the details about a buyer.
      *
      * @param _buyerId - the id of the buyer to check
