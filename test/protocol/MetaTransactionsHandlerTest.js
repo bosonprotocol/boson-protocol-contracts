@@ -225,9 +225,10 @@ describe("IBosonMetaTransactionsHandler", function () {
         id = "1";
         seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
         expect(seller.isValid()).is.true;
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
         // Prepare the function signature for the facet function.
-        functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
+        functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller, contractURI]);
 
         // Set the message Type
         metaTransactionType = [
@@ -247,7 +248,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         message.nonce = parseInt(nonce);
         message.from = operator.address;
         message.contractAddress = accountHandler.address;
-        message.functionName = "createSeller((uint256,address,address,address,address,bool))";
+        message.functionName = "createSeller((uint256,address,address,address,address,bool),string)";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -301,6 +302,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         id = "1";
         seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
         expect(seller.isValid()).is.true;
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
         customTransactionType = {
           MetaTransaction: metaTransactionType,
@@ -313,12 +315,12 @@ describe("IBosonMetaTransactionsHandler", function () {
 
       it("Should emit MetaTransactionExecuted event and update state", async () => {
         // Prepare the function signature for the facet function.
-        functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
+        functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller, contractURI]);
 
         // Prepare the message
         message.from = operator.address;
         message.contractAddress = accountHandler.address;
-        message.functionName = "createSeller((uint256,address,address,address,address,bool))";
+        message.functionName = "createSeller((uint256,address,address,address,address,bool),string)";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -350,12 +352,12 @@ describe("IBosonMetaTransactionsHandler", function () {
         seller.active = false;
 
         // Prepare the function signature for the facet function.
-        functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
+        functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller, contractURI]);
 
         // Prepare the message
         message.from = operator.address;
         message.contractAddress = accountHandler.address;
-        message.functionName = "createSeller((uint256,address,address,address,address,bool))";
+        message.functionName = "createSeller((uint256,address,address,address,address,bool),string)";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -490,7 +492,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           let incorrectFunctionName = "createSeller"; // there are no function argument types here.
 
           // Prepare the function signature for the facet function.
-          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
+          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller, contractURI]);
 
           // Prepare the message
           message.from = operator.address;
@@ -523,12 +525,12 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         it("Should fail when replay transaction", async function () {
           // Prepare the function signature for the facet function.
-          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
+          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller, contractURI]);
 
           // Prepare the message
           message.from = operator.address;
           message.contractAddress = accountHandler.address;
-          message.functionName = "createSeller((uint256,address,address,address,address,bool))";
+          message.functionName = "createSeller((uint256,address,address,address,address,bool),string)";
           message.functionSignature = functionSignature;
 
           // Collect the signature components
@@ -567,12 +569,12 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         it("Should fail when Signer and Signature do not match", async function () {
           // Prepare the function signature for the facet function.
-          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller]);
+          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller, contractURI]);
 
           // Prepare the message
           message.from = rando.address;
           message.contractAddress = accountHandler.address;
-          message.functionName = "createSeller((uint256,address,address,address,address,bool))";
+          message.functionName = "createSeller((uint256,address,address,address,address,bool),string)";
           message.functionSignature = functionSignature;
 
           // Collect the signature components

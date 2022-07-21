@@ -451,7 +451,7 @@ describe("IBosonAccountHandler", function () {
       });
     });
 
-    context.only("👉 getSeller()", async function () {
+    context("👉 getSeller()", async function () {
       beforeEach(async function () {
         // Create a seller
         await accountHandler.connect(admin).createSeller(seller, contractURI);
@@ -494,7 +494,7 @@ describe("IBosonAccountHandler", function () {
       });
     });
 
-    context.only("👉 getSellerByAddress()", async function () {
+    context("👉 getSellerByAddress()", async function () {
       beforeEach(async function () {
         // Create a seller
         await accountHandler.connect(rando).createSeller(seller, contractURI);
@@ -1514,9 +1514,10 @@ describe("IBosonAccountHandler", function () {
         active
       );
 
-      await accountHandler.connect(admin).createSeller(seller);
-      await accountHandler.connect(admin).createSeller(seller2);
-      await accountHandler.connect(admin).createSeller(seller3);
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      await accountHandler.connect(admin).createSeller(seller, contractURI);
+      await accountHandler.connect(admin).createSeller(seller2, contractURI);
+      await accountHandler.connect(admin).createSeller(seller3, contractURI);
 
       // Make a sellerAllowList
       sellerAllowList = ["3", "1"];
@@ -2920,8 +2921,8 @@ describe("IBosonAccountHandler", function () {
           other3.address,
           active
         );
-
-        await accountHandler.connect(admin).createSeller(seller4);
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        await accountHandler.connect(admin).createSeller(seller4, contractURI);
 
         sellerAllowList = ["1", "3"];
         allowedSellersToAdd = ["2", "4"];
@@ -3070,8 +3071,8 @@ describe("IBosonAccountHandler", function () {
           other3.address,
           active
         );
-
-        await accountHandler.connect(admin).createSeller(seller4);
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        await accountHandler.connect(admin).createSeller(seller4, contractURI);
 
         sellerAllowList = ["1", "3", "2", "4"];
         allowedSellersToRemove = ["1", "2"];
@@ -3175,7 +3176,8 @@ describe("IBosonAccountHandler", function () {
           other4.address,
           active
         );
-        await accountHandler.connect(admin).createSeller(seller6);
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        await accountHandler.connect(admin).createSeller(seller6, contractURI);
 
         // check that mappings of allowed selleres were updated
         idsToCheck = ["1", "2", "3", "4", "5", "6"];
@@ -3239,7 +3241,8 @@ describe("IBosonAccountHandler", function () {
             other4.address,
             active
           );
-          await accountHandler.connect(admin).createSeller(seller6);
+          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+          await accountHandler.connect(admin).createSeller(seller6, contractURI);
 
           // seller exists, it's not approved
           allowedSellersToRemove = ["2", "4", "6"];
