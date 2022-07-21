@@ -75,6 +75,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let complaint, validDisputeDetails;
   let buyerPercent, validDisputeResolutionDetails, signatureSplits;
   let sellerAllowList;
+  let contractURI;
 
   before(async function () {
     // get interface Ids
@@ -384,7 +385,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         context("TwinHandler", async function () {
           beforeEach(async function () {
             // Create the seller
-            await accountHandler.connect(admin).createSeller(seller);
+            contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+            await accountHandler.connect(admin).createSeller(seller, contractURI);
 
             // Create a valid twin, then set fields in tests directly
             twin = mockTwin(bosonToken.address);
@@ -611,7 +613,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Create a valid seller
         seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
         expect(seller.isValid()).is.true;
-        await accountHandler.connect(operator).createSeller(seller);
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        await accountHandler.connect(operator).createSeller(seller, contractURI);
 
         // Create a valid dispute resolver
         disputeResolver = await mockDisputeResolver(
@@ -869,7 +872,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Create a valid seller
         seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
         expect(seller.isValid()).is.true;
-        await accountHandler.connect(operator).createSeller(seller);
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        await accountHandler.connect(operator).createSeller(seller, contractURI);
 
         // Create a valid dispute resolver
         disputeResolver = await mockDisputeResolver(
@@ -2240,9 +2244,10 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Create a valid seller
         seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
         expect(seller.isValid()).is.true;
-        await accountHandler.connect(operator).createSeller(seller);
-        // Create a valid dispute resolver
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        await accountHandler.connect(operator).createSeller(seller, contractURI);
 
+        // Create a valid dispute resolver
         disputeResolver = await mockDisputeResolver(
           operatorDR.address,
           adminDR.address,

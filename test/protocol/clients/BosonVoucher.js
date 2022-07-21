@@ -155,8 +155,8 @@ describe("IBosonVoucher", function () {
 
     beforeEach(async function () {
       const seller = new Seller("1", operator.address, admin.address, clerk.address, treasury.address, true);
-
-      await accountHandler.connect(admin).createSeller(seller);
+      const contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      await accountHandler.connect(admin).createSeller(seller, contractURI);
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(

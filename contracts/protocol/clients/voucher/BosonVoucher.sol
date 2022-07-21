@@ -137,10 +137,9 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         _transferOwnership(newOwner);
     }
 
-    
     /**
      * @notice Returns storefront-level metadata used by OpenSea
-     * 
+     *
      * @return Contract metadata URI
      */
     function contractURI() external view override returns (string memory) {
@@ -150,17 +149,17 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     /**
      * @notice Sets new contract URI
      * Can only be called by the owner or during the initialization
-     * 
+     *
      * @param _newContractURI new contract metadata URI
      */
-    function setContractURI(string calldata _newContractURI) external override onlyOwner() {
+    function setContractURI(string calldata _newContractURI) external override onlyOwner {
         _setContractURI(_newContractURI);
     }
 
     /**
      * @notice Sets new contract URI
      * Can only be called by the owner or during the initialization
-     * 
+     *
      * @param _newContractURI new contract metadata URI
      */
     function _setContractURI(string calldata _newContractURI) internal {
@@ -168,5 +167,4 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
         emit ContractURIChanged(_newContractURI);
     }
-        
 }

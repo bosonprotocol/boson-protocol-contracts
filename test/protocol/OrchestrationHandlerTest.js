@@ -75,6 +75,7 @@ describe("IBosonOrchestrationHandler", function () {
   let disputeResolutionTerms, disputeResolutionTermsStruct;
   let DRFeeNative, DRFeeToken;
   let sellerAllowList;
+  let contractURI;
 
   before(async function () {
     // get interface Ids
@@ -230,6 +231,9 @@ describe("IBosonOrchestrationHandler", function () {
       // How that seller looks as a returned struct
       sellerStruct = seller.toStruct();
 
+      // set contract URI
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+
       // The first offer id
       nextOfferId = "1";
 
@@ -266,7 +270,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(
@@ -291,7 +295,7 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller and an offer
         await orchestrationHandler
           .connect(operator)
-          .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId);
+          .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId);
 
         // Get the seller as a struct
         [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
@@ -338,7 +342,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(
@@ -383,7 +387,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -405,7 +409,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -434,7 +438,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -458,7 +462,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -480,7 +484,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -499,7 +503,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -514,6 +518,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // create another offer, now with bosonToken as exchange token
         seller = new Seller(++sellerId, rando.address, rando.address, rando.address, rando.address, active);
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
         offer.exchangeToken = bosonToken.address;
         offer.id = "2";
         offer.protocolFee = protocolFeeFlatBoson;
@@ -529,7 +534,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(rando)
-            .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -551,7 +556,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
 
@@ -562,7 +567,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
 
           seller.clerk = clerk.address;
@@ -572,13 +577,13 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
         it("addresses are not unique to this seller Id", async function () {
           // Create a seller
-          await accountHandler.connect(admin).createSeller(seller);
+          await accountHandler.connect(admin).createSeller(seller, contractURI);
 
           seller.admin = other1.address;
           seller.clerk = other2.address;
@@ -587,7 +592,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
           seller.admin = admin.address;
@@ -597,7 +602,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(other1)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
           seller.clerk = clerk.address;
@@ -607,7 +612,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(other1)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
 
@@ -616,7 +621,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(rando)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
@@ -629,7 +634,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -640,7 +645,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -652,7 +657,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
         });
 
@@ -664,7 +669,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
@@ -677,7 +682,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
@@ -690,7 +695,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
@@ -703,7 +708,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
@@ -717,7 +722,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
@@ -729,7 +734,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
         });
 
@@ -741,7 +746,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
         });
 
@@ -753,7 +758,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.INVALID_QUANTITY_AVAILABLE);
         });
 
@@ -765,7 +770,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -789,7 +794,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -802,7 +807,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -827,7 +832,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -839,7 +844,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
           ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
         });
       });
@@ -876,7 +881,7 @@ describe("IBosonOrchestrationHandler", function () {
         groupStruct = group.toStruct();
 
         // create a seller
-        await accountHandler.connect(admin).createSeller(seller);
+        await accountHandler.connect(admin).createSeller(seller, contractURI);
       });
 
       it("should emit an OfferCreated and GroupCreated events", async function () {
@@ -1451,7 +1456,7 @@ describe("IBosonOrchestrationHandler", function () {
     context("👉 createOfferAddToGroup()", async function () {
       beforeEach(async function () {
         // create a seller
-        await accountHandler.connect(admin).createSeller(seller);
+        await accountHandler.connect(admin).createSeller(seller, contractURI);
 
         // The first group id
         nextGroupId = "1";
@@ -2107,7 +2112,7 @@ describe("IBosonOrchestrationHandler", function () {
         twinStruct = twin.toStruct();
 
         // create a seller
-        await accountHandler.connect(admin).createSeller(seller);
+        await accountHandler.connect(admin).createSeller(seller, contractURI);
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
@@ -2814,7 +2819,7 @@ describe("IBosonOrchestrationHandler", function () {
         twinStruct = twin.toStruct();
 
         // create a seller
-        await accountHandler.connect(admin).createSeller(seller);
+        await accountHandler.connect(admin).createSeller(seller, contractURI);
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
@@ -3311,7 +3316,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller and an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferWithCondition(seller, offer, offerDates, offerDurations, disputeResolverId, condition);
+          .createSellerAndOfferWithCondition(
+            seller,
+            contractURI,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            condition
+          );
 
         // SellerCreated and OfferCreated events
         await expect(tx)
@@ -3351,7 +3364,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller and an offer with condition
         await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferWithCondition(seller, offer, offerDates, offerDurations, disputeResolverId, condition);
+          .createSellerAndOfferWithCondition(
+            seller,
+            contractURI,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            condition
+          );
 
         // Get the seller as a struct
         [, sellerStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -3408,7 +3429,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller and an offer with condition, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferWithCondition(seller, offer, offerDates, offerDurations, disputeResolverId, condition);
+          .createSellerAndOfferWithCondition(
+            seller,
+            contractURI,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            condition
+          );
 
         // SellerCreated and OfferCreated events
         await expect(tx)
@@ -3480,7 +3509,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferAndTwinWithBundle(seller, offer, offerDates, offerDurations, disputeResolverId, twin);
+          .createSellerAndOfferAndTwinWithBundle(
+            seller,
+            contractURI,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            twin
+          );
 
         // SellerCreated and OfferCreated events
         await expect(tx)
@@ -3535,7 +3572,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
         await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferAndTwinWithBundle(seller, offer, offerDates, offerDurations, disputeResolverId, twin);
+          .createSellerAndOfferAndTwinWithBundle(
+            seller,
+            contractURI,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            twin
+          );
 
         // Get the seller as a struct
         [, sellerStruct] = await accountHandler.connect(rando).getSeller(seller.id);
@@ -3607,7 +3652,15 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller, an offer with condition and a twin with bundle, testing for the events
         const tx = await orchestrationHandler
           .connect(operator)
-          .createSellerAndOfferAndTwinWithBundle(seller, offer, offerDates, offerDurations, disputeResolverId, twin);
+          .createSellerAndOfferAndTwinWithBundle(
+            seller,
+            contractURI,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            twin
+          );
 
         // SellerCreated and OfferCreated events
         await expect(tx)
@@ -3721,6 +3774,7 @@ describe("IBosonOrchestrationHandler", function () {
           .connect(operator)
           .createSellerAndOfferWithConditionAndTwinAndBundle(
             seller,
+            contractURI,
             offer,
             offerDates,
             offerDurations,
@@ -3792,6 +3846,7 @@ describe("IBosonOrchestrationHandler", function () {
           .connect(operator)
           .createSellerAndOfferWithConditionAndTwinAndBundle(
             seller,
+            contractURI,
             offer,
             offerDates,
             offerDurations,
@@ -3883,6 +3938,7 @@ describe("IBosonOrchestrationHandler", function () {
           .connect(operator)
           .createSellerAndOfferWithConditionAndTwinAndBundle(
             seller,
+            contractURI,
             offer,
             offerDates,
             offerDurations,

@@ -48,6 +48,7 @@ describe("IBosonTwinHandler", function () {
     sellerId;
   let bundleId, offerIds, twinIds, bundle;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
+  let contractURI;
 
   before(async function () {
     // get interface Ids
@@ -150,8 +151,8 @@ describe("IBosonTwinHandler", function () {
       // Create a valid seller, then set fields in tests directly
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
-
-      await accountHandler.connect(admin).createSeller(seller);
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      await accountHandler.connect(admin).createSeller(seller, contractURI);
 
       // The first twin id
       nextTwinId = sellerId = "1";
@@ -470,7 +471,8 @@ describe("IBosonTwinHandler", function () {
         // Create another valid seller.
         seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
         expect(seller.isValid()).is.true;
-        await accountHandler.connect(rando).createSeller(seller);
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        await accountHandler.connect(rando).createSeller(seller, contractURI);
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(rando).approve(twinHandler.address, 1);

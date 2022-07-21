@@ -204,7 +204,10 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
      * @param _operator - address of the operator
      * @return cloneAddress - the address of newly created clone
      */
-    function cloneBosonVoucher(address _operator, string calldata _contractURI) internal returns (address cloneAddress) {
+    function cloneBosonVoucher(address _operator, string calldata _contractURI)
+        internal
+        returns (address cloneAddress)
+    {
         // Pointer to stored addresses
         ProtocolLib.ProtocolAddresses storage pa = protocolAddresses();
 
@@ -230,5 +233,4 @@ interface IInitializableClone {
     function initialize(address _beaconAddress) external;
 
     function initializeVoucher(address _newOwner, string calldata _newContractURI) external;
-
 }
