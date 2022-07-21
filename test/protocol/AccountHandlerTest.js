@@ -169,6 +169,7 @@ describe("IBosonAccountHandler", function () {
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 0,
         maxAllowedSellers: 100,
+        maxTotalOfferFeePercentage: 0,
       },
       // Protocol fees
       {
@@ -1354,7 +1355,7 @@ describe("IBosonAccountHandler", function () {
           expect(offerDurations.isValid()).is.true;
 
           // Create the offer
-          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolver.id);
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolver.id, "0");
 
           offerId = offer.id;
           const sellerDeposit = offer.sellerDeposit;

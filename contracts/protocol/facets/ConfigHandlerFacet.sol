@@ -46,6 +46,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxDisputesPerBatch(_limits.maxDisputesPerBatch);
         setMaxAllowedSellers(_limits.maxAllowedSellers);
         setBuyerEscalationDepositPercentage(_buyerEscalationDepositPercentage);
+        setMaxTotalOfferFeePercentage(_limits.maxTotalOfferFeePercentage);
 
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -340,6 +341,36 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getMaxDisputesPerBatch() external view override returns (uint16) {
         return protocolLimits().maxDisputesPerBatch;
+    }
+
+    /**
+     * @notice Sets the Total offer fee percentage limit which will validate the sum of (Protocol Fee percentage + Agent Fee percentage) of an offer fee.
+     *
+     * Emits a MaxTotalOfferFeePercentageChanged event.
+     *
+     * Reverts if the _maxTotalOfferFeePercentage is greater than 10000.
+     *
+     * @param _maxTotalOfferFeePercentage - the limit of total offer fee percentage.
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
+     */
+    function setMaxTotalOfferFeePercentage(uint16 _maxTotalOfferFeePercentage) public override onlyRole(ADMIN) {
+        // Make sure percentage is less than 10000
+        require(_maxTotalOfferFeePercentage <= 10000, FEE_PERCENTAGE_INVALID);
+
+        // Store fee percentage
+        protocolLimits().maxTotalOfferFeePercentage = _maxTotalOfferFeePercentage;
+
+        // Notify watchers of state change
+        emit MaxTotalOfferFeePercentageChanged(_maxTotalOfferFeePercentage, msgSender());
+    }
+
+    /**
+     * @notice Get the maximum total of offer fees allowed in an offer fee
+     */
+    function getMaxTotalOfferFeePercentage() external view override returns (uint16) {
+        return protocolLimits().maxTotalOfferFeePercentage;
     }
 
     /**

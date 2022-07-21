@@ -126,6 +126,7 @@ describe("IBosonBundleHandler", function () {
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
         maxAllowedSellers: 100,
+        maxTotalOfferFeePercentage: 4000, //40%
       },
       // Protocol fees
       {
@@ -220,7 +221,7 @@ describe("IBosonBundleHandler", function () {
 
       // create 5 offers
       for (let i = 0; i < 5; i++) {
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
       }
 
       // The first bundle id
@@ -359,7 +360,7 @@ describe("IBosonBundleHandler", function () {
           await accountHandler.connect(rando).createSeller(seller, contractURI);
           const tx = await offerHandler
             .connect(rando)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId); // creates an offer with id 6
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, "0"); // creates an offer with id 6
           const txReceipt = await tx.wait();
           const event = getEvent(txReceipt, offerHandler, "OfferCreated");
           assert.equal(event.offerId.toString(), expectedNewOfferId, "Offer Id is not 6");
@@ -535,7 +536,9 @@ describe("IBosonBundleHandler", function () {
           newOffer.quantityAvailable = ethers.constants.MaxUint256.toString();
           let expectedNewOfferId = "6";
 
-          await offerHandler.connect(operator).createOffer(newOffer, offerDates, offerDurations, disputeResolverId);
+          await offerHandler
+            .connect(operator)
+            .createOffer(newOffer, offerDates, offerDurations, disputeResolverId, "0");
 
           bundle.offerIds = [expectedNewOfferId];
           await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
@@ -860,7 +863,9 @@ describe("IBosonBundleHandler", function () {
           let expectedNewOfferId = "6";
           let expectedNewTwinId = "6";
 
-          await offerHandler.connect(operator).createOffer(newOffer, offerDates, offerDurations, disputeResolverId);
+          await offerHandler
+            .connect(operator)
+            .createOffer(newOffer, offerDates, offerDurations, disputeResolverId, "0");
 
           const newTwin = twin.clone();
           newTwin.supplyAvailable = ethers.constants.MaxUint256.toString();
@@ -1135,7 +1140,7 @@ describe("IBosonBundleHandler", function () {
           await accountHandler.connect(rando).createSeller(seller, contractURI);
           const tx = await offerHandler
             .connect(rando)
-            .createOffer(offer, offerDates, offerDurations, disputeResolverId); // creates an offer with id 6
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, "0"); // creates an offer with id 6
           const txReceipt = await tx.wait();
           const event = getEvent(txReceipt, offerHandler, "OfferCreated");
           assert.equal(event.offerId.toString(), expectedNewOfferId, "Offer Id is not 6");
@@ -1212,7 +1217,9 @@ describe("IBosonBundleHandler", function () {
 
           // twin has supply for cover 3 offers
           newOffer.quantityAvailable = 4;
-          await offerHandler.connect(operator).createOffer(newOffer, offerDates, offerDurations, disputeResolverId); // creates a offer with id 6
+          await offerHandler
+            .connect(operator)
+            .createOffer(newOffer, offerDates, offerDurations, disputeResolverId, "0"); // creates a offer with id 6
 
           await expect(
             bundleHandler.connect(operator).addOffersToBundle(bundle.id, [expectedNewOfferId])
@@ -1224,7 +1231,9 @@ describe("IBosonBundleHandler", function () {
           newOffer.quantityAvailable = ethers.constants.MaxUint256.toString();
           let expectedNewOfferId = "6";
 
-          await offerHandler.connect(operator).createOffer(newOffer, offerDates, offerDurations, disputeResolverId);
+          await offerHandler
+            .connect(operator)
+            .createOffer(newOffer, offerDates, offerDurations, disputeResolverId, "0");
 
           await expect(
             bundleHandler.connect(operator).addOffersToBundle(bundle.id, [expectedNewOfferId])
@@ -1358,7 +1367,7 @@ describe("IBosonBundleHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_NOT_IN_BUNDLE);
 
           // create an offer and add it to another bundle
-          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
           bundle.offerIds = ["6"];
 
           // Twin must be unique to a bundle

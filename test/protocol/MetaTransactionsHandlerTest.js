@@ -141,6 +141,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
         maxAllowedSellers: 100,
+        maxTotalOfferFeePercentage: 4000, //40%
       },
       // Protocol fees
       {
@@ -666,7 +667,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, sellerDeposit);
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
 
         // Set the offer Type
         offerType = [
@@ -904,7 +905,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         expect(offer.isValid()).is.true;
         expect(offerDates.isValid()).is.true;
         expect(offerDurations.isValid()).is.true;
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
 
         sellerDeposit = offer.sellerDeposit;
         price = offer.price;
@@ -2291,8 +2292,8 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Create both offers
         await Promise.all([
-          offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations, disputeResolverId),
-          offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations, disputeResolverId),
+          offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations, disputeResolverId, "0"),
+          offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations, disputeResolverId, "0"),
         ]);
 
         // top up seller's and buyer's account
@@ -2318,7 +2319,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         await exchangeHandler.connect(buyer).cancelVoucher(++exchangeId); // canceling the voucher in the native currency
 
         // expected payoffs - they are the same for token and native currency
-        // buyer: price - buyerCancelPenalty - protocolFee
+        // buyer: price - buyerCancelPenalty
         buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
 
         // prepare validFundDetails

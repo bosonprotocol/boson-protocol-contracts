@@ -153,6 +153,7 @@ describe("IBosonDisputeHandler", function () {
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
         maxAllowedSellers: 100,
+        maxTotalOfferFeePercentage: 4000, //40%
       },
       // Protocol fees
       {
@@ -246,7 +247,7 @@ describe("IBosonDisputeHandler", function () {
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
-      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
 
       // Set used variables
       price = offer.price;
@@ -1208,7 +1209,7 @@ describe("IBosonDisputeHandler", function () {
           offer.id++;
 
           // create an offer with erc20 exchange token
-          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
 
           // mint tokens to buyer and approve the protocol
           buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);

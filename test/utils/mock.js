@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
+const OfferFees = require("../../scripts/domain/OfferFees");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
 const Twin = require("../../scripts/domain/Twin.js");
 const TokenType = require("../../scripts/domain/TokenType.js");
@@ -55,7 +56,6 @@ async function mockOffer() {
     sellerId,
     price,
     sellerDeposit,
-    protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
@@ -67,8 +67,9 @@ async function mockOffer() {
   const offerDates = await mockOfferDates();
   const offerDurations = mockOfferDurations();
   const disputeResolverId = "2";
+  const offerFees = mockOfferFees(protocolFee);
 
-  return { offer, offerDates, offerDurations, disputeResolverId };
+  return { offer, offerDates, offerDurations, disputeResolverId, offerFees };
 }
 
 function mockTwin(tokenAddress, tokenType) {
@@ -95,6 +96,11 @@ function mockDisputeResolver(operatorAddress, adminAddress, clerkAddress, treasu
     active
   );
 }
+
+function mockOfferFees(protocolFee) {
+  return new OfferFees(protocolFee, "0");
+}
+
 exports.mockOffer = mockOffer;
 exports.mockTwin = mockTwin;
 exports.mockDisputeResolver = mockDisputeResolver;

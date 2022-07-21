@@ -160,6 +160,7 @@ describe("IBosonExchangeHandler", function () {
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
         maxAllowedSellers: 100,
+        maxTotalOfferFeePercentage: 4000, //40%
       },
       // Protocol fees
       {
@@ -260,7 +261,7 @@ describe("IBosonExchangeHandler", function () {
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
-      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
 
       // Set used variables
       price = offer.price;
@@ -345,7 +346,7 @@ describe("IBosonExchangeHandler", function () {
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
 
         // Create the offer
-        await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+        await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
 
         // Deposit seller funds so the commit will succeed
         await fundsHandler

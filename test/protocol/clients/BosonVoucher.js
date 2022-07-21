@@ -85,6 +85,7 @@ describe("IBosonVoucher", function () {
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
         maxAllowedSellers: 100,
+        maxTotalOfferFeePercentage: 4000, //40%
       },
       //Protocol fees
       {
@@ -181,7 +182,7 @@ describe("IBosonVoucher", function () {
       const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
       await offerHandler
         .connect(operator)
-        .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId);
+        .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
       await fundsHandler
         .connect(admin)
         .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });

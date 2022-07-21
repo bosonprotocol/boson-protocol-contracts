@@ -9,7 +9,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x701befef
+ * The ERC-165 identifier for this interface is: 0xde051f34
  */
 interface IBosonOfferHandler is IBosonOfferEvents {
     /**
@@ -33,17 +33,22 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price
+     * - When agent id is non zero:
+     *   - If Agent does not exist
+     *   - If the sum of Agent fee amount and protocol fee amount should be greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to 0x0
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
+     * @param _agentId - the id of agent
      */
     function createOffer(
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
-        uint256 _disputeResolverId
+        uint256 _disputeResolverId,
+        uint256 _agentId
     ) external;
 
     /**
@@ -70,17 +75,22 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     * - If agent ids are non zero:
+     *   - If Agent does not exist
+     *   - If the sum of Agent fee amount and protocol fee amount should be greater than the offer fee limit
      *
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
      * @param _offerDates - the array of fully populated offer dates structs
      * @param _offerDurations - the array of fully populated offer durations structs
      * @param _disputeResolverIds - the array of ids of chosen dispute resolvers (can be 0)
+     * @param _agentIds - the array of ids of agents
      */
     function createOfferBatch(
         BosonTypes.Offer[] calldata _offers,
         BosonTypes.OfferDates[] calldata _offerDates,
         BosonTypes.OfferDurations[] calldata _offerDurations,
-        uint256[] calldata _disputeResolverIds
+        uint256[] calldata _disputeResolverIds,
+        uint256[] calldata _agentIds
     ) external;
 
     /**
@@ -163,6 +173,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @return offerDates - the offer dates details. See {BosonTypes.OfferDates}
      * @return offerDurations - the offer durations details. See {BosonTypes.OfferDurations}
      * @return disputeResolutionTerms - the details about the dispute resolution terms. See {BosonTypes.DisputeResolutionTerms}
+     * @return offerFees - the offer dates details. See {BosonTypes.OfferFees}
      */
     function getOffer(uint256 _offerId)
         external
@@ -172,7 +183,8 @@ interface IBosonOfferHandler is IBosonOfferEvents {
             BosonTypes.Offer memory offer,
             BosonTypes.OfferDates memory offerDates,
             BosonTypes.OfferDurations memory offerDurations,
-            BosonTypes.DisputeResolutionTerms memory disputeResolutionTerms
+            BosonTypes.DisputeResolutionTerms memory disputeResolutionTerms,
+            BosonTypes.OfferFees memory offerFees
         );
 
     /**
@@ -192,4 +204,13 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * @return offerVoided - true if voided, false otherwise
      */
     function isOfferVoided(uint256 _offerId) external view returns (bool exists, bool offerVoided);
+
+    /**
+     * @notice Gets the agent id for a given offer id.
+     *
+     * @param _offerId - the offer Id.
+     * @return exists - whether the agent Id exists
+     * @return agentId - the agent Id.
+     */
+    function getAgentIdByOffer(uint256 _offerId) external view returns (bool exists, uint256 agentId);
 }
