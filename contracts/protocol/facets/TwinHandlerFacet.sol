@@ -93,9 +93,11 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         if (twin.tokenType == TokenType.NonFungibleToken) {
             TokenRange[] storage twinRanges = protocolLookups().twinRangesBySeller[sellerId][twin.tokenAddress];
             for (uint256 index = 0; index < twinRanges.length; index++) {
-                twinRanges[index] = twinRanges[twinRanges.length - 1];
-                twinRanges.pop();
-                break;
+                if (twinRanges[index].start == twin.tokenId) {
+                    twinRanges[index] = twinRanges[twinRanges.length - 1];
+                    twinRanges.pop();
+                    break;
+                }
             }
         }
 

@@ -56,6 +56,53 @@
         {
           "indexed": true,
           "internalType": "uint256",
+          "name": "agentId",
+          "type": "uint256"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "feePercentage",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address payable",
+              "name": "wallet",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.Agent",
+          "name": "agent",
+          "type": "tuple"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "AgentUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint256",
           "name": "disputeResolverId",
           "type": "uint256"
         },
@@ -1313,6 +1360,41 @@
         }
       ],
       "name": "removeSellersFromAllowList",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "feePercentage",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address payable",
+              "name": "wallet",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "active",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct BosonTypes.Agent",
+          "name": "_agent",
+          "type": "tuple"
+        }
+      ],
+      "name": "updateAgent",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

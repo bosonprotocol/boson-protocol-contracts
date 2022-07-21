@@ -29,7 +29,7 @@ async function mockOfferDates() {
     .add(oneMonth * 6)
     .toString(); // until 6 months
   const voucherRedeemableFrom = ethers.BigNumber.from(block.timestamp).add(oneWeek).toString(); // redeemable in 1 week
-  const voucherRedeemableUntil = "0"; // vouchers don't have fixed expiration date
+  const voucherRedeemableUntil = "0"; // mocks use voucher valid duration rather than fixed date, override in tests as needed
 
   // Create a valid offerDates, then set fields in tests directly
   return new OfferDates(validFrom, validUntil, voucherRedeemableFrom, voucherRedeemableUntil);
