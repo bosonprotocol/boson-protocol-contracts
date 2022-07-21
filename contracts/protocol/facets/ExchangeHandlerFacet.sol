@@ -471,7 +471,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
             uint256[] storage twinIds = bundle.twinIds;
 
             // Get seller account
-            (, Seller storage seller) = fetchSeller(bundle.sellerId);
+            (, Seller storage seller, ) = fetchSeller(bundle.sellerId);
 
             // Visit the twins
             for (uint256 i = 0; i < twinIds.length; i++) {

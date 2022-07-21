@@ -257,10 +257,14 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @param _sellerId - the id of the seller
      * @return exists - whether the seller exists
      * @return seller - the seller details. See {BosonTypes.Seller}
+     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      */
-    function fetchSeller(uint256 _sellerId) internal view returns (bool exists, Seller storage seller) {
+    function fetchSeller(uint256 _sellerId) internal view returns (bool exists, Seller storage seller, AuthToken storage authToken) {
         // Get the seller's slot
         seller = protocolEntities().sellers[_sellerId];
+
+        //Get the seller's auth token's slot
+        authToken = protocolEntities().authTokens[_sellerId];
 
         // Determine existence
         exists = (_sellerId > 0 && seller.id == _sellerId);
@@ -489,7 +493,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
         require(!offer.voided, OFFER_HAS_BEEN_VOIDED);
 
         // Get seller, we assume seller exists if offer exists
-        (, seller) = fetchSeller(offer.sellerId);
+        (, seller, ) = fetchSeller(offer.sellerId);
 
         // Caller must be seller's operator address
         require(seller.operator == msgSender(), NOT_OPERATOR);

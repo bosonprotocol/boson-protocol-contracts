@@ -21,10 +21,13 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Address values are zero address
      * - Active is not true
      * - Addresses are not unique to this seller
+     * - Admin address is zero address and AuthTokenType == None
+     * - AuthTokenType is not unique to this seller
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      */
-    function createSeller(BosonTypes.Seller memory _seller) external;
+    function createSeller(BosonTypes.Seller memory _seller, BosonTypes.AuthToken calldata _authToken) external;
 
     /**
      * @notice Creates a Buyer
@@ -90,10 +93,13 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Addresses are not unique to this seller
      * - Caller is not the admin address of the seller
      * - Seller does not exist
+     * - Admin address is zero address and AuthTokenType == None
+     * - AuthTokenType is not unique to this seller
      *
      * @param _seller - the fully populated seller struct
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      */
-    function updateSeller(BosonTypes.Seller memory _seller) external;
+    function updateSeller(BosonTypes.Seller memory _seller, BosonTypes.AuthToken calldata _authToken) external;
 
     /**
      * @notice Updates a buyer. All fields should be filled, even those staying the same. The wallet address cannot be updated if the current wallet address has oustanding vouchers
@@ -236,8 +242,10 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _sellerId - the id of the seller to check
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
+     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     *                     See {BosonTypes.AuthToken}
      */
-    function getSeller(uint256 _sellerId) external view returns (bool exists, BosonTypes.Seller memory seller);
+    function getSeller(uint256 _sellerId) external view returns (bool exists, BosonTypes.Seller memory seller, BosonTypes.AuthToken memory authToken);
 
     /**
      * @notice Gets the details about a seller by an address associated with that seller: operator, admin, or clerk address.
@@ -245,11 +253,13 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _associatedAddress - the address associated with the seller. Must be an operator, admin, or clerk address.
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
+     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     *                     See {BosonTypes.AuthToken}
      */
     function getSellerByAddress(address _associatedAddress)
         external
         view
-        returns (bool exists, BosonTypes.Seller memory seller);
+        returns (bool exists, BosonTypes.Seller memory seller,  BosonTypes.AuthToken memory authToken);
 
     /**
      * @notice Gets the details about a buyer.

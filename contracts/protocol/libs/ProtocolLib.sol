@@ -92,6 +92,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Bundle) bundles;
         // twin id => twin
         mapping(uint256 => BosonTypes.Twin) twins;
+        //entity id => auth token
+        mapping(uint256 => BosonTypes.AuthToken) authTokens;
     }
 
     // Protocol lookups storage
@@ -137,6 +139,8 @@ library ProtocolLib {
         //AuthTokenType => Auth NFT contract address. 
         //Would normally be in ProtocolAddresses but can't be because the ProtocolAddresses struct is passed into the initialize function
         mapping(BosonTypes.AuthTokenType => address) authTokenContracts;
+        // AuthTokenType => tokenId => sellerId
+        mapping(BosonTypes.AuthTokenType => mapping(uint256 => uint256)) sellerIdByAuthToken;
         // seller id => token address (only ERC721) => start and end of token ids range
         mapping(uint256 => mapping(address => BosonTypes.TokenRange[])) twinRangesBySeller;
         // dispute resolver id => list of allowed sellers

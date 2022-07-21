@@ -238,6 +238,7 @@ describe("IBosonAccountHandler", function () {
         // Create a seller, testing for the event
         const tx = await accountHandler.connect(admin).createSeller(seller);
 
+        //TODO: add AuthToken struct to this check
         await expect(tx)
           .to.emit(accountHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct, expectedCloneAddress, admin.address);
@@ -272,6 +273,8 @@ describe("IBosonAccountHandler", function () {
 
         expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
       });
+
+      //TODO new test case: should update state when seller has auth token
 
       it("should ignore any provided id and assign the next available", async function () {
         seller.id = "444";
@@ -444,6 +447,11 @@ describe("IBosonAccountHandler", function () {
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
         });
+
+        //TODO: new test case revert if admin address is zero address and AuthTokenType == None
+        //TODO: new test case revert if admin address != zero address and AuthTokenType != None
+        //TODO: new test case revert if AuthTokenType is not unique to this seller
+      
       });
     });
 
@@ -605,6 +613,8 @@ describe("IBosonAccountHandler", function () {
 
         const tx = await accountHandler.connect(admin).updateSeller(seller);
 
+        //TODO: add AuthToken struct to this check
+
         // Update a seller, testing for the event
         await expect(tx).to.emit(accountHandler, "SellerUpdated").withArgs(seller.id, sellerStruct, admin.address);
 
@@ -618,6 +628,8 @@ describe("IBosonAccountHandler", function () {
       it("should emit a SellerUpdated event with correct values if values stay the same", async function () {
         const tx = await accountHandler.connect(admin).updateSeller(seller);
 
+        //TODO: add AuthToken struct to this check
+        
         // Update a seller, testing for the event
         await expect(tx).to.emit(accountHandler, "SellerUpdated").withArgs(seller.id, sellerStruct, admin.address);
 
@@ -679,6 +691,8 @@ describe("IBosonAccountHandler", function () {
         expect(await bosonVoucher.owner()).to.equal(seller.operator, "Wrong voucher clone owner");
       });
 
+      //TODO new test case: should update state when seller has auth token
+
       it("should update state correctly if values are the same", async function () {
         // Update a seller
         await accountHandler.connect(admin).updateSeller(seller);
@@ -700,6 +714,8 @@ describe("IBosonAccountHandler", function () {
 
         expect(await bosonVoucher.owner()).to.equal(seller.operator, "Wrong voucher clone owner");
       });
+
+      //TODO new test case: should update state when seller has auth token
 
       it("should update only active flag", async function () {
         seller.active = false;
@@ -959,6 +975,10 @@ describe("IBosonAccountHandler", function () {
           );
         });
       });
+
+      //TODO: new test case revert if admin address is zero address and AuthTokenType == None
+      //TODO: new test case revert if admin address != zero address and AuthTokenType != None
+      //TODO: new test case revert if AuthTokenType is not unique to this seller
     });
 
     context("👉 getNextAccountId()", async function () {
