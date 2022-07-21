@@ -762,7 +762,7 @@ describe("IBosonOfferHandler", function () {
           offerFees.agentFee = newOfferAgentFee;
           offerFeesStruct = offerFees.toStruct();
 
-          // Create a new offer
+          // Create a new offers
           await expect(
             offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId)
           )
