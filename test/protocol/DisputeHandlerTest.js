@@ -76,6 +76,7 @@ describe("IBosonDisputeHandler", function () {
   let resolutionType, customSignatureType, message, r, s, v;
   let returnedDispute, returnedDisputeDates;
   let DRFeeNative, DRFeeToken, buyerEscalationDepositNative, buyerEscalationDepositToken;
+  let contractURI;
 
   before(async function () {
     // get interface Ids
@@ -208,7 +209,8 @@ describe("IBosonDisputeHandler", function () {
       // Create a valid seller
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
       expect(seller.isValid()).is.true;
-      await accountHandler.connect(admin).createSeller(seller);
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      await accountHandler.connect(admin).createSeller(seller, contractURI);
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(
@@ -867,7 +869,8 @@ describe("IBosonDisputeHandler", function () {
             // Create a valid seller with buyer's wallet
             seller = new Seller(id, buyer.address, buyer.address, buyer.address, buyer.address, true);
             expect(seller.isValid()).is.true;
-            await accountHandler.connect(buyer).createSeller(seller);
+            contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+            await accountHandler.connect(buyer).createSeller(seller, contractURI);
 
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v))
@@ -1106,8 +1109,9 @@ describe("IBosonDisputeHandler", function () {
             // Wallet with seller account, but not the seller in this exchange
             // Create a valid seller
             seller = new Seller(id, other1.address, other1.address, other1.address, other1.address, true);
+            contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
             expect(seller.isValid()).is.true;
-            await accountHandler.connect(other1).createSeller(seller);
+            await accountHandler.connect(other1).createSeller(seller, contractURI);
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(other1).resolveDispute(exchangeId, buyerPercent, r, s, v)

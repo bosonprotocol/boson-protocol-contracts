@@ -57,6 +57,7 @@ describe("IBosonOfferHandler", function () {
     disputeResolutionTermsList;
   let DRFeeNative, DRFeeToken;
   let sellerAllowList;
+  let contractURI;
 
   before(async function () {
     // get interface Ids
@@ -160,8 +161,8 @@ describe("IBosonOfferHandler", function () {
       // Create a valid seller, then set fields in tests directly
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
-
-      await accountHandler.connect(admin).createSeller(seller);
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      await accountHandler.connect(admin).createSeller(seller, contractURI);
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(
@@ -734,7 +735,8 @@ describe("IBosonOfferHandler", function () {
           // caller is an operator of another seller
           // Create a valid seller, then set fields in tests directly
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(seller);
+          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+          await accountHandler.connect(rando).createSeller(seller, contractURI);
 
           // Attempt to update the offer, expecting revert
           await expect(offerHandler.connect(rando).voidOffer(id)).to.revertedWith(RevertReasons.NOT_OPERATOR);
@@ -817,7 +819,8 @@ describe("IBosonOfferHandler", function () {
           // caller is an operator of another seller
           // Create a valid seller, then set fields in tests directly
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(seller);
+          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+          await accountHandler.connect(rando).createSeller(seller, contractURI);
 
           // Attempt to update the offer, expecting revert
           await expect(offerHandler.connect(rando).extendOffer(id, offerDates.validUntil)).to.revertedWith(
@@ -1034,8 +1037,8 @@ describe("IBosonOfferHandler", function () {
       // Create a valid seller, then set fields in tests directly
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
-
-      await accountHandler.connect(admin).createSeller(seller);
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      await accountHandler.connect(admin).createSeller(seller, contractURI);
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(
@@ -1789,7 +1792,8 @@ describe("IBosonOfferHandler", function () {
 
           // caller is an operator of another seller
           seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(seller);
+          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+          await accountHandler.connect(rando).createSeller(seller, contractURI);
 
           // Attempt to update the offer, expecting revert
           await expect(offerHandler.connect(rando).voidOfferBatch(offersToVoid)).to.revertedWith(
@@ -1898,7 +1902,8 @@ describe("IBosonOfferHandler", function () {
 
           // caller is an operator of another seller
           seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(seller);
+          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+          await accountHandler.connect(rando).createSeller(seller, contractURI);
 
           // Attempt to extend the offers, expecting revert
           await expect(offerHandler.connect(rando).extendOfferBatch(offersToExtend, newValidUntilDate)).to.revertedWith(
