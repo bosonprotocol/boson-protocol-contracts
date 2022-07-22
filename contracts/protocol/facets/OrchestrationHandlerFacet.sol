@@ -8,6 +8,7 @@ import { GroupBase } from "../bases/GroupBase.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
 import { TwinBase } from "../bases/TwinBase.sol";
 import { BundleBase } from "../bases/BundleBase.sol";
+import { NOT_OPERATOR } from "../../domain/BosonConstants.sol";
 
 /**
  * @title OrchestrationHandlerFacet

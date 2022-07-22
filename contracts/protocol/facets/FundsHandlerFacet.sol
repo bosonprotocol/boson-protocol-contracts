@@ -8,6 +8,7 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { FEE_COLLECTOR, NATIVE_CURRENCY, NATIVE_WRONG_ADDRESS, NATIVE_WRONG_AMOUNT, NOTHING_TO_WITHDRAW, NOT_AUTHORIZED, NO_SUCH_SELLER, TOKEN_AMOUNT_MISMATCH, TOKEN_NAME_UNSPECIFIED, TOO_MANY_TOKENS } from "../../domain/BosonConstants.sol";
 
 /**
  * @title FundsHandlerFacet

@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
-import { BosonConstants } from "../../domain/BosonConstants.sol";
+import { ACCESS_DENIED } from "../../domain/BosonConstants.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { BeaconClientLib } from "../libs/BeaconClientLib.sol";
 import { IClientExternalAddresses } from "../../interfaces/clients/IClientExternalAddresses.sol";
@@ -17,7 +17,7 @@ import { IClientExternalAddresses } from "../../interfaces/clients/IClientExtern
  *
  * Boson client contracts include BosonVoucher
  */
-abstract contract BeaconClientBase is BosonTypes, BosonConstants {
+abstract contract BeaconClientBase is BosonTypes {
     /**
      * @dev Modifier that checks that the caller has a specific role.
      *

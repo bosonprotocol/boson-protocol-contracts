@@ -8,6 +8,7 @@ import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/O
 
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
+import { PROTOCOL } from "../../../domain/BosonConstants.sol";
 
 /**
  * @title BosonVoucher

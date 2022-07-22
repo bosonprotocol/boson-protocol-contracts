@@ -5,6 +5,7 @@ import { IBosonTwinEvents } from "../../interfaces/events/IBosonTwinEvents.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
+import { INVALID_AMOUNT, INVALID_SUPPLY_AVAILABLE, INVALID_TWIN_PROPERTY, INVALID_TWIN_TOKEN_RANGE, NOT_OPERATOR, NO_TRANSFER_APPROVED, UNSUPPORTED_TOKEN } from "../../domain/BosonConstants.sol";
 
 /**
  * @title TwinBase

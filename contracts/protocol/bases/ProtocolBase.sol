@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
-import { BosonConstants } from "../../domain/BosonConstants.sol";
+import { ACCESS_DENIED, ALREADY_INITIALIZED, INVALID_STATE, NOT_OPERATOR, NOT_VOUCHER_HOLDER, NO_SUCH_EXCHANGE, NO_SUCH_OFFER, OFFER_HAS_BEEN_VOIDED } from "../../domain/BosonConstants.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
 /**
@@ -12,7 +12,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
  *
  * @notice Provides domain and common modifiers to Protocol facets
  */
-abstract contract ProtocolBase is BosonTypes, BosonConstants {
+abstract contract ProtocolBase is BosonTypes {
     /**
      * @dev Modifier to protect initializer function from being invoked twice.
      */

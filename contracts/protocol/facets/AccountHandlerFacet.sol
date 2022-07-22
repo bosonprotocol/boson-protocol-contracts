@@ -6,6 +6,7 @@ import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
+import { ADMIN, AGENT_ADDRESS_MUST_BE_UNIQUE, BUYER_ADDRESS_MUST_BE_UNIQUE, DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE, DISPUTE_RESOLVER_FEE_NOT_FOUND, DUPLICATE_DISPUTE_RESOLVER_FEES, FEE_PERCENTAGE_INVALID, INVALID_ADDRESS, INVALID_AMOUNT_ALLOWED_SELLERS, INVALID_AMOUNT_DISPUTE_RESOLVER_FEES, INVALID_ESCALATION_PERIOD, NOT_ADMIN, NOT_AGENT_WALLET, NOT_BUYER_WALLET, NO_SUCH_AGENT, NO_SUCH_BUYER, NO_SUCH_DISPUTE_RESOLVER, NO_SUCH_SELLER, SELLER_ADDRESS_MUST_BE_UNIQUE, SELLER_ALREADY_APPROVED, SELLER_NOT_APPROVED, WALLET_OWNS_VOUCHERS } from "../../domain/BosonConstants.sol";
 
 contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     /**

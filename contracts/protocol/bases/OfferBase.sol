@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { IBosonOfferEvents } from "../../interfaces/events/IBosonOfferEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
+import { AMBIGUOUS_VOUCHER_EXPIRY, DR_UNSUPPORTED_FEE, INVALID_DISPUTE_DURATION, INVALID_DISPUTE_RESOLVER, INVALID_FULFILLMENT_PERIOD, INVALID_QUANTITY_AVAILABLE, NOT_OPERATOR, OFFER_MUST_BE_ACTIVE, OFFER_PENALTY_INVALID, OFFER_PERIOD_INVALID, REDEMPTION_PERIOD_INVALID } from "./../../domain/BosonConstants.sol";
 
 /**
  * @title OfferBase

@@ -9,6 +9,7 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
+import { FUNCTION_CALL_NOT_SUCCESSFUL, INVALID_FUNCTION_NAME, INVALID_FUNCTION_SIGNATURE, NONCE_USED_ALREADY, SIGNER_AND_SIGNATURE_DO_NOT_MATCH } from "../../domain/BosonConstants.sol";
 
 /**
  * @title MetaTransactionsHandlerFacet

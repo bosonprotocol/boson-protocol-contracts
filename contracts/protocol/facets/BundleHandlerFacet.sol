@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { IBosonBundleHandler } from "../../interfaces/handlers/IBosonBundleHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BundleBase } from "../bases/BundleBase.sol";
+import { BUNDLE_OFFER_MUST_BE_UNIQUE, BUNDLE_TWIN_MUST_BE_UNIQUE, EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS, EXCHANGE_FOR_OFFER_EXISTS, NOTHING_UPDATED, NOT_OPERATOR, NO_SUCH_BUNDLE, OFFER_NOT_IN_BUNDLE, TOO_MANY_OFFERS, TOO_MANY_TWINS, TWIN_NOT_IN_BUNDLE } from "../../domain/BosonConstants.sol";
 
 /**
  * @title BundleHandlerFacet

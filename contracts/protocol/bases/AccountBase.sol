@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
+import { AGENT_ADDRESS_MUST_BE_UNIQUE, BUYER_ADDRESS_MUST_BE_UNIQUE, FEE_PERCENTAGE_INVALID, INVALID_ADDRESS, MUST_BE_ACTIVE, SELLER_ADDRESS_MUST_BE_UNIQUE } from "./../../domain/BosonConstants.sol";
 
 /**
  * @title AccountBase
