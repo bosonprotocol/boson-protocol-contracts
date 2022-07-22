@@ -155,8 +155,8 @@ describe("IBosonVoucher", function () {
 
     beforeEach(async function () {
       const seller = new Seller("1", operator.address, admin.address, clerk.address, treasury.address, true);
-
-      await accountHandler.connect(admin).createSeller(seller);
+      const contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      await accountHandler.connect(admin).createSeller(seller, contractURI);
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(
@@ -197,7 +197,14 @@ describe("IBosonVoucher", function () {
   });
 
   context("transferOwnership()", function () {
-    it("should issue a voucher with success", async function () {
+    it("should emit OwnershipTransferred", async function () {
+      const ownable = await ethers.getContractAt("OwnableUpgradeable", bosonVoucher.address);
+      await expect(bosonVoucher.connect(protocol).transferOwnership(operator.address))
+        .to.emit(ownable, "OwnershipTransferred")
+        .withArgs(ethers.constants.AddressZero, operator.address);
+    });
+
+    it("should transfer ownership with success", async function () {
       await bosonVoucher.connect(protocol).transferOwnership(operator.address);
 
       const ownable = await ethers.getContractAt("OwnableUpgradeable", bosonVoucher.address);
@@ -219,6 +226,43 @@ describe("IBosonVoucher", function () {
       // owner tries to transfer, it should fail
       await expect(bosonVoucher.connect(operator).transferOwnership(rando.address)).to.be.revertedWith(
         RevertReasons.ACCESS_DENIED
+      );
+    });
+  });
+
+  context("setContractURI()", function () {
+    let contractURI;
+
+    beforeEach(async function () {
+      // give ownership to operator
+      await bosonVoucher.connect(protocol).transferOwnership(operator.address);
+
+      contractURI = "newContractURI";
+    });
+
+    it("should emit ContractURIChanged event", async function () {
+      await expect(bosonVoucher.connect(operator).setContractURI(contractURI))
+        .to.emit(bosonVoucher, "ContractURIChanged")
+        .withArgs(contractURI);
+    });
+
+    it("should set new contract with success", async function () {
+      await bosonVoucher.connect(operator).setContractURI(contractURI);
+
+      const returnedContractURI = await bosonVoucher.contractURI();
+
+      expect(returnedContractURI).eq(contractURI, "Wrong contractURI");
+    });
+
+    it("should revert if caller is not the owner", async function () {
+      // random caller
+      await expect(bosonVoucher.connect(rando).setContractURI(contractURI)).to.be.revertedWith(
+        RevertReasons.OWNABLE_NOT_OWNER
+      );
+
+      // protocol as the caller
+      await expect(bosonVoucher.connect(protocol).setContractURI(contractURI)).to.be.revertedWith(
+        RevertReasons.OWNABLE_NOT_OWNER
       );
     });
   });

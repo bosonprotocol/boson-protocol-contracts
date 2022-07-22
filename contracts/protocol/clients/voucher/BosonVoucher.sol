@@ -21,14 +21,18 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     string internal constant VOUCHER_NAME = "Boson Voucher";
     string internal constant VOUCHER_SYMBOL = "BOSON_VOUCHER";
 
+    string private _contractURI;
+
     /**
      * @notice Initializer
      */
-    function initializeVoucher(address _newOwner) public initializer {
+    function initializeVoucher(address _newOwner, string calldata _newContractURI) public initializer {
         __ERC721_init_unchained(VOUCHER_NAME, VOUCHER_SYMBOL);
 
-        // we dont call init on ownable, but rather just set the owneship to correct owner
+        // we dont call init on ownable, but rather just set the ownership to correct owner
         _transferOwnership(_newOwner);
+
+        _setContractURI(_newContractURI);
     }
 
     /**
@@ -131,5 +135,36 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     function transferOwnership(address newOwner) public override(IBosonVoucher, OwnableUpgradeable) onlyRole(PROTOCOL) {
         require(newOwner != address(0), "Ownable: new owner is the zero address");
         _transferOwnership(newOwner);
+    }
+
+    /**
+     * @notice Returns storefront-level metadata used by OpenSea
+     *
+     * @return Contract metadata URI
+     */
+    function contractURI() external view override returns (string memory) {
+        return _contractURI;
+    }
+
+    /**
+     * @notice Sets new contract URI
+     * Can only be called by the owner or during the initialization
+     *
+     * @param _newContractURI new contract metadata URI
+     */
+    function setContractURI(string calldata _newContractURI) external override onlyOwner {
+        _setContractURI(_newContractURI);
+    }
+
+    /**
+     * @notice Sets new contract URI
+     * Can only be called by the owner or during the initialization
+     *
+     * @param _newContractURI new contract metadata URI
+     */
+    function _setContractURI(string calldata _newContractURI) internal {
+        _contractURI = _newContractURI;
+
+        emit ContractURIChanged(_newContractURI);
     }
 }

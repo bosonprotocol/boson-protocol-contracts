@@ -41,6 +41,7 @@ describe("IBosonGroupHandler", function () {
   let groupStruct;
   let offerIdsToAdd, offerIdsToRemove;
   let disputeResolver, disputeResolverFees, disputeResolverId;
+  let contractURI;
 
   before(async function () {
     // get interface Ids
@@ -137,8 +138,8 @@ describe("IBosonGroupHandler", function () {
       // Create a valid seller, then set fields in tests directly
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
-
-      await accountHandler.connect(admin).createSeller(seller);
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      await accountHandler.connect(admin).createSeller(seller, contractURI);
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(
@@ -317,7 +318,8 @@ describe("IBosonGroupHandler", function () {
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(seller);
+          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+          await accountHandler.connect(rando).createSeller(seller, contractURI);
           await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId); // creates an offer with id 6
 
           // add offer belonging to another seller
@@ -485,7 +487,8 @@ describe("IBosonGroupHandler", function () {
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(seller);
+          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+          await accountHandler.connect(rando).createSeller(seller, contractURI);
           await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId); // creates an offer with id 6
 
           // add offer belonging to another seller
