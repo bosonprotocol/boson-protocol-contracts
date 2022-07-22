@@ -2880,12 +2880,12 @@ describe("IBosonFundsHandler", function () {
             // seller: sellerDeposit + price - protocolFee + buyerEscalationDeposit
             sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit)
               .add(offerToken.price)
-              .sub(offerToken.protocolFee)
+              .sub(offerTokenProtocolFee)
               .add(buyerEscalationDeposit)
               .toString();
 
             // protocol: 0
-            protocolPayoff = offerToken.protocolFee;
+            protocolPayoff = offerTokenProtocolFee;
 
             // Escalate the dispute
             await disputeHandler.connect(buyer).escalateDispute(exchangeId);
@@ -3422,6 +3422,7 @@ describe("IBosonFundsHandler", function () {
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
+              agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
 
               // Chain state should match the expected available funds
               expectedSellerAvailableFunds = new FundsList([
@@ -3430,9 +3431,11 @@ describe("IBosonFundsHandler", function () {
               ]);
               expectedBuyerAvailableFunds = new FundsList([]);
               expectedProtocolAvailableFunds = new FundsList([]);
+              expectedAgentAvailableFunds = new FundsList([]);
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
               // Expire the escalated dispute, so the funds are released
               await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
@@ -3441,6 +3444,7 @@ describe("IBosonFundsHandler", function () {
               // buyer: price + buyerEscalationDeposit
               // seller: sellerDeposit; note that seller has sellerDeposit in availableFunds from before
               // protocol: 0
+              // agent: 0
               expectedBuyerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", buyerPayoff);
               expectedSellerAvailableFunds.funds[0] = new Funds(
                 mockToken.address,
@@ -3450,9 +3454,11 @@ describe("IBosonFundsHandler", function () {
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
+              agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
             });
           }
         );
@@ -3491,6 +3497,7 @@ describe("IBosonFundsHandler", function () {
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
+              agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
 
               // Chain state should match the expected available funds
               expectedSellerAvailableFunds = new FundsList([
@@ -3499,9 +3506,11 @@ describe("IBosonFundsHandler", function () {
               ]);
               expectedBuyerAvailableFunds = new FundsList([]);
               expectedProtocolAvailableFunds = new FundsList([]);
+              expectedAgentAvailableFunds = new FundsList([]);
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
               // Expire the escalated dispute, so the funds are released
               await disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId);
@@ -3510,6 +3519,7 @@ describe("IBosonFundsHandler", function () {
               // buyer: price + buyerEscalationDeposit
               // seller: sellerDeposit; note that seller has sellerDeposit in availableFunds from before
               // protocol: 0
+              // agent: 0
               expectedBuyerAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", buyerPayoff);
               expectedSellerAvailableFunds.funds[0] = new Funds(
                 mockToken.address,
@@ -3519,9 +3529,11 @@ describe("IBosonFundsHandler", function () {
               sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
+              agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
               expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
               expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
               expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
+              expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
             });
           }
         );
