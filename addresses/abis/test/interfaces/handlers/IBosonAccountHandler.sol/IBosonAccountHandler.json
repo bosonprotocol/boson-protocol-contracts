@@ -923,6 +923,11 @@
           "internalType": "struct BosonTypes.Seller",
           "name": "_seller",
           "type": "tuple"
+        },
+        {
+          "internalType": "string",
+          "name": "_contractURI",
+          "type": "string"
         }
       ],
       "name": "createSeller",
