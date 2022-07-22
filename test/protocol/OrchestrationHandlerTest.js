@@ -24,7 +24,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { getEvent, applyPercentage, calculateContractAddress } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { oneMonth } = require("../utils/constants");
+const { oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../utils/constants");
 const { mockTwin, mockOffer, mockDisputeResolver } = require("../utils/mock");
 
 /**
@@ -358,6 +358,8 @@ describe("IBosonOrchestrationHandler", function () {
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
       });
 
       it("should ignore any provided id and assign the next available", async function () {
@@ -3463,6 +3465,8 @@ describe("IBosonOrchestrationHandler", function () {
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
       });
 
       it("should ignore any provided ids and assign the next available", async function () {
@@ -3699,6 +3703,8 @@ describe("IBosonOrchestrationHandler", function () {
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
       });
 
       it("should ignore any provided ids and assign the next available", async function () {
@@ -4000,6 +4006,8 @@ describe("IBosonOrchestrationHandler", function () {
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
       });
 
       it("should ignore any provided ids and assign the next available", async function () {
