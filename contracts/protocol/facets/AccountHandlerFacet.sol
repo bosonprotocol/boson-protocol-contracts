@@ -26,10 +26,11 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - Seller is not active (if active == false)
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
+     * @param _contractURI - contract metadata URI
      */
-    function createSeller(Seller memory _seller) external override {
+    function createSeller(Seller memory _seller, string calldata _contractURI) external override {
         // create seller and update structs values to represent true state
-        createSellerInternal(_seller);
+        createSellerInternal(_seller, _contractURI);
     }
 
     /**
@@ -225,7 +226,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         storeSeller(_seller);
 
-        // If operator changed, thasfer the ownership of NFT voucher
+        // If operator changed, transfer the ownership of NFT voucher
         if (oldSellerOperator != _seller.operator) {
             IBosonVoucher(protocolLookups().cloneAddress[seller.id]).transferOwnership(_seller.operator);
         }
