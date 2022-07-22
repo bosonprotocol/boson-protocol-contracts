@@ -717,14 +717,14 @@ describe("IBosonConfigHandler", function () {
         });
 
         it("should emit a MaxTotalOfferFeePercentageChanged event", async function () {
-          // // set new value for Max Total Offer Fee Percentage, testing for the event
+          // set new value for Max Total Offer Fee Percentage, testing for the event
           await expect(configHandler.connect(deployer).setMaxTotalOfferFeePercentage(maxTotalOfferFeePercentage))
             .to.emit(configHandler, "MaxTotalOfferFeePercentageChanged")
             .withArgs(maxTotalOfferFeePercentage, deployer.address);
         });
 
         it("should update state", async function () {
-          // // set new value for Max Total Offer Fee Percentage
+          // set new value for Max Total Offer Fee Percentage
           await configHandler.connect(deployer).setMaxTotalOfferFeePercentage(maxTotalOfferFeePercentage);
 
           // Verify that new value is stored

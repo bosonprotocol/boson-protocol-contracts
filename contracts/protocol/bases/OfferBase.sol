@@ -168,7 +168,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // Get the agent
         (bool agentExists, Agent storage agent) = fetchAgent(_agentId);
         // Make sure agent exists if _agentId is not zero.
-        require(_agentId == 0 || (_agentId > 0 && agentExists), NO_SUCH_AGENT);
+        require(_agentId == 0 || agentExists, NO_SUCH_AGENT);
 
         {
             // scope to avoid stack too deep errors

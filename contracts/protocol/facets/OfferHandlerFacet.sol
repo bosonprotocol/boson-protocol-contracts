@@ -238,7 +238,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @return offerDates - the offer dates details. See {BosonTypes.OfferDates}
      * @return offerDurations - the offer durations details. See {BosonTypes.OfferDurations}
      * @return disputeResolutionTerms - the details about the dispute resolution terms. See {BosonTypes.DisputeResolutionTerms}
-     * @return offerFees - the offer dates details. See {BosonTypes.OfferFees}
+     * @return offerFees - the offer fees details. See {BosonTypes.OfferFees}
      */
     function getOffer(uint256 _offerId)
         external
