@@ -10,8 +10,6 @@ import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title BosonVoucher
  * @notice This is the Boson Protocol ERC-721 NFT Voucher contract.
