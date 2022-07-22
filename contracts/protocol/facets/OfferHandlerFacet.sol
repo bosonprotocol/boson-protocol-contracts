@@ -83,7 +83,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
-     * - If agent ids are non zero:
+     * - When agent ids are non zero:
      *   - If Agent does not exist
      *   - If the sum of Agent fee amount and protocol fee amount should be greater than the offer fee limit
      *

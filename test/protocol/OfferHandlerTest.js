@@ -758,8 +758,8 @@ describe("IBosonOfferHandler", function () {
           offerFees.protocolFee = protocolFee;
 
           // Calculate the new agent fee amount.
-          agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
-          offerFees.agentFee = agentFee;
+          newOfferAgentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+          offerFees.agentFee = newOfferAgentFee;
           offerFeesStruct = offerFees.toStruct();
 
           // Create a new offer
@@ -778,6 +778,10 @@ describe("IBosonOfferHandler", function () {
               agentId,
               operator.address
             );
+
+          //Check offer agent fee for New offer.
+          [, , , , , offerFeesStruct] = await offerHandler.getOffer(offer.id);
+          expect(offerFeesStruct.agentFee.toString()).is.equal(newOfferAgentFee);
         });
 
         it("after the agent fee changes, old offers should have the same agent fee", async function () {

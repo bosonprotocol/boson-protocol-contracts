@@ -169,7 +169,7 @@ describe("IBosonAccountHandler", function () {
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 0,
         maxAllowedSellers: 100,
-        maxTotalOfferFeePercentage: 0,
+        maxTotalOfferFeePercentage: 4000, //40%
       },
       // Protocol fees
       {

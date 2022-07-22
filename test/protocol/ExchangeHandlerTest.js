@@ -418,7 +418,7 @@ describe("IBosonExchangeHandler", function () {
         expect(offerDurations.isValid()).is.true;
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
         exchange.offerId = offerId = "2"; // tested against second offer
 
         // Commit to offer, retrieving the event
