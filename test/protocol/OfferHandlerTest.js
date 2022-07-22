@@ -758,7 +758,7 @@ describe("IBosonOfferHandler", function () {
           offerFees.protocolFee = protocolFee;
 
           // Calculate the new agent fee amount.
-          newOfferAgentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+          let newOfferAgentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
           offerFees.agentFee = newOfferAgentFee;
           offerFeesStruct = offerFees.toStruct();
 

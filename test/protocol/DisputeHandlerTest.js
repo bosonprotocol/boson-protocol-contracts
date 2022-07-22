@@ -1367,7 +1367,9 @@ describe("IBosonDisputeHandler", function () {
             let agentId = "0";
 
             // Create a new offer
-            await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+            await offerHandler
+              .connect(operator)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
             // Commit to offer and put exchange all the way to dispute
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
