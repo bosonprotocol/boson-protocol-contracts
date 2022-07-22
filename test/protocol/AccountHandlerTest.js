@@ -258,7 +258,7 @@ describe("IBosonAccountHandler", function () {
           .withArgs(ethers.constants.AddressZero, operator.address);
       });
 
-      it.only("should update state", async function () {
+      it("should update state", async function () {
         // Create a seller
         await accountHandler.connect(admin).createSeller(seller, contractURI);
 
