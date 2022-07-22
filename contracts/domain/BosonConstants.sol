@@ -93,7 +93,6 @@ contract BosonConstants {
     // Revert Reasons: Twin related
     string internal constant NO_SUCH_TWIN = "No such twin";
     string internal constant NO_TRANSFER_APPROVED = "No transfer approved";
-    string internal constant TWIN_TRANSFER_FAILED = "Twin could not be transferred";
     string internal constant UNSUPPORTED_TOKEN = "Unsupported token";
     string internal constant BUNDLE_FOR_TWIN_EXISTS = "Bundle for twin exists";
     string internal constant INVALID_SUPPLY_AVAILABLE = "supplyAvailable can't be zero";

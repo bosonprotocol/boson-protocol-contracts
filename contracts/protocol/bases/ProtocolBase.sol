@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-
+import "hardhat/console.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
@@ -550,8 +550,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function checkBuyer(uint256 _currentBuyer) internal view {
         // Get the caller's buyer account id
-        uint256 buyerId;
-        (, buyerId) = getBuyerIdByWallet(msgSender());
+        (, uint256 buyerId) = getBuyerIdByWallet(msgSender());
 
         // Must be the buyer associated with the exchange (which is always voucher holder)
         require(buyerId == _currentBuyer, NOT_VOUCHER_HOLDER);
@@ -576,10 +575,10 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
         // Get the exchange
         bool exchangeExists;
         (exchangeExists, exchange) = fetchExchange(_exchangeId);
-
+      
         // Make sure the exchange exists
         require(exchangeExists, NO_SUCH_EXCHANGE);
-
+        console.log(exchange.state == ExchangeState.Revoked);
         // Make sure the exchange is in expected state
         require(exchange.state == _expectedState, INVALID_STATE);
     }
@@ -589,5 +588,46 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function msgSender() internal view returns (address) {
         return EIP712Lib.msgSender();
+    }
+
+    /**
+     * @notice Raise a dispute
+     *
+     *
+     * Reverts if:
+     * - caller does not hold a voucher for the given exchange id
+     * - exchange does not exist
+     * - the complaint is blank
+     * - exchange is not in a redeemed state
+     * - fulfillment period has elapsed already
+     *
+     * @param exchange - the exchange
+     * @param _complaint - the buyer's or protocol complaint description
+     */
+    function raiseDisputeInternal(Exchange memory exchange, string memory _complaint) internal {
+        // Buyer must provide a reason to dispute
+        require(bytes(_complaint).length > 0, COMPLAINT_MISSING);
+
+        // Make sure the fulfillment period has elapsed
+        uint256 elapsed = block.timestamp - exchange.voucher.redeemedDate;
+        require(elapsed < fetchOfferDurations(exchange.offerId).fulfillmentPeriod, FULFILLMENT_PERIOD_HAS_ELAPSED);
+
+        // Make sure the caller is buyer associated with the exchange
+        checkBuyer(exchange.buyerId);
+
+        // Set the exhange state to disputed
+        exchange.state = ExchangeState.Disputed;
+
+        // Fetch the dispute and dispute dates
+        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(exchange.id);
+
+        // Set the initial values
+        dispute.exchangeId = exchange.id;
+        dispute.complaint = _complaint;
+        dispute.state = DisputeState.Resolving;
+
+        // Update the disputeDates
+        disputeDates.disputed = block.timestamp;
+        disputeDates.timeout = block.timestamp + fetchOfferDurations(exchange.offerId).resolutionPeriod;
     }
 }

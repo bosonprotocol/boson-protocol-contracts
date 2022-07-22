@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-
+import "hardhat/console.sol";
 import { IBosonDisputeHandler } from "../../interfaces/handlers/IBosonDisputeHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
@@ -39,39 +39,15 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @param _complaint - the buyer's complaint description
      */
     function raiseDispute(uint256 _exchangeId, string calldata _complaint) external override {
-        // Buyer must provide a reason to dispute
-        require(bytes(_complaint).length > 0, COMPLAINT_MISSING);
-
         // Get the exchange, should be in redeemed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
-
-        // Make sure the fulfillment period has elapsed
-        uint256 elapsed = block.timestamp - exchange.voucher.redeemedDate;
-        require(elapsed < fetchOfferDurations(exchange.offerId).fulfillmentPeriod, FULFILLMENT_PERIOD_HAS_ELAPSED);
-
-        // Make sure the caller is buyer associated with the exchange
-        checkBuyer(exchange.buyerId);
-
-        // Set the exhange state to disputed
-        exchange.state = ExchangeState.Disputed;
-
-        // Fetch the dispute and dispute dates
-        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
-
-        // Set the initial values
-        dispute.exchangeId = _exchangeId;
-        dispute.complaint = _complaint;
-        dispute.state = DisputeState.Resolving;
-
-        // Update the disputeDates
-        disputeDates.disputed = block.timestamp;
-        disputeDates.timeout = block.timestamp + fetchOfferDurations(exchange.offerId).resolutionPeriod;
-
         // Get the offer, which will exist if the exchange does
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
+        raiseDisputeInternal(exchange, _complaint);
+
         // Notify watchers of state change
-        emit DisputeRaised(_exchangeId, exchange.buyerId, offer.sellerId, _complaint, msgSender());
+        emit DisputeRaised(exchange.id, exchange.buyerId, offer.sellerId, _complaint, msgSender());
     }
 
     /**
@@ -251,13 +227,19 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         uint8 _sigV
     ) external override {
         // buyer should get at most 100%
+        console.log("_Excha");
         require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
 
         // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
-
         // Fetch teh dispute and dispute dates
+
+        console.log("u2");
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
+
+        console.log("state", dispute.state == DisputeState.Decided);
+        console.log(dispute.state == DisputeState.Resolved);
+
 
         // Make sure the dispute is in the resolving or escalated state
         require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);

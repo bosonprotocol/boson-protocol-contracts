@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-
+import "hardhat/console.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
+import { IBosonDisputeEvents } from "../../interfaces/events/IBosonDisputeEvents.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
@@ -24,7 +25,7 @@ interface MultiToken {
  *
  * @notice Handles exchanges associated with offers within the protocol
  */
-contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
+contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, IBosonDisputeEvents {
     /**
      * @notice Facet Initializer
      */
@@ -175,23 +176,38 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
-        // Get the offer, which will definitely exist
-        Offer storage offer;
-        (, offer) = fetchOffer(exchange.offerId);
-
         // Get seller id associated with caller
         bool sellerExists;
         uint256 sellerId;
         (sellerExists, sellerId) = getSellerIdByOperator(msgSender());
 
+        // Get the offer, which will definitely exist
+        Offer storage offer;
+        (, offer) = fetchOffer(exchange.offerId);
+
         // Only seller's operator may call
         require(sellerExists && offer.sellerId == sellerId, NOT_OPERATOR);
 
+        revokeVoucherInternal(exchange);
+    }
+
+    /**
+     * @notice Revoke a voucher.
+     *
+     * Reverts if
+     * - Exchange is not in committed state
+     *
+     * Emits
+     * - VoucherRevoked
+     *
+     * @param exchange - the exchange
+     */
+    function revokeVoucherInternal(Exchange storage exchange) internal {
         // Finalize the exchange, burning the voucher
         finalizeExchange(exchange, ExchangeState.Revoked);
 
         // Notify watchers of state change
-        emit VoucherRevoked(offer.id, _exchangeId, msgSender());
+        emit VoucherRevoked(exchange.offerId, exchange.id, msgSender());
     }
 
     /**
@@ -287,11 +303,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         // Set the exchange state to the Redeemed
         exchange.state = ExchangeState.Redeemed;
 
-        // Burn the voucher
-        burnVoucher(exchange);
-
         // Transfer any bundled twins to buyer
-        transferTwins(exchange);
+        bool success = transferTwins(exchange);
+
+        // Burn the voucher
+        // Do not burn if transfer twin failed because voucher was revoked or dispute was raised on transferTwins function
+        if (success) {
+            burnVoucher(exchange);
+        }
 
         // Notify watchers of state change
         emit VoucherRedeemed(offerId, _exchangeId, msgSender());
@@ -462,10 +481,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      *
      * @param _exchange - the exchange
      */
-    function transferTwins(Exchange storage _exchange) internal {
+    function transferTwins(Exchange storage _exchange) internal returns (bool) {
         // See if there is an associated bundle
         (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
 
+              bool success;
         // Transfer the twins
         if (exists) {
             // Get storage location for bundle
@@ -484,13 +504,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
 
                 // Transfer the token from the seller's operator to the buyer
                 // N.B. Using call here so as to normalize the revert reason
-                bool success;
                 bytes memory result;
-
                 if (twin.tokenType == TokenType.FungibleToken && twin.supplyAvailable >= twin.amount) {
                     // ERC-20 style transfer
                     uint256 amount = twin.amount;
                     twin.supplyAvailable -= amount;
+                    console.log(amount);
+                    console.log(twin.tokenAddress);
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
                             "transferFrom(address,address,uint256)",
@@ -499,6 +519,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                             amount
                         )
                     );
+                    console.log(success);
                 } else if (twin.tokenType == TokenType.NonFungibleToken && twin.supplyAvailable > 0) {
                     // ERC-721 style transfer
                     uint256 tokenId = twin.tokenId + twin.supplyAvailable - 1;
@@ -527,10 +548,27 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                         )
                     );
                 }
+                
+                // If token transfer failed 
+                if (!success) {
+                  // Raise a dispute if caller is a contract
+                    if (isContract(msgSender())) {
+                        string memory complaint = "Twin transfer failed and buyer address is a contract";
+
+                        raiseDisputeInternal(_exchange, complaint);
+
+                        // Notify watchers of state change
+                        emit DisputeRaised(_exchange.id, _exchange.buyerId, seller.id, complaint, msgSender());
+                    } else {
+                        // Revoke voucher if caller is an EOA  
+                        revokeVoucherInternal(_exchange);
+                    }
+                  // Should stop trying transfer others twins as the exchange was revoked or a dispute was raised
+                  break;
+                }
             }
-            // @TODO comment the line below because we assume that for now we'll not revert the redeem if Twin transfer failed.
-            // require(success, TWIN_TRANSFER_FAILED);
         }
+      return success;
     }
 
     /**
@@ -645,5 +683,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      */
     function holdsSpecificToken(address _buyer, Condition storage _condition) internal view returns (bool) {
         return (Token(_condition.tokenAddress).ownerOf(_condition.tokenId) == _buyer);
+    }
+
+    /**
+     * @notice Verify if a given address is a contract or not (EOA)
+     *
+     * @param _address address to verify
+     * @return bool true if _address is a contract
+     */
+    function isContract(address _address) private view returns (bool) {
+        return _address.code.length > 0;
     }
 }
