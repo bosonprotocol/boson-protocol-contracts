@@ -15,7 +15,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { getEvent, calculateContractAddress } = require("../../scripts/util/test-utils.js");
-const { oneWeek, oneMonth } = require("../utils/constants");
+const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../utils/constants");
 const { mockOffer } = require("../utils/mock.js");
 
 /**
@@ -258,7 +258,7 @@ describe("IBosonAccountHandler", function () {
           .withArgs(ethers.constants.AddressZero, operator.address);
       });
 
-      it("should update state", async function () {
+      it.only("should update state", async function () {
         // Create a seller
         await accountHandler.connect(admin).createSeller(seller, contractURI);
 
@@ -280,6 +280,8 @@ describe("IBosonAccountHandler", function () {
 
         bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + id, "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + id, "Wrong voucher client symbol");
       });
 
       it("should ignore any provided id and assign the next available", async function () {
