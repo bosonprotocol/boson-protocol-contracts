@@ -481,11 +481,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, IBosonDispu
      *
      * @param _exchange - the exchange
      */
-    function transferTwins(Exchange storage _exchange) internal returns (bool) {
+    function transferTwins(Exchange storage _exchange) internal returns (bool success) {
         // See if there is an associated bundle
         (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
 
-        bool success;
         // Transfer the twins
         if (exists) {
             // Get storage location for bundle
@@ -565,7 +564,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, IBosonDispu
                 }
             }
         }
-        return success;
     }
 
     /**

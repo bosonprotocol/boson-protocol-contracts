@@ -1366,7 +1366,6 @@ describe("IBosonExchangeHandler", function () {
           // Commit to offer
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
-          // Set time forward t
           // Set time forward to the offer's voucherRedeemableFrom
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
         });
