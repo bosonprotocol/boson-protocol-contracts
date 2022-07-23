@@ -123,9 +123,9 @@ library FundsLib {
         uint256 sellerPayoff;
         uint256 buyerPayoff;
         uint256 protocolFee;
+        uint256 agentFee;
 
         BosonTypes.OfferFees storage offerFee = pe.offerFees[exchange.offerId];
-        uint256 agentFee = offerFee.agentFee;
 
         {
             // scope to avoid stack too deep errors
@@ -139,6 +139,7 @@ library FundsLib {
                 // COMPLETED
                 protocolFee = offerFee.protocolFee;
                 // buyerPayoff is 0
+                agentFee = offerFee.agentFee;
                 sellerPayoff = pot - protocolFee - agentFee;
             } else if (exchangeState == BosonTypes.ExchangeState.Revoked) {
                 // REVOKED
@@ -159,6 +160,7 @@ library FundsLib {
                     // RETRACTED - same as "COMPLETED"
                     protocolFee = offerFee.protocolFee;
                     // buyerPayoff is 0
+                    agentFee = offerFee.agentFee;
                     sellerPayoff = pot - protocolFee - agentFee;
                 } else if (disputeState == BosonTypes.DisputeState.Refused) {
                     // REFUSED
