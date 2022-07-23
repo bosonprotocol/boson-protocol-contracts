@@ -78,6 +78,7 @@ describe("IBosonExchangeHandler", function () {
   let twin20, twin721, twin1155, twinIds, bundle, balance, owner;
   let expectedCloneAddress;
   let method, tokenType, tokenAddress, tokenId, threshold, maxCommits, groupId, offerIds, condition, group;
+  let contractURI;
 
   before(async function () {
     // get interface Ids
@@ -225,7 +226,8 @@ describe("IBosonExchangeHandler", function () {
       // Create a valid seller
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
       expect(seller.isValid()).is.true;
-      await accountHandler.connect(admin).createSeller(seller);
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      await accountHandler.connect(admin).createSeller(seller, contractURI);
       expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
 
       // Create a valid dispute resolver
@@ -334,7 +336,8 @@ describe("IBosonExchangeHandler", function () {
         sellerId = "3"; // "1" is the first seller, "2" is DR
         seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, true);
         expect(seller.isValid()).is.true;
-        await accountHandler.connect(rando).createSeller(seller);
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        await accountHandler.connect(rando).createSeller(seller, contractURI);
         expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
         const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
@@ -1761,7 +1764,8 @@ describe("IBosonExchangeHandler", function () {
           // Create a new seller to get new clone
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, true);
           expect(seller.isValid()).is.true;
-          await accountHandler.connect(rando).createSeller(seller);
+          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+          await accountHandler.connect(rando).createSeller(seller, contractURI);
           expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
           const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 

@@ -112,6 +112,7 @@ exports.RevertReasons = {
   ERC20_PAUSED: "ERC20Pausable: token transfer while paused",
   EOA_FUNCTION_CALL: "Transaction reverted: function call to a non-contract account",
   ERC721_NON_EXISTENT: "ERC721: owner query for nonexistent token",
+  OWNABLE_NOT_OWNER: "Ownable: caller is not the owner",
 
   // Meta-Transactions related
   NONCE_USED_ALREADY: "Nonce used already",

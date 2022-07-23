@@ -58,18 +58,20 @@ contract OrchestrationHandlerFacet is
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _seller - the fully populated seller struct
+     * @param _contractURI - contract metadata URI
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      */
     function createSellerAndOffer(
         Seller memory _seller,
+        string calldata _contractURI,
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId
     ) external override {
-        checkAndCreateSeller(_seller);
+        checkAndCreateSeller(_seller, _contractURI);
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId);
     }
 
@@ -326,6 +328,7 @@ contract OrchestrationHandlerFacet is
      * - Condition includes invalid combination of parameters
      *
      * @param _seller - the fully populated seller struct
+     * @param _contractURI - contract metadata URI
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
@@ -334,13 +337,14 @@ contract OrchestrationHandlerFacet is
      */
     function createSellerAndOfferWithCondition(
         Seller memory _seller,
+        string calldata _contractURI,
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         Condition memory _condition
     ) external override {
-        checkAndCreateSeller(_seller);
+        checkAndCreateSeller(_seller, _contractURI);
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition);
     }
 
@@ -375,6 +379,7 @@ contract OrchestrationHandlerFacet is
      *   - Not approved to transfer the seller's token
      *
      * @param _seller - the fully populated seller struct
+     * @param _contractURI - contract metadata URI
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
@@ -383,13 +388,14 @@ contract OrchestrationHandlerFacet is
      */
     function createSellerAndOfferAndTwinWithBundle(
         Seller memory _seller,
+        string calldata _contractURI,
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         Twin memory _twin
     ) external override {
-        checkAndCreateSeller(_seller);
+        checkAndCreateSeller(_seller, _contractURI);
         createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin);
     }
 
@@ -425,6 +431,7 @@ contract OrchestrationHandlerFacet is
      *   - Not approved to transfer the seller's token
      *
      * @param _seller - the fully populated seller struct
+     * @param _contractURI - contract metadata URI
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
@@ -434,6 +441,7 @@ contract OrchestrationHandlerFacet is
      */
     function createSellerAndOfferWithConditionAndTwinAndBundle(
         Seller memory _seller,
+        string calldata _contractURI,
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
@@ -441,7 +449,7 @@ contract OrchestrationHandlerFacet is
         Condition memory _condition,
         Twin memory _twin
     ) external override {
-        checkAndCreateSeller(_seller);
+        checkAndCreateSeller(_seller, _contractURI);
         createOfferWithConditionAndTwinAndBundle(
             _offer,
             _offerDates,
@@ -465,12 +473,13 @@ contract OrchestrationHandlerFacet is
      *   - Seller is not active (if active == false)
      *
      * @param _seller - the fully populated seller struct
+     * @param _contractURI - contract metadata URI
      */
-    function checkAndCreateSeller(Seller memory _seller) internal {
+    function checkAndCreateSeller(Seller memory _seller, string calldata _contractURI) internal {
         // Caller should be the operator, specified in seller
         require(_seller.operator == msgSender(), NOT_OPERATOR);
 
         // create seller and update structs values to represent true state
-        createSellerInternal(_seller);
+        createSellerInternal(_seller, _contractURI);
     }
 }
