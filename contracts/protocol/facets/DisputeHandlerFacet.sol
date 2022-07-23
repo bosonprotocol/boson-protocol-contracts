@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-import "hardhat/console.sol";
+
 import { IBosonDisputeHandler } from "../../interfaces/handlers/IBosonDisputeHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
@@ -227,19 +227,13 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         uint8 _sigV
     ) external override {
         // buyer should get at most 100%
-        console.log("_Excha");
         require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
 
         // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
         // Fetch teh dispute and dispute dates
 
-        console.log("u2");
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
-
-        console.log("state", dispute.state == DisputeState.Decided);
-        console.log(dispute.state == DisputeState.Resolved);
-
 
         // Make sure the dispute is in the resolving or escalated state
         require(dispute.state == DisputeState.Resolving || dispute.state == DisputeState.Escalated, INVALID_STATE);

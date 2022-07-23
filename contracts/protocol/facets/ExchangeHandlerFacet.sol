@@ -485,7 +485,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, IBosonDispu
         // See if there is an associated bundle
         (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
 
-              bool success;
+        bool success;
         // Transfer the twins
         if (exists) {
             // Get storage location for bundle
@@ -548,10 +548,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, IBosonDispu
                         )
                     );
                 }
-                
-                // If token transfer failed 
+
+                // If token transfer failed
                 if (!success) {
-                  // Raise a dispute if caller is a contract
+                    // Raise a dispute if caller is a contract
                     if (isContract(msgSender())) {
                         string memory complaint = "Twin transfer failed and buyer address is a contract";
 
@@ -560,15 +560,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, IBosonDispu
                         // Notify watchers of state change
                         emit DisputeRaised(_exchange.id, _exchange.buyerId, seller.id, complaint, msgSender());
                     } else {
-                        // Revoke voucher if caller is an EOA  
+                        // Revoke voucher if caller is an EOA
                         revokeVoucherInternal(_exchange);
                     }
-                  // Should stop trying transfer others twins as the exchange was revoked or a dispute was raised
-                  break;
+                    // Should stop trying transfer others twins as the exchange was revoked or a dispute was raised
+                    break;
                 }
             }
         }
-      return success;
+        return success;
     }
 
     /**

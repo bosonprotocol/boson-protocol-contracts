@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-import "hardhat/console.sol";
+
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
@@ -575,10 +575,9 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
         // Get the exchange
         bool exchangeExists;
         (exchangeExists, exchange) = fetchExchange(_exchangeId);
-      
+
         // Make sure the exchange exists
         require(exchangeExists, NO_SUCH_EXCHANGE);
-        console.log(exchange.state == ExchangeState.Revoked);
         // Make sure the exchange is in expected state
         require(exchange.state == _expectedState, INVALID_STATE);
     }
@@ -604,7 +603,7 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @param exchange - the exchange
      * @param _complaint - the buyer's or protocol complaint description
      */
-    function raiseDisputeInternal(Exchange memory exchange, string memory _complaint) internal {
+    function raiseDisputeInternal(Exchange storage exchange, string memory _complaint) internal {
         // Buyer must provide a reason to dispute
         require(bytes(_complaint).length > 0, COMPLAINT_MISSING);
 
