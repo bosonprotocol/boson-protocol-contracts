@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-import "hardhat/console.sol";
+
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
 import { IBosonDisputeEvents } from "../../interfaces/events/IBosonDisputeEvents.sol";
@@ -509,8 +509,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, IBosonDispu
                     // ERC-20 style transfer
                     uint256 amount = twin.amount;
                     twin.supplyAvailable -= amount;
-                    console.log(amount);
-                    console.log(twin.tokenAddress);
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
                             "transferFrom(address,address,uint256)",
@@ -519,7 +517,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, IBosonDispu
                             amount
                         )
                     );
-                    console.log(success);
                 } else if (twin.tokenType == TokenType.NonFungibleToken && twin.supplyAvailable > 0) {
                     // ERC-721 style transfer
                     uint256 tokenId = twin.tokenId + twin.supplyAvailable - 1;
