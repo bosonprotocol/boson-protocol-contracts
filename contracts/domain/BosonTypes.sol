@@ -54,7 +54,6 @@ contract BosonTypes {
     }
 
     struct AuthToken {
-        uint256 id;
         uint256 tokenId;
         AuthTokenType tokenType;
     }
