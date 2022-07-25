@@ -208,7 +208,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         }
 
         //Admin address or AuthToken data must be present. A seller can have one or the other
-        require(_seller.admin != address(0) || _authToken.tokenType != AuthTokenType.None, ADMIN_OR_AUTH_TOKEN);
+        require((_seller.admin == address(0) &&  _authToken.tokenType != AuthTokenType.None) || (_seller.admin != address(0) && _authToken.tokenType == AuthTokenType.None), ADMIN_OR_AUTH_TOKEN);
 
         //Check that the addresses are unique to one seller Id across all roles -- not used or are used by this seller id.
         //Checking this seller id is necessary because one or more addresses may not change

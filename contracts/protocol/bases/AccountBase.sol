@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
+import "hardhat/console.sol";
 
 /**
  * @title AccountBase
@@ -32,7 +33,7 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         require(_seller.active, MUST_BE_ACTIVE);
         
         //Admin address or AuthToken data must be present. A seller can have one or the other
-        require(_seller.admin != address(0) || _authToken.tokenType != AuthTokenType.None, ADMIN_OR_AUTH_TOKEN);
+        require((_seller.admin == address(0) &&  _authToken.tokenType != AuthTokenType.None) || (_seller.admin != address(0) && _authToken.tokenType == AuthTokenType.None), ADMIN_OR_AUTH_TOKEN);
 
         //Check that the addresses are unique to one seller Id, accross all roles. These addresses should always be checked. Treasury is not checked
         require(
@@ -179,7 +180,10 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         );
 
         // Get storage location for seller
-        (, Seller storage seller, ) = fetchSeller(_seller.id);
+        (, Seller storage seller, AuthToken storage authToken) = fetchSeller(_seller.id);
+
+       // console.log("authToken.id in storeSeller ", authToken.tokenId);
+        //console.log("authToken.tokenId in storeSeller " , uint( authToken.tokenId));
 
         // Set seller props individually since memory structs can't be copied to storage
         seller.id = _seller.id;
@@ -191,10 +195,13 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
 
         //If no admin address, store auth token
         if(_seller.admin == address(0)) {
-            protocolEntities().authTokens[_seller.id] = _authToken;
+            //console.log("Admin address is zero. Storing authToken");
+            authToken.tokenId = _authToken.tokenId;
+            authToken.tokenType = _authToken.tokenType;
             protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] = _seller.id;
         } else {
-              protocolLookups().sellerIdByAdmin[_seller.admin] = _seller.id;
+            //console.log("Admin address is NOT zero.");
+            protocolLookups().sellerIdByAdmin[_seller.admin] = _seller.id;
         }
 
         //Map the seller's other addresses to the seller Id. It's not necessary to map the treasury address, as it only receives funds
