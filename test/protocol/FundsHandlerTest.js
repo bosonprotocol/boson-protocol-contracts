@@ -56,6 +56,7 @@ describe("IBosonFundsHandler", function () {
   let buyerPercent;
   let resolutionType, customSignatureType, message, r, s, v;
   let disputedDate, escalatedDate, timeout;
+  let contractURI;
 
   before(async function () {
     // get interface Ids
@@ -176,8 +177,8 @@ describe("IBosonFundsHandler", function () {
       // Create a valid seller, then set fields in tests directly
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
-
-      await accountHandler.connect(admin).createSeller(seller);
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      await accountHandler.connect(admin).createSeller(seller, contractURI);
 
       // top up operators account
       await mockToken.mint(operator.address, "1000000");
@@ -1214,7 +1215,8 @@ describe("IBosonFundsHandler", function () {
       // Create a valid seller
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
       expect(seller.isValid()).is.true;
-      await accountHandler.connect(admin).createSeller(seller);
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      await accountHandler.connect(admin).createSeller(seller, contractURI);
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(

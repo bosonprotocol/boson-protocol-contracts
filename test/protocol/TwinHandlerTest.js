@@ -48,6 +48,7 @@ describe("IBosonTwinHandler", function () {
     sellerId;
   let bundleId, offerIds, twinIds, bundle;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
+  let contractURI;
 
   before(async function () {
     // get interface Ids
@@ -150,8 +151,8 @@ describe("IBosonTwinHandler", function () {
       // Create a valid seller, then set fields in tests directly
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
-
-      await accountHandler.connect(admin).createSeller(seller);
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      await accountHandler.connect(admin).createSeller(seller, contractURI);
 
       // The first twin id
       nextTwinId = sellerId = "1";
@@ -470,7 +471,8 @@ describe("IBosonTwinHandler", function () {
         // Create another valid seller.
         seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
         expect(seller.isValid()).is.true;
-        await accountHandler.connect(rando).createSeller(seller);
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        await accountHandler.connect(rando).createSeller(seller, contractURI);
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(rando).approve(twinHandler.address, 1);
@@ -550,6 +552,21 @@ describe("IBosonTwinHandler", function () {
         // Expect twin to be not found.
         [success] = await twinHandler.connect(rando).getTwin(twin.id);
         expect(success).to.be.false;
+      });
+
+      it("should make twin range available again if token type is NonFungible", async function () {
+        twin.tokenType = TokenType.NonFungibleToken;
+        twin.amount = "0";
+        const expectedNewTwinId = "2";
+
+        // Create a twin with range: [0,1499]
+        await twinHandler.connect(operator).createTwin(twin);
+
+        // Remove twin
+        await twinHandler.connect(operator).removeTwin(expectedNewTwinId);
+
+        // Twin range must be available and createTwin transaction with same range should succeed
+        await expect(twinHandler.connect(operator).createTwin(twin)).to.not.reverted;
       });
 
       context("💔 Revert Reasons", async function () {
