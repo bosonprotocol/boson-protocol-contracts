@@ -34,7 +34,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Buyer cancel penalty is greater than price
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of Agent fee amount and protocol fee amount should be greater than the offer fee limit
+     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -93,7 +93,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Buyer cancel penalty is greater than price
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of Agent fee amount and protocol fee amount should be greater than the offer fee limit
+     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      * @param _offerDates - the fully populated offer dates struct

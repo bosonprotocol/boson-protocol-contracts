@@ -41,7 +41,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Buyer cancel penalty is greater than price
      * - When agent id is non zero:
      *   - If Agent does not exist
-     *   - If the sum of Agent fee amount and protocol fee amount should be greater than the offer fee limit
+     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -85,7 +85,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *   - Buyer cancel penalty is greater than price
      * - When agent ids are non zero:
      *   - If Agent does not exist
-     *   - If the sum of Agent fee amount and protocol fee amount should be greater than the offer fee limit
+     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
      * @param _offerDates - the array of fully populated offer dates structs
