@@ -110,7 +110,6 @@ library FundsLib {
      */
     function releaseFunds(uint256 _exchangeId) internal {
         // Load protocol entities storage
-
         ProtocolLib.ProtocolEntities storage pe = ProtocolLib.protocolEntities();
 
         // Get the exchange and its state

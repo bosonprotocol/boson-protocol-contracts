@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { IBosonDisputeHandler } from "../../interfaces/handlers/IBosonDisputeHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
+import { DisputeBase } from "../bases/DisputeBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
@@ -12,7 +13,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
  *
  * @notice Handles disputes associated with exchanges within the protocol
  */
-contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
+contract DisputeHandlerFacet is ProtocolBase, DisputeBase, IBosonDisputeHandler {
     bytes32 private constant RESOLUTION_TYPEHASH =
         keccak256(bytes("Resolution(uint256 exchangeId,uint256 buyerPercent)")); // needed for verification during the resolveDispute
 
@@ -44,10 +45,7 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
         // Get the offer, which will exist if the exchange does
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
-        raiseDisputeInternal(exchange, _complaint);
-
-        // Notify watchers of state change
-        emit DisputeRaised(exchange.id, exchange.buyerId, offer.sellerId, _complaint, msgSender());
+        raiseDisputeInternal(exchange, _complaint, offer.sellerId);
     }
 
     /**

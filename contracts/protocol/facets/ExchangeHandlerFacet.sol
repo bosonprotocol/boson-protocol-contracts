@@ -3,11 +3,11 @@ pragma solidity ^0.8.0;
 
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
-import { IBosonDisputeEvents } from "../../interfaces/events/IBosonDisputeEvents.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
+import { DisputeBase } from "../bases/DisputeBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 
 interface Token {
@@ -25,7 +25,7 @@ interface MultiToken {
  *
  * @notice Handles exchanges associated with offers within the protocol
  */
-contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, IBosonDisputeEvents {
+contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase {
     /**
      * @notice Facet Initializer
      */
@@ -304,11 +304,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, IBosonDispu
         exchange.state = ExchangeState.Redeemed;
 
         // Transfer any bundled twins to buyer
-        bool success = transferTwins(exchange);
+        bool shouldBurnVoucher = transferTwins(exchange);
 
         // Burn the voucher
         // Do not burn if transfer twin failed because voucher was revoked or dispute was raised on transferTwins function
-        if (success) {
+        if (shouldBurnVoucher) {
             burnVoucher(exchange);
         }
 
@@ -480,10 +480,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, IBosonDispu
      * - a twin transfer fails
      *
      * @param _exchange - the exchange
+     * @return shouldBurnVoucher - whether or not the voucher should be burned
      */
-    function transferTwins(Exchange storage _exchange) internal returns (bool success) {
+    function transferTwins(Exchange storage _exchange) internal returns (bool shouldBurnVoucher) {
         // See if there is an associated bundle
         (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
+
+        // Voucher should be burned in the happy path
+        shouldBurnVoucher = true;
 
         // Transfer the twins
         if (exists) {
@@ -498,6 +502,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, IBosonDispu
 
             // Visit the twins
             for (uint256 i = 0; i < twinIds.length; i++) {
+                bool success;
+
                 // Get the twin
                 (, Twin storage twin) = fetchTwin(twinIds[i]);
 
@@ -551,14 +557,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, IBosonDispu
                     if (isContract(msgSender())) {
                         string memory complaint = "Twin transfer failed and buyer address is a contract";
 
-                        raiseDisputeInternal(_exchange, complaint);
-
-                        // Notify watchers of state change
-                        emit DisputeRaised(_exchange.id, _exchange.buyerId, seller.id, complaint, msgSender());
+                        raiseDisputeInternal(_exchange, complaint, seller.id);
                     } else {
                         // Revoke voucher if caller is an EOA
                         revokeVoucherInternal(_exchange);
                     }
+                    shouldBurnVoucher = false;
                     // Should stop trying transfer others twins as the exchange was revoked or a dispute was raised
                     break;
                 }
