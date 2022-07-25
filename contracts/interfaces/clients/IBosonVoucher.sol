@@ -13,6 +13,8 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
  * The ERC-165 identifier for this interface is: 0x17c286ab
  */
 interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
+    event ContractURIChanged(string contractURI);
+
     /**
      * @notice Issue a voucher to a buyer
      *
@@ -38,4 +40,19 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * Can only be called by the protocol. Change is done by calling `updateSeller` on the protocol
      */
     function transferOwnership(address newOwner) external;
+
+    /**
+     * @notice Returns storefront-level metadata used by OpenSea
+     *
+     * @return Contract metadata URI
+     */
+    function contractURI() external view returns (string memory);
+
+    /**
+     * @notice Sets new contract URI
+     * Can only be called by the owner or during the initialization
+     *
+     * @param _newContractURI new contract metadata URI
+     */
+    function setContractURI(string calldata _newContractURI) external;
 }

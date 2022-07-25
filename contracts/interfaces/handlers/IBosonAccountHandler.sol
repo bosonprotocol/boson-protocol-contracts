@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x3ef28879
+ * The ERC-165 identifier for this interface is: 0xdd61de85
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -25,9 +25,10 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - AuthTokenType is not unique to this seller
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
+     * @param _contractURI - contract metadata URI
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      */
-    function createSeller(BosonTypes.Seller memory _seller, BosonTypes.AuthToken calldata _authToken) external;
+    function createSeller(BosonTypes.Seller memory _seller, string calldata _contractURI, BosonTypes.AuthToken calldata _authToken) external;
 
     /**
      * @notice Creates a Buyer

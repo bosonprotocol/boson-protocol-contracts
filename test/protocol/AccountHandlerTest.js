@@ -15,7 +15,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { getEvent, calculateContractAddress } = require("../../scripts/util/test-utils.js");
-const { oneWeek, oneMonth } = require("../utils/constants");
+const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../utils/constants");
 const { mockOffer } = require("../utils/mock.js");
 
 /**
@@ -57,6 +57,7 @@ describe("IBosonAccountHandler", function () {
   let offerId;
   let bosonVoucher;
   let expectedCloneAddress;
+  let contractURI;
 
   before(async function () {
     // get interface Ids
@@ -229,6 +230,9 @@ describe("IBosonAccountHandler", function () {
       // How that seller looks as a returned struct
       sellerStruct = seller.toStruct();
 
+      // Contract URI
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+
       // expected address of the first clone
       expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
     });
@@ -236,7 +240,7 @@ describe("IBosonAccountHandler", function () {
     context("👉 createSeller()", async function () {
       it("should emit a SellerCreated event", async function () {
         // Create a seller, testing for the event
-        const tx = await accountHandler.connect(admin).createSeller(seller);
+        const tx = await accountHandler.connect(admin).createSeller(seller, contractURI);
 
         //TODO: add AuthToken struct to this check
         await expect(tx)
@@ -244,8 +248,11 @@ describe("IBosonAccountHandler", function () {
           .withArgs(seller.id, sellerStruct, expectedCloneAddress, admin.address);
 
         // Voucher clone contract
-        const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+        await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
+
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         await expect(tx)
           .to.emit(bosonVoucher, "OwnershipTransferred")
@@ -254,7 +261,7 @@ describe("IBosonAccountHandler", function () {
 
       it("should update state", async function () {
         // Create a seller
-        await accountHandler.connect(admin).createSeller(seller);
+        await accountHandler.connect(admin).createSeller(seller, contractURI);
 
         // Get the seller as a struct
         [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
@@ -268,10 +275,14 @@ describe("IBosonAccountHandler", function () {
         }
 
         // Voucher clone contract
-        const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", bosonVoucherCloneAddress);
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
 
         expect(await bosonVoucher.owner()).to.equal(operator.address, "Wrong voucher clone owner");
+
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + id, "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + id, "Wrong voucher client symbol");
       });
 
       //TODO new test case: should update state when seller has auth token
@@ -280,7 +291,7 @@ describe("IBosonAccountHandler", function () {
         seller.id = "444";
 
         // Create a seller, testing for the event
-        await expect(accountHandler.connect(admin).createSeller(seller))
+        await expect(accountHandler.connect(admin).createSeller(seller, contractURI))
           .to.emit(accountHandler, "SellerCreated")
           .withArgs(nextAccountId, sellerStruct, expectedCloneAddress, admin.address);
 
@@ -303,14 +314,14 @@ describe("IBosonAccountHandler", function () {
         sellerStruct = seller.toStruct();
 
         // Create a seller, testing for the event
-        await expect(accountHandler.connect(admin).createSeller(seller))
+        await expect(accountHandler.connect(admin).createSeller(seller, contractURI))
           .to.emit(accountHandler, "SellerCreated")
           .withArgs(nextAccountId, sellerStruct, expectedCloneAddress, admin.address);
       });
 
       it("should be possible to use non-unique treasury address", async function () {
         // Create a seller, testing for the event
-        await expect(accountHandler.connect(rando).createSeller(seller))
+        await expect(accountHandler.connect(rando).createSeller(seller, contractURI))
           .to.emit(accountHandler, "SellerCreated")
           .withArgs(nextAccountId, sellerStruct, expectedCloneAddress, rando.address);
 
@@ -328,14 +339,14 @@ describe("IBosonAccountHandler", function () {
         expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
 
         // Create a seller, testing for the event
-        await expect(accountHandler.connect(rando).createSeller(seller))
+        await expect(accountHandler.connect(rando).createSeller(seller, contractURI))
           .to.emit(accountHandler, "SellerCreated")
           .withArgs(nextAccountId, sellerStruct, expectedCloneAddress, rando.address);
       });
 
       it("every seller should get a different clone address", async function () {
         // Create a seller, testing for the event
-        await expect(accountHandler.connect(admin).createSeller(seller))
+        await expect(accountHandler.connect(admin).createSeller(seller, contractURI))
           .to.emit(accountHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct, expectedCloneAddress, admin.address);
 
@@ -344,7 +355,7 @@ describe("IBosonAccountHandler", function () {
         seller = new Seller(++id, other1.address, other1.address, other1.address, other1.address, active);
 
         // Create a seller, testing for the event
-        await expect(accountHandler.connect(other1).createSeller(seller))
+        await expect(accountHandler.connect(other1).createSeller(seller, contractURI))
           .to.emit(accountHandler, "SellerCreated")
           .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, other1.address);
       });
@@ -354,7 +365,7 @@ describe("IBosonAccountHandler", function () {
           seller.active = false;
 
           // Attempt to Create a seller, expecting revert
-          await expect(accountHandler.connect(admin).createSeller(seller)).to.revertedWith(
+          await expect(accountHandler.connect(admin).createSeller(seller, contractURI)).to.revertedWith(
             RevertReasons.MUST_BE_ACTIVE
           );
         });
@@ -363,7 +374,7 @@ describe("IBosonAccountHandler", function () {
           seller.operator = ethers.constants.AddressZero;
 
           // Attempt to Create a seller, expecting revert
-          await expect(accountHandler.connect(admin).createSeller(seller)).to.revertedWith(
+          await expect(accountHandler.connect(admin).createSeller(seller, contractURI)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
 
@@ -371,7 +382,7 @@ describe("IBosonAccountHandler", function () {
           seller.clerk = ethers.constants.AddressZero;
 
           // Attempt to Create a seller, expecting revert
-          await expect(accountHandler.connect(admin).createSeller(seller)).to.revertedWith(
+          await expect(accountHandler.connect(admin).createSeller(seller, contractURI)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
 
@@ -379,20 +390,20 @@ describe("IBosonAccountHandler", function () {
           seller.admin = ethers.constants.AddressZero;
 
           // Attempt to Create a seller, expecting revert
-          await expect(accountHandler.connect(rando).createSeller(seller)).to.revertedWith(
+          await expect(accountHandler.connect(rando).createSeller(seller, contractURI)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
         });
 
         it("addresses are not unique to this seller Id when address used for same role", async function () {
           // Create a seller
-          await accountHandler.connect(admin).createSeller(seller);
+          await accountHandler.connect(admin).createSeller(seller, contractURI);
 
           seller.admin = other1.address;
           seller.clerk = other2.address;
 
           // Attempt to Create a seller with non-unique operator, expecting revert
-          await expect(accountHandler.connect(rando).createSeller(seller)).to.revertedWith(
+          await expect(accountHandler.connect(rando).createSeller(seller, contractURI)).to.revertedWith(
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
 
@@ -400,7 +411,7 @@ describe("IBosonAccountHandler", function () {
           seller.operator = other1.address;
 
           // Attempt to Create a seller with non-unique admin, expecting revert
-          await expect(accountHandler.connect(admin).createSeller(seller)).to.revertedWith(
+          await expect(accountHandler.connect(admin).createSeller(seller, contractURI)).to.revertedWith(
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
 
@@ -408,14 +419,14 @@ describe("IBosonAccountHandler", function () {
           seller.admin = other2.address;
 
           // Attempt to Create a seller with non-unique clerk, expecting revert
-          await expect(accountHandler.connect(admin).createSeller(seller)).to.revertedWith(
+          await expect(accountHandler.connect(admin).createSeller(seller, contractURI)).to.revertedWith(
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
         });
 
         it("addresses are not unique to this seller Id when address used for different role", async function () {
           // Create a seller
-          await accountHandler.connect(admin).createSeller(seller);
+          await accountHandler.connect(admin).createSeller(seller, contractURI);
 
           //Set seller 2's admin address to seller 1's operator address
           seller.admin = operator.address;
@@ -423,7 +434,7 @@ describe("IBosonAccountHandler", function () {
           seller.clerk = other3.address;
 
           // Attempt to Create a seller with non-unique operator, expecting revert
-          await expect(accountHandler.connect(rando).createSeller(seller)).to.revertedWith(
+          await expect(accountHandler.connect(rando).createSeller(seller, contractURI)).to.revertedWith(
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
 
@@ -433,7 +444,7 @@ describe("IBosonAccountHandler", function () {
           seller.clerk = other3.address;
 
           // Attempt to Create a seller with non-unique admin, expecting revert
-          await expect(accountHandler.connect(admin).createSeller(seller)).to.revertedWith(
+          await expect(accountHandler.connect(admin).createSeller(seller, contractURI)).to.revertedWith(
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
 
@@ -443,7 +454,7 @@ describe("IBosonAccountHandler", function () {
           seller.clerk = admin.address;
 
           // Attempt to Create a seller with non-unique clerk, expecting revert
-          await expect(accountHandler.connect(admin).createSeller(seller)).to.revertedWith(
+          await expect(accountHandler.connect(admin).createSeller(seller, contractURI)).to.revertedWith(
             RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE
           );
         });
@@ -458,7 +469,7 @@ describe("IBosonAccountHandler", function () {
     context("👉 getSeller()", async function () {
       beforeEach(async function () {
         // Create a seller
-        await accountHandler.connect(admin).createSeller(seller);
+        await accountHandler.connect(admin).createSeller(seller, contractURI);
 
         // Required constructor params
         id = "2"; // argument sent to contract for createSeller will be ignored
@@ -467,7 +478,7 @@ describe("IBosonAccountHandler", function () {
         seller2 = new Seller(id, other1.address, other2.address, other3.address, other4.address, active);
         expect(seller2.isValid()).is.true;
 
-        await accountHandler.connect(rando).createSeller(seller2);
+        await accountHandler.connect(rando).createSeller(seller2, contractURI);
       });
 
       it("should return true for exists if seller is found", async function () {
@@ -501,7 +512,7 @@ describe("IBosonAccountHandler", function () {
     context("👉 getSellerByAddress()", async function () {
       beforeEach(async function () {
         // Create a seller
-        await accountHandler.connect(rando).createSeller(seller);
+        await accountHandler.connect(rando).createSeller(seller, contractURI);
 
         // Required constructor params
         id = "2"; // argument sent to contract for createSeller will be ignored
@@ -511,7 +522,9 @@ describe("IBosonAccountHandler", function () {
         seller2 = new Seller(id, other1.address, other2.address, other3.address, other4.address, active);
         expect(seller2.isValid()).is.true;
 
-        await accountHandler.connect(rando).createSeller(seller2);
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+
+        await accountHandler.connect(rando).createSeller(seller2, contractURI);
       });
 
       it("should return the correct seller when searching on operator address", async function () {
@@ -596,7 +609,7 @@ describe("IBosonAccountHandler", function () {
     context("👉 updateSeller()", async function () {
       beforeEach(async function () {
         // Create a seller
-        await accountHandler.connect(admin).createSeller(seller);
+        await accountHandler.connect(admin).createSeller(seller, contractURI);
 
         // id of the current seller and increment nextAccountId
         id = nextAccountId++;
@@ -765,11 +778,13 @@ describe("IBosonAccountHandler", function () {
 
         seller2Struct = seller2.toStruct();
 
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+
         // expected address of the second clone
         expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
 
         //Create seller2, testing for the event
-        await expect(accountHandler.connect(rando).createSeller(seller2))
+        await expect(accountHandler.connect(rando).createSeller(seller2, contractURI))
           .to.emit(accountHandler, "SellerCreated")
           .withArgs(seller2.id, seller2Struct, expectedCloneAddress, rando.address);
 
@@ -904,7 +919,7 @@ describe("IBosonAccountHandler", function () {
           expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
 
           //Create second seller
-          await expect(accountHandler.connect(rando).createSeller(seller))
+          await expect(accountHandler.connect(rando).createSeller(seller, contractURI))
             .to.emit(accountHandler, "SellerCreated")
             .withArgs(nextAccountId, sellerStruct, expectedCloneAddress, rando.address);
 
@@ -944,7 +959,7 @@ describe("IBosonAccountHandler", function () {
           expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
 
           //Create second seller
-          await expect(accountHandler.connect(rando).createSeller(seller))
+          await expect(accountHandler.connect(rando).createSeller(seller, contractURI))
             .to.emit(accountHandler, "SellerCreated")
             .withArgs(nextAccountId, sellerStruct, expectedCloneAddress, rando.address);
 
@@ -984,7 +999,7 @@ describe("IBosonAccountHandler", function () {
     context("👉 getNextAccountId()", async function () {
       beforeEach(async function () {
         // Create a seller
-        await accountHandler.connect(admin).createSeller(seller);
+        await accountHandler.connect(admin).createSeller(seller, contractURI);
 
         // id of the current seller and increment nextAccountId
         id = nextAccountId++;
@@ -1008,7 +1023,7 @@ describe("IBosonAccountHandler", function () {
         seller.clerk = other2.address;
 
         // Create another seller
-        await accountHandler.connect(admin).createSeller(seller);
+        await accountHandler.connect(admin).createSeller(seller, contractURI);
 
         // What we expect the next account id to be
         expected = ++nextAccountId;
@@ -1314,7 +1329,7 @@ describe("IBosonAccountHandler", function () {
           expect(seller.isValid()).is.true;
 
           // Create a seller
-          await accountHandler.connect(admin).createSeller(seller);
+          await accountHandler.connect(admin).createSeller(seller, contractURI);
 
           [exists, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(operator.address);
           expect(exists).is.true;
@@ -1526,9 +1541,10 @@ describe("IBosonAccountHandler", function () {
         active
       );
 
-      await accountHandler.connect(admin).createSeller(seller);
-      await accountHandler.connect(admin).createSeller(seller2);
-      await accountHandler.connect(admin).createSeller(seller3);
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      await accountHandler.connect(admin).createSeller(seller, contractURI);
+      await accountHandler.connect(admin).createSeller(seller2, contractURI);
+      await accountHandler.connect(admin).createSeller(seller3, contractURI);
 
       // Make a sellerAllowList
       sellerAllowList = ["3", "1"];
@@ -2932,8 +2948,8 @@ describe("IBosonAccountHandler", function () {
           other3.address,
           active
         );
-
-        await accountHandler.connect(admin).createSeller(seller4);
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        await accountHandler.connect(admin).createSeller(seller4, contractURI);
 
         sellerAllowList = ["1", "3"];
         allowedSellersToAdd = ["2", "4"];
@@ -3082,8 +3098,8 @@ describe("IBosonAccountHandler", function () {
           other3.address,
           active
         );
-
-        await accountHandler.connect(admin).createSeller(seller4);
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        await accountHandler.connect(admin).createSeller(seller4, contractURI);
 
         sellerAllowList = ["1", "3", "2", "4"];
         allowedSellersToRemove = ["1", "2"];
@@ -3187,7 +3203,8 @@ describe("IBosonAccountHandler", function () {
           other4.address,
           active
         );
-        await accountHandler.connect(admin).createSeller(seller6);
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        await accountHandler.connect(admin).createSeller(seller6, contractURI);
 
         // check that mappings of allowed selleres were updated
         idsToCheck = ["1", "2", "3", "4", "5", "6"];
@@ -3251,7 +3268,8 @@ describe("IBosonAccountHandler", function () {
             other4.address,
             active
           );
-          await accountHandler.connect(admin).createSeller(seller6);
+          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+          await accountHandler.connect(admin).createSeller(seller6, contractURI);
 
           // seller exists, it's not approved
           allowedSellersToRemove = ["2", "4", "6"];

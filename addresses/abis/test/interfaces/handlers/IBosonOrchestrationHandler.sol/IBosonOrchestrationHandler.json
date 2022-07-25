@@ -1964,6 +1964,11 @@
           "type": "tuple"
         },
         {
+          "internalType": "string",
+          "name": "_contractURI",
+          "type": "string"
+        },
+        {
           "components": [
             {
               "internalType": "uint256",
@@ -2123,6 +2128,11 @@
           "internalType": "struct BosonTypes.Seller",
           "name": "_seller",
           "type": "tuple"
+        },
+        {
+          "internalType": "string",
+          "name": "_contractURI",
+          "type": "string"
         },
         {
           "components": [
@@ -2328,6 +2338,11 @@
           "type": "tuple"
         },
         {
+          "internalType": "string",
+          "name": "_contractURI",
+          "type": "string"
+        },
+        {
           "components": [
             {
               "internalType": "uint256",
@@ -2524,6 +2539,11 @@
           "internalType": "struct BosonTypes.Seller",
           "name": "_seller",
           "type": "tuple"
+        },
+        {
+          "internalType": "string",
+          "name": "_contractURI",
+          "type": "string"
         },
         {
           "components": [

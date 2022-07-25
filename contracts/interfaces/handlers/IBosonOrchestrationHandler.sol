@@ -13,7 +13,7 @@ import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  *
- * The ERC-165 identifier for this interface is: 0xf9419534
+ * The ERC-165 identifier for this interface is: 0x57187459
  */
 interface IBosonOrchestrationHandler is
     IBosonAccountEvents,
@@ -51,8 +51,9 @@ interface IBosonOrchestrationHandler is
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      *
-     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _seller - the fully populated seller struct
+     * @param _contractURI - contract metadata URI
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
@@ -60,6 +61,7 @@ interface IBosonOrchestrationHandler is
      */
     function createSellerAndOffer(
         BosonTypes.Seller calldata _seller,
+        string calldata _contractURI,
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
@@ -258,6 +260,7 @@ interface IBosonOrchestrationHandler is
      * - Condition includes invalid combination of parameters
      *
      * @param _seller - the fully populated seller struct
+     * @param _contractURI - contract metadata URI
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
@@ -267,6 +270,7 @@ interface IBosonOrchestrationHandler is
      */
     function createSellerAndOfferWithCondition(
         BosonTypes.Seller memory _seller,
+        string calldata _contractURI,
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
@@ -308,6 +312,7 @@ interface IBosonOrchestrationHandler is
      *   - Not approved to transfer the seller's token
      *
      * @param _seller - the fully populated seller struct
+     * @param _contractURI - contract metadata URI
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
@@ -317,6 +322,7 @@ interface IBosonOrchestrationHandler is
      */
     function createSellerAndOfferAndTwinWithBundle(
         BosonTypes.Seller memory _seller,
+        string calldata _contractURI,
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
@@ -359,6 +365,7 @@ interface IBosonOrchestrationHandler is
      *   - Not approved to transfer the seller's token
      *
      * @param _seller - the fully populated seller struct
+     * @param _contractURI - contract metadata URI
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
@@ -369,6 +376,7 @@ interface IBosonOrchestrationHandler is
      */
     function createSellerAndOfferWithConditionAndTwinAndBundle(
         BosonTypes.Seller memory _seller,
+        string calldata _contractURI,
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,

@@ -16,7 +16,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         DiamondLib.addSupportedInterface(type(IBosonAccountHandler).interfaceId);
     }
 
-    /**
+   /**
      * @notice Creates a seller
      *
      * Emits a SellerCreated event if successful.
@@ -29,11 +29,12 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * - AuthTokenType is not unique to this seller
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
+     * @param _contractURI - contract metadata URI
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      */
-    function createSeller(Seller memory _seller, AuthToken calldata _authToken) external override {
+    function createSeller(Seller memory _seller, string calldata _contractURI, AuthToken calldata _authToken) external override {
         // create seller and update structs values to represent true state
-        createSellerInternal(_seller, _authToken);
+        createSellerInternal(_seller, _contractURI, _authToken);
     }
 
     /**
@@ -258,7 +259,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
 
         storeSeller(_seller, _authToken);
 
-        // If operator changed, thasfer the ownership of NFT voucher
+        // If operator changed, transfer the ownership of NFT voucher
         if (oldSellerOperator != _seller.operator) {
             IBosonVoucher(protocolLookups().cloneAddress[seller.id]).transferOwnership(_seller.operator);
         }

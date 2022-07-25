@@ -51,6 +51,7 @@ describe("IBosonBundleHandler", function () {
   let offerDates, offerDurations;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let disputeResolver, disputeResolverFees, disputeResolverId;
+  let contractURI;
 
   before(async function () {
     // get interface Ids
@@ -179,7 +180,8 @@ describe("IBosonBundleHandler", function () {
       // Create a valid seller, then set fields in tests directly
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
-      await accountHandler.connect(admin).createSeller(seller);
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      await accountHandler.connect(admin).createSeller(seller, contractURI);
 
       id = ++nextAccountId;
 
@@ -353,7 +355,8 @@ describe("IBosonBundleHandler", function () {
           // create another seller and an offer
           let expectedNewOfferId = "6";
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(seller);
+          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+          await accountHandler.connect(rando).createSeller(seller, contractURI);
           const tx = await offerHandler
             .connect(rando)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId); // creates an offer with id 6
@@ -392,7 +395,8 @@ describe("IBosonBundleHandler", function () {
           // create another seller and a twin
           let expectedNewTwinId = "6";
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(seller);
+          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+          await accountHandler.connect(rando).createSeller(seller, contractURI);
           await bosonToken.connect(rando).approve(twinHandler.address, 1); // approving the twin handler
           const tx = await twinHandler.connect(rando).createTwin(twin); // creates a twin with id 6
           const txReceipt = await tx.wait();
@@ -767,7 +771,8 @@ describe("IBosonBundleHandler", function () {
           // create another seller and a twin
           let expectedNewTwinId = "6";
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(seller);
+          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+          await accountHandler.connect(rando).createSeller(seller, contractURI);
           await bosonToken.connect(rando).approve(twinHandler.address, 1); // approving the twin handler
           const tx = await twinHandler.connect(rando).createTwin(twin); // creates a twin with id 6
           const txReceipt = await tx.wait();
@@ -1126,7 +1131,8 @@ describe("IBosonBundleHandler", function () {
           // create another seller and an offer
           let expectedNewOfferId = "6";
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(seller);
+          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+          await accountHandler.connect(rando).createSeller(seller, contractURI);
           const tx = await offerHandler
             .connect(rando)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId); // creates an offer with id 6
