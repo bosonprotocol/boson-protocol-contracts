@@ -561,8 +561,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                     } else {
                         // Revoke voucher if caller is an EOA
                         revokeVoucherInternal(_exchange);
+                        shouldBurnVoucher = false;
                     }
-                    shouldBurnVoucher = false;
                     // Should stop trying transfer others twins as the exchange was revoked or a dispute was raised
                     break;
                 }
