@@ -500,19 +500,23 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
             // Get seller account
             (, Seller storage seller) = fetchSeller(bundle.sellerId);
 
+            address sender = msgSender();
+
             // Visit the twins
             for (uint256 i = 0; i < twinIds.length; i++) {
-                bool success;
-
                 // Get the twin
                 (, Twin storage twin) = fetchTwin(twinIds[i]);
 
                 // Transfer the token from the seller's operator to the buyer
                 // N.B. Using call here so as to normalize the revert reason
                 bytes memory result;
+                bool success;
+                uint256 amount;
+                uint256 tokenId;
+
                 if (twin.tokenType == TokenType.FungibleToken && twin.supplyAvailable >= twin.amount) {
                     // ERC-20 style transfer
-                    uint256 amount = twin.amount;
+                    amount = twin.amount;
                     twin.supplyAvailable -= amount;
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
@@ -524,7 +528,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                     );
                 } else if (twin.tokenType == TokenType.NonFungibleToken && twin.supplyAvailable > 0) {
                     // ERC-721 style transfer
-                    uint256 tokenId = twin.tokenId + twin.supplyAvailable - 1;
+                    tokenId = twin.tokenId + twin.supplyAvailable - 1;
                     twin.supplyAvailable--;
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
@@ -537,14 +541,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                     );
                 } else if (twin.tokenType == TokenType.MultiToken && twin.supplyAvailable >= twin.amount) {
                     // ERC-1155 style transfer
-                    uint256 amount = twin.amount;
+                    amount = twin.amount;
+                    tokenId = twin.tokenId;
                     twin.supplyAvailable -= amount;
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
                             seller.operator,
                             msgSender(),
-                            twin.tokenId,
+                            tokenId,
                             amount,
                             ""
                         )
@@ -554,7 +559,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                 // If token transfer failed
                 if (!success) {
                     // Raise a dispute if caller is a contract
-                    if (isContract(msgSender())) {
+                    if (isContract(sender)) {
                         string memory complaint = "Twin transfer failed and buyer address is a contract";
 
                         raiseDisputeInternal(_exchange, complaint, seller.id);
@@ -563,8 +568,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                         revokeVoucherInternal(_exchange);
                         shouldBurnVoucher = false;
                     }
-                    // Should stop trying transfer others twins as the exchange was revoked or a dispute was raised
-                    break;
+                  emit TwinTransferFailed(twin.id, twin.tokenAddress, tokenId, amount, sender); 
+                } else {
+                  emit TwinTransferred(twin.id, twin.tokenAddress, tokenId, amount, sender); 
                 }
             }
         }
