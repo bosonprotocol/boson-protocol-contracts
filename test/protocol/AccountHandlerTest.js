@@ -498,8 +498,6 @@ describe("IBosonAccountHandler", function () {
           .withArgs(nextAccountId, sellerStruct, expectedCloneAddress, authTokenStruct, rando.address);
       });
 
-      //TODO create seller with same auth token type but different Id
-
       context("💔 Revert Reasons", async function () {
         it("active is false", async function () {
           seller.active = false;
