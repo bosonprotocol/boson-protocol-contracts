@@ -29,6 +29,7 @@ contract BosonConstants {
     string internal constant NOT_BUYER_OR_SELLER = "Not buyer or seller";
     string internal constant NOT_VOUCHER_HOLDER = "Not current voucher holder";
     string internal constant NOT_BUYER_WALLET = "Not buyer's wallet address";
+    string internal constant NOT_BUYER_OR_ADMIN = "Not buyer's wallet address or an admin";
     string internal constant NOT_AGENT_WALLET = "Not agent's wallet address";
     string internal constant NOT_DISPUTE_RESOLVER_OPERATOR = "Not dispute resolver's operator address";
 

@@ -287,6 +287,45 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
+     * @notice Deactivates a buyer.
+     *
+     * Emits a BuyerUpdated event if successful.
+     *
+     * Reverts if:
+     * - Buyer does not exist
+     * - Caller is neither an admin nor the wallet address associated with the buyer account
+     * - Current wallet address has oustanding vouchers
+     *
+     * @param _buyerId - the id of the buyer to deactivate
+     */
+    function deactivateBuyer(uint256 _buyerId) external override {
+        bool exists;
+        Buyer storage buyer;
+
+        //Check Buyer exists in buyers mapping
+        (exists, buyer) = fetchBuyer(_buyerId);
+
+        //Buyer must already exist
+        require(exists, NO_SUCH_BUYER);
+
+        // Check if admin
+        DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
+        bool isAdmin = ds.accessController.hasRole(ADMIN, msgSender());
+
+        //Check that msg.sender is either the wallet address for this buyer or an admin
+        require(buyer.wallet == msgSender() || isAdmin, NOT_BUYER_OR_ADMIN);
+
+        //Check that buyer does not own any vouchers
+        require(protocolLookups().voucherCount[_buyerId] == 0, WALLET_OWNS_VOUCHERS);
+
+        // Deactivate the buyer
+        buyer.active = false;
+
+        // Notify watchers of state change
+        emit BuyerUpdated(_buyerId, buyer, msgSender());
+    }
+
+    /**
      * @notice Updates a dispute resolver, not including DisputeResolverFees, allowed seller list or active flag.
      * All DisputeResolver fields should be filled, even those staying the same.
      * Use addFeesToDisputeResolver and removeFeesFromDisputeResolver

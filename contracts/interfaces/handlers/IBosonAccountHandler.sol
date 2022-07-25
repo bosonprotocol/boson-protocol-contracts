@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xdd61de85
+ * The ERC-165 identifier for this interface is: 0x58839250
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -111,6 +111,20 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _buyer - the fully populated buyer struct
      */
     function updateBuyer(BosonTypes.Buyer memory _buyer) external;
+
+    /**
+     * @notice Deactivates a buyer.
+     *
+     * Emits a BuyerUpdated event if successful.
+     *
+     * Reverts if:
+     * - Buyer does not exist
+     * - Caller is neither an admin nor the wallet address associated with the buyer account
+     * - Current wallet address has oustanding vouchers
+     *
+     * @param _buyerId - the id of the buyer to deactivate
+     */
+    function deactivateBuyer(uint256 _buyerId) external;
 
     /**
      * @notice Updates a dispute resolver, not including DisputeResolverFees, allowed seller list or active flag.
