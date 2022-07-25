@@ -568,9 +568,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                         revokeVoucherInternal(_exchange);
                         shouldBurnVoucher = false;
                     }
-                  emit TwinTransferFailed(twin.id, twin.tokenAddress, tokenId, amount, sender); 
+                    emit TwinTransferFailed(twin.id, twin.tokenAddress, tokenId, amount, sender);
                 } else {
-                  emit TwinTransferred(twin.id, twin.tokenAddress, tokenId, amount, sender); 
+                    emit TwinTransferred(twin.id, twin.tokenAddress, tokenId, amount, sender);
                 }
             }
         }
