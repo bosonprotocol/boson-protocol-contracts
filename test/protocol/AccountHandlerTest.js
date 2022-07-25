@@ -1133,7 +1133,6 @@ describe("IBosonAccountHandler", function () {
 
       it("should emit a BuyerUpdated event with correct values if values change", async function () {
         buyer.wallet = other2.address;
-        buyer.active = false;
         expect(buyer.isValid()).is.true;
 
         buyerStruct = buyer.toStruct();
@@ -1149,28 +1148,6 @@ describe("IBosonAccountHandler", function () {
         await expect(accountHandler.connect(other1).updateBuyer(buyer))
           .to.emit(accountHandler, "BuyerUpdated")
           .withArgs(buyer.id, buyerStruct, other1.address);
-      });
-
-      it("should update state of all fields exceipt Id", async function () {
-        buyer.wallet = other2.address;
-        buyer.active = false;
-        expect(buyer.isValid()).is.true;
-
-        buyerStruct = buyer.toStruct();
-
-        // Update buyer
-        await accountHandler.connect(other1).updateBuyer(buyer);
-
-        // Get the buyer as a struct
-        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
-
-        // Parse into entity
-        let returnedBuyer = Buyer.fromStruct(buyerStruct);
-
-        // Returned values should match the input in updateBuyer
-        for ([key, value] of Object.entries(buyer)) {
-          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
-        }
       });
 
       it("should update state correctly if values are the same", async function () {
@@ -1189,17 +1166,20 @@ describe("IBosonAccountHandler", function () {
         }
       });
 
-      it("should update only active flag", async function () {
+      it("should ignore update of active flag", async function () {
+        // try to set active flag to false, expect that it is ignored and active remains equal to true.
         buyer.active = false;
         expect(buyer.isValid()).is.true;
-
-        buyerStruct = buyer.toStruct();
 
         // Update buyer
         await accountHandler.connect(other1).updateBuyer(buyer);
 
         // Get the buyer as a struct
         [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
+
+        // Set expected buyer struct
+        buyer.active = true;
+        buyerStruct = buyer.toStruct(); // expect that active = true
 
         // Parse into entity
         let returnedBuyer = Buyer.fromStruct(buyerStruct);
@@ -1246,7 +1226,6 @@ describe("IBosonAccountHandler", function () {
 
         //Update first buyer
         buyer.wallet = other2.address;
-        buyer.active = false;
         expect(buyer.isValid()).is.true;
 
         buyerStruct = buyer.toStruct();
@@ -1309,6 +1288,7 @@ describe("IBosonAccountHandler", function () {
           expect(seller.isValid()).is.true;
 
           // Create a seller
+          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
           await accountHandler.connect(admin).createSeller(seller, contractURI);
 
           [exists, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(operator.address);

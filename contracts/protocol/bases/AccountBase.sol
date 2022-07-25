@@ -11,6 +11,11 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
  * @dev Provides methods for seller creation that can be shared accross facets
  */
 contract AccountBase is ProtocolBase, IBosonAccountEvents {
+    enum StoreType {
+        CREATE,
+        UPDATE
+    }
+
     /**
      * @notice Creates a seller
      *
@@ -82,7 +87,7 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         require(protocolLookups().buyerIdByWallet[_buyer.wallet] == 0, BUYER_ADDRESS_MUST_BE_UNIQUE);
 
         _buyer.id = buyerId;
-        storeBuyer(_buyer);
+        storeBuyer(_buyer, StoreType.CREATE);
 
         //Notify watchers of state change
         emit BuyerCreated(_buyer.id, _buyer, msgSender());
@@ -128,15 +133,16 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
      * @notice Stores buyer struct in storage
      *
      * @param _buyer - the fully populated struct with buyer id set
+     * @param _type - this is either create or update type from the StoreType enum.
      */
-    function storeBuyer(Buyer memory _buyer) internal {
+    function storeBuyer(Buyer memory _buyer, StoreType _type) internal {
         // Get storage location for buyer
         (, Buyer storage buyer) = fetchBuyer(_buyer.id);
 
         // Set buyer props individually since memory structs can't be copied to storage
         buyer.id = _buyer.id;
         buyer.wallet = _buyer.wallet;
-        buyer.active = _buyer.active;
+        buyer.active = (_type == StoreType.CREATE ? _buyer.active : buyer.active);
 
         //Map the buyer's wallet address to the buyerId.
         protocolLookups().buyerIdByWallet[_buyer.wallet] = _buyer.id;

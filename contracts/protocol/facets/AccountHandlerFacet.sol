@@ -280,7 +280,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         //Delete current mappings
         delete protocolLookups().buyerIdByWallet[msgSender()];
 
-        storeBuyer(_buyer);
+        storeBuyer(_buyer, StoreType.UPDATE);
 
         // Notify watchers of state change
         emit BuyerUpdated(_buyer.id, _buyer, msgSender());
