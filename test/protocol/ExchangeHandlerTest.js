@@ -1417,6 +1417,12 @@ describe("IBosonExchangeHandler", function () {
 
             // Protocol should raised dispute automatically if transfer twin failed
             await expect(testProtocolFunctions.redeem(++exchange.id)).to.emit(disputeHandler, "DisputeRaised");
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Revoked
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
         });
       });
@@ -1490,6 +1496,12 @@ describe("IBosonExchangeHandler", function () {
 
             // Protocol should raised dispute automatically if transfer twin failed
             await expect(testProtocolFunctions.redeem(++exchange.id)).to.emit(disputeHandler, "DisputeRaised");
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Revoked
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
         });
       });
@@ -1549,6 +1561,12 @@ describe("IBosonExchangeHandler", function () {
 
             // Protocol should raised dispute automatically if transfer twin failed
             await expect(testProtocolFunctions.redeem(++exchange.id)).to.emit(disputeHandler, "DisputeRaised");
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Revoked
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
         });
       });
@@ -1624,6 +1642,12 @@ describe("IBosonExchangeHandler", function () {
 
             // Protocol should raised dispute automatically if transfer twin failed
             await expect(testProtocolFunctions.redeem(++exchange.id)).to.emit(disputeHandler, "DisputeRaised");
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Revoked
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
         });
       });
@@ -1906,9 +1930,6 @@ describe("IBosonExchangeHandler", function () {
 
       context("👎 disputed exchange", async function () {
         beforeEach(async function () {
-          // Commit to offer, creating a new exchange
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
           // Set time forward to the offer's voucherRedeemableFrom
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
