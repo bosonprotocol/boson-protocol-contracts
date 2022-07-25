@@ -37,8 +37,8 @@
     "manage-roles:mumbai": " npx hardhat --network mumbai run scripts/manage-roles.js >> logs/mumbai.manage.roles.txt"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.4.2",
-    "@openzeppelin/contracts-upgradeable": "^4.4.2"
+    "@openzeppelin/contracts": "^4.7.1",
+    "@openzeppelin/contracts-upgradeable": "^4.7.1"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.4",

@@ -5,6 +5,7 @@ import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC
 import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
@@ -27,8 +28,17 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     /**
      * @notice Initializer
      */
-    function initializeVoucher(address _newOwner, string calldata _newContractURI) public initializer {
-        __ERC721_init_unchained(VOUCHER_NAME, VOUCHER_SYMBOL);
+    function initializeVoucher(
+        uint256 _sellerId,
+        address _newOwner,
+        string calldata _newContractURI
+    ) public initializer {
+        string memory sellerId = Strings.toString(_sellerId);
+        // TODO: When we move to solidity 0.8.12 or greater, change this to use string.concat()
+        string memory voucherName = string(abi.encodePacked(VOUCHER_NAME, " ", sellerId));
+        string memory voucherSymbol = string(abi.encodePacked(VOUCHER_SYMBOL, "_", sellerId));
+
+        __ERC721_init_unchained(voucherName, voucherSymbol);
 
         // we dont call init on ownable, but rather just set the ownership to correct owner
         _transferOwnership(_newOwner);
