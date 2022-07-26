@@ -252,7 +252,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         delete protocolLookups().sellerIdByOperator[seller.operator];
         delete protocolLookups().sellerIdByAdmin[seller.admin];
         delete protocolLookups().sellerIdByClerk[seller.clerk];
-        delete protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId];
+        delete protocolLookups().sellerIdByAuthToken[authToken.tokenType][authToken.tokenId];
 
         // store this address of existing seller operator to check if you have to transfer the ownership later
         address oldSellerOperator = seller.operator;
