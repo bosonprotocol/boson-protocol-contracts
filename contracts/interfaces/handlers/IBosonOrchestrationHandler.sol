@@ -25,6 +25,14 @@ interface IBosonOrchestrationHandler is
     /**
      * @notice Creates a seller and an offer in a single transaction.
      *
+     * Limitation of the method:
+     * If chosen dispute resolver has seller allow list, this method will not succeed, since seller that will be created
+     * cannot be on that list. To avoid the failure you can
+     * - choose a dispute resolver without seller allow list
+     * - make an absolute zero offer without and dispute resolver specified
+     * - first create a seller {AccountHandler.createSeller}, make sure that dispute resolver adds seller to its allow list
+     *   and then continue with the offer creation
+     *
      * Emits a SellerCreated and an OfferCreated event if successful.
      *
      * Reverts if:
@@ -46,6 +54,7 @@ interface IBosonOrchestrationHandler is
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      * - When agent id is non zero:
@@ -90,6 +99,7 @@ interface IBosonOrchestrationHandler is
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
@@ -133,6 +143,7 @@ interface IBosonOrchestrationHandler is
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      * - when adding to the group if:
@@ -178,6 +189,7 @@ interface IBosonOrchestrationHandler is
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      * - when creating twin if
@@ -222,6 +234,7 @@ interface IBosonOrchestrationHandler is
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
@@ -252,6 +265,14 @@ interface IBosonOrchestrationHandler is
     /**
      * @notice Takes a seller, an offer and a condition, creates a seller, creates an offer, then a group with that offer and the given condition.
      *
+     * Limitation of the method:
+     * If chosen dispute resolver has seller allow list, this method will not succeed, since seller that will be created
+     * cannot be on that list. To avoid the failure you can
+     * - choose a dispute resolver without seller allow list
+     * - make an absolute zero offer without and dispute resolver specified
+     * - first create a seller {AccountHandler.createSeller}, make sure that dispute resolver adds seller to its allow list
+     *   and then continue with the offer creation
+     *
      * Emits a SellerCreated, an OfferCreated and a GroupCreated event if successful.
      *
      * Reverts if:
@@ -274,6 +295,7 @@ interface IBosonOrchestrationHandler is
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
@@ -304,6 +326,14 @@ interface IBosonOrchestrationHandler is
     /**
      * @notice Takes a seller, an offer and a twin, creates a seller, creates an offer, creates a twin, then a bundle with that offer and the given twin
      *
+     * Limitation of the method:
+     * If chosen dispute resolver has seller allow list, this method will not succeed, since seller that will be created
+     * cannot be on that list. To avoid the failure you can
+     * - choose a dispute resolver without seller allow list
+     * - make an absolute zero offer without and dispute resolver specified
+     * - first create a seller {AccountHandler.createSeller}, make sure that dispute resolver adds seller to its allow list
+     *   and then continue with the offer creation
+     *
      * Emits a SellerCreated, an OfferCreated, a TwinCreated and a BundleCreated event if successful.
      *
      * Reverts if:
@@ -326,6 +356,7 @@ interface IBosonOrchestrationHandler is
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      * - when creating twin if
@@ -357,6 +388,14 @@ interface IBosonOrchestrationHandler is
     /**
      * @notice Takes a seller, an offer, a condition and a twin, creates a sellerm an offer, then a group with that offer and the given condition, then creates a twin, then a bundle with that offer and the given twin
      *
+     * Limitation of the method:
+     * If chosen dispute resolver has seller allow list, this method will not succeed, since seller that will be created
+     * cannot be on that list. To avoid the failure you can
+     * - choose a dispute resolver without seller allow list
+     * - make an absolute zero offer without and dispute resolver specified
+     * - first create a seller {AccountHandler.createSeller}, make sure that dispute resolver adds seller to its allow list
+     *   and then continue with the offer creation
+     *
      * Emits an SellerCreated, OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event if successful.
      *
      * Reverts if:
@@ -379,6 +418,7 @@ interface IBosonOrchestrationHandler is
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters

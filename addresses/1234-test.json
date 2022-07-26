@@ -5,27 +5,27 @@
   "contracts": [
     {
       "name": "AccessController",
-      "address": "0x7ccf2488184FEa541E104bF4238b06f9f9580009",
+      "address": "0x1733205d7bDDaFeafbD00f242f722F0748838511",
       "args": []
     },
     {
       "name": "DiamondLoupeFacet",
-      "address": "0x830e1D00183786a12C0007d758Bd5Fbe4369Bf5c",
+      "address": "0xf8a9E3E2Cd9CbfBB688d839AB217004d187579cf",
       "args": []
     },
     {
       "name": "DiamondCutFacet",
-      "address": "0xA01A86E288A189e3cBAf01834a660443809A8D43",
+      "address": "0x7da398B3D9265Fbaa3daF70ec6312c2278e08Ec8",
       "args": []
     },
     {
       "name": "ProtocolDiamond",
-      "address": "0x5Bc8fC3a12cEb92231F3575c8e236e96fBE7BB1C",
+      "address": "0x551aFa63BE09Ecd6c2f8DBB77533118D3d185A4B",
       "args": [
-        "0x7ccf2488184FEa541E104bF4238b06f9f9580009",
+        "0x1733205d7bDDaFeafbD00f242f722F0748838511",
         [
           [
-            "0x830e1D00183786a12C0007d758Bd5Fbe4369Bf5c",
+            "0xf8a9E3E2Cd9CbfBB688d839AB217004d187579cf",
             0,
             [
               "0xcdffacc6",
@@ -35,7 +35,7 @@
             ]
           ],
           [
-            "0xA01A86E288A189e3cBAf01834a660443809A8D43",
+            "0x7da398B3D9265Fbaa3daF70ec6312c2278e08Ec8",
             0,
             [
               "0x1f931c1c"
@@ -51,76 +51,76 @@
     },
     {
       "name": "ConfigHandlerFacet",
-      "address": "0x09234Eb142b045537F46571665Bcc55B30C172E2",
+      "address": "0x7f0c5C8780C231527B8c8A198Ac242A9a031956E",
       "args": []
     },
     {
       "name": "AccountHandlerFacet",
-      "address": "0xE9D0115321dc246A79792E433761B5C71f78EAb6",
+      "address": "0x255f4201C84bc84422769D4060E51c28E429274f",
       "args": []
     },
     {
       "name": "BundleHandlerFacet",
-      "address": "0x65FF26D12414C0dC3Da5317a05ee835D49ddDdeB",
+      "address": "0x4eA6f3BC1ff5Cb83CB75CCa2C6Eb9A3F0De5d949",
       "args": []
     },
     {
       "name": "DisputeHandlerFacet",
-      "address": "0xA4Dd8DE78384811Ba645D9e94A2F49CF9ba35166",
+      "address": "0xa825fb9f0AEcfDbDce9CacE158543fDf4dBCD147",
       "args": []
     },
     {
       "name": "ExchangeHandlerFacet",
-      "address": "0x113B717B97bE366DB86455d072bf99644a21c8b3",
+      "address": "0xBF80D3b2F5f98e0CCb09377465264547515B1176",
       "args": []
     },
     {
       "name": "FundsHandlerFacet",
-      "address": "0xa060A9dF13f655352461f9AcE62C1bde3D61d7D4",
+      "address": "0xbb24335A19D76Cb98057A32C767Dad90F2e2a4e8",
       "args": []
     },
     {
       "name": "GroupHandlerFacet",
-      "address": "0xEcBC8c20FBbd02CD272329ECEd9E96Adfa8c3C96",
+      "address": "0x1dBEa19576280c6a4be01924d3613EbdEb1c3083",
       "args": []
     },
     {
       "name": "MetaTransactionsHandlerFacet",
-      "address": "0x87B86eFD31bd39c668d4560BFbC1A3f0577A2ec5",
+      "address": "0x1bB2238472f34cC9480b771b487cD162952FB9c6",
       "args": []
     },
     {
       "name": "OfferHandlerFacet",
-      "address": "0xcf3c5A9024189221eEc723804CF9F64A4466E65e",
+      "address": "0xF0eACF9e85e1920A6944ae2D3237b4662D5B9d1F",
       "args": []
     },
     {
       "name": "OrchestrationHandlerFacet",
-      "address": "0x50d2A7F26ba25d26330FdA5532370F3f9c00d4B6",
+      "address": "0x6AB425b404b11eE1D4634C28418552c8731B6f8c",
       "args": []
     },
     {
       "name": "TwinHandlerFacet",
-      "address": "0xcA3B4CE4074441aA38016E0A7e605de9e2767407",
+      "address": "0x92d66E720Ef802169675E25e1443c3025a0133cb",
       "args": []
     },
     {
       "name": "BosonVoucher Logic",
-      "address": "0x3d25717b2345125e2429c2ECFc38c5cf0C38cD20",
+      "address": "0xF0070e63fc41Ad0F446FC08892671bee76115a71",
       "args": []
     },
     {
       "name": "BosonVoucher Beacon",
-      "address": "0x951703FaF6Dcb117180B1cc61aBFDa234d310EeE",
+      "address": "0x011069399965EC2bE59159A839276A1c1aFb0151",
       "args": []
     },
     {
       "name": "BosonVoucher Proxy",
-      "address": "0x3ED19BDe8Ade7B165b6C2A5602472F2a1E2C9841",
+      "address": "0xBa0BD2924440B0D2F0A29b5D44Dc195f33a84134",
       "args": [
-        "0x7ccf2488184FEa541E104bF4238b06f9f9580009",
-        "0x5Bc8fC3a12cEb92231F3575c8e236e96fBE7BB1C",
-        "0x3d25717b2345125e2429c2ECFc38c5cf0C38cD20"
+        "0x1733205d7bDDaFeafbD00f242f722F0748838511",
+        "0x551aFa63BE09Ecd6c2f8DBB77533118D3d185A4B",
+        "0xF0070e63fc41Ad0F446FC08892671bee76115a71"
       ]
     }
   ]
