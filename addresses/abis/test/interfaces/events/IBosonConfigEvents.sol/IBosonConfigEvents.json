@@ -199,6 +199,25 @@
         {
           "indexed": false,
           "internalType": "uint16",
+          "name": "maxTotalOfferFeePercentage",
+          "type": "uint16"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MaxTotalOfferFeePercentageChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint16",
           "name": "maxTwinsPerBundle",
           "type": "uint16"
         },

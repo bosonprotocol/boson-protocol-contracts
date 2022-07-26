@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { IBosonOfferEvents } from "../../interfaces/events/IBosonOfferEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
+import "./../../domain/BosonConstants.sol";
 
 /**
  * @title OfferBase
