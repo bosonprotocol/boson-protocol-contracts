@@ -466,6 +466,24 @@ describe("IBosonFundsHandler", function () {
             .withArgs(buyerId, buyer.address, ethers.constants.Zero, buyerPayoff, buyer.address);
         });
 
+        it("A deactivated buyer can withdraw funds", async function () {
+          await accountHandler.connect(deployer).deactivateBuyer(buyerId);
+
+          // Withdraw funds, testing for the event
+          // Withdraw tokens
+          tokenListBuyer = [ethers.constants.AddressZero, mockToken.address];
+
+          // Withdraw amounts
+          tokenAmountsBuyer = [buyerPayoff, ethers.BigNumber.from(buyerPayoff).div("5").toString()];
+
+          // buyer withdrawal
+          await expect(fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer))
+            .to.emit(fundsHandler, "FundsWithdrawn", buyer.address)
+            .withArgs(buyerId, buyer.address, mockToken.address, ethers.BigNumber.from(buyerPayoff).div("5"))
+            .to.emit(fundsHandler, "FundsWithdrawn")
+            .withArgs(buyerId, buyer.address, ethers.constants.Zero, buyerPayoff, buyer.address);
+        });
+
         it("should update state", async function () {
           // WITHDRAW ONE TOKEN PARTIALLY
 

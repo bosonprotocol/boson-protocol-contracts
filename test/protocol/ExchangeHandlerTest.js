@@ -456,7 +456,7 @@ describe("IBosonExchangeHandler", function () {
          * - offer is not yet available for commits   // TODO asap
          * - offer's quantity available is zero       // TODO asap
          * - buyer address is zero
-         * - buyer account is inactive                // TODO when deactivateBuyer works
+         * - buyer account is inactive
          * - buyer is token-gated (conditional commit requirements not met or already used)  // TODO asap
          * - offer price is in native token and buyer caller does not send enough  // TODO asap
          * - offer price is in some ERC20 token and caller also send native currency  // TODO asap
@@ -480,6 +480,19 @@ describe("IBosonExchangeHandler", function () {
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
           ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+        });
+
+        it("buyer account is inactive", async function () {
+          // Create a buyer account for the new owner
+          await accountHandler.connect(newOwner).createBuyer(new Buyer("0", newOwner.address, true));
+
+          //Deactivate the buyer
+          await accountHandler.connect(newOwner).deactivateBuyer(buyerId);
+
+          // Attempt to commit, expecting revert
+          await expect(
+            exchangeHandler.connect(newOwner).commitToOffer(newOwner.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
       });
     });
@@ -1761,8 +1774,8 @@ describe("IBosonExchangeHandler", function () {
           // Create a buyer account for the new owner
           await accountHandler.connect(newOwner).createBuyer(new Buyer("0", newOwner.address, true));
 
-          // Update buyer account, deactivating it
-          await accountHandler.connect(newOwner).updateBuyer(new Buyer(nextAccountId, newOwner.address, false));
+          // Deactivate buyer account
+          await accountHandler.connect(newOwner).deactivateBuyer(nextAccountId);
 
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(

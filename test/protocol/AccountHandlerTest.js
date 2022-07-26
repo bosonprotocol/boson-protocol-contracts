@@ -1179,7 +1179,6 @@ describe("IBosonAccountHandler", function () {
 
         // Set expected buyer struct
         buyer.active = true;
-        buyerStruct = buyer.toStruct(); // expect that active = true
 
         // Parse into entity
         let returnedBuyer = Buyer.fromStruct(buyerStruct);
@@ -1277,6 +1276,32 @@ describe("IBosonAccountHandler", function () {
         await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NOT_BUYER_WALLET);
       });
 
+      it("if buyer is deactivated, then it cannot be activated again", async function () {
+        //Deactivate a buyer
+        await accountHandler.connect(other1).deactivateBuyer(buyer.id);
+
+        // try to set active flag to true, expect that it is ignored and active remains equal to false.
+        buyer.active = true;
+        expect(buyer.isValid()).is.true;
+
+        // Update buyer
+        await accountHandler.connect(other1).updateBuyer(buyer);
+
+        // Get the buyer as a struct
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
+
+        // Set expected buyer struct
+        buyer.active = false;
+
+        // Parse into entity
+        let returnedBuyer = Buyer.fromStruct(buyerStruct);
+
+        // Returned values should match active as false
+        for ([key, value] of Object.entries(buyer)) {
+          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
       context("💔 Revert Reasons", async function () {
         beforeEach(async function () {
           // Initial ids for all the things
@@ -1288,7 +1313,6 @@ describe("IBosonAccountHandler", function () {
           expect(seller.isValid()).is.true;
 
           // Create a seller
-          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
           await accountHandler.connect(admin).createSeller(seller, contractURI);
 
           [exists, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(operator.address);
@@ -1408,6 +1432,216 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to update the buyer, expecting revert
           await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(
+            RevertReasons.WALLET_OWNS_VOUCHERS
+          );
+        });
+      });
+    });
+
+    context("👉 deactivateBuyer()", async function () {
+      beforeEach(async function () {
+        // Create a buyer
+        await accountHandler.connect(rando).createBuyer(buyer);
+
+        // id of the current buyer and increment nextAccountId
+        id = nextAccountId++;
+      });
+
+      it("should emit a BuyerUpdated event with correct values if deactivate is successful", async function () {
+        buyer.active = false; // expect buyer gets deactivated
+        buyerStruct = buyer.toStruct();
+
+        //Deactivate a buyer, testing for the event
+        await expect(accountHandler.connect(other1).deactivateBuyer(buyer.id))
+          .to.emit(accountHandler, "BuyerUpdated")
+          .withArgs(buyer.id, buyerStruct, other1.address);
+      });
+
+      it("should update only active flag", async function () {
+        buyer.active = false; // expect buyer gets deactivated
+        expect(buyer.isValid()).is.true;
+
+        // Deactivate buyer
+        await accountHandler.connect(other1).deactivateBuyer(buyer.id);
+
+        // Get the buyer as a struct
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
+
+        // Parse into entity
+        let returnedBuyer = Buyer.fromStruct(buyerStruct);
+
+        // Returned values should match the buyer with active as false
+        for ([key, value] of Object.entries(buyer)) {
+          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("Admin can deactivate any buyer", async function () {
+        buyer.active = false; // expect buyer gets deactivated
+        buyerStruct = buyer.toStruct();
+
+        //Deactivate a buyer, testing for the event
+        await expect(accountHandler.connect(deployer).deactivateBuyer(buyer.id))
+          .to.emit(accountHandler, "BuyerUpdated")
+          .withArgs(buyer.id, buyerStruct, deployer.address);
+
+        // Get the buyer as a struct
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
+
+        // Parse into entity
+        let returnedBuyer = Buyer.fromStruct(buyerStruct);
+
+        // Returned values should match the buyer with active as false
+        for ([key, value] of Object.entries(buyer)) {
+          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should deactivate the correct buyer", async function () {
+        // Confgiure another buyer
+        id2 = nextAccountId++;
+        buyer2 = new Buyer(id2.toString(), other3.address, active);
+        expect(buyer2.isValid()).is.true;
+
+        buyer2Struct = buyer2.toStruct();
+
+        //Create buyer2, testing for the event
+        await expect(accountHandler.connect(rando).createBuyer(buyer2))
+          .to.emit(accountHandler, "BuyerCreated")
+          .withArgs(buyer2.id, buyer2Struct, rando.address);
+
+        // Deactivate a buyer
+        await accountHandler.connect(other1).deactivateBuyer(buyer.id);
+
+        // Get the first buyer as a struct
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
+
+        // Parse into entity
+        let returnedBuyer = Buyer.fromStruct(buyerStruct);
+
+        buyer.active = false; // expect buyer gets deactivated
+
+        // Returned values should match the buyer with active as false
+        for ([key, value] of Object.entries(buyer)) {
+          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
+        }
+
+        //Check buyer hasn't been changed
+        [, buyer2Struct] = await accountHandler.connect(rando).getBuyer(buyer2.id);
+
+        // Parse into entity
+        let returnedSeller2 = Buyer.fromStruct(buyer2Struct);
+
+        //returnedSeller2 should still contain original values
+        for ([key, value] of Object.entries(buyer2)) {
+          expect(JSON.stringify(returnedSeller2[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        beforeEach(async function () {
+          // Initial ids for all the things
+          id = await accountHandler.connect(rando).getNextAccountId();
+          offerId = await offerHandler.connect(rando).getNextOfferId();
+
+          // Create a valid seller
+          seller = new Seller(id.toString(), operator.address, admin.address, clerk.address, treasury.address, active);
+          expect(seller.isValid()).is.true;
+
+          // Create a seller
+          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+          await accountHandler.connect(admin).createSeller(seller, contractURI);
+
+          [exists, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(operator.address);
+          expect(exists).is.true;
+
+          // Create a valid dispute resolver
+          active = true;
+          disputeResolver = new DisputeResolver(
+            id.add(1).toString(),
+            oneMonth.toString(),
+            operator.address,
+            admin.address,
+            clerk.address,
+            treasury.address,
+            metadataUriDR,
+            active
+          );
+          expect(disputeResolver.isValid()).is.true;
+
+          //Create DisputeResolverFee array
+          disputeResolverFees = [
+            new DisputeResolverFee(other1.address, "MockToken1", "100"),
+            new DisputeResolverFee(other2.address, "MockToken2", "200"),
+            new DisputeResolverFee(other3.address, "MockToken3", "300"),
+            new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
+          ];
+
+          // Add seller to sellerAllowList
+          sellerAllowList = [seller.id];
+
+          // Register the dispute resolver
+          await accountHandler
+            .connect(rando)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+          await accountHandler.connect(deployer).activateDisputeResolver(++id);
+
+          // Mock the offer
+          let { offer, offerDates, offerDurations } = await mockOffer();
+
+          // Check if domains are valid
+          expect(offer.isValid()).is.true;
+          expect(offerDates.isValid()).is.true;
+          expect(offerDurations.isValid()).is.true;
+
+          // Create the offer
+          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolver.id);
+
+          offerId = offer.id;
+          const sellerDeposit = offer.sellerDeposit;
+
+          // Deposit seller funds so the commit will succeed
+          await fundsHandler
+            .connect(operator)
+            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
+          //Commit to offer
+          await exchangeHandler.connect(other1).commitToOffer(other1.address, offerId, { value: offer.price });
+
+          const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
+          const balance = await bosonVoucher.connect(rando).balanceOf(other1.address);
+          expect(balance).equal(1);
+        });
+
+        it("Buyer does not exist", async function () {
+          // Set invalid id
+          buyer.id = "444";
+
+          // Attempt to deactivate the buyer, expecting revert
+          await expect(accountHandler.connect(other1).deactivateBuyer(buyer.id)).to.revertedWith(
+            RevertReasons.NO_SUCH_BUYER
+          );
+
+          // Set invalid id
+          buyer.id = "0";
+
+          // Attempt to deactivate the buyer, expecting revert
+          await expect(accountHandler.connect(other1).deactivateBuyer(buyer.id)).to.revertedWith(
+            RevertReasons.NO_SUCH_BUYER
+          );
+        });
+
+        it("Caller is not buyer wallet address", async function () {
+          // Attempt to update the buyer, expecting revert
+          await expect(accountHandler.connect(other2).deactivateBuyer(buyer.id)).to.revertedWith(
+            RevertReasons.NOT_BUYER_WALLET
+          );
+        });
+
+        it("buyer has outstanding vouchers", async function () {
+          // Attempt to update the buyer, expecting revert
+          await expect(accountHandler.connect(other1).deactivateBuyer(buyer.id)).to.revertedWith(
             RevertReasons.WALLET_OWNS_VOUCHERS
           );
         });
