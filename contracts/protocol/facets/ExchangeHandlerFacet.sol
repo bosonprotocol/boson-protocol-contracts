@@ -8,7 +8,7 @@ import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
-import { ACCESS_DENIED, CANNOT_COMMIT, FULFILLMENT_PERIOD_NOT_ELAPSED, INVALID_ADDRESS, MUST_BE_ACTIVE, NOT_OPERATOR, NO_SUCH_OFFER, OFFER_HAS_BEEN_VOIDED, OFFER_HAS_EXPIRED, OFFER_NOT_AVAILABLE, OFFER_SOLD_OUT, VOUCHER_HAS_EXPIRED, VOUCHER_NOT_REDEEMABLE, VOUCHER_STILL_VALID } from "../../domain/BosonConstants.sol";
+import "../../domain/BosonConstants.sol";
 
 interface Token {
     function balanceOf(address account) external view returns (uint256); //ERC-721 and ERC-20

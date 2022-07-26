@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import "../domain/BosonConstants.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { ADMIN, PROTOCOL, CLIENT, UPGRADER, FEE_COLLECTOR } from "../domain/BosonConstants.sol";
 
 /**
  * @title AccessController

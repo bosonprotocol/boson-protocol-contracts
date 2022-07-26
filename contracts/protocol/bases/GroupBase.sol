@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./../../domain/BosonConstants.sol";
 import { IBosonGroupEvents } from "../../interfaces/events/IBosonGroupEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
-import { INVALID_CONDITION_PARAMETERS, NOTHING_UPDATED, NOT_OPERATOR, NO_SUCH_GROUP, OFFER_MUST_BE_UNIQUE, TOO_MANY_OFFERS } from "./../../domain/BosonConstants.sol";
 
 /**
  * @title GroupBase

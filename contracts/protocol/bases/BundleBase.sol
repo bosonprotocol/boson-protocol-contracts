@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./../../domain/BosonConstants.sol";
 import { IBosonBundleEvents } from "../../interfaces/events/IBosonBundleEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
-import { BUNDLE_OFFER_MUST_BE_UNIQUE, BUNDLE_TWIN_MUST_BE_UNIQUE, EXCHANGE_FOR_OFFER_EXISTS, INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS, NOT_OPERATOR, NO_SUCH_TWIN, TOO_MANY_OFFERS, TOO_MANY_TWINS } from "./../../domain/BosonConstants.sol";
 
 /**
  * @title BundleBase

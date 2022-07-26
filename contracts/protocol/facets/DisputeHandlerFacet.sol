@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import "../../domain/BosonConstants.sol";
 import { IBosonDisputeHandler } from "../../interfaces/handlers/IBosonDisputeHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
-import { COMPLAINT_MISSING, DISPUTE_HAS_EXPIRED, DISPUTE_STILL_VALID, ESCALATION_NOT_ALLOWED, FULFILLMENT_PERIOD_HAS_ELAPSED, INVALID_BUYER_PERCENT, INVALID_DISPUTE_TIMEOUT, INVALID_STATE, NOT_BUYER_OR_SELLER, NOT_DISPUTE_RESOLVER_OPERATOR, NOT_OPERATOR, SIGNER_AND_SIGNATURE_DO_NOT_MATCH, TOO_MANY_DISPUTES } from "../../domain/BosonConstants.sol";
 
 /**
  * @title DisputeHandlerFacet

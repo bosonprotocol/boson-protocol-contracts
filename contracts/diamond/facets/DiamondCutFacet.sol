@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { UPGRADER } from "../../domain/BosonConstants.sol";
+import "../../domain/BosonConstants.sol";
 import { IDiamondCut } from "../../interfaces/diamond/IDiamondCut.sol";
 import { DiamondLib } from "../DiamondLib.sol";
 import { JewelerLib } from "../JewelerLib.sol";

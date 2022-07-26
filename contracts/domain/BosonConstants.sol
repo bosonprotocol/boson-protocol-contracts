@@ -135,3 +135,54 @@ string constant ESCALATION_NOT_ALLOWED = "Disputes without dispute resolver cann
 
 // Revert Reasons: Config related
 string constant FEE_PERCENTAGE_INVALID = "Percentage representation must be less than 10000";
+
+// EIP712Lib
+bytes32 constant EIP712_DOMAIN_TYPEHASH = keccak256(
+    bytes("EIP712Domain(string name,string version,address verifyingContract,bytes32 salt)")
+);
+
+// BosonVoucher
+string constant VOUCHER_NAME = "Boson Voucher";
+string constant VOUCHER_SYMBOL = "BOSON_VOUCHER";
+
+// Meta Transations - Structs
+bytes32 constant META_TRANSACTION_TYPEHASH = keccak256(
+    bytes(
+        "MetaTransaction(uint256 nonce,address from,address contractAddress,string functionName,bytes functionSignature)"
+    )
+);
+bytes32 constant OFFER_DETAILS_TYPEHASH = keccak256("MetaTxOfferDetails(address buyer,uint256 offerId)");
+bytes32 constant META_TX_COMMIT_TO_OFFER_TYPEHASH = keccak256(
+    "MetaTxCommitToOffer(uint256 nonce,address from,address contractAddress,string functionName,MetaTxOfferDetails offerDetails)MetaTxOfferDetails(address buyer,uint256 offerId)"
+);
+bytes32 constant EXCHANGE_DETAILS_TYPEHASH = keccak256("MetaTxExchangeDetails(uint256 exchangeId)");
+bytes32 constant META_TX_EXCHANGE_TYPEHASH = keccak256(
+    "MetaTxExchange(uint256 nonce,address from,address contractAddress,string functionName,MetaTxExchangeDetails exchangeDetails)MetaTxExchangeDetails(uint256 exchangeId)"
+);
+bytes32 constant FUND_DETAILS_TYPEHASH = keccak256(
+    "MetaTxFundDetails(uint256 entityId,address[] tokenList,uint256[] tokenAmounts)"
+);
+bytes32 constant META_TX_FUNDS_TYPEHASH = keccak256(
+    "MetaTxFund(uint256 nonce,address from,address contractAddress,string functionName,MetaTxFundDetails fundDetails)MetaTxFundDetails(uint256 entityId,address[] tokenList,uint256[] tokenAmounts)"
+);
+bytes32 constant DISPUTE_DETAILS_TYPEHASH = keccak256("MetaTxDisputeDetails(uint256 exchangeId,string complaint)");
+bytes32 constant META_TX_DISPUTES_TYPEHASH = keccak256(
+    "MetaTxDispute(uint256 nonce,address from,address contractAddress,string functionName,MetaTxDisputeDetails disputeDetails)MetaTxDisputeDetails(uint256 exchangeId,string complaint)"
+);
+bytes32 constant DISPUTE_RESOLUTION_DETAILS_TYPEHASH = keccak256(
+    "MetaTxDisputeResolutionDetails(uint256 exchangeId,uint256 buyerPercent,bytes32 sigR,bytes32 sigS,uint8 sigV)"
+);
+bytes32 constant META_TX_DISPUTE_RESOLUTIONS_TYPEHASH = keccak256(
+    "MetaTxDisputeResolution(uint256 nonce,address from,address contractAddress,string functionName,MetaTxDisputeResolutionDetails disputeResolutionDetails)MetaTxDisputeResolutionDetails(uint256 exchangeId,uint256 buyerPercent,bytes32 sigR,bytes32 sigS,uint8 sigV)"
+);
+
+// Function names
+string constant COMMIT_TO_OFFER = "commitToOffer(address,uint256)";
+string constant CANCEL_VOUCHER = "cancelVoucher(uint256)";
+string constant REDEEM_VOUCHER = "redeemVoucher(uint256)";
+string constant COMPLETE_EXCHANGE = "completeExchange(uint256)";
+string constant WITHDRAW_FUNDS = "withdrawFunds(uint256,address[],uint256[])";
+string constant RETRACT_DISPUTE = "retractDispute(uint256)";
+string constant RAISE_DISPUTE = "raiseDispute(uint256,string)";
+string constant ESCALATE_DISPUTE = "escalateDispute(uint256)";
+string constant RESOLVE_DISPUTE = "resolveDispute(uint256,uint256,bytes32,bytes32,uint8)";

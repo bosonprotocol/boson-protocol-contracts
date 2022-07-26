@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
@@ -9,7 +10,6 @@ import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
-import { PROTOCOL } from "../../../domain/BosonConstants.sol";
 
 /**
  * @title BosonVoucher
@@ -20,9 +20,6 @@ import { PROTOCOL } from "../../../domain/BosonConstants.sol";
  * - Newly minted voucher NFTs are automatically transferred to the buyer
  */
 contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
-    string internal constant VOUCHER_NAME = "Boson Voucher";
-    string internal constant VOUCHER_SYMBOL = "BOSON_VOUCHER";
-
     string private _contractURI;
 
     /**

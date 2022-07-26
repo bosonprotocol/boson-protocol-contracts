@@ -5,7 +5,7 @@ import { IBosonTwinHandler } from "../../interfaces/handlers/IBosonTwinHandler.s
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { TwinBase } from "../bases/TwinBase.sol";
-import { BUNDLE_FOR_TWIN_EXISTS, NO_SUCH_TWIN, NOT_OPERATOR } from "../../domain/BosonConstants.sol";
+import "../../domain/BosonConstants.sol";
 
 /**
  * @title TwinHandlerFacet

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "../domain/BosonConstants.sol";
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { TestFacetLib } from "./TestFacetLib.sol";
-import { ALREADY_INITIALIZED } from "../domain/BosonConstants.sol";
 
 /**
  * @title Test3Facet

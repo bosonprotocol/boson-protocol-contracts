@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
-import { ACCESS_DENIED, ALREADY_INITIALIZED, INVALID_STATE, NOT_OPERATOR, NOT_VOUCHER_HOLDER, NO_SUCH_EXCHANGE, NO_SUCH_OFFER, OFFER_HAS_BEEN_VOIDED } from "../../domain/BosonConstants.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
 /**

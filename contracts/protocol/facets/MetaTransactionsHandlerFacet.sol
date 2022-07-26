@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import "../../domain/BosonConstants.sol";
 import { IBosonMetaTransactionsHandler } from "../../interfaces/handlers/IBosonMetaTransactionsHandler.sol";
 import { IBosonDisputeHandler } from "../../interfaces/handlers/IBosonDisputeHandler.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
@@ -9,7 +10,6 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
-import { FUNCTION_CALL_NOT_SUCCESSFUL, INVALID_FUNCTION_NAME, INVALID_FUNCTION_SIGNATURE, NONCE_USED_ALREADY, SIGNER_AND_SIGNATURE_DO_NOT_MATCH } from "../../domain/BosonConstants.sol";
 
 /**
  * @title MetaTransactionsHandlerFacet
@@ -17,54 +17,6 @@ import { FUNCTION_CALL_NOT_SUCCESSFUL, INVALID_FUNCTION_NAME, INVALID_FUNCTION_S
  * @notice Manages incoming meta-transactions in the protocol.
  */
 contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, ProtocolBase {
-    // Structs
-    bytes32 private constant META_TRANSACTION_TYPEHASH =
-        keccak256(
-            bytes(
-                "MetaTransaction(uint256 nonce,address from,address contractAddress,string functionName,bytes functionSignature)"
-            )
-        );
-    bytes32 private constant OFFER_DETAILS_TYPEHASH = keccak256("MetaTxOfferDetails(address buyer,uint256 offerId)");
-    bytes32 private constant META_TX_COMMIT_TO_OFFER_TYPEHASH =
-        keccak256(
-            "MetaTxCommitToOffer(uint256 nonce,address from,address contractAddress,string functionName,MetaTxOfferDetails offerDetails)MetaTxOfferDetails(address buyer,uint256 offerId)"
-        );
-    bytes32 private constant EXCHANGE_DETAILS_TYPEHASH = keccak256("MetaTxExchangeDetails(uint256 exchangeId)");
-    bytes32 private constant META_TX_EXCHANGE_TYPEHASH =
-        keccak256(
-            "MetaTxExchange(uint256 nonce,address from,address contractAddress,string functionName,MetaTxExchangeDetails exchangeDetails)MetaTxExchangeDetails(uint256 exchangeId)"
-        );
-    bytes32 private constant FUND_DETAILS_TYPEHASH =
-        keccak256("MetaTxFundDetails(uint256 entityId,address[] tokenList,uint256[] tokenAmounts)");
-    bytes32 private constant META_TX_FUNDS_TYPEHASH =
-        keccak256(
-            "MetaTxFund(uint256 nonce,address from,address contractAddress,string functionName,MetaTxFundDetails fundDetails)MetaTxFundDetails(uint256 entityId,address[] tokenList,uint256[] tokenAmounts)"
-        );
-    bytes32 private constant DISPUTE_DETAILS_TYPEHASH =
-        keccak256("MetaTxDisputeDetails(uint256 exchangeId,string complaint)");
-    bytes32 private constant META_TX_DISPUTES_TYPEHASH =
-        keccak256(
-            "MetaTxDispute(uint256 nonce,address from,address contractAddress,string functionName,MetaTxDisputeDetails disputeDetails)MetaTxDisputeDetails(uint256 exchangeId,string complaint)"
-        );
-    bytes32 private constant DISPUTE_RESOLUTION_DETAILS_TYPEHASH =
-        keccak256(
-            "MetaTxDisputeResolutionDetails(uint256 exchangeId,uint256 buyerPercent,bytes32 sigR,bytes32 sigS,uint8 sigV)"
-        );
-    bytes32 private constant META_TX_DISPUTE_RESOLUTIONS_TYPEHASH =
-        keccak256(
-            "MetaTxDisputeResolution(uint256 nonce,address from,address contractAddress,string functionName,MetaTxDisputeResolutionDetails disputeResolutionDetails)MetaTxDisputeResolutionDetails(uint256 exchangeId,uint256 buyerPercent,bytes32 sigR,bytes32 sigS,uint8 sigV)"
-        );
-    // Function names
-    string private constant COMMIT_TO_OFFER = "commitToOffer(address,uint256)";
-    string private constant CANCEL_VOUCHER = "cancelVoucher(uint256)";
-    string private constant REDEEM_VOUCHER = "redeemVoucher(uint256)";
-    string private constant COMPLETE_EXCHANGE = "completeExchange(uint256)";
-    string private constant WITHDRAW_FUNDS = "withdrawFunds(uint256,address[],uint256[])";
-    string private constant RETRACT_DISPUTE = "retractDispute(uint256)";
-    string private constant RAISE_DISPUTE = "raiseDispute(uint256,string)";
-    string private constant ESCALATE_DISPUTE = "escalateDispute(uint256)";
-    string private constant RESOLVE_DISPUTE = "resolveDispute(uint256,uint256,bytes32,bytes32,uint8)";
-
     /**
      * @notice Facet Initializer
      */
