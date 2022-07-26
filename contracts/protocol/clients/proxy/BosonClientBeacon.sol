@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
-import { BosonConstants } from "../../../domain/BosonConstants.sol";
-import { ClientLib } from "../../libs/ClientLib.sol";
 import { ClientExternalAddressesBase } from "./../../bases/ClientExternalAddressesBase.sol";
 
 /**

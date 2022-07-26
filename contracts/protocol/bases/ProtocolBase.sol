@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
-import { BosonConstants } from "../../domain/BosonConstants.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
 /**
@@ -12,7 +12,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
  *
  * @notice Provides domain and common modifiers to Protocol facets
  */
-abstract contract ProtocolBase is BosonTypes, BosonConstants {
+abstract contract ProtocolBase is BosonTypes {
     /**
      * @dev Modifier to protect initializer function from being invoked twice.
      */

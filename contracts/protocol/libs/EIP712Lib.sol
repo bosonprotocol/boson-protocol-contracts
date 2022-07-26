@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import { INVALID_SIGNATURE } from "../../domain/BosonConstants.sol";
 
 /**
  * @title EIP712Lib
@@ -10,9 +10,6 @@ import { INVALID_SIGNATURE } from "../../domain/BosonConstants.sol";
  * @dev Provides the domain seperator and chain id.
  */
 library EIP712Lib {
-    bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
-        keccak256(bytes("EIP712Domain(string name,string version,address verifyingContract,bytes32 salt)"));
-
     /**
      * @notice Get the domain separator
      *

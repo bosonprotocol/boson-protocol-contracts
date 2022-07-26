@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
+import "../../domain/BosonConstants.sol";
 
 /**
  * @title OfferHandlerFacet

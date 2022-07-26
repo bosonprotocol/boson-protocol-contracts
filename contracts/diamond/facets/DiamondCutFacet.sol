@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { BosonConstants } from "../../domain/BosonConstants.sol";
+import "../../domain/BosonConstants.sol";
 import { IDiamondCut } from "../../interfaces/diamond/IDiamondCut.sol";
 import { DiamondLib } from "../DiamondLib.sol";
 import { JewelerLib } from "../JewelerLib.sol";
@@ -20,7 +20,7 @@ import { EIP712Lib } from "../../protocol/libs/EIP712Lib.sol";
  * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract DiamondCutFacet is BosonConstants, IDiamondCut {
+contract DiamondCutFacet is IDiamondCut {
     /**
      * @notice Cut facets of the Diamond
      *
