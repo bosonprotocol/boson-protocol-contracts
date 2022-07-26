@@ -65,6 +65,7 @@ string constant INVALID_DISPUTE_DURATION = "Invalid dispute duration";
 string constant INVALID_DISPUTE_RESOLVER = "Invalid dispute resolver";
 string constant INVALID_QUANTITY_AVAILABLE = "Invalid quantity available";
 string constant DR_UNSUPPORTED_FEE = "Dispute resolver does not accept this token";
+string constant AGENT_FEE_AMOUNT_TOO_HIGH = "Sum of Agent fee amount and protocol fee amount should be <= offer fee limit";
 
 // Revert Reasons: Group related
 string constant NO_SUCH_GROUP = "No such group";
@@ -110,10 +111,6 @@ string constant TOO_MANY_TOKENS = "Too many tokens";
 string constant TOKEN_AMOUNT_MISMATCH = "Number of amounts should match number of tokens";
 string constant NOTHING_TO_WITHDRAW = "Nothing to withdraw";
 string constant NOT_AUTHORIZED = "Not authorized to withdraw";
-string constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
-string constant INSUFFICIENT_VALUE_SENT = "Insufficient value sent";
-string constant INSUFFICIENT_AVAILABLE_FUNDS = "Insufficient available funds";
-string constant NATIVE_NOT_ALLOWED = "Transfer of native currency not allowed";
 
 // Revert Reasons: Meta-Transactions related
 string constant NONCE_USED_ALREADY = "Nonce used already";

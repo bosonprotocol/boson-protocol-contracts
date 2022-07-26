@@ -42,7 +42,7 @@ abstract contract BeaconClientBase is BosonTypes {
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
 
         (, Exchange memory exchange) = IBosonExchangeHandler(protocolDiamond).getExchange(_exchangeId);
-        (exists, offer, , , ) = IBosonOfferHandler(protocolDiamond).getOffer(exchange.offerId);
+        (exists, offer, , , , ) = IBosonOfferHandler(protocolDiamond).getOffer(exchange.offerId);
     }
 
     /**

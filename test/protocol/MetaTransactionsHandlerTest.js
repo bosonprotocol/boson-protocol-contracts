@@ -76,6 +76,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let buyerPercent, validDisputeResolutionDetails, signatureSplits;
   let sellerAllowList;
   let contractURI;
+  let agentId;
 
   before(async function () {
     // get interface Ids
@@ -121,6 +122,8 @@ describe("IBosonMetaTransactionsHandler", function () {
     protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
     buyerEscalationDepositPercentage = "1000"; // 10%
 
+    agentId = "0"; // agent id is optional while creating an offer
+
     // Add config Handler
     const protocolConfig = [
       // Protocol addresses
@@ -141,6 +144,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
         maxAllowedSellers: 100,
+        maxTotalOfferFeePercentage: 4000, //40%
       },
       // Protocol fees
       {
@@ -666,7 +670,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, sellerDeposit);
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
         // Set the offer Type
         offerType = [
@@ -904,7 +908,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         expect(offer.isValid()).is.true;
         expect(offerDates.isValid()).is.true;
         expect(offerDurations.isValid()).is.true;
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
         sellerDeposit = offer.sellerDeposit;
         price = offer.price;
@@ -2291,8 +2295,12 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Create both offers
         await Promise.all([
-          offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations, disputeResolverId),
-          offerHandler.connect(operator).createOffer(offerToken, offerDates, offerDurations, disputeResolverId),
+          offerHandler
+            .connect(operator)
+            .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId),
+          offerHandler
+            .connect(operator)
+            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId),
         ]);
 
         // top up seller's and buyer's account
@@ -2318,7 +2326,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         await exchangeHandler.connect(buyer).cancelVoucher(++exchangeId); // canceling the voucher in the native currency
 
         // expected payoffs - they are the same for token and native currency
-        // buyer: price - buyerCancelPenalty - protocolFee
+        // buyer: price - buyerCancelPenalty
         buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
 
         // prepare validFundDetails

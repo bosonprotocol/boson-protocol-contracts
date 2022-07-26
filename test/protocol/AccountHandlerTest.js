@@ -169,6 +169,7 @@ describe("IBosonAccountHandler", function () {
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 0,
         maxAllowedSellers: 100,
+        maxTotalOfferFeePercentage: 4000, //40%
       },
       // Protocol fees
       {
@@ -1303,6 +1304,7 @@ describe("IBosonAccountHandler", function () {
           // Initial ids for all the things
           id = await accountHandler.connect(rando).getNextAccountId();
           offerId = await offerHandler.connect(rando).getNextOfferId();
+          let agentId = "0"; // agent id is optional while creating an offer
 
           // Create a valid seller
           seller = new Seller(id.toString(), operator.address, admin.address, clerk.address, treasury.address, active);
@@ -1354,7 +1356,9 @@ describe("IBosonAccountHandler", function () {
           expect(offerDurations.isValid()).is.true;
 
           // Create the offer
-          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolver.id);
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
 
           offerId = offer.id;
           const sellerDeposit = offer.sellerDeposit;
@@ -3484,7 +3488,7 @@ describe("IBosonAccountHandler", function () {
         it("feePercentage is above 100%", async function () {
           //Agent with feePercentage > 10000 (100%)
           agent = new Agent(id, "10001", other1.address, active);
-          expect(agent.isValid()).is.true;
+          expect(agent.isValid()).is.false;
 
           // Attempt to create another buyer with same wallet address
           await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(
@@ -3726,7 +3730,7 @@ describe("IBosonAccountHandler", function () {
         it("feePercentage is above 100%", async function () {
           //Agent with feePercentage > 10000 (100%)
           agent.feePercentage = "10001";
-          expect(agent.isValid()).is.true;
+          expect(agent.isValid()).is.false;
 
           // Attempt to update the agent, expecting revert
           await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(

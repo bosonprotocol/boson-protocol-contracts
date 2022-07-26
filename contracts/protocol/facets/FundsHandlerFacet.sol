@@ -109,7 +109,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * - there is nothing to withdraw
      * - transfer of funds is not succesful
      *
-     * @param _entityId - seller or buyer id
+     * @param _entityId - seller or buyer or agent id
      * @param _tokenList - list of contract addresses of tokens that are being withdrawn
      * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
      */
@@ -134,8 +134,14 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
                 (, Seller storage seller) = fetchSeller(callerId);
                 destinationAddress = seller.treasury;
             } else {
-                // in this branch, caller is neither buyer or clerk or does not match the _entityId
-                revert(NOT_AUTHORIZED);
+                (exists, callerId) = getAgentIdByWallet(msgSender());
+                if (exists && callerId == _entityId) {
+                    // caller is an agent
+                    destinationAddress = payable(msgSender());
+                } else {
+                    // in this branch, caller is neither buyer, clerk or agent or does not match the _entityId
+                    revert(NOT_AUTHORIZED);
+                }
             }
         }
 
