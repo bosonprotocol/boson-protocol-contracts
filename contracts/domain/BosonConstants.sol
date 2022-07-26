@@ -111,6 +111,10 @@ string constant TOO_MANY_TOKENS = "Too many tokens";
 string constant TOKEN_AMOUNT_MISMATCH = "Number of amounts should match number of tokens";
 string constant NOTHING_TO_WITHDRAW = "Nothing to withdraw";
 string constant NOT_AUTHORIZED = "Not authorized to withdraw";
+string constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
+string constant INSUFFICIENT_VALUE_SENT = "Insufficient value sent";
+string constant INSUFFICIENT_AVAILABLE_FUNDS = "Insufficient available funds";
+string constant NATIVE_NOT_ALLOWED = "Transfer of native currency not allowed";
 
 // Revert Reasons: Meta-Transactions related
 string constant NONCE_USED_ALREADY = "Nonce used already";
