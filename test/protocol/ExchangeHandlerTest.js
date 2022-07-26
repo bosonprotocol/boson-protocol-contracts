@@ -1577,6 +1577,95 @@ describe("IBosonExchangeHandler", function () {
       });
     });
 
+    context("👉 extendVoucher()", async function () {
+      beforeEach(async function () {
+        // Commit to offer
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        exchange.voucher.committedDate = block.timestamp.toString();
+
+        // Update the validUntilDate date in the expected exchange struct
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        // New expiry date for extensions
+        validUntilDate = ethers.BigNumber.from(exchange.voucher.validUntilDate).add(oneMonth).toString();
+
+        // Get the struct
+        exchangeStruct = exchange.toStruct();
+      });
+
+      it("should emit an VoucherExtended event when seller's operator calls", async function () {
+        // Extend the voucher, expecting event
+        await expect(exchangeHandler.connect(operator).extendVoucher(exchange.id, validUntilDate))
+          .to.emit(exchangeHandler, "VoucherExtended")
+          .withArgs(offerId, exchange.id, validUntilDate, operator.address);
+      });
+
+      it("should update state", async function () {
+        // Extend the voucher
+        await exchangeHandler.connect(operator).extendVoucher(exchange.id, validUntilDate);
+
+        // Get the exchange
+        [, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+        exchange = Exchange.fromStruct(response);
+
+        // It should match the new validUntilDate
+        assert.equal(exchange.voucher.validUntilDate, validUntilDate, "Voucher validUntilDate not updated");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        /*
+         * Reverts if
+         * - Exchange does not exist
+         * - Exchange is not in committed state
+         * - Caller is not seller's operator
+         * - New date is not later than the current one
+         */
+
+        it("exchange id is invalid", async function () {
+          // An invalid exchange id
+          id = "666";
+
+          // Attempt to extend voucher, expecting revert
+          await expect(exchangeHandler.connect(operator).extendVoucher(id, validUntilDate)).to.revertedWith(
+            RevertReasons.NO_SUCH_EXCHANGE
+          );
+        });
+
+        it("exchange is not in committed state", async function () {
+          // Cancel the voucher
+          await exchangeHandler.connect(buyer).cancelVoucher(exchange.id);
+
+          // Attempt to extend voucher, expecting revert
+          await expect(exchangeHandler.connect(operator).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
+            RevertReasons.INVALID_STATE
+          );
+        });
+
+        it("caller is not seller's operator", async function () {
+          // Attempt to extend voucher, expecting revert
+          await expect(exchangeHandler.connect(rando).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
+        });
+
+        it("new date is not later than the current one", async function () {
+          // New expiry date is older than current
+          validUntilDate = ethers.BigNumber.from(exchange.voucher.validUntilDate).sub(oneMonth).toString();
+
+          // Attempt to extend voucher, expecting revert
+          await expect(exchangeHandler.connect(operator).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
+            RevertReasons.VOUCHER_EXTENSION_NOT_VALID
+          );
+        });
+      });
+    });
+
     context("👉 onVoucherTransferred()", async function () {
       beforeEach(async function () {
         // Commit to offer, retrieving the event

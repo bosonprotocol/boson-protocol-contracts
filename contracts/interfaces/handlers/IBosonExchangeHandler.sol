@@ -99,6 +99,23 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
     function expireVoucher(uint256 _exchangeId) external;
 
     /**
+     * @notice Extend a Voucher's validity period.
+     *
+     * Reverts if
+     * - Exchange does not exist
+     * - Exchange is not in committed state
+     * - Caller is not seller's operator
+     * - New date is not later than the current one
+     *
+     * Emits
+     * - VoucherExtended
+     *
+     * @param _exchangeId - the id of the exchange
+     * @param _validUntilDate - the new voucher expiry date
+     */
+    function extendVoucher(uint256 _exchangeId, uint256 _validUntilDate) external;
+
+    /**
      * @notice Redeem a voucher.
      *
      * Reverts if
