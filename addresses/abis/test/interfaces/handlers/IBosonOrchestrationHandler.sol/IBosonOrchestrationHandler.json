@@ -868,11 +868,6 @@
             },
             {
               "internalType": "uint256",
-              "name": "protocolFee",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
               "name": "buyerCancelPenalty",
               "type": "uint256"
             },
@@ -987,7 +982,31 @@
           "type": "tuple"
         },
         {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "protocolFee",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "agentFee",
+              "type": "uint256"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.OfferFees",
+          "name": "offerFees",
+          "type": "tuple"
+        },
+        {
           "indexed": true,
+          "internalType": "uint256",
+          "name": "agentId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
           "internalType": "address",
           "name": "executedBy",
           "type": "address"
@@ -1291,11 +1310,6 @@
             },
             {
               "internalType": "uint256",
-              "name": "protocolFee",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
               "name": "buyerCancelPenalty",
               "type": "uint256"
             },
@@ -1387,6 +1401,11 @@
           "internalType": "uint256",
           "name": "_groupId",
           "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_agentId",
+          "type": "uint256"
         }
       ],
       "name": "createOfferAddToGroup",
@@ -1420,11 +1439,6 @@
             },
             {
               "internalType": "uint256",
-              "name": "protocolFee",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
               "name": "buyerCancelPenalty",
               "type": "uint256"
             },
@@ -1553,6 +1567,11 @@
           "internalType": "struct BosonTypes.Twin",
           "name": "_twin",
           "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_agentId",
+          "type": "uint256"
         }
       ],
       "name": "createOfferAndTwinWithBundle",
@@ -1586,11 +1605,6 @@
             },
             {
               "internalType": "uint256",
-              "name": "protocolFee",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
               "name": "buyerCancelPenalty",
               "type": "uint256"
             },
@@ -1714,6 +1728,11 @@
           "internalType": "struct BosonTypes.Condition",
           "name": "_condition",
           "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_agentId",
+          "type": "uint256"
         }
       ],
       "name": "createOfferWithCondition",
@@ -1743,11 +1762,6 @@
             {
               "internalType": "uint256",
               "name": "sellerDeposit",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "protocolFee",
               "type": "uint256"
             },
             {
@@ -1917,6 +1931,11 @@
           "internalType": "struct BosonTypes.Twin",
           "name": "_twin",
           "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_agentId",
+          "type": "uint256"
         }
       ],
       "name": "createOfferWithConditionAndTwinAndBundle",
@@ -1992,11 +2011,6 @@
             },
             {
               "internalType": "uint256",
-              "name": "protocolFee",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
               "name": "buyerCancelPenalty",
               "type": "uint256"
             },
@@ -2082,6 +2096,11 @@
         {
           "internalType": "uint256",
           "name": "_disputeResolverId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_agentId",
           "type": "uint256"
         }
       ],
@@ -2158,11 +2177,6 @@
             },
             {
               "internalType": "uint256",
-              "name": "protocolFee",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
               "name": "buyerCancelPenalty",
               "type": "uint256"
             },
@@ -2291,6 +2305,11 @@
           "internalType": "struct BosonTypes.Twin",
           "name": "_twin",
           "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_agentId",
+          "type": "uint256"
         }
       ],
       "name": "createSellerAndOfferAndTwinWithBundle",
@@ -2366,11 +2385,6 @@
             },
             {
               "internalType": "uint256",
-              "name": "protocolFee",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
               "name": "buyerCancelPenalty",
               "type": "uint256"
             },
@@ -2494,6 +2508,11 @@
           "internalType": "struct BosonTypes.Condition",
           "name": "_condition",
           "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_agentId",
+          "type": "uint256"
         }
       ],
       "name": "createSellerAndOfferWithCondition",
@@ -2565,11 +2584,6 @@
             {
               "internalType": "uint256",
               "name": "sellerDeposit",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "protocolFee",
               "type": "uint256"
             },
             {
@@ -2739,6 +2753,11 @@
           "internalType": "struct BosonTypes.Twin",
           "name": "_twin",
           "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_agentId",
+          "type": "uint256"
         }
       ],
       "name": "createSellerAndOfferWithConditionAndTwinAndBundle",
