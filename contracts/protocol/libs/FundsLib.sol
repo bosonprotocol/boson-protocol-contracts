@@ -133,18 +133,16 @@ library FundsLib {
             uint256 sellerDeposit = offer.sellerDeposit;
             uint256 price = offer.price;
 
-            // sum of price and sellerDeposit occurs multiple times
-            uint256 pot = price + sellerDeposit;
             if (exchangeState == BosonTypes.ExchangeState.Completed) {
                 // COMPLETED
                 protocolFee = offerFee.protocolFee;
                 // buyerPayoff is 0
                 agentFee = offerFee.agentFee;
-                sellerPayoff = pot - protocolFee - agentFee;
+                sellerPayoff = price + sellerDeposit - protocolFee - agentFee;
             } else if (exchangeState == BosonTypes.ExchangeState.Revoked) {
                 // REVOKED
                 // sellerPayoff is 0
-                buyerPayoff = pot;
+                buyerPayoff = price + sellerDeposit;
             } else if (exchangeState == BosonTypes.ExchangeState.Canceled) {
                 // CANCELED
                 uint256 buyerCancelPenalty = offer.buyerCancelPenalty;
@@ -152,6 +150,12 @@ library FundsLib {
                 buyerPayoff = price - buyerCancelPenalty;
             } else if (exchangeState == BosonTypes.ExchangeState.Disputed) {
                 // DISPUTED
+                // determine if buyerEscalationDeposit was encumbered or not
+                // if dispute was escalated, disputeDates.escalated is populated
+                uint256 buyerEscalationDeposit = pe.disputeDates[_exchangeId].escalated > 0
+                    ? pe.disputeResolutionTerms[exchange.offerId].buyerEscalationDeposit
+                    : 0;
+
                 // get the information about the dispute, which must exist
                 BosonTypes.Dispute storage dispute = pe.disputes[_exchangeId];
                 BosonTypes.DisputeState disputeState = dispute.state;
@@ -159,15 +163,16 @@ library FundsLib {
                 if (disputeState == BosonTypes.DisputeState.Retracted) {
                     // RETRACTED - same as "COMPLETED"
                     protocolFee = offerFee.protocolFee;
-                    // buyerPayoff is 0
                     agentFee = offerFee.agentFee;
-                    sellerPayoff = pot - protocolFee - agentFee;
+                    // buyerPayoff is 0
+                    sellerPayoff = price + sellerDeposit - protocolFee - agentFee + buyerEscalationDeposit;
                 } else if (disputeState == BosonTypes.DisputeState.Refused) {
                     // REFUSED
                     sellerPayoff = sellerDeposit;
-                    buyerPayoff = price;
+                    buyerPayoff = price + buyerEscalationDeposit;
                 } else {
                     // RESOLVED or DECIDED
+                    uint256 pot = price + sellerDeposit + buyerEscalationDeposit;
                     buyerPayoff = (pot * dispute.buyerPercent) / 10000;
                     sellerPayoff = pot - buyerPayoff;
                 }
