@@ -3517,7 +3517,7 @@ describe("IBosonFundsHandler", function () {
               expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
             });
 
-            context("Offer is an agentOffer", async function () {
+            context("Offer has an agent", async function () {
               beforeEach(async function () {
                 // Create Agent offer
                 await offerHandler
@@ -3679,7 +3679,7 @@ describe("IBosonFundsHandler", function () {
               expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
             });
 
-            context("Offer is an agentOffer", async function () {
+            context("Offer has an agent", async function () {
               beforeEach(async function () {
                 // Create Agent offer
                 await offerHandler
