@@ -5,6 +5,7 @@ import { IBosonGroupHandler } from "../../interfaces/handlers/IBosonGroupHandler
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { GroupBase } from "../bases/GroupBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
+import "../../domain/BosonConstants.sol";
 
 /**
  * @title GroupHandlerFacet
