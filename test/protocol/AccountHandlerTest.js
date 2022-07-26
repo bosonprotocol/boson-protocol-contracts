@@ -26,7 +26,7 @@ const { mockOffer } = require("../utils/mock.js");
 describe("IBosonAccountHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, other4, other5;
+  let deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, other4, other5, other6, other7, other8;
   let erc165,
     protocolDiamond,
     accessController,
@@ -36,7 +36,8 @@ describe("IBosonAccountHandler", function () {
     fundsHandler,
     configHandler,
     gasLimit;
-  let seller, sellerStruct, active, seller2, seller2Struct, id2, authToken, authTokenStruct, emptyAuthToken, emptyAuthTokenStruct;
+  let seller, sellerStruct, active, seller2, seller2Struct, id2, seller3, seller4;
+  let authToken, authTokenStruct, emptyAuthToken, emptyAuthTokenStruct, authToken2, authToken3;
   let buyer, buyerStruct, buyer2, buyer2Struct;
   let disputeResolver,
     disputeResolverStruct,
@@ -117,7 +118,7 @@ describe("IBosonAccountHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, other1, other2, other3, other4, other5] =
+    [deployer, operator, admin, clerk, treasury, rando, other1, other2, other3, other4, other5, other6, other7, other8] =
       await ethers.getSigners();
 
     //Dispute Resolver metadata URI
@@ -638,8 +639,18 @@ describe("IBosonAccountHandler", function () {
 
     context("👉 getSeller()", async function () {
       beforeEach(async function () {
+        // AuthTokens
+        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        expect(emptyAuthToken.isValid()).is.true;
+     
+        authToken = new AuthToken("8400", AuthTokenType.Lens);
+        expect(authToken.isValid()).is.true;
+       
+        // Seller can have either admin address or auth token
+        seller.admin = ethers.constants.AddressZero;
+
         // Create a seller
-        await accountHandler.connect(admin).createSeller(seller, contractURI);
+        await accountHandler.connect(admin).createSeller(seller, contractURI, authToken);
 
         // Required constructor params
         id = "2"; // argument sent to contract for createSeller will be ignored
@@ -648,7 +659,7 @@ describe("IBosonAccountHandler", function () {
         seller2 = new Seller(id, other1.address, other2.address, other3.address, other4.address, active);
         expect(seller2.isValid()).is.true;
 
-        await accountHandler.connect(rando).createSeller(seller2, contractURI);
+        await accountHandler.connect(rando).createSeller(seller2, contractURI, emptyAuthToken);
       });
 
       it("should return true for exists if seller is found", async function () {
@@ -669,20 +680,57 @@ describe("IBosonAccountHandler", function () {
 
       it("should return the details of the correct seller as a struct if found", async function () {
         // Get the seller as a struct
-        [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
+        [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller("1");
 
         // Parse into entity
-        seller = Seller.fromStruct(sellerStruct);
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+        let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
 
-        // Validate
-        expect(seller.isValid()).to.be.true;
+        // Returned values should match the input in createSeller
+        for ([key, value] of Object.entries(seller)) {
+          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Returned auth token values should match the input in createSeller
+        for ([key, value] of Object.entries(authToken)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should return the details of the correct seller if seller has empty authToken", async function () {
+        // Get the seller as a struct
+        [, sellerStruct, emptyAuthTokenStruct] = await accountHandler.connect(rando).getSeller("2");
+
+        // Parse into entity
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+        let returnedAuthToken = AuthToken.fromStruct(emptyAuthTokenStruct);
+
+        // Returned values should match the input in createSeller
+        for ([key, value] of Object.entries(seller2)) {
+          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Returned auth token values should match the input in createSeller
+        for ([key, value] of Object.entries(emptyAuthToken)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
+        }
       });
     });
 
     context("👉 getSellerByAddress()", async function () {
       beforeEach(async function () {
+        // AuthTokens
+        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        expect(emptyAuthToken.isValid()).is.true;
+     
+        authToken = new AuthToken("8400", AuthTokenType.Lens);
+        expect(authToken.isValid()).is.true;
+       
+        // Seller can have either admin address or auth token
+        seller.admin = ethers.constants.AddressZero;
+
         // Create a seller
-        await accountHandler.connect(rando).createSeller(seller, contractURI);
+        await accountHandler.connect(rando).createSeller(seller, contractURI, authToken);
 
         // Required constructor params
         id = "2"; // argument sent to contract for createSeller will be ignored
@@ -694,58 +742,77 @@ describe("IBosonAccountHandler", function () {
 
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
-        await accountHandler.connect(rando).createSeller(seller2, contractURI);
+        await accountHandler.connect(rando).createSeller(seller2, contractURI, emptyAuthToken);
       });
 
       it("should return the correct seller when searching on operator address", async function () {
-        [exists, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(operator.address);
+        [exists, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSellerByAddress(operator.address);
 
         expect(exists).is.true;
 
         // Parse into entity
         let returnedSeller = Seller.fromStruct(sellerStruct);
+        let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
 
         // Returned values should match the input in createSeller
         for ([key, value] of Object.entries(seller)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Returned auth token values should match the input in createSeller
+        for ([key, value] of Object.entries(authToken)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
         }
       });
 
       it("should return the correct seller when searching on admin address", async function () {
-        [exists, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(admin.address);
+        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler.connect(rando).getSellerByAddress(other2.address);
 
         expect(exists).is.true;
 
         // Parse into entity
         let returnedSeller = Seller.fromStruct(sellerStruct);
+        let returnedAuthToken = AuthToken.fromStruct(emptyAuthTokenStruct);
 
         // Returned values should match the input in createSeller
-        for ([key, value] of Object.entries(seller)) {
+        for ([key, value] of Object.entries(seller2)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Returned auth token values should match the input in createSeller
+        for ([key, value] of Object.entries(emptyAuthToken)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
         }
       });
 
       it("should return the correct seller when searching on clerk address", async function () {
-        [exists, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(clerk.address);
+        [exists, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSellerByAddress(clerk.address);
 
         expect(exists).is.true;
 
         // Parse into entity
         let returnedSeller = Seller.fromStruct(sellerStruct);
+        let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
 
         // Returned values should match the input in createSeller
         for ([key, value] of Object.entries(seller)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
         }
+
+        // Returned auth token values should match the input in createSeller
+        for ([key, value] of Object.entries(authToken)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
+        }
       });
 
       it("should return exists false and default values when searching on treasury address", async function () {
-        [exists, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(treasury.address);
+        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler.connect(rando).getSellerByAddress(treasury.address);
 
         expect(exists).is.false;
 
         // Parse into entity
         let returnedSeller = Seller.fromStruct(sellerStruct);
+        let returnedAuthToken = AuthToken.fromStruct(emptyAuthTokenStruct);
 
         // Returned values should be the default value for it's data type
         for ([key, value] of Object.entries(returnedSeller)) {
@@ -755,15 +822,21 @@ describe("IBosonAccountHandler", function () {
             expect(value).is.false;
           }
         }
+
+        // Returned auth token values should be empty/default values
+        for ([key, value] of Object.entries(emptyAuthToken)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
+        }
       });
 
       it("should return exists false and default values when searching on unassociated address", async function () {
-        [exists, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(deployer.address);
+        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler.connect(rando).getSellerByAddress(deployer.address);
 
         expect(exists).is.false;
 
         // Parse into entity
         let returnedSeller = Seller.fromStruct(sellerStruct);
+        let returnedAuthToken = AuthToken.fromStruct(emptyAuthTokenStruct);
 
         // Returned values should be the default value for it's data type
         for ([key, value] of Object.entries(returnedSeller)) {
@@ -772,6 +845,267 @@ describe("IBosonAccountHandler", function () {
           } else {
             expect(value).is.false;
           }
+        }
+
+        // Returned auth token values should be empty/default values
+        for ([key, value] of Object.entries(emptyAuthToken)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should return exists false and default values when searching on admin address that is zero address", async function () {
+        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler.connect(rando).getSellerByAddress(seller.admin);
+
+        expect(exists).is.false;
+
+        // Parse into entity
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+        let returnedAuthToken = AuthToken.fromStruct(emptyAuthTokenStruct);
+
+        // Returned values should be the default value for it's data type
+        for ([key, value] of Object.entries(returnedSeller)) {
+          if (key != "active") {
+            expect(value == 0).is.true || expect(value === ethers.constants.AddressZero).is.true;
+          } else {
+            expect(value).is.false;
+          }
+        }
+
+        // Returned auth token values should be empty/default values
+        for ([key, value] of Object.entries(emptyAuthToken)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should return exists false and default values when searching on zero address", async function () {
+        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler.connect(rando).getSellerByAddress(ethers.constants.AddressZero);
+
+        expect(exists).is.false;
+
+        // Parse into entity
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+        let returnedAuthToken = AuthToken.fromStruct(emptyAuthTokenStruct);
+
+        // Returned values should be the default value for it's data type
+        for ([key, value] of Object.entries(returnedSeller)) {
+          if (key != "active") {
+            expect(value == 0).is.true || expect(value === ethers.constants.AddressZero).is.true;
+          } else {
+            expect(value).is.false;
+          }
+        }
+
+        // Returned auth token values should be empty/default values
+        for ([key, value] of Object.entries(emptyAuthToken)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+    });
+
+    context("👉 getSellerByAuthToken()", async function () {
+      beforeEach(async function () {
+        // AuthTokens
+        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        expect(emptyAuthToken.isValid()).is.true;
+     
+        authToken = new AuthToken("8400", AuthTokenType.Lens);
+        expect(authToken.isValid()).is.true;
+
+        authToken2 = new AuthToken("0", AuthTokenType.ENS);
+        expect(authToken2.isValid()).is.true;
+       
+        // Seller can have either admin address or auth token
+        seller.admin = ethers.constants.AddressZero;
+
+        // Create a seller
+        await accountHandler.connect(rando).createSeller(seller, contractURI, authToken);
+
+        // Required constructor params
+        id = "2"; // argument sent to contract for createSeller will be ignored
+        active = true;
+
+        // Create seller 2
+        seller2 = new Seller(id, other1.address, other2.address, other3.address, other4.address, active);
+        expect(seller2.isValid()).is.true;
+
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+
+        await accountHandler.connect(rando).createSeller(seller2, contractURI, emptyAuthToken);
+
+        // Required constructor params
+        id = "3"; // argument sent to contract for createSeller will be ignored
+        active = true;
+
+        // Create seller 3
+        seller3 = new Seller(id, other5.address, ethers.constants.AddressZero, other6.address, treasury.address, active);
+        expect(seller3.isValid()).is.true;
+
+        contractURI = `https://ipfs.io/ipfs/QmPChd2hVbrJ6bfo3WBcTW4iZnpHm8TEzWkLHmLpXhF68A`;
+
+        await accountHandler.connect(rando).createSeller(seller3, contractURI, authToken2);
+      });
+
+      it("should return the correct seller when searching on valid auth token", async function () {
+        //Search on authToken
+        [exists, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSellerByAuthToken(authToken);
+
+        expect(exists).is.true;
+
+        // Parse into entity
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+        let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
+
+        // Returned values should match the input in createSeller
+        for ([key, value] of Object.entries(seller)) {
+          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Returned auth token values should match the input in createSeller
+        for ([key, value] of Object.entries(authToken)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
+        }
+
+        //Search on authToken2
+        [exists, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSellerByAuthToken(authToken2);
+
+        expect(exists).is.true;
+
+        // Parse into entity
+        returnedSeller = Seller.fromStruct(sellerStruct);
+        returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
+
+        // Returned values should match the input in createSeller
+        for ([key, value] of Object.entries(seller3)) {
+          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Returned auth token values should match the input in createSeller
+        for ([key, value] of Object.entries(authToken2)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should return the correct seller when two sellers have same auth token Id but different auth token type", async function () {
+        //create seller with same auth token Id but different auth token type from seller 1
+        authToken3 = new AuthToken("8400", AuthTokenType.ENS);
+        expect(authToken3.isValid()).is.true;
+
+        // Create seller 4
+        seller4 = new Seller("4", other7.address, ethers.constants.AddressZero, other8.address, treasury.address, active);
+        expect(seller4.isValid()).is.true;
+
+        await accountHandler.connect(rando).createSeller(seller4, contractURI, authToken3);
+
+        //Search on authToken
+        [exists, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSellerByAuthToken(authToken);
+
+        expect(exists).is.true;
+
+        // Parse into entity
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+        let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
+
+        // Returned values should match the input in createSeller
+        for ([key, value] of Object.entries(seller)) {
+          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Returned auth token values should match the input in createSeller
+        for ([key, value] of Object.entries(authToken)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
+        }
+
+        //Search on authToken3
+        [exists, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSellerByAuthToken(authToken3);
+
+        expect(exists).is.true;
+
+        // Parse into entity
+        returnedSeller = Seller.fromStruct(sellerStruct);
+        returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
+
+        // Returned values should match the input in createSeller
+        for ([key, value] of Object.entries(seller4)) {
+          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Returned auth token values should match the input in createSeller
+        for ([key, value] of Object.entries(authToken3)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should return the correct seller when two sellers have same auth token type but different auth token id", async function () {
+        //create seller with same auth token Id but different auth token type from seller 1
+        authToken3 = new AuthToken("0", AuthTokenType.Lens);
+        expect(authToken3.isValid()).is.true;
+
+        // Create seller 4
+        seller4 = new Seller("4", other7.address, ethers.constants.AddressZero, other8.address, treasury.address, active);
+        expect(seller4.isValid()).is.true;
+
+        await accountHandler.connect(rando).createSeller(seller4, contractURI, authToken3);
+
+        //Search on authToken
+        [exists, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSellerByAuthToken(authToken);
+
+        expect(exists).is.true;
+
+        // Parse into entity
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+        let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
+
+        // Returned values should match the input in createSeller
+        for ([key, value] of Object.entries(seller)) {
+          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Returned auth token values should match the input in createSeller
+        for ([key, value] of Object.entries(authToken)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
+        }
+
+        //Search on authToken3
+        [exists, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSellerByAuthToken(authToken3);
+
+        expect(exists).is.true;
+
+        // Parse into entity
+        returnedSeller = Seller.fromStruct(sellerStruct);
+        returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
+
+        // Returned values should match the input in createSeller
+        for ([key, value] of Object.entries(seller4)) {
+          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Returned auth token values should match the input in createSeller
+        for ([key, value] of Object.entries(authToken3)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should return exists false and default values when searching on empty auth token", async function () {
+        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler.connect(rando).getSellerByAuthToken(emptyAuthToken);
+
+        expect(exists).is.false;
+
+        // Parse into entity
+        let returnedSeller = Seller.fromStruct(sellerStruct);
+        let returnedAuthToken = AuthToken.fromStruct(emptyAuthTokenStruct);
+
+        // Returned values should be the default value for it's data type
+        for ([key, value] of Object.entries(returnedSeller)) {
+          if (key != "active") {
+            expect(value == 0).is.true || expect(value === ethers.constants.AddressZero).is.true;
+          } else {
+            expect(value).is.false;
+          }
+        }
+
+        // Returned auth token values should be empty/default values
+        for ([key, value] of Object.entries(emptyAuthToken)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
         }
       });
     });
