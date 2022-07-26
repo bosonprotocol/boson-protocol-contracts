@@ -31,6 +31,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     * - Seller is not on dispute resolver's seller allow list
      * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price
      * - When agent id is non zero:
@@ -90,6 +91,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     * - Seller is not on dispute resolver's seller allow list
+     * - Seller is not on dispute resolver's seller allow list
      * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price
      * - When agent id is non zero:
@@ -147,8 +150,17 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             ) = fetchDisputeResolver(_disputeResolverId);
             require(exists && disputeResolver.active, INVALID_DISPUTE_RESOLVER);
 
+            ProtocolLib.ProtocolLookups storage pl = protocolLookups();
+
+            // check that seller is on the DR allow list
+            if (pl.allowedSellers[_disputeResolverId].length > 0) {
+                // if length == 0, dispute resolver allows any seller
+                // if length > 0, we check that it is on allow list
+                require(pl.allowedSellerIndex[_disputeResolverId][_offer.sellerId] > 0, SELLER_NOT_APPROVED);
+            }
+
             // get the index of DisputeResolverFee and make sure DR supports the exchangeToken
-            uint256 feeIndex = protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_offer.exchangeToken];
+            uint256 feeIndex = pl.disputeResolverFeeTokenIndex[_disputeResolverId][_offer.exchangeToken];
             require(feeIndex > 0, DR_UNSUPPORTED_FEE);
 
             uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
@@ -158,7 +170,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                 _disputeResolverId,
                 disputeResolver.escalationResponsePeriod,
                 feeAmount,
-                (feeAmount * protocolLookups().buyerEscalationDepositPercentage) / 10000
+                (feeAmount * pl.buyerEscalationDepositPercentage) / 10000
             );
             protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
         }
