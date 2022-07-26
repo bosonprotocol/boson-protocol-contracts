@@ -501,6 +501,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
             (, Seller storage seller) = fetchSeller(bundle.sellerId);
 
             address sender = msgSender();
+            // Variable to track whether some twin transfer failed
+            bool transferFailed;
 
             // Visit the twins
             for (uint256 i = 0; i < twinIds.length; i++) {
@@ -558,19 +560,24 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
 
                 // If token transfer failed
                 if (!success) {
-                    // Raise a dispute if caller is a contract
-                    if (isContract(sender)) {
-                        string memory complaint = "Twin transfer failed and buyer address is a contract";
-
-                        raiseDisputeInternal(_exchange, complaint, seller.id);
-                    } else {
-                        // Revoke voucher if caller is an EOA
-                        revokeVoucherInternal(_exchange);
-                        shouldBurnVoucher = false;
-                    }
+                    transferFailed = true;
                     emit TwinTransferFailed(twin.id, twin.tokenAddress, tokenId, amount, sender);
                 } else {
                     emit TwinTransferred(twin.id, twin.tokenAddress, tokenId, amount, sender);
+                }
+            }
+
+            if (transferFailed) {
+                // Raise a dispute if caller is a contract
+                if (isContract(sender)) {
+                    string memory complaint = "Twin transfer failed and buyer address is a contract";
+
+                    raiseDisputeInternal(_exchange, complaint, seller.id);
+                } else {
+                    // Revoke voucher if caller is an EOA
+                    revokeVoucherInternal(_exchange);
+                    // Do not burn the voucher because it's already burned on revoke
+                    shouldBurnVoucher = false;
                 }
             }
         }
