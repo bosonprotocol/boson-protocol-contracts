@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "../domain/BosonConstants.sol";
 import { AddressUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import { TestFacetLib } from "./TestFacetLib.sol";
-import "../domain/BosonConstants.sol";
 
 /**
  * @title Test3Facet
@@ -13,7 +13,7 @@ import "../domain/BosonConstants.sol";
  * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
  * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
-contract Test3Facet is BosonConstants {
+contract Test3Facet {
     modifier onlyUnInitialized() {
         TestFacetLib.TestFacetStorage storage tfs = TestFacetLib.testFacetStorage();
         require(!tfs.initialized, ALREADY_INITIALIZED);

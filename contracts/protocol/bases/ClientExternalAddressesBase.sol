@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "../../domain/BosonConstants.sol";
 import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
 import { IClientExternalAddresses } from "../../interfaces/clients/IClientExternalAddresses.sol";
-import { BosonConstants } from "../../domain/BosonConstants.sol";
 import { ClientLib } from "../libs/ClientLib.sol";
 
 /**
@@ -11,7 +11,7 @@ import { ClientLib } from "../libs/ClientLib.sol";
  *
  * @notice Helps minimal proxies
  */
-contract ClientExternalAddressesBase is IClientExternalAddresses, BosonConstants {
+contract ClientExternalAddressesBase is IClientExternalAddresses {
     /**
      * @dev Modifier that checks that the caller has a specific role.
      *

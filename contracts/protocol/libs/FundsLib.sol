@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import { NATIVE_NOT_ALLOWED, TOKEN_TRANSFER_FAILED, INSUFFICIENT_VALUE_SENT, INSUFFICIENT_AVAILABLE_FUNDS } from "../../domain/BosonConstants.sol";
+import "../../domain/BosonConstants.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
@@ -116,53 +116,61 @@ library FundsLib {
         // Since this should be called only from certain functions from exchangeHandler and disputeHandler
         // exhange must exist and be in a completed state, so that's not checked explicitly
         BosonTypes.Exchange storage exchange = pe.exchanges[_exchangeId];
-        BosonTypes.ExchangeState exchangeState = exchange.state;
 
         // Get offer from storage to get the details about sellerDeposit, price, sellerId, exchangeToken and buyerCancelPenalty
         BosonTypes.Offer storage offer = pe.offers[exchange.offerId];
-        uint256 sellerDeposit = offer.sellerDeposit;
-        uint256 price = offer.price;
-
-        // sum of price and sellerDeposit occurs multiple times
-        uint256 pot = price + sellerDeposit;
-
         // calculate the payoffs depending on state exchange is in
         uint256 sellerPayoff;
         uint256 buyerPayoff;
         uint256 protocolFee;
-        if (exchangeState == BosonTypes.ExchangeState.Completed) {
-            // COMPLETED
-            protocolFee = offer.protocolFee;
-            // buyerPayoff is 0
-            sellerPayoff = pot - protocolFee;
-        } else if (exchangeState == BosonTypes.ExchangeState.Revoked) {
-            // REVOKED
-            // sellerPayoff is 0
-            buyerPayoff = pot;
-        } else if (exchangeState == BosonTypes.ExchangeState.Canceled) {
-            // CANCELED
-            uint256 buyerCancelPenalty = offer.buyerCancelPenalty;
-            sellerPayoff = sellerDeposit + buyerCancelPenalty;
-            buyerPayoff = price - buyerCancelPenalty;
-        } else {
-            // DISPUTED
-            // get the information about the dispute, which must exist
-            BosonTypes.Dispute storage dispute = pe.disputes[_exchangeId];
-            BosonTypes.DisputeState disputeState = dispute.state;
+        uint256 agentFee;
 
-            if (disputeState == BosonTypes.DisputeState.Retracted) {
-                // RETRACTED - same as "COMPLETED"
-                protocolFee = offer.protocolFee;
+        BosonTypes.OfferFees storage offerFee = pe.offerFees[exchange.offerId];
+
+        {
+            // scope to avoid stack too deep errors
+            BosonTypes.ExchangeState exchangeState = exchange.state;
+            uint256 sellerDeposit = offer.sellerDeposit;
+            uint256 price = offer.price;
+
+            // sum of price and sellerDeposit occurs multiple times
+            uint256 pot = price + sellerDeposit;
+            if (exchangeState == BosonTypes.ExchangeState.Completed) {
+                // COMPLETED
+                protocolFee = offerFee.protocolFee;
                 // buyerPayoff is 0
-                sellerPayoff = pot - protocolFee;
-            } else if (disputeState == BosonTypes.DisputeState.Refused) {
-                // REFUSED
-                sellerPayoff = sellerDeposit;
-                buyerPayoff = price;
-            } else {
-                // RESOLVED or DECIDED
-                buyerPayoff = (pot * dispute.buyerPercent) / 10000;
-                sellerPayoff = pot - buyerPayoff;
+                agentFee = offerFee.agentFee;
+                sellerPayoff = pot - protocolFee - agentFee;
+            } else if (exchangeState == BosonTypes.ExchangeState.Revoked) {
+                // REVOKED
+                // sellerPayoff is 0
+                buyerPayoff = pot;
+            } else if (exchangeState == BosonTypes.ExchangeState.Canceled) {
+                // CANCELED
+                uint256 buyerCancelPenalty = offer.buyerCancelPenalty;
+                sellerPayoff = sellerDeposit + buyerCancelPenalty;
+                buyerPayoff = price - buyerCancelPenalty;
+            } else if (exchangeState == BosonTypes.ExchangeState.Disputed) {
+                // DISPUTED
+                // get the information about the dispute, which must exist
+                BosonTypes.Dispute storage dispute = pe.disputes[_exchangeId];
+                BosonTypes.DisputeState disputeState = dispute.state;
+
+                if (disputeState == BosonTypes.DisputeState.Retracted) {
+                    // RETRACTED - same as "COMPLETED"
+                    protocolFee = offerFee.protocolFee;
+                    // buyerPayoff is 0
+                    agentFee = offerFee.agentFee;
+                    sellerPayoff = pot - protocolFee - agentFee;
+                } else if (disputeState == BosonTypes.DisputeState.Refused) {
+                    // REFUSED
+                    sellerPayoff = sellerDeposit;
+                    buyerPayoff = price;
+                } else {
+                    // RESOLVED or DECIDED
+                    buyerPayoff = (pot * dispute.buyerPercent) / 10000;
+                    sellerPayoff = pot - buyerPayoff;
+                }
             }
         }
 
@@ -181,6 +189,15 @@ library FundsLib {
         if (protocolFee > 0) {
             increaseAvailableFunds(0, exchangeToken, protocolFee);
             emit ProtocolFeeCollected(_exchangeId, exchangeToken, protocolFee, EIP712Lib.msgSender());
+        }
+        if (agentFee > 0) {
+            // Load protocol lookups storage
+            ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
+
+            // Get the agent for offer
+            uint256 agentId = pl.agentIdByOffer[exchange.offerId];
+            increaseAvailableFunds(agentId, exchangeToken, agentFee);
+            emit FundsReleased(_exchangeId, agentId, exchangeToken, agentFee, EIP712Lib.msgSender());
         }
     }
 

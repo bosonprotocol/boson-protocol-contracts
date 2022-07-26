@@ -21,7 +21,6 @@ class Exchange {
 
   constructor(id, offerId, buyerId, finalizedDate, voucher, state) {
     this.id = id;
-
     this.offerId = offerId;
     this.buyerId = buyerId;
     this.finalizedDate = finalizedDate;

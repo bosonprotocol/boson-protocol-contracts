@@ -16,7 +16,9 @@ interface IBosonOfferEvents {
         BosonTypes.OfferDates offerDates,
         BosonTypes.OfferDurations offerDurations,
         BosonTypes.DisputeResolutionTerms disputeResolutionTerms,
-        address indexed executedBy
+        BosonTypes.OfferFees offerFees,
+        uint256 indexed agentId,
+        address executedBy
     );
     event OfferExtended(
         uint256 indexed offerId,

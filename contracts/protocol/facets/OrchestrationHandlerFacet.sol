@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import "../../domain/BosonConstants.sol";
 import { IBosonOrchestrationHandler } from "../../interfaces/handlers/IBosonOrchestrationHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
@@ -55,6 +56,9 @@ contract OrchestrationHandlerFacet is
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     * - When agent id is non zero:
+     *   - If Agent does not exist
+     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _seller - the fully populated seller struct
@@ -62,6 +66,7 @@ contract OrchestrationHandlerFacet is
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
+     * @param _agentId - the id of agent
      */
     function createSellerAndOffer(
         Seller memory _seller,
@@ -69,10 +74,11 @@ contract OrchestrationHandlerFacet is
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
-        uint256 _disputeResolverId
+        uint256 _disputeResolverId,
+        uint256 _agentId
     ) external override {
         checkAndCreateSeller(_seller, _contractURI);
-        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
     }
 
     /**
@@ -98,22 +104,27 @@ contract OrchestrationHandlerFacet is
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
+     * - When agent id is non zero:
+     *   - If Agent does not exist
+     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
+     * @param _agentId - the id of agent
      */
     function createOfferWithCondition(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        Condition memory _condition
+        Condition memory _condition,
+        uint256 _agentId
     ) public override {
         // create offer and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
         // construct new group
         // - groupid is 0, and it is ignored
@@ -150,22 +161,27 @@ contract OrchestrationHandlerFacet is
      * - when adding to the group if:
      *   - Group does not exists
      *   - Caller is not the operator of the group
+     * - When agent id is non zero:
+     *   - If Agent does not exist
+     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _groupId - id of the group, where offer will be added
+     * @param _agentId - the id of agent
      */
     function createOfferAddToGroup(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        uint256 _groupId
+        uint256 _groupId,
+        uint256 _agentId
     ) external override {
         // create offer and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
         // create an array with offer ids and add it to the group
         uint256[] memory _offerIds = new uint256[](1);
@@ -197,22 +213,27 @@ contract OrchestrationHandlerFacet is
      *   - Buyer cancel penalty is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
+     * - When agent id is non zero:
+     *   - If Agent does not exist
+     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _twin - the fully populated twin struct
+     * @param _agentId - the id of agent
      */
     function createOfferAndTwinWithBundle(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        Twin memory _twin
+        Twin memory _twin,
+        uint256 _agentId
     ) public override {
-        // create seller and update structs values to represent true state
-        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId);
+        // create offer and update structs values to represent true state
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
         // create twin and pack everything into a bundle
         createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
@@ -243,6 +264,9 @@ contract OrchestrationHandlerFacet is
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token
+     * - When agent id is non zero:
+     *   - If Agent does not exist
+     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -250,6 +274,7 @@ contract OrchestrationHandlerFacet is
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
+     * @param _agentId - the id of agent
      */
     function createOfferWithConditionAndTwinAndBundle(
         Offer memory _offer,
@@ -257,10 +282,11 @@ contract OrchestrationHandlerFacet is
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         Condition memory _condition,
-        Twin memory _twin
+        Twin memory _twin,
+        uint256 _agentId
     ) public override {
         // create offer with condition first
-        createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition);
+        createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
         // create twin and pack everything into a bundle
         createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
     }
@@ -326,6 +352,9 @@ contract OrchestrationHandlerFacet is
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
      * - Condition includes invalid combination of parameters
+     * - When agent id is non zero:
+     *   - If Agent does not exist
+     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _seller - the fully populated seller struct
      * @param _contractURI - contract metadata URI
@@ -334,6 +363,7 @@ contract OrchestrationHandlerFacet is
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
+     * @param _agentId - the id of agent
      */
     function createSellerAndOfferWithCondition(
         Seller memory _seller,
@@ -342,10 +372,11 @@ contract OrchestrationHandlerFacet is
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        Condition memory _condition
+        Condition memory _condition,
+        uint256 _agentId
     ) external override {
         checkAndCreateSeller(_seller, _contractURI);
-        createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition);
+        createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
     }
 
     /**
@@ -377,6 +408,9 @@ contract OrchestrationHandlerFacet is
      *   - Buyer cancel penalty is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
+     * - When agent id is non zero:
+     *   - If Agent does not exist
+     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _seller - the fully populated seller struct
      * @param _contractURI - contract metadata URI
@@ -385,6 +419,7 @@ contract OrchestrationHandlerFacet is
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _twin - the fully populated twin struct
+     * @param _agentId - the id of agent
      */
     function createSellerAndOfferAndTwinWithBundle(
         Seller memory _seller,
@@ -393,10 +428,11 @@ contract OrchestrationHandlerFacet is
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        Twin memory _twin
+        Twin memory _twin,
+        uint256 _agentId
     ) external override {
         checkAndCreateSeller(_seller, _contractURI);
-        createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin);
+        createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin, _agentId);
     }
 
     /**
@@ -429,6 +465,9 @@ contract OrchestrationHandlerFacet is
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token
+     * - When agent id is non zero:
+     *   - If Agent does not exist
+     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _seller - the fully populated seller struct
      * @param _contractURI - contract metadata URI
@@ -438,6 +477,7 @@ contract OrchestrationHandlerFacet is
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
+     * @param _agentId - the id of agent
      */
     function createSellerAndOfferWithConditionAndTwinAndBundle(
         Seller memory _seller,
@@ -447,7 +487,8 @@ contract OrchestrationHandlerFacet is
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         Condition memory _condition,
-        Twin memory _twin
+        Twin memory _twin,
+        uint256 _agentId
     ) external override {
         checkAndCreateSeller(_seller, _contractURI);
         createOfferWithConditionAndTwinAndBundle(
@@ -456,7 +497,8 @@ contract OrchestrationHandlerFacet is
             _offerDurations,
             _disputeResolverId,
             _condition,
-            _twin
+            _twin,
+            _agentId
         );
     }
 

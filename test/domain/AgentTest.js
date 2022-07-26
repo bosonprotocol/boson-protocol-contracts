@@ -95,6 +95,11 @@ describe("Agent", function () {
       expect(agent.feePercentageIsValid()).is.false;
       expect(agent.isValid()).is.false;
 
+      // Invalid field value
+      agent.feePercentage = "10001"; // Value greater than 100% should be invalid
+      expect(agent.feePercentageIsValid()).is.false;
+      expect(agent.isValid()).is.false;
+
       // Valid field value
       agent.feePercentage = "0";
       expect(agent.feePercentageIsValid()).is.true;

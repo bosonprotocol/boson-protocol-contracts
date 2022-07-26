@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
-import { BosonConstants } from "../../domain/BosonConstants.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
 /**
@@ -12,7 +12,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
  *
  * @notice Provides domain and common modifiers to Protocol facets
  */
-abstract contract ProtocolBase is BosonTypes, BosonConstants {
+abstract contract ProtocolBase is BosonTypes {
     /**
      * @dev Modifier to protect initializer function from being invoked twice.
      */
@@ -177,6 +177,21 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
 
         // Determine existence
         exists = (buyerId > 0);
+    }
+
+    /**
+     * @notice Gets a agent id from storage by wallet address
+     *
+     * @param _wallet - the wallet address of the buyer
+     * @return exists - whether the buyer Id exists
+     * @return agentId  - the buyer Id
+     */
+    function getAgentIdByWallet(address _wallet) internal view returns (bool exists, uint256 agentId) {
+        // Get the buyer Id
+        agentId = protocolLookups().agentIdByWallet[_wallet];
+
+        // Determine existence
+        exists = (agentId > 0);
     }
 
     /**
@@ -587,5 +602,31 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function msgSender() internal view returns (address) {
         return EIP712Lib.msgSender();
+    }
+
+    /**
+     * @notice Gets the agent id for a given offer id.
+     *
+     * @param _offerId - the offer Id.
+     * @return exists - whether the exchange Ids exist
+     * @return agentId - the agent Id.
+     */
+    function fetchAgentIdByOffer(uint256 _offerId) internal view returns (bool exists, uint256 agentId) {
+        // Get the exchange Ids
+        agentId = protocolLookups().agentIdByOffer[_offerId];
+
+        // Determine existence
+        exists = (agentId > 0);
+    }
+
+    /**
+     * @notice Fetches the offer fees from storage by offer id
+     *
+     * @param _offerId - the id of the offer
+     * @return offerFees - the offer fees details. See {BosonTypes.OfferFees}
+     */
+    function fetchOfferFees(uint256 _offerId) internal view returns (BosonTypes.OfferFees storage offerFees) {
+        // Get the offerFees's slot
+        offerFees = protocolEntities().offerFees[_offerId];
     }
 }
