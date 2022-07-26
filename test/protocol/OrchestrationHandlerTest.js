@@ -898,7 +898,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("Seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
           const newSeller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(newSeller);
+          await accountHandler.connect(rando).createSeller(newSeller, contractURI);
 
           allowedSellersToAdd = ["2"]; // DR is "1", new seller is "2"
           await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
@@ -907,7 +907,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, agentId)
           ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
         });
 
@@ -1363,7 +1363,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
+            .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition, agentId)
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
 
@@ -1592,7 +1592,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("Seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
           const newSeller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(newSeller);
+          await accountHandler.connect(rando).createSeller(newSeller, contractURI);
 
           allowedSellersToAdd = ["3"]; // DR is "1", existing seller is "2", new seller is "3"
           await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
@@ -1601,7 +1601,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition)
+              .createOfferWithCondition(offer, offerDates, offerDurations, disputeResolverId, condition, agentId)
           ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
         });
 
@@ -2124,7 +2124,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
+            .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId, agentId)
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
 
@@ -2357,7 +2357,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("Seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
           const newSeller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(newSeller);
+          await accountHandler.connect(rando).createSeller(newSeller, contractURI);
 
           allowedSellersToAdd = ["3"]; // DR is "1", existing seller is "2", new seller is "3"
           await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
@@ -2366,7 +2366,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId)
+              .createOfferAddToGroup(offer, offerDates, offerDurations, disputeResolverId, nextGroupId, agentId)
           ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
         });
 
@@ -2889,7 +2889,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
+            .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin, agentId)
         ).to.emit(orchestrationHandler, "OfferCreated");
       });
 
@@ -3118,7 +3118,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("Seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
           const newSeller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(newSeller);
+          await accountHandler.connect(rando).createSeller(newSeller, contractURI);
 
           allowedSellersToAdd = ["3"]; // DR is "1", existing seller is "2", new seller is "3"
           await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
@@ -3127,7 +3127,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin)
+              .createOfferAndTwinWithBundle(offer, offerDates, offerDurations, disputeResolverId, twin, agentId)
           ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
         });
 
