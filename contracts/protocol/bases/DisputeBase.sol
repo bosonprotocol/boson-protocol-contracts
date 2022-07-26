@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { IBosonDisputeEvents } from "../../interfaces/events/IBosonDisputeEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
+import "../../domain/BosonConstants.sol";
 
 /**
  *
