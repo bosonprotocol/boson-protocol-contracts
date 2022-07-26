@@ -42,6 +42,7 @@ describe("IBosonGroupHandler", function () {
   let offerIdsToAdd, offerIdsToRemove;
   let disputeResolver, disputeResolverFees, disputeResolverId;
   let contractURI;
+  let agentId;
 
   before(async function () {
     // get interface Ids
@@ -133,6 +134,7 @@ describe("IBosonGroupHandler", function () {
       // create a seller
       // Required constructor params
       id = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
+      agentId = "0"; // agent id is optional while creating an offer
 
       active = true;
 
@@ -186,7 +188,7 @@ describe("IBosonGroupHandler", function () {
         expect(offerDurations.isValid()).is.true;
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
       }
 
       // Required constructor params for Condition
@@ -320,7 +322,7 @@ describe("IBosonGroupHandler", function () {
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
           await accountHandler.connect(rando).createSeller(seller, contractURI);
-          await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0"); // creates an offer with id 6
+          await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
 
           // add offer belonging to another seller
           group.offerIds = ["2", "6"];
@@ -489,7 +491,7 @@ describe("IBosonGroupHandler", function () {
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
           await accountHandler.connect(rando).createSeller(seller, contractURI);
-          await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0"); // creates an offer with id 6
+          await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
 
           // add offer belonging to another seller
           offerIdsToAdd = ["1", "6"];
@@ -643,7 +645,9 @@ describe("IBosonGroupHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_NOT_IN_GROUP);
 
           // create an offer and add it to another group
-          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
           group.offerIds = ["6"];
           await groupHandler.connect(operator).createGroup(group);
 

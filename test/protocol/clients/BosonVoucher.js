@@ -22,6 +22,7 @@ describe("IBosonVoucher", function () {
   let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler;
   let deployer, protocol, buyer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
   let disputeResolver, disputeResolverFees;
+  let agentId;
 
   before(async function () {
     // Get interface id
@@ -158,6 +159,7 @@ describe("IBosonVoucher", function () {
       const seller = new Seller("1", operator.address, admin.address, clerk.address, treasury.address, true);
       const contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
       await accountHandler.connect(admin).createSeller(seller, contractURI);
+      agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(
@@ -182,7 +184,7 @@ describe("IBosonVoucher", function () {
       const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
       await offerHandler
         .connect(operator)
-        .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, "0");
+        .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
       await fundsHandler
         .connect(admin)
         .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });

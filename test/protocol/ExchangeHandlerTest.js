@@ -79,6 +79,7 @@ describe("IBosonExchangeHandler", function () {
   let expectedCloneAddress;
   let method, tokenType, tokenAddress, tokenId, threshold, maxCommits, groupId, offerIds, condition, group;
   let contractURI;
+  let agentId;
 
   before(async function () {
     // get interface Ids
@@ -223,6 +224,7 @@ describe("IBosonExchangeHandler", function () {
       // Initial ids for all the things
       id = offerId = sellerId = nextAccountId = "1";
       buyerId = "3"; // created after seller and dispute resolver
+      agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
@@ -261,7 +263,7 @@ describe("IBosonExchangeHandler", function () {
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
-      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
       // Set used variables
       price = offer.price;
@@ -346,7 +348,7 @@ describe("IBosonExchangeHandler", function () {
         const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
 
         // Create the offer
-        await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+        await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
         // Deposit seller funds so the commit will succeed
         await fundsHandler
@@ -418,7 +420,7 @@ describe("IBosonExchangeHandler", function () {
         expect(offerDurations.isValid()).is.true;
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
         exchange.offerId = offerId = "2"; // tested against second offer
 
         // Commit to offer, retrieving the event

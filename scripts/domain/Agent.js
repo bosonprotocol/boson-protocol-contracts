@@ -100,14 +100,17 @@ class Agent {
 
   /**
    * Is this Agent instance's feePercentage field valid?
-   * Must be a string representation of a big number
+   * Must be a string representation of a big number less than or equal to 10000, i.e. <= 100%
    * @returns {boolean}
    */
   feePercentageIsValid() {
     let valid = false;
     let { feePercentage } = this;
     try {
-      valid = typeof feePercentage === "string" && typeof ethers.BigNumber.from(feePercentage) === "object";
+      valid =
+        typeof feePercentage === "string" &&
+        typeof ethers.BigNumber.from(feePercentage) === "object" &&
+        ethers.BigNumber.from(feePercentage).lte(ethers.BigNumber.from("10000"));
     } catch (e) {}
     return valid;
   }

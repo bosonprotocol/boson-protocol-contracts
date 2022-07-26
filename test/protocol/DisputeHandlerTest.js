@@ -77,6 +77,7 @@ describe("IBosonDisputeHandler", function () {
   let returnedDispute, returnedDisputeDates;
   let DRFeeNative, DRFeeToken, buyerEscalationDepositNative, buyerEscalationDepositToken;
   let contractURI;
+  let agentId;
 
   before(async function () {
     // get interface Ids
@@ -204,6 +205,7 @@ describe("IBosonDisputeHandler", function () {
       // Initial ids for all the things
       id = offerId = sellerId = nextAccountId = "1";
       buyerId = "3"; // created after seller and dispute resolver
+      agentId = "0"; // agent id is optional while creating an offer
 
       active = true;
 
@@ -247,7 +249,7 @@ describe("IBosonDisputeHandler", function () {
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
-      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
       // Set used variables
       price = offer.price;
@@ -1209,7 +1211,9 @@ describe("IBosonDisputeHandler", function () {
           offer.id++;
 
           // create an offer with erc20 exchange token
-          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
           // mint tokens to buyer and approve the protocol
           buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
@@ -1364,7 +1368,6 @@ describe("IBosonDisputeHandler", function () {
             offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = "0";
             offer.id++;
             disputeResolverId = "0";
-            let agentId = "0";
 
             // Create a new offer
             await offerHandler

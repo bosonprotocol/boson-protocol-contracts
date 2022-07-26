@@ -67,7 +67,8 @@ async function mockOffer() {
   const offerDates = await mockOfferDates();
   const offerDurations = mockOfferDurations();
   const disputeResolverId = "2";
-  const offerFees = mockOfferFees(protocolFee);
+  const agentFee = "0";
+  const offerFees = mockOfferFees(protocolFee, agentFee);
 
   return { offer, offerDates, offerDurations, disputeResolverId, offerFees };
 }
@@ -97,8 +98,8 @@ function mockDisputeResolver(operatorAddress, adminAddress, clerkAddress, treasu
   );
 }
 
-function mockOfferFees(protocolFee) {
-  return new OfferFees(protocolFee, "0");
+function mockOfferFees(protocolFee, agentFee) {
+  return new OfferFees(protocolFee, agentFee);
 }
 
 exports.mockOffer = mockOffer;

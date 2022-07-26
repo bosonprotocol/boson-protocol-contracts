@@ -44,7 +44,7 @@ describe("IBosonFundsHandler", function () {
   let resolutionPeriod, offerDurations;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let block, blockNumber;
-  let protocolId, exchangeId, buyerId, sellerPayoff, buyerPayoff, protocolPayoff;
+  let protocolId, exchangeId, buyerId, randoBuyerId, sellerPayoff, buyerPayoff, protocolPayoff;
   let sellersAvailableFunds,
     buyerAvailableFunds,
     protocolAvailableFunds,
@@ -1405,7 +1405,7 @@ describe("IBosonFundsHandler", function () {
 
       disputeResolverId = mo.disputeResolverId;
 
-      agentId = "0";
+      agentId = "0"; // agent id is optional while creating an offer
       // Create both offers
       await Promise.all([
         offerHandler.connect(operator).createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId),
@@ -1449,6 +1449,8 @@ describe("IBosonFundsHandler", function () {
       agentOffer = offerToken.clone();
       agentOffer.id = "3";
       agentOfferProtocolFee = mo.offerFees.protocolFee;
+
+      randoBuyerId = "4"; // 1: seller, 2: disputeResolver, 3: agent, 4: rando
     });
 
     context("👉 encumberFunds()", async function () {
@@ -1556,7 +1558,6 @@ describe("IBosonFundsHandler", function () {
       });
 
       it("when someone else deposits on buyer's behalf, callers funds are transferred", async function () {
-        let randoBuyerId = "4"; // 1: seller, 2: disputeResolver, 3: agent, 4: rando
         // buyer will commit to an offer on rando's behalf
         // get token balance before the commit
         const buyerTokenBalanceBefore = await mockToken.balanceOf(buyer.address);
@@ -1836,7 +1837,7 @@ describe("IBosonFundsHandler", function () {
           expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
         });
 
-        context("Offer is an agentOffer", async function () {
+        context("Offer has an agent", async function () {
           beforeEach(async function () {
             // Create Agent offer
             await offerHandler
@@ -2021,7 +2022,7 @@ describe("IBosonFundsHandler", function () {
           expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
         });
 
-        context("Offer is an agentOffer", async function () {
+        context("Offer has an agent", async function () {
           beforeEach(async function () {
             // Create Agent offer
             await offerHandler
@@ -2197,7 +2198,7 @@ describe("IBosonFundsHandler", function () {
           expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
         });
 
-        context("Offer is an agentOffer", async function () {
+        context("Offer has an agent", async function () {
           beforeEach(async function () {
             // Create Agent offer
             await offerHandler
@@ -2377,7 +2378,7 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
           });
 
-          context("Offer is an agentOffer", async function () {
+          context("Offer has an agent", async function () {
             beforeEach(async function () {
               // expected payoffs
               // buyer: 0
@@ -2545,7 +2546,7 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
           });
 
-          context("Offer is an agentOffer", async function () {
+          context("Offer has an agent", async function () {
             beforeEach(async function () {
               // Create Agent offer
               await offerHandler
@@ -2756,7 +2757,7 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
           });
 
-          context("Offer is an agentOffer", async function () {
+          context("Offer has an agent", async function () {
             beforeEach(async function () {
               // Create Agent offer
               await offerHandler
@@ -2941,7 +2942,7 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
           });
 
-          context("Offer is an agentOffer", async function () {
+          context("Offer has an agent", async function () {
             beforeEach(async function () {
               // Create Agent offer
               await offerHandler
@@ -3109,7 +3110,7 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
           });
 
-          context("Offer is an agentOffer", async function () {
+          context("Offer has an agent", async function () {
             beforeEach(async function () {
               // Create Agent offer
               await offerHandler
@@ -3262,7 +3263,7 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
           });
 
-          context("Offer is an agentOffer", async function () {
+          context("Offer has an agent", async function () {
             beforeEach(async function () {
               // Create Agent offer
               await offerHandler
@@ -3403,7 +3404,7 @@ describe("IBosonFundsHandler", function () {
             .withArgs(exchangeId, offerToken.exchangeToken, offerTokenProtocolFee, buyer.address);
         });
 
-        context("Offer is an agentOffer", async function () {
+        context("Offer has an agent", async function () {
           beforeEach(async function () {
             exchangeId = "2";
 

@@ -150,7 +150,7 @@ library FundsLib {
                 uint256 buyerCancelPenalty = offer.buyerCancelPenalty;
                 sellerPayoff = sellerDeposit + buyerCancelPenalty;
                 buyerPayoff = price - buyerCancelPenalty;
-            } else {
+            } else if (exchangeState == BosonTypes.ExchangeState.Disputed) {
                 // DISPUTED
                 // get the information about the dispute, which must exist
                 BosonTypes.Dispute storage dispute = pe.disputes[_exchangeId];
