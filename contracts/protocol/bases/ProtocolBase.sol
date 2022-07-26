@@ -180,6 +180,21 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     }
 
     /**
+     * @notice Gets a agent id from storage by wallet address
+     *
+     * @param _wallet - the wallet address of the buyer
+     * @return exists - whether the buyer Id exists
+     * @return agentId  - the buyer Id
+     */
+    function getAgentIdByWallet(address _wallet) internal view returns (bool exists, uint256 agentId) {
+        // Get the buyer Id
+        agentId = protocolLookups().agentIdByWallet[_wallet];
+
+        // Determine existence
+        exists = (agentId > 0);
+    }
+
+    /**
      * @notice Gets a dispute resolver Id from storage by operator address
      *
      * @param _operator - the operator address of the dispute resolver
@@ -589,5 +604,31 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      */
     function msgSender() internal view returns (address) {
         return EIP712Lib.msgSender();
+    }
+
+    /**
+     * @notice Gets the agent id for a given offer id.
+     *
+     * @param _offerId - the offer Id.
+     * @return exists - whether the exchange Ids exist
+     * @return agentId - the agent Id.
+     */
+    function fetchAgentIdByOffer(uint256 _offerId) internal view returns (bool exists, uint256 agentId) {
+        // Get the exchange Ids
+        agentId = protocolLookups().agentIdByOffer[_offerId];
+
+        // Determine existence
+        exists = (agentId > 0);
+    }
+
+    /**
+     * @notice Fetches the offer fees from storage by offer id
+     *
+     * @param _offerId - the id of the offer
+     * @return offerFees - the offer fees details. See {BosonTypes.OfferFees}
+     */
+    function fetchOfferFees(uint256 _offerId) internal view returns (BosonTypes.OfferFees storage offerFees) {
+        // Get the offerFees's slot
+        offerFees = protocolEntities().offerFees[_offerId];
     }
 }

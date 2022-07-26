@@ -213,6 +213,25 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     function getMaxDisputesPerBatch() external view returns (uint16);
 
     /**
+     * @notice Sets the Total offer fee percentage limit which will validate the sum of (Protocol Fee percentage + Agent Fee percentage) of an offer fee.
+     *
+     * Emits a MaxTotalOfferFeePercentageChanged event.
+     *
+     * Reverts if the _maxTotalOfferFeePercentage is greater than 10000.
+     *
+     * @param _maxTotalOfferFeePercentage - the limit of total offer fee percentage.
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
+     */
+    function setMaxTotalOfferFeePercentage(uint16 _maxTotalOfferFeePercentage) external;
+
+    /**
+     * @notice Get the maximum total of offer fees allowed in an offer fee
+     */
+    function getMaxTotalOfferFeePercentage() external view returns (uint16);
+
+    /**
      * @notice Sets the maximum numbers of seller ids that can be added to or removed from dispute resolver seller allow list in a single transaction
      *
      * Emits a MaxAllowedSellersChanged event.

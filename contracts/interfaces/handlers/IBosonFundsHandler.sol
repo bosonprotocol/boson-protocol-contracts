@@ -52,7 +52,7 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
      * - there is nothing to withdraw
      * - transfer of funds is not succesful
      *
-     * @param _entityId - seller or buyer id
+     * @param _entityId - seller or buyer or agent id
      * @param _tokenList - list of contract addresses of tokens that are being withdrawn
      * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
      */

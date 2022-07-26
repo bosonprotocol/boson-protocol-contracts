@@ -2,7 +2,6 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const Offer = require("../../scripts/domain/Offer");
-const { applyPercentage } = require("../../scripts/util/test-utils.js");
 
 /**
  *  Test the Offer domain entity
@@ -15,18 +14,14 @@ describe("Offer", function () {
     sellerId,
     price,
     sellerDeposit,
-    protocolFee,
     buyerCancelPenalty,
     quantityAvailable,
     exchangeToken,
     metadataUri,
     metadataHash,
     voided;
-  let protocolFeePercentage;
 
   beforeEach(async function () {
-    protocolFeePercentage = "200"; // 2 %
-
     // Get a list of accounts
     accounts = await ethers.getSigners();
 
@@ -34,7 +29,6 @@ describe("Offer", function () {
     id = sellerId = "0";
     price = ethers.utils.parseUnits("1.5", "ether").toString();
     sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
-    protocolFee = applyPercentage(price, protocolFeePercentage);
     buyerCancelPenalty = ethers.utils.parseUnits("0.05", "ether").toString();
     quantityAvailable = "1";
     exchangeToken = ethers.constants.AddressZero.toString(); // Zero addy ~ chain base currency
@@ -51,7 +45,6 @@ describe("Offer", function () {
         sellerId,
         price,
         sellerDeposit,
-        protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
@@ -63,7 +56,6 @@ describe("Offer", function () {
       expect(offer.sellerIdIsValid()).is.true;
       expect(offer.priceIsValid()).is.true;
       expect(offer.sellerDepositIsValid()).is.true;
-      expect(offer.protocolFeeIsValid()).is.true;
       expect(offer.buyerCancelPenaltyIsValid()).is.true;
       expect(offer.quantityAvailableIsValid()).is.true;
       expect(offer.exchangeTokenIsValid()).is.true;
@@ -82,7 +74,6 @@ describe("Offer", function () {
         sellerId,
         price,
         sellerDeposit,
-        protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
@@ -171,33 +162,6 @@ describe("Offer", function () {
       // Valid field value
       offer.sellerDeposit = "126";
       expect(offer.sellerDepositIsValid()).is.true;
-      expect(offer.isValid()).is.true;
-    });
-
-    it("Always present, protocolFee must be the string representation of a BigNumber", async function () {
-      // Invalid field value
-      offer.protocolFee = "zedzdeadbaby";
-      expect(offer.protocolFeeIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.protocolFee = new Date();
-      expect(offer.protocolFeeIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Invalid field value
-      offer.protocolFee = 12;
-      expect(offer.protocolFeeIsValid()).is.false;
-      expect(offer.isValid()).is.false;
-
-      // Valid field value
-      offer.protocolFee = "0";
-      expect(offer.protocolFeeIsValid()).is.true;
-      expect(offer.isValid()).is.true;
-
-      // Valid field value
-      offer.protocolFee = "126";
-      expect(offer.protocolFeeIsValid()).is.true;
       expect(offer.isValid()).is.true;
     });
 
@@ -372,7 +336,6 @@ describe("Offer", function () {
         sellerId,
         price,
         sellerDeposit,
-        protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
@@ -388,7 +351,6 @@ describe("Offer", function () {
         sellerId,
         price,
         sellerDeposit,
-        protocolFee,
         buyerCancelPenalty,
         quantityAvailable,
         exchangeToken,
@@ -418,7 +380,6 @@ describe("Offer", function () {
           offer.sellerId,
           offer.price,
           offer.sellerDeposit,
-          offer.protocolFee,
           offer.buyerCancelPenalty,
           offer.quantityAvailable,
           offer.exchangeToken,
