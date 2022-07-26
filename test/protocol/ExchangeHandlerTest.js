@@ -1384,7 +1384,7 @@ describe("IBosonExchangeHandler", function () {
           // Redeem the voucher
           await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
             .to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin20.id, twin20.tokenAddress, twin20.tokenId, twin20.amount, buyer.address);
+            .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address);
 
           // Check the buyer's balance of the ERC20
           balance = await foreign20.balanceOf(buyer.address);
@@ -1400,7 +1400,7 @@ describe("IBosonExchangeHandler", function () {
               .to.emit(exchangeHandler, "VoucherRevoked")
               .withArgs(exchange.offerId, exchange.id, buyer.address)
               .and.to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin20.id, twin20.tokenAddress, twin20.tokenId, twin20.amount, buyer.address);
+              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address);
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -1422,11 +1422,19 @@ describe("IBosonExchangeHandler", function () {
 
             await testProtocolFunctions.commit(offerId, { value: price });
 
+            let exchangeId = ++exchange.id;
             // Protocol should raised dispute automatically if transfer twin failed
-            await expect(testProtocolFunctions.redeem(++exchange.id))
+            await expect(testProtocolFunctions.redeem(exchangeId))
               .to.emit(disputeHandler, "DisputeRaised")
               .and.to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin20.id, twin20.tokenAddress, twin20.tokenId, twin20.amount, testProtocolFunctions.address);
+              .withArgs(
+                twin20.id,
+                twin20.tokenAddress,
+                exchangeId,
+                twin20.tokenId,
+                twin20.amount,
+                testProtocolFunctions.address
+              );
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -1462,7 +1470,7 @@ describe("IBosonExchangeHandler", function () {
           // Redeem the voucher
           await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
             .to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin721.id, twin721.tokenAddress, tokenId, "0", buyer.address);
+            .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, "0", buyer.address);
 
           // Check the buyer owns the last ERC721 of twin range
           owner = await foreign721.ownerOf(tokenId);
@@ -1479,7 +1487,7 @@ describe("IBosonExchangeHandler", function () {
           // Redeem the second voucher for the second time / id = 2
           await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
             .to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin721.id, twin721.tokenAddress, tokenId, "0", buyer.address);
+            .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, "0", buyer.address);
 
           // Check the buyer owns the last ERC721 of twin range
           owner = await foreign721.ownerOf(tokenId);
@@ -1494,7 +1502,7 @@ describe("IBosonExchangeHandler", function () {
               .to.emit(exchangeHandler, "VoucherRevoked")
               .withArgs(exchange.offerId, exchange.id, buyer.address)
               .and.to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin721.id, twin721.tokenAddress, "9", "0", buyer.address);
+              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "9", "0", buyer.address);
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -1517,7 +1525,7 @@ describe("IBosonExchangeHandler", function () {
             await expect(testProtocolFunctions.connect(buyer).redeem(++exchange.id))
               .to.emit(disputeHandler, "DisputeRaised")
               .and.to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin721.id, twin721.tokenAddress, "9", "0", testProtocolFunctions.address);
+              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "9", "0", testProtocolFunctions.address);
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -1552,7 +1560,7 @@ describe("IBosonExchangeHandler", function () {
           // Redeem the voucher
           await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
             .to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin1155.id, twin1155.tokenAddress, tokenId, twin1155.amount, buyer.address);
+            .withArgs(twin1155.id, twin1155.tokenAddress, exchange.id, tokenId, twin1155.amount, buyer.address);
 
           // Check the buyer's balance of the ERC1155
           balance = await foreign1155.balanceOf(buyer.address, tokenId);
@@ -1568,7 +1576,14 @@ describe("IBosonExchangeHandler", function () {
               .to.emit(exchangeHandler, "VoucherRevoked")
               .withArgs(exchange.offerId, exchange.id, buyer.address)
               .and.to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin1155.id, twin1155.tokenAddress, twin1155.tokenId, twin1155.amount, buyer.address);
+              .withArgs(
+                twin1155.id,
+                twin1155.tokenAddress,
+                exchange.id,
+                twin1155.tokenId,
+                twin1155.amount,
+                buyer.address
+              );
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -1594,6 +1609,7 @@ describe("IBosonExchangeHandler", function () {
               .withArgs(
                 twin1155.id,
                 twin1155.tokenAddress,
+                exchange.id,
                 twin1155.tokenId,
                 twin1155.amount,
                 testProtocolFunctions.address
@@ -1638,14 +1654,15 @@ describe("IBosonExchangeHandler", function () {
           balance = await foreign1155.balanceOf(buyer.address, tokenIdMultiToken);
           expect(balance).to.equal(0);
 
+          let exchangeId = exchange.id;
           // Redeem the voucher
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId))
             .to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin1155.id, twin1155.tokenAddress, tokenIdMultiToken, twin1155.amount, buyer.address)
+            .withArgs(twin1155.id, twin1155.tokenAddress, exchangeId, tokenIdMultiToken, twin1155.amount, buyer.address)
             .and.to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin20.id, twin20.tokenAddress, "0", twin20.amount, buyer.address)
+            .withArgs(twin20.id, twin20.tokenAddress, exchangeId, "0", twin20.amount, buyer.address)
             .and.to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin721.id, twin721.tokenAddress, tokenIdNonFungible, twin721.amount, buyer.address);
+            .withArgs(twin721.id, twin721.tokenAddress, exchangeId, tokenIdNonFungible, twin721.amount, buyer.address);
 
           // Check the buyer's balance of the ERC20
           balance = await foreign20.balanceOf(buyer.address);
@@ -1665,15 +1682,23 @@ describe("IBosonExchangeHandler", function () {
             // Remove the approval for the protocal to transfer the seller's tokens
             await foreign20.connect(operator).approve(protocolDiamond.address, "0");
 
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+            let exchangeId = exchange.id;
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId))
               .to.emit(exchangeHandler, "VoucherRevoked")
-              .withArgs(exchange.offerId, exchange.id, buyer.address)
+              .withArgs(exchange.offerId, exchangeId, buyer.address)
               .and.to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin20.id, twin20.tokenAddress, "0", twin20.amount, buyer.address)
+              .withArgs(twin20.id, twin20.tokenAddress, exchangeId, "0", twin20.amount, buyer.address)
               .and.to.emit(exchangeHandler, "TwinTransferred")
-              .withArgs(twin721.id, twin721.tokenAddress, "9", "0", buyer.address)
+              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, "9", "0", buyer.address)
               .and.to.emit(exchangeHandler, "TwinTransferred")
-              .withArgs(twin1155.id, twin1155.tokenAddress, twin1155.tokenId, twin1155.amount, buyer.address);
+              .withArgs(
+                twin1155.id,
+                twin1155.tokenAddress,
+                exchangeId,
+                twin1155.tokenId,
+                twin1155.amount,
+                buyer.address
+              );
 
             // Get the exchange state
             [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -1695,17 +1720,19 @@ describe("IBosonExchangeHandler", function () {
 
             await testProtocolFunctions.commit(offerId, { value: price });
 
+            let exchangeId = ++exchange.id;
             // Protocol should raised dispute automatically if transfer twin failed
-            await expect(testProtocolFunctions.redeem(++exchange.id))
+            await expect(testProtocolFunctions.redeem(exchangeId))
               .to.emit(disputeHandler, "DisputeRaised")
               .and.to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin20.id, twin20.tokenAddress, "0", twin20.amount, testProtocolFunctions.address)
+              .withArgs(twin20.id, twin20.tokenAddress, exchangeId, "0", twin20.amount, testProtocolFunctions.address)
               .and.to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin721.id, twin721.tokenAddress, "9", "0", testProtocolFunctions.address)
+              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, "9", "0", testProtocolFunctions.address)
               .and.to.emit(exchangeHandler, "TwinTransferFailed")
               .withArgs(
                 twin1155.id,
                 twin1155.tokenAddress,
+                exchangeId,
                 twin1155.tokenId,
                 twin1155.amount,
                 testProtocolFunctions.address

@@ -21,14 +21,16 @@ interface IBosonTwinEvents {
     event TwinTransferred(
         uint256 indexed twinId,
         address indexed tokenAddress,
-        uint256 indexed tokenId,
+        uint256 indexed exchangeId,
+        uint256 tokenId,
         uint256 amount,
         address executedBy
     );
     event TwinTransferFailed(
         uint256 indexed twinId,
         address indexed tokenAddress,
-        uint256 indexed tokenId,
+        uint256 indexed exchangeId,
+        uint256 tokenId,
         uint256 amount,
         address executedBy
     );

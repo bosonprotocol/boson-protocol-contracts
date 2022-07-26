@@ -305,11 +305,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
         exchange.state = ExchangeState.Redeemed;
 
         // Transfer any bundled twins to buyer
+        // N.B.: If voucher was revoked because transfer twin failed, then voucher was already burned
         bool shouldBurnVoucher = transferTwins(exchange);
 
-        // Burn the voucher
-        // Do not burn if transfer twin failed because voucher was revoked or dispute was raised on transferTwins function
         if (shouldBurnVoucher) {
+            // Burn the voucher
             burnVoucher(exchange);
         }
 
@@ -562,9 +562,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                 // If token transfer failed
                 if (!success) {
                     transferFailed = true;
-                    emit TwinTransferFailed(twin.id, twin.tokenAddress, tokenId, amount, sender);
+                    emit TwinTransferFailed(twin.id, twin.tokenAddress, _exchange.id, tokenId, amount, sender);
                 } else {
-                    emit TwinTransferred(twin.id, twin.tokenAddress, tokenId, amount, sender);
+                    emit TwinTransferred(twin.id, twin.tokenAddress, _exchange.id, tokenId, amount, sender);
                 }
             }
 
