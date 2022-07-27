@@ -2344,7 +2344,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("Completing too many exchanges", async function () {
           // Try to complete more than 50 exchanges
-          exchangesToComplete = [...Array(101).keys()];
+          exchangesToComplete = [...Array(51).keys()];
 
           // Attempt to complete the exchange, expecting revert
           await expect(exchangeHandler.connect(rando).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
