@@ -132,14 +132,14 @@ interface IBosonOfferHandler is IBosonOfferEvents {
     function voidOfferBatch(uint256[] calldata _offerIds) external;
 
     /**
-     * @notice Sets new valid until date
+     * @notice Extends an Offer's validity period.
      *
      * Emits an OfferExtended event if successful.
      *
      * Reverts if:
      * - Offer does not exist
      * - Caller is not the operator of the offer
-     * - New valid until date is before existing valid until dates
+     * - New valid until date is before existing valid until date
      * - Offer has voucherRedeemableUntil set and new valid until date is greater than that
      *
      *  @param _offerId - the id of the offer to extend

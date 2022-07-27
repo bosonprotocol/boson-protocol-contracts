@@ -269,6 +269,48 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
     }
 
     /**
+     * @notice Extend a Voucher's validity period.
+     *
+     * Reverts if
+     * - Exchange does not exist
+     * - Exchange is not in committed state
+     * - Caller is not seller's operator
+     * - New date is not later than the current one
+     *
+     * Emits
+     * - VoucherExtended
+     *
+     * @param _exchangeId - the id of the exchange
+     * @param _validUntilDate - the new voucher expiry date
+     */
+    function extendVoucher(uint256 _exchangeId, uint256 _validUntilDate) external {
+        // Get the exchange, should be in committed state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
+
+        // Get the offer, which will definitely exist
+        Offer storage offer;
+        uint256 offerId = exchange.offerId;
+        (, offer) = fetchOffer(offerId);
+
+        // Get seller id associated with caller
+        bool sellerExists;
+        uint256 sellerId;
+        (sellerExists, sellerId) = getSellerIdByOperator(msgSender());
+
+        // Only seller's operator may call
+        require(sellerExists && offer.sellerId == sellerId, NOT_OPERATOR);
+
+        // Make sure the proposed date is later than the current one
+        require(_validUntilDate > exchange.voucher.validUntilDate, VOUCHER_EXTENSION_NOT_VALID);
+
+        // Extend voucher
+        exchange.voucher.validUntilDate = _validUntilDate;
+
+        // Notify watchers of state exchange
+        emit VoucherExtended(offerId, _exchangeId, _validUntilDate, msgSender());
+    }
+
+    /**
      * @notice Redeem a voucher.
      *
      * Reverts if
