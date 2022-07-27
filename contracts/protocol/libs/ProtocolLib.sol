@@ -32,6 +32,8 @@ library ProtocolLib {
 
     // Protocol limits storage
     struct ProtocolLimits {
+        // limit how many exchanges can be processed in single batch transaction
+        uint16 maxExchangesPerBatch;
         // limit how many offers can be added to the group
         uint16 maxOffersPerGroup;
         // limit how many offers can be added to the bundle
