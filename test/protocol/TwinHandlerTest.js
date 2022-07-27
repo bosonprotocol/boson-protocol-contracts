@@ -343,7 +343,7 @@ describe("IBosonTwinHandler", function () {
           await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(RevertReasons.INVALID_AMOUNT);
         });
 
-        it("amount should be zero if token type is NonFungibleToken", async function () {
+        it("Amount must be zero if token type is NonFungibleToken", async function () {
           twin.tokenAddress = foreign721.address;
           twin.tokenType = TokenType.NonFungibleToken;
           twin.amount = "1";
@@ -421,6 +421,26 @@ describe("IBosonTwinHandler", function () {
 
             await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
               RevertReasons.UNSUPPORTED_TOKEN
+            );
+          });
+
+          it("Token address is a contract that doesn't implement IERC721 interface when selected token type is NonFungible", async function () {
+            await bosonToken.connect(operator).approve(twinHandler.address, 1);
+            twin.tokenType = TokenType.NonFungibleToken;
+            twin.tokenAddress = bosonToken.address;
+
+            await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
+              RevertReasons.INVALID_TOKEN_ADDRESS
+            );
+          });
+
+          it("Token address is a contract that doesn't implement IERC1155 interface when selected token type is MultiToken", async function () {
+            await bosonToken.connect(operator).approve(twinHandler.address, 1);
+            twin.tokenType = TokenType.MultiToken;
+            twin.tokenAddress = bosonToken.address;
+
+            await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
+              RevertReasons.INVALID_TOKEN_ADDRESS
             );
           });
         });
@@ -557,8 +577,11 @@ describe("IBosonTwinHandler", function () {
 
       it("should make twin range available again if token type is NonFungible", async function () {
         twin.tokenType = TokenType.NonFungibleToken;
+        twin.tokenAddress = foreign721.address;
         twin.amount = "0";
         const expectedNewTwinId = "2";
+
+        await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
 
         // Create a twin with range: [0,1499]
         await twinHandler.connect(operator).createTwin(twin);

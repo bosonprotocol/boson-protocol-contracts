@@ -6,6 +6,8 @@ import { IBosonTwinEvents } from "../../interfaces/events/IBosonTwinEvents.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
+import { IERC721 } from "../../interfaces/IERC721.sol";
+import { IERC1155 } from "../../interfaces/IERC1155.sol";
 
 /**
  * @title TwinBase
@@ -40,6 +42,9 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         require(_twin.supplyAvailable > 0, INVALID_SUPPLY_AVAILABLE);
 
         if (_twin.tokenType == TokenType.NonFungibleToken) {
+            // Check if the token supports IERC721 interface
+            require(contractSupportsInterface(_twin.tokenAddress, type(IERC721).interfaceId), INVALID_TOKEN_ADDRESS);
+
             // If token is NonFungible amount should be zero
             require(_twin.amount == 0, INVALID_TWIN_PROPERTY);
 
@@ -64,6 +69,14 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         } else {
             // If token is Fungible or MultiToken amount should not be zero
             require(_twin.amount > 0, INVALID_AMOUNT);
+            // Not every ERC20 has supportsInterface method so we can't check interface support if token type is NonFungible
+            if (_twin.tokenType != TokenType.FungibleToken) {
+                // Check if the token supports IERC1155 interface
+                require(
+                    contractSupportsInterface(_twin.tokenAddress, type(IERC1155).interfaceId),
+                    INVALID_TOKEN_ADDRESS
+                );
+            }
         }
 
         // Get the next twinId and increment the counter
@@ -83,6 +96,20 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
 
         // Notify watchers of state change
         emit TwinCreated(twinId, sellerId, _twin, msgSender());
+    }
+
+    /**
+     * @notice Check if the contract supports the correct interface for the selected token type.
+     *
+     * @param _tokenAddress - the address of the token to check
+     * @param _interfaceId - the interface to check for
+     * @return true if the contract supports the interface, false otherwise
+     */
+    function contractSupportsInterface(address _tokenAddress, bytes4 _interfaceId) internal view returns (bool) {
+        try ITwinToken(_tokenAddress).supportsInterface(_interfaceId) {} catch {
+            return false;
+        }
+        return true;
     }
 
     /**
