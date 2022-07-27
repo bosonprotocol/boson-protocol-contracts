@@ -565,8 +565,7 @@ abstract contract ProtocolBase is BosonTypes {
      */
     function checkBuyer(uint256 _currentBuyer) internal view {
         // Get the caller's buyer account id
-        uint256 buyerId;
-        (, buyerId) = getBuyerIdByWallet(msgSender());
+        (, uint256 buyerId) = getBuyerIdByWallet(msgSender());
 
         // Must be the buyer associated with the exchange (which is always voucher holder)
         require(buyerId == _currentBuyer, NOT_VOUCHER_HOLDER);
@@ -594,7 +593,6 @@ abstract contract ProtocolBase is BosonTypes {
 
         // Make sure the exchange exists
         require(exchangeExists, NO_SUCH_EXCHANGE);
-
         // Make sure the exchange is in expected state
         require(exchange.state == _expectedState, INVALID_STATE);
     }

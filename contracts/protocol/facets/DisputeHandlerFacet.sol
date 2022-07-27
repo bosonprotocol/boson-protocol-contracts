@@ -5,6 +5,7 @@ import "../../domain/BosonConstants.sol";
 import { IBosonDisputeHandler } from "../../interfaces/handlers/IBosonDisputeHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
+import { DisputeBase } from "../bases/DisputeBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 
@@ -13,7 +14,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
  *
  * @notice Handles disputes associated with exchanges within the protocol
  */
-contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
+contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     bytes32 private constant RESOLUTION_TYPEHASH =
         keccak256(bytes("Resolution(uint256 exchangeId,uint256 buyerPercent)")); // needed for verification during the resolveDispute
 
@@ -40,39 +41,12 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
      * @param _complaint - the buyer's complaint description
      */
     function raiseDispute(uint256 _exchangeId, string calldata _complaint) external override {
-        // Buyer must provide a reason to dispute
-        require(bytes(_complaint).length > 0, COMPLAINT_MISSING);
-
         // Get the exchange, should be in redeemed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
-
-        // Make sure the fulfillment period has elapsed
-        uint256 elapsed = block.timestamp - exchange.voucher.redeemedDate;
-        require(elapsed < fetchOfferDurations(exchange.offerId).fulfillmentPeriod, FULFILLMENT_PERIOD_HAS_ELAPSED);
-
-        // Make sure the caller is buyer associated with the exchange
-        checkBuyer(exchange.buyerId);
-
-        // Set the exhange state to disputed
-        exchange.state = ExchangeState.Disputed;
-
-        // Fetch the dispute and dispute dates
-        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
-
-        // Set the initial values
-        dispute.exchangeId = _exchangeId;
-        dispute.complaint = _complaint;
-        dispute.state = DisputeState.Resolving;
-
-        // Update the disputeDates
-        disputeDates.disputed = block.timestamp;
-        disputeDates.timeout = block.timestamp + fetchOfferDurations(exchange.offerId).resolutionPeriod;
-
         // Get the offer, which will exist if the exchange does
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
-        // Notify watchers of state change
-        emit DisputeRaised(_exchangeId, exchange.buyerId, offer.sellerId, _complaint, msgSender());
+        raiseDisputeInternal(exchange, _complaint, offer.sellerId);
     }
 
     /**
@@ -256,8 +230,8 @@ contract DisputeHandlerFacet is IBosonDisputeHandler, ProtocolBase {
 
         // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
-
         // Fetch teh dispute and dispute dates
+
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
 
         // Make sure the dispute is in the resolving or escalated state

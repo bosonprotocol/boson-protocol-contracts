@@ -7,6 +7,7 @@ import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
+import { DisputeBase } from "../bases/DisputeBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
 
@@ -25,7 +26,7 @@ interface MultiToken {
  *
  * @notice Handles exchanges associated with offers within the protocol
  */
-contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
+contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase {
     /**
      * @notice Facet Initializer
      */
@@ -176,23 +177,38 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
-        // Get the offer, which will definitely exist
-        Offer storage offer;
-        (, offer) = fetchOffer(exchange.offerId);
-
         // Get seller id associated with caller
         bool sellerExists;
         uint256 sellerId;
         (sellerExists, sellerId) = getSellerIdByOperator(msgSender());
 
+        // Get the offer, which will definitely exist
+        Offer storage offer;
+        (, offer) = fetchOffer(exchange.offerId);
+
         // Only seller's operator may call
         require(sellerExists && offer.sellerId == sellerId, NOT_OPERATOR);
 
+        revokeVoucherInternal(exchange);
+    }
+
+    /**
+     * @notice Revoke a voucher.
+     *
+     * Reverts if
+     * - Exchange is not in committed state
+     *
+     * Emits
+     * - VoucherRevoked
+     *
+     * @param exchange - the exchange
+     */
+    function revokeVoucherInternal(Exchange storage exchange) internal {
         // Finalize the exchange, burning the voucher
         finalizeExchange(exchange, ExchangeState.Revoked);
 
         // Notify watchers of state change
-        emit VoucherRevoked(offer.id, _exchangeId, msgSender());
+        emit VoucherRevoked(exchange.offerId, exchange.id, msgSender());
     }
 
     /**
@@ -288,11 +304,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
         // Set the exchange state to the Redeemed
         exchange.state = ExchangeState.Redeemed;
 
-        // Burn the voucher
-        burnVoucher(exchange);
-
         // Transfer any bundled twins to buyer
-        transferTwins(exchange);
+        // N.B.: If voucher was revoked because transfer twin failed, then voucher was already burned
+        bool shouldBurnVoucher = transferTwins(exchange);
+
+        if (shouldBurnVoucher) {
+            // Burn the voucher
+            burnVoucher(exchange);
+        }
 
         // Notify watchers of state change
         emit VoucherRedeemed(offerId, _exchangeId, msgSender());
@@ -462,10 +481,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      * - a twin transfer fails
      *
      * @param _exchange - the exchange
+     * @return shouldBurnVoucher - whether or not the voucher should be burned
      */
-    function transferTwins(Exchange storage _exchange) internal {
+    function transferTwins(Exchange storage _exchange) internal returns (bool shouldBurnVoucher) {
         // See if there is an associated bundle
         (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
+
+        // Voucher should be burned in the happy path
+        shouldBurnVoucher = true;
 
         // Transfer the twins
         if (exists) {
@@ -478,6 +501,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
             // Get seller account
             (, Seller storage seller) = fetchSeller(bundle.sellerId);
 
+            address sender = msgSender();
+            // Variable to track whether some twin transfer failed
+            bool transferFailed;
+
             // Visit the twins
             for (uint256 i = 0; i < twinIds.length; i++) {
                 // Get the twin
@@ -485,12 +512,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
 
                 // Transfer the token from the seller's operator to the buyer
                 // N.B. Using call here so as to normalize the revert reason
-                bool success;
                 bytes memory result;
+                bool success;
+                uint256 amount;
+                uint256 tokenId;
 
                 if (twin.tokenType == TokenType.FungibleToken && twin.supplyAvailable >= twin.amount) {
                     // ERC-20 style transfer
-                    uint256 amount = twin.amount;
+                    amount = twin.amount;
                     twin.supplyAvailable -= amount;
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
@@ -502,7 +531,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                     );
                 } else if (twin.tokenType == TokenType.NonFungibleToken && twin.supplyAvailable > 0) {
                     // ERC-721 style transfer
-                    uint256 tokenId = twin.tokenId + twin.supplyAvailable - 1;
+                    tokenId = twin.tokenId + twin.supplyAvailable - 1;
                     twin.supplyAvailable--;
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
@@ -515,22 +544,43 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
                     );
                 } else if (twin.tokenType == TokenType.MultiToken && twin.supplyAvailable >= twin.amount) {
                     // ERC-1155 style transfer
-                    uint256 amount = twin.amount;
+                    amount = twin.amount;
+                    tokenId = twin.tokenId;
                     twin.supplyAvailable -= amount;
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
                             seller.operator,
                             msgSender(),
-                            twin.tokenId,
+                            tokenId,
                             amount,
                             ""
                         )
                     );
                 }
+
+                // If token transfer failed
+                if (!success) {
+                    transferFailed = true;
+                    emit TwinTransferFailed(twin.id, twin.tokenAddress, _exchange.id, tokenId, amount, sender);
+                } else {
+                    emit TwinTransferred(twin.id, twin.tokenAddress, _exchange.id, tokenId, amount, sender);
+                }
             }
-            // @TODO comment the line below because we assume that for now we'll not revert the redeem if Twin transfer failed.
-            // require(success, TWIN_TRANSFER_FAILED);
+
+            if (transferFailed) {
+                // Raise a dispute if caller is a contract
+                if (isContract(sender)) {
+                    string memory complaint = "Twin transfer failed and buyer address is a contract";
+
+                    raiseDisputeInternal(_exchange, complaint, seller.id);
+                } else {
+                    // Revoke voucher if caller is an EOA
+                    revokeVoucherInternal(_exchange);
+                    // Do not burn the voucher because it's already burned on revoke
+                    shouldBurnVoucher = false;
+                }
+            }
         }
     }
 
@@ -646,5 +696,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase {
      */
     function holdsSpecificToken(address _buyer, Condition storage _condition) internal view returns (bool) {
         return (Token(_condition.tokenAddress).ownerOf(_condition.tokenId) == _buyer);
+    }
+
+    /**
+     * @notice Verify if a given address is a contract or not (EOA)
+     *
+     * @param _address address to verify
+     * @return bool true if _address is a contract
+     */
+    function isContract(address _address) private view returns (bool) {
+        return _address.code.length > 0;
     }
 }

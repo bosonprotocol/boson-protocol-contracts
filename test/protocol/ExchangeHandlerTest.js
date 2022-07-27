@@ -1382,23 +1382,65 @@ describe("IBosonExchangeHandler", function () {
           expect(balance).to.equal(0);
 
           // Redeem the voucher
-          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+            .to.emit(exchangeHandler, "TwinTransferred")
+            .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address);
 
           // Check the buyer's balance of the ERC20
           balance = await foreign20.balanceOf(buyer.address);
           expect(balance).to.equal(3);
         });
 
-        // Skip these tests because we decide that for now we shouldn't revert redeemVoucher if twin transfer failed otherwise buyer will lose cancellation penalty
-        context.skip("💔 Revert Reasons", async function () {
-          it("unable to transfer the twin", async function () {
+        context("Twin transfer fail", async function () {
+          it("should revoke exchange when buyer is an EOA", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
             await foreign20.connect(operator).approve(protocolDiamond.address, "0");
 
-            // Attempt to redeem the voucher, expecting revert
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
-              RevertReasons.TWIN_TRANSFER_FAILED
-            );
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+              .to.emit(exchangeHandler, "VoucherRevoked")
+              .withArgs(exchange.offerId, exchange.id, buyer.address)
+              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address);
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Revoked
+            assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+          });
+
+          it("should raise a dispute when buyer account is a contract", async function () {
+            // Remove the approval for the protocal to transfer the seller's tokens
+            await foreign20.connect(operator).approve(protocolDiamond.address, "0");
+
+            // Deploy contract to test redeem called by another contract
+            let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
+            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address, {
+              gasLimit,
+            });
+            await testProtocolFunctions.deployed();
+
+            await testProtocolFunctions.commit(offerId, { value: price });
+
+            let exchangeId = ++exchange.id;
+            // Protocol should raised dispute automatically if transfer twin failed
+            await expect(testProtocolFunctions.redeem(exchangeId))
+              .to.emit(disputeHandler, "DisputeRaised")
+              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(
+                twin20.id,
+                twin20.tokenAddress,
+                exchangeId,
+                twin20.tokenId,
+                twin20.amount,
+                testProtocolFunctions.address
+              );
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Revoked
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
         });
       });
@@ -1418,42 +1460,78 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("should transfer the twin", async function () {
+          let tokenId = "9";
+
           // Check the operator owns the last ERC721 of twin range
-          owner = await foreign721.ownerOf("9");
+          owner = await foreign721.ownerOf(tokenId);
           expect(owner).to.equal(operator.address);
           [exists, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
           // Redeem the voucher
-          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+            .to.emit(exchangeHandler, "TwinTransferred")
+            .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, "0", buyer.address);
 
           // Check the buyer owns the last ERC721 of twin range
-          owner = await foreign721.ownerOf("9");
+          owner = await foreign721.ownerOf(tokenId);
           expect(owner).to.equal(buyer.address);
 
+          tokenId = "8";
           // Check the operator owns the last ERC721 of twin range
-          owner = await foreign721.ownerOf("8");
+          owner = await foreign721.ownerOf(tokenId);
           expect(owner).to.equal(operator.address);
 
           // Commit to offer for the second time
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
           // Redeem the second voucher for the second time / id = 2
-          await exchangeHandler.connect(buyer).redeemVoucher(++exchange.id);
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
+            .to.emit(exchangeHandler, "TwinTransferred")
+            .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, "0", buyer.address);
 
           // Check the buyer owns the last ERC721 of twin range
-          owner = await foreign721.ownerOf("8");
+          owner = await foreign721.ownerOf(tokenId);
         });
 
-        // Skip these tests because we decide that for now we shouldn't revert redeemVoucher if twin transfer failed otherwise buyer will lose cancellation penalty
-        context.skip("💔 Revert Reasons", async function () {
-          it("unable to transfer the twin", async function () {
+        context("Twin transfer fail", async function () {
+          it("should revoke exchange when buyer is an EOA", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
             await foreign721.connect(operator).setApprovalForAll(protocolDiamond.address, false);
 
-            // Attempt to redeem the voucher, expecting revert
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
-              RevertReasons.TWIN_TRANSFER_FAILED
-            );
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+              .to.emit(exchangeHandler, "VoucherRevoked")
+              .withArgs(exchange.offerId, exchange.id, buyer.address)
+              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "9", "0", buyer.address);
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Revoked
+            assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+          });
+
+          it("should raise a dispute when buyer account is a contract", async function () {
+            // Deploy contract to test redeem called by another contract
+            let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
+            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address, {
+              gasLimit,
+            });
+            await testProtocolFunctions.deployed();
+
+            await testProtocolFunctions.commit(offerId, { value: price });
+
+            // Protocol should raised dispute automatically if transfer twin failed
+            await expect(testProtocolFunctions.connect(buyer).redeem(++exchange.id))
+              .to.emit(disputeHandler, "DisputeRaised")
+              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "9", "0", testProtocolFunctions.address);
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Revoked
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
         });
       });
@@ -1473,28 +1551,75 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("should transfer the twin", async function () {
+          let tokenId = "1";
+
           // Check the buyer's balance of the ERC1155
-          balance = await foreign1155.balanceOf(buyer.address, "1");
+          balance = await foreign1155.balanceOf(buyer.address, tokenId);
           expect(balance).to.equal(0);
 
           // Redeem the voucher
-          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+            .to.emit(exchangeHandler, "TwinTransferred")
+            .withArgs(twin1155.id, twin1155.tokenAddress, exchange.id, tokenId, twin1155.amount, buyer.address);
 
           // Check the buyer's balance of the ERC1155
-          balance = await foreign1155.balanceOf(buyer.address, "1");
+          balance = await foreign1155.balanceOf(buyer.address, tokenId);
           expect(balance).to.equal(1);
         });
 
-        context("💔 Revert Reasons", async function () {
-          // Skip these tests because we decide that for now we shouldn't revert redeemVoucher if twin transfer failed otherwise buyer will lose cancellation penalty
-          it.skip("unable to transfer the twin", async function () {
+        context("Twin transfer fail", async function () {
+          it("should revoke exchange when buyer is an EOA", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
             await foreign1155.connect(operator).setApprovalForAll(protocolDiamond.address, false);
 
-            // Attempt to redeem the voucher, expecting revert
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
-              RevertReasons.TWIN_TRANSFER_FAILED
-            );
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+              .to.emit(exchangeHandler, "VoucherRevoked")
+              .withArgs(exchange.offerId, exchange.id, buyer.address)
+              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(
+                twin1155.id,
+                twin1155.tokenAddress,
+                exchange.id,
+                twin1155.tokenId,
+                twin1155.amount,
+                buyer.address
+              );
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Revoked
+            assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+          });
+
+          it("should raise a dispute when buyer account is a contract", async function () {
+            // Deploy contract to test redeem called by another contract
+            let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
+            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address, {
+              gasLimit,
+            });
+            await testProtocolFunctions.deployed();
+
+            await testProtocolFunctions.commit(offerId, { value: price });
+
+            // Protocol should raised dispute automatically if transfer twin failed
+            await expect(testProtocolFunctions.redeem(++exchange.id))
+              .to.emit(disputeHandler, "DisputeRaised")
+              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(
+                twin1155.id,
+                twin1155.tokenAddress,
+                exchange.id,
+                twin1155.tokenId,
+                twin1155.amount,
+                testProtocolFunctions.address
+              );
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Revoked
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
         });
       });
@@ -1514,64 +1639,110 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("should transfer the twins", async function () {
+          let tokenIdNonFungible = "9";
+          let tokenIdMultiToken = "1";
+
           // Check the buyer's balance of the ERC20
           balance = await foreign20.balanceOf(buyer.address);
           expect(balance).to.equal(0);
 
           // Check the operator owns the ERC721
-          owner = await foreign721.ownerOf("9");
+          owner = await foreign721.ownerOf(tokenIdNonFungible);
           expect(owner).to.equal(operator.address);
 
           // Check the buyer's balance of the ERC1155
-          balance = await foreign1155.balanceOf(buyer.address, "1");
+          balance = await foreign1155.balanceOf(buyer.address, tokenIdMultiToken);
           expect(balance).to.equal(0);
 
+          let exchangeId = exchange.id;
           // Redeem the voucher
-          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId))
+            .to.emit(exchangeHandler, "TwinTransferred")
+            .withArgs(twin1155.id, twin1155.tokenAddress, exchangeId, tokenIdMultiToken, twin1155.amount, buyer.address)
+            .and.to.emit(exchangeHandler, "TwinTransferred")
+            .withArgs(twin20.id, twin20.tokenAddress, exchangeId, "0", twin20.amount, buyer.address)
+            .and.to.emit(exchangeHandler, "TwinTransferred")
+            .withArgs(twin721.id, twin721.tokenAddress, exchangeId, tokenIdNonFungible, twin721.amount, buyer.address);
 
           // Check the buyer's balance of the ERC20
           balance = await foreign20.balanceOf(buyer.address);
           expect(balance).to.equal(3);
 
           // Check the buyer owns the ERC721
-          owner = await foreign721.ownerOf("9");
+          owner = await foreign721.ownerOf(tokenIdNonFungible);
           expect(owner).to.equal(buyer.address);
 
           // Check the buyer's balance of the ERC1155
-          balance = await foreign1155.balanceOf(buyer.address, "1");
+          balance = await foreign1155.balanceOf(buyer.address, tokenIdMultiToken);
           expect(balance).to.equal(1);
         });
 
-        // Skip these tests because we decide that for now we shouldn't revert redeemVoucher if twin transfer failed otherwise buyer will lose cancellation penalty
-        context.skip("💔 Revert Reasons", async function () {
-          it("unable to transfer the ERC20 twin", async function () {
+        context("Twin transfer fail", async function () {
+          it("should revoke exchange when buyer is an EOA", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
             await foreign20.connect(operator).approve(protocolDiamond.address, "0");
 
-            // Attempt to redeem the voucher, expecting revert
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
-              RevertReasons.TWIN_TRANSFER_FAILED
-            );
+            let exchangeId = exchange.id;
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId))
+              .to.emit(exchangeHandler, "VoucherRevoked")
+              .withArgs(exchange.offerId, exchangeId, buyer.address)
+              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin20.id, twin20.tokenAddress, exchangeId, "0", twin20.amount, buyer.address)
+              .and.to.emit(exchangeHandler, "TwinTransferred")
+              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, "9", "0", buyer.address)
+              .and.to.emit(exchangeHandler, "TwinTransferred")
+              .withArgs(
+                twin1155.id,
+                twin1155.tokenAddress,
+                exchangeId,
+                twin1155.tokenId,
+                twin1155.amount,
+                buyer.address
+              );
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Revoked
+            assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
           });
 
-          it("unable to transfer the ERC721 twin", async function () {
+          it("should raise a dispute when buyer account is a contract", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
-            await foreign721.connect(operator).setApprovalForAll(protocolDiamond.address, false);
+            await foreign20.connect(operator).approve(protocolDiamond.address, "0");
 
-            // Attempt to redeem the voucher, expecting revert
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
-              RevertReasons.TWIN_TRANSFER_FAILED
-            );
-          });
+            // Deploy contract to test redeem called by another contract
+            let TestProtocolFunctionsFactory = await ethers.getContractFactory("TestProtocolFunctions");
+            const testProtocolFunctions = await TestProtocolFunctionsFactory.deploy(protocolDiamond.address, {
+              gasLimit,
+            });
+            await testProtocolFunctions.deployed();
 
-          it("unable to transfer the ERC1155 twin", async function () {
-            // Remove the approval for the protocal to transfer the seller's tokens
-            await foreign1155.connect(operator).setApprovalForAll(protocolDiamond.address, false);
+            await testProtocolFunctions.commit(offerId, { value: price });
 
-            // Attempt to redeem the voucher, expecting revert
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id)).to.revertedWith(
-              RevertReasons.TWIN_TRANSFER_FAILED
-            );
+            let exchangeId = ++exchange.id;
+            // Protocol should raised dispute automatically if transfer twin failed
+            await expect(testProtocolFunctions.redeem(exchangeId))
+              .to.emit(disputeHandler, "DisputeRaised")
+              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin20.id, twin20.tokenAddress, exchangeId, "0", twin20.amount, testProtocolFunctions.address)
+              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, "9", "0", testProtocolFunctions.address)
+              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(
+                twin1155.id,
+                twin1155.tokenAddress,
+                exchangeId,
+                twin1155.tokenId,
+                twin1155.amount,
+                testProtocolFunctions.address
+              );
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Revoked
+            assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
           });
         });
       });
