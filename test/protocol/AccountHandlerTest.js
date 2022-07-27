@@ -160,6 +160,7 @@ describe("IBosonAccountHandler", function () {
       },
       // Protocol limits
       {
+        maxExchangesPerBatch: 0,
         maxOffersPerGroup: 0,
         maxTwinsPerBundle: 0,
         maxOffersPerBundle: 0,

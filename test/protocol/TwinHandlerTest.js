@@ -91,6 +91,7 @@ describe("IBosonTwinHandler", function () {
       },
       // Protocol limits
       {
+        maxExchangesPerBatch: 100,
         maxOffersPerGroup: 100,
         maxTwinsPerBundle: 100,
         maxOffersPerBundle: 100,
