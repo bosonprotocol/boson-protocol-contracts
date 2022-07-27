@@ -1776,7 +1776,7 @@ describe("IBosonAccountHandler", function () {
 
           // Attempt to update seller2 for token Id that doesn't exist
           await expect(accountHandler.connect(authTokenOwner).updateSeller(seller2, authToken2)).to.revertedWith(
-            RevertReasons.ERC721_OWNER_QUERY_NONEXISTENT_ID
+            RevertReasons.ERC721_NON_EXISTENT
           );
         });
 
