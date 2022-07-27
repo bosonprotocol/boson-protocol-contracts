@@ -4,6 +4,8 @@ const { expect } = require("chai");
 const { gasLimit } = require("../../environments");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
+const  AuthToken  = require("../../scripts/domain/AuthToken");
+const  AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -57,6 +59,7 @@ describe("IBosonFundsHandler", function () {
   let resolutionType, customSignatureType, message, r, s, v;
   let disputedDate, escalatedDate, timeout;
   let contractURI;
+  let emptyAuthToken;
 
   before(async function () {
     // get interface Ids
@@ -178,7 +181,12 @@ describe("IBosonFundsHandler", function () {
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      await accountHandler.connect(admin).createSeller(seller, contractURI);
+
+      // AuthToken
+      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      expect(emptyAuthToken.isValid()).is.true;
+
+      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
 
       // top up operators account
       await mockToken.mint(operator.address, "1000000");
@@ -1216,7 +1224,12 @@ describe("IBosonFundsHandler", function () {
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
       expect(seller.isValid()).is.true;
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      await accountHandler.connect(admin).createSeller(seller, contractURI);
+
+      // AuthToken
+      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      expect(emptyAuthToken.isValid()).is.true;
+
+      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(

@@ -5,6 +5,8 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
+const  AuthToken  = require("../../scripts/domain/AuthToken");
+const  AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -49,6 +51,7 @@ describe("IBosonTwinHandler", function () {
   let bundleId, offerIds, twinIds, bundle;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let contractURI;
+  let emptyAuthToken;
 
   before(async function () {
     // get interface Ids
@@ -152,7 +155,11 @@ describe("IBosonTwinHandler", function () {
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      await accountHandler.connect(admin).createSeller(seller, contractURI);
+
+      // AuthToken
+      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      expect(emptyAuthToken.isValid()).is.true;
+      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
 
       // The first twin id
       nextTwinId = sellerId = "1";
@@ -472,7 +479,11 @@ describe("IBosonTwinHandler", function () {
         seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
         expect(seller.isValid()).is.true;
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        await accountHandler.connect(rando).createSeller(seller, contractURI);
+
+        // AuthToken
+        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        expect(emptyAuthToken.isValid()).is.true;
+        await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(rando).approve(twinHandler.address, 1);

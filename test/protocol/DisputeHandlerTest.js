@@ -5,6 +5,8 @@ const { expect, assert } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const Exchange = require("../../scripts/domain/Exchange");
 const Seller = require("../../scripts/domain/Seller");
+const  AuthToken  = require("../../scripts/domain/AuthToken");
+const  AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Buyer = require("../../scripts/domain/Buyer");
 const Dispute = require("../../scripts/domain/Dispute");
 const DisputeState = require("../../scripts/domain/DisputeState");
@@ -77,6 +79,7 @@ describe("IBosonDisputeHandler", function () {
   let returnedDispute, returnedDisputeDates;
   let DRFeeNative, DRFeeToken, buyerEscalationDepositNative, buyerEscalationDepositToken;
   let contractURI;
+  let emptyAuthToken;
 
   before(async function () {
     // get interface Ids
@@ -210,7 +213,12 @@ describe("IBosonDisputeHandler", function () {
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
       expect(seller.isValid()).is.true;
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      await accountHandler.connect(admin).createSeller(seller, contractURI);
+
+      // AuthToken
+      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      expect(emptyAuthToken.isValid()).is.true;
+
+      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(
@@ -870,7 +878,7 @@ describe("IBosonDisputeHandler", function () {
             seller = new Seller(id, buyer.address, buyer.address, buyer.address, buyer.address, true);
             expect(seller.isValid()).is.true;
             contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-            await accountHandler.connect(buyer).createSeller(seller, contractURI);
+            await accountHandler.connect(buyer).createSeller(seller, contractURI, emptyAuthToken);
 
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v))
@@ -1111,7 +1119,7 @@ describe("IBosonDisputeHandler", function () {
             seller = new Seller(id, other1.address, other1.address, other1.address, other1.address, true);
             contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
             expect(seller.isValid()).is.true;
-            await accountHandler.connect(other1).createSeller(seller, contractURI);
+            await accountHandler.connect(other1).createSeller(seller, contractURI, emptyAuthToken);
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(other1).resolveDispute(exchangeId, buyerPercent, r, s, v)
