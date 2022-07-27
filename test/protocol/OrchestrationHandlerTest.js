@@ -16,6 +16,8 @@ const Bundle = require("../../scripts/domain/Bundle");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const TokenType = require("../../scripts/domain/TokenType");
+const  AuthToken  = require("../../scripts/domain/AuthToken");
+const  AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -79,6 +81,7 @@ describe("IBosonOrchestrationHandler", function () {
   let contractURI;
   let expectedCloneAddress, bosonVoucher;
   let tx;
+  let authToken, authTokenStruct, emptyAuthToken, emptyAuthTokenStruct
 
   before(async function () {
     // get interface Ids
@@ -241,6 +244,15 @@ describe("IBosonOrchestrationHandler", function () {
       // set contract URI
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
+       // AuthTokens
+       emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+       expect(emptyAuthToken.isValid()).is.true;
+       emptyAuthTokenStruct = emptyAuthToken.toStruct();
+ 
+       authToken = new AuthToken("8400", AuthTokenType.Lens);
+       expect(authToken.isValid()).is.true;
+       authTokenStruct = authToken.toStruct();
+
       // The first offer id
       nextOfferId = "1";
 
@@ -272,17 +284,56 @@ describe("IBosonOrchestrationHandler", function () {
     });
 
     context("👉 createSellerAndOffer()", async function () {
-      it("should emit a SellerCreated and OfferCreated events", async function () {
+      it("should emit a SellerCreated and OfferCreated events with empty auth token", async function () {
         // Create a seller and an offer, testing for the event
         tx = await orchestrationHandler
           .connect(operator)
-          .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId);
+          .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken);
 
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
 
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, operator.address);
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
+
+        await expect(tx)
+          .to.emit(orchestrationHandler, "OfferCreated")
+          .withArgs(
+            nextOfferId,
+            offer.sellerId,
+            offerStruct,
+            offerDatesStruct,
+            offerDurationsStruct,
+            disputeResolutionTermsStruct,
+            operator.address
+          );
+
+        // Voucher clone contract
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+        await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
+
+        bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+        await expect(tx)
+          .to.emit(bosonVoucher, "OwnershipTransferred")
+          .withArgs(ethers.constants.AddressZero, operator.address);
+      });
+
+      it("should emit a SellerCreated and OfferCreated events with auth token", async function () {
+        seller.admin = ethers.constants.AddressZero;
+        sellerStruct = seller.toStruct();
+
+        // Create a seller and an offer, testing for the event
+        tx = await orchestrationHandler
+          .connect(operator)
+          .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, authToken);
+
+        expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+
+        await expect(tx)
+          .to.emit(orchestrationHandler, "SellerCreated")
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, authTokenStruct, operator.address);
 
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -309,20 +360,29 @@ describe("IBosonOrchestrationHandler", function () {
       });
 
       it("should update state", async function () {
+        seller.admin = ethers.constants.AddressZero;
+        sellerStruct = seller.toStruct();
+
         // Create a seller and an offer
         await orchestrationHandler
           .connect(operator)
-          .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId);
+          .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, authToken  );
 
         // Get the seller as a struct
-        [, sellerStruct] = await accountHandler.connect(rando).getSeller(id);
+        [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(id);
 
         // Parse into entity
         let returnedSeller = Seller.fromStruct(sellerStruct);
+        let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
 
         // Returned values should match the input in createSellerAndOffer
         for ([key, value] of Object.entries(seller)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Returned auth token values should match the input in createSellerAndOffer
+        for ([key, value] of Object.entries(authToken)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the offer as a struct
@@ -370,13 +430,14 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
         )
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(
             nextAccountId,
             sellerStruct,
             calculateContractAddress(orchestrationHandler.address, "1"),
+            emptyAuthTokenStruct,
             operator.address
           )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -415,7 +476,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -437,7 +498,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -466,7 +527,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -490,7 +551,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -512,7 +573,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -531,7 +592,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -562,7 +623,7 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(rando)
-            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -584,7 +645,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
 
@@ -595,23 +656,23 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
 
           seller.clerk = clerk.address;
-          seller.admin = ethers.constants.AddressZero;
+          seller.treasury = ethers.constants.AddressZero;
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
         it("addresses are not unique to this seller Id", async function () {
           // Create a seller
-          await accountHandler.connect(admin).createSeller(seller, contractURI);
+          await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
 
           seller.admin = other1.address;
           seller.clerk = other2.address;
@@ -620,7 +681,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
           seller.admin = admin.address;
@@ -630,7 +691,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(other1)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
           seller.clerk = clerk.address;
@@ -640,7 +701,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(other1)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
 
@@ -649,8 +710,47 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(rando)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.NOT_OPERATOR);
+        });
+
+        it("admin address is NOT zero address and AuthTokenType is NOT None", async function () {
+           // Attempt to create a seller and an offer, expecting revert
+           await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, authToken)
+          ).to.revertedWith(RevertReasons.ADMIN_OR_AUTH_TOKEN);
+        });
+
+        it("admin address is zero address and AuthTokenType is None", async function () {
+          seller.admin = ethers.constants.AddressZero;
+
+          // Attempt to create a seller and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(operator)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
+          ).to.revertedWith(RevertReasons.ADMIN_OR_AUTH_TOKEN);
+        });
+
+        it("authToken is not unique to this seller", async function () {
+          // Set admin == zero address because seller will be created with auth token
+          seller.admin = ethers.constants.AddressZero;
+
+          // Create a seller
+          await accountHandler.connect(rando).createSeller(seller, contractURI, authToken);
+
+          //Set seller 2's addresses to unique operator and clerk addresses
+          seller.operator = other2.address;
+          seller.clerk = other3.address;
+
+          // Attempt to create a seller with non-unique authToken and an offer, expecting revert
+          await expect(
+            orchestrationHandler
+              .connect(other2)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, authToken)
+          ).to.revertedWith(RevertReasons.AUTH_TOKEN_MUST_BE_UNIQUE);
         });
 
         it("Valid from date is greater than valid until date", async function () {
@@ -662,7 +762,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -673,7 +773,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -685,7 +785,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
         });
 
@@ -697,7 +797,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
@@ -710,7 +810,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
@@ -723,7 +823,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
@@ -736,7 +836,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
@@ -750,7 +850,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
@@ -762,7 +862,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
         });
 
@@ -774,7 +874,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
         });
 
@@ -786,7 +886,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.INVALID_QUANTITY_AVAILABLE);
         });
 
@@ -798,7 +898,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -822,7 +922,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -835,7 +935,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -860,7 +960,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -872,7 +972,7 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId)
+              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken)
           ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
         });
       });
@@ -909,7 +1009,7 @@ describe("IBosonOrchestrationHandler", function () {
         groupStruct = group.toStruct();
 
         // create a seller
-        await accountHandler.connect(admin).createSeller(seller, contractURI);
+        await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
       });
 
       it("should emit an OfferCreated and GroupCreated events", async function () {
@@ -1484,7 +1584,7 @@ describe("IBosonOrchestrationHandler", function () {
     context("👉 createOfferAddToGroup()", async function () {
       beforeEach(async function () {
         // create a seller
-        await accountHandler.connect(admin).createSeller(seller, contractURI);
+        await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
 
         // The first group id
         nextGroupId = "1";
@@ -2140,7 +2240,7 @@ describe("IBosonOrchestrationHandler", function () {
         twinStruct = twin.toStruct();
 
         // create a seller
-        await accountHandler.connect(admin).createSeller(seller, contractURI);
+        await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
@@ -2847,7 +2947,7 @@ describe("IBosonOrchestrationHandler", function () {
         twinStruct = twin.toStruct();
 
         // create a seller
-        await accountHandler.connect(admin).createSeller(seller, contractURI);
+        await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
@@ -3351,7 +3451,8 @@ describe("IBosonOrchestrationHandler", function () {
             offerDates,
             offerDurations,
             disputeResolverId,
-            condition
+            condition,
+            emptyAuthToken
           );
 
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
@@ -3359,7 +3460,7 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, operator.address)
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -3407,18 +3508,25 @@ describe("IBosonOrchestrationHandler", function () {
             offerDates,
             offerDurations,
             disputeResolverId,
-            condition
+            condition,
+            emptyAuthToken
           );
 
         // Get the seller as a struct
-        [, sellerStruct] = await accountHandler.connect(rando).getSeller(seller.id);
+        [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
 
         // Parse into entity
         let returnedSeller = Seller.fromStruct(sellerStruct);
+        let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
 
         // Returned values should match the input in createSellerAndOfferWithCondition
         for ([key, value] of Object.entries(seller)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Returned auth token values should match the input in createSeller
+        for ([key, value] of Object.entries(emptyAuthToken)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the offer as a struct
@@ -3483,7 +3591,8 @@ describe("IBosonOrchestrationHandler", function () {
             offerDates,
             offerDurations,
             disputeResolverId,
-            condition
+            condition,
+            emptyAuthToken
           );
 
         // SellerCreated and OfferCreated events
@@ -3493,6 +3602,7 @@ describe("IBosonOrchestrationHandler", function () {
             seller.id,
             calculateContractAddress(orchestrationHandler.address, "1"),
             sellerStruct,
+            emptyAuthTokenStruct,
             operator.address
           )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -3563,7 +3673,8 @@ describe("IBosonOrchestrationHandler", function () {
             offerDates,
             offerDurations,
             disputeResolverId,
-            twin
+            twin,
+            emptyAuthToken
           );
 
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
@@ -3571,7 +3682,7 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, operator.address)
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -3634,18 +3745,25 @@ describe("IBosonOrchestrationHandler", function () {
             offerDates,
             offerDurations,
             disputeResolverId,
-            twin
+            twin,
+            emptyAuthToken
           );
 
         // Get the seller as a struct
-        [, sellerStruct] = await accountHandler.connect(rando).getSeller(seller.id);
+        [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
 
         // Parse into entity
         let returnedSeller = Seller.fromStruct(sellerStruct);
+        let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
 
         // Returned values should match the input in createSellerAndOfferAndTwinWithBundle
         for ([key, value] of Object.entries(seller)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Returned auth token values should match the input in createSeller
+        for ([key, value] of Object.entries(emptyAuthToken)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the offer as a struct
@@ -3725,7 +3843,8 @@ describe("IBosonOrchestrationHandler", function () {
             offerDates,
             offerDurations,
             disputeResolverId,
-            twin
+            twin,
+            emptyAuthToken
           );
 
         // SellerCreated and OfferCreated events
@@ -3735,6 +3854,7 @@ describe("IBosonOrchestrationHandler", function () {
             seller.id,
             sellerStruct,
             calculateContractAddress(orchestrationHandler.address, "1"),
+            emptyAuthTokenStruct,
             operator.address
           )
           .to.emit(orchestrationHandler, "OfferCreated")
@@ -3846,7 +3966,8 @@ describe("IBosonOrchestrationHandler", function () {
             offerDurations,
             disputeResolverId,
             condition,
-            twin
+            twin,
+            emptyAuthToken
           );
 
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
@@ -3854,7 +3975,7 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, operator.address)
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -3926,18 +4047,25 @@ describe("IBosonOrchestrationHandler", function () {
             offerDurations,
             disputeResolverId,
             condition,
-            twin
+            twin,
+            emptyAuthToken
           );
 
         // Get the seller as a struct
-        [, sellerStruct] = await accountHandler.connect(rando).getSeller(seller.id);
+        [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
 
         // Parse into entity
         let returnedSeller = Seller.fromStruct(sellerStruct);
+        let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
 
         // Returned values should match the input in createSellerAndOfferWithConditionAndTwinAndBundle
         for ([key, value] of Object.entries(seller)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Returned auth token values should match the input in createSeller
+        for ([key, value] of Object.entries(emptyAuthToken)) {
+          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the offer as a struct
@@ -4029,7 +4157,8 @@ describe("IBosonOrchestrationHandler", function () {
             offerDurations,
             disputeResolverId,
             condition,
-            twin
+            twin,
+            emptyAuthToken
           );
 
         // SellerCreated and OfferCreated events
@@ -4039,6 +4168,7 @@ describe("IBosonOrchestrationHandler", function () {
             sellerId,
             sellerStruct,
             calculateContractAddress(orchestrationHandler.address, "1"),
+            emptyAuthTokenStruct,
             operator.address
           )
           .to.emit(orchestrationHandler, "OfferCreated")
