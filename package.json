@@ -68,6 +68,7 @@
     "prettier-plugin-solidity": "^1.0.0-beta.19",
     "solhint": "^3.3.7",
     "solidity-coverage": "^0.7.18-eip165.0",
+    "truffle": "^5.5.23",
     "web3": "^1.7.0"
   }
 }
