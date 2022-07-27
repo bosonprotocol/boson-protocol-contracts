@@ -1,5 +1,3 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
 const { expect } = require("chai");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
@@ -40,31 +38,31 @@ describe("AuthToken", function () {
     });
 
     it("Always present, tokenId must be the string representation of a BigNumber", async function () {
-        // Invalid field value
-        authToken.tokenId = "zedzdeadbaby";
-        expect(authToken.tokenIdIsValid()).is.false;
-        expect(authToken.isValid()).is.false;
-  
-        // Invalid field value
-        authToken.tokenId = new Date();
-        expect(authToken.tokenIdIsValid()).is.false;
-        expect(authToken.isValid()).is.false;
-  
-        // Invalid field value
-        authToken.tokenId = 12;
-        expect(authToken.tokenIdIsValid()).is.false;
-        expect(authToken.isValid()).is.false;
-  
-        // Valid field value
-        authToken.tokenId = "0";
-        expect(authToken.tokenIdIsValid()).is.true;
-        expect(authToken.isValid()).is.true;
-  
-        // Valid field value
-        authToken.tokenId = "126";
-        expect(authToken.tokenIdIsValid()).is.true;
-        expect(authToken.isValid()).is.true;
-      });
+      // Invalid field value
+      authToken.tokenId = "zedzdeadbaby";
+      expect(authToken.tokenIdIsValid()).is.false;
+      expect(authToken.isValid()).is.false;
+
+      // Invalid field value
+      authToken.tokenId = new Date();
+      expect(authToken.tokenIdIsValid()).is.false;
+      expect(authToken.isValid()).is.false;
+
+      // Invalid field value
+      authToken.tokenId = 12;
+      expect(authToken.tokenIdIsValid()).is.false;
+      expect(authToken.isValid()).is.false;
+
+      // Valid field value
+      authToken.tokenId = "0";
+      expect(authToken.tokenIdIsValid()).is.true;
+      expect(authToken.isValid()).is.true;
+
+      // Valid field value
+      authToken.tokenId = "126";
+      expect(authToken.tokenIdIsValid()).is.true;
+      expect(authToken.isValid()).is.true;
+    });
 
     it("Always present, tokenType must be the string representation of a BigNumber", async function () {
       // Invalid field value
@@ -106,13 +104,13 @@ describe("AuthToken", function () {
 
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
-       // Required constructor params
-       tokenId = "1";
-       tokenType = AuthTokenType.ENS;
- 
-       // Create a valid auth token, then set fields in tests directly
-       authToken = new AuthToken(tokenId, tokenType);
-       expect(authToken.isValid()).is.true;
+      // Required constructor params
+      tokenId = "1";
+      tokenType = AuthTokenType.ENS;
+
+      // Create a valid auth token, then set fields in tests directly
+      authToken = new AuthToken(tokenId, tokenType);
+      expect(authToken.isValid()).is.true;
 
       // Get plain object
       object = {

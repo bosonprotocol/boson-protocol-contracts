@@ -28,7 +28,11 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _contractURI - contract metadata URI
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      */
-    function createSeller(BosonTypes.Seller memory _seller, string calldata _contractURI, BosonTypes.AuthToken calldata _authToken) external;
+    function createSeller(
+        BosonTypes.Seller memory _seller,
+        string calldata _contractURI,
+        BosonTypes.AuthToken calldata _authToken
+    ) external;
 
     /**
      * @notice Creates a Buyer
@@ -246,7 +250,14 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
-    function getSeller(uint256 _sellerId) external view returns (bool exists, BosonTypes.Seller memory seller, BosonTypes.AuthToken memory authToken);
+    function getSeller(uint256 _sellerId)
+        external
+        view
+        returns (
+            bool exists,
+            BosonTypes.Seller memory seller,
+            BosonTypes.AuthToken memory authToken
+        );
 
     /**
      * @notice Gets the details about a seller by an address associated with that seller: operator, admin, or clerk address.
@@ -260,13 +271,17 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function getSellerByAddress(address _associatedAddress)
         external
         view
-        returns (bool exists, BosonTypes.Seller memory seller,  BosonTypes.AuthToken memory authToken);
+        returns (
+            bool exists,
+            BosonTypes.Seller memory seller,
+            BosonTypes.AuthToken memory authToken
+        );
 
     /**
      * @notice Gets the details about a seller by an auth token associated with that seller.
      *         A seller will have either an admin address or an auth token
      *
-     * @param _associatedAuthToken - the auth token that may be associated with the seller. 
+     * @param _associatedAuthToken - the auth token that may be associated with the seller.
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
@@ -275,7 +290,11 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function getSellerByAuthToken(BosonTypes.AuthToken calldata _associatedAuthToken)
         external
         view
-        returns (bool exists, BosonTypes.Seller memory seller,  BosonTypes.AuthToken memory authToken);
+        returns (
+            bool exists,
+            BosonTypes.Seller memory seller,
+            BosonTypes.AuthToken memory authToken
+        );
 
     /**
      * @notice Gets the details about a buyer.

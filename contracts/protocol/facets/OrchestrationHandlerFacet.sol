@@ -407,7 +407,7 @@ contract OrchestrationHandlerFacet is
         Twin memory _twin,
         AuthToken calldata _authToken
     ) external override {
-        checkAndCreateSeller(_seller,  _contractURI,  _authToken);
+        checkAndCreateSeller(_seller, _contractURI, _authToken);
         createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin);
     }
 
@@ -418,7 +418,7 @@ contract OrchestrationHandlerFacet is
      *
      * Reverts if:
      * - caller is not the same as operator address
-    * - Admin address is zero address and AuthTokenType == None
+     * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      * - in seller struct:
      *   - Address values are zero address
@@ -494,7 +494,11 @@ contract OrchestrationHandlerFacet is
      * @param _contractURI - contract metadata URI
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      */
-    function checkAndCreateSeller(Seller memory _seller, string calldata _contractURI, AuthToken calldata _authToken) internal {
+    function checkAndCreateSeller(
+        Seller memory _seller,
+        string calldata _contractURI,
+        AuthToken calldata _authToken
+    ) internal {
         // Caller should be the operator, specified in seller
         require(_seller.operator == msgSender(), NOT_OPERATOR);
 

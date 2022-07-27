@@ -406,10 +406,10 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _authTokenType - the auth token type, as an Enum value
      * @param _authTokenContract the address of the auth token contract (e.g. Lens or ENS contract address)
      */
-    function setAuthTokenContract(AuthTokenType _authTokenType, address _authTokenContract) 
-    external
-    override
-    onlyRole(ADMIN)
+    function setAuthTokenContract(AuthTokenType _authTokenType, address _authTokenContract)
+        external
+        override
+        onlyRole(ADMIN)
     {
         require(_authTokenType != AuthTokenType.None, INVALID_AUTH_TOKEN_TYPE);
         require(_authTokenContract != address(0), INVALID_ADDRESS);
@@ -421,8 +421,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @notice Get the auth token address for the given AuthTokenType
      * @param _authTokenType - the auth token type, as an Enum value
      */
-    function getAuthTokenContract(AuthTokenType _authTokenType) external view returns (address)
-    {
+    function getAuthTokenContract(AuthTokenType _authTokenType) external view returns (address) {
         return protocolLookups().authTokenContracts[_authTokenType];
     }
 }

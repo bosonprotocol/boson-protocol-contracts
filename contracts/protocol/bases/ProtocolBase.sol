@@ -167,11 +167,15 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
     /**
      * @notice Gets a seller Id from storage by auth token.  A seller will have either an admin address or an auth token
      *
-     * @param _authToken - the potential _authToken of the seller. 
+     * @param _authToken - the potential _authToken of the seller.
      * @return exists - whether the seller Id exists
      * @return sellerId  - the seller Id
      */
-    function getSellerIdByAuthToken(AuthToken calldata _authToken) internal view returns (bool exists, uint256 sellerId) {
+    function getSellerIdByAuthToken(AuthToken calldata _authToken)
+        internal
+        view
+        returns (bool exists, uint256 sellerId)
+    {
         // Get the seller Id
         sellerId = protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId];
 
@@ -274,7 +278,15 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
      * @return seller - the seller details. See {BosonTypes.Seller}
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      */
-    function fetchSeller(uint256 _sellerId) internal view returns (bool exists, Seller storage seller, AuthToken storage authToken) {
+    function fetchSeller(uint256 _sellerId)
+        internal
+        view
+        returns (
+            bool exists,
+            Seller storage seller,
+            AuthToken storage authToken
+        )
+    {
         // Get the seller's slot
         seller = protocolEntities().sellers[_sellerId];
 

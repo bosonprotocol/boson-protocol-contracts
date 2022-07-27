@@ -48,16 +48,16 @@ contract BosonTypes {
     }
 
     enum AuthTokenType {
-       None,
-       Lens,
-       ENS
+        None,
+        Lens,
+        ENS
     }
 
     struct AuthToken {
         uint256 tokenId;
         AuthTokenType tokenType;
     }
-    
+
     struct Seller {
         uint256 id;
         address operator;

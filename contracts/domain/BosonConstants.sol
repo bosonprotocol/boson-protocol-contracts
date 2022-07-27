@@ -51,7 +51,8 @@ contract BosonConstants {
     string internal constant DISPUTE_RESOLVER_FEE_NOT_FOUND = "Dispute resolver fee not found";
     string internal constant INVALID_AUTH_TOKEN_TYPE = "Invalid AuthTokenType";
     string internal constant ADMIN_OR_AUTH_TOKEN = "An admin address or an auth token is required";
-    string internal constant AUTH_TOKEN_MUST_BE_UNIQUE = "Auth token cannot be assigned to another entity of the same type";
+    string internal constant AUTH_TOKEN_MUST_BE_UNIQUE =
+        "Auth token cannot be assigned to another entity of the same type";
     string internal constant SELLER_ALREADY_APPROVED = "Seller id is approved already";
     string internal constant SELLER_NOT_APPROVED = "Seller id is not approved";
     string internal constant INVALID_AMOUNT_ALLOWED_SELLERS =

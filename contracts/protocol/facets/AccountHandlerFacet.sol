@@ -6,7 +6,7 @@ import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AccountBase } from "../bases/AccountBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import {IERC721} from "../../interfaces/IERC721.sol";
+import { IERC721 } from "../../interfaces/IERC721.sol";
 
 contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     /**
@@ -16,7 +16,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         DiamondLib.addSupportedInterface(type(IBosonAccountHandler).interfaceId);
     }
 
-   /**
+    /**
      * @notice Creates a seller
      *
      * Emits a SellerCreated event if successful.
@@ -32,7 +32,11 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * @param _contractURI - contract metadata URI
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      */
-    function createSeller(Seller memory _seller, string calldata _contractURI, AuthToken calldata _authToken) external override {
+    function createSeller(
+        Seller memory _seller,
+        string calldata _contractURI,
+        AuthToken calldata _authToken
+    ) external override {
         // create seller and update structs values to represent true state
         createSellerInternal(_seller, _contractURI, _authToken);
     }
@@ -192,7 +196,11 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         AuthToken storage authToken;
 
         //Admin address or AuthToken data must be present. A seller can have one or the other
-        require((_seller.admin == address(0) &&  _authToken.tokenType != AuthTokenType.None) || (_seller.admin != address(0) && _authToken.tokenType == AuthTokenType.None), ADMIN_OR_AUTH_TOKEN);
+        require(
+            (_seller.admin == address(0) && _authToken.tokenType != AuthTokenType.None) ||
+                (_seller.admin != address(0) && _authToken.tokenType == AuthTokenType.None),
+            ADMIN_OR_AUTH_TOKEN
+        );
 
         //Check Seller exists in sellers mapping
         (exists, seller, authToken) = fetchSeller(_seller.id);
@@ -201,7 +209,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         require(exists, NO_SUCH_SELLER);
 
         //Check that caller is authorized to call this function
-        if(seller.admin == address(0)) {
+        if (seller.admin == address(0)) {
             address authTokenContract = protocolLookups().authTokenContracts[authToken.tokenType];
             address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
             require(tokenIdOwner == msgSender(), NOT_ADMIN);
@@ -228,24 +236,27 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         );
 
         //Admin address or AuthToken data must be present in parameters. A seller can have one or the other. Check passed in parameters
-        if(_seller.admin == address(0)) {
+        if (_seller.admin == address(0)) {
             require(_authToken.tokenType != AuthTokenType.None, ADMIN_OR_AUTH_TOKEN);
 
             //Check that auth token is unique to this seller
-            require(protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == 0 ||
-                    protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == _seller.id, AUTH_TOKEN_MUST_BE_UNIQUE);
+            require(
+                protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == 0 ||
+                    protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == _seller.id,
+                AUTH_TOKEN_MUST_BE_UNIQUE
+            );
         } else {
             //Check that the admin address is unique to one seller Id across all roles -- not used or is used by this seller id.
-       
-        require(
-            (protocolLookups().sellerIdByOperator[_seller.admin] == 0 ||
-                protocolLookups().sellerIdByOperator[_seller.admin] == _seller.id) &&
-            (protocolLookups().sellerIdByAdmin[_seller.admin] == 0 ||
-                protocolLookups().sellerIdByAdmin[_seller.admin] == _seller.id) &&
-            (protocolLookups().sellerIdByClerk[_seller.admin] == 0 ||
-                protocolLookups().sellerIdByClerk[_seller.admin] == _seller.id),
-            SELLER_ADDRESS_MUST_BE_UNIQUE
-        );
+
+            require(
+                (protocolLookups().sellerIdByOperator[_seller.admin] == 0 ||
+                    protocolLookups().sellerIdByOperator[_seller.admin] == _seller.id) &&
+                    (protocolLookups().sellerIdByAdmin[_seller.admin] == 0 ||
+                        protocolLookups().sellerIdByAdmin[_seller.admin] == _seller.id) &&
+                    (protocolLookups().sellerIdByClerk[_seller.admin] == 0 ||
+                        protocolLookups().sellerIdByClerk[_seller.admin] == _seller.id),
+                SELLER_ADDRESS_MUST_BE_UNIQUE
+            );
         }
 
         //Delete current mappings
@@ -708,7 +719,16 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * @return seller - the seller details. See {BosonTypes.Seller}
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      */
-    function getSeller(uint256 _sellerId) external view override returns (bool exists, Seller memory seller, AuthToken memory authToken) {
+    function getSeller(uint256 _sellerId)
+        external
+        view
+        override
+        returns (
+            bool exists,
+            Seller memory seller,
+            AuthToken memory authToken
+        )
+    {
         return fetchSeller(_sellerId);
     }
 
@@ -725,7 +745,11 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         external
         view
         override
-        returns (bool exists, Seller memory seller, AuthToken memory authToken)
+        returns (
+            bool exists,
+            Seller memory seller,
+            AuthToken memory authToken
+        )
     {
         uint256 sellerId;
 
@@ -749,7 +773,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
      * @notice Gets the details about a seller by an auth token associated with that seller.
      *         A seller will have either an admin address or an auth token
      *
-     * @param _associatedAuthToken - the auth token that may be associated with the seller. 
+     * @param _associatedAuthToken - the auth token that may be associated with the seller.
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
      * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
@@ -758,11 +782,15 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     function getSellerByAuthToken(AuthToken calldata _associatedAuthToken)
         external
         view
-        returns (bool exists, Seller memory seller, AuthToken memory authToken)
+        returns (
+            bool exists,
+            Seller memory seller,
+            AuthToken memory authToken
+        )
     {
         uint256 sellerId;
-        
-       (exists, sellerId) = getSellerIdByAuthToken(_associatedAuthToken);
+
+        (exists, sellerId) = getSellerIdByAuthToken(_associatedAuthToken);
         if (exists) {
             return fetchSeller(sellerId);
         }

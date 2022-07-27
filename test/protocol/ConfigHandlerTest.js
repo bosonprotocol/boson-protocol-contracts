@@ -8,7 +8,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
-const  AuthTokenType = require("../../scripts/domain/AuthTokenType");
+const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 
 /**
  *  Test the Boson Config Handler interface
@@ -717,7 +717,9 @@ describe("IBosonConfigHandler", function () {
 
         it("should emit a AuthTokenContractChanged event", async function () {
           // Set new auth token contract, testing for the event
-          await expect(configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, authTokenContract.address) )
+          await expect(
+            configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, authTokenContract.address)
+          )
             .to.emit(configHandler, "AuthTokenContractChanged")
             .withArgs(AuthTokenType.Lens, authTokenContract.address, deployer.address);
         });
@@ -727,15 +729,17 @@ describe("IBosonConfigHandler", function () {
           await configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.ENS, authTokenContract.address);
 
           // Verify that new value is stored
-          expect(await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.ENS)).to.equal(authTokenContract.address);
+          expect(await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.ENS)).to.equal(
+            authTokenContract.address
+          );
         });
 
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new auth token contract, expecting revert
-            await expect(configHandler.connect(rando).setAuthTokenContract(AuthTokenType.ENS, authTokenContract.address)).to.revertedWith(
-              RevertReasons.ACCESS_DENIED
-            );
+            await expect(
+              configHandler.connect(rando).setAuthTokenContract(AuthTokenType.ENS, authTokenContract.address)
+            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
           });
         });
       });

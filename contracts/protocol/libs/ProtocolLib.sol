@@ -136,7 +136,7 @@ library ProtocolLib {
         mapping(address => mapping(uint256 => uint256)) conditionalCommitsByAddress;
         // buyer escalation deposit percentage
         uint16 buyerEscalationDepositPercentage;
-        //AuthTokenType => Auth NFT contract address. 
+        //AuthTokenType => Auth NFT contract address.
         //Would normally be in ProtocolAddresses but can't be because the ProtocolAddresses struct is passed into the initialize function
         mapping(BosonTypes.AuthTokenType => address) authTokenContracts;
         // AuthTokenType => tokenId => sellerId

@@ -110,7 +110,7 @@ function getConfig() {
  * Get the contract addresses for supported NFT Auth token contracts
  * @returns {lensAddress: string, ensAddress: string}
  */
- function getAuthTokenContracts() {
+function getAuthTokenContracts() {
   // Lens protocol NFT contract address
   const LENS = {
     mainnet: "0xDb46d1Dc155634FbC732f92E853b10B288AD5a1d",
@@ -127,7 +127,7 @@ function getConfig() {
     mumbai: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
   };
 
-  return { lensAddress: LENS[network], ensAddress: ENS[network]};
+  return { lensAddress: LENS[network], ensAddress: ENS[network] };
 }
 
 /**
@@ -190,7 +190,6 @@ async function main() {
   } = await deployProtocolConfigFacet(protocolDiamond, config, gasLimit);
   deploymentComplete("ConfigHandlerFacet", configHandlerFacet.address, [], contracts);
 
- 
   // Deploy and cut facets
   const deployedFacets = await deployProtocolHandlerFacets(protocolDiamond, getNoArgFacetNames(), gasLimit);
   for (let i = 0; i < deployedFacets.length; i++) {
@@ -228,8 +227,8 @@ async function main() {
   await bosonConfigHandler.setBeaconProxyAddress(bosonVoucherProxy.address);
 
   //Add NFT auth token addresses to protocol config
-  await bosonConfigHandler.setAuthTokenContract(AuthTokenType.Lens,  authTokenContracts.lensAddress);
-  await bosonConfigHandler.setAuthTokenContract(AuthTokenType.ENS,  authTokenContracts.ensAddress);
+  await bosonConfigHandler.setAuthTokenContract(AuthTokenType.Lens, authTokenContracts.lensAddress);
+  await bosonConfigHandler.setAuthTokenContract(AuthTokenType.ENS, authTokenContracts.ensAddress);
 
   console.log(`✅ ConfigHandlerFacet updated with remaining post-initialization config.`);
 

@@ -16,7 +16,12 @@ interface IBosonAccountEvents {
         BosonTypes.AuthToken authToken,
         address indexed executedBy
     );
-    event SellerUpdated(uint256 indexed sellerId, BosonTypes.Seller seller, BosonTypes.AuthToken authToken, address indexed executedBy);
+    event SellerUpdated(
+        uint256 indexed sellerId,
+        BosonTypes.Seller seller,
+        BosonTypes.AuthToken authToken,
+        address indexed executedBy
+    );
     event BuyerCreated(uint256 indexed buyerId, BosonTypes.Buyer buyer, address indexed executedBy);
     event BuyerUpdated(uint256 indexed buyerId, BosonTypes.Buyer buyer, address indexed executedBy);
     event AgentUpdated(uint256 indexed agentId, BosonTypes.Agent agent, address indexed executedBy);

@@ -22,7 +22,7 @@ interface IBosonOrchestrationHandler is
     IBosonTwinEvents,
     IBosonBundleEvents
 {
-   /**
+    /**
      * @notice Creates a seller (with optional auth token) and an offer in a single transaction.
      *
      * Emits a SellerCreated and an OfferCreated event if successful.
@@ -279,7 +279,7 @@ interface IBosonOrchestrationHandler is
         BosonTypes.AuthToken calldata _authToken
     ) external;
 
-   /**
+    /**
      * @notice Takes a seller, an offer, a twin, and an optional auth token, creates a seller, creates an offer, creates a twin, then a bundle with that offer and the given twin
      *
      * Emits a SellerCreated, an OfferCreated, a TwinCreated and a BundleCreated event if successful.
@@ -331,7 +331,7 @@ interface IBosonOrchestrationHandler is
         BosonTypes.AuthToken calldata _authToken
     ) external;
 
-     /**
+    /**
      * @notice Takes a seller, an offer, a condition and a twin, and an optional auth token, creates a seller an offer, then a group with that offer and the given condition, then creates a twin, then a bundle with that offer and the given twin
      *
      * Emits an SellerCreated, OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event if successful.

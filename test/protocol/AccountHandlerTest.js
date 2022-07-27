@@ -8,8 +8,8 @@ const Buyer = require("../../scripts/domain/Buyer");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Agent = require("../../scripts/domain/Agent");
 const { DisputeResolverFee, DisputeResolverFeeList } = require("../../scripts/domain/DisputeResolverFee");
-const  AuthToken  = require("../../scripts/domain/AuthToken");
-const  AuthTokenType = require("../../scripts/domain/AuthTokenType");
+const AuthToken = require("../../scripts/domain/AuthToken");
+const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -27,7 +27,21 @@ const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 describe("IBosonAccountHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, other4, other5, other6, other7, other8, authTokenOwner;
+  let deployer,
+    rando,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    other1,
+    other2,
+    other3,
+    other4,
+    other5,
+    other6,
+    other7,
+    other8,
+    authTokenOwner;
   let erc165,
     protocolDiamond,
     accessController,
@@ -37,8 +51,8 @@ describe("IBosonAccountHandler", function () {
     fundsHandler,
     configHandler,
     gasLimit;
-  let seller, sellerStruct, active, seller2, seller2Struct, id2, seller3, seller4;
-  let authToken, authTokenStruct, emptyAuthToken, emptyAuthTokenStruct, authToken2, authToken2Struct, authToken3;
+  let seller, sellerStruct, active, seller2, id2, seller3, seller4;
+  let authToken, authTokenStruct, emptyAuthToken, emptyAuthTokenStruct, authToken2, authToken3;
   let buyer, buyerStruct, buyer2, buyer2Struct;
   let disputeResolver,
     disputeResolverStruct,
@@ -120,8 +134,23 @@ describe("IBosonAccountHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, other1, other2, other3, other4, other5, other6, other7, other8, authTokenOwner] =
-      await ethers.getSigners();
+    [
+      deployer,
+      operator,
+      admin,
+      clerk,
+      treasury,
+      rando,
+      other1,
+      other2,
+      other3,
+      other4,
+      other5,
+      other6,
+      other7,
+      other8,
+      authTokenOwner,
+    ] = await ethers.getSigners();
 
     //Dispute Resolver metadata URI
     metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
@@ -206,13 +235,17 @@ describe("IBosonAccountHandler", function () {
     //Cast Diamond to IBosonConfigHancler
     configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
-    await expect(configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens,  mockAuthERC721Contract.address))
-    .to.emit(configHandler, "AuthTokenContractChanged")
-    .withArgs(AuthTokenType.Lens, mockAuthERC721Contract.address, deployer.address);
+    await expect(
+      configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, mockAuthERC721Contract.address)
+    )
+      .to.emit(configHandler, "AuthTokenContractChanged")
+      .withArgs(AuthTokenType.Lens, mockAuthERC721Contract.address, deployer.address);
 
-    await expect(configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.ENS,  mockAuthERC721Contract2.address))
-    .to.emit(configHandler, "AuthTokenContractChanged")
-    .withArgs(AuthTokenType.ENS, mockAuthERC721Contract2.address, deployer.address);
+    await expect(
+      configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.ENS, mockAuthERC721Contract2.address)
+    )
+      .to.emit(configHandler, "AuthTokenContractChanged")
+      .withArgs(AuthTokenType.ENS, mockAuthERC721Contract2.address, deployer.address);
 
     await mockAuthERC721Contract.connect(authTokenOwner).mint(8400, 1);
   });
@@ -639,7 +672,7 @@ describe("IBosonAccountHandler", function () {
           //Set seller 2's addresses to unique operator and clerk addresses
           seller.operator = other2.address;
           seller.clerk = other3.address;
-        
+
           // Attempt to Create a seller with non-unique authToken
           await expect(accountHandler.connect(rando).createSeller(seller, contractURI, authToken)).to.revertedWith(
             RevertReasons.AUTH_TOKEN_MUST_BE_UNIQUE
@@ -653,10 +686,10 @@ describe("IBosonAccountHandler", function () {
         // AuthTokens
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
         expect(emptyAuthToken.isValid()).is.true;
-     
+
         authToken = new AuthToken("8400", AuthTokenType.Lens);
         expect(authToken.isValid()).is.true;
-       
+
         // Seller can have either admin address or auth token
         seller.admin = ethers.constants.AddressZero;
 
@@ -733,10 +766,10 @@ describe("IBosonAccountHandler", function () {
         // AuthTokens
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
         expect(emptyAuthToken.isValid()).is.true;
-     
+
         authToken = new AuthToken("8400", AuthTokenType.Lens);
         expect(authToken.isValid()).is.true;
-       
+
         // Seller can have either admin address or auth token
         seller.admin = ethers.constants.AddressZero;
 
@@ -757,7 +790,9 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should return the correct seller when searching on operator address", async function () {
-        [exists, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSellerByAddress(operator.address);
+        [exists, sellerStruct, authTokenStruct] = await accountHandler
+          .connect(rando)
+          .getSellerByAddress(operator.address);
 
         expect(exists).is.true;
 
@@ -777,7 +812,9 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should return the correct seller when searching on admin address", async function () {
-        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler.connect(rando).getSellerByAddress(other2.address);
+        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler
+          .connect(rando)
+          .getSellerByAddress(other2.address);
 
         expect(exists).is.true;
 
@@ -817,7 +854,9 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should return exists false and default values when searching on treasury address", async function () {
-        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler.connect(rando).getSellerByAddress(treasury.address);
+        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler
+          .connect(rando)
+          .getSellerByAddress(treasury.address);
 
         expect(exists).is.false;
 
@@ -841,7 +880,9 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should return exists false and default values when searching on unassociated address", async function () {
-        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler.connect(rando).getSellerByAddress(deployer.address);
+        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler
+          .connect(rando)
+          .getSellerByAddress(deployer.address);
 
         expect(exists).is.false;
 
@@ -865,7 +906,9 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should return exists false and default values when searching on admin address that is zero address", async function () {
-        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler.connect(rando).getSellerByAddress(seller.admin);
+        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler
+          .connect(rando)
+          .getSellerByAddress(seller.admin);
 
         expect(exists).is.false;
 
@@ -889,7 +932,9 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should return exists false and default values when searching on zero address", async function () {
-        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler.connect(rando).getSellerByAddress(ethers.constants.AddressZero);
+        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler
+          .connect(rando)
+          .getSellerByAddress(ethers.constants.AddressZero);
 
         expect(exists).is.false;
 
@@ -918,13 +963,13 @@ describe("IBosonAccountHandler", function () {
         // AuthTokens
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
         expect(emptyAuthToken.isValid()).is.true;
-     
+
         authToken = new AuthToken("8400", AuthTokenType.Lens);
         expect(authToken.isValid()).is.true;
 
         authToken2 = new AuthToken("0", AuthTokenType.ENS);
         expect(authToken2.isValid()).is.true;
-       
+
         // Seller can have either admin address or auth token
         seller.admin = ethers.constants.AddressZero;
 
@@ -948,7 +993,14 @@ describe("IBosonAccountHandler", function () {
         active = true;
 
         // Create seller 3
-        seller3 = new Seller(id, other5.address, ethers.constants.AddressZero, other6.address, treasury.address, active);
+        seller3 = new Seller(
+          id,
+          other5.address,
+          ethers.constants.AddressZero,
+          other6.address,
+          treasury.address,
+          active
+        );
         expect(seller3.isValid()).is.true;
 
         contractURI = `https://ipfs.io/ipfs/QmPChd2hVbrJ6bfo3WBcTW4iZnpHm8TEzWkLHmLpXhF68A`;
@@ -1002,7 +1054,14 @@ describe("IBosonAccountHandler", function () {
         expect(authToken3.isValid()).is.true;
 
         // Create seller 4
-        seller4 = new Seller("4", other7.address, ethers.constants.AddressZero, other8.address, treasury.address, active);
+        seller4 = new Seller(
+          "4",
+          other7.address,
+          ethers.constants.AddressZero,
+          other8.address,
+          treasury.address,
+          active
+        );
         expect(seller4.isValid()).is.true;
 
         await accountHandler.connect(rando).createSeller(seller4, contractURI, authToken3);
@@ -1052,7 +1111,14 @@ describe("IBosonAccountHandler", function () {
         expect(authToken3.isValid()).is.true;
 
         // Create seller 4
-        seller4 = new Seller("4", other7.address, ethers.constants.AddressZero, other8.address, treasury.address, active);
+        seller4 = new Seller(
+          "4",
+          other7.address,
+          ethers.constants.AddressZero,
+          other8.address,
+          treasury.address,
+          active
+        );
         expect(seller4.isValid()).is.true;
 
         await accountHandler.connect(rando).createSeller(seller4, contractURI, authToken3);
@@ -1097,7 +1163,9 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should return exists false and default values when searching on empty auth token", async function () {
-        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler.connect(rando).getSellerByAuthToken(emptyAuthToken);
+        [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler
+          .connect(rando)
+          .getSellerByAuthToken(emptyAuthToken);
 
         expect(exists).is.false;
 
@@ -1123,18 +1191,17 @@ describe("IBosonAccountHandler", function () {
 
     context("👉 updateSeller()", async function () {
       beforeEach(async function () {
-         // AuthTokens
-         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
-         expect(emptyAuthToken.isValid()).is.true;
-         emptyAuthTokenStruct = emptyAuthToken.toStruct();
- 
-         authToken = new AuthToken("8400", AuthTokenType.Lens);
-         expect(authToken.isValid()).is.true;
-         authTokenStruct = authToken.toStruct();
+        // AuthTokens
+        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        expect(emptyAuthToken.isValid()).is.true;
+        emptyAuthTokenStruct = emptyAuthToken.toStruct();
+
+        authToken = new AuthToken("8400", AuthTokenType.Lens);
+        expect(authToken.isValid()).is.true;
+        authTokenStruct = authToken.toStruct();
 
         // Create a seller
         await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
-       
       });
 
       it("should emit a SellerUpdated and OwnershipTransferred event with correct values if values change", async function () {
@@ -1149,7 +1216,9 @@ describe("IBosonAccountHandler", function () {
         const tx = await accountHandler.connect(admin).updateSeller(seller, authToken);
 
         // Update a seller, testing for the event
-        await expect(tx).to.emit(accountHandler, "SellerUpdated").withArgs(seller.id, sellerStruct, authTokenStruct, admin.address);
+        await expect(tx)
+          .to.emit(accountHandler, "SellerUpdated")
+          .withArgs(seller.id, sellerStruct, authTokenStruct, admin.address);
 
         // Voucher clone contract
         const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
@@ -1160,9 +1229,11 @@ describe("IBosonAccountHandler", function () {
 
       it("should emit a SellerUpdated and OwnershipTransferred event with correct values if values stay the same", async function () {
         const tx = await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
-        
+
         // Update a seller, testing for the event
-        await expect(tx).to.emit(accountHandler, "SellerUpdated").withArgs(seller.id, sellerStruct, emptyAuthTokenStruct, admin.address);
+        await expect(tx)
+          .to.emit(accountHandler, "SellerUpdated")
+          .withArgs(seller.id, sellerStruct, emptyAuthTokenStruct, admin.address);
 
         // Voucher clone contract
         const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
@@ -1197,7 +1268,7 @@ describe("IBosonAccountHandler", function () {
         }
 
         // Returned auth token values should match the input in updateSeller
-          for ([key, value] of Object.entries(authToken)) {
+        for ([key, value] of Object.entries(authToken)) {
           expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
         }
 
@@ -1231,7 +1302,14 @@ describe("IBosonAccountHandler", function () {
 
       it("should update state from auth token to empty auth token", async function () {
         id2 = ++nextAccountId;
-        seller2 = new Seller(id2.toString(), other1.address, ethers.constants.AddressZero, other3.address, other4.address, active);
+        seller2 = new Seller(
+          id2.toString(),
+          other1.address,
+          ethers.constants.AddressZero,
+          other3.address,
+          other4.address,
+          active
+        );
         expect(seller2.isValid()).is.true;
 
         // Create a seller with auth token
@@ -1259,7 +1337,7 @@ describe("IBosonAccountHandler", function () {
         }
 
         // Returned auth token values should match the input in updateSeller
-          for ([key, value] of Object.entries(emptyAuthToken)) {
+        for ([key, value] of Object.entries(emptyAuthToken)) {
           expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
         }
 
@@ -1292,7 +1370,14 @@ describe("IBosonAccountHandler", function () {
 
       it("should update state from auth token to new auth token", async function () {
         id2 = ++nextAccountId;
-        seller2 = new Seller(id2.toString(), other1.address, ethers.constants.AddressZero, other3.address, other4.address, active);
+        seller2 = new Seller(
+          id2.toString(),
+          other1.address,
+          ethers.constants.AddressZero,
+          other3.address,
+          other4.address,
+          active
+        );
         expect(seller2.isValid()).is.true;
 
         // Create a seller with auth token
@@ -1325,7 +1410,7 @@ describe("IBosonAccountHandler", function () {
         }
 
         // Returned auth token values should match the input in updateSeller
-          for ([key, value] of Object.entries(authToken2)) {
+        for ([key, value] of Object.entries(authToken2)) {
           expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
         }
 
@@ -1439,10 +1524,15 @@ describe("IBosonAccountHandler", function () {
       it("should update the correct seller", async function () {
         // Confgiure another seller
         id2 = ++nextAccountId;
-        seller2 = new Seller(id2.toString(), other1.address, ethers.constants.AddressZero, other3.address, other4.address, active);
+        seller2 = new Seller(
+          id2.toString(),
+          other1.address,
+          ethers.constants.AddressZero,
+          other3.address,
+          other4.address,
+          active
+        );
         expect(seller2.isValid()).is.true;
-
-        seller2Struct = seller2.toStruct();
 
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
@@ -1450,7 +1540,6 @@ describe("IBosonAccountHandler", function () {
 
         //Seller2  auth token
         authToken2 = new AuthToken("8500", AuthTokenType.Lens);
-        authToken2Struct = authToken2.toStruct();
 
         //Create seller2
         await accountHandler.connect(rando).createSeller(seller2, contractURI, authToken2);
@@ -1481,12 +1570,12 @@ describe("IBosonAccountHandler", function () {
         }
 
         //returnedAuthToken should still contain original values
-         for ([key, value] of Object.entries(emptyAuthToken)) {
+        for ([key, value] of Object.entries(emptyAuthToken)) {
           expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
         }
 
         // Check seller2 HAS changed
-        [, sellerStruct, authTokenStruct]= await accountHandler.connect(rando).getSeller(seller2.id);
+        [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller2.id);
 
         // Parse into entity
         let returnedSeller2 = Seller.fromStruct(sellerStruct);
@@ -1512,7 +1601,7 @@ describe("IBosonAccountHandler", function () {
           .to.emit(accountHandler, "SellerUpdated")
           .withArgs(seller.id, sellerStruct, emptyAuthTokenStruct, admin.address);
 
-        seller.admin = other3.address; 
+        seller.admin = other3.address;
         sellerStruct = seller.toStruct();
 
         // Update seller, testing for the event
@@ -1521,7 +1610,9 @@ describe("IBosonAccountHandler", function () {
           .withArgs(seller.id, sellerStruct, emptyAuthTokenStruct, other2.address);
 
         // Attempt to update the seller with original admin address, expecting revert
-        await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWith(RevertReasons.NOT_ADMIN);
+        await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+          RevertReasons.NOT_ADMIN
+        );
       });
 
       it("should be able to only update with new auth token", async function () {
@@ -1533,7 +1624,7 @@ describe("IBosonAccountHandler", function () {
           .to.emit(accountHandler, "SellerUpdated")
           .withArgs(seller.id, sellerStruct, authTokenStruct, admin.address);
 
-        seller.operator = other3.address; 
+        seller.operator = other3.address;
         sellerStruct = seller.toStruct();
 
         // Update seller, testing for the event
@@ -1542,7 +1633,9 @@ describe("IBosonAccountHandler", function () {
           .withArgs(seller.id, sellerStruct, authTokenStruct, authTokenOwner.address);
 
         // Attempt to update the seller with original admin address, expecting revert
-        await expect(accountHandler.connect(admin).updateSeller(seller, authToken)).to.revertedWith(RevertReasons.NOT_ADMIN);
+        await expect(accountHandler.connect(admin).updateSeller(seller, authToken)).to.revertedWith(
+          RevertReasons.NOT_ADMIN
+        );
       });
 
       it("should be possible to use non-unique treasury address", async function () {
@@ -1580,7 +1673,9 @@ describe("IBosonAccountHandler", function () {
 
         it("Caller is not seller admin", async function () {
           // Attempt to update the seller, expecting revert
-          await expect(accountHandler.connect(operator).updateSeller(seller, emptyAuthToken)).to.revertedWith(RevertReasons.NOT_ADMIN);
+          await expect(accountHandler.connect(operator).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+            RevertReasons.NOT_ADMIN
+          );
         });
 
         it("addresses are the zero address", async function () {
@@ -1722,7 +1817,6 @@ describe("IBosonAccountHandler", function () {
           id2 = ++nextAccountId;
           seller2 = new Seller(id2.toString(), other1.address, other2.address, other3.address, other4.address, active);
           expect(seller2.isValid()).is.true;
-  
 
           // Create a seller with auth token
           await accountHandler.connect(rando).createSeller(seller2, contractURI, emptyAuthToken);
@@ -1738,13 +1832,20 @@ describe("IBosonAccountHandler", function () {
         it("seller is not owner of auth token currently stored for seller", async function () {
           //Create seller 2 with auth token
           id2 = ++nextAccountId;
-          seller2 = new Seller(id2.toString(), other1.address, ethers.constants.AddressZero, other3.address, other4.address, active);
+          seller2 = new Seller(
+            id2.toString(),
+            other1.address,
+            ethers.constants.AddressZero,
+            other3.address,
+            other4.address,
+            active
+          );
           expect(seller2.isValid()).is.true;
-    
+
           //Create auth token for token Id that seller does not own
           authToken2 = new AuthToken("0", AuthTokenType.ENS);
           expect(authToken2.isValid()).is.true;
-  
+
           // Create a seller with auth token
           await accountHandler.connect(rando).createSeller(seller2, contractURI, authToken2);
 
@@ -1762,9 +1863,16 @@ describe("IBosonAccountHandler", function () {
         it("auth token id currently stored for seller does not exist", async function () {
           //Create seller 2 with auth token
           id2 = ++nextAccountId;
-          seller2 = new Seller(id2.toString(), other1.address, ethers.constants.AddressZero, other3.address, other4.address, active);
+          seller2 = new Seller(
+            id2.toString(),
+            other1.address,
+            ethers.constants.AddressZero,
+            other3.address,
+            other4.address,
+            active
+          );
           expect(seller2.isValid()).is.true;
-    
+
           //Create auth token for token Id that seller does not own
           authToken2 = new AuthToken("0", AuthTokenType.ENS);
           expect(authToken2.isValid()).is.true;
@@ -1779,7 +1887,6 @@ describe("IBosonAccountHandler", function () {
             RevertReasons.ERC721_NON_EXISTENT
           );
         });
-
       });
     });
 
@@ -2327,7 +2434,7 @@ describe("IBosonAccountHandler", function () {
       // AuthToken
       emptyAuthToken = new AuthToken("0", AuthTokenType.None);
       expect(emptyAuthToken.isValid()).is.true;
-    
+
       // Create two additional sellers and create seller allow list
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       seller2 = new Seller((++id).toString(), other1.address, other1.address, other1.address, other1.address, active);
