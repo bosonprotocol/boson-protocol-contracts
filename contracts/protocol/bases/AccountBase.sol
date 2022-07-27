@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
-import "hardhat/console.sol";
 
 /**
  * @title AccountBase
@@ -182,9 +181,6 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         // Get storage location for seller
         (, Seller storage seller, AuthToken storage authToken) = fetchSeller(_seller.id);
 
-       // console.log("authToken.id in storeSeller ", authToken.tokenId);
-        //console.log("authToken.tokenId in storeSeller " , uint( authToken.tokenId));
-
         // Set seller props individually since memory structs can't be copied to storage
         seller.id = _seller.id;
         seller.operator = _seller.operator;
@@ -193,15 +189,17 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         seller.treasury = _seller.treasury;
         seller.active = _seller.active;
 
-        //If no admin address, store auth token
-        if(_seller.admin == address(0)) {
-            //console.log("Admin address is zero. Storing authToken");
+        // Auth token passed in
+        if(_authToken.tokenType != AuthTokenType.None) {
+            // Store auth token
             authToken.tokenId = _authToken.tokenId;
             authToken.tokenType = _authToken.tokenType;
+
+            // Store seller by auth token reference
             protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] = _seller.id;
-        } else {
-            //console.log("Admin address is NOT zero.");
-            protocolLookups().sellerIdByAdmin[_seller.admin] = _seller.id;
+        } else { // Empty auth token passed in
+            // Store admin address reference
+            protocolLookups().sellerIdByAdmin[_seller.admin] = _seller.id;  
         }
 
         //Map the seller's other addresses to the seller Id. It's not necessary to map the treasury address, as it only receives funds

@@ -6,7 +6,6 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { BosonConstants } from "../../domain/BosonConstants.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
-import "hardhat/console.sol";
 
 /**
  * @title ProtocolBase
@@ -281,9 +280,6 @@ abstract contract ProtocolBase is BosonTypes, BosonConstants {
 
         //Get the seller's auth token's slot
         authToken = protocolEntities().authTokens[_sellerId];
-
-        //console.log("authToken.id in fetchSeller ", authToken.tokenId);
-        //console.log("authToken.tokenId in fetchSeller " , uint( authToken.tokenId));
 
         // Determine existence
         exists = (_sellerId > 0 && seller.id == _sellerId);

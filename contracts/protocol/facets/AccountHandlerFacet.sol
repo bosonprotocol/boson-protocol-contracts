@@ -191,6 +191,9 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         Seller storage seller;
         AuthToken storage authToken;
 
+        //Admin address or AuthToken data must be present. A seller can have one or the other
+        require((_seller.admin == address(0) &&  _authToken.tokenType != AuthTokenType.None) || (_seller.admin != address(0) && _authToken.tokenType == AuthTokenType.None), ADMIN_OR_AUTH_TOKEN);
+
         //Check Seller exists in sellers mapping
         (exists, seller, authToken) = fetchSeller(_seller.id);
 
@@ -203,14 +206,10 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
             address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
             require(tokenIdOwner == msgSender(), NOT_ADMIN);
         } else {
-            //Check that msg.sender is authorized to call this function
             require(seller.admin == msgSender(), NOT_ADMIN);
         }
 
-        //Admin address or AuthToken data must be present. A seller can have one or the other
-        require((_seller.admin == address(0) &&  _authToken.tokenType != AuthTokenType.None) || (_seller.admin != address(0) && _authToken.tokenType == AuthTokenType.None), ADMIN_OR_AUTH_TOKEN);
-
-        //Check that the addresses are unique to one seller Id across all roles -- not used or are used by this seller id.
+        //Check that the passed in addresses are unique to one seller Id across all roles -- not used or are used by this seller id.
         //Checking this seller id is necessary because one or more addresses may not change
         require(
             (protocolLookups().sellerIdByOperator[_seller.operator] == 0 ||
@@ -228,12 +227,13 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
             SELLER_ADDRESS_MUST_BE_UNIQUE
         );
 
-        //Admin address or AuthToken data must be present in parameters. A seller can have one or the other
+        //Admin address or AuthToken data must be present in parameters. A seller can have one or the other. Check passed in parameters
         if(_seller.admin == address(0)) {
             require(_authToken.tokenType != AuthTokenType.None, ADMIN_OR_AUTH_TOKEN);
 
             //Check that auth token is unique to this seller
-            require(protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == 0, AUTH_TOKEN_MUST_BE_UNIQUE);
+            require(protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == 0 ||
+                    protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == _seller.id, AUTH_TOKEN_MUST_BE_UNIQUE);
         } else {
             //Check that the admin address is unique to one seller Id across all roles -- not used or is used by this seller id.
        
@@ -253,6 +253,7 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
         delete protocolLookups().sellerIdByAdmin[seller.admin];
         delete protocolLookups().sellerIdByClerk[seller.clerk];
         delete protocolLookups().sellerIdByAuthToken[authToken.tokenType][authToken.tokenId];
+        delete protocolEntities().authTokens[seller.id];
 
         // store this address of existing seller operator to check if you have to transfer the ownership later
         address oldSellerOperator = seller.operator;
