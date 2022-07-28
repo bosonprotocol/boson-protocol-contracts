@@ -261,6 +261,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
 
     /**
      * @notice Gets the details about a seller by an address associated with that seller: operator, admin, or clerk address.
+     *         N.B.: If seller's admin uses NFT Auth they should call `getSellerByAuthToken` instead.
      *
      * @param _associatedAddress - the address associated with the seller. Must be an operator, admin, or clerk address.
      * @return exists - the seller was found

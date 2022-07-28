@@ -229,17 +229,15 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
                     protocolLookups().sellerIdByAdmin[_seller.operator] == _seller.id) &&
                 (protocolLookups().sellerIdByAdmin[_seller.clerk] == 0 ||
                     protocolLookups().sellerIdByAdmin[_seller.clerk] == _seller.id) &&
-                (protocolLookups().sellerIdByClerk[_seller.clerk] == 0 ||
-                    protocolLookups().sellerIdByClerk[_seller.clerk] == _seller.id) &&
                 (protocolLookups().sellerIdByClerk[_seller.operator] == 0 ||
-                    protocolLookups().sellerIdByClerk[_seller.operator] == _seller.id),
+                    protocolLookups().sellerIdByClerk[_seller.operator] == _seller.id) &&
+                (protocolLookups().sellerIdByClerk[_seller.clerk] == 0 ||
+                    protocolLookups().sellerIdByClerk[_seller.clerk] == _seller.id),
             SELLER_ADDRESS_MUST_BE_UNIQUE
         );
 
         //Admin address or AuthToken data must be present in parameters. A seller can have one or the other. Check passed in parameters
         if (_seller.admin == address(0)) {
-            require(_authToken.tokenType != AuthTokenType.None, ADMIN_OR_AUTH_TOKEN);
-
             //Check that auth token is unique to this seller
             require(
                 protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == 0 ||
@@ -734,7 +732,8 @@ contract AccountHandlerFacet is IBosonAccountHandler, AccountBase {
     }
 
     /**
-     * @notice Gets the details about a seller using an address associated with that seller: operator, admin, or clerk address.
+     * @notice Gets the details about a seller by an address associated with that seller: operator, admin, or clerk address.
+     *         N.B.: If seller's admin uses NFT Auth they should call `getSellerByAuthToken` instead.
      *
      * @param _associatedAddress - the address associated with the seller. Must be an operator, admin, or clerk address.
      * @return exists - the seller was found

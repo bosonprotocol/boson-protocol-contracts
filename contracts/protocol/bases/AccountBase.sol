@@ -49,8 +49,8 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
                 protocolLookups().sellerIdByOperator[_seller.clerk] == 0 &&
                 protocolLookups().sellerIdByAdmin[_seller.operator] == 0 &&
                 protocolLookups().sellerIdByAdmin[_seller.clerk] == 0 &&
-                protocolLookups().sellerIdByClerk[_seller.clerk] == 0 &&
-                protocolLookups().sellerIdByClerk[_seller.operator] == 0,
+                protocolLookups().sellerIdByClerk[_seller.operator] == 0 &&
+                protocolLookups().sellerIdByClerk[_seller.clerk] == 0,
             SELLER_ADDRESS_MUST_BE_UNIQUE
         );
 
