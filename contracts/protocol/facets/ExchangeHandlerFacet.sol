@@ -107,8 +107,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
         // Map the offerId to the exchangeId as one-to-many
         protocolLookups().exchangeIdsByOffer[_offerId].push(exchangeId);
 
-        // Decrement offer's quantity available
-        offer.quantityAvailable--;
+        // Should shoudn't decrement if offer is unlimited
+        if(offer.quantityAvailable != type(uint256).max) {
+          // Decrement offer's quantity available
+          offer.quantityAvailable--;
+        }
 
         // Issue voucher
         protocolLookups().voucherCount[buyerId]++;
@@ -514,14 +517,18 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                 // N.B. Using call here so as to normalize the revert reason
                 bytes memory result;
                 bool success;
-                uint256 amount;
-                uint256 tokenId;
+                uint256 amount = twin.amount;
+                uint256 tokenId = twin.tokenId;
+                uint256 tokenType = twin.tokenType;
 
-                if (twin.tokenType == TokenType.FungibleToken && twin.supplyAvailable >= twin.amount) {
+              // Shoudn't decrement supply if twin supply is unlimited
+                if(twin.supplyAvailable != type(uint256).max) {
+                  twin.supplyAvailable = twin.tokenType == NonFungibleToken ? twin.supplyAvailable - 1 : twin.supplyAvailable - amount;
+                }
+
+                if (tokenType == TokenType.FungibleToken && twin.supplyAvailable >= twin.amount) {
                     // ERC-20 style transfer
-                    amount = twin.amount;
-                    twin.supplyAvailable -= amount;
-                    (success, result) = twin.tokenAddress.call(
+                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
                             "transferFrom(address,address,uint256)",
                             seller.operator,
@@ -529,10 +536,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                             amount
                         )
                     );
-                } else if (twin.tokenType == TokenType.NonFungibleToken && twin.supplyAvailable > 0) {
+                } else if (tokenType == TokenType.NonFungibleToken && twin.supplyAvailable > 0) {
+                   // If twin supply is unlimited then token transfer order is ascending to avoid overflow
+                    if(twin.supplyAvailable == type(uint256).max) {
+                      twin.tokenId++;
+                    } else {
+                      // Token transfer order is descending 
+                      tokenId = twin.tokenId + twin.supplyAvailable - 1;
+                    }
                     // ERC-721 style transfer
-                    tokenId = twin.tokenId + twin.supplyAvailable - 1;
-                    twin.supplyAvailable--;
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,bytes)",
@@ -544,9 +556,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                     );
                 } else if (twin.tokenType == TokenType.MultiToken && twin.supplyAvailable >= twin.amount) {
                     // ERC-1155 style transfer
-                    amount = twin.amount;
-                    tokenId = twin.tokenId;
-                    twin.supplyAvailable -= amount;
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
@@ -559,7 +568,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                     );
                 }
 
-                // If token transfer failed
+                 // If token transfer failed
                 if (!success) {
                     transferFailed = true;
                     emit TwinTransferFailed(twin.id, twin.tokenAddress, _exchange.id, tokenId, amount, sender);
@@ -577,7 +586,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                 } else {
                     // Revoke voucher if caller is an EOA
                     revokeVoucherInternal(_exchange);
-                    // Do not burn the voucher because it's already burned on revoke
+                    // N.B.: If voucher was revoked because transfer twin failed, then voucher was already burned
                     shouldBurnVoucher = false;
                 }
             }
