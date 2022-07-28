@@ -106,10 +106,11 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
      * @return true if the contract supports the interface, false otherwise
      */
     function contractSupportsInterface(address _tokenAddress, bytes4 _interfaceId) internal view returns (bool) {
-        try ITwinToken(_tokenAddress).supportsInterface(_interfaceId) {} catch {
+        try ITwinToken(_tokenAddress).supportsInterface(_interfaceId) returns (bool supported) {
+            return supported;
+        } catch {
             return false;
         }
-        return true;
     }
 
     /**
