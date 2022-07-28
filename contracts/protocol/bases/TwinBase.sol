@@ -66,17 +66,15 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
 
             // Add range to twinRangesBySeller mapping
             protocolLookups().twinRangesBySeller[sellerId][_twin.tokenAddress].push(TokenRange(tokenId, lastTokenId));
-        } else {
+        } else if (_twin.tokenType == TokenType.MultiToken) {
             // If token is Fungible or MultiToken amount should not be zero
             require(_twin.amount > 0, INVALID_AMOUNT);
             // Not every ERC20 has supportsInterface method so we can't check interface support if token type is NonFungible
-            if (_twin.tokenType != TokenType.FungibleToken) {
-                // Check if the token supports IERC1155 interface
-                require(
-                    contractSupportsInterface(_twin.tokenAddress, type(IERC1155).interfaceId),
-                    INVALID_TOKEN_ADDRESS
-                );
-            }
+            // Check if the token supports IERC1155 interface
+            require(contractSupportsInterface(_twin.tokenAddress, type(IERC1155).interfaceId), INVALID_TOKEN_ADDRESS);
+        } else {
+            // If token is Fungible or MultiToken amount should not be zero
+            require(_twin.amount > 0, INVALID_AMOUNT);
         }
 
         // Get the next twinId and increment the counter
