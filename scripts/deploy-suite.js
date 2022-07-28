@@ -36,6 +36,7 @@ function getConfig() {
   // Protocol configuration params
   const feePercentage = "150"; // 1.5%  = 150
   const protocolFeeFlatBoson = "0";
+  const maxExchangesPerBatch = "100";
   const maxOffersPerGroup = "100";
   const maxTwinsPerBundle = "100";
   const maxOffersPerBundle = "100";
@@ -88,6 +89,7 @@ function getConfig() {
       beaconProxyAddress: BEACON_PROXY[network],
     },
     {
+      maxExchangesPerBatch,
       maxOffersPerGroup,
       maxTwinsPerBundle,
       maxOffersPerBundle,

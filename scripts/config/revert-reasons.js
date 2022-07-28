@@ -95,6 +95,7 @@ exports.RevertReasons = {
   VOUCHER_EXTENSION_NOT_VALID: "Proposed date is not later than the current one",
   VOUCHER_STILL_VALID: "Voucher still valid",
   VOUCHER_HAS_EXPIRED: "Voucher has expired",
+  TOO_MANY_EXCHANGES: "Exceeded maximum exchanges in a single transaction",
 
   // Funds related
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",

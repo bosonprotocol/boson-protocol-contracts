@@ -81,6 +81,7 @@ string constant VOUCHER_NOT_REDEEMABLE = "Voucher not yet valid or already expir
 string constant VOUCHER_EXTENSION_NOT_VALID = "Proposed date is not later than the current one";
 string constant VOUCHER_STILL_VALID = "Voucher still valid";
 string constant VOUCHER_HAS_EXPIRED = "Voucher has expired";
+string constant TOO_MANY_EXCHANGES = "Exceeded maximum exchanges in a single transaction";
 
 // Revert Reasons: Twin related
 string constant NO_SUCH_TWIN = "No such twin";
