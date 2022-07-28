@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "../../../domain/BosonConstants.sol";
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import { ERC721RoyaltyUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721RoyaltyUpgradeable.sol";
 import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -19,7 +20,7 @@ import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
  * - Only PROTOCOL-roled addresses can issue vouchers, i.e., the ProtocolDiamond or an EOA for testing
  * - Newly minted voucher NFTs are automatically transferred to the buyer
  */
-contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
+contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721RoyaltyUpgradeable {
     string private _contractURI;
 
     /**
@@ -84,7 +85,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(ERC721Upgradeable, IERC165Upgradeable)
+        override(ERC721RoyaltyUpgradeable, IERC165Upgradeable)
         returns (bool)
     {
         return (interfaceId == type(IBosonVoucher).interfaceId || super.supportsInterface(interfaceId));
@@ -174,5 +175,49 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         _contractURI = _newContractURI;
 
         emit ContractURIChanged(_newContractURI);
+    }
+
+    /**
+     * @notice Sets the default royalty information that all ids in this contract will default to.
+     * Can only be called by the owner or during the initialization
+     *
+     * @param _receiver address of the receiver.
+     * @param _value value in percentage. e.g. 500 = 5%
+     */
+    function setDefaultRoyalty(address _receiver, uint96 _value) external override onlyOwner {
+        _setDefaultRoyalty(_receiver, _value);
+    }
+
+    /**
+     * @notice Removes default royalty information.
+     * Can only be called by the owner
+     */
+    function deleteDefaultRoyalty() external override onlyOwner {
+        _deleteDefaultRoyalty();
+    }
+
+    /**
+     * @notice Sets the royalty information for a specific token id, overriding the global default.
+     * Can only be called by the owner
+     *
+     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
+     * @param _receiver address of the receiver.
+     * @param _value value in percentage. e.g. 500 = 5%
+     */
+    function setTokenRoyalty(
+        uint256 _exchangeId,
+        address _receiver,
+        uint96 _value
+    ) external override onlyOwner {
+        _setTokenRoyalty(_exchangeId, _receiver, _value);
+    }
+
+    /**
+     * @notice Resets royalty information for the token id back to the global default.
+     *
+     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
+     */
+    function resetTokenRoyalty(uint256 _exchangeId) external override onlyOwner {
+        _resetTokenRoyalty(_exchangeId);
     }
 }

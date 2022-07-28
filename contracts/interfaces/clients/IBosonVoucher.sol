@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 
@@ -12,7 +11,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
  *
  * The ERC-165 identifier for this interface is: 0x17c286ab
  */
-interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
+interface IBosonVoucher is IERC721MetadataUpgradeable {
     event ContractURIChanged(string contractURI);
 
     /**
@@ -55,4 +54,36 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @param _newContractURI new contract metadata URI
      */
     function setContractURI(string calldata _newContractURI) external;
+
+    /**
+     * @notice Sets the default royalty information that all ids in this contract will default to.
+     * Can only be called by the owner or during the initialization
+     *
+     * @param _receiver address of the receiver.
+     * @param _value value in percentage. e.g. 500 = 5%
+     */
+    function setDefaultRoyalty(address _receiver, uint96 _value) external;
+
+    /**
+     * @notice Removes default royalty information.
+     * Can only be called by the owner
+     */
+    function deleteDefaultRoyalty() external;
+
+    /**
+     * @notice Sets the royalty information for a specific token id, overriding the global default.
+     * Can only be called by the owner
+     *
+     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
+     * @param _receiver address of the receiver.
+     * @param _value value in percentage. e.g. 500 = 5%
+     */
+    function setTokenRoyalty(uint256 _exchangeId, address _receiver, uint96 _value) external;
+
+    /**
+     * @notice Resets royalty information for the token id back to the global default.
+     *
+     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
+     */
+    function resetTokenRoyalty(uint256 _exchangeId) external;
 }
