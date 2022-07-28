@@ -132,7 +132,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
      *
      * @param _exchangeId - the id of the exchange to complete
      */
-    function completeExchange(uint256 _exchangeId) external override {
+    function completeExchange(uint256 _exchangeId) public override {
         // Get the exchange, should be in redeemed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
         uint256 offerId = exchange.offerId;
@@ -266,6 +266,48 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
 
         // Notify watchers of state change
         emit VoucherExpired(exchange.offerId, _exchangeId, msgSender());
+    }
+
+    /**
+     * @notice Extend a Voucher's validity period.
+     *
+     * Reverts if
+     * - Exchange does not exist
+     * - Exchange is not in committed state
+     * - Caller is not seller's operator
+     * - New date is not later than the current one
+     *
+     * Emits
+     * - VoucherExtended
+     *
+     * @param _exchangeId - the id of the exchange
+     * @param _validUntilDate - the new voucher expiry date
+     */
+    function extendVoucher(uint256 _exchangeId, uint256 _validUntilDate) external {
+        // Get the exchange, should be in committed state
+        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
+
+        // Get the offer, which will definitely exist
+        Offer storage offer;
+        uint256 offerId = exchange.offerId;
+        (, offer) = fetchOffer(offerId);
+
+        // Get seller id associated with caller
+        bool sellerExists;
+        uint256 sellerId;
+        (sellerExists, sellerId) = getSellerIdByOperator(msgSender());
+
+        // Only seller's operator may call
+        require(sellerExists && offer.sellerId == sellerId, NOT_OPERATOR);
+
+        // Make sure the proposed date is later than the current one
+        require(_validUntilDate > exchange.voucher.validUntilDate, VOUCHER_EXTENSION_NOT_VALID);
+
+        // Extend voucher
+        exchange.voucher.validUntilDate = _validUntilDate;
+
+        // Notify watchers of state exchange
+        emit VoucherExtended(offerId, _exchangeId, _validUntilDate, msgSender());
     }
 
     /**
@@ -706,5 +748,29 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
      */
     function isContract(address _address) private view returns (bool) {
         return _address.code.length > 0;
+    }
+
+    /**
+     * @notice Complete a batch of exchanges
+     *
+     * Emits a ExchangeCompleted event for every exchange if finalized to the complete state.
+     *
+     * Reverts if:
+     * - Number of exchanges exceeds maximum allowed number per batch
+     * - for any exchange:
+     *   - Exchange does not exist
+     *   - Exchange is not in redeemed state
+     *   - Caller is not buyer and offer fulfillment period has not elapsed
+     *
+     * @param _exchangeIds - the array of exchanges ids
+     */
+    function completeExchangeBatch(uint256[] calldata _exchangeIds) external override {
+        // limit maximum number of exchanges to avoid running into block gas limit in a loop
+        require(_exchangeIds.length <= protocolLimits().maxExchangesPerBatch, TOO_MANY_EXCHANGES);
+
+        for (uint256 i = 0; i < _exchangeIds.length; i++) {
+            // complete the exchange
+            completeExchange(_exchangeIds[i]);
+        }
     }
 }

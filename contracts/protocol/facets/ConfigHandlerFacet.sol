@@ -37,6 +37,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setBeaconProxyAddress(_addresses.beaconProxyAddress);
         setProtocolFeePercentage(_fees.percentage);
         setProtocolFeeFlatBoson(_fees.flatBoson);
+        setMaxExchangesPerBatch(_limits.maxExchangesPerBatch);
         setMaxOffersPerGroup(_limits.maxOffersPerGroup);
         setMaxTwinsPerBundle(_limits.maxTwinsPerBundle);
         setMaxOffersPerBundle(_limits.maxOffersPerBundle);
@@ -425,5 +426,24 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getBuyerEscalationDepositPercentage() external view override returns (uint16) {
         return protocolLookups().buyerEscalationDepositPercentage;
+    }
+
+    /**
+     * @notice Sets the maximum number of exchanges that can be created in a single transaction
+     *
+     * Emits a MaxExchangesPerBatchChanged event.
+     *
+     * @param _maxExchangesPerBatch - the maximum length of {BosonTypes.Exchange[]}
+     */
+    function setMaxExchangesPerBatch(uint16 _maxExchangesPerBatch) public override onlyRole(ADMIN) {
+        protocolLimits().maxExchangesPerBatch = _maxExchangesPerBatch;
+        emit MaxExchangesPerBatchChanged(_maxExchangesPerBatch, msgSender());
+    }
+
+    /**
+     * @notice Get the maximum exchanges per batch
+     */
+    function getMaxExchangesPerBatch() external view override returns (uint16) {
+        return protocolLimits().maxExchangesPerBatch;
     }
 }

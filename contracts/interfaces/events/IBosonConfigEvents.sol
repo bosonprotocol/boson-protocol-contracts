@@ -15,6 +15,7 @@ interface IBosonConfigEvents {
     event BeaconProxyAddressChanged(address indexed beaconProxyAddress, address indexed executedBy);
     event ProtocolFeePercentageChanged(uint16 feePercentage, address indexed executedBy);
     event ProtocolFeeFlatBosonChanged(uint256 feeFlatBoson, address indexed executedBy);
+    event MaxExchangesPerBatchChanged(uint16 maxExchangesPerBatch, address indexed executedBy);
     event MaxOffersPerGroupChanged(uint16 maxOffersPerGroup, address indexed executedBy);
     event MaxOffersPerBatchChanged(uint16 maxOffersPerBatch, address indexed executedBy);
     event MaxTwinsPerBundleChanged(uint16 maxTwinsPerBundle, address indexed executedBy);

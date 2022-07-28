@@ -11,7 +11,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x619e9d29
+ * The ERC-165 identifier for this interface is: 0x28b04001
  */
 interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**
@@ -100,6 +100,23 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
     function expireVoucher(uint256 _exchangeId) external;
 
     /**
+     * @notice Extend a Voucher's validity period.
+     *
+     * Reverts if
+     * - Exchange does not exist
+     * - Exchange is not in committed state
+     * - Caller is not seller's operator
+     * - New date is not later than the current one
+     *
+     * Emits
+     * - VoucherExtended
+     *
+     * @param _exchangeId - the id of the exchange
+     * @param _validUntilDate - the new voucher expiry date
+     */
+    function extendVoucher(uint256 _exchangeId, uint256 _validUntilDate) external;
+
+    /**
      * @notice Redeem a voucher.
      *
      * Reverts if
@@ -170,4 +187,20 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @return nextExchangeId - the next exchange Id
      */
     function getNextExchangeId() external view returns (uint256 nextExchangeId);
+
+    /**
+     * @notice Complete a batch of exchanges
+     *
+     * Emits a ExchangeCompleted event for every exchange if finalized to the complete state.
+     *
+     * Reverts if:
+     * - Number of exchanges exceeds maximum allowed number per batch
+     * - for any exchange:
+     *   - Exchange does not exist
+     *   - Exchange is not in redeemed state
+     *   - Caller is not buyer and offer fulfillment period has not elapsed
+     *
+     * @param _exchangeIds - the array of exchanges ids
+     */
+    function completeExchangeBatch(uint256[] calldata _exchangeIds) external;
 }

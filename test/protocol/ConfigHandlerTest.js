@@ -19,6 +19,7 @@ describe("IBosonConfigHandler", function () {
     maxTwinsPerBundle,
     maxOffersPerBundle,
     maxOffersPerBatch,
+    maxExchangesPerBatch,
     maxTokensPerWithdrawal,
     maxFeesPerDisputeResolver,
     maxEscalationResponsePeriod,
@@ -53,6 +54,7 @@ describe("IBosonConfigHandler", function () {
     // Set protocol config
     protocolFeePercentage = 12;
     protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    maxExchangesPerBatch = 100;
     maxOffersPerGroup = 100;
     maxTwinsPerBundle = 100;
     maxOffersPerBundle = 100;
@@ -85,6 +87,7 @@ describe("IBosonConfigHandler", function () {
           },
           // Protocol limits
           {
+            maxExchangesPerBatch,
             maxOffersPerGroup,
             maxTwinsPerBundle,
             maxOffersPerBundle,
@@ -119,6 +122,8 @@ describe("IBosonConfigHandler", function () {
           .withArgs(protocolFeePercentage, deployer.address)
           .to.emit(configHandler, "ProtocolFeeFlatBosonChanged")
           .withArgs(protocolFeeFlatBoson, deployer.address)
+          .to.emit(configHandler, "MaxExchangesPerBatchChanged")
+          .withArgs(maxExchangesPerBatch, deployer.address)
           .to.emit(configHandler, "MaxOffersPerGroupChanged")
           .withArgs(maxOffersPerGroup, deployer.address)
           .to.emit(configHandler, "MaxTwinsPerBundleChanged")
@@ -156,6 +161,7 @@ describe("IBosonConfigHandler", function () {
         },
         // Protocol limits
         {
+          maxExchangesPerBatch,
           maxOffersPerGroup,
           maxTwinsPerBundle,
           maxOffersPerBundle,
@@ -750,6 +756,37 @@ describe("IBosonConfigHandler", function () {
           });
         });
       });
+
+      context("👉 setMaxExchangesPerBatch()", async function () {
+        beforeEach(async function () {
+          // set new value for max exchanges per batch
+          maxExchangesPerBatch = 135;
+        });
+
+        it("should emit a MaxExchangesPerBatchChanged event", async function () {
+          // Set new max exchange per batch, testing for the event
+          await expect(configHandler.connect(deployer).setMaxExchangesPerBatch(maxExchangesPerBatch))
+            .to.emit(configHandler, "MaxExchangesPerBatchChanged")
+            .withArgs(maxExchangesPerBatch, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new max exchange per batch,
+          await configHandler.connect(deployer).setMaxExchangesPerBatch(maxExchangesPerBatch);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxExchangesPerBatch()).to.equal(maxExchangesPerBatch);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new max exchange per batch, expecting revert
+            await expect(configHandler.connect(rando).setMaxExchangesPerBatch(maxExchangesPerBatch)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
+          });
+        });
+      });
     });
 
     context("📋 Getters", async function () {
@@ -822,6 +859,10 @@ describe("IBosonConfigHandler", function () {
         expect(await configHandler.connect(rando).getMaxTotalOfferFeePercentage()).to.equal(
           maxTotalOfferFeePercentage,
           "Invalid max total offer fee percentage"
+        );
+        expect(await configHandler.connect(rando).getMaxExchangesPerBatch()).to.equal(
+          maxExchangesPerBatch,
+          "Invalid max exchanges per batch"
         );
       });
     });

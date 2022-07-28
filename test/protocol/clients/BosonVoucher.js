@@ -77,6 +77,7 @@ describe("IBosonVoucher", function () {
       },
       // Protocol limits
       {
+        maxExchangesPerBatch: 100,
         maxOffersPerGroup: 0,
         maxTwinsPerBundle: 0,
         maxOffersPerBundle: 0,
