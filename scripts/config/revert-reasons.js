@@ -92,6 +92,7 @@ exports.RevertReasons = {
   FULFILLMENT_PERIOD_NOT_ELAPSED: "Fulfillment period has not yet elapsed",
   EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS: "Exchange for the bundled offers exists",
   VOUCHER_NOT_REDEEMABLE: "Voucher not yet valid or already expired",
+  VOUCHER_EXTENSION_NOT_VALID: "Proposed date is not later than the current one",
   VOUCHER_STILL_VALID: "Voucher still valid",
   VOUCHER_HAS_EXPIRED: "Voucher has expired",
   TOO_MANY_EXCHANGES: "Exceeded maximum exchanges in a single transaction",
