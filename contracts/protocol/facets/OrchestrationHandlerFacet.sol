@@ -403,7 +403,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         Condition memory _condition,
         AuthToken calldata _authToken,
-         uint256 _agentId
+        uint256 _agentId
     ) external override {
         checkAndCreateSeller(_seller, _contractURI, _authToken);
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);

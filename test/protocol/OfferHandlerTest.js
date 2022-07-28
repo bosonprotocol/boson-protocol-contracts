@@ -720,7 +720,7 @@ describe("IBosonOfferHandler", function () {
         it("Seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(seller, contractURI);
+          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
 
           allowedSellersToAdd = ["3"]; // DR is "1", existing seller is "2", new seller is "3"
           await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
@@ -1934,7 +1934,7 @@ describe("IBosonOfferHandler", function () {
         it("For some offer seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(seller, contractURI);
+          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
 
           allowedSellersToAdd = ["3"];
           await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);

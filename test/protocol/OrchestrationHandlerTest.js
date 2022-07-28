@@ -298,14 +298,22 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller and an offer, testing for the event
         tx = await orchestrationHandler
           .connect(operator)
-          .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId,  emptyAuthToken, agentId);
+          .createSellerAndOffer(
+            seller,
+            contractURI,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            emptyAuthToken,
+            agentId
+          );
 
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
 
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
-
         await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -315,6 +323,8 @@ describe("IBosonOrchestrationHandler", function () {
             offerDatesStruct,
             offerDurationsStruct,
             disputeResolutionTermsStruct,
+            offerFeesStruct,
+            agentId,
             operator.address
           );
 
@@ -337,7 +347,16 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller and an offer, testing for the event
         tx = await orchestrationHandler
           .connect(operator)
-          .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, authToken);
+          .createSellerAndOffer(
+            seller,
+            contractURI,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            authToken,
+            agentId
+          );
 
         expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
 
@@ -378,7 +397,16 @@ describe("IBosonOrchestrationHandler", function () {
         // Create a seller and an offer
         await orchestrationHandler
           .connect(operator)
-          .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, authToken, agentId);
+          .createSellerAndOffer(
+            seller,
+            contractURI,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            authToken,
+            agentId
+          );
 
         // Get the seller as a struct
         [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(id);
@@ -442,7 +470,16 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+            .createSellerAndOffer(
+              seller,
+              contractURI,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolverId,
+              emptyAuthToken,
+              agentId
+            )
         )
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(
@@ -490,7 +527,16 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+            .createSellerAndOffer(
+              seller,
+              contractURI,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolverId,
+              emptyAuthToken,
+              agentId
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -514,7 +560,16 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+            .createSellerAndOffer(
+              seller,
+              contractURI,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolverId,
+              emptyAuthToken,
+              agentId
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -546,7 +601,16 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+            .createSellerAndOffer(
+              seller,
+              contractURI,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolverId,
+              emptyAuthToken,
+              agentId
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -573,7 +637,16 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+            .createSellerAndOffer(
+              seller,
+              contractURI,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolverId,
+              emptyAuthToken,
+              agentId
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -597,7 +670,16 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+            .createSellerAndOffer(
+              seller,
+              contractURI,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolverId,
+              emptyAuthToken,
+              agentId
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -618,7 +700,16 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(operator)
-            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+            .createSellerAndOffer(
+              seller,
+              contractURI,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolverId,
+              emptyAuthToken,
+              agentId
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -652,7 +743,16 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(
           orchestrationHandler
             .connect(rando)
-            .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+            .createSellerAndOffer(
+              seller,
+              contractURI,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolverId,
+              emptyAuthToken,
+              agentId
+            )
         )
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
@@ -676,7 +776,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
 
@@ -687,7 +796,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
 
           seller.clerk = clerk.address;
@@ -697,7 +815,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
@@ -712,7 +839,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
           seller.admin = admin.address;
@@ -722,7 +858,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(other1)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
 
           seller.clerk = clerk.address;
@@ -732,7 +877,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(other1)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
 
@@ -741,7 +895,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(rando)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
@@ -757,7 +920,8 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDates,
                 offerDurations,
                 disputeResolverId,
-                authToken
+                authToken,
+                agentId
               )
           ).to.revertedWith(RevertReasons.ADMIN_OR_AUTH_TOKEN);
         });
@@ -776,7 +940,8 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDates,
                 offerDurations,
                 disputeResolverId,
-                emptyAuthToken
+                emptyAuthToken,
+                agentId
               )
           ).to.revertedWith(RevertReasons.ADMIN_OR_AUTH_TOKEN);
         });
@@ -803,7 +968,8 @@ describe("IBosonOrchestrationHandler", function () {
                 offerDates,
                 offerDurations,
                 disputeResolverId,
-                authToken
+                authToken,
+                agentId
               )
           ).to.revertedWith(RevertReasons.AUTH_TOKEN_MUST_BE_UNIQUE);
         });
@@ -817,7 +983,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -828,7 +1003,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
         });
 
@@ -840,7 +1024,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.OFFER_PENALTY_INVALID);
         });
 
@@ -852,7 +1045,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.OFFER_MUST_BE_ACTIVE);
         });
 
@@ -865,7 +1067,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
@@ -878,7 +1089,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.AMBIGUOUS_VOUCHER_EXPIRY);
         });
 
@@ -891,7 +1111,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
@@ -905,7 +1134,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
@@ -917,7 +1155,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.INVALID_FULFILLMENT_PERIOD);
         });
 
@@ -929,7 +1176,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
         });
 
@@ -941,7 +1197,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.INVALID_QUANTITY_AVAILABLE);
         });
 
@@ -953,7 +1218,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -977,7 +1251,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -990,7 +1273,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
@@ -1015,14 +1307,23 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_RESOLVER);
         });
 
         it("Seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
           const newSeller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(newSeller, contractURI);
+          await accountHandler.connect(rando).createSeller(newSeller, contractURI, emptyAuthToken);
 
           allowedSellersToAdd = ["2"]; // DR is "1", new seller is "2"
           await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
@@ -1031,7 +1332,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
         });
 
@@ -1043,7 +1353,16 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, emptyAuthToken, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           ).to.revertedWith(RevertReasons.DR_UNSUPPORTED_FEE);
         });
       });
@@ -1078,13 +1397,23 @@ describe("IBosonOrchestrationHandler", function () {
           await expect(
             orchestrationHandler
               .connect(operator)
-              .createSellerAndOffer(seller, contractURI, offer, offerDates, offerDurations, disputeResolverId, agentId)
+              .createSellerAndOffer(
+                seller,
+                contractURI,
+                offer,
+                offerDates,
+                offerDurations,
+                disputeResolverId,
+                emptyAuthToken,
+                agentId
+              )
           )
             .to.emit(orchestrationHandler, "SellerCreated")
             .withArgs(
               seller.id,
               sellerStruct,
               calculateContractAddress(orchestrationHandler.address, "1"),
+              emptyAuthTokenStruct,
               operator.address
             )
             .to.emit(orchestrationHandler, "OfferCreated")
@@ -1106,6 +1435,9 @@ describe("IBosonOrchestrationHandler", function () {
             // Set an agent id that does not exist
             let agentId = "16";
 
+            // Seller can have admin address OR auth token
+            seller.admin = ethers.constants.AddressZero;
+
             // Attempt to Create an offer, expecting revert
             await expect(
               orchestrationHandler
@@ -1117,6 +1449,7 @@ describe("IBosonOrchestrationHandler", function () {
                   offerDates,
                   offerDurations,
                   disputeResolverId,
+                  authToken,
                   agentId
                 )
             ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
@@ -1147,6 +1480,7 @@ describe("IBosonOrchestrationHandler", function () {
                   offerDates,
                   offerDurations,
                   disputeResolverId,
+                  emptyAuthToken,
                   agent.id
                 )
             ).to.revertedWith(RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
@@ -1716,7 +2050,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("Seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
           const newSeller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(newSeller, contractURI);
+          await accountHandler.connect(rando).createSeller(newSeller, contractURI, emptyAuthToken);
 
           allowedSellersToAdd = ["3"]; // DR is "1", existing seller is "2", new seller is "3"
           await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
@@ -2481,7 +2815,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("Seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
           const newSeller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(newSeller, contractURI);
+          await accountHandler.connect(rando).createSeller(newSeller, contractURI, emptyAuthToken);
 
           allowedSellersToAdd = ["3"]; // DR is "1", existing seller is "2", new seller is "3"
           await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
@@ -3242,7 +3576,7 @@ describe("IBosonOrchestrationHandler", function () {
         it("Seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
           const newSeller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(newSeller, contractURI);
+          await accountHandler.connect(rando).createSeller(newSeller, contractURI, emptyAuthToken);
 
           allowedSellersToAdd = ["3"]; // DR is "1", existing seller is "2", new seller is "3"
           await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
@@ -4372,6 +4706,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolverId,
               condition,
+              emptyAuthToken,
               agentId
             );
 
@@ -4382,6 +4717,7 @@ describe("IBosonOrchestrationHandler", function () {
               seller.id,
               sellerStruct,
               calculateContractAddress(orchestrationHandler.address, "1"),
+              emptyAuthTokenStruct,
               operator.address
             )
             .to.emit(orchestrationHandler, "OfferCreated")
@@ -4428,6 +4764,7 @@ describe("IBosonOrchestrationHandler", function () {
                   offerDurations,
                   disputeResolverId,
                   condition,
+                  emptyAuthToken,
                   agentId
                 )
             ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
@@ -4459,6 +4796,7 @@ describe("IBosonOrchestrationHandler", function () {
                   offerDurations,
                   disputeResolverId,
                   condition,
+                  emptyAuthToken,
                   agent.id
                 )
             ).to.revertedWith(RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
@@ -4781,6 +5119,7 @@ describe("IBosonOrchestrationHandler", function () {
               offerDurations,
               disputeResolverId,
               twin,
+              emptyAuthToken,
               agentId
             );
 
@@ -4791,6 +5130,7 @@ describe("IBosonOrchestrationHandler", function () {
               seller.id,
               sellerStruct,
               calculateContractAddress(orchestrationHandler.address, "1"),
+              emptyAuthTokenStruct,
               operator.address
             )
             .to.emit(orchestrationHandler, "OfferCreated")
@@ -4849,6 +5189,7 @@ describe("IBosonOrchestrationHandler", function () {
                   offerDurations,
                   disputeResolverId,
                   twin,
+                  emptyAuthToken,
                   agentId
                 )
             ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
@@ -4880,6 +5221,7 @@ describe("IBosonOrchestrationHandler", function () {
                   offerDurations,
                   disputeResolverId,
                   twin,
+                  emptyAuthToken,
                   agent.id
                 )
             ).to.revertedWith(RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
@@ -5249,6 +5591,9 @@ describe("IBosonOrchestrationHandler", function () {
           // Approving the twinHandler contract to transfer seller's tokens
           await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
 
+          // Seller can have admin address OR auth token
+          seller.admin = ethers.constants.AddressZero;
+
           // Create a seller, an offer with condition, twin and bundle
           const tx = await orchestrationHandler
             .connect(operator)
@@ -5261,6 +5606,7 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolverId,
               condition,
               twin,
+              authToken,
               agentId
             );
 
@@ -5271,6 +5617,7 @@ describe("IBosonOrchestrationHandler", function () {
               seller.id,
               sellerStruct,
               calculateContractAddress(orchestrationHandler.address, "1"),
+              authTokenStruct,
               operator.address
             )
             .to.emit(orchestrationHandler, "OfferCreated")
@@ -5338,6 +5685,7 @@ describe("IBosonOrchestrationHandler", function () {
                   disputeResolverId,
                   condition,
                   twin,
+                  emptyAuthToken,
                   agentId
                 )
             ).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
@@ -5370,6 +5718,7 @@ describe("IBosonOrchestrationHandler", function () {
                   disputeResolverId,
                   condition,
                   twin,
+                  emptyAuthToken,
                   agent.id
                 )
             ).to.revertedWith(RevertReasons.AGENT_FEE_AMOUNT_TOO_HIGH);
