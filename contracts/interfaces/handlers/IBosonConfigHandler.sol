@@ -282,7 +282,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @param _authTokenType - the auth token type, as an Enum value
      */
     function getAuthTokenContract(BosonTypes.AuthTokenType _authTokenType) external view returns (address);
-    
+
     /*
      * @notice Sets the maximum number of exchanges that can be created in a single transaction
      *

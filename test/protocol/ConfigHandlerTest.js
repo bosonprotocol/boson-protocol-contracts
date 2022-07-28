@@ -784,7 +784,7 @@ describe("IBosonConfigHandler", function () {
             authTokenContract.address
           );
         });
-        
+
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new auth token contract, expecting revert
@@ -794,7 +794,7 @@ describe("IBosonConfigHandler", function () {
           });
         });
       });
-      
+
       context("👉 setMaxExchangesPerBatch()", async function () {
         beforeEach(async function () {
           // set new value for max exchanges per batch
