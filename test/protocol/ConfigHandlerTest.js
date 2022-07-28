@@ -21,6 +21,7 @@ describe("IBosonConfigHandler", function () {
     maxTwinsPerBundle,
     maxOffersPerBundle,
     maxOffersPerBatch,
+    maxExchangesPerBatch,
     maxTokensPerWithdrawal,
     maxFeesPerDisputeResolver,
     maxEscalationResponsePeriod,
@@ -56,6 +57,7 @@ describe("IBosonConfigHandler", function () {
     // Set protocol config
     protocolFeePercentage = 12;
     protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    maxExchangesPerBatch = 100;
     maxOffersPerGroup = 100;
     maxTwinsPerBundle = 100;
     maxOffersPerBundle = 100;
@@ -88,6 +90,7 @@ describe("IBosonConfigHandler", function () {
           },
           // Protocol limits
           {
+            maxExchangesPerBatch,
             maxOffersPerGroup,
             maxTwinsPerBundle,
             maxOffersPerBundle,
@@ -122,6 +125,8 @@ describe("IBosonConfigHandler", function () {
           .withArgs(protocolFeePercentage, deployer.address)
           .to.emit(configHandler, "ProtocolFeeFlatBosonChanged")
           .withArgs(protocolFeeFlatBoson, deployer.address)
+          .to.emit(configHandler, "MaxExchangesPerBatchChanged")
+          .withArgs(maxExchangesPerBatch, deployer.address)
           .to.emit(configHandler, "MaxOffersPerGroupChanged")
           .withArgs(maxOffersPerGroup, deployer.address)
           .to.emit(configHandler, "MaxTwinsPerBundleChanged")
@@ -159,6 +164,7 @@ describe("IBosonConfigHandler", function () {
         },
         // Protocol limits
         {
+          maxExchangesPerBatch,
           maxOffersPerGroup,
           maxTwinsPerBundle,
           maxOffersPerBundle,
@@ -760,7 +766,7 @@ describe("IBosonConfigHandler", function () {
           authTokenContract = accounts[9];
         });
 
-        it("should emit a AuthTokenContractChanged event", async function () {
+        it("should emit an AuthTokenContractChanged event", async function () {
           // Set new auth token contract, testing for the event
           await expect(
             configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, authTokenContract.address)
@@ -778,13 +784,44 @@ describe("IBosonConfigHandler", function () {
             authTokenContract.address
           );
         });
-
+        
         context("💔 Revert Reasons", async function () {
           it("caller is not the admin", async function () {
             // Attempt to set new auth token contract, expecting revert
             await expect(
               configHandler.connect(rando).setAuthTokenContract(AuthTokenType.ENS, authTokenContract.address)
             ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          });
+        });
+      });
+      
+      context("👉 setMaxExchangesPerBatch()", async function () {
+        beforeEach(async function () {
+          // set new value for max exchanges per batch
+          maxExchangesPerBatch = 135;
+        });
+
+        it("should emit a MaxExchangesPerBatchChanged event", async function () {
+          // Set new max exchange per batch, testing for the event
+          await expect(configHandler.connect(deployer).setMaxExchangesPerBatch(maxExchangesPerBatch))
+            .to.emit(configHandler, "MaxExchangesPerBatchChanged")
+            .withArgs(maxExchangesPerBatch, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new max exchange per batch,
+          await configHandler.connect(deployer).setMaxExchangesPerBatch(maxExchangesPerBatch);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxExchangesPerBatch()).to.equal(maxExchangesPerBatch);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new max exchange per batch, expecting revert
+            await expect(configHandler.connect(rando).setMaxExchangesPerBatch(maxExchangesPerBatch)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
           });
         });
       });
@@ -865,6 +902,11 @@ describe("IBosonConfigHandler", function () {
         expect(await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.Lens)).to.equal(
           ethers.constants.AddressZero,
           "Invalid auth token contract address"
+        );
+
+        expect(await configHandler.connect(rando).getMaxExchangesPerBatch()).to.equal(
+          maxExchangesPerBatch,
+          "Invalid max exchanges per batch"
         );
       });
     });

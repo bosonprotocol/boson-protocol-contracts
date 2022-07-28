@@ -649,6 +649,19 @@
     {
       "inputs": [
         {
+          "internalType": "uint256[]",
+          "name": "_exchangeIds",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "completeExchangeBatch",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "uint256",
           "name": "_exchangeId",
           "type": "uint256"

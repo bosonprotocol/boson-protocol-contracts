@@ -104,6 +104,25 @@
         {
           "indexed": false,
           "internalType": "uint16",
+          "name": "maxExchangesPerBatch",
+          "type": "uint16"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MaxExchangesPerBatchChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint16",
           "name": "maxFeesPerDisputeResolver",
           "type": "uint16"
         },
