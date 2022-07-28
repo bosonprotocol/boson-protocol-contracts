@@ -109,7 +109,6 @@ contract BosonTypes {
         uint256 sellerId;
         uint256 price;
         uint256 sellerDeposit;
-        uint256 protocolFee;
         uint256 buyerCancelPenalty;
         uint256 quantityAvailable;
         address exchangeToken;
@@ -222,5 +221,10 @@ contract BosonTypes {
     struct HashInfo {
         bytes32 typeHash;
         function(bytes memory) internal pure returns (bytes32) hashFunction;
+    }
+
+    struct OfferFees {
+        uint256 protocolFee;
+        uint256 agentFee;
     }
 }

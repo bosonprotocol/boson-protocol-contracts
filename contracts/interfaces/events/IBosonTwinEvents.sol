@@ -16,4 +16,22 @@ interface IBosonTwinEvents {
         address indexed executedBy
     );
     event TwinDeleted(uint256 indexed twinId, uint256 indexed sellerId, address indexed executedBy);
+    // Amount must be 0 if token type is TokenType.NonFungible
+    // tokenId must be 0 if token type is TokenType.Fungible
+    event TwinTransferred(
+        uint256 indexed twinId,
+        address indexed tokenAddress,
+        uint256 indexed exchangeId,
+        uint256 tokenId,
+        uint256 amount,
+        address executedBy
+    );
+    event TwinTransferFailed(
+        uint256 indexed twinId,
+        address indexed tokenAddress,
+        uint256 indexed exchangeId,
+        uint256 tokenId,
+        uint256 amount,
+        address executedBy
+    );
 }

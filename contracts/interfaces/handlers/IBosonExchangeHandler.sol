@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { IBosonExchangeEvents } from "../events/IBosonExchangeEvents.sol";
+import { IBosonTwinEvents } from "../events/IBosonTwinEvents.sol";
 import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
 
 /**
@@ -12,7 +13,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * The ERC-165 identifier for this interface is: 0x619e9d29
  */
-interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
+interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**
      * @notice Commit to an offer (first step of an exchange)
      *
@@ -97,6 +98,23 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents {
      * @param _exchangeId - the id of the exchange
      */
     function expireVoucher(uint256 _exchangeId) external;
+
+    /**
+     * @notice Extend a Voucher's validity period.
+     *
+     * Reverts if
+     * - Exchange does not exist
+     * - Exchange is not in committed state
+     * - Caller is not seller's operator
+     * - New date is not later than the current one
+     *
+     * Emits
+     * - VoucherExtended
+     *
+     * @param _exchangeId - the id of the exchange
+     * @param _validUntilDate - the new voucher expiry date
+     */
+    function extendVoucher(uint256 _exchangeId, uint256 _validUntilDate) external;
 
     /**
      * @notice Redeem a voucher.

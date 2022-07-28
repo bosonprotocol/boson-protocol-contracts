@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
+import "../../domain/BosonConstants.sol";
 
 /**
  * @title OfferHandlerFacet
@@ -37,21 +38,27 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     * - Seller is not on dispute resolver's seller allow list
      * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price
+     * - When agent id is non zero:
+     *   - If Agent does not exist
+     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
+     * @param _agentId - the id of agent
      */
     function createOffer(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
-        uint256 _disputeResolverId
+        uint256 _disputeResolverId,
+        uint256 _agentId
     ) external override {
-        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId);
+        createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
     }
 
     /**
@@ -76,19 +83,25 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *   - Available quantity is set to zero
      *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
      *   - Buyer cancel penalty is greater than price
+     * - When agent ids are non zero:
+     *   - If Agent does not exist
+     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offers - the array of fully populated Offer structs with offer id set to 0x0 and voided set to false
      * @param _offerDates - the array of fully populated offer dates structs
      * @param _offerDurations - the array of fully populated offer durations structs
      * @param _disputeResolverIds - the array of ids of chosen dispute resolvers (can be 0)
+     * @param _agentIds - the array of ids of agents
      */
     function createOfferBatch(
         Offer[] calldata _offers,
         OfferDates[] calldata _offerDates,
         OfferDurations[] calldata _offerDurations,
-        uint256[] calldata _disputeResolverIds
+        uint256[] calldata _disputeResolverIds,
+        uint256[] calldata _agentIds
     ) external override {
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offers.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
@@ -96,13 +109,14 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         require(
             _offers.length == _offerDates.length &&
                 _offers.length == _offerDurations.length &&
-                _offers.length == _disputeResolverIds.length,
+                _offers.length == _disputeResolverIds.length &&
+                _offers.length == _agentIds.length,
             ARRAY_LENGTH_MISMATCH
         );
 
         for (uint256 i = 0; i < _offers.length; i++) {
             // create offer and update structs values to represent true state
-            createOfferInternal(_offers[i], _offerDates[i], _offerDurations[i], _disputeResolverIds[i]);
+            createOfferInternal(_offers[i], _offerDates[i], _offerDurations[i], _disputeResolverIds[i], _agentIds[i]);
         }
     }
 
@@ -227,6 +241,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @return offerDates - the offer dates details. See {BosonTypes.OfferDates}
      * @return offerDurations - the offer durations details. See {BosonTypes.OfferDurations}
      * @return disputeResolutionTerms - the details about the dispute resolution terms. See {BosonTypes.DisputeResolutionTerms}
+     * @return offerFees - the offer fees details. See {BosonTypes.OfferFees}
      */
     function getOffer(uint256 _offerId)
         external
@@ -237,7 +252,8 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
             Offer memory offer,
             OfferDates memory offerDates,
             OfferDurations memory offerDurations,
-            DisputeResolutionTerms memory disputeResolutionTerms
+            DisputeResolutionTerms memory disputeResolutionTerms,
+            OfferFees memory offerFees
         )
     {
         (exists, offer) = fetchOffer(_offerId);
@@ -245,6 +261,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
             offerDates = fetchOfferDates(_offerId);
             offerDurations = fetchOfferDurations(_offerId);
             disputeResolutionTerms = fetchDisputeResolutionTerms(_offerId);
+            offerFees = fetchOfferFees(_offerId);
         }
     }
 
@@ -270,5 +287,16 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         Offer memory offer;
         (exists, offer) = fetchOffer(_offerId);
         offerVoided = offer.voided;
+    }
+
+    /**
+     * @notice Gets the agent id for a given offer id.
+     *
+     * @param _offerId - the offer Id.
+     * @return exists - whether the agent Id exists
+     * @return agentId - the agent Id.
+     */
+    function getAgentIdByOffer(uint256 _offerId) external view override returns (bool exists, uint256 agentId) {
+        return fetchAgentIdByOffer(_offerId);
     }
 }

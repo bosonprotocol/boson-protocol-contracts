@@ -33,6 +33,7 @@ exports.RevertReasons = {
   INVALID_DISPUTE_RESOLVER: "Invalid dispute resolver",
   INVALID_QUANTITY_AVAILABLE: "Invalid quantity available",
   DR_UNSUPPORTED_FEE: "Dispute resolver does not accept this token",
+  AGENT_FEE_AMOUNT_TOO_HIGH: "Sum of Agent fee amount and protocol fee amount should be <= offer fee limit",
 
   // Group related
   NO_SUCH_GROUP: "No such group",
@@ -72,7 +73,6 @@ exports.RevertReasons = {
   // Twin related
   NO_SUCH_TWIN: "No such twin",
   NO_TRANSFER_APPROVED: "No transfer approved",
-  TWIN_TRANSFER_FAILED: "Twin could not be transferred",
   UNSUPPORTED_TOKEN: "Unsupported token",
   BUNDLE_FOR_TWIN_EXISTS: "Bundle for twin exists",
   INVALID_SUPPLY_AVAILABLE: "supplyAvailable can't be zero",
@@ -95,6 +95,7 @@ exports.RevertReasons = {
   FULFILLMENT_PERIOD_NOT_ELAPSED: "Fulfillment period has not yet elapsed",
   EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS: "Exchange for the bundled offers exists",
   VOUCHER_NOT_REDEEMABLE: "Voucher not yet valid or already expired",
+  VOUCHER_EXTENSION_NOT_VALID: "Proposed date is not later than the current one",
   VOUCHER_STILL_VALID: "Voucher still valid",
   VOUCHER_HAS_EXPIRED: "Voucher has expired",
 

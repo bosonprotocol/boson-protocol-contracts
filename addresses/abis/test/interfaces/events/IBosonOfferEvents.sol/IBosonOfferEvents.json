@@ -42,11 +42,6 @@
             },
             {
               "internalType": "uint256",
-              "name": "protocolFee",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
               "name": "buyerCancelPenalty",
               "type": "uint256"
             },
@@ -161,7 +156,31 @@
           "type": "tuple"
         },
         {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "protocolFee",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "agentFee",
+              "type": "uint256"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.OfferFees",
+          "name": "offerFees",
+          "type": "tuple"
+        },
+        {
           "indexed": true,
+          "internalType": "uint256",
+          "name": "agentId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
           "internalType": "address",
           "name": "executedBy",
           "type": "address"

@@ -80,6 +80,7 @@ describe("IBosonDisputeHandler", function () {
   let DRFeeNative, DRFeeToken, buyerEscalationDepositNative, buyerEscalationDepositToken;
   let contractURI;
   let emptyAuthToken;
+  let agentId;
 
   before(async function () {
     // get interface Ids
@@ -156,6 +157,7 @@ describe("IBosonDisputeHandler", function () {
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
         maxAllowedSellers: 100,
+        maxTotalOfferFeePercentage: 4000, //40%
       },
       // Protocol fees
       {
@@ -206,6 +208,7 @@ describe("IBosonDisputeHandler", function () {
       // Initial ids for all the things
       id = offerId = sellerId = nextAccountId = "1";
       buyerId = "3"; // created after seller and dispute resolver
+      agentId = "0"; // agent id is optional while creating an offer
 
       active = true;
 
@@ -254,7 +257,7 @@ describe("IBosonDisputeHandler", function () {
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
-      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
       // Set used variables
       price = offer.price;
@@ -1216,7 +1219,9 @@ describe("IBosonDisputeHandler", function () {
           offer.id++;
 
           // create an offer with erc20 exchange token
-          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
           // mint tokens to buyer and approve the protocol
           buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
@@ -1368,12 +1373,14 @@ describe("IBosonDisputeHandler", function () {
           it("Dispute resolver is not specified (absolute zero offer)", async function () {
             // Create and absolute zero offer without DR
             // Prepare an absolute zero offer
-            offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = offer.protocolFee = "0";
+            offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = "0";
             offer.id++;
             disputeResolverId = "0";
 
             // Create a new offer
-            await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+            await offerHandler
+              .connect(operator)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
             // Commit to offer and put exchange all the way to dispute
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);

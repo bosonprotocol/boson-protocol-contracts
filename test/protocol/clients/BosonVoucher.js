@@ -25,6 +25,7 @@ describe("IBosonVoucher", function () {
   let deployer, protocol, buyer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
   let disputeResolver, disputeResolverFees;
   let emptyAuthToken;
+  let agentId;
 
   before(async function () {
     // Get interface id
@@ -88,6 +89,7 @@ describe("IBosonVoucher", function () {
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
         maxAllowedSellers: 100,
+        maxTotalOfferFeePercentage: 4000, //40%
       },
       //Protocol fees
       {
@@ -165,6 +167,8 @@ describe("IBosonVoucher", function () {
       expect(emptyAuthToken.isValid()).is.true;
       await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
 
+      agentId = "0"; // agent id is optional while creating an offer
+
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(
         operatorDR.address,
@@ -188,7 +192,7 @@ describe("IBosonVoucher", function () {
       const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
       await offerHandler
         .connect(operator)
-        .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId);
+        .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
       await fundsHandler
         .connect(admin)
         .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });

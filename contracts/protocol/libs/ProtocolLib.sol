@@ -50,6 +50,8 @@ library ProtocolLib {
         uint16 maxDisputesPerBatch;
         // limit how many sellers can be added to or removed from an allow list in a single transaction
         uint16 maxAllowedSellers;
+        // limit the sum of (Protocol Fee percentage + Agent Fee perpercentagecent) of an offer fee
+        uint16 maxTotalOfferFeePercentage;
     }
 
     // Protocol fees storage
@@ -66,6 +68,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Offer) offers;
         // offer id => offer dates
         mapping(uint256 => BosonTypes.OfferDates) offerDates;
+        // offer id => offer fees
+        mapping(uint256 => BosonTypes.OfferFees) offerFees;
         // offer id => offer durations
         mapping(uint256 => BosonTypes.OfferDurations) offerDurations;
         // offer id => dispute resolution terms
@@ -106,6 +110,8 @@ library ProtocolLib {
         mapping(uint256 => uint256) bundleIdByTwin;
         // offer id => group id
         mapping(uint256 => uint256) groupIdByOffer;
+        // offer id => agent id
+        mapping(uint256 => uint256) agentIdByOffer;
         // seller operator address => sellerId
         mapping(address => uint256) sellerIdByOperator;
         // seller admin address => sellerId

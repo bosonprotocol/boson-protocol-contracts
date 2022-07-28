@@ -26,7 +26,8 @@ describe("IBosonConfigHandler", function () {
     maxEscalationResponsePeriod,
     maxDisputesPerBatch,
     maxAllowedSellers,
-    buyerEscalationDepositPercentage;
+    buyerEscalationDepositPercentage,
+    maxTotalOfferFeePercentage;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
   let authTokenContract;
@@ -65,6 +66,7 @@ describe("IBosonConfigHandler", function () {
     maxDisputesPerBatch = 100;
     maxAllowedSellers = 100;
     buyerEscalationDepositPercentage = 100;
+    maxTotalOfferFeePercentage = 4000; // 40%
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
@@ -95,6 +97,7 @@ describe("IBosonConfigHandler", function () {
             maxEscalationResponsePeriod,
             maxDisputesPerBatch,
             maxAllowedSellers,
+            maxTotalOfferFeePercentage,
           },
           //Protocol fees
           {
@@ -165,6 +168,7 @@ describe("IBosonConfigHandler", function () {
           maxEscalationResponsePeriod,
           maxDisputesPerBatch,
           maxAllowedSellers,
+          maxTotalOfferFeePercentage,
         },
         // Protocol fees
         {
@@ -709,6 +713,47 @@ describe("IBosonConfigHandler", function () {
         });
       });
 
+      context("👉 setMaxTotalOfferFeePercentage()", async function () {
+        beforeEach(async function () {
+          // set new value for Max Total Offer Fee Percentage
+          maxTotalOfferFeePercentage = 50;
+        });
+
+        it("should emit a MaxTotalOfferFeePercentageChanged event", async function () {
+          // set new value for Max Total Offer Fee Percentage, testing for the event
+          await expect(configHandler.connect(deployer).setMaxTotalOfferFeePercentage(maxTotalOfferFeePercentage))
+            .to.emit(configHandler, "MaxTotalOfferFeePercentageChanged")
+            .withArgs(maxTotalOfferFeePercentage, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // set new value for Max Total Offer Fee Percentage
+          await configHandler.connect(deployer).setMaxTotalOfferFeePercentage(maxTotalOfferFeePercentage);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxTotalOfferFeePercentage()).to.equal(
+            maxTotalOfferFeePercentage
+          );
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new value for Max Total Offer Fee Percentage, expecting revert
+            await expect(
+              configHandler.connect(rando).setMaxTotalOfferFeePercentage(maxTotalOfferFeePercentage)
+            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          });
+
+          it("protocolFeePercentage must be less than 10000", async function () {
+            // Attempt to set new value for Max Total Offer Fee Percentage, expecting revert
+            maxTotalOfferFeePercentage = 10001;
+            await expect(
+              configHandler.connect(deployer).setMaxTotalOfferFeePercentage(maxTotalOfferFeePercentage)
+            ).to.revertedWith(RevertReasons.FEE_PERCENTAGE_INVALID);
+          });
+        });
+      });
+
       context("👉 setAuthTokenContract()", async function () {
         beforeEach(async function () {
           // set new value for auth token contract
@@ -811,6 +856,10 @@ describe("IBosonConfigHandler", function () {
         expect(await configHandler.connect(rando).getBuyerEscalationDepositPercentage()).to.equal(
           buyerEscalationDepositPercentage,
           "Invalid buyer escalation deposit"
+        );
+        expect(await configHandler.connect(rando).getMaxTotalOfferFeePercentage()).to.equal(
+          maxTotalOfferFeePercentage,
+          "Invalid max total offer fee percentage"
         );
         //setAuthTokenContract is not called in the initialize function
         expect(await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.Lens)).to.equal(

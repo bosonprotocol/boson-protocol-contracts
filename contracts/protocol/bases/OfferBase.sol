@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import { IBosonOfferEvents } from "../../interfaces/events/IBosonOfferEvents.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
+import "./../../domain/BosonConstants.sol";
 
 /**
  * @title OfferBase
@@ -30,19 +31,25 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     * - Seller is not on dispute resolver's seller allow list
      * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price
+     * - When agent id is non zero:
+     *   - If Agent does not exist
+     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
+     * @param _agentId - the id of agent
      */
     function createOfferInternal(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
-        uint256 _disputeResolverId
+        uint256 _disputeResolverId,
+        uint256 _agentId
     ) internal {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
@@ -53,7 +60,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         _offer.id = offerId;
 
         // Store the offer
-        storeOffer(_offer, _offerDates, _offerDurations, _disputeResolverId);
+        storeOffer(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
     }
 
     /**
@@ -84,19 +91,26 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     * - Seller is not on dispute resolver's seller allow list
+     * - Seller is not on dispute resolver's seller allow list
      * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price
+     * - When agent id is non zero:
+     *   - If Agent does not exist
+     *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _offer - the fully populated struct with offer id set to offer to be updated and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
+     * @param _agentId - the id of agent
      */
     function storeOffer(
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
-        uint256 _disputeResolverId
+        uint256 _disputeResolverId,
+        uint256 _agentId
     ) internal {
         // validFrom date must be less than validUntil date
         require(_offerDates.validFrom < _offerDates.validUntil, OFFER_PERIOD_INVALID);
@@ -136,8 +150,17 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             ) = fetchDisputeResolver(_disputeResolverId);
             require(exists && disputeResolver.active, INVALID_DISPUTE_RESOLVER);
 
+            ProtocolLib.ProtocolLookups storage pl = protocolLookups();
+
+            // check that seller is on the DR allow list
+            if (pl.allowedSellers[_disputeResolverId].length > 0) {
+                // if length == 0, dispute resolver allows any seller
+                // if length > 0, we check that it is on allow list
+                require(pl.allowedSellerIndex[_disputeResolverId][_offer.sellerId] > 0, SELLER_NOT_APPROVED);
+            }
+
             // get the index of DisputeResolverFee and make sure DR supports the exchangeToken
-            uint256 feeIndex = protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_offer.exchangeToken];
+            uint256 feeIndex = pl.disputeResolverFeeTokenIndex[_disputeResolverId][_offer.exchangeToken];
             require(feeIndex > 0, DR_UNSUPPORTED_FEE);
 
             uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
@@ -147,19 +170,47 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
                 _disputeResolverId,
                 disputeResolver.escalationResponsePeriod,
                 feeAmount,
-                (feeAmount * protocolLookups().buyerEscalationDepositPercentage) / 10000
+                (feeAmount * pl.buyerEscalationDepositPercentage) / 10000
             );
             protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
         }
 
-        // Calculate and set the protocol fee
-        uint256 protocolFee = _offer.exchangeToken == protocolAddresses().tokenAddress
-            ? protocolFees().flatBoson
-            : (protocolFees().percentage * _offer.price) / 10000;
-        _offer.protocolFee = protocolFee;
+        // Get storage location for offer fees
+        OfferFees storage offerFees = fetchOfferFees(_offer.id);
 
-        // condition for succesfull payout when exchange final state is canceled
-        require(_offer.buyerCancelPenalty <= _offer.price, OFFER_PENALTY_INVALID);
+        // Get the agent
+        (bool agentExists, Agent storage agent) = fetchAgent(_agentId);
+        // Make sure agent exists if _agentId is not zero.
+        require(_agentId == 0 || agentExists, NO_SUCH_AGENT);
+
+        {
+            // scope to avoid stack too deep errors
+            // Set variable to eliminate multiple SLOAD
+            uint256 offerPrice = _offer.price;
+
+            // condition for succesfull payout when exchange final state is canceled
+            require(_offer.buyerCancelPenalty <= offerPrice, OFFER_PENALTY_INVALID);
+
+            // Calculate and set the protocol fee
+            uint256 protocolFee = _offer.exchangeToken == protocolAddresses().tokenAddress
+                ? protocolFees().flatBoson
+                : (protocolFees().percentage * offerPrice) / 10000;
+
+            // Calculate the agent fee amount
+            uint256 agentFeeAmount = (agent.feePercentage * offerPrice) / 10000;
+
+            uint256 totalOfferFeeLimit = (protocolLimits().maxTotalOfferFeePercentage * offerPrice) / 10000;
+
+            // Sum of Agent fee amount and protocol fee amount should be <= offer fee limit
+            require((agentFeeAmount + protocolFee) <= totalOfferFeeLimit, AGENT_FEE_AMOUNT_TOO_HIGH);
+
+            //Set offer fees props individually since calldata structs can't be copied to storage
+            offerFees.protocolFee = protocolFee;
+            offerFees.agentFee = agentFeeAmount;
+
+            // Store the agent id for the offer
+            protocolLookups().agentIdByOffer[_offer.id] = _agentId;
+        }
 
         // Get storage location for offer
         (, Offer storage offer) = fetchOffer(_offer.id);
@@ -169,7 +220,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         offer.sellerId = _offer.sellerId;
         offer.price = _offer.price;
         offer.sellerDeposit = _offer.sellerDeposit;
-        offer.protocolFee = _offer.protocolFee;
         offer.buyerCancelPenalty = _offer.buyerCancelPenalty;
         offer.quantityAvailable = _offer.quantityAvailable;
         offer.exchangeToken = _offer.exchangeToken;
@@ -201,6 +251,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             _offerDates,
             _offerDurations,
             disputeResolutionTerms,
+            offerFees,
+            _agentId,
             msgSender()
         );
     }

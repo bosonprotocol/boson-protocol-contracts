@@ -30,4 +30,5 @@ interface IBosonConfigEvents {
         address indexed authTokenContract,
         address indexed executedBy
     );
+    event MaxTotalOfferFeePercentageChanged(uint16 maxTotalOfferFeePercentage, address indexed executedBy);
 }

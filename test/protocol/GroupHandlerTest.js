@@ -18,7 +18,7 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { getEvent, applyPercentage } = require("../../scripts/util/test-utils.js");
+const { getEvent } = require("../../scripts/util/test-utils.js");
 const { oneMonth } = require("../utils/constants");
 const { mockOffer, mockDisputeResolver } = require("../utils/mock");
 
@@ -45,6 +45,7 @@ describe("IBosonGroupHandler", function () {
   let disputeResolver, disputeResolverFees, disputeResolverId;
   let contractURI;
   let emptyAuthToken;
+  let agentId;
 
   before(async function () {
     // get interface Ids
@@ -96,6 +97,7 @@ describe("IBosonGroupHandler", function () {
         maxEscalationResponsePeriod: oneMonth,
         maxDisputesPerBatch: 100,
         maxAllowedSellers: 100,
+        maxTotalOfferFeePercentage: 4000, //40%
       },
       // Protocol fees
       {
@@ -135,6 +137,7 @@ describe("IBosonGroupHandler", function () {
       // create a seller
       // Required constructor params
       id = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
+      agentId = "0"; // agent id is optional while creating an offer
 
       active = true;
 
@@ -182,7 +185,6 @@ describe("IBosonGroupHandler", function () {
         offer.id = `${i + 1}`;
         offer.price = ethers.utils.parseUnits(`${1.5 + i * 1}`, "ether").toString();
         offer.sellerDeposit = ethers.utils.parseUnits(`${0.25 + i * 0.1}`, "ether").toString();
-        offer.protocolFee = applyPercentage(offer.price, protocolFeePercentage);
         offer.buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
         offer.quantityAvailable = `${(i + 1) * 2}`;
         offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
@@ -194,7 +196,7 @@ describe("IBosonGroupHandler", function () {
         expect(offerDurations.isValid()).is.true;
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
       }
 
       // Required constructor params for Condition
@@ -328,7 +330,7 @@ describe("IBosonGroupHandler", function () {
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
           await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
-          await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId); // creates an offer with id 6
+          await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
 
           // add offer belonging to another seller
           group.offerIds = ["2", "6"];
@@ -497,7 +499,7 @@ describe("IBosonGroupHandler", function () {
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
           await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
-          await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId); // creates an offer with id 6
+          await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
 
           // add offer belonging to another seller
           offerIdsToAdd = ["1", "6"];
@@ -651,7 +653,9 @@ describe("IBosonGroupHandler", function () {
           ).to.revertedWith(RevertReasons.OFFER_NOT_IN_GROUP);
 
           // create an offer and add it to another group
-          await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId);
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
           group.offerIds = ["6"];
           await groupHandler.connect(operator).createGroup(group);
 
