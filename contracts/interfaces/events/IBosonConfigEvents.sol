@@ -26,5 +26,10 @@ interface IBosonConfigEvents {
     event MaxDisputesPerBatchChanged(uint16 maxDisputesPerBatch, address indexed executedBy);
     event MaxAllowedSellersChanged(uint16 maxAllowedSellers, address indexed executedBy);
     event BuyerEscalationFeePercentageChanged(uint16 buyerEscalationFeePercentage, address indexed executedBy);
+    event AuthTokenContractChanged(
+        BosonTypes.AuthTokenType indexed authTokenType,
+        address indexed authTokenContract,
+        address indexed executedBy
+    );
     event MaxTotalOfferFeePercentageChanged(uint16 maxTotalOfferFeePercentage, address indexed executedBy);
 }

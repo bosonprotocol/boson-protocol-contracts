@@ -9,6 +9,8 @@ const { deployProtocolHandlerFacets } = require("../../../scripts/util/deploy-pr
 const Buyer = require("../../../scripts/domain/Buyer");
 const Role = require("../../../scripts/domain/Role");
 const Seller = require("../../../scripts/domain/Seller");
+const AuthToken = require("../../../scripts/domain/AuthToken");
+const AuthTokenType = require("../../../scripts/domain/AuthTokenType");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
 const { mockOffer } = require("../../utils/mock.js");
 const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
@@ -22,6 +24,7 @@ describe("IBosonVoucher", function () {
   let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler;
   let deployer, protocol, buyer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
   let disputeResolver, disputeResolverFees;
+  let emptyAuthToken;
   let agentId;
 
   before(async function () {
@@ -159,7 +162,12 @@ describe("IBosonVoucher", function () {
     beforeEach(async function () {
       const seller = new Seller("1", operator.address, admin.address, clerk.address, treasury.address, true);
       const contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      await accountHandler.connect(admin).createSeller(seller, contractURI);
+
+      // AuthToken
+      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      expect(emptyAuthToken.isValid()).is.true;
+      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid dispute resolver

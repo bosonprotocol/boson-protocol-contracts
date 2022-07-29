@@ -13,7 +13,7 @@ import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  *
- * The ERC-165 identifier for this interface is: 0x37a73f99
+ * The ERC-165 identifier for this interface is: 0xbfb8b741
  */
 interface IBosonOrchestrationHandler is
     IBosonAccountEvents,
@@ -23,7 +23,7 @@ interface IBosonOrchestrationHandler is
     IBosonBundleEvents
 {
     /**
-     * @notice Creates a seller and an offer in a single transaction.
+     * @notice Creates a seller (with optional auth token) and an offer in a single transaction.
      *
      * Limitation of the method:
      * If chosen dispute resolver has seller allow list, this method will not succeed, since seller that will be created
@@ -37,6 +37,8 @@ interface IBosonOrchestrationHandler is
      *
      * Reverts if:
      * - caller is not the same as operator address
+     * - Admin address is zero address and AuthTokenType == None
+     * - AuthTokenType is not unique to this seller
      * - in seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -67,6 +69,7 @@ interface IBosonOrchestrationHandler is
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      * @param _agentId - the id of agent
      */
     function createSellerAndOffer(
@@ -76,6 +79,7 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
+        BosonTypes.AuthToken calldata _authToken,
         uint256 _agentId
     ) external;
 
@@ -263,7 +267,7 @@ interface IBosonOrchestrationHandler is
     ) external;
 
     /**
-     * @notice Takes a seller, an offer and a condition, creates a seller, creates an offer, then a group with that offer and the given condition.
+     * @notice Takes a seller, an offer, a condition and an optional auth token, creates a seller, creates an offer, then a group with that offer and the given condition.
      *
      * Limitation of the method:
      * If chosen dispute resolver has seller allow list, this method will not succeed, since seller that will be created
@@ -277,6 +281,8 @@ interface IBosonOrchestrationHandler is
      *
      * Reverts if:
      * - caller is not the same as operator address
+     * - Admin address is zero address and AuthTokenType == None
+     * - AuthTokenType is not unique to this seller
      * - in seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -310,6 +316,7 @@ interface IBosonOrchestrationHandler is
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      * @param _agentId - the id of agent
      */
     function createSellerAndOfferWithCondition(
@@ -320,11 +327,12 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         BosonTypes.Condition memory _condition,
+        BosonTypes.AuthToken calldata _authToken,
         uint256 _agentId
     ) external;
 
     /**
-     * @notice Takes a seller, an offer and a twin, creates a seller, creates an offer, creates a twin, then a bundle with that offer and the given twin
+     * @notice Takes a seller, an offer, a twin, and an optional auth token, creates a seller, creates an offer, creates a twin, then a bundle with that offer and the given twin
      *
      * Limitation of the method:
      * If chosen dispute resolver has seller allow list, this method will not succeed, since seller that will be created
@@ -338,6 +346,8 @@ interface IBosonOrchestrationHandler is
      *
      * Reverts if:
      * - caller is not the same as operator address
+     * - Admin address is zero address and AuthTokenType == None
+     * - AuthTokenType is not unique to this seller
      * - in seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -372,6 +382,7 @@ interface IBosonOrchestrationHandler is
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _twin - the fully populated twin struct
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      * @param _agentId - the id of agent
      */
     function createSellerAndOfferAndTwinWithBundle(
@@ -382,11 +393,12 @@ interface IBosonOrchestrationHandler is
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         BosonTypes.Twin memory _twin,
+        BosonTypes.AuthToken calldata _authToken,
         uint256 _agentId
     ) external;
 
     /**
-     * @notice Takes a seller, an offer, a condition and a twin, creates a sellerm an offer, then a group with that offer and the given condition, then creates a twin, then a bundle with that offer and the given twin
+     * @notice Takes a seller, an offer, a condition and a twin, and an optional auth token, creates a seller an offer, then a group with that offer and the given condition, then creates a twin, then a bundle with that offer and the given twin
      *
      * Limitation of the method:
      * If chosen dispute resolver has seller allow list, this method will not succeed, since seller that will be created
@@ -400,6 +412,8 @@ interface IBosonOrchestrationHandler is
      *
      * Reverts if:
      * - caller is not the same as operator address
+     * - Admin address is zero address and AuthTokenType == None
+     * - AuthTokenType is not unique to this seller
      * - in seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -436,6 +450,7 @@ interface IBosonOrchestrationHandler is
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      * @param _agentId - the id of agent
      */
     function createSellerAndOfferWithConditionAndTwinAndBundle(
@@ -447,6 +462,7 @@ interface IBosonOrchestrationHandler is
         uint256 _disputeResolverId,
         BosonTypes.Condition memory _condition,
         BosonTypes.Twin memory _twin,
+        BosonTypes.AuthToken calldata _authToken,
         uint256 _agentId
     ) external;
 }

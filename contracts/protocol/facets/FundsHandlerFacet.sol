@@ -43,7 +43,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         uint256 _amount
     ) external payable override {
         //Check Seller exists in sellers mapping
-        (bool exists, ) = fetchSeller(_sellerId);
+        (bool exists, , ) = fetchSeller(_sellerId);
 
         //Seller must exist
         require(exists, NO_SUCH_SELLER);
@@ -131,7 +131,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             (exists, callerId) = getSellerIdByClerk(msgSender());
             if (exists && callerId == _entityId) {
                 // caller is a clerk. In this case funds are transferred to the treasury address
-                (, Seller storage seller) = fetchSeller(callerId);
+                (, Seller storage seller, ) = fetchSeller(callerId);
                 destinationAddress = seller.treasury;
             } else {
                 (exists, callerId) = getAgentIdByWallet(msgSender());

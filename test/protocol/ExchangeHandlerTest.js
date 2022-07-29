@@ -7,6 +7,8 @@ const Role = require("../../scripts/domain/Role");
 const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
 const Seller = require("../../scripts/domain/Seller");
+const AuthToken = require("../../scripts/domain/AuthToken");
+const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Buyer = require("../../scripts/domain/Buyer");
 const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
@@ -79,6 +81,7 @@ describe("IBosonExchangeHandler", function () {
   let expectedCloneAddress;
   let method, tokenType, tokenAddress, tokenId, threshold, maxCommits, groupId, offerIds, condition, group;
   let contractURI;
+  let emptyAuthToken;
   let agentId;
   let exchangesToComplete, exchangeId;
 
@@ -232,7 +235,12 @@ describe("IBosonExchangeHandler", function () {
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
       expect(seller.isValid()).is.true;
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      await accountHandler.connect(admin).createSeller(seller, contractURI);
+
+      // AuthToken
+      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      expect(emptyAuthToken.isValid()).is.true;
+
+      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
       expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
 
       // Create a valid dispute resolver
@@ -342,7 +350,7 @@ describe("IBosonExchangeHandler", function () {
         seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, true);
         expect(seller.isValid()).is.true;
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        await accountHandler.connect(rando).createSeller(seller, contractURI);
+        await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
         expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
         const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
@@ -1974,7 +1982,7 @@ describe("IBosonExchangeHandler", function () {
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, true);
           expect(seller.isValid()).is.true;
           contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-          await accountHandler.connect(rando).createSeller(seller, contractURI);
+          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
           expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
           const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 

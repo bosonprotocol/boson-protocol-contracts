@@ -6,6 +6,8 @@ const { gasLimit } = require("../../environments");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const Bundle = require("../../scripts/domain/Bundle");
+const AuthToken = require("../../scripts/domain/AuthToken");
+const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -52,6 +54,7 @@ describe("IBosonBundleHandler", function () {
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let disputeResolver, disputeResolverFees, disputeResolverId;
   let contractURI;
+  let emptyAuthToken;
   let agentId;
 
   before(async function () {
@@ -185,7 +188,12 @@ describe("IBosonBundleHandler", function () {
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      await accountHandler.connect(admin).createSeller(seller, contractURI);
+
+      // AuthTokens
+      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      expect(emptyAuthToken.isValid()).is.true;
+
+      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
 
       id = ++nextAccountId;
 
@@ -360,7 +368,7 @@ describe("IBosonBundleHandler", function () {
           let expectedNewOfferId = "6";
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-          await accountHandler.connect(rando).createSeller(seller, contractURI);
+          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
           const tx = await offerHandler
             .connect(rando)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
@@ -400,7 +408,7 @@ describe("IBosonBundleHandler", function () {
           let expectedNewTwinId = "6";
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-          await accountHandler.connect(rando).createSeller(seller, contractURI);
+          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
           await bosonToken.connect(rando).approve(twinHandler.address, 1); // approving the twin handler
           const tx = await twinHandler.connect(rando).createTwin(twin); // creates a twin with id 6
           const txReceipt = await tx.wait();
@@ -778,7 +786,7 @@ describe("IBosonBundleHandler", function () {
           let expectedNewTwinId = "6";
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-          await accountHandler.connect(rando).createSeller(seller, contractURI);
+          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
           await bosonToken.connect(rando).approve(twinHandler.address, 1); // approving the twin handler
           const tx = await twinHandler.connect(rando).createTwin(twin); // creates a twin with id 6
           const txReceipt = await tx.wait();
@@ -1140,7 +1148,7 @@ describe("IBosonBundleHandler", function () {
           let expectedNewOfferId = "6";
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-          await accountHandler.connect(rando).createSeller(seller, contractURI);
+          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
           const tx = await offerHandler
             .connect(rando)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
