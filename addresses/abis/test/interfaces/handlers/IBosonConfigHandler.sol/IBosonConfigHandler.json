@@ -8,6 +8,31 @@
       "inputs": [
         {
           "indexed": true,
+          "internalType": "enum BosonTypes.AuthTokenType",
+          "name": "authTokenType",
+          "type": "uint8"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "authTokenContract",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "AuthTokenContractChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
           "internalType": "address",
           "name": "beaconProxyAddress",
           "type": "address"
@@ -346,6 +371,25 @@
       "type": "event"
     },
     {
+      "inputs": [
+        {
+          "internalType": "enum BosonTypes.AuthTokenType",
+          "name": "_authTokenType",
+          "type": "uint8"
+        }
+      ],
+      "name": "getAuthTokenContract",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "getBeaconProxyAddress",
       "outputs": [
@@ -577,6 +621,24 @@
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "enum BosonTypes.AuthTokenType",
+          "name": "_authTokenType",
+          "type": "uint8"
+        },
+        {
+          "internalType": "address",
+          "name": "_authTokenContract",
+          "type": "address"
+        }
+      ],
+      "name": "setAuthTokenContract",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
