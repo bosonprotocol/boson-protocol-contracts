@@ -450,7 +450,7 @@ describe("IBosonExchangeHandler", function () {
         );
       });
 
-      it("should not decrement quantityAvailable if offer is unlimited", async function () {
+      it("Should not decrement quantityAvailable if offer is unlimited", async function () {
         // Create an offer with unlimited quantity
         let { offer, ...details } = await mockOffer();
         offer.quantityAvailable = ethers.constants.MaxUint256.toString();
@@ -1414,7 +1414,7 @@ describe("IBosonExchangeHandler", function () {
           expect(balance).to.equal(3);
         });
 
-        it("Twin supply should be reduced by the amount", async function () {
+        it("Amount should be reduced from twin supplyAvailable", async function () {
           // Redeem the voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
@@ -1562,7 +1562,7 @@ describe("IBosonExchangeHandler", function () {
           owner = await foreign721.ownerOf(tokenId);
         });
 
-        it("Twin supply should be reduced by 1", async function () {
+        it("1 should be reduced from twin supplyAvailable", async function () {
           // Redeem the voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
@@ -1718,7 +1718,7 @@ describe("IBosonExchangeHandler", function () {
           expect(balance).to.equal(1);
         });
 
-        it("Twin supply should be reduced by amount", async function () {
+        it("Amount should be reduced from twin supplyAvailable", async function () {
           // Redeem the voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 

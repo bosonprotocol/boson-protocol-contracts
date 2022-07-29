@@ -521,7 +521,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                 uint256 tokenId = twin.tokenId;
                 TokenType tokenType = twin.tokenType;
 
-                // Should not decrement supply if twin supply is unlimited
+                // Shouldn't decrement supply if twin supply is unlimited
                 if (twin.supplyAvailable != type(uint256).max) {
                     // Decrement by 1 if token type is NonFungible otherwise decrement amount (i.e, tokenType is MultiToken or FungibleToken)
                     twin.supplyAvailable = twin.tokenType == TokenType.NonFungibleToken
