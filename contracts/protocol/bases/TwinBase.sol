@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-
+import "hardhat/console.sol";
 import "../../domain/BosonConstants.sol";
 import { IBosonTwinEvents } from "../../interfaces/events/IBosonTwinEvents.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
@@ -49,16 +49,16 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             require(lastTokenId >= tokenId, INVALID_TWIN_TOKEN_RANGE);
 
             uint256[] memory twinIds = protocolLookups().twinIdsByTokenAddressAndBySeller[sellerId][_twin.tokenAddress];
-            
-            for (uint256 i = 0; i < twinIds.length; i++) {
-                uint256 twinId = twinIds[i];
-                // Get storage location for twin
-                (, Twin storage twin) = fetchTwin(twinId);
 
-               if (twin.supplyAvailable == type(uint256).max)  {
-                    require(_twin.tokenAddress != twin.tokenAddress, "Token range is already used on another twin with unlimited supply");
+            for (uint256 i = 0; i < twinIds.length; i++) {
+                // Get storage location for looped twin
+                (, Twin storage currentTwin) = fetchTwin(twinIds[i]);
+
+                // The protocol cannot allow two twins with unlimited supply and with the same token address because range overlaps with each other
+                if (currentTwin.supplyAvailable == type(uint256).max || _twin.supplyAvailable == type(uint256).max) {
+                    require(currentTwin.tokenAddress != _twin.tokenAddress, INVALID_TWIN_TOKEN_RANGE);
                 }
-              }
+            }
 
             // Get all twin ids that belong to seller
             TokenRange[] memory twinRanges = protocolLookups().twinRangesBySeller[sellerId][_twin.tokenAddress];
@@ -71,9 +71,10 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
                 require(tokenId > twinRanges[i].end || lastTokenId < twinRanges[i].start, INVALID_TWIN_TOKEN_RANGE);
             }
 
-
             // Add range to twinRangesBySeller mapping
             protocolLookups().twinRangesBySeller[sellerId][_twin.tokenAddress].push(TokenRange(tokenId, lastTokenId));
+            // Add twin id to twinIdsByTokenAddressAndBySeller mapping
+            protocolLookups().twinIdsByTokenAddressAndBySeller[sellerId][_twin.tokenAddress].push(_twin.id);
         } else {
             // If token is Fungible or MultiToken amount should not be zero
             require(_twin.amount > 0, INVALID_AMOUNT);

@@ -399,6 +399,23 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
+        it("Should revert if token address is already being used in another twin with unlimited supply", async function () {
+          twin.supplyAvailable = ethers.constants.MaxUint256;
+          twin.tokenType = TokenType.NonFungibleToken;
+          twin.tokenAddress = foreign721.address;
+          twin.amount = "0";
+
+          await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+          // Create twin with unlimited supply
+          await twinHandler.connect(operator).createTwin(twin);
+
+          // Create new twin with same token address
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
+            RevertReasons.INVALID_TWIN_TOKEN_RANGE
+          );
+        });
+
         context("Token address is unsupported", async function () {
           it("Token address is a zero address", async function () {
             twin.tokenAddress = ethers.constants.AddressZero;

@@ -107,10 +107,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
         // Map the offerId to the exchangeId as one-to-many
         protocolLookups().exchangeIdsByOffer[_offerId].push(exchangeId);
 
-        // Should shoudn't decrement if offer is unlimited
-        if(offer.quantityAvailable != type(uint256).max) {
-          // Decrement offer's quantity available
-          offer.quantityAvailable--;
+        // Shoudn't decrement if offer is unlimited
+        if (offer.quantityAvailable != type(uint256).max) {
+            // Decrement offer's quantity available
+            offer.quantityAvailable--;
         }
 
         // Issue voucher
@@ -519,16 +519,19 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                 bool success;
                 uint256 amount = twin.amount;
                 uint256 tokenId = twin.tokenId;
-                uint256 tokenType = twin.tokenType;
+                TokenType tokenType = twin.tokenType;
 
-              // Shoudn't decrement supply if twin supply is unlimited
-                if(twin.supplyAvailable != type(uint256).max) {
-                  twin.supplyAvailable = twin.tokenType == NonFungibleToken ? twin.supplyAvailable - 1 : twin.supplyAvailable - amount;
+                // Should not decrement supply if twin supply is unlimited
+                if (twin.supplyAvailable != type(uint256).max) {
+                    // Decrement by 1 if token type is NonFungible otherwise decrement amount (i.e, tokenType is MultiToken or FungibleToken)
+                    twin.supplyAvailable = twin.tokenType == TokenType.NonFungibleToken
+                        ? twin.supplyAvailable - 1
+                        : twin.supplyAvailable - amount;
                 }
 
                 if (tokenType == TokenType.FungibleToken && twin.supplyAvailable >= twin.amount) {
                     // ERC-20 style transfer
-                     (success, result) = twin.tokenAddress.call(
+                    (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
                             "transferFrom(address,address,uint256)",
                             seller.operator,
@@ -537,12 +540,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                         )
                     );
                 } else if (tokenType == TokenType.NonFungibleToken && twin.supplyAvailable > 0) {
-                   // If twin supply is unlimited then token transfer order is ascending to avoid overflow
-                    if(twin.supplyAvailable == type(uint256).max) {
-                      twin.tokenId++;
+                    // Token transfer order is ascending to avoid overflow when twin supply is unlimited
+                    if (twin.supplyAvailable == type(uint256).max) {
+                        twin.tokenId++;
                     } else {
-                      // Token transfer order is descending 
-                      tokenId = twin.tokenId + twin.supplyAvailable - 1;
+                        // Token transfer order is descending
+                        tokenId = twin.tokenId + twin.supplyAvailable;
                     }
                     // ERC-721 style transfer
                     (success, result) = twin.tokenAddress.call(
@@ -568,7 +571,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                     );
                 }
 
-                 // If token transfer failed
+                // If token transfer failed
                 if (!success) {
                     transferFailed = true;
                     emit TwinTransferFailed(twin.id, twin.tokenAddress, _exchange.id, tokenId, amount, sender);
