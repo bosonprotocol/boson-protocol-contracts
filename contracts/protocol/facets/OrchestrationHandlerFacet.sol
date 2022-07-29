@@ -31,7 +31,7 @@ contract OrchestrationHandlerFacet is
     }
 
     /**
-     * @notice Creates a seller and an offer in a single transaction.
+     * @notice Creates a seller (with optional auth token) and an offer in a single transaction.
      *
      * Limitation of the method:
      * If chosen dispute resolver has seller allow list, this method will not succeed, since seller that will be created
@@ -45,6 +45,8 @@ contract OrchestrationHandlerFacet is
      *
      * Reverts if:
      * - caller is not the same as operator address
+     * - Admin address is zero address and AuthTokenType == None
+     * - AuthTokenType is not unique to this seller
      * - in seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -75,6 +77,7 @@ contract OrchestrationHandlerFacet is
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      * @param _agentId - the id of agent
      */
     function createSellerAndOffer(
@@ -84,9 +87,10 @@ contract OrchestrationHandlerFacet is
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
+        AuthToken calldata _authToken,
         uint256 _agentId
     ) external override {
-        checkAndCreateSeller(_seller, _contractURI);
+        checkAndCreateSeller(_seller, _contractURI, _authToken);
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
     }
 
@@ -338,7 +342,7 @@ contract OrchestrationHandlerFacet is
     }
 
     /**
-     * @notice Takes a seller, an offer and a condition, creates a seller, creates an offer, then a group with that offer and the given condition.
+     * @notice Takes a seller, an offer, a condition and an optional auth token, creates a seller, creates an offer, then a group with that offer and the given condition.
      *
      * Limitation of the method:
      * If chosen dispute resolver has seller allow list, this method will not succeed, since seller that will be created
@@ -352,6 +356,8 @@ contract OrchestrationHandlerFacet is
      *
      * Reverts if:
      * - caller is not the same as operator address
+     * - Admin address is zero address and AuthTokenType == None
+     * - AuthTokenType is not unique to this seller
      * - in seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -385,6 +391,7 @@ contract OrchestrationHandlerFacet is
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      * @param _agentId - the id of agent
      */
     function createSellerAndOfferWithCondition(
@@ -395,14 +402,15 @@ contract OrchestrationHandlerFacet is
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         Condition memory _condition,
+        AuthToken calldata _authToken,
         uint256 _agentId
     ) external override {
-        checkAndCreateSeller(_seller, _contractURI);
+        checkAndCreateSeller(_seller, _contractURI, _authToken);
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
     }
 
     /**
-     * @notice Takes a seller, an offer and a twin, creates a seller, creates an offer, creates a twin, then a bundle with that offer and the given twin
+     * @notice Takes a seller, an offer, a twin, and an optional auth token, creates a seller, creates an offer, creates a twin, then a bundle with that offer and the given twin
      *
      * Limitation of the method:
      * If chosen dispute resolver has seller allow list, this method will not succeed, since seller that will be created
@@ -416,6 +424,8 @@ contract OrchestrationHandlerFacet is
      *
      * Reverts if:
      * - caller is not the same as operator address
+     * - Admin address is zero address and AuthTokenType == None
+     * - AuthTokenType is not unique to this seller
      * - in seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -450,6 +460,7 @@ contract OrchestrationHandlerFacet is
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _twin - the fully populated twin struct
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      * @param _agentId - the id of agent
      */
     function createSellerAndOfferAndTwinWithBundle(
@@ -460,14 +471,15 @@ contract OrchestrationHandlerFacet is
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         Twin memory _twin,
+        AuthToken calldata _authToken,
         uint256 _agentId
     ) external override {
-        checkAndCreateSeller(_seller, _contractURI);
+        checkAndCreateSeller(_seller, _contractURI, _authToken);
         createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin, _agentId);
     }
 
     /**
-     * @notice Takes a seller, an offer, a condition and a twin, creates a sellerm an offer, then a group with that offer and the given condition, then creates a twin, then a bundle with that offer and the given twin
+     * @notice Takes a seller, an offer, a condition and a twin, and an optional auth token, creates a seller an offer, then a group with that offer and the given condition, then creates a twin, then a bundle with that offer and the given twin
      *
      * Limitation of the method:
      * If chosen dispute resolver has seller allow list, this method will not succeed, since seller that will be created
@@ -481,6 +493,8 @@ contract OrchestrationHandlerFacet is
      *
      * Reverts if:
      * - caller is not the same as operator address
+     * - Admin address is zero address and AuthTokenType == None
+     * - AuthTokenType is not unique to this seller
      * - in seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
@@ -517,6 +531,7 @@ contract OrchestrationHandlerFacet is
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      * @param _agentId - the id of agent
      */
     function createSellerAndOfferWithConditionAndTwinAndBundle(
@@ -528,9 +543,10 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         Condition memory _condition,
         Twin memory _twin,
+        AuthToken calldata _authToken,
         uint256 _agentId
     ) external override {
-        checkAndCreateSeller(_seller, _contractURI);
+        checkAndCreateSeller(_seller, _contractURI, _authToken);
         createOfferWithConditionAndTwinAndBundle(
             _offer,
             _offerDates,
@@ -549,19 +565,26 @@ contract OrchestrationHandlerFacet is
      *
      * Reverts if:
      * - caller is not the same as operator address
+     * - Admin address is zero address and AuthTokenType == None
+     * - AuthTokenType is not unique to this seller
      * - in seller struct:
      *   - Address values are zero address
      *   - Addresses are not unique to this seller
      *   - Seller is not active (if active == false)
      *
-     * @param _seller - the fully populated seller struct
+     * @param _seller - the fully populated struct with seller id set to 0x0
      * @param _contractURI - contract metadata URI
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      */
-    function checkAndCreateSeller(Seller memory _seller, string calldata _contractURI) internal {
+    function checkAndCreateSeller(
+        Seller memory _seller,
+        string calldata _contractURI,
+        AuthToken calldata _authToken
+    ) internal {
         // Caller should be the operator, specified in seller
         require(_seller.operator == msgSender(), NOT_OPERATOR);
 
         // create seller and update structs values to represent true state
-        createSellerInternal(_seller, _contractURI);
+        createSellerInternal(_seller, _contractURI, _authToken);
     }
 }

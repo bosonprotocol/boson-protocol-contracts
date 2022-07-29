@@ -7,6 +7,8 @@ const Exchange = require("../../scripts/domain/Exchange");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
+const AuthToken = require("../../scripts/domain/AuthToken");
+const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const Voucher = require("../../scripts/domain/Voucher");
@@ -76,6 +78,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let buyerPercent, validDisputeResolutionDetails, signatureSplits;
   let sellerAllowList;
   let contractURI;
+  let emptyAuthToken;
   let agentId;
 
   before(async function () {
@@ -232,8 +235,16 @@ describe("IBosonMetaTransactionsHandler", function () {
         expect(seller.isValid()).is.true;
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
+        // AuthToken
+        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        expect(emptyAuthToken.isValid()).is.true;
+
         // Prepare the function signature for the facet function.
-        functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller, contractURI]);
+        functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+          seller,
+          contractURI,
+          emptyAuthToken,
+        ]);
 
         // Set the message Type
         metaTransactionType = [
@@ -253,7 +264,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         message.nonce = parseInt(nonce);
         message.from = operator.address;
         message.contractAddress = accountHandler.address;
-        message.functionName = "createSeller((uint256,address,address,address,address,bool),string)";
+        message.functionName = "createSeller((uint256,address,address,address,address,bool),string,(uint256,uint8))";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -309,6 +320,10 @@ describe("IBosonMetaTransactionsHandler", function () {
         expect(seller.isValid()).is.true;
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
+        // AuthToken
+        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        expect(emptyAuthToken.isValid()).is.true;
+
         customTransactionType = {
           MetaTransaction: metaTransactionType,
         };
@@ -320,12 +335,16 @@ describe("IBosonMetaTransactionsHandler", function () {
 
       it("Should emit MetaTransactionExecuted event and update state", async () => {
         // Prepare the function signature for the facet function.
-        functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller, contractURI]);
+        functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+          seller,
+          contractURI,
+          emptyAuthToken,
+        ]);
 
         // Prepare the message
         message.from = operator.address;
         message.contractAddress = accountHandler.address;
-        message.functionName = "createSeller((uint256,address,address,address,address,bool),string)";
+        message.functionName = "createSeller((uint256,address,address,address,address,bool),string,(uint256,uint8))";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -357,12 +376,16 @@ describe("IBosonMetaTransactionsHandler", function () {
         seller.active = false;
 
         // Prepare the function signature for the facet function.
-        functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller, contractURI]);
+        functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+          seller,
+          contractURI,
+          emptyAuthToken,
+        ]);
 
         // Prepare the message
         message.from = operator.address;
         message.contractAddress = accountHandler.address;
-        message.functionName = "createSeller((uint256,address,address,address,address,bool),string)";
+        message.functionName = "createSeller((uint256,address,address,address,address,bool),string,(uint256,uint8))";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -393,7 +416,11 @@ describe("IBosonMetaTransactionsHandler", function () {
           beforeEach(async function () {
             // Create the seller
             contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-            await accountHandler.connect(admin).createSeller(seller, contractURI);
+
+            // AuthToken
+            emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+            expect(emptyAuthToken.isValid()).is.true;
+            await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
 
             // Create a valid twin, then set fields in tests directly
             twin = mockTwin(bosonToken.address);
@@ -497,7 +524,11 @@ describe("IBosonMetaTransactionsHandler", function () {
           let incorrectFunctionName = "createSeller"; // there are no function argument types here.
 
           // Prepare the function signature for the facet function.
-          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller, contractURI]);
+          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+            seller,
+            contractURI,
+            emptyAuthToken,
+          ]);
 
           // Prepare the message
           message.from = operator.address;
@@ -530,12 +561,16 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         it("Should fail when replay transaction", async function () {
           // Prepare the function signature for the facet function.
-          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller, contractURI]);
+          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+            seller,
+            contractURI,
+            emptyAuthToken,
+          ]);
 
           // Prepare the message
           message.from = operator.address;
           message.contractAddress = accountHandler.address;
-          message.functionName = "createSeller((uint256,address,address,address,address,bool),string)";
+          message.functionName = "createSeller((uint256,address,address,address,address,bool),string,(uint256,uint8))";
           message.functionSignature = functionSignature;
 
           // Collect the signature components
@@ -574,12 +609,16 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         it("Should fail when Signer and Signature do not match", async function () {
           // Prepare the function signature for the facet function.
-          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [seller, contractURI]);
+          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+            seller,
+            contractURI,
+            emptyAuthToken,
+          ]);
 
           // Prepare the message
           message.from = rando.address;
           message.contractAddress = accountHandler.address;
-          message.functionName = "createSeller((uint256,address,address,address,address,bool),string)";
+          message.functionName = "createSeller((uint256,address,address,address,address,bool),string,(uint256,uint8))";
           message.functionSignature = functionSignature;
 
           // Collect the signature components
@@ -621,7 +660,12 @@ describe("IBosonMetaTransactionsHandler", function () {
         seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
         expect(seller.isValid()).is.true;
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        await accountHandler.connect(operator).createSeller(seller, contractURI);
+
+        // AuthToken
+        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        expect(emptyAuthToken.isValid()).is.true;
+
+        await accountHandler.connect(operator).createSeller(seller, contractURI, emptyAuthToken);
 
         // Create a valid dispute resolver
         disputeResolver = await mockDisputeResolver(
@@ -880,7 +924,11 @@ describe("IBosonMetaTransactionsHandler", function () {
         seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
         expect(seller.isValid()).is.true;
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        await accountHandler.connect(operator).createSeller(seller, contractURI);
+
+        // AuthToken
+        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        expect(emptyAuthToken.isValid()).is.true;
+        await accountHandler.connect(operator).createSeller(seller, contractURI, emptyAuthToken);
 
         // Create a valid dispute resolver
         disputeResolver = await mockDisputeResolver(
@@ -2252,7 +2300,11 @@ describe("IBosonMetaTransactionsHandler", function () {
         seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
         expect(seller.isValid()).is.true;
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        await accountHandler.connect(operator).createSeller(seller, contractURI);
+
+        // AuthToken
+        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        expect(emptyAuthToken.isValid()).is.true;
+        await accountHandler.connect(operator).createSeller(seller, contractURI, emptyAuthToken);
 
         // Create a valid dispute resolver
         disputeResolver = await mockDisputeResolver(

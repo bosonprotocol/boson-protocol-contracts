@@ -541,7 +541,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
             uint256[] storage twinIds = bundle.twinIds;
 
             // Get seller account
-            (, Seller storage seller) = fetchSeller(bundle.sellerId);
+            (, Seller storage seller, ) = fetchSeller(bundle.sellerId);
 
             address sender = msgSender();
             // Variable to track whether some twin transfer failed

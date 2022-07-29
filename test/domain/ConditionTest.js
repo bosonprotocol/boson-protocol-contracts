@@ -254,7 +254,7 @@ describe("Condition", function () {
         // Get struct from condition
         struct = condition.toStruct();
 
-        // Marshal back to a buyer instance
+        // Marshal back to a condition instance
         condition = Condition.fromStruct(struct);
 
         // Ensure it marshals back to a valid condition
