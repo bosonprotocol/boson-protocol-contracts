@@ -72,8 +72,8 @@ describe("IBosonTwinHandler", function () {
       "BundleHandlerFacet",
     ]);
 
-    // Deploy the boson token
-    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+    // Deploy the mock tokens
+    [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens(gasLimit);
 
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
@@ -123,9 +123,6 @@ describe("IBosonTwinHandler", function () {
 
     // Cast Diamond to IBundleHandler
     bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
-
-    // Deploy the mock tokens
-    [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens(gasLimit);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
