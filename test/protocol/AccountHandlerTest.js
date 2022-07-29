@@ -41,7 +41,8 @@ describe("IBosonAccountHandler", function () {
     other6,
     other7,
     other8,
-    authTokenOwner;
+    authTokenOwner,
+    protocolAdmin;
   let erc165,
     protocolDiamond,
     accessController,
@@ -150,6 +151,7 @@ describe("IBosonAccountHandler", function () {
       other7,
       other8,
       authTokenOwner,
+      protocolAdmin,
     ] = await ethers.getSigners();
 
     //Dispute Resolver metadata URI
@@ -163,6 +165,10 @@ describe("IBosonAccountHandler", function () {
 
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+
+    //Grant ADMIN role to and address that can call restricted functions.
+    //This ADMIN role is a protocol-level role. It is not the same an admin address for an account type
+    await accessController.grantRole(Role.ADMIN, protocolAdmin.address);
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
@@ -4223,14 +4229,14 @@ describe("IBosonAccountHandler", function () {
       });
 
       it("should emit a DisputeResolverActivated event", async function () {
-        await expect(accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id))
+        await expect(accountHandler.connect(protocolAdmin).activateDisputeResolver(disputeResolver.id))
           .to.emit(accountHandler, "DisputeResolverActivated")
-          .withArgs(disputeResolver.id, disputeResolverStruct, deployer.address);
+          .withArgs(disputeResolver.id, disputeResolverStruct, protocolAdmin.address);
       });
 
       it("should update only active flag state", async function () {
         // Activate disupte resolver
-        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+        await accountHandler.connect(protocolAdmin).activateDisputeResolver(disputeResolver.id);
 
         [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
           .connect(rando)
@@ -4260,17 +4266,17 @@ describe("IBosonAccountHandler", function () {
           disputeResolver.id = "444";
 
           // Attempt to activate the dispute resolver, expecting revert
-          await expect(accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id)).to.revertedWith(
-            RevertReasons.NO_SUCH_DISPUTE_RESOLVER
-          );
+          await expect(
+            accountHandler.connect(protocolAdmin).activateDisputeResolver(disputeResolver.id)
+          ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
 
           // Set invalid id
           disputeResolver.id = "0";
 
           // Attempt to activate the dispute resolver, expecting revert
-          await expect(accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id)).to.revertedWith(
-            RevertReasons.NO_SUCH_DISPUTE_RESOLVER
-          );
+          await expect(
+            accountHandler.connect(protocolAdmin).activateDisputeResolver(disputeResolver.id)
+          ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
         });
 
         it("Caller does not have ADMIN role", async function () {

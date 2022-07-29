@@ -245,6 +245,14 @@ async function main() {
 
   //Verify on test node if test env
   if (hre.network.name === "test") {
+    //******TODO: This is a quick-and-dirty impl so that DRs can be activated in the test env. Will be replaced with a
+    //proper implementation for all networks!  *******/
+
+    // Grant admin role to an address that can execute certain functions in the test env.
+    await accessController.grantRole(Role.ADMIN, "0x57faFe1fB7C682216FCe44e50946C5249192b9D5");
+
+    console.log(`✅ Granted ADMIN role to appropriate test env address.`);
+
     await verifyOnTestEnv(contracts);
   }
 
