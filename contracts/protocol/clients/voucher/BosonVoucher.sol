@@ -29,7 +29,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     function initializeVoucher(
         uint256 _sellerId,
         address _newOwner,
-        string calldata _newContractURI
+        VoucherInitValues calldata voucherInitValues
     ) public initializer {
         string memory sellerId = Strings.toString(_sellerId);
         // TODO: When we move to solidity 0.8.12 or greater, change this to use string.concat()
@@ -41,7 +41,9 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         // we dont call init on ownable, but rather just set the ownership to correct owner
         _transferOwnership(_newOwner);
 
-        _setContractURI(_newContractURI);
+        _setContractURI(voucherInitValues.contractURI);
+
+        _setDefaultRoyalty(voucherInitValues.royaltyReceiver, voucherInitValues.feeNumerator);
     }
 
     /**
@@ -182,10 +184,10 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * Can only be called by the owner or during the initialization
      *
      * @param _receiver address of the receiver.
-     * @param _value value in percentage. e.g. 500 = 5%
+     * @param _feeNumerator fee in percentage. e.g. 500 = 5%
      */
-    function setDefaultRoyalty(address _receiver, uint96 _value) external override onlyOwner {
-        _setDefaultRoyalty(_receiver, _value);
+    function setDefaultRoyalty(address _receiver, uint96 _feeNumerator) external override onlyOwner {
+        _setDefaultRoyalty(_receiver, _feeNumerator);
     }
 
     /**
@@ -202,14 +204,14 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      *
      * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
      * @param _receiver address of the receiver.
-     * @param _value value in percentage. e.g. 500 = 5%
+     * @param _feeNumerator fee in percentage. e.g. 500 = 5%
      */
     function setTokenRoyalty(
         uint256 _exchangeId,
         address _receiver,
-        uint96 _value
+        uint96 _feeNumerator
     ) external override onlyOwner {
-        _setTokenRoyalty(_exchangeId, _receiver, _value);
+        _setTokenRoyalty(_exchangeId, _receiver, _feeNumerator);
     }
 
     /**

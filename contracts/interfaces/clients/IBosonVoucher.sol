@@ -60,9 +60,9 @@ interface IBosonVoucher is IERC721MetadataUpgradeable {
      * Can only be called by the owner or during the initialization
      *
      * @param _receiver address of the receiver.
-     * @param _value value in percentage. e.g. 500 = 5%
+     * @param _feeNumerator fee in percentage. e.g. 500 = 5%
      */
-    function setDefaultRoyalty(address _receiver, uint96 _value) external;
+    function setDefaultRoyalty(address _receiver, uint96 _feeNumerator) external;
 
     /**
      * @notice Removes default royalty information.
@@ -76,9 +76,9 @@ interface IBosonVoucher is IERC721MetadataUpgradeable {
      *
      * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
      * @param _receiver address of the receiver.
-     * @param _value value in percentage. e.g. 500 = 5%
+     * @param _feeNumerator fee in percentage. e.g. 500 = 5%
      */
-    function setTokenRoyalty(uint256 _exchangeId, address _receiver, uint96 _value) external;
+    function setTokenRoyalty(uint256 _exchangeId, address _receiver, uint96 _feeNumerator) external;
 
     /**
      * @notice Resets royalty information for the token id back to the global default.

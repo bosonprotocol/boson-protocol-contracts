@@ -12,6 +12,7 @@ const Seller = require("../../../scripts/domain/Seller");
 const AuthToken = require("../../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../../scripts/domain/AuthTokenType");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
+const VoucherInitValues = require("../../../scripts/domain/VoucherInitValues");
 const { mockOffer } = require("../../utils/mock.js");
 const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
 const { expect } = require("chai");
@@ -26,6 +27,7 @@ describe("IBosonVoucher", function () {
   let disputeResolver, disputeResolverFees;
   let emptyAuthToken;
   let agentId;
+  let voucherInitValues, contractURI, royaltyReceiver, feeNumerator;
 
   before(async function () {
     // Get interface id
@@ -162,12 +164,19 @@ describe("IBosonVoucher", function () {
 
     beforeEach(async function () {
       const seller = new Seller("1", operator.address, admin.address, clerk.address, treasury.address, true);
-      const contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+
+      // prepare the VoucherInitValues
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      royaltyReceiver = seller.treasury;
+      feeNumerator = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+      expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
       emptyAuthToken = new AuthToken("0", AuthTokenType.None);
       expect(emptyAuthToken.isValid()).is.true;
-      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
       agentId = "0"; // agent id is optional while creating an offer
 
@@ -244,8 +253,6 @@ describe("IBosonVoucher", function () {
   });
 
   context("setContractURI()", function () {
-    let contractURI;
-
     beforeEach(async function () {
       // give ownership to operator
       await bosonVoucher.connect(protocol).transferOwnership(operator.address);
