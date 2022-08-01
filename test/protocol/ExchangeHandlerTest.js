@@ -17,6 +17,7 @@ const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
+const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -80,7 +81,7 @@ describe("IBosonExchangeHandler", function () {
   let twin20, twin721, twin1155, twinIds, bundle, balance, owner;
   let expectedCloneAddress;
   let method, tokenType, tokenAddress, tokenId, threshold, maxCommits, groupId, offerIds, condition, group;
-  let contractURI;
+  let voucherInitValues, contractURI, royaltyReceiver, feeNumerator;
   let emptyAuthToken;
   let agentId;
   let exchangesToComplete, exchangeId;
@@ -237,13 +238,19 @@ describe("IBosonExchangeHandler", function () {
       // Create a valid seller
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
       expect(seller.isValid()).is.true;
-      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
       // AuthToken
       emptyAuthToken = new AuthToken("0", AuthTokenType.None);
       expect(emptyAuthToken.isValid()).is.true;
 
-      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+      // VoucherInitValues
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      royaltyReceiver = seller.treasury;
+      feeNumerator = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+      expect(voucherInitValues.isValid()).is.true;
+
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
       expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
 
       // Create a valid dispute resolver
@@ -352,8 +359,12 @@ describe("IBosonExchangeHandler", function () {
         sellerId = "3"; // "1" is the first seller, "2" is DR
         seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, true);
         expect(seller.isValid()).is.true;
-        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+
+        // VoucherInitValues
+        voucherInitValues.royaltyReceiver = seller.treasury;
+        expect(voucherInitValues.isValid()).is.true;
+
+        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
         expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
         const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
@@ -2330,8 +2341,12 @@ describe("IBosonExchangeHandler", function () {
           // Create a new seller to get new clone
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, true);
           expect(seller.isValid()).is.true;
-          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+
+          // VoucherInitValues
+          voucherInitValues.royaltyReceiver = seller.treasury;
+          expect(voucherInitValues.isValid()).is.true;
+
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
           const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 

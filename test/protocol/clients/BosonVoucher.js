@@ -15,7 +15,7 @@ const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverF
 const VoucherInitValues = require("../../../scripts/domain/VoucherInitValues");
 const { mockOffer } = require("../../utils/mock.js");
 const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
-const { expect } = require("chai");
+const { assert, expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 const { oneMonth } = require("../../utils/constants");
 const { mockDisputeResolver } = require("../../utils/mock");
@@ -23,11 +23,23 @@ const { mockDisputeResolver } = require("../../utils/mock");
 describe("IBosonVoucher", function () {
   let interfaceId;
   let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler;
-  let deployer, protocol, buyer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
+  let deployer,
+    protocol,
+    buyer,
+    rando,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    operatorDR,
+    adminDR,
+    clerkDR,
+    treasuryDR,
+    seller;
   let disputeResolver, disputeResolverFees;
   let emptyAuthToken;
   let agentId;
-  let voucherInitValues, contractURI, royaltyReceiver, feeNumerator;
+  let voucherInitValues, contractURI, royaltyReceiver, feeNumerator, exchangeId, offerPrice, receiver, royaltyAmount;
 
   before(async function () {
     // Get interface id
@@ -163,7 +175,7 @@ describe("IBosonVoucher", function () {
     let metadataUri;
 
     beforeEach(async function () {
-      const seller = new Seller("1", operator.address, admin.address, clerk.address, treasury.address, true);
+      seller = new Seller("1", operator.address, admin.address, clerk.address, treasury.address, true);
 
       // prepare the VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
@@ -284,6 +296,318 @@ describe("IBosonVoucher", function () {
       await expect(bosonVoucher.connect(protocol).setContractURI(contractURI)).to.be.revertedWith(
         RevertReasons.OWNABLE_NOT_OWNER
       );
+    });
+  });
+
+  context("ERC2981 NFT Royalty fee", function () {
+    beforeEach(async function () {
+      seller = new Seller("1", operator.address, admin.address, clerk.address, treasury.address, true);
+
+      // prepare the VoucherInitValues
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      royaltyReceiver = seller.treasury;
+      feeNumerator = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+      expect(voucherInitValues.isValid()).is.true;
+
+      // AuthToken
+      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      expect(emptyAuthToken.isValid()).is.true;
+
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+      agentId = "0"; // agent id is optional while creating an offer
+
+      // Create a valid dispute resolver
+      disputeResolver = await mockDisputeResolver(
+        operatorDR.address,
+        adminDR.address,
+        clerkDR.address,
+        treasuryDR.address,
+        false
+      );
+      expect(disputeResolver.isValid()).is.true;
+
+      //Create DisputeResolverFee array so offer creation will succeed
+      disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+
+      // Make empty seller list, so every seller is allowed
+      const sellerAllowList = [];
+
+      // Register and activate the dispute resolver
+      await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+      await accountHandler.connect(deployer).activateDisputeResolver("2");
+
+      const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+      await offerHandler
+        .connect(operator)
+        .createOffer(offer.toStruct(), offerDates.toStruct(), offerDurations.toStruct(), disputeResolverId, agentId);
+      await fundsHandler
+        .connect(admin)
+        .depositFunds(seller.id, ethers.constants.AddressZero, offer.sellerDeposit, { value: offer.sellerDeposit });
+      await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
+
+      exchangeId = "1";
+
+      offerPrice = offer.price;
+    });
+
+    context("setDefaultRoyalty()", function () {
+      beforeEach(async function () {
+        // give ownership to operator
+        await bosonVoucher.connect(protocol).transferOwnership(operator.address);
+      });
+
+      it("should set a default royalty fee", async function () {
+        // First, set default fee as 0
+        feeNumerator = "0"; //0%
+        await bosonVoucher.connect(operator).setDefaultRoyalty(seller.treasury, feeNumerator);
+
+        let receiver, royaltyAmount;
+        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).callStatic.royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = seller.treasury;
+        let expectedRoyaltyAmount = "0";
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+
+        // Now, set default fee as 10%
+        feeNumerator = "1000"; //10%
+        await bosonVoucher.connect(operator).setDefaultRoyalty(seller.treasury, feeNumerator);
+
+        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).callStatic.royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        expectedRecipient = seller.treasury;
+        expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(feeNumerator).div("10000").toString();
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("should revert if caller is not the owner", async function () {
+          // random caller
+          await expect(bosonVoucher.connect(rando).setDefaultRoyalty(seller.treasury, feeNumerator)).to.be.revertedWith(
+            RevertReasons.OWNABLE_NOT_OWNER
+          );
+
+          // protocol as the caller
+          await expect(
+            bosonVoucher.connect(protocol).setDefaultRoyalty(seller.treasury, feeNumerator)
+          ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
+        });
+
+        it("should revert if receiver is a zero address", async function () {
+          await expect(
+            bosonVoucher.connect(operator).setDefaultRoyalty(ethers.constants.AddressZero, feeNumerator)
+          ).to.be.revertedWith(RevertReasons.ROYALTY_RECEIVER_INVALID);
+        });
+
+        it("should revert if feeNumerator is greater than 100%", async function () {
+          // Set default fee as 101%
+          feeNumerator = "10001"; //101%
+
+          // random caller
+          await expect(
+            bosonVoucher.connect(operator).setDefaultRoyalty(seller.treasury, feeNumerator)
+          ).to.be.revertedWith(RevertReasons.ROYALTY_FEE_INVALID);
+        });
+      });
+    });
+
+    context("deleteDefaultRoyalty()", function () {
+      beforeEach(async function () {
+        // give ownership to operator
+        await bosonVoucher.connect(protocol).transferOwnership(operator.address);
+
+        // Set default fee as 10%
+        feeNumerator = "1000"; //10%
+        await bosonVoucher.connect(operator).setDefaultRoyalty(seller.treasury, feeNumerator);
+      });
+
+      it("should delete the default royalty fee", async function () {
+        await bosonVoucher.connect(operator).deleteDefaultRoyalty();
+
+        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).callStatic.royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = ethers.constants.AddressZero;
+        let expectedRoyaltyAmount = "0";
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("should revert if caller is not the owner", async function () {
+          // random caller
+          await expect(
+            bosonVoucher.connect(rando).deleteDefaultRoyalty()
+          ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
+
+          // protocol as the caller
+          await expect(
+            bosonVoucher.connect(protocol).deleteDefaultRoyalty()
+          ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
+        });
+      });
+    });
+
+    context("setTokenRoyalty()", function () {
+      beforeEach(async function () {
+        // give ownership to operator
+        await bosonVoucher.connect(protocol).transferOwnership(operator.address);
+      });
+
+      it("should set a royalty fee for exchange id", async function () {
+        // First, set default fee as 0
+        feeNumerator = "0"; //0%
+        await bosonVoucher.connect(operator).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator);
+
+        let receiver, royaltyAmount;
+        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).callStatic.royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = seller.treasury;
+        let expectedRoyaltyAmount = "0";
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+
+        // Now, set default fee as 10%
+        feeNumerator = "1000"; //10%
+        await bosonVoucher.connect(operator).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator);
+
+        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).callStatic.royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        expectedRecipient = seller.treasury;
+        expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(feeNumerator).div("10000").toString();
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("should revert if caller is not the owner", async function () {
+          // random caller
+          await expect(
+            bosonVoucher.connect(rando).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator)
+          ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
+
+          // protocol as the caller
+          await expect(
+            bosonVoucher.connect(protocol).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator)
+          ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
+        });
+
+        it("should revert if receiver is a zero address", async function () {
+          await expect(
+            bosonVoucher.connect(operator).setTokenRoyalty(exchangeId, ethers.constants.AddressZero, feeNumerator)
+          ).to.be.revertedWith(RevertReasons.ROYALTY_PARAMETERS_INVALID);
+        });
+
+        it("should revert if feeNumerator is greater than 100%", async function () {
+          // Set default fee as 101%
+          feeNumerator = "10001"; //101%
+
+          // random caller
+          await expect(
+            bosonVoucher.connect(operator).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator)
+          ).to.be.revertedWith(RevertReasons.ROYALTY_FEE_INVALID);
+        });
+      });
+    });
+
+    context("resetTokenRoyalty()", function () {
+      beforeEach(async function () {
+        // give ownership to operator
+        await bosonVoucher.connect(protocol).transferOwnership(operator.address);
+
+        // Set default fee as 10%
+        feeNumerator = "1000"; //10%
+        await expect(bosonVoucher.connect(operator).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator));
+      });
+
+      it("should delete the default royalty fee", async function () {
+        await bosonVoucher.connect(operator).resetTokenRoyalty(exchangeId);
+
+        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).callStatic.royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = ethers.constants.AddressZero;
+        let expectedRoyaltyAmount = "0";
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("should revert if caller is not the owner", async function () {
+          // random caller
+          await expect(bosonVoucher.connect(rando).resetTokenRoyalty(exchangeId)).to.be.revertedWith(
+            RevertReasons.OWNABLE_NOT_OWNER
+          );
+
+          // protocol as the caller
+          await expect(bosonVoucher.connect(protocol).resetTokenRoyalty(exchangeId)).to.be.revertedWith(
+            RevertReasons.OWNABLE_NOT_OWNER
+          );
+        });
+      });
+    });
+
+    context("royaltyInfo()", function () {
+      beforeEach(async function () {
+        // give ownership to operator
+        await bosonVoucher.connect(protocol).transferOwnership(operator.address);
+      });
+
+      it("should return a recipient and royalty fee", async function () {
+        // First, set default fee as 0
+        feeNumerator = "0"; //0%
+        await bosonVoucher.connect(operator).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator);
+
+        let receiver, royaltyAmount;
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = seller.treasury;
+        let expectedRoyaltyAmount = "0";
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+
+        // Now, set default fee as 10%
+        feeNumerator = "1000"; //10%
+        await bosonVoucher.connect(operator).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator);
+
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        expectedRecipient = seller.treasury;
+        expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(feeNumerator).div("10000").toString();
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+
+        // Any random address can check the royalty info
+        // Now, set default fee as 20%
+        feeNumerator = "2000"; //20%
+        await bosonVoucher.connect(operator).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator);
+
+        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).callStatic.royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        expectedRecipient = seller.treasury;
+        expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(feeNumerator).div("10000").toString();
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+      });
     });
   });
 });
