@@ -396,7 +396,7 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
-        it("Should revert if token address is already being used in another twin with unlimited supply", async function () {
+        it("Should revert if token address has been used in another twin with unlimited supply", async function () {
           twin.supplyAvailable = ethers.constants.MaxUint256;
           twin.tokenType = TokenType.NonFungibleToken;
           twin.tokenAddress = foreign721.address;

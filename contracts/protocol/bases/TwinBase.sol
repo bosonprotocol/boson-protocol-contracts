@@ -48,7 +48,10 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             uint256 lastTokenId = tokenId + _twin.supplyAvailable - 1;
             require(lastTokenId >= tokenId, INVALID_TWIN_TOKEN_RANGE);
 
-            uint256[] memory twinIds = protocolLookups().twinIdsByTokenAddressAndBySeller[sellerId][_twin.tokenAddress];
+            // Get all seller twin ids that belong to the same token address of the new twin to validate if they have not unlimited supply since ranges can overlaps each other
+            uint256[] storage twinIds = protocolLookups().twinIdsByTokenAddressAndBySeller[sellerId][
+                _twin.tokenAddress
+            ];
 
             for (uint256 i = 0; i < twinIds.length; i++) {
                 // Get storage location for looped twin
@@ -60,7 +63,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
                 }
             }
 
-            // Get all twin ids that belong to seller
+            // Get all ranges of twins that belong to the seller and to the same token address of the new twin to validate if range is available
             TokenRange[] memory twinRanges = protocolLookups().twinRangesBySeller[sellerId][_twin.tokenAddress];
 
             // Checks if token range isn't being used in any other twin of seller
