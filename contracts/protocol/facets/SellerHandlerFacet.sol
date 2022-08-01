@@ -2,19 +2,17 @@
 pragma solidity ^0.8.0;
 
 import "../../domain/BosonConstants.sol";
-import { IBosonSellerHandler } from "../../interfaces/handlers/IBosonSellerHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
-import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { SellerBase } from "../bases/SellerBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 
-contract SellertHandlerFacet is IBosonSellerHandler, SellerBase {
+contract SellertHandlerFacet is SellerBase {
     /**
      * @notice Facet Initializer
      */
-    function initialize() public onlyUnInitialized(type(IBosonSellerHandler).interfaceId) {
-        DiamondLib.addSupportedInterface(type(IBosonSellerHandler).interfaceId);
+    function initialize() public {
+        //No-op initializer. Keeping function for consistency in the deployment script.
     }
 
     /**
@@ -37,7 +35,7 @@ contract SellertHandlerFacet is IBosonSellerHandler, SellerBase {
         Seller memory _seller,
         string calldata _contractURI,
         AuthToken calldata _authToken
-    ) external override {
+    ) external {
         // create seller and update structs values to represent true state
         createSellerInternal(_seller, _contractURI, _authToken);
     }
@@ -58,7 +56,7 @@ contract SellertHandlerFacet is IBosonSellerHandler, SellerBase {
      * @param _seller - the fully populated seller struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      */
-    function updateSeller(Seller memory _seller, AuthToken calldata _authToken) external override {
+    function updateSeller(Seller memory _seller, AuthToken calldata _authToken) external {
         bool exists;
         Seller storage seller;
         AuthToken storage authToken;
@@ -157,7 +155,6 @@ contract SellertHandlerFacet is IBosonSellerHandler, SellerBase {
     function getSeller(uint256 _sellerId)
         external
         view
-        override
         returns (
             bool exists,
             Seller memory seller,
@@ -180,7 +177,6 @@ contract SellertHandlerFacet is IBosonSellerHandler, SellerBase {
     function getSellerByAddress(address _associatedAddress)
         external
         view
-        override
         returns (
             bool exists,
             Seller memory seller,

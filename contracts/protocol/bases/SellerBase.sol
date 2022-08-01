@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./../../domain/BosonConstants.sol";
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
-import { ProtocolBase } from "./../bases/ProtocolBase.sol";
+import { ProtocolBase } from "./ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 
 /**

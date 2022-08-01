@@ -2,66 +2,19 @@
 pragma solidity ^0.8.0;
 
 import "../../domain/BosonConstants.sol";
-import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
-//import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
+import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-//import { IERC721 } from "../../interfaces/IERC721.sol";
 
-contract AccountHandlerFacet is ProtocolBase {
+contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**
      * @notice Facet Initializer
      */
-    function initialize() public onlyUnInitialized(type(IBosonAccountHandler).interfaceId) {
-        DiamondLib.addSupportedInterface(type(IBosonAccountHandler).interfaceId);
+    function initialize() public {
+        //No-op initializer. Keeping function for consistency in the deployment script.
     }
-
-    /**
-     * @notice Creates a seller
-     *
-     * Emits a SellerCreated event if successful.
-     *
-     * Reverts if:
-     * - Address values are zero address
-     * - Addresses are not unique to this seller
-     * - Seller is not active (if active == false)
-     * - Admin address is zero address and AuthTokenType == None
-     * - AuthTokenType is not unique to this seller
-     *
-     * @param _seller - the fully populated struct with seller id set to 0x0
-     * @param _contractURI - contract metadata URI
-     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
-     */
-/*
-    function createSeller(
-        Seller memory _seller,
-        string calldata _contractURI,
-        AuthToken calldata _authToken
-    ) external override {
-        // create seller and update structs values to represent true state
-        createSellerInternal(_seller, _contractURI, _authToken);
-    }
-*/
-    /**
-     * @notice Creates a Buyer
-     *
-     * Emits an BuyerCreated event if successful.
-     *
-     * Reverts if:
-     * - Wallet address is zero address
-     * - Active is not true
-     * - Wallet address is not unique to this buyer
-     *
-     * @param _buyer - the fully populated struct with buyer id set to 0x0
-     */
-/*
-    function createBuyer(Buyer memory _buyer) external override {
-        createBuyerInternal(_buyer);
-    }
-*/
-
-
+    
     /**
      * @notice Creates a Dispute Resolver. Dispute Resolver must be activated before it can participate in the protocol.
      *
@@ -81,12 +34,11 @@ contract AccountHandlerFacet is ProtocolBase {
      * @param _disputeResolverFees - array of fees dispute resolver charges per token type. Zero address is native currency. Can be empty.
      * @param _sellerAllowList - list of ids of sellers that can choose this dispute resolver. If empty, there are no restrictions on which seller can chose it.
      */
-/*
     function createDisputeResolver(
         DisputeResolver memory _disputeResolver,
         DisputeResolverFee[] calldata _disputeResolverFees,
         uint256[] calldata _sellerAllowList
-    ) external override {
+    ) external {
         //Check for zero address
         require(
             _disputeResolver.admin != address(0) &&
@@ -162,182 +114,7 @@ contract AccountHandlerFacet is ProtocolBase {
             msgSender()
         );
     }
-*/
-    /**
-     * @notice Creates a marketplace agent
-     *
-     * Emits an AgentCreated event if successful.
-     *
-     * Reverts if:
-     * - Wallet address is zero address
-     * - Active is not true
-     * - Wallet address is not unique to this agent
-     * - Fee percentage is greater than 10000 (100%)
-     *
-     * @param _agent - the fully populated struct with agent id set to 0x0
-     */
-/*
-    function createAgent(Agent memory _agent) external override {
-        createAgentInternal(_agent);
-    }
-*/
-    /**
-     * @notice Updates a seller. All fields should be filled, even those staying the same.
-     *
-     * Emits a SellerUpdated event if successful.
-     *
-     * Reverts if:
-     * - Address values are zero address
-     * - Addresses are not unique to this seller
-     * - Caller is not the admin address of the seller
-     * - Seller does not exist
-     * - Admin address is zero address and AuthTokenType == None
-     * - AuthTokenType is not unique to this seller
-     *
-     * @param _seller - the fully populated seller struct
-     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
-     */
-/*
-    function updateSeller(Seller memory _seller, AuthToken calldata _authToken) external override {
-        bool exists;
-        Seller storage seller;
-        AuthToken storage authToken;
 
-        //Admin address or AuthToken data must be present. A seller can have one or the other
-        require(
-            (_seller.admin == address(0) && _authToken.tokenType != AuthTokenType.None) ||
-                (_seller.admin != address(0) && _authToken.tokenType == AuthTokenType.None),
-            ADMIN_OR_AUTH_TOKEN
-        );
-
-        //Check Seller exists in sellers mapping
-        (exists, seller, authToken) = fetchSeller(_seller.id);
-
-        //Seller must already exist
-        require(exists, NO_SUCH_SELLER);
-
-        //Check that caller is authorized to call this function
-        if (seller.admin == address(0)) {
-            address authTokenContract = protocolLookups().authTokenContracts[authToken.tokenType];
-            address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
-            require(tokenIdOwner == msgSender(), NOT_ADMIN);
-        } else {
-            require(seller.admin == msgSender(), NOT_ADMIN);
-        }
-
-        //Check that the passed in addresses are unique to one seller Id across all roles -- not used or are used by this seller id.
-        //Checking this seller id is necessary because one or more addresses may not change
-        require(
-            (protocolLookups().sellerIdByOperator[_seller.operator] == 0 ||
-                protocolLookups().sellerIdByOperator[_seller.operator] == _seller.id) &&
-                (protocolLookups().sellerIdByOperator[_seller.clerk] == 0 ||
-                    protocolLookups().sellerIdByOperator[_seller.clerk] == _seller.id) &&
-                (protocolLookups().sellerIdByAdmin[_seller.operator] == 0 ||
-                    protocolLookups().sellerIdByAdmin[_seller.operator] == _seller.id) &&
-                (protocolLookups().sellerIdByAdmin[_seller.clerk] == 0 ||
-                    protocolLookups().sellerIdByAdmin[_seller.clerk] == _seller.id) &&
-                (protocolLookups().sellerIdByClerk[_seller.operator] == 0 ||
-                    protocolLookups().sellerIdByClerk[_seller.operator] == _seller.id) &&
-                (protocolLookups().sellerIdByClerk[_seller.clerk] == 0 ||
-                    protocolLookups().sellerIdByClerk[_seller.clerk] == _seller.id),
-            SELLER_ADDRESS_MUST_BE_UNIQUE
-        );
-
-        //Admin address or AuthToken data must be present in parameters. A seller can have one or the other. Check passed in parameters
-        if (_seller.admin == address(0)) {
-            //Check that auth token is unique to this seller
-            require(
-                protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == 0 ||
-                    protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == _seller.id,
-                AUTH_TOKEN_MUST_BE_UNIQUE
-            );
-        } else {
-            //Check that the admin address is unique to one seller Id across all roles -- not used or is used by this seller id.
-
-            require(
-                (protocolLookups().sellerIdByOperator[_seller.admin] == 0 ||
-                    protocolLookups().sellerIdByOperator[_seller.admin] == _seller.id) &&
-                    (protocolLookups().sellerIdByAdmin[_seller.admin] == 0 ||
-                        protocolLookups().sellerIdByAdmin[_seller.admin] == _seller.id) &&
-                    (protocolLookups().sellerIdByClerk[_seller.admin] == 0 ||
-                        protocolLookups().sellerIdByClerk[_seller.admin] == _seller.id),
-                SELLER_ADDRESS_MUST_BE_UNIQUE
-            );
-        }
-
-        //Delete current mappings
-        delete protocolLookups().sellerIdByOperator[seller.operator];
-        delete protocolLookups().sellerIdByAdmin[seller.admin];
-        delete protocolLookups().sellerIdByClerk[seller.clerk];
-        delete protocolLookups().sellerIdByAuthToken[authToken.tokenType][authToken.tokenId];
-        delete protocolEntities().authTokens[seller.id];
-
-        // store this address of existing seller operator to check if you have to transfer the ownership later
-        address oldSellerOperator = seller.operator;
-
-        storeSeller(_seller, _authToken);
-
-        // If operator changed, transfer the ownership of NFT voucher
-        if (oldSellerOperator != _seller.operator) {
-            IBosonVoucher(protocolLookups().cloneAddress[seller.id]).transferOwnership(_seller.operator);
-        }
-
-        // Notify watchers of state change
-        emit SellerUpdated(_seller.id, _seller, _authToken, msgSender());
-    }
-*/
-    /**
-     * @notice Updates a buyer. All fields should be filled, even those staying the same. The wallet address cannot be updated if the current wallet address has oustanding vouchers
-     *
-     * Emits a BuyerUpdated event if successful.
-     *
-     * Reverts if:
-     * - Caller is not the wallet address associated with the buyer account
-     * - Wallet address is zero address
-     * - Address is not unique to this buyer
-     * - Buyer does not exist
-     * - Current wallet address has oustanding vouchers
-     *
-     * @param _buyer - the fully populated buyer struct
-     */
-/*
-    function updateBuyer(Buyer memory _buyer) external override {
-        //Check for zero address
-        require(_buyer.wallet != address(0), INVALID_ADDRESS);
-
-        bool exists;
-        Buyer storage buyer;
-
-        //Check Buyer exists in buyers mapping
-        (exists, buyer) = fetchBuyer(_buyer.id);
-
-        //Buyer must already exist
-        require(exists, NO_SUCH_BUYER);
-
-        //Check that msg.sender is the wallet address for this buyer
-        require(buyer.wallet == msgSender(), NOT_BUYER_WALLET);
-
-        //Check that current wallet address does not own any vouchers, if changing wallet address
-        if (buyer.wallet != _buyer.wallet) {
-            require(protocolLookups().voucherCount[_buyer.id] == 0, WALLET_OWNS_VOUCHERS);
-        }
-
-        //check that the wallet address is unique to one buyer Id if new
-        require(
-            protocolLookups().buyerIdByWallet[_buyer.wallet] == 0 ||
-                protocolLookups().buyerIdByWallet[_buyer.wallet] == _buyer.id,
-            BUYER_ADDRESS_MUST_BE_UNIQUE
-        );
-
-        //Delete current mappings
-        delete protocolLookups().buyerIdByWallet[msgSender()];
-
-        storeBuyer(_buyer);
-
-        // Notify watchers of state change
-        emit BuyerUpdated(_buyer.id, _buyer, msgSender());
-    }
-*/
     /**
      * @notice Updates a dispute resolver, not including DisputeResolverFees, allowed seller list or active flag.
      * All DisputeResolver fields should be filled, even those staying the same.
@@ -353,8 +130,7 @@ contract AccountHandlerFacet is ProtocolBase {
      *
      * @param _disputeResolver - the fully populated buydispute resolver struct
      */
-/*
-    function updateDisputeResolver(DisputeResolver memory _disputeResolver) external override {
+    function updateDisputeResolver(DisputeResolver memory _disputeResolver) external {
         //Check for zero address
         require(
             _disputeResolver.admin != address(0) &&
@@ -411,57 +187,7 @@ contract AccountHandlerFacet is ProtocolBase {
         // Notify watchers of state change
         emit DisputeResolverUpdated(_disputeResolver.id, _disputeResolver, msgSender());
     }
-*/
-    /**
-     * @notice Updates an agent. All fields should be filled, even those staying the same.
-     *
-     * Emits a AgentUpdated event if successful.
-     *
-     * Reverts if:
-     * - Caller is not the wallet address associated with the agent account
-     * - Wallet address is zero address
-     * - Wallet address is not unique to this agent
-     * - Agent does not exist
-     * - Fee percentage is greater than 10000 (100%)
-     *
-     * @param _agent - the fully populated agent struct
-     */
-/*
-    function updateAgent(Agent memory _agent) external override {
-        //Check for zero address
-        require(_agent.wallet != address(0), INVALID_ADDRESS);
 
-        bool exists;
-        Agent storage agent;
-
-        //Check Agent exists in agents mapping
-        (exists, agent) = fetchAgent(_agent.id);
-
-        //Agent must already exist
-        require(exists, NO_SUCH_AGENT);
-
-        //Check that msg.sender is the wallet address for this agent
-        require(agent.wallet == msgSender(), NOT_AGENT_WALLET);
-
-        // Make sure percentage is less than or equal to 10000
-        require(_agent.feePercentage <= 10000, FEE_PERCENTAGE_INVALID);
-
-        //check that the wallet address is unique to one agent Id if new
-        require(
-            protocolLookups().agentIdByWallet[_agent.wallet] == 0 ||
-                protocolLookups().agentIdByWallet[_agent.wallet] == _agent.id,
-            AGENT_ADDRESS_MUST_BE_UNIQUE
-        );
-
-        //Delete current mappings
-        delete protocolLookups().agentIdByWallet[msgSender()];
-
-        storeAgent(_agent);
-
-        // Notify watchers of state change
-        emit AgentUpdated(_agent.id, _agent, msgSender());
-    }
-*/
     /**
      * @notice Add DisputeResolverFees to an existing dispute resolver
      *
@@ -477,10 +203,8 @@ contract AccountHandlerFacet is ProtocolBase {
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      */
-/*
     function addFeesToDisputeResolver(uint256 _disputeResolverId, DisputeResolverFee[] calldata _disputeResolverFees)
         external
-        override
     {
         bool exists;
         DisputeResolver storage disputeResolver;
@@ -524,7 +248,7 @@ contract AccountHandlerFacet is ProtocolBase {
 
         emit DisputeResolverFeesAdded(_disputeResolverId, _disputeResolverFees, msgSender());
     }
-*/
+
     /**
      * @notice Remove DisputeResolverFees from  an existing dispute resolver
      *
@@ -540,10 +264,8 @@ contract AccountHandlerFacet is ProtocolBase {
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _feeTokenAddresses - list of adddresses of dispute resolver fee tokens to remove
      */
-/*
     function removeFeesFromDisputeResolver(uint256 _disputeResolverId, address[] calldata _feeTokenAddresses)
         external
-        override
     {
         bool exists;
         DisputeResolver storage disputeResolver;
@@ -590,7 +312,7 @@ contract AccountHandlerFacet is ProtocolBase {
 
         emit DisputeResolverFeesRemoved(_disputeResolverId, _feeTokenAddresses, msgSender());
     }
-*/
+
     /**
      * @notice Add seller ids to set of ids allowed to chose the given dispute resolver
      *
@@ -607,8 +329,7 @@ contract AccountHandlerFacet is ProtocolBase {
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _sellerAllowList - List of seller ids to add to allowed list
      */
-/*
-    function addSellersToAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external override {
+    function addSellersToAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external {
         // At least one seller id must be specified and the number of ids cannot exceed the maximum number of seller ids to avoid running into block gas limit in a loop
         require(
             _sellerAllowList.length > 0 && _sellerAllowList.length <= protocolLimits().maxAllowedSellers,
@@ -631,7 +352,7 @@ contract AccountHandlerFacet is ProtocolBase {
 
         emit AllowedSellersAdded(_disputeResolverId, _sellerAllowList, msgSender());
     }
-*/
+
     /**
      * @notice Remove seller ids from set of ids allowed to chose the given dispute resolver
      *
@@ -647,10 +368,8 @@ contract AccountHandlerFacet is ProtocolBase {
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _sellerAllowList - list of seller ids to remove from allowed list
      */
-/*
     function removeSellersFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList)
         external
-        override
     {
         // At least one seller id must be specified and the number of ids cannot exceed the maximum number of seller ids to avoid running into block gas limit in a loop
         require(
@@ -697,7 +416,7 @@ contract AccountHandlerFacet is ProtocolBase {
 
         emit AllowedSellersRemoved(_disputeResolverId, _sellerAllowList, msgSender());
     }
-*/
+
     /**
      * @notice Set the active flag for this Dispute Resolver to true. Only callable by the protocol ADMIN role.
      *
@@ -709,8 +428,7 @@ contract AccountHandlerFacet is ProtocolBase {
      *
      * @param _disputeResolverId - Id of the dispute resolver
      */
-/*
-    function activateDisputeResolver(uint256 _disputeResolverId) external override onlyRole(ADMIN) {
+    function activateDisputeResolver(uint256 _disputeResolverId) external onlyRole(ADMIN) {
         bool exists;
         DisputeResolver storage disputeResolver;
 
@@ -724,108 +442,7 @@ contract AccountHandlerFacet is ProtocolBase {
 
         emit DisputeResolverActivated(_disputeResolverId, disputeResolver, msgSender());
     }
-*/
-    /**
-     * @notice Gets the details about a seller.
-     *
-     * @param _sellerId - the id of the seller to check
-     * @return exists - the seller was found
-     * @return seller - the seller details. See {BosonTypes.Seller}
-     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
-     */
-/*
-    function getSeller(uint256 _sellerId)
-        external
-        view
-        override
-        returns (
-            bool exists,
-            Seller memory seller,
-            AuthToken memory authToken
-        )
-    {
-        return fetchSeller(_sellerId);
-    }
-*/
-    /**
-     * @notice Gets the details about a seller by an address associated with that seller: operator, admin, or clerk address.
-     *         N.B.: If seller's admin uses NFT Auth they should call `getSellerByAuthToken` instead.
-     *
-     * @param _associatedAddress - the address associated with the seller. Must be an operator, admin, or clerk address.
-     * @return exists - the seller was found
-     * @return seller - the seller details. See {BosonTypes.Seller}
-     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
-     *                     See {BosonTypes.AuthToken}
-     */
-/*
-    function getSellerByAddress(address _associatedAddress)
-        external
-        view
-        override
-        returns (
-            bool exists,
-            Seller memory seller,
-            AuthToken memory authToken
-        )
-    {
-        uint256 sellerId;
 
-        (exists, sellerId) = getSellerIdByOperator(_associatedAddress);
-        if (exists) {
-            return fetchSeller(sellerId);
-        }
-
-        (exists, sellerId) = getSellerIdByAdmin(_associatedAddress);
-        if (exists) {
-            return fetchSeller(sellerId);
-        }
-
-        (exists, sellerId) = getSellerIdByClerk(_associatedAddress);
-        if (exists) {
-            return fetchSeller(sellerId);
-        }
-    }
-*/
-    /**
-     * @notice Gets the details about a seller by an auth token associated with that seller.
-     *         A seller will have either an admin address or an auth token
-     *
-     * @param _associatedAuthToken - the auth token that may be associated with the seller.
-     * @return exists - the seller was found
-     * @return seller - the seller details. See {BosonTypes.Seller}
-     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
-     *                     See {BosonTypes.AuthToken}
-     */
-/*
-    function getSellerByAuthToken(AuthToken calldata _associatedAuthToken)
-        external
-        view
-        returns (
-            bool exists,
-            Seller memory seller,
-            AuthToken memory authToken
-        )
-    {
-        uint256 sellerId;
-
-        (exists, sellerId) = getSellerIdByAuthToken(_associatedAuthToken);
-        if (exists) {
-            return fetchSeller(sellerId);
-        }
-    }
-*/
-    /**
-     * @notice Gets the details about a buyer.
-     *
-     * @param _buyerId - the id of the buyer to check
-     * @return exists - the buyer was found
-     * @return buyer - the buyer details. See {BosonTypes.Buyer}
-     */
-/*
-    function getBuyer(uint256 _buyerId) external view override returns (bool exists, Buyer memory buyer) {
-        return fetchBuyer(_buyerId);
-    }
-*/
     /**
      * @notice Gets the details about a dispute resolver.
      *
@@ -835,11 +452,9 @@ contract AccountHandlerFacet is ProtocolBase {
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      * @return sellerAllowList - list of sellers that are allowed to chose this dispute resolver
      */
-/*
     function getDisputeResolver(uint256 _disputeResolverId)
         public
         view
-        override
         returns (
             bool exists,
             DisputeResolver memory disputeResolver,
@@ -852,7 +467,7 @@ contract AccountHandlerFacet is ProtocolBase {
             sellerAllowList = protocolLookups().allowedSellers[_disputeResolverId];
         }
     }
-*/
+
     /**
      * @notice Gets the details about a dispute resolver by an address associated with that dispute resolver: operator, admin, or clerk address.
      *
@@ -862,11 +477,9 @@ contract AccountHandlerFacet is ProtocolBase {
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      * @return sellerAllowList - list of sellers that are allowed to chose this dispute resolver
      */
-/*
     function getDisputeResolverByAddress(address _associatedAddress)
         external
         view
-        override
         returns (
             bool exists,
             DisputeResolver memory disputeResolver,
@@ -891,27 +504,7 @@ contract AccountHandlerFacet is ProtocolBase {
             return getDisputeResolver(disputeResolverId);
         }
     }
-*/
-    /**
-     * @notice Gets the details about an agent.
-     *
-     * @param _agentId - the id of the agent to check
-     * @return exists - the agent was found
-     * @return agent - the agent details. See {BosonTypes.Agent}
-     */
-/*
-    function getAgent(uint256 _agentId) external view returns (bool exists, Agent memory agent) {
-        return fetchAgent(_agentId);
-    }
-*/
-    /**
-     * @notice Gets the next account Id that can be assigned to an account.
-     *
-     * @return nextAccountId - the account Id
-     */
-    function getNextAccountId() external view returns (uint256 nextAccountId) {
-        nextAccountId = protocolCounters().nextAccountId;
-    }
+
 
     /**
      * @notice Returns the inforamtion if given sellers are allowed to chose the given dispute resolver
@@ -920,11 +513,9 @@ contract AccountHandlerFacet is ProtocolBase {
      * @param _sellerIds - list of sellers ids to check
      * @return sellerAllowed - array with indicator (true/false) if seller is allowed to chose the dispute resolver. Index in this array corresponds to indices of the incoming _sellerIds
      */
-/*
     function areSellersAllowed(uint256 _disputeResolverId, uint256[] calldata _sellerIds)
         external
         view
-        override
         returns (bool[] memory sellerAllowed)
     {
         sellerAllowed = new bool[](_sellerIds.length);
@@ -948,13 +539,12 @@ contract AccountHandlerFacet is ProtocolBase {
             }
         }
     }
-*/
+
     /**
      * @notice Stores DisputeResolver struct in storage
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set
      */
-/*
     function storeDisputeResolver(DisputeResolver memory _disputeResolver) internal {
         // escalation period must be greater than zero and less than or equal to the max allowed
         require(
@@ -981,7 +571,7 @@ contract AccountHandlerFacet is ProtocolBase {
         protocolLookups().disputeResolverIdByAdmin[_disputeResolver.admin] = _disputeResolver.id;
         protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] = _disputeResolver.id;
     }
-*/
+
     /**
      * @notice Stores seller id to allowed list mapping in storage
      *
@@ -992,7 +582,6 @@ contract AccountHandlerFacet is ProtocolBase {
      * @param _disputeResolverId - id of dispute resolver that is giving the permission
      * @param _sellerAllowList - list of sellers ids added to allow list
      */
-/*
     function storeSellerAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) internal {
         ProtocolLib.ProtocolLookups storage pl = protocolLookups();
 
@@ -1013,5 +602,4 @@ contract AccountHandlerFacet is ProtocolBase {
             pl.allowedSellerIndex[_disputeResolverId][sellerId] = pl.allowedSellers[_disputeResolverId].length; //Set index mapping. Should be index in allowedSellers array + 1
         }
     }
-*/
 }

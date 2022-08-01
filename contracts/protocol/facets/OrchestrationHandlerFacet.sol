@@ -4,7 +4,8 @@ pragma solidity ^0.8.0;
 import "../../domain/BosonConstants.sol";
 import { IBosonOrchestrationHandler } from "../../interfaces/handlers/IBosonOrchestrationHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
-import { AccountBase } from "../bases/AccountBase.sol";
+import { SellerBase } from "../bases/SellerBase.sol";
+import { AgentBase } from "../bases/AgentBase.sol";
 import { GroupBase } from "../bases/GroupBase.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
 import { TwinBase } from "../bases/TwinBase.sol";
@@ -16,7 +17,8 @@ import { BundleBase } from "../bases/BundleBase.sol";
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  */
 contract OrchestrationHandlerFacet is
-    AccountBase,
+    SellerBase,
+    AgentBase,
     OfferBase,
     GroupBase,
     TwinBase,

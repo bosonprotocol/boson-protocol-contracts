@@ -2,17 +2,15 @@
 pragma solidity ^0.8.0;
 
 import "../../domain/BosonConstants.sol";
-import { IBosonAgentHandler } from "../../interfaces/handlers/IBosonAgentHandler.sol";
-import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { AgentBase } from "../bases/AgentBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
-contract AgenttHandlerFacet is IBosonAgentHandler, AgentBase {
+contract AgenttHandlerFacet is AgentBase {
     /**
      * @notice Facet Initializer
      */
-    function initialize() public onlyUnInitialized(type(IBosonAgentHandler).interfaceId) {
-        DiamondLib.addSupportedInterface(type(IBosonAgentHandler).interfaceId);
+    function initialize() public {
+        //No-op initializer. Keeping function for consistency in the deployment script.
     }
 
     /**
@@ -28,7 +26,7 @@ contract AgenttHandlerFacet is IBosonAgentHandler, AgentBase {
      *
      * @param _agent - the fully populated struct with agent id set to 0x0
      */
-    function createAgent(Agent memory _agent) external override {
+    function createAgent(Agent memory _agent) external {
         createAgentInternal(_agent);
     }
 
@@ -46,7 +44,7 @@ contract AgenttHandlerFacet is IBosonAgentHandler, AgentBase {
      *
      * @param _agent - the fully populated agent struct
      */
-    function updateAgent(Agent memory _agent) external override {
+    function updateAgent(Agent memory _agent) external {
         //Check for zero address
         require(_agent.wallet != address(0), INVALID_ADDRESS);
 

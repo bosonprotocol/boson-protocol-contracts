@@ -2,17 +2,15 @@
 pragma solidity ^0.8.0;
 
 import "../../domain/BosonConstants.sol";
-import { IBosonBuyerHandler } from "../../interfaces/handlers/IBosonBuyerHandler.sol";
-import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BuyerBase } from "../bases/BuyerBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
-contract BuyerHandlerFacet is IBosonBuyerHandler, BuyerBase {
+contract BuyerHandlerFacet is BuyerBase {
     /**
      * @notice Facet Initializer
      */
-    function initialize() public onlyUnInitialized(type(IBosonBuyerHandler).interfaceId) {
-        DiamondLib.addSupportedInterface(type(IBosonBuyerHandler).interfaceId);
+    function initialize() public {
+        //No-op initializer. Keeping function for consistency in the deployment script.
     }
 
     /**
@@ -27,7 +25,7 @@ contract BuyerHandlerFacet is IBosonBuyerHandler, BuyerBase {
      *
      * @param _buyer - the fully populated struct with buyer id set to 0x0
      */
-    function createBuyer(Buyer memory _buyer) external override {
+    function createBuyer(Buyer memory _buyer) external {
         createBuyerInternal(_buyer);
     }
 
@@ -45,7 +43,7 @@ contract BuyerHandlerFacet is IBosonBuyerHandler, BuyerBase {
      *
      * @param _buyer - the fully populated buyer struct
      */
-    function updateBuyer(Buyer memory _buyer) external override {
+    function updateBuyer(Buyer memory _buyer) external {
         //Check for zero address
         require(_buyer.wallet != address(0), INVALID_ADDRESS);
 
@@ -92,7 +90,7 @@ contract BuyerHandlerFacet is IBosonBuyerHandler, BuyerBase {
      * @return exists - the buyer was found
      * @return buyer - the buyer details. See {BosonTypes.Buyer}
      */
-    function getBuyer(uint256 _buyerId) external view override returns (bool exists, Buyer memory buyer) {
+    function getBuyer(uint256 _buyerId) external view returns (bool exists, Buyer memory buyer) {
         return fetchBuyer(_buyerId);
     }
 }
