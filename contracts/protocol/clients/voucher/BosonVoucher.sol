@@ -8,6 +8,7 @@ import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { IERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { ERC2981Upgradeable } from "@openzeppelin/contracts-upgradeable/token/common/ERC2981Upgradeable.sol";
 
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
@@ -180,8 +181,33 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     }
 
     /**
+     * @notice Get royalty info for a token
+     *
+     * For a given token id and sale price, how much should be sent to whom as royalty
+     *
+     * @param _exchangeId - the NFT asset queried for royalty information
+     * @param _offerPrice - the sale price of the NFT asset specified by _exchangeId
+     *
+     * @return receiver - address of who should be sent the royalty payment
+     * @return royaltyAmount - the royalty payment amount for _value sale price
+     */
+    function royaltyInfo(uint256 _exchangeId, uint256 _offerPrice)
+        public
+        view
+        override(ERC2981Upgradeable, IBosonVoucher)
+        returns (address, uint256)
+    {
+        return super.royaltyInfo(_exchangeId, _offerPrice);
+    }
+
+    /**
      * @notice Sets the default royalty information that all ids in this contract will default to.
      * Can only be called by the owner or during the initialization
+     *
+     * Reverts if:
+     * - caller is not the owner.
+     * - `receiver` is a zero address.
+     * - `feeNumerator` is greater than the fee denominator i.e. greater than 100%.
      *
      * @param _receiver address of the receiver.
      * @param _feeNumerator fee in percentage. e.g. 500 = 5%
@@ -193,6 +219,10 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     /**
      * @notice Removes default royalty information.
      * Can only be called by the owner
+     *
+     * Reverts if:
+     * - caller is not the owner.
+     *
      */
     function deleteDefaultRoyalty() external override onlyOwner {
         _deleteDefaultRoyalty();
@@ -201,6 +231,10 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     /**
      * @notice Sets the royalty information for a specific token id, overriding the global default.
      * Can only be called by the owner
+     *
+     * - caller is not the owner.
+     * - `receiver` is a zero address.
+     * - `feeNumerator` is greater than the fee denominator i.e. greater than 100%.
      *
      * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
      * @param _receiver address of the receiver.
@@ -216,6 +250,9 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
     /**
      * @notice Resets royalty information for the token id back to the global default.
+     *
+     * Reverts if:
+     * - caller is not the owner.
      *
      * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
      */
