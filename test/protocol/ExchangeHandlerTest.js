@@ -454,9 +454,9 @@ describe("IBosonExchangeHandler", function () {
         // Commit to offer
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
-        // Offer qunantityAvailable should not be decremented
+        // Offer qunantityAvailable should be decremented
         const [, offer] = await offerHandler.connect(rando).getOffer(offerId);
-        expect(offer.quantityAvailable).to.equal(9, "Quantity available should be unlimited");
+        expect(offer.quantityAvailable).to.equal(9, "Quantity available should be 9");
       });
 
       it("Should not decrement quantityAvailable if offer is unlimited", async function () {
@@ -1583,10 +1583,11 @@ describe("IBosonExchangeHandler", function () {
         });
 
         context("Unlimited supply", async function () {
+          let other721;
           beforeEach(async function () {
             // Deploy a new ERC721 token
             let TokenContractFactory = await ethers.getContractFactory("Foreign721");
-            const other721 = await TokenContractFactory.connect(rando).deploy({ gasLimit });
+            other721 = await TokenContractFactory.connect(rando).deploy({ gasLimit });
 
             // Mint enough tokens to cover the offer
             await other721.connect(operator).mint("0", "2");
@@ -1639,13 +1640,23 @@ describe("IBosonExchangeHandler", function () {
             let expectedTokenId = "0";
 
             // Check the operator owns the first ERC721 of twin range
-            owner = await foreign721.ownerOf(expectedTokenId);
+            owner = await other721.ownerOf(expectedTokenId);
             expect(owner).to.equal(operator.address);
 
             // Redeem the voucher
             await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId))
               .to.emit(exchangeHandler, "TwinTransferred")
               .withArgs(twin721.id, twin721.tokenAddress, exchangeId, expectedTokenId, "0", buyer.address);
+
+            // Check the buyer owns the first ERC721 of twin range
+            owner = await other721.ownerOf(expectedTokenId);
+            expect(owner).to.equal(buyer.address);
+
+            ++expectedTokenId;
+
+            // Check the operator owns the second ERC721 of twin range
+            owner = await other721.ownerOf(expectedTokenId);
+            expect(owner).to.equal(operator.address);
 
             // Commit to offer for the second time
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -1654,12 +1665,12 @@ describe("IBosonExchangeHandler", function () {
             // tokenId transferred to the buyer is 1
             await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchangeId))
               .to.emit(exchangeHandler, "TwinTransferred")
-              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, ++expectedTokenId, "0", buyer.address);
-          });
+              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, expectedTokenId, "0", buyer.address);
 
-          // Check the buyer owns the first ERC721 of twin range
-          owner = await foreign721.ownerOf(tokenId);
-          expect(owner).to.equal(buyer.address);
+            // Check the buyer owns the second ERC721 of twin range
+            owner = await other721.ownerOf(expectedTokenId);
+            expect(owner).to.equal(buyer.address);
+          });
         });
 
         context("Twin transfer fail", async function () {
