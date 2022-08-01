@@ -75,8 +75,8 @@ describe("IBosonTwinHandler", function () {
       "BundleHandlerFacet",
     ]);
 
-    // Deploy the boson token
-    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+    // Deploy the mock tokens
+    [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens(gasLimit);
 
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
@@ -127,9 +127,6 @@ describe("IBosonTwinHandler", function () {
 
     // Cast Diamond to IBundleHandler
     bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
-
-    // Deploy the mock tokens
-    [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens(gasLimit);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -402,6 +399,23 @@ describe("IBosonTwinHandler", function () {
           // Create an twin with ids range: ["6" ... "9"]
           twin.tokenId = "6";
           twin.supplyAvailable = "4";
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
+            RevertReasons.INVALID_TWIN_TOKEN_RANGE
+          );
+        });
+
+        it("Should revert if token address has been used in another twin with unlimited supply", async function () {
+          twin.supplyAvailable = ethers.constants.MaxUint256;
+          twin.tokenType = TokenType.NonFungibleToken;
+          twin.tokenAddress = foreign721.address;
+          twin.amount = "0";
+
+          await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+          // Create twin with unlimited supply
+          await twinHandler.connect(operator).createTwin(twin);
+
+          // Create new twin with same token address
           await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
             RevertReasons.INVALID_TWIN_TOKEN_RANGE
           );

@@ -48,7 +48,22 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             uint256 lastTokenId = tokenId + _twin.supplyAvailable - 1;
             require(lastTokenId >= tokenId, INVALID_TWIN_TOKEN_RANGE);
 
-            // Get all twin ids that belong to seller
+            // Get all seller twin ids that belong to the same token address of the new twin to validate if they have not unlimited supply since ranges can overlaps each other
+            uint256[] storage twinIds = protocolLookups().twinIdsByTokenAddressAndBySeller[sellerId][
+                _twin.tokenAddress
+            ];
+
+            for (uint256 i = 0; i < twinIds.length; i++) {
+                // Get storage location for looped twin
+                (, Twin storage currentTwin) = fetchTwin(twinIds[i]);
+
+                // The protocol cannot allow two twins with unlimited supply and with the same token address because range overlaps with each other
+                if (currentTwin.supplyAvailable == type(uint256).max || _twin.supplyAvailable == type(uint256).max) {
+                    require(currentTwin.tokenAddress != _twin.tokenAddress, INVALID_TWIN_TOKEN_RANGE);
+                }
+            }
+
+            // Get all ranges of twins that belong to the seller and to the same token address of the new twin to validate if range is available
             TokenRange[] memory twinRanges = protocolLookups().twinRangesBySeller[sellerId][_twin.tokenAddress];
 
             // Checks if token range isn't being used in any other twin of seller
@@ -61,6 +76,8 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
 
             // Add range to twinRangesBySeller mapping
             protocolLookups().twinRangesBySeller[sellerId][_twin.tokenAddress].push(TokenRange(tokenId, lastTokenId));
+            // Add twin id to twinIdsByTokenAddressAndBySeller mapping
+            protocolLookups().twinIdsByTokenAddressAndBySeller[sellerId][_twin.tokenAddress].push(_twin.id);
         } else {
             // If token is Fungible or MultiToken amount should not be zero
             require(_twin.amount > 0, INVALID_AMOUNT);

@@ -151,6 +151,8 @@ library ProtocolLib {
         mapping(BosonTypes.AuthTokenType => mapping(uint256 => uint256)) sellerIdByAuthToken;
         // seller id => token address (only ERC721) => start and end of token ids range
         mapping(uint256 => mapping(address => BosonTypes.TokenRange[])) twinRangesBySeller;
+        // seller id => token address (only ERC721) => twin ids
+        mapping(uint256 => mapping(address => uint256[])) twinIdsByTokenAddressAndBySeller;
         // dispute resolver id => list of allowed sellers
         mapping(uint256 => uint256[]) allowedSellers;
         // dispute resolver id => seller id => index of allowed seller in allowedSellers
