@@ -5,7 +5,6 @@ import "../../domain/BosonConstants.sol";
 import { IBosonOrchestrationHandler } from "../../interfaces/handlers/IBosonOrchestrationHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { SellerBase } from "../bases/SellerBase.sol";
-import { AgentBase } from "../bases/AgentBase.sol";
 import { GroupBase } from "../bases/GroupBase.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
 import { TwinBase } from "../bases/TwinBase.sol";
@@ -18,7 +17,7 @@ import { BundleBase } from "../bases/BundleBase.sol";
  */
 contract OrchestrationHandlerFacet is
     SellerBase,
-    AgentBase,
+    //AgentBase,
     OfferBase,
     GroupBase,
     TwinBase,
