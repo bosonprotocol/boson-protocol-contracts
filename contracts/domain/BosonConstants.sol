@@ -44,6 +44,9 @@ string constant DISPUTE_RESOLVER_FEE_NOT_FOUND = "Dispute resolver fee not found
 string constant SELLER_ALREADY_APPROVED = "Seller id is approved already";
 string constant SELLER_NOT_APPROVED = "Seller id is not approved";
 string constant INVALID_AMOUNT_ALLOWED_SELLERS = "Allowed sellers not present or exceeds maximum allowed sellers in a single transaction";
+string constant INVALID_AUTH_TOKEN_TYPE = "Invalid AuthTokenType";
+string constant ADMIN_OR_AUTH_TOKEN = "An admin address or an auth token is required";
+string constant AUTH_TOKEN_MUST_BE_UNIQUE = "Auth token cannot be assigned to another entity of the same type";
 
 // Revert Reasons: Offer related
 string constant NO_SUCH_OFFER = "No such offer";
@@ -78,8 +81,10 @@ string constant INVALID_CONDITION_PARAMETERS = "Invalid condition parameters";
 string constant NO_SUCH_EXCHANGE = "No such exchange";
 string constant FULFILLMENT_PERIOD_NOT_ELAPSED = "Fulfillment period has not yet elapsed";
 string constant VOUCHER_NOT_REDEEMABLE = "Voucher not yet valid or already expired";
+string constant VOUCHER_EXTENSION_NOT_VALID = "Proposed date is not later than the current one";
 string constant VOUCHER_STILL_VALID = "Voucher still valid";
 string constant VOUCHER_HAS_EXPIRED = "Voucher has expired";
+string constant TOO_MANY_EXCHANGES = "Exceeded maximum exchanges in a single transaction";
 
 // Revert Reasons: Twin related
 string constant NO_SUCH_TWIN = "No such twin";

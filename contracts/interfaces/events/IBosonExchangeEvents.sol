@@ -24,6 +24,12 @@ interface IBosonExchangeEvents {
     );
     event VoucherCanceled(uint256 indexed offerId, uint256 indexed exchangeId, address indexed executedBy);
     event VoucherExpired(uint256 indexed offerId, uint256 indexed exchangeId, address indexed executedBy);
+    event VoucherExtended(
+        uint256 indexed offerId,
+        uint256 indexed exchangeId,
+        uint256 validUntil,
+        address indexed executedBy
+    );
     event VoucherRedeemed(uint256 indexed offerId, uint256 indexed exchangeId, address indexed executedBy);
     event VoucherRevoked(uint256 indexed offerId, uint256 indexed exchangeId, address indexed executedBy);
     event VoucherTransferred(

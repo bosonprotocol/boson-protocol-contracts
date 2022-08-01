@@ -8,6 +8,8 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
+const AuthTokenType = require("../../scripts/domain/AuthTokenType");
+
 /**
  *  Test the Boson Config Handler interface
  */
@@ -19,6 +21,7 @@ describe("IBosonConfigHandler", function () {
     maxTwinsPerBundle,
     maxOffersPerBundle,
     maxOffersPerBatch,
+    maxExchangesPerBatch,
     maxTokensPerWithdrawal,
     maxFeesPerDisputeResolver,
     maxEscalationResponsePeriod,
@@ -28,6 +31,7 @@ describe("IBosonConfigHandler", function () {
     maxTotalOfferFeePercentage;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
+  let authTokenContract;
 
   before(async function () {
     // get interface Ids
@@ -53,6 +57,7 @@ describe("IBosonConfigHandler", function () {
     // Set protocol config
     protocolFeePercentage = 12;
     protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    maxExchangesPerBatch = 100;
     maxOffersPerGroup = 100;
     maxTwinsPerBundle = 100;
     maxOffersPerBundle = 100;
@@ -85,6 +90,7 @@ describe("IBosonConfigHandler", function () {
           },
           // Protocol limits
           {
+            maxExchangesPerBatch,
             maxOffersPerGroup,
             maxTwinsPerBundle,
             maxOffersPerBundle,
@@ -119,6 +125,8 @@ describe("IBosonConfigHandler", function () {
           .withArgs(protocolFeePercentage, deployer.address)
           .to.emit(configHandler, "ProtocolFeeFlatBosonChanged")
           .withArgs(protocolFeeFlatBoson, deployer.address)
+          .to.emit(configHandler, "MaxExchangesPerBatchChanged")
+          .withArgs(maxExchangesPerBatch, deployer.address)
           .to.emit(configHandler, "MaxOffersPerGroupChanged")
           .withArgs(maxOffersPerGroup, deployer.address)
           .to.emit(configHandler, "MaxTwinsPerBundleChanged")
@@ -156,6 +164,7 @@ describe("IBosonConfigHandler", function () {
         },
         // Protocol limits
         {
+          maxExchangesPerBatch,
           maxOffersPerGroup,
           maxTwinsPerBundle,
           maxOffersPerBundle,
@@ -750,6 +759,72 @@ describe("IBosonConfigHandler", function () {
           });
         });
       });
+
+      context("👉 setAuthTokenContract()", async function () {
+        beforeEach(async function () {
+          // set new value for auth token contract
+          authTokenContract = accounts[9];
+        });
+
+        it("should emit an AuthTokenContractChanged event", async function () {
+          // Set new auth token contract, testing for the event
+          await expect(
+            configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.Lens, authTokenContract.address)
+          )
+            .to.emit(configHandler, "AuthTokenContractChanged")
+            .withArgs(AuthTokenType.Lens, authTokenContract.address, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new auth token contract,
+          await configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.ENS, authTokenContract.address);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.ENS)).to.equal(
+            authTokenContract.address
+          );
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new auth token contract, expecting revert
+            await expect(
+              configHandler.connect(rando).setAuthTokenContract(AuthTokenType.ENS, authTokenContract.address)
+            ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          });
+        });
+      });
+
+      context("👉 setMaxExchangesPerBatch()", async function () {
+        beforeEach(async function () {
+          // set new value for max exchanges per batch
+          maxExchangesPerBatch = 135;
+        });
+
+        it("should emit a MaxExchangesPerBatchChanged event", async function () {
+          // Set new max exchange per batch, testing for the event
+          await expect(configHandler.connect(deployer).setMaxExchangesPerBatch(maxExchangesPerBatch))
+            .to.emit(configHandler, "MaxExchangesPerBatchChanged")
+            .withArgs(maxExchangesPerBatch, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new max exchange per batch,
+          await configHandler.connect(deployer).setMaxExchangesPerBatch(maxExchangesPerBatch);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxExchangesPerBatch()).to.equal(maxExchangesPerBatch);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new max exchange per batch, expecting revert
+            await expect(configHandler.connect(rando).setMaxExchangesPerBatch(maxExchangesPerBatch)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
+          });
+        });
+      });
     });
 
     context("📋 Getters", async function () {
@@ -822,6 +897,16 @@ describe("IBosonConfigHandler", function () {
         expect(await configHandler.connect(rando).getMaxTotalOfferFeePercentage()).to.equal(
           maxTotalOfferFeePercentage,
           "Invalid max total offer fee percentage"
+        );
+        //setAuthTokenContract is not called in the initialize function
+        expect(await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.Lens)).to.equal(
+          ethers.constants.AddressZero,
+          "Invalid auth token contract address"
+        );
+
+        expect(await configHandler.connect(rando).getMaxExchangesPerBatch()).to.equal(
+          maxExchangesPerBatch,
+          "Invalid max exchanges per batch"
         );
       });
     });

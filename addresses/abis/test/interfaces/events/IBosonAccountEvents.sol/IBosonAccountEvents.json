@@ -582,6 +582,24 @@
           "type": "address"
         },
         {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum BosonTypes.AuthTokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.AuthToken",
+          "name": "authToken",
+          "type": "tuple"
+        },
+        {
           "indexed": true,
           "internalType": "address",
           "name": "executedBy",
@@ -636,6 +654,24 @@
           "indexed": false,
           "internalType": "struct BosonTypes.Seller",
           "name": "seller",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum BosonTypes.AuthTokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.AuthToken",
+          "name": "authToken",
           "type": "tuple"
         },
         {

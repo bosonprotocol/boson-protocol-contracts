@@ -9,6 +9,8 @@ const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const TokenType = require("../../scripts/domain/TokenType");
+const AuthToken = require("../../scripts/domain/AuthToken");
+const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -42,6 +44,7 @@ describe("IBosonGroupHandler", function () {
   let offerIdsToAdd, offerIdsToRemove;
   let disputeResolver, disputeResolverFees, disputeResolverId;
   let contractURI;
+  let emptyAuthToken;
   let agentId;
 
   before(async function () {
@@ -85,6 +88,7 @@ describe("IBosonGroupHandler", function () {
       },
       // Protocol limits
       {
+        maxExchangesPerBatch: 100,
         maxOffersPerGroup: 100,
         maxTwinsPerBundle: 100,
         maxOffersPerBundle: 100,
@@ -142,7 +146,12 @@ describe("IBosonGroupHandler", function () {
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      await accountHandler.connect(admin).createSeller(seller, contractURI);
+
+      // AuthToken
+      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      expect(emptyAuthToken.isValid()).is.true;
+
+      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(
@@ -321,7 +330,7 @@ describe("IBosonGroupHandler", function () {
           // create another seller and an offer
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-          await accountHandler.connect(rando).createSeller(seller, contractURI);
+          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
           await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
 
           // add offer belonging to another seller
@@ -490,7 +499,7 @@ describe("IBosonGroupHandler", function () {
           // create another seller and an offer
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
           contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-          await accountHandler.connect(rando).createSeller(seller, contractURI);
+          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
           await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
 
           // add offer belonging to another seller

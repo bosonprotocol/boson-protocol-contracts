@@ -8,6 +8,31 @@
       "inputs": [
         {
           "indexed": true,
+          "internalType": "enum BosonTypes.AuthTokenType",
+          "name": "authTokenType",
+          "type": "uint8"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "authTokenContract",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "AuthTokenContractChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
           "internalType": "address",
           "name": "beaconProxyAddress",
           "type": "address"
@@ -96,6 +121,25 @@
         }
       ],
       "name": "MaxEscalationResponsePeriodChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint16",
+          "name": "maxExchangesPerBatch",
+          "type": "uint16"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MaxExchangesPerBatchChanged",
       "type": "event"
     },
     {
@@ -327,6 +371,25 @@
       "type": "event"
     },
     {
+      "inputs": [
+        {
+          "internalType": "enum BosonTypes.AuthTokenType",
+          "name": "_authTokenType",
+          "type": "uint8"
+        }
+      ],
+      "name": "getAuthTokenContract",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "getBeaconProxyAddress",
       "outputs": [
@@ -386,6 +449,19 @@
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getMaxExchangesPerBatch",
+      "outputs": [
+        {
+          "internalType": "uint16",
+          "name": "",
+          "type": "uint16"
         }
       ],
       "stateMutability": "view",
@@ -550,6 +626,24 @@
     {
       "inputs": [
         {
+          "internalType": "enum BosonTypes.AuthTokenType",
+          "name": "_authTokenType",
+          "type": "uint8"
+        },
+        {
+          "internalType": "address",
+          "name": "_authTokenContract",
+          "type": "address"
+        }
+      ],
+      "name": "setAuthTokenContract",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "address",
           "name": "_beaconProxyAddress",
           "type": "address"
@@ -608,6 +702,19 @@
         }
       ],
       "name": "setMaxEscalationResponsePeriod",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint16",
+          "name": "_maxExchangesPerBatch",
+          "type": "uint16"
+        }
+      ],
+      "name": "setMaxExchangesPerBatch",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

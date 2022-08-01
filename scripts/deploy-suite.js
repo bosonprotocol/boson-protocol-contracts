@@ -17,6 +17,7 @@ const {
   writeContracts,
 } = require("./util/report-verify-deployments");
 const { oneMonth } = require("../test/utils/constants");
+const AuthTokenType = require("../scripts/domain/AuthTokenType");
 
 /**
  * Deploy Boson Protocol V2 contract suite
@@ -36,6 +37,7 @@ function getConfig() {
   // Protocol configuration params
   const feePercentage = "150"; // 1.5%  = 150
   const protocolFeeFlatBoson = "0";
+  const maxExchangesPerBatch = "100";
   const maxOffersPerGroup = "100";
   const maxTwinsPerBundle = "100";
   const maxOffersPerBundle = "100";
@@ -88,6 +90,7 @@ function getConfig() {
       beaconProxyAddress: BEACON_PROXY[network],
     },
     {
+      maxExchangesPerBatch,
       maxOffersPerGroup,
       maxTwinsPerBundle,
       maxOffersPerBundle,
@@ -105,6 +108,30 @@ function getConfig() {
     },
     buyerEscalationDepositPercentage,
   ];
+}
+
+/**
+ * Get the contract addresses for supported NFT Auth token contracts
+ * @returns {lensAddress: string, ensAddress: string}
+ */
+function getAuthTokenContracts() {
+  // Lens protocol NFT contract address
+  const LENS = {
+    mainnet: "0xDb46d1Dc155634FbC732f92E853b10B288AD5a1d",
+    hardhat: "0x60Ae865ee4C725cd04353b5AAb364553f56ceF82",
+    test: "0x0000000000000000000000000000000000000000",
+    mumbai: "0x60Ae865ee4C725cd04353b5AAb364553f56ceF82",
+  };
+
+  // ENS contract address
+  const ENS = {
+    mainnet: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
+    hardhat: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
+    test: "0x0000000000000000000000000000000000000000",
+    mumbai: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
+  };
+
+  return { lensAddress: LENS[network], ensAddress: ENS[network] };
 }
 
 /**
@@ -139,6 +166,7 @@ async function main() {
 
   // Get the protocol config
   const config = getConfig();
+  const authTokenContracts = getAuthTokenContracts();
 
   // Get the accounts
   const accounts = await ethers.provider.listAccounts();
@@ -202,6 +230,10 @@ async function main() {
   await bosonConfigHandler.setVoucherBeaconAddress(bosonClientBeacon.address);
   await bosonConfigHandler.setBeaconProxyAddress(bosonVoucherProxy.address);
 
+  //Add NFT auth token addresses to protocol config
+  await bosonConfigHandler.setAuthTokenContract(AuthTokenType.Lens, authTokenContracts.lensAddress);
+  await bosonConfigHandler.setAuthTokenContract(AuthTokenType.ENS, authTokenContracts.ensAddress);
+
   console.log(`✅ ConfigHandlerFacet updated with remaining post-initialization config.`);
 
   // Add roles to contracts and addresses that need it
@@ -213,6 +245,14 @@ async function main() {
 
   //Verify on test node if test env
   if (hre.network.name === "test") {
+    //******TODO: This is a quick-and-dirty impl so that DRs can be activated in the test env. Will be replaced with a
+    //proper implementation for all networks!  *******/
+
+    // Grant admin role to an address that can execute certain functions in the test env.
+    await accessController.grantRole(Role.ADMIN, "0x57faFe1fB7C682216FCe44e50946C5249192b9D5");
+
+    console.log(`✅ Granted ADMIN role to appropriate test env address.`);
+
     await verifyOnTestEnv(contracts);
   }
 

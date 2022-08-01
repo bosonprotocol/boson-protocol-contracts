@@ -15,6 +15,7 @@ interface IBosonConfigEvents {
     event BeaconProxyAddressChanged(address indexed beaconProxyAddress, address indexed executedBy);
     event ProtocolFeePercentageChanged(uint16 feePercentage, address indexed executedBy);
     event ProtocolFeeFlatBosonChanged(uint256 feeFlatBoson, address indexed executedBy);
+    event MaxExchangesPerBatchChanged(uint16 maxExchangesPerBatch, address indexed executedBy);
     event MaxOffersPerGroupChanged(uint16 maxOffersPerGroup, address indexed executedBy);
     event MaxOffersPerBatchChanged(uint16 maxOffersPerBatch, address indexed executedBy);
     event MaxTwinsPerBundleChanged(uint16 maxTwinsPerBundle, address indexed executedBy);
@@ -25,5 +26,10 @@ interface IBosonConfigEvents {
     event MaxDisputesPerBatchChanged(uint16 maxDisputesPerBatch, address indexed executedBy);
     event MaxAllowedSellersChanged(uint16 maxAllowedSellers, address indexed executedBy);
     event BuyerEscalationFeePercentageChanged(uint16 buyerEscalationFeePercentage, address indexed executedBy);
+    event AuthTokenContractChanged(
+        BosonTypes.AuthTokenType indexed authTokenType,
+        address indexed authTokenContract,
+        address indexed executedBy
+    );
     event MaxTotalOfferFeePercentageChanged(uint16 maxTotalOfferFeePercentage, address indexed executedBy);
 }

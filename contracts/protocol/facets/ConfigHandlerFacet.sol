@@ -37,6 +37,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setBeaconProxyAddress(_addresses.beaconProxyAddress);
         setProtocolFeePercentage(_fees.percentage);
         setProtocolFeeFlatBoson(_fees.flatBoson);
+        setMaxExchangesPerBatch(_limits.maxExchangesPerBatch);
         setMaxOffersPerGroup(_limits.maxOffersPerGroup);
         setMaxTwinsPerBundle(_limits.maxTwinsPerBundle);
         setMaxOffersPerBundle(_limits.maxOffersPerBundle);
@@ -425,5 +426,54 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getBuyerEscalationDepositPercentage() external view override returns (uint16) {
         return protocolLookups().buyerEscalationDepositPercentage;
+    }
+
+    /**
+     * @notice Sets the contract address for the given AuthTokenType
+     *
+     * Emits an AuthTokenContractChanged event.
+     *
+     * Reverts if _authTokenType is None
+     * Reverts if _authTokenContract is the zero address
+     *
+     * @param _authTokenType - the auth token type, as an Enum value
+     * @param _authTokenContract the address of the auth token contract (e.g. Lens or ENS contract address)
+     */
+    function setAuthTokenContract(AuthTokenType _authTokenType, address _authTokenContract)
+        external
+        override
+        onlyRole(ADMIN)
+    {
+        require(_authTokenType != AuthTokenType.None, INVALID_AUTH_TOKEN_TYPE);
+        require(_authTokenContract != address(0), INVALID_ADDRESS);
+        protocolLookups().authTokenContracts[_authTokenType] = _authTokenContract;
+        emit AuthTokenContractChanged(_authTokenType, _authTokenContract, msgSender());
+    }
+
+    /**
+     * @notice Get the auth token address for the given AuthTokenType
+     * @param _authTokenType - the auth token type, as an Enum value
+     */
+    function getAuthTokenContract(AuthTokenType _authTokenType) external view returns (address) {
+        return protocolLookups().authTokenContracts[_authTokenType];
+    }
+
+    /*
+     * @notice Sets the maximum number of exchanges that can be created in a single transaction
+     *
+     * Emits a MaxExchangesPerBatchChanged event.
+     *
+     * @param _maxExchangesPerBatch - the maximum length of {BosonTypes.Exchange[]}
+     */
+    function setMaxExchangesPerBatch(uint16 _maxExchangesPerBatch) public override onlyRole(ADMIN) {
+        protocolLimits().maxExchangesPerBatch = _maxExchangesPerBatch;
+        emit MaxExchangesPerBatchChanged(_maxExchangesPerBatch, msgSender());
+    }
+
+    /**
+     * @notice Get the maximum exchanges per batch
+     */
+    function getMaxExchangesPerBatch() external view override returns (uint16) {
+        return protocolLimits().maxExchangesPerBatch;
     }
 }

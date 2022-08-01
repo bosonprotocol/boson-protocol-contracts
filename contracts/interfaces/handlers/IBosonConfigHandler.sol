@@ -9,7 +9,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xff6bd4ef
+ * The ERC-165 identifier for this interface is: 0xd6070e58
  */
 interface IBosonConfigHandler is IBosonConfigEvents {
     /**
@@ -263,4 +263,37 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Get the buyer escalation fee percentage.
      */
     function getBuyerEscalationDepositPercentage() external view returns (uint16);
+
+    /**
+     * @notice Sets the contract address for the given AuthTokenType
+     *
+     * Emits an AuthTokenContractChanged event.
+     *
+     * Reverts if _authTokenType is None
+     * Reverts if _authTokenContract is the zero address
+     *
+     * @param _authTokenType - the auth token type, as an Enum value
+     * @param _authTokenContract the address of the auth token contract (e.g. Lens or ENS contract address)
+     */
+    function setAuthTokenContract(BosonTypes.AuthTokenType _authTokenType, address _authTokenContract) external;
+
+    /**
+     * @notice Get the auth token address for the given AuthTokenType
+     * @param _authTokenType - the auth token type, as an Enum value
+     */
+    function getAuthTokenContract(BosonTypes.AuthTokenType _authTokenType) external view returns (address);
+
+    /*
+     * @notice Sets the maximum number of exchanges that can be created in a single transaction
+     *
+     * Emits a MaxExchangesPerBatchChanged event.
+     *
+     * @param _maxExchangesPerBatch - the maximum length of {BosonTypes.Exchange[]}
+     */
+    function setMaxExchangesPerBatch(uint16 _maxExchangesPerBatch) external;
+
+    /**
+     * @notice Get the maximum exchanges per batch
+     */
+    function getMaxExchangesPerBatch() external view returns (uint16);
 }
