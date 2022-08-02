@@ -1003,7 +1003,7 @@ describe("DisputeResolverHandler", function () {
         //ADMIN role activates Dispute Resolver
         await disputeResolverHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
-        disputeResolver.acitve = false;
+        disputeResolver.active = false;
         expect(disputeResolver.isValid()).is.true;
         expectedDisputeResolver.active = true;
         expect(expectedDisputeResolver.isValid()).is.true;
@@ -1277,14 +1277,16 @@ describe("DisputeResolverHandler", function () {
           await expect(disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
-
+          
+          disputeResolver.operator = operator.address;
           disputeResolver.admin = other2.address;
 
           // Attempt to update dispute resolver 1 with non-unique admin address, expecting revert
           await expect(disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
-
+          
+          disputeResolver.admin = admin.address;
           disputeResolver.clerk = other3.address;
 
           // Attempt to update dispute resolver 1 with non-unique clerk address, expecting revert
