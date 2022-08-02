@@ -143,7 +143,7 @@ describe("IBosonFundsHandler", function () {
       {
         treasuryAddress: "0x0000000000000000000000000000000000000000",
         tokenAddress: bosonToken.address,
-        voucherBeaconAddress: beacon.address,
+        voucherBeacon: beacon.address,
         beaconProxy: proxy.address,
       },
       // Protocol limits

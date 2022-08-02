@@ -159,7 +159,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         }
 
         // Initialize the clone
-        IInitializableClone(cloneAddress).initialize(pa.voucherBeaconAddress);
+        IInitializableClone(cloneAddress).initialize(pa.voucherBeacon);
         IInitializableClone(cloneAddress).initializeVoucher(_sellerId, _operator, _contractURI);
     }
 }

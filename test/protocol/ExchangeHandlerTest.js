@@ -154,7 +154,7 @@ describe("IBosonExchangeHandler", function () {
       {
         treasuryAddress: ethers.constants.AddressZero,
         tokenAddress: ethers.constants.AddressZero,
-        voucherBeaconAddress: beacon.address,
+        voucherBeacon: beacon.address,
         beaconProxy: proxy.address,
       },
       // Protocol limits

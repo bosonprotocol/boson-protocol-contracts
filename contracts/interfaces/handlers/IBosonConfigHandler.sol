@@ -45,12 +45,12 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a VoucherBeaconAddressChanged event.
      *
-     * @param _voucherBeaconAddress - the address of the Boson Voucher beacon contract.
+     * @param _voucherBeacon - the address of the Boson Voucher beacon contract.
      */
-    function setVoucherBeaconAddress(address _voucherBeaconAddress) external;
+    function setVoucherBeaconAddress(address _voucherBeacon) external;
 
     /**
-     * @notice The voucherBeaconAddress getter
+     * @notice The voucherBeacon address getter
      */
     function getVoucherBeaconAddress() external view returns (address);
 

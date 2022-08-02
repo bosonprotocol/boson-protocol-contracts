@@ -33,7 +33,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         // Initialize protocol config params
         setTokenAddress(_addresses.tokenAddress);
         setTreasuryAddress(_addresses.treasuryAddress);
-        setVoucherBeaconAddress(_addresses.voucherBeaconAddress);
+        setVoucherBeaconAddress(_addresses.voucherBeacon);
         setBeaconProxyAddress(_addresses.beaconProxy);
         setProtocolFeePercentage(_fees.percentage);
         setProtocolFeeFlatBoson(_fees.flatBoson);
@@ -107,18 +107,18 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a VoucherBeaconAddressChanged event.
      *
-     * @param _voucherBeaconAddress - the address of the Boson Voucher beacon contract.
+     * @param _voucherBeacon - the address of the Boson Voucher beacon contract.
      */
-    function setVoucherBeaconAddress(address _voucherBeaconAddress) public override onlyRole(ADMIN) {
-        protocolAddresses().voucherBeaconAddress = _voucherBeaconAddress;
-        emit VoucherBeaconAddressChanged(_voucherBeaconAddress, msgSender());
+    function setVoucherBeaconAddress(address _voucherBeacon) public override onlyRole(ADMIN) {
+        protocolAddresses().voucherBeacon = _voucherBeacon;
+        emit VoucherBeaconAddressChanged(_voucherBeacon, msgSender());
     }
 
     /**
-     * @notice The voucherBeaconAddress getter
+     * @notice The voucherBeacon address getter
      */
     function getVoucherBeaconAddress() external view override returns (address) {
-        return protocolAddresses().voucherBeaconAddress;
+        return protocolAddresses().voucherBeacon;
     }
 
     /**

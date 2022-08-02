@@ -25,7 +25,7 @@ library ProtocolLib {
         // Address of the Boson Token (ERC-20 contract)
         address payable tokenAddress;
         // Address of the Boson Protocol Voucher beacon
-        address voucherBeaconAddress;
+        address voucherBeacon;
         // Address of the Boson Beacon proxy implementation
         address beaconProxy;
     }
