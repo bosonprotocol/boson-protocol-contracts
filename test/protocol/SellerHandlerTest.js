@@ -17,7 +17,7 @@ const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 /**
  *  Test the Boson Seller Handler
  */
-describe("SellertHandlerFacet", function () {
+describe("SellerHandlerFacet", function () {
   // Common vars
   let deployer,
     rando,
@@ -89,10 +89,8 @@ describe("SellertHandlerFacet", function () {
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
       "AccountHandlerFacet",
-      "SellertHandlerFacet",
+      "SellerHandlerFacet",
       "ExchangeHandlerFacet",
-      //"OfferHandlerFacet",
-      //"FundsHandlerFacet",
     ]);
 
     // Deploy mock ERC721 tokens
@@ -146,7 +144,7 @@ describe("SellertHandlerFacet", function () {
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
 
     // Cast Diamond to SellerHandlerFacet
-    sellerHandler = await ethers.getContractAt("SellertHandlerFacet", protocolDiamond.address);
+    sellerHandler = await ethers.getContractAt("SellerHandlerFacet", protocolDiamond.address);
 
     // Cast Diamond to IBosonExchangeHandler
     exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);

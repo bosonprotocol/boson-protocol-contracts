@@ -7,7 +7,7 @@ import { SellerBase } from "../bases/SellerBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC721 } from "../../interfaces/IERC721.sol";
 
-contract SellertHandlerFacet is SellerBase {
+contract SellerHandlerFacet is SellerBase {
     /**
      * @notice Facet Initializer
      */
