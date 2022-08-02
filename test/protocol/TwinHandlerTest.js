@@ -75,8 +75,8 @@ describe("IBosonTwinHandler", function () {
       "BundleHandlerFacet",
     ]);
 
-    // Deploy the boson token
-    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+    // Deploy the mock tokens
+    [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens(gasLimit);
 
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
@@ -127,9 +127,6 @@ describe("IBosonTwinHandler", function () {
 
     // Cast Diamond to IBundleHandler
     bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
-
-    // Deploy the mock tokens
-    [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens(gasLimit);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -351,7 +348,7 @@ describe("IBosonTwinHandler", function () {
           await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(RevertReasons.INVALID_AMOUNT);
         });
 
-        it("amount should be zero if token type is NonFungibleToken", async function () {
+        it("Amount must be zero if token type is NonFungibleToken", async function () {
           twin.tokenAddress = foreign721.address;
           twin.tokenType = TokenType.NonFungibleToken;
           twin.amount = "1";
@@ -407,6 +404,23 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
+        it("Should revert if token address has been used in another twin with unlimited supply", async function () {
+          twin.supplyAvailable = ethers.constants.MaxUint256;
+          twin.tokenType = TokenType.NonFungibleToken;
+          twin.tokenAddress = foreign721.address;
+          twin.amount = "0";
+
+          await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+          // Create twin with unlimited supply
+          await twinHandler.connect(operator).createTwin(twin);
+
+          // Create new twin with same token address
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
+            RevertReasons.INVALID_TWIN_TOKEN_RANGE
+          );
+        });
+
         context("Token address is unsupported", async function () {
           it("Token address is a zero address", async function () {
             twin.tokenAddress = ethers.constants.AddressZero;
@@ -429,6 +443,26 @@ describe("IBosonTwinHandler", function () {
 
             await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
               RevertReasons.UNSUPPORTED_TOKEN
+            );
+          });
+
+          it("Token address is a contract that doesn't implement IERC721 interface when selected token type is NonFungible", async function () {
+            await bosonToken.connect(operator).approve(twinHandler.address, 1);
+            twin.tokenType = TokenType.NonFungibleToken;
+            twin.tokenAddress = bosonToken.address;
+
+            await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
+              RevertReasons.INVALID_TOKEN_ADDRESS
+            );
+          });
+
+          it("Token address is a contract that doesn't implement IERC1155 interface when selected token type is MultiToken", async function () {
+            await bosonToken.connect(operator).approve(twinHandler.address, 1);
+            twin.tokenType = TokenType.MultiToken;
+            twin.tokenAddress = bosonToken.address;
+
+            await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
+              RevertReasons.INVALID_TOKEN_ADDRESS
             );
           });
         });
@@ -569,8 +603,11 @@ describe("IBosonTwinHandler", function () {
 
       it("should make twin range available again if token type is NonFungible", async function () {
         twin.tokenType = TokenType.NonFungibleToken;
+        twin.tokenAddress = foreign721.address;
         twin.amount = "0";
         const expectedNewTwinId = "2";
+
+        await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
 
         // Create a twin with range: [0,1499]
         await twinHandler.connect(operator).createTwin(twin);

@@ -40,6 +40,9 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         require(_twin.supplyAvailable > 0, INVALID_SUPPLY_AVAILABLE);
 
         if (_twin.tokenType == TokenType.NonFungibleToken) {
+            // Check if the token supports IERC721 interface
+            require(contractSupportsInterface(_twin.tokenAddress, 0x80ac58cd), INVALID_TOKEN_ADDRESS);
+
             // If token is NonFungible amount should be zero
             require(_twin.amount == 0, INVALID_TWIN_PROPERTY);
 
@@ -48,7 +51,22 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             uint256 lastTokenId = tokenId + _twin.supplyAvailable - 1;
             require(lastTokenId >= tokenId, INVALID_TWIN_TOKEN_RANGE);
 
-            // Get all twin ids that belong to seller
+            // Get all seller twin ids that belong to the same token address of the new twin to validate if they have not unlimited supply since ranges can overlaps each other
+            uint256[] storage twinIds = protocolLookups().twinIdsByTokenAddressAndBySeller[sellerId][
+                _twin.tokenAddress
+            ];
+
+            for (uint256 i = 0; i < twinIds.length; i++) {
+                // Get storage location for looped twin
+                (, Twin storage currentTwin) = fetchTwin(twinIds[i]);
+
+                // The protocol cannot allow two twins with unlimited supply and with the same token address because range overlaps with each other
+                if (currentTwin.supplyAvailable == type(uint256).max || _twin.supplyAvailable == type(uint256).max) {
+                    require(currentTwin.tokenAddress != _twin.tokenAddress, INVALID_TWIN_TOKEN_RANGE);
+                }
+            }
+
+            // Get all ranges of twins that belong to the seller and to the same token address of the new twin to validate if range is available
             TokenRange[] memory twinRanges = protocolLookups().twinRangesBySeller[sellerId][_twin.tokenAddress];
 
             // Checks if token range isn't being used in any other twin of seller
@@ -61,6 +79,14 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
 
             // Add range to twinRangesBySeller mapping
             protocolLookups().twinRangesBySeller[sellerId][_twin.tokenAddress].push(TokenRange(tokenId, lastTokenId));
+        } else if (_twin.tokenType == TokenType.MultiToken) {
+            // If token is Fungible or MultiToken amount should not be zero
+            require(_twin.amount > 0, INVALID_AMOUNT);
+            // Not every ERC20 has supportsInterface method so we can't check interface support if token type is NonFungible
+            // Check if the token supports IERC1155 interface
+            require(contractSupportsInterface(_twin.tokenAddress, 0xd9b67a26), INVALID_TOKEN_ADDRESS);
+            // Add twin id to twinIdsByTokenAddressAndBySeller mapping
+            protocolLookups().twinIdsByTokenAddressAndBySeller[sellerId][_twin.tokenAddress].push(_twin.id);
         } else {
             // If token is Fungible or MultiToken amount should not be zero
             require(_twin.amount > 0, INVALID_AMOUNT);
@@ -83,6 +109,21 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
 
         // Notify watchers of state change
         emit TwinCreated(twinId, sellerId, _twin, msgSender());
+    }
+
+    /**
+     * @notice Check if the contract supports the correct interface for the selected token type.
+     *
+     * @param _tokenAddress - the address of the token to check
+     * @param _interfaceId - the interface to check for
+     * @return true if the contract supports the interface, false otherwise
+     */
+    function contractSupportsInterface(address _tokenAddress, bytes4 _interfaceId) internal view returns (bool) {
+        try ITwinToken(_tokenAddress).supportsInterface(_interfaceId) returns (bool supported) {
+            return supported;
+        } catch {
+            return false;
+        }
     }
 
     /**
