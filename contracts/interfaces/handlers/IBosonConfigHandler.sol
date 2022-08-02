@@ -22,7 +22,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     function setTokenAddress(address payable _token) external;
 
     /**
-     * @notice The tokenAddress getter
+     * @notice The token address getter
      */
     function getTokenAddress() external view returns (address payable);
 

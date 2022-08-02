@@ -133,7 +133,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       // Protocol addresses
       {
         treasuryAddress: ethers.constants.AddressZero,
-        tokenAddress: bosonToken.address,
+        token: bosonToken.address,
         voucherBeacon: beacon.address,
         beaconProxy: proxy.address,
       },

@@ -82,7 +82,7 @@ describe("IBosonGroupHandler", function () {
       // Protocol addresses
       {
         treasuryAddress: ethers.constants.AddressZero,
-        tokenAddress: bosonToken.address,
+        token: bosonToken.address,
         voucherBeacon: ethers.constants.AddressZero,
         beaconProxy: ethers.constants.AddressZero,
       },

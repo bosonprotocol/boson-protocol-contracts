@@ -84,7 +84,7 @@ function getConfig() {
 
   return [
     {
-      tokenAddress: TOKEN[network],
+      token: TOKEN[network],
       treasuryAddress: TREASURY[network],
       voucherBeacon: BEACON[network],
       beaconProxy: BEACON_PROXY[network],

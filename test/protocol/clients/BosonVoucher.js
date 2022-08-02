@@ -75,7 +75,7 @@ describe("IBosonVoucher", function () {
       // Protocol addresses
       {
         treasuryAddress: ethers.constants.AddressZero,
-        tokenAddress: ethers.constants.AddressZero,
+        token: ethers.constants.AddressZero,
         voucherBeacon: beacon.address,
         beaconProxy: proxy.address,
       },

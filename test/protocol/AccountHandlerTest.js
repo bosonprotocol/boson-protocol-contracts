@@ -81,7 +81,7 @@ describe("IBosonAccountHandler", function () {
       // Protocol addresses
       {
         treasuryAddress: "0x0000000000000000000000000000000000000000",
-        tokenAddress: "0x0000000000000000000000000000000000000000",
+        token: "0x0000000000000000000000000000000000000000",
         voucherBeacon: beacon.address,
         beaconProxy: proxy.address,
       },

@@ -9,7 +9,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
  * @notice Events related to management of configuration within the protocol.
  */
 interface IBosonConfigEvents {
-    event TokenAddressChanged(address indexed tokenAddress, address indexed executedBy);
+    event TokenAddressChanged(address indexed token, address indexed executedBy);
     event TreasuryAddressChanged(address indexed treasuryAddress, address indexed executedBy);
     event VoucherBeaconAddressChanged(address indexed voucherBeacon, address indexed executedBy);
     event BeaconProxyAddressChanged(address indexed beaconProxy, address indexed executedBy);

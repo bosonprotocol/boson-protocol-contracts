@@ -23,7 +23,7 @@ library ProtocolLib {
         // Address of the Boson Protocol treasury
         address payable treasuryAddress;
         // Address of the Boson Token (ERC-20 contract)
-        address payable tokenAddress;
+        address payable token;
         // Address of the Boson Protocol Voucher beacon
         address voucherBeacon;
         // Address of the Boson Beacon proxy implementation

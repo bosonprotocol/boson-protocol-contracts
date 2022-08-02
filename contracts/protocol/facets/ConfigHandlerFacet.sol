@@ -31,7 +31,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         DiamondLib.addSupportedInterface(type(IBosonConfigHandler).interfaceId);
 
         // Initialize protocol config params
-        setTokenAddress(_addresses.tokenAddress);
+        setTokenAddress(_addresses.token);
         setTreasuryAddress(_addresses.treasuryAddress);
         setVoucherBeaconAddress(_addresses.voucherBeacon);
         setBeaconProxyAddress(_addresses.beaconProxy);
@@ -69,18 +69,18 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a TokenAddressChanged event.
      *
-     * @param _tokenAddress - the address of the token contract
+     * @param _token - the address of the token contract
      */
-    function setTokenAddress(address payable _tokenAddress) public override onlyRole(ADMIN) {
-        protocolAddresses().tokenAddress = _tokenAddress;
-        emit TokenAddressChanged(_tokenAddress, msgSender());
+    function setTokenAddress(address payable _token) public override onlyRole(ADMIN) {
+        protocolAddresses().token = _token;
+        emit TokenAddressChanged(_token, msgSender());
     }
 
     /**
-     * @notice The tokenAddress getter
+     * @notice The token address getter
      */
     function getTokenAddress() external view override returns (address payable) {
-        return protocolAddresses().tokenAddress;
+        return protocolAddresses().token;
     }
 
     /**
