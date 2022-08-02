@@ -55,7 +55,7 @@ class Exchange {
       offerId: offerId.toString(),
       buyerId: buyerId.toString(),
       finalizedDate: finalizedDate.toString(),
-      voucher: Voucher.fromStruct(voucher),
+      voucher: voucher && Voucher.fromStruct(voucher),
       state,
     });
   }

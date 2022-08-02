@@ -153,6 +153,8 @@ library ProtocolLib {
         mapping(uint256 => mapping(address => BosonTypes.TokenRange[])) twinRangesBySeller;
         // seller id => token address (only ERC721) => twin ids
         mapping(uint256 => mapping(address => uint256[])) twinIdsByTokenAddressAndBySeller;
+        // exchange id => BosonTypes.TwinReceipt
+        mapping(uint256 => BosonTypes.TwinReceipt) twinReceiptByExchange;
         // dispute resolver id => list of allowed sellers
         mapping(uint256 => uint256[]) allowedSellers;
         // dispute resolver id => seller id => index of allowed seller in allowedSellers

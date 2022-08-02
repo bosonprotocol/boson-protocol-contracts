@@ -203,4 +203,9 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @param _exchangeIds - the array of exchanges ids
      */
     function completeExchangeBatch(uint256[] calldata _exchangeIds) external;
+
+    /**
+     * @notice Get exchange
+     */
+    function getReceipt(uint256 _exchangeId) external view returns (BosonTypes.Receipt memory receipt);
 }

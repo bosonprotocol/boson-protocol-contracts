@@ -414,7 +414,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
      * @return exists - true if the exchange exists
      * @return isFinalized - true if the exchange is finalized
      */
-    function isExchangeFinalized(uint256 _exchangeId) external view override returns (bool exists, bool isFinalized) {
+    function isExchangeFinalized(uint256 _exchangeId) public view override returns (bool exists, bool isFinalized) {
         Exchange storage exchange;
 
         // Get the exchange
@@ -559,7 +559,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                 // N.B. Using call here so as to normalize the revert reason
                 bytes memory result;
                 bool success;
-                uint256 amount = twin.amount;
                 uint256 tokenId = twin.tokenId;
                 TokenType tokenType = twin.tokenType;
 
@@ -568,7 +567,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                     // Decrement by 1 if token type is NonFungible otherwise decrement amount (i.e, tokenType is MultiToken or FungibleToken)
                     twin.supplyAvailable = twin.tokenType == TokenType.NonFungibleToken
                         ? twin.supplyAvailable - 1
-                        : twin.supplyAvailable - amount;
+                        : twin.supplyAvailable - twin.amount;
                 }
 
                 if (tokenType == TokenType.FungibleToken && twin.supplyAvailable >= twin.amount) {
@@ -578,7 +577,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                             "transferFrom(address,address,uint256)",
                             seller.operator,
                             msgSender(),
-                            amount
+                            twin.amount
                         )
                     );
                 } else if (tokenType == TokenType.NonFungibleToken && twin.supplyAvailable > 0) {
@@ -607,18 +606,27 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                             seller.operator,
                             msgSender(),
                             tokenId,
-                            amount,
+                            twin.amount,
                             ""
                         )
                     );
                 }
 
+                uint256 exchangeId = _exchange.id;
                 // If token transfer failed
                 if (!success) {
                     transferFailed = true;
-                    emit TwinTransferFailed(twin.id, twin.tokenAddress, _exchange.id, tokenId, amount, sender);
+
+                    emit TwinTransferFailed(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 } else {
-                    emit TwinTransferred(twin.id, twin.tokenAddress, _exchange.id, tokenId, amount, sender);
+                    protocolLookups().twinReceiptByExchange[exchangeId] = TwinReceipt(
+                        twin.id,
+                        tokenId,
+                        twin.amount,
+                        twin.tokenAddress,
+                        twin.tokenType
+                    );
+                    emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 }
             }
 
@@ -784,5 +792,29 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
             // complete the exchange
             completeExchange(_exchangeIds[i]);
         }
+    }
+
+    function getReceipt(uint256 _exchangeId) external view returns (Receipt memory receipt) {
+        // Get the exchange, should be in one of the finalized states
+        (bool exists, Exchange storage exchange) = fetchExchange(_exchangeId);
+        require(exists);
+
+        // Verify if exchange is finalized, returns true if exchange is in one of the final states
+        (, bool isFinalized) = isExchangeFinalized(_exchangeId);
+        require(isFinalized);
+
+        receipt.exchange = exchange;
+        (, Offer memory offer) = fetchOffer(exchange.offerId);
+        receipt.offer = offer;
+
+        // Fetch the dispute, it exists if exchange is in Disputed state
+        (bool disputeExists, Dispute memory dispute, DisputeDates memory disputeDates) = fetchDispute(_exchangeId);
+
+        if (disputeExists) {
+            receipt.dispute = dispute;
+        }
+
+        TwinReceipt memory twinReceipt = protocolLookups().twinReceiptByExchange[_exchangeId];
+        receipt.twinReceipt = twinReceipt;
     }
 }
