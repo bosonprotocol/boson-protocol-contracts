@@ -31,9 +31,9 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a TreasuryAddressChanged event.
      *
-     * @param _treasury - the address of the treasury
+     * @param _treasuryAddress - the address of the treasury
      */
-    function setTreasuryAddress(address payable _treasury) external;
+    function setTreasuryAddress(address payable _treasuryAddress) external;
 
     /**
      * @notice The treasury address getter
@@ -45,9 +45,9 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a VoucherBeaconAddressChanged event.
      *
-     * @param _voucherBeacon - the address of the Boson Voucher beacon contract.
+     * @param _voucherBeaconAddress - the address of the Boson Voucher beacon contract.
      */
-    function setVoucherBeaconAddress(address _voucherBeacon) external;
+    function setVoucherBeaconAddress(address _voucherBeaconAddress) external;
 
     /**
      * @notice The voucherBeacon address getter
@@ -59,9 +59,9 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a BeaconProxyAddressChanged event.
      *
-     * @param _beaconProxy - the address of the reference proxy implementation
+     * @param _beaconProxyAddress - the address of the reference proxy implementation
      */
-    function setBeaconProxyAddress(address _beaconProxy) external;
+    function setBeaconProxyAddress(address _beaconProxyAddress) external;
 
     /**
      * @notice The beaconProxy address getter

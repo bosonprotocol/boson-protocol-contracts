@@ -69,11 +69,11 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a TokenAddressChanged event.
      *
-     * @param _token - the address of the token contract
+     * @param _tokenAddress - the address of the token contract
      */
-    function setTokenAddress(address payable _token) public override onlyRole(ADMIN) {
-        protocolAddresses().token = _token;
-        emit TokenAddressChanged(_token, msgSender());
+    function setTokenAddress(address payable _tokenAddress) public override onlyRole(ADMIN) {
+        protocolAddresses().token = _tokenAddress;
+        emit TokenAddressChanged(_tokenAddress, msgSender());
     }
 
     /**
@@ -88,11 +88,11 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a TreasuryAddressChanged event.
      *
-     * @param _treasury - the address of the multi-sig wallet
+     * @param _treasuryAddress - the address of the multi-sig wallet
      */
-    function setTreasuryAddress(address payable _treasury) public override onlyRole(ADMIN) {
-        protocolAddresses().treasury = _treasury;
-        emit TreasuryAddressChanged(_treasury, msgSender());
+    function setTreasuryAddress(address payable _treasuryAddress) public override onlyRole(ADMIN) {
+        protocolAddresses().treasury = _treasuryAddress;
+        emit TreasuryAddressChanged(_treasuryAddress, msgSender());
     }
 
     /**
@@ -107,11 +107,11 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a VoucherBeaconAddressChanged event.
      *
-     * @param _voucherBeacon - the address of the Boson Voucher beacon contract.
+     * @param _voucherBeaconAddress - the address of the Boson Voucher beacon contract.
      */
-    function setVoucherBeaconAddress(address _voucherBeacon) public override onlyRole(ADMIN) {
-        protocolAddresses().voucherBeacon = _voucherBeacon;
-        emit VoucherBeaconAddressChanged(_voucherBeacon, msgSender());
+    function setVoucherBeaconAddress(address _voucherBeaconAddress) public override onlyRole(ADMIN) {
+        protocolAddresses().voucherBeacon = _voucherBeaconAddress;
+        emit VoucherBeaconAddressChanged(_voucherBeaconAddress, msgSender());
     }
 
     /**
@@ -126,11 +126,11 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a BeaconProxyAddressChanged event.
      *
-     * @param _beaconProxy - the address of the reference proxy implementation
+     * @param _beaconProxyAddress - the address of the reference proxy implementation
      */
-    function setBeaconProxyAddress(address _beaconProxy) public override onlyRole(ADMIN) {
-        protocolAddresses().beaconProxy = _beaconProxy;
-        emit BeaconProxyAddressChanged(_beaconProxy, msgSender());
+    function setBeaconProxyAddress(address _beaconProxyAddress) public override onlyRole(ADMIN) {
+        protocolAddresses().beaconProxy = _beaconProxyAddress;
+        emit BeaconProxyAddressChanged(_beaconProxyAddress, msgSender());
     }
 
     /**
