@@ -1,0 +1,559 @@
+const hre = require("hardhat");
+const ethers = hre.ethers;
+const { expect} = require("chai");
+
+const Role = require("../../scripts/domain/Role");
+const Agent = require("../../scripts/domain/Agent");
+const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
+const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
+const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
+const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
+const { oneMonth } = require("../utils/constants");
+
+/**
+ *  Test the Boson Agent Handler
+ */
+describe("AgentHandler", function () {
+  // Common vars
+  let deployer,
+    rando,
+    other1,
+    other2,
+    other3;
+  let protocolDiamond,
+    accessController,
+    accountHandler,
+    agentHandler,
+    gasLimit;
+  let agent, agentStruct, feePercentage, agent2, agent2Struct, active;
+  let nextAccountId;
+  let invalidAccountId, id, id2, key, value, exists;
+  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
+
+  beforeEach(async function () {
+    // Make accounts available
+    [
+      deployer,
+      rando,
+      other1,
+      other2,
+      other3,
+    ] = await ethers.getSigners();
+
+    // Deploy the Protocol Diamond
+    [protocolDiamond, , , accessController] = await deployProtocolDiamond();
+
+    // Temporarily grant UPGRADER role to deployer account
+    await accessController.grantRole(Role.UPGRADER, deployer.address);
+
+    // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
+    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+
+    // Cut the protocol handler facets into the Diamond
+    await deployProtocolHandlerFacets(protocolDiamond, [
+      "AccountHandlerFacet",
+      "AgenttHandlerFacet",
+    ]);
+
+    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
+    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [beacon] = beacons;
+    const [proxy] = proxies;
+
+    // set protocolFees
+    protocolFeePercentage = "200"; // 2 %
+    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    buyerEscalationDepositPercentage = "1000"; // 10%
+
+    // Add config Handler, so ids start at 1, and so voucher address can be found
+    const protocolConfig = [
+      // Protocol addresses
+      {
+        treasuryAddress: "0x0000000000000000000000000000000000000000",
+        tokenAddress: "0x0000000000000000000000000000000000000000",
+        voucherBeaconAddress: beacon.address,
+        beaconProxyAddress: proxy.address,
+      },
+      // Protocol limits
+      {
+        maxExchangesPerBatch: 0,
+        maxOffersPerGroup: 0,
+        maxTwinsPerBundle: 0,
+        maxOffersPerBundle: 0,
+        maxOffersPerBatch: 0,
+        maxTokensPerWithdrawal: 0,
+        maxFeesPerDisputeResolver: 100,
+        maxEscalationResponsePeriod: oneMonth,
+        maxDisputesPerBatch: 0,
+        maxAllowedSellers: 100,
+        maxTotalOfferFeePercentage: 4000, //40%
+      },
+      // Protocol fees
+      {
+        percentage: protocolFeePercentage,
+        flatBoson: protocolFeeFlatBoson,
+      },
+      buyerEscalationDepositPercentage,
+    ];
+
+    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+
+    // Cast Diamond to IBosonAccountHandler
+    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+
+    // Cast Diamond to AgenttHandlerFacet
+    agentHandler = await ethers.getContractAt("AgenttHandlerFacet", protocolDiamond.address);
+  });
+
+  // All supported Agent methods
+  context("📋 Agent Methods", async function () {
+    beforeEach(async function () {
+      // The first agent id
+      nextAccountId = "1";
+      invalidAccountId = "666";
+
+      // Required constructor params
+      id = "1"; // argument sent to contract for createAgent will be ignored
+      feePercentage = "500"; //5%
+
+      active = true;
+
+      // Create a valid agent, then set fields in tests directly
+      agent = new Agent(id, feePercentage, other1.address, active);
+      expect(agent.isValid()).is.true;
+
+      // How that agent looks as a returned struct
+      agentStruct = agent.toStruct();
+    });
+
+    context("👉 createAgent()", async function () {
+      it("should emit a AgentCreated event", async function () {
+        // Create an agent, testing for the event
+        await expect(agentHandler.connect(rando).createAgent(agent))
+          .to.emit(agentHandler, "AgentCreated")
+          .withArgs(agent.id, agentStruct, rando.address);
+      });
+
+      it("should update state", async function () {
+        // Create an agent
+        await agentHandler.connect(rando).createAgent(agent);
+
+        // Get the agent as a struct
+        [, agentStruct] = await agentHandler.connect(rando).getAgent(id);
+
+        // Parse into entity
+        let returnedAgent = Agent.fromStruct(agentStruct);
+
+        // Returned values should match the input in createAgent
+        for ([key, value] of Object.entries(agent)) {
+          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should ignore any provided id and assign the next available", async function () {
+        agent.id = "444";
+
+        // Create an agent, testing for the event
+        await expect(agentHandler.connect(rando).createAgent(agent))
+          .to.emit(agentHandler, "AgentCreated")
+          .withArgs(nextAccountId, agentStruct, rando.address);
+
+        // wrong agent id should not exist
+        [exists] = await agentHandler.connect(rando).getAgent(agent.id);
+        expect(exists).to.be.false;
+
+        // next agent id should exist
+        [exists] = await agentHandler.connect(rando).getAgent(nextAccountId);
+        expect(exists).to.be.true;
+      });
+
+      it("should allow feePercentage of 0", async function () {
+        // Create a valid agent with feePercentage = 0, as it is optional
+        agent = new Agent(id, "0", other1.address, active);
+        expect(agent.isValid()).is.true;
+
+        // How that agent looks as a returned struct
+        agentStruct = agent.toStruct();
+
+        // Create an agent, testing for the event
+        await expect(agentHandler.connect(rando).createAgent(agent))
+          .to.emit(agentHandler, "AgentCreated")
+          .withArgs(nextAccountId, agentStruct, rando.address);
+
+        // Get the agent as a struct
+        [, agentStruct] = await agentHandler.connect(rando).getAgent(id);
+
+        // Parse into entity
+        let returnedAgent = Agent.fromStruct(agentStruct);
+
+        // Returned values should match the input in createAgent
+        for ([key, value] of Object.entries(agent)) {
+          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should allow feePercentage of 100%", async function () {
+        // Create a valid agent with feePercentage = 10000 (100%). Not handy for seller, but technically possible
+        agent = new Agent(id, "10000", other1.address, active);
+        expect(agent.isValid()).is.true;
+
+        // How that agent looks as a returned struct
+        agentStruct = agent.toStruct();
+
+        // Create an agent, testing for the event
+        await expect(agentHandler.connect(rando).createAgent(agent))
+          .to.emit(agentHandler, "AgentCreated")
+          .withArgs(nextAccountId, agentStruct, rando.address);
+
+        // Get the agent as a struct
+        [, agentStruct] = await agentHandler.connect(rando).getAgent(id);
+
+        // Parse into entity
+        let returnedAgent = Agent.fromStruct(agentStruct);
+
+        // Returned values should match the input in createAgent
+        for ([key, value] of Object.entries(agent)) {
+          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("active is false", async function () {
+          agent.active = false;
+
+          // Attempt to Create an Agent, expecting revert
+          await expect(agentHandler.connect(rando).createAgent(agent)).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
+        });
+
+        it("addresses are the zero address", async function () {
+          agent.wallet = ethers.constants.AddressZero;
+
+          // Attempt to Create an Agent, expecting revert
+          await expect(agentHandler.connect(rando).createAgent(agent)).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+        });
+
+        it("wallet address is not unique to this agentId", async function () {
+          // Create an agent
+          await agentHandler.connect(rando).createAgent(agent);
+
+          // Attempt to create another buyer with same wallet address
+          await expect(agentHandler.connect(rando).createAgent(agent)).to.revertedWith(
+            RevertReasons.AGENT_ADDRESS_MUST_BE_UNIQUE
+          );
+        });
+
+        it("feePercentage is above 100%", async function () {
+          //Agent with feePercentage > 10000 (100%)
+          agent = new Agent(id, "10001", other1.address, active);
+          expect(agent.isValid()).is.false;
+
+          // Attempt to create another buyer with same wallet address
+          await expect(agentHandler.connect(rando).createAgent(agent)).to.revertedWith(
+            RevertReasons.FEE_PERCENTAGE_INVALID
+          );
+        });
+      });
+    });
+
+    context("👉 updateAgent()", async function () {
+      beforeEach(async function () {
+        // Create an agent
+        await agentHandler.connect(rando).createAgent(agent);
+
+        // id of the current agent and increment nextAccountId
+        id = nextAccountId++;
+      });
+
+      it("should emit an AgentUpdated event with correct values if values change", async function () {
+        agent.wallet = other2.address;
+        agent.active = false;
+        expect(agent.isValid()).is.true;
+
+        agentStruct = agent.toStruct();
+
+        //Update a agent, testing for the event
+        await expect(agentHandler.connect(other1).updateAgent(agent))
+          .to.emit(agentHandler, "AgentUpdated")
+          .withArgs(agent.id, agentStruct, other1.address);
+      });
+
+      it("should emit an AgentUpdated event with correct values if values stay the same", async function () {
+        //Update a agent, testing for the event
+        await expect(agentHandler.connect(other1).updateAgent(agent))
+          .to.emit(agentHandler, "AgentUpdated")
+          .withArgs(agent.id, agentStruct, other1.address);
+      });
+
+      it("should update state of all fields exceipt Id", async function () {
+        agent.wallet = other2.address;
+        agent.active = false;
+        agent.feePercentage = "5000";
+        expect(agent.isValid()).is.true;
+
+        agentStruct = agent.toStruct();
+
+        // Update agent
+        await agentHandler.connect(other1).updateAgent(agent);
+
+        // Get the agent as a struct
+        [, agentStruct] = await agentHandler.connect(rando).getAgent(agent.id);
+
+        // Parse into entity
+        let returnedAgent = Agent.fromStruct(agentStruct);
+
+        // Returned values should match the input in updateAgent
+        for ([key, value] of Object.entries(agent)) {
+          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update state correctly if values are the same", async function () {
+        // Update agent
+        await agentHandler.connect(other1).updateAgent(agent);
+
+        // Get the agent as a struct
+        [, agentStruct] = await agentHandler.connect(rando).getAgent(agent.id);
+
+        // Parse into entity
+        let returnedAgent = Agent.fromStruct(agentStruct);
+
+        // Returned values should match the input in updateAgent
+        for ([key, value] of Object.entries(agent)) {
+          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update only active flag", async function () {
+        agent.active = false;
+        expect(agent.isValid()).is.true;
+
+        agentStruct = agent.toStruct();
+
+        // Update agent
+        await agentHandler.connect(other1).updateAgent(agent);
+
+        // Get the agent as a struct
+        [, agentStruct] = await agentHandler.connect(rando).getAgent(agent.id);
+
+        // Parse into entity
+        let returnedAgent = Agent.fromStruct(agentStruct);
+
+        // Returned values should match the input in updateAgent
+        for ([key, value] of Object.entries(agent)) {
+          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update only feePercentage", async function () {
+        agent.feePercentage = "5000";
+        expect(agent.isValid()).is.true;
+
+        agentStruct = agent.toStruct();
+
+        // Update agent
+        await agentHandler.connect(other1).updateAgent(agent);
+
+        // Get the agent as a struct
+        [, agentStruct] = await agentHandler.connect(rando).getAgent(agent.id);
+
+        // Parse into entity
+        let returnedAgent = Agent.fromStruct(agentStruct);
+
+        // Returned values should match the input in updateAgent
+        for ([key, value] of Object.entries(agent)) {
+          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update only wallet address", async function () {
+        agent.wallet = other2.address;
+        expect(agent.isValid()).is.true;
+
+        agentStruct = agent.toStruct();
+
+        // Update agent
+        await agentHandler.connect(other1).updateAgent(agent);
+
+        // Get the agent as a struct
+        [, agentStruct] = await agentHandler.connect(rando).getAgent(agent.id);
+
+        // Parse into entity
+        let returnedAgent = Agent.fromStruct(agentStruct);
+
+        // Returned values should match the input in updateAgent
+        for ([key, value] of Object.entries(agent)) {
+          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should update the correct agent", async function () {
+        // Confgiure another agent
+        id2 = nextAccountId++;
+        agent2 = new Agent(id2.toString(), feePercentage, other3.address, active);
+        expect(agent2.isValid()).is.true;
+
+        agent2Struct = agent2.toStruct();
+
+        //Create agent2, testing for the event
+        await expect(agentHandler.connect(rando).createAgent(agent2))
+          .to.emit(agentHandler, "AgentCreated")
+          .withArgs(agent2.id, agent2Struct, rando.address);
+
+        //Update first agent
+        agent.wallet = other2.address;
+        agent.active = false;
+        expect(agent.isValid()).is.true;
+
+        agentStruct = agent.toStruct();
+
+        // Update a agent
+        await agentHandler.connect(other1).updateAgent(agent);
+
+        // Get the first agent as a struct
+        [, agentStruct] = await agentHandler.connect(rando).getAgent(agent.id);
+
+        // Parse into entity
+        let returnedAgent = Agent.fromStruct(agentStruct);
+
+        // Returned values should match the input in updateAgent
+        for ([key, value] of Object.entries(agent)) {
+          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
+        }
+
+        //Check agent hasn't been changed
+        [, agent2Struct] = await agentHandler.connect(rando).getAgent(agent2.id);
+
+        // Parse into entity
+        let returnedSeller2 = Agent.fromStruct(agent2Struct);
+
+        //returnedSeller2 should still contain original values
+        for ([key, value] of Object.entries(agent2)) {
+          expect(JSON.stringify(returnedSeller2[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should be able to only update second time with new wallet address", async function () {
+        agent.wallet = other2.address;
+        agentStruct = agent.toStruct();
+
+        // Update agent, testing for the event
+        await expect(agentHandler.connect(other1).updateAgent(agent))
+          .to.emit(agentHandler, "AgentUpdated")
+          .withArgs(agent.id, agentStruct, other1.address);
+
+        agent.wallet = other3.address;
+        agentStruct = agent.toStruct();
+
+        // Update agent, testing for the event
+        await expect(agentHandler.connect(other2).updateAgent(agent))
+          .to.emit(agentHandler, "AgentUpdated")
+          .withArgs(agent.id, agentStruct, other2.address);
+
+        // Attempt to update the agent with original wallet address, expecting revert
+        await expect(agentHandler.connect(other1).updateAgent(agent)).to.revertedWith(RevertReasons.NOT_AGENT_WALLET);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Agent does not exist", async function () {
+          // Set invalid id
+          agent.id = "444";
+
+          // Attempt to update the agent, expecting revert
+          await expect(agentHandler.connect(other1).updateAgent(agent)).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
+
+          // Set invalid id
+          agent.id = "0";
+
+          // Attempt to update the agent, expecting revert
+          await expect(agentHandler.connect(other1).updateAgent(agent)).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
+        });
+
+        it("Caller is not agent wallet address", async function () {
+          // Attempt to update the agent, expecting revert
+          await expect(agentHandler.connect(other2).updateAgent(agent)).to.revertedWith(
+            RevertReasons.NOT_AGENT_WALLET
+          );
+        });
+
+        it("wallet address is the zero address", async function () {
+          agent.wallet = ethers.constants.AddressZero;
+
+          // Attempt to update the agent, expecting revert
+          await expect(agentHandler.connect(other1).updateAgent(agent)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
+        });
+
+        it("feePercentage is above 100%", async function () {
+          //Agent with feePercentage > 10000 (100%)
+          agent.feePercentage = "10001";
+          expect(agent.isValid()).is.false;
+
+          // Attempt to update the agent, expecting revert
+          await expect(agentHandler.connect(other1).updateAgent(agent)).to.revertedWith(
+            RevertReasons.FEE_PERCENTAGE_INVALID
+          );
+        });
+
+        it("wallet address is not unique to this agent Id", async function () {
+          id = await accountHandler.connect(rando).getNextAccountId();
+
+          agent2 = new Agent(id.toString(), feePercentage, other2.address, active);
+          agent2Struct = agent2.toStruct();
+
+          //Create second agent, testing for the event
+          await expect(agentHandler.connect(rando).createAgent(agent2))
+            .to.emit(agentHandler, "AgentCreated")
+            .withArgs(agent2.id, agent2Struct, rando.address);
+
+          //Set wallet address value to be same as first agent created in Agent Methods beforeEach
+          agent2.wallet = other1.address; //already being used by agent 1
+
+          // Attempt to update agent 2 with non-unique wallet address, expecting revert
+          await expect(agentHandler.connect(other2).updateAgent(agent2)).to.revertedWith(
+            RevertReasons.AGENT_ADDRESS_MUST_BE_UNIQUE
+          );
+        });
+      });
+    });
+
+    context("👉 getAgent()", async function () {
+      beforeEach(async function () {
+        // Create a agent
+        await agentHandler.connect(rando).createAgent(agent);
+
+        // id of the current agent and increment nextAccountId
+        id = nextAccountId++;
+      });
+
+      it("should return true for exists if agent is found", async function () {
+        // Get the exists flag
+        [exists] = await agentHandler.connect(rando).getAgent(id);
+
+        // Validate
+        expect(exists).to.be.true;
+      });
+
+      it("should return false for exists if agent is not found", async function () {
+        // Get the exists flag
+        [exists] = await agentHandler.connect(rando).getAgent(invalidAccountId);
+
+        // Validate
+        expect(exists).to.be.false;
+      });
+
+      it("should return the details of the agent as a struct if found", async function () {
+        // Get the agent as a struct
+        [, agentStruct] = await agentHandler.connect(rando).getAgent(id);
+
+        // Parse into entity
+        agent = Agent.fromStruct(agentStruct);
+
+        // Validate
+        expect(agent.isValid()).to.be.true;
+      });
+    });
+  });
+});
