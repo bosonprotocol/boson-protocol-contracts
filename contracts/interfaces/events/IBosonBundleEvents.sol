@@ -15,11 +15,4 @@ interface IBosonBundleEvents {
         BosonTypes.Bundle bundle,
         address indexed executedBy
     );
-    event BundleUpdated(
-        uint256 indexed bundleId,
-        uint256 indexed sellerId,
-        BosonTypes.Bundle bundle,
-        address indexed executedBy
-    );
-    event BundleDeleted(uint256 indexed bundleId, uint256 indexed sellerId, address indexed executedBy);
 }

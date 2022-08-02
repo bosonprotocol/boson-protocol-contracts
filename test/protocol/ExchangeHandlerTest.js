@@ -7,6 +7,8 @@ const Role = require("../../scripts/domain/Role");
 const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
 const Seller = require("../../scripts/domain/Seller");
+const AuthToken = require("../../scripts/domain/AuthToken");
+const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Buyer = require("../../scripts/domain/Buyer");
 const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
@@ -79,6 +81,7 @@ describe("IBosonExchangeHandler", function () {
   let expectedCloneAddress;
   let method, tokenType, tokenAddress, tokenId, threshold, maxCommits, groupId, offerIds, condition, group;
   let contractURI;
+  let emptyAuthToken;
   let agentId;
   let exchangesToComplete, exchangeId;
 
@@ -232,7 +235,12 @@ describe("IBosonExchangeHandler", function () {
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
       expect(seller.isValid()).is.true;
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      await accountHandler.connect(admin).createSeller(seller, contractURI);
+
+      // AuthToken
+      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      expect(emptyAuthToken.isValid()).is.true;
+
+      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
       expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
 
       // Create a valid dispute resolver
@@ -342,7 +350,7 @@ describe("IBosonExchangeHandler", function () {
         seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, true);
         expect(seller.isValid()).is.true;
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        await accountHandler.connect(rando).createSeller(seller, contractURI);
+        await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
         expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
         const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
@@ -450,6 +458,38 @@ describe("IBosonExchangeHandler", function () {
           Exchange.fromStruct(exchangeStruct).toString(),
           "Exchange struct is incorrect"
         );
+      });
+
+      it("Should decrement quantityAvailable", async function () {
+        // Commit to offer
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+        // Offer qunantityAvailable should be decremented
+        const [, offer] = await offerHandler.connect(rando).getOffer(offerId);
+        expect(offer.quantityAvailable).to.equal(9, "Quantity available should be 9");
+      });
+
+      it("Should not decrement quantityAvailable if offer is unlimited", async function () {
+        // Create an offer with unlimited quantity
+        let { offer, ...details } = await mockOffer();
+        offer.quantityAvailable = ethers.constants.MaxUint256.toString();
+
+        // Delete unnecessary field
+        delete details.offerFees;
+
+        // Check if domain entities are valid
+        expect(offer.isValid()).is.true;
+
+        // Create the offer
+        await offerHandler.connect(operator).createOffer(offer, ...Object.values(details), agentId);
+        exchange.offerId = offerId = "2"; // first offer is created on beforeEach
+
+        // Commit to offer
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+        // Offer qunantityAvailable should not be decremented
+        [, offer] = await offerHandler.connect(rando).getOffer(offerId);
+        expect(offer.quantityAvailable).to.equal(ethers.constants.MaxUint256, "Quantity available should be unlimited");
       });
 
       context("💔 Revert Reasons", async function () {
@@ -1393,6 +1433,52 @@ describe("IBosonExchangeHandler", function () {
           expect(balance).to.equal(3);
         });
 
+        it("Amount should be reduced from twin supplyAvailable", async function () {
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Check twin supplyAvailable
+          const [, twin] = await twinHandler.connect(operator).getTwin(twin20.id);
+
+          expect(twin.supplyAvailable).to.equal(twin20.supplyAvailable - twin20.amount);
+        });
+
+        it("Should not decrease twin supplyAvailable if supply is unlimited", async function () {
+          // Change twin supply to unlimited
+          twin20.supplyAvailable = ethers.constants.MaxUint256.toString();
+          twin20.id = "4";
+
+          // Create a new twin
+          await twinHandler.connect(operator).createTwin(twin20.toStruct());
+
+          const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+          offer.quantityAvailable = "2";
+
+          // Create a new offer
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+          // Create a new bundle
+          bundle = new Bundle("1", sellerId, [++offerId], [twin20.id]);
+          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+
+          // Commit to offer
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Set time forward to the offer's voucherRedeemableFrom
+          voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Check the supplyAvailable of the twin
+          const [exists, twin] = await twinHandler.connect(operator).getTwin(twin20.id);
+          expect(exists).to.be.true;
+          expect(twin.supplyAvailable).to.equal(twin20.supplyAvailable);
+        });
+
         context("Twin transfer fail", async function () {
           it("should revoke exchange when buyer is an EOA", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
@@ -1461,7 +1547,7 @@ describe("IBosonExchangeHandler", function () {
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
         });
 
-        it("should transfer the twin", async function () {
+        it("Should transfer the twin", async function () {
           let tokenId = "9";
 
           // Check the operator owns the last ERC721 of twin range
@@ -1493,6 +1579,108 @@ describe("IBosonExchangeHandler", function () {
 
           // Check the buyer owns the last ERC721 of twin range
           owner = await foreign721.ownerOf(tokenId);
+          expect(owner).to.equal(buyer.address);
+        });
+
+        it("1 should be reduced from twin supplyAvailable", async function () {
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Check twin supplyAvailable
+          const [, twin] = await twinHandler.connect(operator).getTwin(twin721.id);
+
+          expect(twin.supplyAvailable).to.equal(twin721.supplyAvailable - 1);
+        });
+
+        context("Unlimited supply", async function () {
+          let other721;
+          beforeEach(async function () {
+            // Deploy a new ERC721 token
+            let TokenContractFactory = await ethers.getContractFactory("Foreign721");
+            other721 = await TokenContractFactory.connect(rando).deploy({ gasLimit });
+
+            // Mint enough tokens to cover the offer
+            await other721.connect(operator).mint("0", "2");
+
+            // Approve the protocol diamond to transfer seller's tokens
+            await other721.connect(operator).setApprovalForAll(protocolDiamond.address, true);
+
+            const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+            offer.quantityAvailable = "2";
+
+            // Create a new offer
+            await offerHandler
+              .connect(operator)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+            // Change twin supply to unlimited and token address to the new token
+            twin721.supplyAvailable = ethers.constants.MaxUint256.toString();
+            twin721.tokenAddress = other721.address;
+            twin721.id = "4";
+
+            // Create a new twin with the new token address
+            await twinHandler.connect(operator).createTwin(twin721.toStruct());
+
+            // Create a new bundle
+            bundle = new Bundle("1", sellerId, [++offerId], [twin721.id]);
+            await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+
+            // Commit to offer
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+            // Set time forward to the offer's voucherRedeemableFrom
+            voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+            await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+          });
+
+          it("Should not decrease twin supplyAvailable if supply is unlimited", async function () {
+            // Redeem the voucher
+            await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+            // Check the supplyAvailable of the twin
+            const [exists, twin] = await twinHandler.connect(operator).getTwin(twin721.id);
+            expect(exists).to.be.true;
+            expect(twin.supplyAvailable).to.equal(twin721.supplyAvailable);
+          });
+
+          it("Transfer token order must be ascending if twin supply is unlimited", async function () {
+            let exchangeId = ++exchange.id;
+
+            // tokenId transferred to the buyer is 0
+            let expectedTokenId = "0";
+
+            // Check the operator owns the first ERC721 of twin range
+            owner = await other721.ownerOf(expectedTokenId);
+            expect(owner).to.equal(operator.address);
+
+            // Redeem the voucher
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId))
+              .to.emit(exchangeHandler, "TwinTransferred")
+              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, expectedTokenId, "0", buyer.address);
+
+            // Check the buyer owns the first ERC721 of twin range
+            owner = await other721.ownerOf(expectedTokenId);
+            expect(owner).to.equal(buyer.address);
+
+            ++expectedTokenId;
+
+            // Check the operator owns the second ERC721 of twin range
+            owner = await other721.ownerOf(expectedTokenId);
+            expect(owner).to.equal(operator.address);
+
+            // Commit to offer for the second time
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+            // Redeem the voucher
+            // tokenId transferred to the buyer is 1
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchangeId))
+              .to.emit(exchangeHandler, "TwinTransferred")
+              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, expectedTokenId, "0", buyer.address);
+
+            // Check the buyer owns the second ERC721 of twin range
+            owner = await other721.ownerOf(expectedTokenId);
+            expect(owner).to.equal(buyer.address);
+          });
         });
 
         context("Twin transfer fail", async function () {
@@ -1567,6 +1755,52 @@ describe("IBosonExchangeHandler", function () {
           // Check the buyer's balance of the ERC1155
           balance = await foreign1155.balanceOf(buyer.address, tokenId);
           expect(balance).to.equal(1);
+        });
+
+        it("Amount should be reduced from twin supplyAvailable", async function () {
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Check twin supplyAvailable
+          const [, twin] = await twinHandler.connect(operator).getTwin(twin1155.id);
+
+          expect(twin.supplyAvailable).to.equal(twin1155.supplyAvailable - twin1155.amount);
+        });
+
+        it("Should not decrease twin supplyAvailable if supply is unlimited", async function () {
+          // Change twin supply to unlimited
+          twin1155.supplyAvailable = ethers.constants.MaxUint256.toString();
+          twin1155.id = "4";
+
+          // Create a new twin
+          await twinHandler.connect(operator).createTwin(twin1155.toStruct());
+
+          const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+          offer.quantityAvailable = "2";
+
+          // Create a new offer
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+          // Create a new bundle
+          bundle = new Bundle("1", sellerId, [++offerId], [twin1155.id]);
+          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+
+          // Commit to offer
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Set time forward to the offer's voucherRedeemableFrom
+          voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Check the supplyAvailable of the twin
+          const [exists, twin] = await twinHandler.connect(operator).getTwin(twin1155.id);
+          expect(exists).to.be.true;
+          expect(twin.supplyAvailable).to.equal(twin1155.supplyAvailable);
         });
 
         context("Twin transfer fail", async function () {
@@ -1677,6 +1911,126 @@ describe("IBosonExchangeHandler", function () {
           // Check the buyer's balance of the ERC1155
           balance = await foreign1155.balanceOf(buyer.address, tokenIdMultiToken);
           expect(balance).to.equal(1);
+        });
+
+        context("Unlimited supply", async function () {
+          let other721;
+
+          beforeEach(async function () {
+            // Deploy a new ERC721 token
+            let TokenContractFactory = await ethers.getContractFactory("Foreign721");
+            other721 = await TokenContractFactory.connect(rando).deploy({ gasLimit });
+
+            // Mint enough tokens to cover the offer
+            await other721.connect(operator).mint("0", "2");
+
+            // Approve the protocol diamond to transfer seller's tokens
+            await other721.connect(operator).setApprovalForAll(protocolDiamond.address, true);
+
+            const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+            offer.quantityAvailable = "2";
+
+            // Create a new offer
+            await offerHandler
+              .connect(operator)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+            // Change twin supply to unlimited and token address to the new token
+            twin721.supplyAvailable = ethers.constants.MaxUint256.toString();
+            twin721.tokenAddress = other721.address;
+            twin721.id = "4";
+            // Create a new ERC721 twin with the new token address
+            await twinHandler.connect(operator).createTwin(twin721.toStruct());
+
+            twin20.supplyAvailable = ethers.constants.MaxUint256.toString();
+            twin20.id = "5";
+            // Create a new ERC20 twin with the new token address
+            await twinHandler.connect(operator).createTwin(twin20.toStruct());
+
+            twin1155.supplyAvailable = ethers.constants.MaxUint256.toString();
+            twin1155.id = "6";
+            // Create a new ERC1155 twin with the new token address
+            await twinHandler.connect(operator).createTwin(twin1155.toStruct());
+
+            // Create a new bundle
+            bundle = new Bundle("1", sellerId, [++offerId], [twin721.id, twin20.id, twin1155.id]);
+            await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+
+            // Commit to offer
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+            // Set time forward to the offer's voucherRedeemableFrom
+            voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+            await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+            ++exchange.id;
+          });
+
+          it("Should not decrease twin supplyAvailable if supply is unlimited", async function () {
+            // Redeem the voucher
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+              .to.emit(exchangeHandler, "TwinTransferred")
+              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "0", twin721.amount, buyer.address)
+              .to.emit(exchangeHandler, "TwinTransferred")
+              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address)
+              .to.emit(exchangeHandler, "TwinTransferred")
+              .withArgs(
+                twin1155.id,
+                twin1155.tokenAddress,
+                exchange.id,
+                twin1155.tokenId,
+                twin1155.amount,
+                buyer.address
+              );
+
+            // Check the supplyAvailable of each twin
+            let [, twin] = await twinHandler.connect(operator).getTwin(twin721.id);
+            expect(twin.supplyAvailable).to.equal(twin721.supplyAvailable);
+
+            [, twin] = await twinHandler.connect(operator).getTwin(twin20.id);
+            expect(twin.supplyAvailable).to.equal(twin20.supplyAvailable);
+
+            [, twin] = await twinHandler.connect(operator).getTwin(twin1155.id);
+            expect(twin.supplyAvailable).to.equal(twin1155.supplyAvailable);
+          });
+
+          it("Transfer token order must be ascending if twin supply is unlimited and token type is NonFungible", async function () {
+            // tokenId transferred to the buyer is 0
+            let expectedTokenId = "0";
+            let exchangeId = exchange.id;
+
+            // Check the operator owns the first ERC721 of twin range
+            owner = await other721.ownerOf(expectedTokenId);
+            expect(owner).to.equal(operator.address);
+
+            // Redeem the voucher
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId))
+              .to.emit(exchangeHandler, "TwinTransferred")
+              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, expectedTokenId, "0", buyer.address);
+
+            // Check the buyer owns the first ERC721 of twin range
+            owner = await other721.ownerOf(expectedTokenId);
+            expect(owner).to.equal(buyer.address);
+
+            ++expectedTokenId;
+
+            // Check the operator owns the second ERC721 of twin range
+            owner = await other721.ownerOf(expectedTokenId);
+            expect(owner).to.equal(operator.address);
+
+            // Commit to offer for the second time
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+            // Redeem the voucher
+            // tokenId transferred to the buyer is 1
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchangeId))
+              .to.emit(exchangeHandler, "TwinTransferred")
+              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, expectedTokenId, "0", buyer.address);
+
+            // Check the buyer owns the second ERC721 of twin range
+            owner = await other721.ownerOf(expectedTokenId);
+            expect(owner).to.equal(buyer.address);
+          });
         });
 
         context("Twin transfer fail", async function () {
@@ -1974,7 +2328,7 @@ describe("IBosonExchangeHandler", function () {
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, true);
           expect(seller.isValid()).is.true;
           contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-          await accountHandler.connect(rando).createSeller(seller, contractURI);
+          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
           expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
           const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 

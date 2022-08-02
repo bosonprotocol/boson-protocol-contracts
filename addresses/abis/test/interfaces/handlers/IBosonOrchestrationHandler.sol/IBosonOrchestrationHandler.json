@@ -206,84 +206,6 @@
         {
           "indexed": true,
           "internalType": "uint256",
-          "name": "bundleId",
-          "type": "uint256"
-        },
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "sellerId",
-          "type": "uint256"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "BundleDeleted",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "bundleId",
-          "type": "uint256"
-        },
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "sellerId",
-          "type": "uint256"
-        },
-        {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "id",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "sellerId",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256[]",
-              "name": "offerIds",
-              "type": "uint256[]"
-            },
-            {
-              "internalType": "uint256[]",
-              "name": "twinIds",
-              "type": "uint256[]"
-            }
-          ],
-          "indexed": false,
-          "internalType": "struct BosonTypes.Bundle",
-          "name": "bundle",
-          "type": "tuple"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "executedBy",
-          "type": "address"
-        }
-      ],
-      "name": "BundleUpdated",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
           "name": "buyerId",
           "type": "uint256"
         },
@@ -1125,6 +1047,24 @@
           "type": "address"
         },
         {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum BosonTypes.AuthTokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.AuthToken",
+          "name": "authToken",
+          "type": "tuple"
+        },
+        {
           "indexed": true,
           "internalType": "address",
           "name": "executedBy",
@@ -1179,6 +1119,24 @@
           "indexed": false,
           "internalType": "struct BosonTypes.Seller",
           "name": "seller",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum BosonTypes.AuthTokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.AuthToken",
+          "name": "authToken",
           "type": "tuple"
         },
         {
@@ -2185,6 +2143,23 @@
           "type": "uint256"
         },
         {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum BosonTypes.AuthTokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct BosonTypes.AuthToken",
+          "name": "_authToken",
+          "type": "tuple"
+        },
+        {
           "internalType": "uint256",
           "name": "_agentId",
           "type": "uint256"
@@ -2393,6 +2368,23 @@
           "type": "tuple"
         },
         {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum BosonTypes.AuthTokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct BosonTypes.AuthToken",
+          "name": "_authToken",
+          "type": "tuple"
+        },
+        {
           "internalType": "uint256",
           "name": "_agentId",
           "type": "uint256"
@@ -2593,6 +2585,23 @@
           ],
           "internalType": "struct BosonTypes.Condition",
           "name": "_condition",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum BosonTypes.AuthTokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct BosonTypes.AuthToken",
+          "name": "_authToken",
           "type": "tuple"
         },
         {
@@ -2838,6 +2847,23 @@
           ],
           "internalType": "struct BosonTypes.Twin",
           "name": "_twin",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "tokenId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "enum BosonTypes.AuthTokenType",
+              "name": "tokenType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct BosonTypes.AuthToken",
+          "name": "_authToken",
           "type": "tuple"
         },
         {

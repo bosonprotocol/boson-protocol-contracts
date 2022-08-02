@@ -115,7 +115,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
         // Get seller, we assume seller exists if offer exists
-        (, Seller storage seller) = fetchSeller(offer.sellerId);
+        (, Seller storage seller, ) = fetchSeller(offer.sellerId);
 
         // Caller must be seller's operator address
         require(seller.operator == msgSender(), NOT_OPERATOR);
@@ -264,7 +264,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
 
                 // caller is the buyer
                 // get the seller's address, which should be the signer of the resolution
-                (, Seller storage seller) = fetchSeller(offer.sellerId);
+                (, Seller storage seller, ) = fetchSeller(offer.sellerId);
                 expectedSigner = seller.operator;
             }
 

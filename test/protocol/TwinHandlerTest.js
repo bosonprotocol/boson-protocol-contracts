@@ -5,6 +5,8 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
+const AuthToken = require("../../scripts/domain/AuthToken");
+const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -49,6 +51,7 @@ describe("IBosonTwinHandler", function () {
   let bundleId, offerIds, twinIds, bundle;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let contractURI;
+  let emptyAuthToken;
 
   before(async function () {
     // get interface Ids
@@ -72,8 +75,8 @@ describe("IBosonTwinHandler", function () {
       "BundleHandlerFacet",
     ]);
 
-    // Deploy the boson token
-    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+    // Deploy the mock tokens
+    [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens(gasLimit);
 
     // set protocolFees
     protocolFeePercentage = "200"; // 2 %
@@ -124,9 +127,6 @@ describe("IBosonTwinHandler", function () {
 
     // Cast Diamond to IBundleHandler
     bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
-
-    // Deploy the mock tokens
-    [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens(gasLimit);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -154,7 +154,11 @@ describe("IBosonTwinHandler", function () {
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      await accountHandler.connect(admin).createSeller(seller, contractURI);
+
+      // AuthToken
+      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      expect(emptyAuthToken.isValid()).is.true;
+      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
 
       // The first twin id
       nextTwinId = sellerId = "1";
@@ -400,6 +404,23 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
+        it("Should revert if token address has been used in another twin with unlimited supply", async function () {
+          twin.supplyAvailable = ethers.constants.MaxUint256;
+          twin.tokenType = TokenType.NonFungibleToken;
+          twin.tokenAddress = foreign721.address;
+          twin.amount = "0";
+
+          await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+          // Create twin with unlimited supply
+          await twinHandler.connect(operator).createTwin(twin);
+
+          // Create new twin with same token address
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
+            RevertReasons.INVALID_TWIN_TOKEN_RANGE
+          );
+        });
+
         context("Token address is unsupported", async function () {
           it("Token address is a zero address", async function () {
             twin.tokenAddress = ethers.constants.AddressZero;
@@ -494,7 +515,11 @@ describe("IBosonTwinHandler", function () {
         seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
         expect(seller.isValid()).is.true;
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        await accountHandler.connect(rando).createSeller(seller, contractURI);
+
+        // AuthToken
+        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        expect(emptyAuthToken.isValid()).is.true;
+        await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(rando).approve(twinHandler.address, 1);
