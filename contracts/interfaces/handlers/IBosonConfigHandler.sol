@@ -59,12 +59,12 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a BeaconProxyAddressChanged event.
      *
-     * @param _beaconProxyAddress - the address of the reference proxy implementation
+     * @param _beaconProxy - the address of the reference proxy implementation
      */
-    function setBeaconProxyAddress(address _beaconProxyAddress) external;
+    function setBeaconProxyAddress(address _beaconProxy) external;
 
     /**
-     * @notice The beaconProxyAddress getter
+     * @notice The beaconProxy address getter
      */
     function getBeaconProxyAddress() external view returns (address);
 

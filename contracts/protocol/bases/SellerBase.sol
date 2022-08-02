@@ -147,7 +147,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         ProtocolLib.ProtocolAddresses storage pa = protocolAddresses();
 
         // Load beacon proxy contract address
-        bytes20 targetBytes = bytes20(pa.beaconProxyAddress);
+        bytes20 targetBytes = bytes20(pa.beaconProxy);
 
         // create a minimal clone
         assembly {

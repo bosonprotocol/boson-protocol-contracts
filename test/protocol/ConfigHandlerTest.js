@@ -86,7 +86,7 @@ describe("IBosonConfigHandler", function () {
             tokenAddress: token.address,
             treasuryAddress: treasury.address,
             voucherBeaconAddress: beacon.address,
-            beaconProxyAddress: proxy.address,
+            beaconProxy: proxy.address,
           },
           // Protocol limits
           {
@@ -160,7 +160,7 @@ describe("IBosonConfigHandler", function () {
           treasuryAddress: treasury.address,
           tokenAddress: token.address,
           voucherBeaconAddress: beacon.address,
-          beaconProxyAddress: proxy.address,
+          beaconProxy: proxy.address,
         },
         // Protocol limits
         {

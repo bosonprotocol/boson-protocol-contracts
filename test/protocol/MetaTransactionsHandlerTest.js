@@ -135,7 +135,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         treasuryAddress: ethers.constants.AddressZero,
         tokenAddress: bosonToken.address,
         voucherBeaconAddress: beacon.address,
-        beaconProxyAddress: proxy.address,
+        beaconProxy: proxy.address,
       },
       // Protocol limits
       {

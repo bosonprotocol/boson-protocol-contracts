@@ -90,7 +90,7 @@ describe("IBosonTwinHandler", function () {
         treasuryAddress: ethers.constants.AddressZero,
         tokenAddress: bosonToken.address,
         voucherBeaconAddress: ethers.constants.AddressZero,
-        beaconProxyAddress: ethers.constants.AddressZero,
+        beaconProxy: ethers.constants.AddressZero,
       },
       // Protocol limits
       {
