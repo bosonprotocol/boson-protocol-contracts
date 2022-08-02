@@ -1,5 +1,4 @@
 const ethers = require("ethers");
-const eip55 = require("eip55");
 
 /**
  * Boson Protocol Domain Entity: VoucherInitValues
@@ -10,15 +9,13 @@ class VoucherInitValues {
   /*
       struct VoucherInitValues {
           string contractURI;
-          address payable royaltyReceiver;
-          uint96 feeNumerator;
+          uint96 royaltyPercentage;
       }
   */
 
-  constructor(contractURI, royaltyReceiver, feeNumerator) {
+  constructor(contractURI, royaltyPercentage) {
     this.contractURI = contractURI;
-    this.royaltyReceiver = royaltyReceiver;
-    this.feeNumerator = feeNumerator;
+    this.royaltyPercentage = royaltyPercentage;
   }
 
   /**
@@ -27,8 +24,8 @@ class VoucherInitValues {
    * @returns {VoucherInitValues}
    */
   static fromObject(o) {
-    const { contractURI, royaltyReceiver, feeNumerator } = o;
-    return new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+    const { contractURI, royaltyPercentage } = o;
+    return new VoucherInitValues(contractURI, royaltyPercentage);
   }
 
   /**
@@ -37,15 +34,14 @@ class VoucherInitValues {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let contractURI, royaltyReceiver, feeNumerator;
+    let contractURI, royaltyPercentage;
 
     // destructure struct
-    [contractURI, royaltyReceiver, feeNumerator] = struct;
+    [contractURI, royaltyPercentage] = struct;
 
     return VoucherInitValues.fromObject({
       contractURI,
-      royaltyReceiver,
-      feeNumerator: feeNumerator.toString(),
+      royaltyPercentage: royaltyPercentage.toString(),
     });
   }
 
@@ -70,7 +66,7 @@ class VoucherInitValues {
    * @returns {string}
    */
   toStruct() {
-    return [this.contractURI, this.royaltyReceiver, this.feeNumerator];
+    return [this.contractURI, this.royaltyPercentage];
   }
 
   /**
@@ -96,29 +92,15 @@ class VoucherInitValues {
   }
 
   /**
-   * Is this VoucherInitValues instance's royaltyReceiver field valid?
-   * Must be a eip55 compliant Ethereum address
-   * @returns {boolean}
-   */
-  royaltyReceiverIsValid() {
-    let valid = false;
-    let { royaltyReceiver } = this;
-    try {
-      valid = eip55.verify(eip55.encode(royaltyReceiver));
-    } catch (e) {}
-    return valid;
-  }
-
-  /**
-   * Is this VoucherInitValues instance's feeNumerator valid?
+   * Is this VoucherInitValues instance's royaltyPercentage valid?
    * Must be a string representation of a big number
    * @returns {boolean}
    */
-  feeNumeratorIsValid() {
+  royaltyPercentageIsValid() {
     let valid = false;
-    let { feeNumerator } = this;
+    let { royaltyPercentage } = this;
     try {
-      valid = typeof feeNumerator === "string" && typeof ethers.BigNumber.from(feeNumerator) === "object";
+      valid = typeof royaltyPercentage === "string" && typeof ethers.BigNumber.from(royaltyPercentage) === "object";
     } catch (e) {}
     return valid;
   }
@@ -128,7 +110,7 @@ class VoucherInitValues {
    * @returns {boolean}
    */
   isValid() {
-    return this.contractURIIsValid() && this.royaltyReceiverIsValid() && this.feeNumeratorIsValid();
+    return this.contractURIIsValid() && this.royaltyPercentageIsValid();
   }
 }
 

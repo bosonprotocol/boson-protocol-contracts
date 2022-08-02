@@ -78,7 +78,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let complaint, validDisputeDetails;
   let buyerPercent, validDisputeResolutionDetails, signatureSplits;
   let sellerAllowList;
-  let voucherInitValues, contractURI, royaltyReceiver, feeNumerator;
+  let voucherInitValues, contractURI, royaltyPercentage;
   let emptyAuthToken;
   let agentId;
 
@@ -238,9 +238,8 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // VoucherInitValues
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        royaltyReceiver = seller.treasury;
-        feeNumerator = "0"; // 0%
-        voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+        royaltyPercentage = "0"; // 0%
+        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
         expect(voucherInitValues.isValid()).is.true;
 
         // AuthToken
@@ -273,7 +272,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         message.from = operator.address;
         message.contractAddress = accountHandler.address;
         message.functionName =
-          "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,address,uint96))";
+          "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -330,9 +329,8 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // VoucherInitValues
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        voucherInitValues.royaltyReceiver = seller.treasury;
-        feeNumerator = "0"; // 0%
-        voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+        royaltyPercentage = "0"; // 0%
+        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
         expect(voucherInitValues.isValid()).is.true;
 
         // AuthToken
@@ -360,7 +358,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         message.from = operator.address;
         message.contractAddress = accountHandler.address;
         message.functionName =
-          "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,address,uint96))";
+          "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -402,7 +400,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         message.from = operator.address;
         message.contractAddress = accountHandler.address;
         message.functionName =
-          "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,address,uint96))";
+          "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -433,9 +431,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           beforeEach(async function () {
             // VoucherInitValues
             contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-            royaltyReceiver = seller.treasury;
-            feeNumerator = "0"; // 0%
-            voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+            royaltyPercentage = "0"; // 0%
+            voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
             expect(voucherInitValues.isValid()).is.true;
 
             // AuthToken
@@ -592,7 +589,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.from = operator.address;
           message.contractAddress = accountHandler.address;
           message.functionName =
-            "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,address,uint96))";
+            "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
           message.functionSignature = functionSignature;
 
           // Collect the signature components
@@ -641,7 +638,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           message.from = rando.address;
           message.contractAddress = accountHandler.address;
           message.functionName =
-            "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,address,uint96))";
+            "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
           message.functionSignature = functionSignature;
 
           // Collect the signature components
@@ -685,9 +682,8 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // VoucherInitValues
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        royaltyReceiver = seller.treasury;
-        feeNumerator = "0"; // 0%
-        voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+        royaltyPercentage = "0"; // 0%
+        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
         expect(voucherInitValues.isValid()).is.true;
 
         // AuthToken
@@ -955,9 +951,8 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // VoucherInitValues
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        royaltyReceiver = seller.treasury;
-        feeNumerator = "0"; // 0%
-        voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+        royaltyPercentage = "0"; // 0%
+        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
         expect(voucherInitValues.isValid()).is.true;
 
         // AuthToken
@@ -2337,9 +2332,8 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // VoucherInitValues
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        royaltyReceiver = seller.treasury;
-        feeNumerator = "0"; // 0%
-        voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+        royaltyPercentage = "0"; // 0%
+        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
         expect(voucherInitValues.isValid()).is.true;
 
         // AuthToken

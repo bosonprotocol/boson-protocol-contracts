@@ -39,7 +39,7 @@ describe("IBosonVoucher", function () {
   let disputeResolver, disputeResolverFees;
   let emptyAuthToken;
   let agentId;
-  let voucherInitValues, contractURI, royaltyReceiver, feeNumerator, exchangeId, offerPrice, receiver, royaltyAmount;
+  let voucherInitValues, contractURI, royaltyPercentage, exchangeId, offerPrice;
 
   before(async function () {
     // Get interface id
@@ -179,9 +179,8 @@ describe("IBosonVoucher", function () {
 
       // prepare the VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      royaltyReceiver = seller.treasury;
-      feeNumerator = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
@@ -305,9 +304,8 @@ describe("IBosonVoucher", function () {
 
       // prepare the VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      royaltyReceiver = seller.treasury;
-      feeNumerator = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
@@ -352,16 +350,23 @@ describe("IBosonVoucher", function () {
       offerPrice = offer.price;
     });
 
-    context("setDefaultRoyalty()", function () {
+    context("setRoyaltyPercentage()", function () {
       beforeEach(async function () {
         // give ownership to operator
         await bosonVoucher.connect(protocol).transferOwnership(operator.address);
       });
 
-      it("should set a default royalty fee", async function () {
-        // First, set default fee as 0
-        feeNumerator = "0"; //0%
-        await bosonVoucher.connect(operator).setDefaultRoyalty(seller.treasury, feeNumerator);
+      it("should emit RoyaltyPercentageChanged event", async function () {
+        royaltyPercentage = "0"; //0%
+        await expect(bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage))
+          .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
+          .withArgs(royaltyPercentage);
+      });
+
+      it("should set a royalty fee percentage", async function () {
+        // First, set royalty fee as 0
+        royaltyPercentage = "0"; //0%
+        await bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage);
 
         let receiver, royaltyAmount;
         [receiver, royaltyAmount] = await bosonVoucher.connect(rando).callStatic.royaltyInfo(exchangeId, offerPrice);
@@ -373,15 +378,15 @@ describe("IBosonVoucher", function () {
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
 
-        // Now, set default fee as 10%
-        feeNumerator = "1000"; //10%
-        await bosonVoucher.connect(operator).setDefaultRoyalty(seller.treasury, feeNumerator);
+        // Now, set royalty fee as 10%
+        royaltyPercentage = "1000"; //10%
+        await bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage);
 
         [receiver, royaltyAmount] = await bosonVoucher.connect(rando).callStatic.royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         expectedRecipient = seller.treasury;
-        expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(feeNumerator).div("10000").toString();
+        expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(royaltyPercentage).div("10000").toString();
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
@@ -390,171 +395,23 @@ describe("IBosonVoucher", function () {
       context("💔 Revert Reasons", async function () {
         it("should revert if caller is not the owner", async function () {
           // random caller
-          await expect(bosonVoucher.connect(rando).setDefaultRoyalty(seller.treasury, feeNumerator)).to.be.revertedWith(
+          await expect(bosonVoucher.connect(rando).setRoyaltyPercentage(royaltyPercentage)).to.be.revertedWith(
             RevertReasons.OWNABLE_NOT_OWNER
           );
 
           // protocol as the caller
-          await expect(
-            bosonVoucher.connect(protocol).setDefaultRoyalty(seller.treasury, feeNumerator)
-          ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
-        });
-
-        it("should revert if receiver is a zero address", async function () {
-          await expect(
-            bosonVoucher.connect(operator).setDefaultRoyalty(ethers.constants.AddressZero, feeNumerator)
-          ).to.be.revertedWith(RevertReasons.ROYALTY_RECEIVER_INVALID);
-        });
-
-        it("should revert if feeNumerator is greater than 100%", async function () {
-          // Set default fee as 101%
-          feeNumerator = "10001"; //101%
-
-          // random caller
-          await expect(
-            bosonVoucher.connect(operator).setDefaultRoyalty(seller.treasury, feeNumerator)
-          ).to.be.revertedWith(RevertReasons.ROYALTY_FEE_INVALID);
-        });
-      });
-    });
-
-    context("deleteDefaultRoyalty()", function () {
-      beforeEach(async function () {
-        // give ownership to operator
-        await bosonVoucher.connect(protocol).transferOwnership(operator.address);
-
-        // Set default fee as 10%
-        feeNumerator = "1000"; //10%
-        await bosonVoucher.connect(operator).setDefaultRoyalty(seller.treasury, feeNumerator);
-      });
-
-      it("should delete the default royalty fee", async function () {
-        await bosonVoucher.connect(operator).deleteDefaultRoyalty();
-
-        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).callStatic.royaltyInfo(exchangeId, offerPrice);
-
-        // Expectations
-        let expectedRecipient = ethers.constants.AddressZero;
-        let expectedRoyaltyAmount = "0";
-
-        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
-      });
-
-      context("💔 Revert Reasons", async function () {
-        it("should revert if caller is not the owner", async function () {
-          // random caller
-          await expect(bosonVoucher.connect(rando).deleteDefaultRoyalty()).to.be.revertedWith(
-            RevertReasons.OWNABLE_NOT_OWNER
-          );
-
-          // protocol as the caller
-          await expect(bosonVoucher.connect(protocol).deleteDefaultRoyalty()).to.be.revertedWith(
+          await expect(bosonVoucher.connect(protocol).setRoyaltyPercentage(royaltyPercentage)).to.be.revertedWith(
             RevertReasons.OWNABLE_NOT_OWNER
           );
         });
-      });
-    });
 
-    context("setTokenRoyalty()", function () {
-      beforeEach(async function () {
-        // give ownership to operator
-        await bosonVoucher.connect(protocol).transferOwnership(operator.address);
-      });
-
-      it("should set a royalty fee for exchange id", async function () {
-        // First, set default fee as 0
-        feeNumerator = "0"; //0%
-        await bosonVoucher.connect(operator).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator);
-
-        let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).callStatic.royaltyInfo(exchangeId, offerPrice);
-
-        // Expectations
-        let expectedRecipient = seller.treasury;
-        let expectedRoyaltyAmount = "0";
-
-        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
-
-        // Now, set default fee as 10%
-        feeNumerator = "1000"; //10%
-        await bosonVoucher.connect(operator).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator);
-
-        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).callStatic.royaltyInfo(exchangeId, offerPrice);
-
-        // Expectations
-        expectedRecipient = seller.treasury;
-        expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(feeNumerator).div("10000").toString();
-
-        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
-      });
-
-      context("💔 Revert Reasons", async function () {
-        it("should revert if caller is not the owner", async function () {
-          // random caller
-          await expect(
-            bosonVoucher.connect(rando).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator)
-          ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
-
-          // protocol as the caller
-          await expect(
-            bosonVoucher.connect(protocol).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator)
-          ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
-        });
-
-        it("should revert if receiver is a zero address", async function () {
-          await expect(
-            bosonVoucher.connect(operator).setTokenRoyalty(exchangeId, ethers.constants.AddressZero, feeNumerator)
-          ).to.be.revertedWith(RevertReasons.ROYALTY_PARAMETERS_INVALID);
-        });
-
-        it("should revert if feeNumerator is greater than 100%", async function () {
-          // Set default fee as 101%
-          feeNumerator = "10001"; //101%
+        it("should revert if royaltyPercentage is greater than 100%", async function () {
+          // Set royalty fee as 101%
+          royaltyPercentage = "10001"; //101%
 
           // random caller
-          await expect(
-            bosonVoucher.connect(operator).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator)
-          ).to.be.revertedWith(RevertReasons.ROYALTY_FEE_INVALID);
-        });
-      });
-    });
-
-    context("resetTokenRoyalty()", function () {
-      beforeEach(async function () {
-        // give ownership to operator
-        await bosonVoucher.connect(protocol).transferOwnership(operator.address);
-
-        // Set default fee as 10%
-        feeNumerator = "1000"; //10%
-        await expect(bosonVoucher.connect(operator).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator));
-      });
-
-      it("should delete the default royalty fee", async function () {
-        await bosonVoucher.connect(operator).resetTokenRoyalty(exchangeId);
-
-        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).callStatic.royaltyInfo(exchangeId, offerPrice);
-
-        // Expectations
-        let expectedRecipient = ethers.constants.AddressZero;
-        let expectedRoyaltyAmount = "0";
-
-        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
-      });
-
-      context("💔 Revert Reasons", async function () {
-        it("should revert if caller is not the owner", async function () {
-          // random caller
-          await expect(bosonVoucher.connect(rando).resetTokenRoyalty(exchangeId)).to.be.revertedWith(
-            RevertReasons.OWNABLE_NOT_OWNER
-          );
-
-          // protocol as the caller
-          await expect(bosonVoucher.connect(protocol).resetTokenRoyalty(exchangeId)).to.be.revertedWith(
-            RevertReasons.OWNABLE_NOT_OWNER
+          await expect(bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage)).to.be.revertedWith(
+            RevertReasons.ROYALTY_FEE_INVALID
           );
         });
       });
@@ -567,9 +424,9 @@ describe("IBosonVoucher", function () {
       });
 
       it("should return a recipient and royalty fee", async function () {
-        // First, set default fee as 0
-        feeNumerator = "0"; //0%
-        await bosonVoucher.connect(operator).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator);
+        // First, set royalty fee as 0
+        royaltyPercentage = "0"; //0%
+        await bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage);
 
         let receiver, royaltyAmount;
         [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
@@ -581,29 +438,29 @@ describe("IBosonVoucher", function () {
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
 
-        // Now, set default fee as 10%
-        feeNumerator = "1000"; //10%
-        await bosonVoucher.connect(operator).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator);
+        // Now, set royalty fee as 10%
+        royaltyPercentage = "1000"; //10%
+        await bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage);
 
         [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         expectedRecipient = seller.treasury;
-        expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(feeNumerator).div("10000").toString();
+        expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(royaltyPercentage).div("10000").toString();
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
 
         // Any random address can check the royalty info
-        // Now, set default fee as 20%
-        feeNumerator = "2000"; //20%
-        await bosonVoucher.connect(operator).setTokenRoyalty(exchangeId, seller.treasury, feeNumerator);
+        // Now, set royalty fee as 20%
+        royaltyPercentage = "2000"; //20%
+        await bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage);
 
         [receiver, royaltyAmount] = await bosonVoucher.connect(rando).callStatic.royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         expectedRecipient = seller.treasury;
-        expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(feeNumerator).div("10000").toString();
+        expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(royaltyPercentage).div("10000").toString();
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");

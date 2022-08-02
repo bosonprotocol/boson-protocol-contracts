@@ -65,7 +65,7 @@ describe("IBosonOfferHandler", function () {
     disputeResolutionTermsStructs,
     disputeResolutionTermsList;
   let DRFeeNative, DRFeeToken;
-  let voucherInitValues, contractURI, royaltyReceiver, feeNumerator;
+  let voucherInitValues, contractURI, royaltyPercentage;
   let emptyAuthToken;
   let agent, agentId, agentFeePercentage, nonZeroAgentIds;
   let sellerAllowList, allowedSellersToAdd;
@@ -182,9 +182,8 @@ describe("IBosonOfferHandler", function () {
 
       // VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      royaltyReceiver = seller.treasury;
-      feeNumerator = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
@@ -734,10 +733,6 @@ describe("IBosonOfferHandler", function () {
           // Create new seller so sellerAllowList can have an entry
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
 
-          // VoucherInitValues
-          voucherInitValues.royaltyReceiver = seller.treasury;
-          expect(voucherInitValues.isValid()).is.true;
-
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           allowedSellersToAdd = ["3"]; // DR is "1", existing seller is "2", new seller is "3"
@@ -968,10 +963,6 @@ describe("IBosonOfferHandler", function () {
           // Create a valid seller, then set fields in tests directly
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
 
-          // VoucherInitValues
-          voucherInitValues.royaltyReceiver = seller.treasury;
-          expect(voucherInitValues.isValid()).is.true;
-
           // AuthToken
           emptyAuthToken = new AuthToken("0", AuthTokenType.None);
           expect(emptyAuthToken.isValid()).is.true;
@@ -1058,10 +1049,6 @@ describe("IBosonOfferHandler", function () {
           // caller is an operator of another seller
           // Create a valid seller, then set fields in tests directly
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-
-          // VoucherInitValues
-          voucherInitValues.royaltyReceiver = seller.treasury;
-          expect(voucherInitValues.isValid()).is.true;
 
           // AuthToken
           emptyAuthToken = new AuthToken("0", AuthTokenType.None);
@@ -1294,7 +1281,9 @@ describe("IBosonOfferHandler", function () {
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
-      voucherInitValues.royaltyReceiver = seller.treasury;
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
@@ -1962,9 +1951,6 @@ describe("IBosonOfferHandler", function () {
           // Create new seller so sellerAllowList can have an entry
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
 
-          // VoucherInitValues
-          voucherInitValues.royaltyReceiver = seller.treasury;
-          expect(voucherInitValues.isValid()).is.true;
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           allowedSellersToAdd = ["3"];
@@ -2270,10 +2256,6 @@ describe("IBosonOfferHandler", function () {
           // caller is an operator of another seller
           seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, active);
 
-          // VoucherInitValues
-          voucherInitValues.royaltyReceiver = seller.treasury;
-          expect(voucherInitValues.isValid()).is.true;
-
           // AuthToken
           emptyAuthToken = new AuthToken("0", AuthTokenType.None);
           expect(emptyAuthToken.isValid()).is.true;
@@ -2387,10 +2369,6 @@ describe("IBosonOfferHandler", function () {
 
           // caller is an operator of another seller
           seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, active);
-
-          // VoucherInitValues
-          voucherInitValues.royaltyReceiver = seller.treasury;
-          expect(voucherInitValues.isValid()).is.true;
 
           // AuthToken
           emptyAuthToken = new AuthToken("0", AuthTokenType.None);

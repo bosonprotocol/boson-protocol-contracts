@@ -53,7 +53,7 @@ describe("IBosonBundleHandler", function () {
   let offerDates, offerDurations;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let disputeResolver, disputeResolverFees, disputeResolverId;
-  let voucherInitValues, contractURI, royaltyReceiver, feeNumerator;
+  let voucherInitValues, contractURI, royaltyPercentage;
   let emptyAuthToken;
   let agentId;
 
@@ -191,9 +191,8 @@ describe("IBosonBundleHandler", function () {
 
       // VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      royaltyReceiver = seller.treasury;
-      feeNumerator = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthTokens
@@ -375,10 +374,6 @@ describe("IBosonBundleHandler", function () {
           let expectedNewOfferId = "6";
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
 
-          // VoucherInitValues
-          voucherInitValues.royaltyReceiver = seller.treasury;
-          expect(voucherInitValues.isValid()).is.true;
-
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           const tx = await offerHandler
             .connect(rando)
@@ -418,10 +413,6 @@ describe("IBosonBundleHandler", function () {
           // create another seller and a twin
           let expectedNewTwinId = "6";
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-
-          // VoucherInitValues
-          voucherInitValues.royaltyReceiver = seller.treasury;
-          expect(voucherInitValues.isValid()).is.true;
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           await bosonToken.connect(rando).approve(twinHandler.address, 1); // approving the twin handler

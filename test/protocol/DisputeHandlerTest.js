@@ -79,7 +79,7 @@ describe("IBosonDisputeHandler", function () {
   let resolutionType, customSignatureType, message, r, s, v;
   let returnedDispute, returnedDisputeDates;
   let DRFeeNative, DRFeeToken, buyerEscalationDepositNative, buyerEscalationDepositToken;
-  let voucherInitValues, contractURI, royaltyReceiver, feeNumerator;
+  let voucherInitValues, contractURI, royaltyPercentage;
   let emptyAuthToken;
   let agentId;
 
@@ -222,9 +222,8 @@ describe("IBosonDisputeHandler", function () {
 
       // VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      royaltyReceiver = seller.treasury;
-      feeNumerator = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
@@ -1131,10 +1130,6 @@ describe("IBosonDisputeHandler", function () {
             // Create a valid seller
             seller = new Seller(id, other1.address, other1.address, other1.address, other1.address, true);
             expect(seller.isValid()).is.true;
-
-            // VoucherInitValues
-            voucherInitValues.royaltyReceiver = seller.treasury;
-            expect(voucherInitValues.isValid()).is.true;
 
             await accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues);
             // Attempt to resolve the dispute, expecting revert

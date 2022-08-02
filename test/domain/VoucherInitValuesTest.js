@@ -1,5 +1,3 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
 const { expect } = require("chai");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 
@@ -8,26 +6,21 @@ const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
  */
 describe("VoucherInitValues", function () {
   // Suite-wide scope
-  let accounts, voucherInitValues, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let contractURI, royaltyReceiver, feeNumerator;
+  let voucherInitValues, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
+  let contractURI, royaltyPercentage;
 
   beforeEach(async function () {
-    // Get a list of accounts
-    accounts = await ethers.getSigners();
-    royaltyReceiver = accounts[1].address;
-
     // Required constructor params
     contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-    feeNumerator = "100"; // 1%
+    royaltyPercentage = "100"; // 1%
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated VoucherInitValues instance", async function () {
       // Create valid voucherInitValues
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
       expect(voucherInitValues.contractURIIsValid()).is.true;
-      expect(voucherInitValues.royaltyReceiverIsValid()).is.true;
-      expect(voucherInitValues.feeNumeratorIsValid()).is.true;
+      expect(voucherInitValues.royaltyPercentageIsValid()).is.true;
       expect(voucherInitValues.isValid()).is.true;
     });
   });
@@ -35,7 +28,7 @@ describe("VoucherInitValues", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create valid voucherInitValues, then set fields in tests directly
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
       expect(voucherInitValues.isValid()).is.true;
     });
 
@@ -61,52 +54,30 @@ describe("VoucherInitValues", function () {
       expect(voucherInitValues.isValid()).is.true;
     });
 
-    it("Always present, royaltyReceiver must be a string representation of an EIP-55 compliant address", async function () {
+    it("Always present, royaltyPercentage must be the string representation of a BigNumber", async function () {
       // Invalid field value
-      voucherInitValues.royaltyReceiver = "0xASFADF";
-      expect(voucherInitValues.royaltyReceiverIsValid()).is.false;
+      voucherInitValues.royaltyPercentage = "zedzdeadbaby";
+      expect(voucherInitValues.royaltyPercentageIsValid()).is.false;
       expect(voucherInitValues.isValid()).is.false;
 
       // Invalid field value
-      voucherInitValues.royaltyReceiver = "zedzdeadbaby";
-      expect(voucherInitValues.royaltyReceiverIsValid()).is.false;
+      voucherInitValues.royaltyPercentage = new Date();
+      expect(voucherInitValues.royaltyPercentageIsValid()).is.false;
+      expect(voucherInitValues.isValid()).is.false;
+
+      // Invalid field value
+      voucherInitValues.royaltyPercentage = 12;
+      expect(voucherInitValues.royaltyPercentageIsValid()).is.false;
       expect(voucherInitValues.isValid()).is.false;
 
       // Valid field value
-      voucherInitValues.royaltyReceiver = accounts[0].address;
-      expect(voucherInitValues.royaltyReceiverIsValid()).is.true;
+      voucherInitValues.royaltyPercentage = "0";
+      expect(voucherInitValues.royaltyPercentageIsValid()).is.true;
       expect(voucherInitValues.isValid()).is.true;
 
       // Valid field value
-      voucherInitValues.royaltyReceiver = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
-      expect(voucherInitValues.royaltyReceiverIsValid()).is.true;
-      expect(voucherInitValues.isValid()).is.true;
-    });
-
-    it("Always present, feeNumerator must be the string representation of a BigNumber", async function () {
-      // Invalid field value
-      voucherInitValues.feeNumerator = "zedzdeadbaby";
-      expect(voucherInitValues.feeNumeratorIsValid()).is.false;
-      expect(voucherInitValues.isValid()).is.false;
-
-      // Invalid field value
-      voucherInitValues.feeNumerator = new Date();
-      expect(voucherInitValues.feeNumeratorIsValid()).is.false;
-      expect(voucherInitValues.isValid()).is.false;
-
-      // Invalid field value
-      voucherInitValues.feeNumerator = 12;
-      expect(voucherInitValues.feeNumeratorIsValid()).is.false;
-      expect(voucherInitValues.isValid()).is.false;
-
-      // Valid field value
-      voucherInitValues.feeNumerator = "0";
-      expect(voucherInitValues.feeNumeratorIsValid()).is.true;
-      expect(voucherInitValues.isValid()).is.true;
-
-      // Valid field value
-      voucherInitValues.feeNumerator = "126";
-      expect(voucherInitValues.feeNumeratorIsValid()).is.true;
+      voucherInitValues.royaltyPercentage = "126";
+      expect(voucherInitValues.royaltyPercentageIsValid()).is.true;
       expect(voucherInitValues.isValid()).is.true;
     });
   });
@@ -114,19 +85,18 @@ describe("VoucherInitValues", function () {
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create valid voucherInitValues, then set fields in tests directly
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
 
       expect(voucherInitValues.isValid()).is.true;
 
       // Get plain object
       object = {
         contractURI,
-        royaltyReceiver,
-        feeNumerator,
+        royaltyPercentage,
       };
 
       // Struct representation
-      struct = [contractURI, royaltyReceiver, feeNumerator];
+      struct = [contractURI, royaltyPercentage];
     });
 
     context("👉 Static", async function () {

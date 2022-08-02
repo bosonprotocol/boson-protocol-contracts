@@ -81,7 +81,7 @@ describe("IBosonExchangeHandler", function () {
   let twin20, twin721, twin1155, twinIds, bundle, balance, owner;
   let expectedCloneAddress;
   let method, tokenType, tokenAddress, tokenId, threshold, maxCommits, groupId, offerIds, condition, group;
-  let voucherInitValues, contractURI, royaltyReceiver, feeNumerator1, feeNumerator2, seller1Treasury, seller2Treasury;
+  let voucherInitValues, contractURI, royaltyPercentage1, royaltyPercentage2, seller1Treasury, seller2Treasury;
   let emptyAuthToken;
   let agentId;
   let exchangesToComplete, exchangeId;
@@ -245,9 +245,9 @@ describe("IBosonExchangeHandler", function () {
 
       // VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      seller1Treasury = royaltyReceiver = seller.treasury;
-      feeNumerator1 = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator1);
+      seller1Treasury = seller.treasury;
+      royaltyPercentage1 = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage1);
       expect(voucherInitValues.isValid()).is.true;
 
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -360,10 +360,6 @@ describe("IBosonExchangeHandler", function () {
         seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, true);
         expect(seller.isValid()).is.true;
 
-        // VoucherInitValues
-        voucherInitValues.royaltyReceiver = seller.treasury;
-        expect(voucherInitValues.isValid()).is.true;
-
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
         expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
         const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
@@ -442,8 +438,7 @@ describe("IBosonExchangeHandler", function () {
         expect(seller.isValid()).is.true;
 
         // VoucherInitValues
-        voucherInitValues.feeNumerator = "3000"; // 30%
-        voucherInitValues.royaltyReceiver = seller.treasury;
+        voucherInitValues.royaltyPercentage = "3000"; // 30%
         expect(voucherInitValues.isValid()).is.true;
 
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -493,15 +488,15 @@ describe("IBosonExchangeHandler", function () {
           .callStatic.royaltyInfo(exchangeId, offer.price);
 
         // Expectations
-        let expectedRecipient = seller1Treasury;
-        let expectedRoyaltyAmount = ethers.BigNumber.from(price).mul(feeNumerator1).div("10000").toString(); //0% of offer price because feeNumerator1 is 0%
+        let expectedRecipient = seller1Treasury; //Expect 1st seller's treasury address as exchange id exists
+        let expectedRoyaltyAmount = ethers.BigNumber.from(price).mul(royaltyPercentage1).div("10000").toString(); //0% of offer price because royaltyPercentage1 is 0%
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
 
         // Make sure that vouchers have correct royalty fee for exchangeId 2
         exchangeId = "2";
-        feeNumerator2 = voucherInitValues.feeNumerator; // 30%
+        royaltyPercentage2 = voucherInitValues.royaltyPercentage; // 30%
         seller2Treasury = seller.treasury;
 
         receiver, royaltyAmount;
@@ -510,8 +505,8 @@ describe("IBosonExchangeHandler", function () {
           .callStatic.royaltyInfo(exchangeId, offer.price);
 
         // Expectations
-        expectedRecipient = seller2Treasury;
-        expectedRoyaltyAmount = ethers.BigNumber.from(price).mul(feeNumerator2).div("10000").toString(); //30% of offer price because feeNumerator2 is 30%
+        expectedRecipient = seller2Treasury; //Expect 2nd seller's treasury address as exchange id exists
+        expectedRoyaltyAmount = ethers.BigNumber.from(price).mul(royaltyPercentage2).div("10000").toString(); //30% of offer price because royaltyPercentage2 is 30%
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
@@ -2426,10 +2421,6 @@ describe("IBosonExchangeHandler", function () {
           // Create a new seller to get new clone
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, true);
           expect(seller.isValid()).is.true;
-
-          // VoucherInitValues
-          voucherInitValues.royaltyReceiver = seller.treasury;
-          expect(voucherInitValues.isValid()).is.true;
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");

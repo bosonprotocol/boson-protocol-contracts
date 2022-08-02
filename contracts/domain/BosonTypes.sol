@@ -230,7 +230,6 @@ contract BosonTypes {
 
     struct VoucherInitValues {
         string contractURI;
-        address payable royaltyReceiver;
-        uint96 feeNumerator;
+        uint96 royaltyPercentage;
     }
 }

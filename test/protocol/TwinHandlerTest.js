@@ -51,7 +51,7 @@ describe("IBosonTwinHandler", function () {
     sellerId;
   let bundleId, offerIds, twinIds, bundle;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
-  let voucherInitValues, contractURI, royaltyReceiver, feeNumerator;
+  let voucherInitValues, contractURI, royaltyPercentage;
   let emptyAuthToken;
 
   before(async function () {
@@ -157,9 +157,8 @@ describe("IBosonTwinHandler", function () {
 
       // VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      royaltyReceiver = seller.treasury;
-      feeNumerator = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyReceiver, feeNumerator);
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
@@ -521,10 +520,6 @@ describe("IBosonTwinHandler", function () {
         // Create another valid seller.
         seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
         expect(seller.isValid()).is.true;
-
-        // VoucherInitValues
-        voucherInitValues.royaltyReceiver = seller.treasury;
-        expect(voucherInitValues.isValid()).is.true;
 
         // AuthToken
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);

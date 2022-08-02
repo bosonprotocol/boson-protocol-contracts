@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import { IERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import { IERC721MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/IERC721MetadataUpgradeable.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 
@@ -9,10 +10,11 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
  *
  * @notice This is the interface for the Boson Protocol ERC-721 Voucher NFT contract.
  *
- * The ERC-165 identifier for this interface is: 0xc91a5da5
+ * The ERC-165 identifier for this interface is: 0x2b2ac434
  */
-interface IBosonVoucher is IERC721MetadataUpgradeable {
+interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     event ContractURIChanged(string contractURI);
+    event RoyaltyPercentageChanged(uint96 royaltyPercentage);
 
     /**
      * @notice Issue a voucher to a buyer
@@ -58,65 +60,25 @@ interface IBosonVoucher is IERC721MetadataUpgradeable {
     /**
      * @notice Get royalty info for a token
      *
-     * For a given token id and sale price, how much should be sent to whom as royalty
-     *
      * @param _exchangeId - the NFT asset queried for royalty information
      * @param _offerPrice - the sale price of the NFT asset specified by _exchangeId
      *
      * @return receiver - address of who should be sent the royalty payment
      * @return royaltyAmount - the royalty payment amount for _value sale price
      */
-    function royaltyInfo(uint256 _exchangeId, uint256 _offerPrice) external returns (address, uint256);
+    function royaltyInfo(uint256 _exchangeId, uint256 _offerPrice)
+        external
+        returns (address receiver, uint256 royaltyAmount);
 
     /**
-     * @notice Sets the default royalty information that all ids in this contract will default to.
+     * @notice Sets the royalty percentage.
      * Can only be called by the owner or during the initialization
      *
      * Reverts if:
      * - caller is not the owner.
-     * - `receiver` is a zero address.
-     * - `feeNumerator` is greater than the fee denominator i.e. greater than 100%.
+     * - `royaltyPercentage` is greater than 100%.
      *
-     * @param _receiver address of the receiver.
-     * @param _feeNumerator fee in percentage. e.g. 500 = 5%
+     * @param _newRoyaltyPercentage fee in percentage. e.g. 500 = 5%
      */
-    function setDefaultRoyalty(address _receiver, uint96 _feeNumerator) external;
-
-    /**
-     * @notice Removes default royalty information.
-     * Can only be called by the owner
-     *
-     * Reverts if:
-     * - caller is not the owner.
-     *
-     */
-    function deleteDefaultRoyalty() external;
-
-    /**
-     * @notice Sets the royalty information for a specific token id, overriding the global default.
-     * Can only be called by the owner
-     *
-     * - caller is not the owner.
-     * - `receiver` is a zero address.
-     * - `feeNumerator` is greater than the fee denominator i.e. greater than 100%.
-     *
-     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
-     * @param _receiver address of the receiver.
-     * @param _feeNumerator fee in percentage. e.g. 500 = 5%
-     */
-    function setTokenRoyalty(
-        uint256 _exchangeId,
-        address _receiver,
-        uint96 _feeNumerator
-    ) external;
-
-    /**
-     * @notice Resets royalty information for the token id back to the global default.
-     *
-     * Reverts if:
-     * - caller is not the owner.
-     *
-     * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
-     */
-    function resetTokenRoyalty(uint256 _exchangeId) external;
+    function setRoyaltyPercentage(uint96 _newRoyaltyPercentage) external;
 }
