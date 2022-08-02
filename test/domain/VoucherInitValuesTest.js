@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
-const { VoucherInitValues } = require("../../scripts/domain/VoucherInitValues");
+const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 
 /**
  *  Test the VoucherInitValues domain entity
