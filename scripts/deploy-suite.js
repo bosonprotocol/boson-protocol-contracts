@@ -53,33 +53,33 @@ function getConfig() {
   // Boson Token (ERC-20) contract address
   const TOKEN = {
     mainnet: "0xC477D038d5420C6A9e0b031712f61c5120090de9",
-    hardhat: "0x0000000000000000000000000000000000000000",
+    hardhat: ethers.constants.AddressZero,
     test: "0x520ce45DF6d14334257BFdD360a5C22B06E309c7",
-    mumbai: "0x0000000000000000000000000000000000000000",
+    mumbai: ethers.constants.AddressZero,
   };
 
   // Treasury contract address
   const TREASURY = {
     mainnet: "0x4a25E18076DDcFd646ED14ABC07286c2A4c1256A",
-    hardhat: "0x0000000000000000000000000000000000000000",
-    test: "0x0000000000000000000000000000000000000000",
-    mumbai: "0x0000000000000000000000000000000000000000",
+    hardhat: ethers.constants.AddressZero,
+    test: ethers.constants.AddressZero,
+    mumbai: ethers.constants.AddressZero,
   };
 
   // Boson voucher beacon contract address
   const BEACON = {
-    mainnet: "0x0000000000000000000000000000000000000000",
-    ropsten: "0x0000000000000000000000000000000000000000",
-    hardhat: "0x0000000000000000000000000000000000000000",
-    test: "0x0000000000000000000000000000000000000000",
+    mainnet: ethers.constants.AddressZero,
+    ropsten: ethers.constants.AddressZero,
+    hardhat: ethers.constants.AddressZero,
+    test: ethers.constants.AddressZero,
   };
 
   // Beacon proxy contract address
   const BEACON_PROXY = {
-    mainnet: "0x0000000000000000000000000000000000000000",
-    hardhat: "0x0000000000000000000000000000000000000000",
-    test: "0x0000000000000000000000000000000000000000",
-    mumbai: "0x0000000000000000000000000000000000000000",
+    mainnet: ethers.constants.AddressZero,
+    hardhat: ethers.constants.AddressZero,
+    test: ethers.constants.AddressZero,
+    mumbai: ethers.constants.AddressZero,
   };
 
   return [
@@ -119,15 +119,15 @@ function getAuthTokenContracts() {
   const LENS = {
     mainnet: "0xDb46d1Dc155634FbC732f92E853b10B288AD5a1d",
     hardhat: "0x60Ae865ee4C725cd04353b5AAb364553f56ceF82",
-    test: "0x0000000000000000000000000000000000000000",
-    mumbai: "0x60Ae865ee4C725cd04353b5AAb364553f56ceF82",
+    test: ethers.constants.AddressZero,
+    mumbai: ethers.constants.AddressZero,
   };
 
   // ENS contract address
   const ENS = {
     mainnet: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
     hardhat: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
-    test: "0x0000000000000000000000000000000000000000",
+    test: ethers.constants.AddressZero,
     mumbai: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
   };
 
