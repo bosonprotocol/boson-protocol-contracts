@@ -14,7 +14,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     function initialize() public {
         //No-op initializer. Keeping function for consistency in the deployment script.
     }
-    
+
     /**
      * @notice Creates a Dispute Resolver. Dispute Resolver must be activated before it can participate in the protocol.
      *
@@ -264,9 +264,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _feeTokenAddresses - list of adddresses of dispute resolver fee tokens to remove
      */
-    function removeFeesFromDisputeResolver(uint256 _disputeResolverId, address[] calldata _feeTokenAddresses)
-        external
-    {
+    function removeFeesFromDisputeResolver(uint256 _disputeResolverId, address[] calldata _feeTokenAddresses) external {
         bool exists;
         DisputeResolver storage disputeResolver;
         DisputeResolverFee[] storage disputeResolverFees;
@@ -368,9 +366,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _sellerAllowList - list of seller ids to remove from allowed list
      */
-    function removeSellersFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList)
-        external
-    {
+    function removeSellersFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external {
         // At least one seller id must be specified and the number of ids cannot exceed the maximum number of seller ids to avoid running into block gas limit in a loop
         require(
             _sellerAllowList.length > 0 && _sellerAllowList.length <= protocolLimits().maxAllowedSellers,
@@ -504,7 +500,6 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             return getDisputeResolver(disputeResolverId);
         }
     }
-
 
     /**
      * @notice Returns the inforamtion if given sellers are allowed to chose the given dispute resolver

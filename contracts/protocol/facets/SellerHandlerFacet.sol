@@ -12,7 +12,7 @@ contract SellerHandlerFacet is SellerBase {
      * @notice Facet Initializer
      */
     function initialize() public {
-        // No-op initializer. 
+        // No-op initializer.
         // - needed by the deployment script, which expects a no-args initializer on facets other than the config handler
         // - exception here because IBosonAccountHandler is contributed to by multiple facets which do not have their own individual interfaces
     }

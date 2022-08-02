@@ -10,7 +10,7 @@ contract BuyerHandlerFacet is BuyerBase {
      * @notice Facet Initializer
      */
     function initialize() public {
-        // No-op initializer. 
+        // No-op initializer.
         // - needed by the deployment script, which expects a no-args initializer on facets other than the config handler
         // - exception here because IBosonAccountHandler is contributed to by multiple facets which do not have their own individual interfaces
     }
@@ -82,9 +82,6 @@ contract BuyerHandlerFacet is BuyerBase {
         emit BuyerUpdated(_buyer.id, _buyer, msgSender());
     }
 
-  
-
-   
     /**
      * @notice Gets the details about a buyer.
      *

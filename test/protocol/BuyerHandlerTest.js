@@ -1,12 +1,12 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { expect} = require("chai");
+const { expect } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
-const { DisputeResolverFee} = require("../../scripts/domain/DisputeResolverFee");
+const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -15,41 +15,22 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { calculateContractAddress } = require("../../scripts/util/test-utils.js");
-const { oneMonth,  } = require("../utils/constants");
+const { oneMonth } = require("../utils/constants");
 const { mockOffer } = require("../utils/mock.js");
 
 /**
- *  Test the Boson Account Handler interface
+ *  Test the Boson Buyer Handler
  */
-describe("IBosonAccountHandler", function () {
+describe("BuyerHandler", function () {
   // Common vars
-  let deployer,
-    rando,
-    operator,
-    admin,
-    clerk,
-    treasury,
-    other1,
-    other2,
-    other3,
-    other4,
-    protocolAdmin;
-  let protocolDiamond,
-    accessController,
-    accountHandler,
-    exchangeHandler,
-    offerHandler,
-    fundsHandler,
-    disputeResolverHandler,
-    sellerHandler,
-    buyerHandler,
-    gasLimit;
-  let seller, active,  id2;
+  let deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, other4;
+  let protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, fundsHandler, gasLimit;
+  let seller, active, id2;
   let emptyAuthToken;
   let buyer, buyerStruct, buyer2, buyer2Struct;
   let disputeResolver;
   let disputeResolverFees;
-  let sellerAllowList;;
+  let sellerAllowList;
   let metadataUriDR;
   let nextAccountId;
   let invalidAccountId, id, key, value, exists;
@@ -60,19 +41,7 @@ describe("IBosonAccountHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [
-      deployer,
-      operator,
-      admin,
-      clerk,
-      treasury,
-      rando,
-      other1,
-      other2,
-      other3,
-      other4,
-      protocolAdmin,
-    ] = await ethers.getSigners();
+    [deployer, operator, admin, clerk, treasury, rando, other1, other2, other3, other4] = await ethers.getSigners();
 
     //Dispute Resolver metadata URI
     metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
@@ -85,10 +54,6 @@ describe("IBosonAccountHandler", function () {
 
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-
-    //Grant ADMIN role to and address that can call restricted functions.
-    //This ADMIN role is a protocol-level role. It is not the same an admin address for an account type
-    await accessController.grantRole(Role.ADMIN, protocolAdmin.address);
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
@@ -145,17 +110,8 @@ describe("IBosonAccountHandler", function () {
 
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
-    // Cast Diamond to IBosonAccountHandler
+    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handler
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-
-    // Cast Diamond to SellerHandlerFacet
-    sellerHandler = await ethers.getContractAt("SellerHandlerFacet", protocolDiamond.address);
-
-    // Cast Diamond to BuyerHandlerFacet
-    buyerHandler = await ethers.getContractAt("BuyerHandlerFacet", protocolDiamond.address);
-
-    // Cast Diamond to DisputeResolverHandlerFacet
-    disputeResolverHandler = await ethers.getContractAt("DisputeResolverHandlerFacet", protocolDiamond.address);
 
     // Cast Diamond to IBosonOfferHandler
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
@@ -165,10 +121,8 @@ describe("IBosonAccountHandler", function () {
 
     // Cast Diamond to IBosonFundsHandler
     fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
-
   });
 
-  
   // All supported Buyer methods
   context("📋 Buyer Methods", async function () {
     beforeEach(async function () {
@@ -192,17 +146,17 @@ describe("IBosonAccountHandler", function () {
     context("👉 createBuyer()", async function () {
       it("should emit a BuyerCreated event", async function () {
         // Create a buyer, testing for the event
-        await expect(buyerHandler.connect(rando).createBuyer(buyer))
-          .to.emit(buyerHandler, "BuyerCreated")
+        await expect(accountHandler.connect(rando).createBuyer(buyer))
+          .to.emit(accountHandler, "BuyerCreated")
           .withArgs(buyer.id, buyerStruct, rando.address);
       });
 
       it("should update state", async function () {
         // Create a buyer
-        await buyerHandler.connect(rando).createBuyer(buyer);
+        await accountHandler.connect(rando).createBuyer(buyer);
 
         // Get the buyer as a struct
-        [, buyerStruct] = await buyerHandler.connect(rando).getBuyer(id);
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(id);
 
         // Parse into entity
         let returnedBuyer = Buyer.fromStruct(buyerStruct);
@@ -217,16 +171,16 @@ describe("IBosonAccountHandler", function () {
         buyer.id = "444";
 
         // Create a buyer, testing for the event
-        await expect(buyerHandler.connect(rando).createBuyer(buyer))
-          .to.emit(buyerHandler, "BuyerCreated")
+        await expect(accountHandler.connect(rando).createBuyer(buyer))
+          .to.emit(accountHandler, "BuyerCreated")
           .withArgs(nextAccountId, buyerStruct, rando.address);
 
         // wrong buyer id should not exist
-        [exists] = await buyerHandler.connect(rando).getBuyer(buyer.id);
+        [exists] = await accountHandler.connect(rando).getBuyer(buyer.id);
         expect(exists).to.be.false;
 
         // next buyer id should exist
-        [exists] = await buyerHandler.connect(rando).getBuyer(nextAccountId);
+        [exists] = await accountHandler.connect(rando).getBuyer(nextAccountId);
         expect(exists).to.be.true;
       });
 
@@ -235,22 +189,22 @@ describe("IBosonAccountHandler", function () {
           buyer.active = false;
 
           // Attempt to Create a Buyer, expecting revert
-          await expect(buyerHandler.connect(rando).createBuyer(buyer)).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
+          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
 
         it("addresses are the zero address", async function () {
           buyer.wallet = ethers.constants.AddressZero;
 
           // Attempt to Create a Buyer, expecting revert
-          await expect(buyerHandler.connect(rando).createBuyer(buyer)).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
         it("wallet address is not unique to this buyerId", async function () {
           // Create a buyer
-          await buyerHandler.connect(rando).createBuyer(buyer);
+          await accountHandler.connect(rando).createBuyer(buyer);
 
           // Attempt to create another buyer with same wallet address
-          await expect(buyerHandler.connect(rando).createBuyer(buyer)).to.revertedWith(
+          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(
             RevertReasons.BUYER_ADDRESS_MUST_BE_UNIQUE
           );
         });
@@ -260,7 +214,7 @@ describe("IBosonAccountHandler", function () {
     context("👉 updateBuyer()", async function () {
       beforeEach(async function () {
         // Create a buyer
-        await buyerHandler.connect(rando).createBuyer(buyer);
+        await accountHandler.connect(rando).createBuyer(buyer);
 
         // id of the current buyer and increment nextAccountId
         id = nextAccountId++;
@@ -274,15 +228,15 @@ describe("IBosonAccountHandler", function () {
         buyerStruct = buyer.toStruct();
 
         //Update a buyer, testing for the event
-        await expect(buyerHandler.connect(other1).updateBuyer(buyer))
-          .to.emit(buyerHandler, "BuyerUpdated")
+        await expect(accountHandler.connect(other1).updateBuyer(buyer))
+          .to.emit(accountHandler, "BuyerUpdated")
           .withArgs(buyer.id, buyerStruct, other1.address);
       });
 
       it("should emit a BuyerUpdated event with correct values if values stay the same", async function () {
         //Update a buyer, testing for the event
-        await expect(buyerHandler.connect(other1).updateBuyer(buyer))
-          .to.emit(buyerHandler, "BuyerUpdated")
+        await expect(accountHandler.connect(other1).updateBuyer(buyer))
+          .to.emit(accountHandler, "BuyerUpdated")
           .withArgs(buyer.id, buyerStruct, other1.address);
       });
 
@@ -294,10 +248,10 @@ describe("IBosonAccountHandler", function () {
         buyerStruct = buyer.toStruct();
 
         // Update buyer
-        await buyerHandler.connect(other1).updateBuyer(buyer);
+        await accountHandler.connect(other1).updateBuyer(buyer);
 
         // Get the buyer as a struct
-        [, buyerStruct] = await buyerHandler.connect(rando).getBuyer(buyer.id);
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
 
         // Parse into entity
         let returnedBuyer = Buyer.fromStruct(buyerStruct);
@@ -310,10 +264,10 @@ describe("IBosonAccountHandler", function () {
 
       it("should update state correctly if values are the same", async function () {
         // Update buyer
-        await buyerHandler.connect(other1).updateBuyer(buyer);
+        await accountHandler.connect(other1).updateBuyer(buyer);
 
         // Get the buyer as a struct
-        [, buyerStruct] = await buyerHandler.connect(rando).getBuyer(buyer.id);
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
 
         // Parse into entity
         let returnedBuyer = Buyer.fromStruct(buyerStruct);
@@ -331,10 +285,10 @@ describe("IBosonAccountHandler", function () {
         buyerStruct = buyer.toStruct();
 
         // Update buyer
-        await buyerHandler.connect(other1).updateBuyer(buyer);
+        await accountHandler.connect(other1).updateBuyer(buyer);
 
         // Get the buyer as a struct
-        [, buyerStruct] = await buyerHandler.connect(rando).getBuyer(buyer.id);
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
 
         // Parse into entity
         let returnedBuyer = Buyer.fromStruct(buyerStruct);
@@ -352,10 +306,10 @@ describe("IBosonAccountHandler", function () {
         buyerStruct = buyer.toStruct();
 
         // Update buyer
-        await buyerHandler.connect(other1).updateBuyer(buyer);
+        await accountHandler.connect(other1).updateBuyer(buyer);
 
         // Get the buyer as a struct
-        [, buyerStruct] = await buyerHandler.connect(rando).getBuyer(buyer.id);
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
 
         // Parse into entity
         let returnedBuyer = Buyer.fromStruct(buyerStruct);
@@ -375,8 +329,8 @@ describe("IBosonAccountHandler", function () {
         buyer2Struct = buyer2.toStruct();
 
         //Create buyer2, testing for the event
-        await expect(buyerHandler.connect(rando).createBuyer(buyer2))
-          .to.emit(buyerHandler, "BuyerCreated")
+        await expect(accountHandler.connect(rando).createBuyer(buyer2))
+          .to.emit(accountHandler, "BuyerCreated")
           .withArgs(buyer2.id, buyer2Struct, rando.address);
 
         //Update first buyer
@@ -387,10 +341,10 @@ describe("IBosonAccountHandler", function () {
         buyerStruct = buyer.toStruct();
 
         // Update a buyer
-        await buyerHandler.connect(other1).updateBuyer(buyer);
+        await accountHandler.connect(other1).updateBuyer(buyer);
 
         // Get the first buyer as a struct
-        [, buyerStruct] = await buyerHandler.connect(rando).getBuyer(buyer.id);
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
 
         // Parse into entity
         let returnedBuyer = Buyer.fromStruct(buyerStruct);
@@ -401,7 +355,7 @@ describe("IBosonAccountHandler", function () {
         }
 
         //Check buyer hasn't been changed
-        [, buyer2Struct] = await buyerHandler.connect(rando).getBuyer(buyer2.id);
+        [, buyer2Struct] = await accountHandler.connect(rando).getBuyer(buyer2.id);
 
         // Parse into entity
         let returnedSeller2 = Buyer.fromStruct(buyer2Struct);
@@ -417,111 +371,106 @@ describe("IBosonAccountHandler", function () {
         buyerStruct = buyer.toStruct();
 
         // Update buyer, testing for the event
-        await expect(buyerHandler.connect(other1).updateBuyer(buyer))
-          .to.emit(buyerHandler, "BuyerUpdated")
+        await expect(accountHandler.connect(other1).updateBuyer(buyer))
+          .to.emit(accountHandler, "BuyerUpdated")
           .withArgs(buyer.id, buyerStruct, other1.address);
 
         buyer.wallet = other3.address;
         buyerStruct = buyer.toStruct();
 
         // Update buyer, testing for the event
-        await expect(buyerHandler.connect(other2).updateBuyer(buyer))
-          .to.emit(buyerHandler, "BuyerUpdated")
+        await expect(accountHandler.connect(other2).updateBuyer(buyer))
+          .to.emit(accountHandler, "BuyerUpdated")
           .withArgs(buyer.id, buyerStruct, other2.address);
 
         // Attempt to update the buyer with original wallet address, expecting revert
-        await expect(buyerHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NOT_BUYER_WALLET);
+        await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NOT_BUYER_WALLET);
       });
 
       context("💔 Revert Reasons", async function () {
         beforeEach(async function () {
-             // Initial ids for all the things
-             id = await accountHandler.connect(rando).getNextAccountId();
-             offerId = await offerHandler.connect(rando).getNextOfferId();
-             let agentId = "0"; // agent id is optional while creating an offer
-    
-             // Create a valid seller
-             seller = new Seller(id.toString(), operator.address, admin.address, clerk.address, treasury.address, active);
-             expect(seller.isValid()).is.true;
+          // Initial ids for all the things
+          id = await accountHandler.connect(rando).getNextAccountId();
+          offerId = await offerHandler.connect(rando).getNextOfferId();
+          let agentId = "0"; // agent id is optional while creating an offer
 
-             // AuthTokens
-             emptyAuthToken = new AuthToken("0", AuthTokenType.None);
-             expect(emptyAuthToken.isValid()).is.true;
+          // Create a valid seller
+          seller = new Seller(id.toString(), operator.address, admin.address, clerk.address, treasury.address, active);
+          expect(seller.isValid()).is.true;
 
-             // Contract URI
-             contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-   
-             // Create a seller
-             await sellerHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
-   
-             [exists, ] = await sellerHandler.connect(rando).getSellerByAddress(operator.address);
-             expect(exists).is.true;
-   
-             // Create a valid dispute resolver
-             active = true;
-             disputeResolver = new DisputeResolver(
-               id.add(1).toString(),
-               oneMonth.toString(),
-               operator.address,
-               admin.address,
-               clerk.address,
-               treasury.address,
-               metadataUriDR,
-               active
-             );
-             expect(disputeResolver.isValid()).is.true;
-   
-             //Create DisputeResolverFee array
-             disputeResolverFees = [
-               new DisputeResolverFee(other1.address, "MockToken1", "100"),
-               new DisputeResolverFee(other2.address, "MockToken2", "200"),
-               new DisputeResolverFee(other3.address, "MockToken3", "300"),
-               new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
-             ];
-   
-             // Add seller to sellerAllowList
-             sellerAllowList = [seller.id];
-   
-             // Register the dispute resolver
-             await disputeResolverHandler
-               .connect(rando)
-               .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-            
+          // AuthTokens
+          emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+          expect(emptyAuthToken.isValid()).is.true;
 
-             await disputeResolverHandler.connect(deployer).activateDisputeResolver(++id);
+          // Contract URI
+          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
-   
-             // Mock the offer
-             let { offer, offerDates, offerDurations } = await mockOffer();
-   
-             // Check if domains are valid
-             expect(offer.isValid()).is.true;
-             expect(offerDates.isValid()).is.true;
-             expect(offerDurations.isValid()).is.true;
-   
-             // Create the offer
-             await offerHandler
-               .connect(operator)
-               .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+          // Create a seller
+          await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
 
-   
-             offerId = offer.id;
-             const sellerDeposit = offer.sellerDeposit;
-   
-             // Deposit seller funds so the commit will succeed
-             await fundsHandler
-               .connect(operator)
-               .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+          [exists] = await accountHandler.connect(rando).getSellerByAddress(operator.address);
+          expect(exists).is.true;
 
-   
-             //Commit to offer
-             await exchangeHandler.connect(other1).commitToOffer(other1.address, offerId, { value: offer.price });
+          // Create a valid dispute resolver
+          active = true;
+          disputeResolver = new DisputeResolver(
+            id.add(1).toString(),
+            oneMonth.toString(),
+            operator.address,
+            admin.address,
+            clerk.address,
+            treasury.address,
+            metadataUriDR,
+            active
+          );
+          expect(disputeResolver.isValid()).is.true;
 
-   
-             const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
-             bosonVoucher = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
-             const balance = await bosonVoucher.connect(rando).balanceOf(other1.address);
-             expect(balance).equal(1);
+          //Create DisputeResolverFee array
+          disputeResolverFees = [
+            new DisputeResolverFee(other1.address, "MockToken1", "100"),
+            new DisputeResolverFee(other2.address, "MockToken2", "200"),
+            new DisputeResolverFee(other3.address, "MockToken3", "300"),
+            new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0"),
+          ];
+
+          // Add seller to sellerAllowList
+          sellerAllowList = [seller.id];
+
+          // Register the dispute resolver
+          await accountHandler
+            .connect(rando)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+          await accountHandler.connect(deployer).activateDisputeResolver(++id);
+
+          // Mock the offer
+          let { offer, offerDates, offerDurations } = await mockOffer();
+
+          // Check if domains are valid
+          expect(offer.isValid()).is.true;
+          expect(offerDates.isValid()).is.true;
+          expect(offerDurations.isValid()).is.true;
+
+          // Create the offer
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+
+          offerId = offer.id;
+          const sellerDeposit = offer.sellerDeposit;
+
+          // Deposit seller funds so the commit will succeed
+          await fundsHandler
+            .connect(operator)
+            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+
+          //Commit to offer
+          await exchangeHandler.connect(other1).commitToOffer(other1.address, offerId, { value: offer.price });
+
+          const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
+          const balance = await bosonVoucher.connect(rando).balanceOf(other1.address);
+          expect(balance).equal(1);
         });
 
         it("Buyer does not exist", async function () {
@@ -529,18 +478,18 @@ describe("IBosonAccountHandler", function () {
           buyer.id = "444";
 
           // Attempt to update the buyer, expecting revert
-          await expect(buyerHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NO_SUCH_BUYER);
+          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NO_SUCH_BUYER);
 
           // Set invalid id
           buyer.id = "0";
 
           // Attempt to update the buyer, expecting revert
-          await expect(buyerHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NO_SUCH_BUYER);
+          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NO_SUCH_BUYER);
         });
 
         it("Caller is not buyer wallet address", async function () {
           // Attempt to update the buyer, expecting revert
-          await expect(buyerHandler.connect(other2).updateBuyer(buyer)).to.revertedWith(
+          await expect(accountHandler.connect(other2).updateBuyer(buyer)).to.revertedWith(
             RevertReasons.NOT_BUYER_WALLET
           );
         });
@@ -549,7 +498,7 @@ describe("IBosonAccountHandler", function () {
           buyer.wallet = ethers.constants.AddressZero;
 
           // Attempt to update the buyer, expecting revert
-          await expect(buyerHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(
+          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
         });
@@ -561,15 +510,15 @@ describe("IBosonAccountHandler", function () {
           buyer2Struct = buyer2.toStruct();
 
           //Create second buyer, testing for the event
-          await expect(buyerHandler.connect(rando).createBuyer(buyer2))
-            .to.emit(buyerHandler, "BuyerCreated")
+          await expect(accountHandler.connect(rando).createBuyer(buyer2))
+            .to.emit(accountHandler, "BuyerCreated")
             .withArgs(buyer2.id, buyer2Struct, rando.address);
 
           //Set wallet address value to be same as first buyer created in Buyer Methods beforeEach
           buyer2.wallet = other1.address; //already being used by buyer 1
 
           // Attempt to update buyer 2 with non-unique wallet address, expecting revert
-          await expect(buyerHandler.connect(other2).updateBuyer(buyer2)).to.revertedWith(
+          await expect(accountHandler.connect(other2).updateBuyer(buyer2)).to.revertedWith(
             RevertReasons.BUYER_ADDRESS_MUST_BE_UNIQUE
           );
         });
@@ -578,7 +527,7 @@ describe("IBosonAccountHandler", function () {
           buyer.wallet = other4.address;
 
           // Attempt to update the buyer, expecting revert
-          await expect(buyerHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(
+          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(
             RevertReasons.WALLET_OWNS_VOUCHERS
           );
         });
@@ -588,7 +537,7 @@ describe("IBosonAccountHandler", function () {
     context("👉 getBuyer()", async function () {
       beforeEach(async function () {
         // Create a buyer
-        await buyerHandler.connect(rando).createBuyer(buyer);
+        await accountHandler.connect(rando).createBuyer(buyer);
 
         // id of the current buyer and increment nextAccountId
         id = nextAccountId++;
@@ -596,7 +545,7 @@ describe("IBosonAccountHandler", function () {
 
       it("should return true for exists if buyer is found", async function () {
         // Get the exists flag
-        [exists] = await buyerHandler.connect(rando).getBuyer(id);
+        [exists] = await accountHandler.connect(rando).getBuyer(id);
 
         // Validate
         expect(exists).to.be.true;
@@ -604,7 +553,7 @@ describe("IBosonAccountHandler", function () {
 
       it("should return false for exists if buyer is not found", async function () {
         // Get the exists flag
-        [exists] = await buyerHandler.connect(rando).getBuyer(invalidAccountId);
+        [exists] = await accountHandler.connect(rando).getBuyer(invalidAccountId);
 
         // Validate
         expect(exists).to.be.false;
@@ -612,7 +561,7 @@ describe("IBosonAccountHandler", function () {
 
       it("should return the details of the buyer as a struct if found", async function () {
         // Get the buyer as a struct
-        [, buyerStruct] = await buyerHandler.connect(rando).getBuyer(id);
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(id);
 
         // Parse into entity
         buyer = Buyer.fromStruct(buyerStruct);

@@ -13,34 +13,17 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { getEvent} = require("../../scripts/util/test-utils.js");
-const { oneWeek, oneMonth} = require("../utils/constants");
+const { getEvent } = require("../../scripts/util/test-utils.js");
+const { oneWeek, oneMonth } = require("../utils/constants");
 
 /**
  *  Test the Boson Dispute Resolver Handler
  */
 describe("DisputeResolverHandler", function () {
   // Common vars
-  let deployer,
-    rando,
-    operator,
-    admin,
-    clerk,
-    treasury,
-    other1,
-    other2,
-    other3,
-    other4,
-    other5,
-    protocolAdmin;
-  let protocolDiamond,
-    accessController,
-    accountHandler,
-    sellerHandler,
-    disputeResolverHandler,
-    configHandler,
-    gasLimit;
-  let seller,active, seller2, id2, nextAccountId;
+  let deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, other4, other5, protocolAdmin;
+  let protocolDiamond, accessController, accountHandler, configHandler, gasLimit;
+  let seller, active, seller2, id2;
   let emptyAuthToken;
   let disputeResolver,
     disputeResolverStruct,
@@ -73,7 +56,7 @@ describe("DisputeResolverHandler", function () {
     let valid = true;
 
     const txReceipt = await tx.wait();
-    const event = getEvent(txReceipt, disputeResolverHandler, eventName);
+    const event = getEvent(txReceipt, accountHandler, eventName);
 
     try {
       if (eventName == "DisputeResolverCreated") {
@@ -111,20 +94,8 @@ describe("DisputeResolverHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [
-      deployer,
-      operator,
-      admin,
-      clerk,
-      treasury,
-      rando,
-      other1,
-      other2,
-      other3,
-      other4,
-      other5,
-      protocolAdmin,
-    ] = await ethers.getSigners();
+    [deployer, operator, admin, clerk, treasury, rando, other1, other2, other3, other4, other5, protocolAdmin] =
+      await ethers.getSigners();
 
     //Dispute Resolver metadata URI
     metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
@@ -193,14 +164,8 @@ describe("DisputeResolverHandler", function () {
 
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
-    // Cast Diamond to IBosonAccountHandler
+    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-
-    // Cast Diamond to SellerHandlerFacet
-    sellerHandler = await ethers.getContractAt("SellerHandlerFacet", protocolDiamond.address);
-
-    // Cast Diamond to DisputeResolverHandlerFacet
-    disputeResolverHandler = await ethers.getContractAt("DisputeResolverHandlerFacet", protocolDiamond.address);
 
     //Cast Diamond to IBosonConfigHancler
     configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
@@ -210,7 +175,6 @@ describe("DisputeResolverHandler", function () {
   context("📋 Dispute Resolver Methods", async function () {
     beforeEach(async function () {
       // The first dispute resolver id
-      //nextAccountId = "1";
       invalidAccountId = "666";
 
       // Required constructor params
@@ -260,9 +224,9 @@ describe("DisputeResolverHandler", function () {
       );
 
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      await sellerHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
-      await sellerHandler.connect(admin).createSeller(seller2, contractURI, emptyAuthToken);
-      await sellerHandler.connect(admin).createSeller(seller3, contractURI, emptyAuthToken);
+      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+      await accountHandler.connect(admin).createSeller(seller2, contractURI, emptyAuthToken);
+      await accountHandler.connect(admin).createSeller(seller3, contractURI, emptyAuthToken);
 
       // Make a sellerAllowList
       sellerAllowList = ["3", "1"];
@@ -284,7 +248,7 @@ describe("DisputeResolverHandler", function () {
       });
 
       it("should emit a DisputeResolverCreated event if Dispute Resolver Fees are supplied", async function () {
-        const tx = await disputeResolverHandler
+        const tx = await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
         const valid = await isValidDisputeResolverEvent(
@@ -303,7 +267,7 @@ describe("DisputeResolverHandler", function () {
       it("should emit a DisputeResolverCreated event if NO Dispute Resolver Fees are supplied", async function () {
         disputeResolverFees = [];
         disputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFees);
-        const tx = await disputeResolverHandler
+        const tx = await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
         const valid = await isValidDisputeResolverEvent(
@@ -321,12 +285,12 @@ describe("DisputeResolverHandler", function () {
 
       it("should update state if Dispute Resolver Fees and Seller Allow List are supplied", async function () {
         // Create a dispute resolver
-        await disputeResolverHandler
+        await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // Get the dispute resolver data as structs
-        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await disputeResolverHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
           .getDisputeResolver(id);
 
@@ -352,7 +316,7 @@ describe("DisputeResolverHandler", function () {
         // check that mappings of allowed selleres were updated
         idsToCheck = ["1", "2", "3", "4"];
         expectedStatus = [true, false, true, false]; // 1 and 3 are allowed
-        const areSellersAllowed = await disputeResolverHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
 
         expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
@@ -363,12 +327,12 @@ describe("DisputeResolverHandler", function () {
         sellerAllowList = [];
 
         // Create a dispute resolver
-        await disputeResolverHandler
+        await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // Get the dispute resolver data as structs
-        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await disputeResolverHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
           .getDisputeResolver(id);
 
@@ -394,19 +358,19 @@ describe("DisputeResolverHandler", function () {
         // check that mappings of allowed selleres were updated
         idsToCheck = ["1", "2", "3", "4"];
         expectedStatus = [true, true, true, false]; // ids 1,2 and 3 are sellers so the should be allowed
-        const areSellersAllowed = await disputeResolverHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
 
         expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
 
       it("should allow same fee token to be specified for multiple dispute resolvers", async function () {
         // Create a dispute resolver 1
-        await disputeResolverHandler
+        await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // Get the dispute resolver data as structs
-        [, disputeResolverStruct, disputeResolverFeeListStruct] = await disputeResolverHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
           .connect(rando)
           .getDisputeResolver(expectedDisputeResolver.id);
 
@@ -441,14 +405,14 @@ describe("DisputeResolverHandler", function () {
         );
         expect(disputeResolver2.isValid()).is.true;
 
-        await disputeResolverHandler
+        await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
 
         let disputeResolverStruct2;
 
         // Get the dispute resolver data as structs
-        [, disputeResolverStruct2, disputeResolverFeeListStruct2] = await disputeResolverHandler
+        [, disputeResolverStruct2, disputeResolverFeeListStruct2] = await accountHandler
           .connect(rando)
           .getDisputeResolver(id2);
 
@@ -474,7 +438,7 @@ describe("DisputeResolverHandler", function () {
         disputeResolver.id = "444";
 
         // Create a dispute resolver, testing for the event
-        const tx = await disputeResolverHandler
+        const tx = await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
         const valid = await isValidDisputeResolverEvent(
@@ -490,16 +454,16 @@ describe("DisputeResolverHandler", function () {
         expect(valid).is.true;
 
         // wrong dispute resolver id should not exist
-        [exists] = await disputeResolverHandler.connect(rando).getDisputeResolver(disputeResolver.id);
+        [exists] = await accountHandler.connect(rando).getDisputeResolver(disputeResolver.id);
         expect(exists).to.be.false;
 
         // next dispute resolver id should exist
-        [exists] = await disputeResolverHandler.connect(rando).getDisputeResolver(id);
+        [exists] = await accountHandler.connect(rando).getDisputeResolver(id);
         expect(exists).to.be.true;
       });
 
       it("should be possible to use non-unique treasury address", async function () {
-        const tx = await disputeResolverHandler
+        const tx = await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
         let valid = await isValidDisputeResolverEvent(
@@ -528,7 +492,7 @@ describe("DisputeResolverHandler", function () {
         expect(disputeResolver2.isValid()).is.true;
         expectedDisputeResolverStruct = disputeResolver2.toStruct();
 
-        const tx2 = await disputeResolverHandler
+        const tx2 = await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
         valid = await isValidDisputeResolverEvent(
@@ -550,7 +514,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
 
           disputeResolver.operator = operator.address;
@@ -558,7 +522,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
 
           disputeResolver.admin = admin.address;
@@ -566,7 +530,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
 
           disputeResolver.clerk = clerk.address;
@@ -574,7 +538,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
@@ -595,11 +559,11 @@ describe("DisputeResolverHandler", function () {
           disputeResolver2Struct = disputeResolver2.toStruct();
 
           //Create dispute resolver 1
-          disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+          accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
           // Attempt to create another dispute resolver with same addresses
           await expect(
-            disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
 
           //Set each address value to be same as dispute resolver 1 and expect revert
@@ -608,7 +572,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to create another dispute resolver with same addresses
           await expect(
-            disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
 
           disputeResolver2.admin = other2.address;
@@ -616,7 +580,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to create another dispute resolver with same addresses
           await expect(
-            disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
         });
 
@@ -638,11 +602,11 @@ describe("DisputeResolverHandler", function () {
           disputeResolver2Struct = disputeResolver2.toStruct();
 
           //Create dispute resolver 1
-          disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+          accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
           // Attempt to create another dispute resolver with non-unique admin address
           await expect(
-            disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
 
           //Set dispute resolver 2's operator address to dispute resolver 1's clerk address
@@ -651,7 +615,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to create another dispute resolver with non-unique operator address
           await expect(
-            disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
 
           //Set dispute resolver 2's clerk address to dispute resolver 1's admin address
@@ -660,7 +624,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to create another dispute resolver with non-unique clerk address
           await expect(
-            disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE);
         });
 
@@ -669,7 +633,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
         });
 
@@ -678,14 +642,14 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.INVALID_ESCALATION_PERIOD);
 
           disputeResolver.escalationResponsePeriod = 0;
 
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.INVALID_ESCALATION_PERIOD);
         });
 
@@ -700,7 +664,7 @@ describe("DisputeResolverHandler", function () {
 
           // Create a dispute resolver
           await expect(
-            disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees2, sellerAllowList)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees2, sellerAllowList)
           ).to.revertedWith(RevertReasons.DUPLICATE_DISPUTE_RESOLVER_FEES);
         });
 
@@ -709,7 +673,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to Create a DisputeResolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
         });
 
@@ -719,7 +683,7 @@ describe("DisputeResolverHandler", function () {
 
           // Create a dispute resolver
           await expect(
-            disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
         });
 
@@ -729,7 +693,7 @@ describe("DisputeResolverHandler", function () {
 
           // Create a dispute resolver
           await expect(
-            disputeResolverHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
           ).to.revertedWith(RevertReasons.SELLER_ALREADY_APPROVED);
         });
       });
@@ -747,7 +711,7 @@ describe("DisputeResolverHandler", function () {
         sellerAllowList = ["1"];
 
         // Create a dispute resolver
-        await disputeResolverHandler
+        await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
@@ -757,7 +721,7 @@ describe("DisputeResolverHandler", function () {
 
       it("should return true for exists if dispute resolver is found", async function () {
         // Get the exists flag
-        [exists] = await disputeResolverHandler.connect(rando).getDisputeResolver(disputeResolver.id);
+        [exists] = await accountHandler.connect(rando).getDisputeResolver(disputeResolver.id);
 
         // Validate
         expect(exists).to.be.true;
@@ -765,7 +729,7 @@ describe("DisputeResolverHandler", function () {
 
       it("should return false for exists if dispute resolver is not found", async function () {
         // Get the exists flag
-        [exists] = await disputeResolverHandler.connect(rando).getDisputeResolver(invalidAccountId);
+        [exists] = await accountHandler.connect(rando).getDisputeResolver(invalidAccountId);
 
         // Validate
         expect(exists).to.be.false;
@@ -773,7 +737,7 @@ describe("DisputeResolverHandler", function () {
 
       it("should return the details of the dispute resolver as structs if found", async function () {
         // Get the dispute resolver as a struct
-        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await disputeResolverHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
           .getDisputeResolver(disputeResolver.id);
 
@@ -810,7 +774,7 @@ describe("DisputeResolverHandler", function () {
         sellerAllowList = [];
 
         // Create a dispute resolver
-        await disputeResolverHandler
+        await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
@@ -818,7 +782,7 @@ describe("DisputeResolverHandler", function () {
         expectedStatus = [true, true, true, false]; // 1,2 and 3 are sellers, 4 is not a seller
 
         // Get the statuese flag
-        const areSellersAllowed = await disputeResolverHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
 
         expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
@@ -828,7 +792,7 @@ describe("DisputeResolverHandler", function () {
         sellerAllowList = ["3", "1"];
 
         // Create a dispute resolver
-        await disputeResolverHandler
+        await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
@@ -836,7 +800,7 @@ describe("DisputeResolverHandler", function () {
         expectedStatus = [true, false, true, false]; // 1 and 3 are allowed, 2 is not, 4 is not a seller
 
         // Get the statuese flag
-        const areSellersAllowed = await disputeResolverHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
 
         expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
@@ -849,7 +813,7 @@ describe("DisputeResolverHandler", function () {
         expectedStatus = [false, false, false, false]; // since DR does not exist everything is false
 
         // Get the statuese flag
-        const areSellersAllowed = await disputeResolverHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
 
         expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
@@ -859,7 +823,7 @@ describe("DisputeResolverHandler", function () {
       beforeEach(async function () {
         // Create a dispute resolver from objects in Dispute Resolver Methods beforeEach
         disputeResolver.id = (++id).toString();
-        await disputeResolverHandler
+        await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
@@ -885,14 +849,14 @@ describe("DisputeResolverHandler", function () {
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
 
         //Update a dispute resolver, testing for the event
-        await expect(disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver))
-          .to.emit(disputeResolverHandler, "DisputeResolverUpdated")
+        await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverUpdated")
           .withArgs(disputeResolver.id, expectedDisputeResolverStruct, admin.address);
       });
 
       it("should emit a DisputeResolverUpdated event with correct values if values stay the same", async function () {
-        await expect(disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver))
-          .to.emit(disputeResolverHandler, "DisputeResolverUpdated")
+        await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverUpdated")
           .withArgs(disputeResolver.id, expectedDisputeResolverStruct, admin.address);
       });
 
@@ -912,10 +876,10 @@ describe("DisputeResolverHandler", function () {
         expectedDisputeResolver.active = false;
 
         // Update disupte resolver
-        await disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver);
+        await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
 
         // Get the disupte resolver as structs
-        [, disputeResolverStruct, disputeResolverFeeListStruct] = await disputeResolverHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
           .connect(rando)
           .getDisputeResolver(disputeResolver.id);
 
@@ -936,31 +900,31 @@ describe("DisputeResolverHandler", function () {
         );
 
         //Check that old addresses are no longer mapped. We don't map the treasury address.
-        [exists] = await disputeResolverHandler.connect(rando).getDisputeResolverByAddress(operator.address);
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(operator.address);
         expect(exists).to.be.false;
 
-        [exists] = await disputeResolverHandler.connect(rando).getDisputeResolverByAddress(admin.address);
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(admin.address);
         expect(exists).to.be.false;
 
-        [exists] = await disputeResolverHandler.connect(rando).getDisputeResolverByAddress(clerk.address);
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(clerk.address);
         expect(exists).to.be.false;
 
         //Check that new addresses are mapped. We don't map the treasury address.
-        [exists] = await disputeResolverHandler.connect(rando).getDisputeResolverByAddress(disputeResolver.operator);
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(disputeResolver.operator);
         expect(exists).to.be.true;
 
-        [exists] = await disputeResolverHandler.connect(rando).getDisputeResolverByAddress(disputeResolver.admin);
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(disputeResolver.admin);
         expect(exists).to.be.true;
 
-        [exists] = await disputeResolverHandler.connect(rando).getDisputeResolverByAddress(disputeResolver.clerk);
+        [exists] = await accountHandler.connect(rando).getDisputeResolverByAddress(disputeResolver.clerk);
         expect(exists).to.be.true;
       });
 
       it("should update state correctly if values are the same", async function () {
         // Update disupte resolver
-        await disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver);
+        await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
 
-        [, disputeResolverStruct, disputeResolverFeeListStruct] = await disputeResolverHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
           .connect(rando)
           .getDisputeResolver(expectedDisputeResolver.id);
 
@@ -987,10 +951,10 @@ describe("DisputeResolverHandler", function () {
         expect(disputeResolver.isValid()).is.true;
 
         // Update disupte resolver
-        await disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver);
+        await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
 
         // Get the disupte resolver as a struct
-        [, disputeResolverStruct] = await disputeResolverHandler.connect(rando).getDisputeResolver(disputeResolver.id);
+        [, disputeResolverStruct] = await accountHandler.connect(rando).getDisputeResolver(disputeResolver.id);
 
         // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
@@ -1001,7 +965,7 @@ describe("DisputeResolverHandler", function () {
         }
 
         //ADMIN role activates Dispute Resolver
-        await disputeResolverHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
         disputeResolver.active = false;
         expect(disputeResolver.isValid()).is.true;
@@ -1009,10 +973,10 @@ describe("DisputeResolverHandler", function () {
         expect(expectedDisputeResolver.isValid()).is.true;
 
         // Update disupte resolver
-        await disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver);
+        await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
 
         // Get the disupte resolver as a struct
-        [, disputeResolverStruct] = await disputeResolverHandler.connect(rando).getDisputeResolver(disputeResolver.id);
+        [, disputeResolverStruct] = await accountHandler.connect(rando).getDisputeResolver(disputeResolver.id);
 
         // Parse into entity
         returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
@@ -1033,10 +997,10 @@ describe("DisputeResolverHandler", function () {
         disputeResolverStruct = disputeResolver.toStruct();
 
         // Update disupte resolver
-        await disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver);
+        await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
 
         // Get the disupte resolver as a struct
-        [, disputeResolverStruct] = await disputeResolverHandler.connect(rando).getDisputeResolver(disputeResolver.id);
+        [, disputeResolverStruct] = await accountHandler.connect(rando).getDisputeResolver(disputeResolver.id);
 
         // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
@@ -1072,7 +1036,7 @@ describe("DisputeResolverHandler", function () {
         const disputeResolverFeeList2 = new DisputeResolverFeeList(disputeResolverFees2);
 
         //Create disputeResolver2 testing, for the event
-        const tx = await disputeResolverHandler
+        const tx = await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver2, disputeResolverFees2, sellerAllowList);
         const valid = await isValidDisputeResolverEvent(
@@ -1103,9 +1067,9 @@ describe("DisputeResolverHandler", function () {
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
 
         // Update the first dispute resolver
-        await disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver);
+        await accountHandler.connect(admin).updateDisputeResolver(disputeResolver);
 
-        [, disputeResolverStruct, disputeResolverFeeListStruct] = await disputeResolverHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
           .connect(rando)
           .getDisputeResolver(expectedDisputeResolver.id);
 
@@ -1127,7 +1091,7 @@ describe("DisputeResolverHandler", function () {
         );
 
         //Check dispute resolver 2 hasn't been changed
-        [, disputeResolver2Struct, disputeResolverFeeListStruct2] = await disputeResolverHandler
+        [, disputeResolver2Struct, disputeResolverFeeListStruct2] = await accountHandler
           .connect(rando)
           .getDisputeResolver(disputeResolver2.id);
 
@@ -1156,8 +1120,8 @@ describe("DisputeResolverHandler", function () {
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
 
         //Update a dispute resolver, testing for the event
-        await expect(disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver))
-          .to.emit(disputeResolverHandler, "DisputeResolverUpdated")
+        await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverUpdated")
           .withArgs(disputeResolver.id, expectedDisputeResolverStruct, admin.address);
 
         disputeResolver.admin = other3.address;
@@ -1166,12 +1130,12 @@ describe("DisputeResolverHandler", function () {
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
 
         //Update a dispute resolver, testing for the event
-        await expect(disputeResolverHandler.connect(other2).updateDisputeResolver(disputeResolver))
-          .to.emit(disputeResolverHandler, "DisputeResolverUpdated")
+        await expect(accountHandler.connect(other2).updateDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverUpdated")
           .withArgs(disputeResolver.id, expectedDisputeResolverStruct, other2.address);
 
         // Attempt to update the dispute resolver with original admin address, expecting revert
-        await expect(disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+        await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
           RevertReasons.NOT_ADMIN
         );
       });
@@ -1187,8 +1151,8 @@ describe("DisputeResolverHandler", function () {
         expectedDisputeResolverStruct = disputeResolver.toStruct();
 
         //Update a dispute resolver, testing for the event
-        await expect(disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver))
-          .to.emit(disputeResolverHandler, "DisputeResolverUpdated")
+        await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverUpdated")
           .withArgs(disputeResolver.id, expectedDisputeResolverStruct, admin.address);
       });
 
@@ -1198,7 +1162,7 @@ describe("DisputeResolverHandler", function () {
           disputeResolver.id = "444";
 
           // Attempt to update the dispute resolver, expecting revert
-          await expect(disputeResolverHandler.connect(other1).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.NO_SUCH_DISPUTE_RESOLVER
           );
 
@@ -1206,14 +1170,14 @@ describe("DisputeResolverHandler", function () {
           disputeResolver.id = "0";
 
           // Attempt to update the dispute resolver, expecting revert
-          await expect(disputeResolverHandler.connect(other1).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(other1).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.NO_SUCH_DISPUTE_RESOLVER
           );
         });
 
         it("Caller is not dispute resolver admin address", async function () {
           // Attempt to update the disputer resolver, expecting revert
-          await expect(disputeResolverHandler.connect(other2).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(other2).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.NOT_ADMIN
           );
         });
@@ -1222,7 +1186,7 @@ describe("DisputeResolverHandler", function () {
           disputeResolver.operator = ethers.constants.AddressZero;
 
           // Attempt to update the disputer resolver, expecting revert
-          await expect(disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
 
@@ -1230,7 +1194,7 @@ describe("DisputeResolverHandler", function () {
           disputeResolver.admin = ethers.constants.AddressZero;
 
           // Attempt to update the disputer resolver, expecting revert
-          await expect(disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
 
@@ -1238,7 +1202,7 @@ describe("DisputeResolverHandler", function () {
           disputeResolver.clerk = ethers.constants.AddressZero;
 
           // Attempt to update the disputer resolver, expecting revert
-          await expect(disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
 
@@ -1246,7 +1210,7 @@ describe("DisputeResolverHandler", function () {
           disputeResolver.treasury = ethers.constants.AddressZero;
 
           // Attempt to update the disputer resolver, expecting revert
-          await expect(disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.INVALID_ADDRESS
           );
         });
@@ -1266,7 +1230,7 @@ describe("DisputeResolverHandler", function () {
           );
           expect(disputeResolver2.isValid()).is.true;
           disputeResolver2Struct = disputeResolver2.toStruct();
-          await disputeResolverHandler
+          await accountHandler
             .connect(admin)
             .createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
 
@@ -1274,23 +1238,23 @@ describe("DisputeResolverHandler", function () {
           disputeResolver.operator = other1.address;
 
           // Attempt to update dispute resolver 1 with non-unique admin address, expecting revert
-          await expect(disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
-          
+
           disputeResolver.operator = operator.address;
           disputeResolver.admin = other2.address;
 
           // Attempt to update dispute resolver 1 with non-unique admin address, expecting revert
-          await expect(disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
-          
+
           disputeResolver.admin = admin.address;
           disputeResolver.clerk = other3.address;
 
           // Attempt to update dispute resolver 1 with non-unique clerk address, expecting revert
-          await expect(disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
         });
@@ -1311,7 +1275,7 @@ describe("DisputeResolverHandler", function () {
 
           expect(disputeResolver2.isValid()).is.true;
           //disputeResolver2Struct = disputeResolver2.toStruct();
-          await disputeResolverHandler
+          await accountHandler
             .connect(admin)
             .createDisputeResolver(disputeResolver2, disputeResolverFees, sellerAllowList);
 
@@ -1319,7 +1283,7 @@ describe("DisputeResolverHandler", function () {
           disputeResolver2.admin = operator.address;
 
           // Attempt to update dispute resolver 1 with non-unique admin address, expecting revert
-          await expect(disputeResolverHandler.connect(other2).updateDisputeResolver(disputeResolver2)).to.revertedWith(
+          await expect(accountHandler.connect(other2).updateDisputeResolver(disputeResolver2)).to.revertedWith(
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
 
@@ -1328,7 +1292,7 @@ describe("DisputeResolverHandler", function () {
           disputeResolver2.operator = clerk.address;
 
           // Attempt to update dispute resolver 1 with non-unique operator address, expecting revert
-          await expect(disputeResolverHandler.connect(other2).updateDisputeResolver(disputeResolver2)).to.revertedWith(
+          await expect(accountHandler.connect(other2).updateDisputeResolver(disputeResolver2)).to.revertedWith(
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
 
@@ -1337,7 +1301,7 @@ describe("DisputeResolverHandler", function () {
           disputeResolver2.clerk = admin.address;
 
           // Attempt to update dispute resolver 1 with non-unique clerk address, expecting revert
-          await expect(disputeResolverHandler.connect(other2).updateDisputeResolver(disputeResolver2)).to.revertedWith(
+          await expect(accountHandler.connect(other2).updateDisputeResolver(disputeResolver2)).to.revertedWith(
             RevertReasons.DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
           );
         });
@@ -1346,14 +1310,14 @@ describe("DisputeResolverHandler", function () {
           await configHandler.setMaxEscalationResponsePeriod(oneWeek);
 
           // Attempt to update a DisputeResolver, expecting revert
-          await expect(disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.INVALID_ESCALATION_PERIOD
           );
 
           disputeResolver.escalationResponsePeriod = 0;
 
           // Attempt to update a DisputeResolver, expecting revert
-          await expect(disputeResolverHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
             RevertReasons.INVALID_ESCALATION_PERIOD
           );
         });
@@ -1363,7 +1327,7 @@ describe("DisputeResolverHandler", function () {
     context("👉 addFeesToDisputeResolver()", async function () {
       beforeEach(async function () {
         disputeResolver.id = (++id).toString();
-        await disputeResolverHandler
+        await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
@@ -1383,7 +1347,7 @@ describe("DisputeResolverHandler", function () {
 
         const addedDisputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFeesToAdd);
 
-        const tx = await disputeResolverHandler
+        const tx = await accountHandler
           .connect(admin)
           .addFeesToDisputeResolver(disputeResolver.id, disputeResolverFeesToAdd);
 
@@ -1417,10 +1381,10 @@ describe("DisputeResolverHandler", function () {
         const expectedDisputeResolverFeeList = new DisputeResolverFeeList(expectedDisputeResovlerFees);
 
         // Add fees to dispute resolver
-        await disputeResolverHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFeesToAdd);
+        await accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFeesToAdd);
 
         // Get the dispute resolver data as structs
-        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await disputeResolverHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
           .getDisputeResolver(disputeResolver.id);
 
@@ -1451,7 +1415,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to add fees to the dispute resolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
+            accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
 
           // Set invalid id
@@ -1459,14 +1423,14 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to add fees to the dispute resolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
+            accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
         });
 
         it("Caller is not dispute resolver admin address", async function () {
           // Attempt to add fees to the dispute resolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(rando).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
+            accountHandler.connect(rando).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
           ).to.revertedWith(RevertReasons.NOT_ADMIN);
         });
 
@@ -1475,7 +1439,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to add fees to the dispute resolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
+            accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
         });
 
@@ -1484,7 +1448,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to add fees to the dispute resolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
+            accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
         });
 
@@ -1496,7 +1460,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to add fees to the dispute resolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
+            accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFees)
           ).to.revertedWith(RevertReasons.DUPLICATE_DISPUTE_RESOLVER_FEES);
         });
       });
@@ -1505,7 +1469,7 @@ describe("DisputeResolverHandler", function () {
     context("👉 removeFeesFromDisputeResolver()", async function () {
       beforeEach(async function () {
         disputeResolver.id = (++id).toString();
-        await disputeResolverHandler
+        await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
@@ -1521,9 +1485,9 @@ describe("DisputeResolverHandler", function () {
         feeTokenAddressesToRemove = [other1.address, other2.address, other3.address];
 
         await expect(
-          disputeResolverHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
+          accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
         )
-          .to.emit(disputeResolverHandler, "DisputeResolverFeesRemoved")
+          .to.emit(accountHandler, "DisputeResolverFeesRemoved")
           .withArgs(disputeResolver.id, feeTokenAddressesToRemove, admin.address);
       });
 
@@ -1531,12 +1495,12 @@ describe("DisputeResolverHandler", function () {
         feeTokenAddressesToRemove = [other1.address, other3.address];
 
         // Remove fees from dispute resolver
-        await disputeResolverHandler
+        await accountHandler
           .connect(admin)
           .removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove);
 
         // Get the dispute resolver data as structs
-        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await disputeResolverHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
           .getDisputeResolver(disputeResolver.id);
 
@@ -1567,12 +1531,12 @@ describe("DisputeResolverHandler", function () {
         const feeTokenAddressesToRemove = [other1.address, other2.address, other3.address];
 
         // Remove fees from dispute resolver
-        await disputeResolverHandler
+        await accountHandler
           .connect(admin)
           .removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove);
 
         // Get the dispute resolver data as structs
-        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await disputeResolverHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
           .getDisputeResolver(disputeResolver.id);
 
@@ -1609,7 +1573,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to remove fees from the dispute resolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
+            accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
 
           // Set invalid id
@@ -1617,14 +1581,14 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to remove fees from the dispute resolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
+            accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
         });
 
         it("Caller is not dispute resolver admin address", async function () {
           // Attempt to remove fees from the dispute resolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(rando).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
+            accountHandler.connect(rando).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
           ).to.revertedWith(RevertReasons.NOT_ADMIN);
         });
 
@@ -1633,7 +1597,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to remove fees from the dispute resolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
+            accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
         });
 
@@ -1642,7 +1606,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to remove fees from the dispute resolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
+            accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_DISPUTE_RESOLVER_FEES);
         });
 
@@ -1651,7 +1615,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to remove fees from the dispute resolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
+            accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
           ).to.revertedWith(RevertReasons.DISPUTE_RESOLVER_FEE_NOT_FOUND);
         });
       });
@@ -1674,14 +1638,14 @@ describe("DisputeResolverHandler", function () {
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
         expect(emptyAuthToken.isValid()).is.true;
 
-        await sellerHandler.connect(admin).createSeller(seller4, contractURI, emptyAuthToken);
+        await accountHandler.connect(admin).createSeller(seller4, contractURI, emptyAuthToken);
 
         sellerAllowList = ["1", "3"];
         allowedSellersToAdd = ["2", "4"];
 
         disputeResolver.id = (++id).toString();
 
-        await disputeResolverHandler
+        await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
@@ -1695,8 +1659,8 @@ describe("DisputeResolverHandler", function () {
 
       it("should emit an AllowedSellersAdded event", async function () {
         // add sellers, test for event
-        expect(await disputeResolverHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd))
-          .to.emit(disputeResolverHandler, "AllowedSellersAdded")
+        expect(await accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd))
+          .to.emit(accountHandler, "AllowedSellersAdded")
           .withArgs(disputeResolver.id, allowedSellersToAdd, admin.address);
       });
 
@@ -1704,10 +1668,10 @@ describe("DisputeResolverHandler", function () {
         const expectedSellerAllowList = [...sellerAllowList, ...allowedSellersToAdd];
 
         // Add seller ids to seller allow list
-        await disputeResolverHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd);
+        await accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd);
 
         // Get the dispute resolver data as structs
-        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await disputeResolverHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
           .getDisputeResolver(id);
 
@@ -1733,7 +1697,7 @@ describe("DisputeResolverHandler", function () {
         // check that mappings of allowed selleres were updated
         idsToCheck = ["1", "2", "3", "4"];
         expectedStatus = [true, true, true, true]; // 1 and 3 are allowed
-        const areSellersAllowed = await disputeResolverHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
 
         expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
@@ -1745,7 +1709,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
+            accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
 
           // Set invalid id
@@ -1753,14 +1717,14 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
+            accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
         });
 
         it("Caller is not dispute resolver admin address", async function () {
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
-            disputeResolverHandler.connect(rando).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
+            accountHandler.connect(rando).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
           ).to.revertedWith(RevertReasons.NOT_ADMIN);
         });
 
@@ -1769,7 +1733,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
+            accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
         });
 
@@ -1778,7 +1742,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
+            accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
         });
 
@@ -1788,7 +1752,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
+            accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
           ).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
         });
 
@@ -1798,7 +1762,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to add sellers to the allow listr, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
+            accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
           ).to.revertedWith(RevertReasons.SELLER_ALREADY_APPROVED);
 
           // Duplicate existing seller id
@@ -1806,7 +1770,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to add sellers to the allow list, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
+            accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
           ).to.revertedWith(RevertReasons.SELLER_ALREADY_APPROVED);
         });
       });
@@ -1829,14 +1793,14 @@ describe("DisputeResolverHandler", function () {
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
         expect(emptyAuthToken.isValid()).is.true;
 
-        await sellerHandler.connect(admin).createSeller(seller4, contractURI, emptyAuthToken);
+        await accountHandler.connect(admin).createSeller(seller4, contractURI, emptyAuthToken);
 
         sellerAllowList = ["1", "3", "2", "4"];
         allowedSellersToRemove = ["1", "2"];
 
         disputeResolver.id = (++id).toString();
 
-        await disputeResolverHandler
+        await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
@@ -1850,18 +1814,18 @@ describe("DisputeResolverHandler", function () {
 
       it("should emit a AllowedSellersRemoved event", async function () {
         await expect(
-          disputeResolverHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
+          accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
         )
-          .to.emit(disputeResolverHandler, "AllowedSellersRemoved")
+          .to.emit(accountHandler, "AllowedSellersRemoved")
           .withArgs(disputeResolver.id, allowedSellersToRemove, admin.address);
       });
 
       it("should update SellerAllowList state only if some Allowed Sellers are removed", async function () {
         // Remove fees from dispute resolver
-        await disputeResolverHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove);
+        await accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove);
 
         // Get the dispute resolver data as structs
-        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await disputeResolverHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
           .getDisputeResolver(id);
 
@@ -1888,7 +1852,7 @@ describe("DisputeResolverHandler", function () {
         // check that mappings of allowed selleres were updated
         idsToCheck = ["1", "2", "3", "4"];
         expectedStatus = [false, false, true, true]; // 3 and 4 are allowed
-        const areSellersAllowed = await disputeResolverHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
 
         expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
@@ -1897,10 +1861,10 @@ describe("DisputeResolverHandler", function () {
         allowedSellersToRemove = sellerAllowList;
 
         // Remove fees from dispute resolver
-        await disputeResolverHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove);
+        await accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove);
 
         // Get the dispute resolver data as structs
-        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await disputeResolverHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
           .getDisputeResolver(id);
 
@@ -1934,12 +1898,12 @@ describe("DisputeResolverHandler", function () {
           active
         );
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        await sellerHandler.connect(admin).createSeller(seller6, contractURI, emptyAuthToken);
+        await accountHandler.connect(admin).createSeller(seller6, contractURI, emptyAuthToken);
 
         // check that mappings of allowed selleres were updated
         idsToCheck = ["1", "2", "3", "4", "5", "6"];
         expectedStatus = [true, true, true, true, false, true]; // everything was removed, so every seller is allowed. 5 is not a seller
-        const areSellersAllowed = await disputeResolverHandler.connect(rando).areSellersAllowed(disputeResolver.id, idsToCheck);
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(disputeResolver.id, idsToCheck);
 
         expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
@@ -1951,7 +1915,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
+            accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
 
           // Set invalid id
@@ -1959,14 +1923,14 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
+            accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
         });
 
         it("Caller is not dispute resolver admin address", async function () {
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
-            disputeResolverHandler.connect(rando).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
+            accountHandler.connect(rando).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
           ).to.revertedWith(RevertReasons.NOT_ADMIN);
         });
 
@@ -1975,7 +1939,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
+            accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
         });
 
@@ -1984,7 +1948,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
+            accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
           ).to.revertedWith(RevertReasons.INVALID_AMOUNT_ALLOWED_SELLERS);
         });
 
@@ -1999,14 +1963,14 @@ describe("DisputeResolverHandler", function () {
             active
           );
           contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-          await sellerHandler.connect(admin).createSeller(seller6, contractURI, emptyAuthToken);
+          await accountHandler.connect(admin).createSeller(seller6, contractURI, emptyAuthToken);
 
           // seller exists, it's not approved
           allowedSellersToRemove = ["2", "4", "6"];
 
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
+            accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
           ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
 
           // remove same id twice
@@ -2014,7 +1978,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to remove sellers from the allowed list, expecting revert
           await expect(
-            disputeResolverHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
+            accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
           ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
         });
       });
@@ -2023,7 +1987,7 @@ describe("DisputeResolverHandler", function () {
     context("👉 activateDisputeResolver()", async function () {
       beforeEach(async function () {
         disputeResolver.id = (++id).toString();
-        await disputeResolverHandler
+        await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
@@ -2032,16 +1996,16 @@ describe("DisputeResolverHandler", function () {
       });
 
       it("should emit a DisputeResolverActivated event", async function () {
-        await expect(disputeResolverHandler.connect(protocolAdmin).activateDisputeResolver(disputeResolver.id))
-          .to.emit(disputeResolverHandler, "DisputeResolverActivated")
+        await expect(accountHandler.connect(protocolAdmin).activateDisputeResolver(disputeResolver.id))
+          .to.emit(accountHandler, "DisputeResolverActivated")
           .withArgs(disputeResolver.id, disputeResolverStruct, protocolAdmin.address);
       });
 
       it("should update only active flag state", async function () {
         // Activate disupte resolver
-        await disputeResolverHandler.connect(protocolAdmin).activateDisputeResolver(disputeResolver.id);
+        await accountHandler.connect(protocolAdmin).activateDisputeResolver(disputeResolver.id);
 
-        [, disputeResolverStruct, disputeResolverFeeListStruct] = await disputeResolverHandler
+        [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
           .connect(rando)
           .getDisputeResolver(id);
 
@@ -2070,7 +2034,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to activate the dispute resolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(protocolAdmin).activateDisputeResolver(disputeResolver.id)
+            accountHandler.connect(protocolAdmin).activateDisputeResolver(disputeResolver.id)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
 
           // Set invalid id
@@ -2078,7 +2042,7 @@ describe("DisputeResolverHandler", function () {
 
           // Attempt to activate the dispute resolver, expecting revert
           await expect(
-            disputeResolverHandler.connect(protocolAdmin).activateDisputeResolver(disputeResolver.id)
+            accountHandler.connect(protocolAdmin).activateDisputeResolver(disputeResolver.id)
           ).to.revertedWith(RevertReasons.NO_SUCH_DISPUTE_RESOLVER);
         });
 
@@ -2086,7 +2050,7 @@ describe("DisputeResolverHandler", function () {
           //ADMIN role is not the same as DR's admin address
 
           // Attempt to activate the dispute resolver, expecting revert
-          await expect(disputeResolverHandler.connect(admin).activateDisputeResolver(disputeResolver.id)).to.revertedWith(
+          await expect(accountHandler.connect(admin).activateDisputeResolver(disputeResolver.id)).to.revertedWith(
             RevertReasons.ACCESS_DENIED
           );
         });

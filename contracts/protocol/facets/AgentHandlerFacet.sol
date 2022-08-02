@@ -6,12 +6,12 @@ import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
-contract AgenttHandlerFacet is IBosonAccountEvents, ProtocolBase {
+contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**
      * @notice Facet Initializer
      */
     function initialize() public {
-        // No-op initializer. 
+        // No-op initializer.
         // - needed by the deployment script, which expects a no-args initializer on facets other than the config handler
         // - exception here because IBosonAccountHandler is contributed to by multiple facets which do not have their own individual interfaces
     }
@@ -112,7 +112,7 @@ contract AgenttHandlerFacet is IBosonAccountEvents, ProtocolBase {
         return fetchAgent(_agentId);
     }
 
-     /**
+    /**
      * @notice Stores agent struct in storage
      *
      * @param _agent - the fully populated struct with agent id set
