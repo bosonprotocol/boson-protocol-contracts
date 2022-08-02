@@ -15,7 +15,7 @@ library ProtocolLib {
     bytes32 internal constant PROTOCOL_LOOKUPS_POSITION = keccak256("boson.protocol.lookups");
     bytes32 internal constant PROTOCOL_FEES_POSITION = keccak256("boson.protocol.fees");
     bytes32 internal constant PROTOCOL_COUNTERS_POSITION = keccak256("boson.protocol.counters");
-    bytes32 internal constant PROTOCOL_INITIALIZERS_POSITION = keccak256("boson.protocol.initializers");
+    bytes32 internal constant PROTOCOL_STATUS_POSITION = keccak256("boson.protocol.initializers");
     bytes32 internal constant PROTOCOL_META_TX_POSITION = keccak256("boson.protocol.metaTransactions");
 
     // Protocol addresses storage
@@ -145,7 +145,6 @@ library ProtocolLib {
         // buyer escalation deposit percentage
         uint16 buyerEscalationDepositPercentage;
         //AuthTokenType => Auth NFT contract address.
-        //Would normally be in ProtocolAddresses but can't be because the ProtocolAddresses struct is passed into the initialize function
         mapping(BosonTypes.AuthTokenType => address) authTokenContracts;
         // AuthTokenType => tokenId => sellerId
         mapping(BosonTypes.AuthTokenType => mapping(uint256 => uint256)) sellerIdByAuthToken;
@@ -192,7 +191,9 @@ library ProtocolLib {
     }
 
     // Individual facet initialization states
-    struct ProtocolInitializers {
+    struct ProtocolStatus {
+        // the current pause scenario, a sum of PausableRegions as powers of two
+        uint256 pauseScenario;
         // interface id => initialized?
         mapping(bytes4 => bool) initializedInterfaces;
     }
@@ -282,14 +283,14 @@ library ProtocolLib {
     }
 
     /**
-     * @dev Get the protocol initializers slot
+     * @dev Get the protocol status slot
      *
-     * @return pi the the protocol initializers slot
+     * @return ps the the protocol status slot
      */
-    function protocolInitializers() internal pure returns (ProtocolInitializers storage pi) {
-        bytes32 position = PROTOCOL_INITIALIZERS_POSITION;
+    function protocolStatus() internal pure returns (ProtocolStatus storage ps) {
+        bytes32 position = PROTOCOL_STATUS_POSITION;
         assembly {
-            pi.slot := position
+            ps.slot := position
         }
     }
 }

@@ -17,20 +17,9 @@ abstract contract ProtocolBase is BosonTypes {
      * @dev Modifier to protect initializer function from being invoked twice.
      */
     modifier onlyUnInitialized(bytes4 interfaceId) {
-        ProtocolLib.ProtocolInitializers storage pi = protocolInitializers();
-        require(!pi.initializedInterfaces[interfaceId], ALREADY_INITIALIZED);
-        pi.initializedInterfaces[interfaceId] = true;
-        _;
-    }
-
-    /**
-     * @dev Modifier that checks that an offer exists
-     *
-     * Reverts if the offer does not exist
-     */
-    modifier offerExists(uint256 _offerId) {
-        // Make sure the offer exists TODO: remove me, not used and not the way to check
-        require(_offerId > 0 && _offerId < protocolCounters().nextOfferId, "Offer does not exist");
+        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+        require(!ps.initializedInterfaces[interfaceId], ALREADY_INITIALIZED);
+        ps.initializedInterfaces[interfaceId] = true;
         _;
     }
 
@@ -45,6 +34,18 @@ abstract contract ProtocolBase is BosonTypes {
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
         require(ds.accessController.hasRole(_role, msgSender()), ACCESS_DENIED);
         _;
+    }
+
+    /**
+     * @dev Check if a region of the protocol is paused.
+     *
+     * @param _region the region to check pause status for
+     */
+    function paused(PausableRegion _region) internal view returns (bool)
+    {
+        uint256 scenario = 0; // TODO store scenario in ProtocolStorage
+
+        return true;
     }
 
     /**
@@ -111,12 +112,12 @@ abstract contract ProtocolBase is BosonTypes {
     }
 
     /**
-     * @dev Get the Protocol Initializers slot
+     * @dev Get the Protocol Status slot
      *
-     * @return pi the Protocol Initializers slot
+     * @return ps the Protocol Status slot
      */
-    function protocolInitializers() internal pure returns (ProtocolLib.ProtocolInitializers storage pi) {
-        pi = ProtocolLib.protocolInitializers();
+    function protocolStatus() internal pure returns (ProtocolLib.ProtocolStatus storage ps) {
+        ps = ProtocolLib.protocolStatus();
     }
 
     /**
