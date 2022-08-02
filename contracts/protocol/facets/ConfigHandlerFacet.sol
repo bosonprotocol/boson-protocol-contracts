@@ -32,7 +32,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
 
         // Initialize protocol config params
         setTokenAddress(_addresses.token);
-        setTreasuryAddress(_addresses.treasuryAddress);
+        setTreasuryAddress(_addresses.treasury);
         setVoucherBeaconAddress(_addresses.voucherBeacon);
         setBeaconProxyAddress(_addresses.beaconProxy);
         setProtocolFeePercentage(_fees.percentage);
@@ -88,18 +88,18 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a TreasuryAddressChanged event.
      *
-     * @param _treasuryAddress - the address of the multi-sig wallet
+     * @param _treasury - the address of the multi-sig wallet
      */
-    function setTreasuryAddress(address payable _treasuryAddress) public override onlyRole(ADMIN) {
-        protocolAddresses().treasuryAddress = _treasuryAddress;
-        emit TreasuryAddressChanged(_treasuryAddress, msgSender());
+    function setTreasuryAddress(address payable _treasury) public override onlyRole(ADMIN) {
+        protocolAddresses().treasury = _treasury;
+        emit TreasuryAddressChanged(_treasury, msgSender());
     }
 
     /**
-     * @notice The treasuryAddress getter
+     * @notice The treasury address getter
      */
     function getTreasuryAddress() external view override returns (address payable) {
-        return protocolAddresses().treasuryAddress;
+        return protocolAddresses().treasury;
     }
 
     /**

@@ -114,7 +114,7 @@ describe("IBosonBundleHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: ethers.constants.AddressZero,
+        treasury: ethers.constants.AddressZero,
         token: bosonToken.address,
         voucherBeacon: beacon.address,
         beaconProxy: proxy.address,

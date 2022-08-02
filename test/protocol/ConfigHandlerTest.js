@@ -84,7 +84,7 @@ describe("IBosonConfigHandler", function () {
           // Protocol addresses
           {
             token: token.address,
-            treasuryAddress: treasury.address,
+            treasury: treasury.address,
             voucherBeacon: beacon.address,
             beaconProxy: proxy.address,
           },
@@ -157,7 +157,7 @@ describe("IBosonConfigHandler", function () {
       const protocolConfig = [
         // Protocol addresses
         {
-          treasuryAddress: treasury.address,
+          treasury: treasury.address,
           token: token.address,
           voucherBeacon: beacon.address,
           beaconProxy: proxy.address,

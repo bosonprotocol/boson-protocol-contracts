@@ -114,7 +114,7 @@ describe("IBosonOfferHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: "0x0000000000000000000000000000000000000000",
+        treasury: "0x0000000000000000000000000000000000000000",
         token: bosonToken.address,
         voucherBeacon: beacon.address,
         beaconProxy: proxy.address,

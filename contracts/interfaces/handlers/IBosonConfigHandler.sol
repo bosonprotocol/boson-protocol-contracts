@@ -31,12 +31,12 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a TreasuryAddressChanged event.
      *
-     * @param _treasuryAddress - the address of the treasury
+     * @param _treasury - the address of the treasury
      */
-    function setTreasuryAddress(address payable _treasuryAddress) external;
+    function setTreasuryAddress(address payable _treasury) external;
 
     /**
-     * @notice The treasuryAddress getter
+     * @notice The treasury address getter
      */
     function getTreasuryAddress() external view returns (address payable);
 
