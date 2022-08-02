@@ -55,6 +55,7 @@ describe("IBosonOrchestrationHandler", function () {
     accessController,
     accountHandler,
     offerHandler,
+    exchangeHandler,
     groupHandler,
     twinHandler,
     bundleHandler,
@@ -80,7 +81,7 @@ describe("IBosonOrchestrationHandler", function () {
   let foreign721, foreign1155, fallbackError;
   let disputeResolutionTerms, disputeResolutionTermsStruct;
   let DRFeeNative, DRFeeToken;
-  let voucherInitValues, contractURI, royaltyReceiver, feeNumerator;
+  let voucherInitValues, contractURI, royaltyReceiver;
   let expectedCloneAddress, bosonVoucher;
   let tx;
   let authToken, authTokenStruct, emptyAuthToken, emptyAuthTokenStruct;
@@ -121,6 +122,7 @@ describe("IBosonOrchestrationHandler", function () {
       "SellerHandlerFacet",
       "AgentHandlerFacet",
       "DisputeResolverHandlerFacet",
+      "ExchangeHandlerFacet",
       "OfferHandlerFacet",
       "GroupHandlerFacet",
       "TwinHandlerFacet",
@@ -177,6 +179,9 @@ describe("IBosonOrchestrationHandler", function () {
 
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonExchangeHandler
+    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
 
     // Cast Diamond to IOfferHandler
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
@@ -468,6 +473,105 @@ describe("IBosonOrchestrationHandler", function () {
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+      });
+
+      it("should update state when voucherInitValues has zero feeNumerator", async function () {
+        seller.admin = ethers.constants.AddressZero;
+
+        // ERC2981 Royalty fee is 0%
+        voucherInitValues.feeNumerator = "0"; //0%
+        expect(voucherInitValues.isValid()).is.true;
+
+        // Create a seller and an offer
+        await orchestrationHandler
+          .connect(operator)
+          .createSellerAndOffer(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            authToken,
+            voucherInitValues,
+            agentId
+          );
+
+        expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+
+        // Prepare random parameters
+        let exchangeId = "1234"; // An exchange id that does not exist
+        let offerPrice = "1234567"; // A random offer price
+
+        //Exchange exists
+        let exists;
+        [exists] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
+        expect(exists).to.be.false;
+
+        // Get Royalty Information for Exchange id i.e. Voucher NFT token id
+        let receiver, royaltyAmount;
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = seller.treasury;
+        let expectedRoyaltyAmount = "0"; // Zero Fee because feeNumerator is 0%.
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+      });
+
+      it("should update state when voucherInitValues has non zero feeNumerator", async function () {
+        seller.admin = ethers.constants.AddressZero;
+
+        // ERC2981 Royalty fee is 10%
+        voucherInitValues.feeNumerator = "1000"; //10%
+        expect(voucherInitValues.isValid()).is.true;
+
+        // Create a seller and an offer
+        await orchestrationHandler
+          .connect(operator)
+          .createSellerAndOffer(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            authToken,
+            voucherInitValues,
+            agentId
+          );
+
+        expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+
+        // Prepare random parameters
+        let exchangeId = "1234"; // An exchange id that does not exist
+        let offerPrice = "1234567"; // A random offer price
+
+        //Exchange exists
+        let exists;
+        [exists] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
+        expect(exists).to.be.false;
+
+        // Get Royalty Information for Exchange id i.e. Voucher NFT token id
+        let receiver, royaltyAmount;
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = seller.treasury;
+        let expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice)
+          .mul(voucherInitValues.feeNumerator)
+          .div("10000")
+          .toString(); //10% of offer price because feeNumerator is 10%
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
       it("should ignore any provided id and assign the next available", async function () {
@@ -4635,6 +4739,105 @@ describe("IBosonOrchestrationHandler", function () {
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
       });
 
+      it("should update state when voucherInitValues has zero feeNumerator", async function () {
+        // ERC2981 Royalty fee is 0%
+        voucherInitValues.feeNumerator = "0"; //0%
+        expect(voucherInitValues.isValid()).is.true;
+
+        // Create a seller and an offer with condition
+        await orchestrationHandler
+          .connect(operator)
+          .createSellerAndOfferWithCondition(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            condition,
+            emptyAuthToken,
+            voucherInitValues,
+            agentId
+          );
+
+        // Voucher clone contract
+        expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+
+        // Prepare random parameters
+        let exchangeId = "1234"; // An exchange id that does not exist
+        let offerPrice = "1234567"; // A random offer price
+
+        //Exchange exists
+        let exists;
+        [exists] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
+        expect(exists).to.be.false;
+
+        // Get Royalty Information for Exchange id i.e. Voucher NFT token id
+        let receiver, royaltyAmount;
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = seller.treasury;
+        let expectedRoyaltyAmount = "0"; // Zero Fee because feeNumerator is 0%.
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+      });
+
+      it("should update state when voucherInitValues has non zero feeNumerator", async function () {
+        // ERC2981 Royalty fee is 10%
+        voucherInitValues.feeNumerator = "1000"; //10%
+        expect(voucherInitValues.isValid()).is.true;
+
+        // Create a seller and an offer with condition
+        await orchestrationHandler
+          .connect(operator)
+          .createSellerAndOfferWithCondition(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            condition,
+            emptyAuthToken,
+            voucherInitValues,
+            agentId
+          );
+
+        // Voucher clone contract
+        expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+
+        // Prepare random parameters
+        let exchangeId = "1234"; // An exchange id that does not exist
+        let offerPrice = "1234567"; // A random offer price
+
+        //Exchange exists
+        let exists;
+        [exists] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
+        expect(exists).to.be.false;
+
+        // Get Royalty Information for Exchange id i.e. Voucher NFT token id
+        let receiver, royaltyAmount;
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = seller.treasury;
+        let expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice)
+          .mul(voucherInitValues.feeNumerator)
+          .div("10000")
+          .toString(); //10% of offer price because feeNumerator is 10%
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+      });
+
       it("should ignore any provided ids and assign the next available", async function () {
         offer.id = "555";
         seller.id = "444";
@@ -5024,6 +5227,111 @@ describe("IBosonOrchestrationHandler", function () {
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+      });
+
+      it("should update state when voucherInitValues has zero feeNumerator", async function () {
+        // ERC2981 Royalty fee is 0%
+        voucherInitValues.feeNumerator = "0"; //0%
+        expect(voucherInitValues.isValid()).is.true;
+
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
+        // Create a seller, an offer with condition and a twin with bundle, testing for the events
+        await orchestrationHandler
+          .connect(operator)
+          .createSellerAndOfferAndTwinWithBundle(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            twin,
+            emptyAuthToken,
+            voucherInitValues,
+            agentId
+          );
+
+        // Voucher clone contract
+        expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+
+        // Prepare random parameters
+        let exchangeId = "1234"; // An exchange id that does not exist
+        let offerPrice = "1234567"; // A random offer price
+
+        //Exchange exists
+        let exists;
+        [exists] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
+        expect(exists).to.be.false;
+
+        // Get Royalty Information for Exchange id i.e. Voucher NFT token id
+        let receiver, royaltyAmount;
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = seller.treasury;
+        let expectedRoyaltyAmount = "0"; // Zero Fee because feeNumerator is 0%.
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+      });
+
+      it("should update state when voucherInitValues has non zero feeNumerator", async function () {
+        // ERC2981 Royalty fee is 10%
+        voucherInitValues.feeNumerator = "1000"; //10%
+        expect(voucherInitValues.isValid()).is.true;
+
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
+        // Create a seller, an offer with condition and a twin with bundle, testing for the events
+        await orchestrationHandler
+          .connect(operator)
+          .createSellerAndOfferAndTwinWithBundle(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            twin,
+            emptyAuthToken,
+            voucherInitValues,
+            agentId
+          );
+
+        // Voucher clone contract
+        expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+
+        // Prepare random parameters
+        let exchangeId = "1234"; // An exchange id that does not exist
+        let offerPrice = "1234567"; // A random offer price
+
+        //Exchange exists
+        let exists;
+        [exists] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
+        expect(exists).to.be.false;
+
+        // Get Royalty Information for Exchange id i.e. Voucher NFT token id
+        let receiver, royaltyAmount;
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = seller.treasury;
+        let expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice)
+          .mul(voucherInitValues.feeNumerator)
+          .div("10000")
+          .toString(); //10% of offer price because feeNumerator is 10%
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
       it("should ignore any provided ids and assign the next available", async function () {
@@ -5495,6 +5803,113 @@ describe("IBosonOrchestrationHandler", function () {
         expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
         expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+      });
+
+      it("should update state when voucherInitValues has zero feeNumerator", async function () {
+        // ERC2981 Royalty fee is 0%
+        voucherInitValues.feeNumerator = "0"; //0%
+        expect(voucherInitValues.isValid()).is.true;
+
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
+        // Create a seller, an offer with condition, twin and bundle
+        await orchestrationHandler
+          .connect(operator)
+          .createSellerAndOfferWithConditionAndTwinAndBundle(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            condition,
+            twin,
+            emptyAuthToken,
+            voucherInitValues,
+            agentId
+          );
+
+        // Voucher clone contract
+        expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+
+        // Prepare random parameters
+        let exchangeId = "1234"; // An exchange id that does not exist
+        let offerPrice = "1234567"; // A random offer price
+
+        //Exchange exists
+        let exists;
+        [exists] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
+        expect(exists).to.be.false;
+
+        // Get Royalty Information for Exchange id i.e. Voucher NFT token id
+        let receiver, royaltyAmount;
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = seller.treasury;
+        let expectedRoyaltyAmount = "0"; // Zero Fee because feeNumerator is 0%.
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+      });
+
+      it("should update state when voucherInitValues has non zero feeNumerator", async function () {
+        // ERC2981 Royalty fee is 10%
+        voucherInitValues.feeNumerator = "1000"; //10%
+        expect(voucherInitValues.isValid()).is.true;
+
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
+
+        // Create a seller, an offer with condition, twin and bundle
+        await orchestrationHandler
+          .connect(operator)
+          .createSellerAndOfferWithConditionAndTwinAndBundle(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            condition,
+            twin,
+            emptyAuthToken,
+            voucherInitValues,
+            agentId
+          );
+
+        // Voucher clone contract
+        expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
+        bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+        expect(await bosonVoucher.contractURI()).to.equal(contractURI, "Wrong contract URI");
+        expect(await bosonVoucher.name()).to.equal(VOUCHER_NAME + " " + seller.id, "Wrong voucher client name");
+        expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
+
+        // Prepare random parameters
+        let exchangeId = "1234"; // An exchange id that does not exist
+        let offerPrice = "1234567"; // A random offer price
+
+        //Exchange exists
+        let exists;
+        [exists] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
+        expect(exists).to.be.false;
+
+        // Get Royalty Information for Exchange id i.e. Voucher NFT token id
+        let receiver, royaltyAmount;
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+
+        // Expectations
+        let expectedRecipient = seller.treasury;
+        let expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice)
+          .mul(voucherInitValues.feeNumerator)
+          .div("10000")
+          .toString(); //10% of offer price because feeNumerator is 10%
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
       it("should ignore any provided ids and assign the next available", async function () {

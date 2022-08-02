@@ -371,7 +371,7 @@ describe("IBosonVoucher", function () {
         let expectedRoyaltyAmount = "0";
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
 
         // Now, set default fee as 10%
         feeNumerator = "1000"; //10%
@@ -384,7 +384,7 @@ describe("IBosonVoucher", function () {
         expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(feeNumerator).div("10000").toString();
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
       context("💔 Revert Reasons", async function () {
@@ -438,20 +438,20 @@ describe("IBosonVoucher", function () {
         let expectedRoyaltyAmount = "0";
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
       context("💔 Revert Reasons", async function () {
         it("should revert if caller is not the owner", async function () {
           // random caller
-          await expect(
-            bosonVoucher.connect(rando).deleteDefaultRoyalty()
-          ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
+          await expect(bosonVoucher.connect(rando).deleteDefaultRoyalty()).to.be.revertedWith(
+            RevertReasons.OWNABLE_NOT_OWNER
+          );
 
           // protocol as the caller
-          await expect(
-            bosonVoucher.connect(protocol).deleteDefaultRoyalty()
-          ).to.be.revertedWith(RevertReasons.OWNABLE_NOT_OWNER);
+          await expect(bosonVoucher.connect(protocol).deleteDefaultRoyalty()).to.be.revertedWith(
+            RevertReasons.OWNABLE_NOT_OWNER
+          );
         });
       });
     });
@@ -475,7 +475,7 @@ describe("IBosonVoucher", function () {
         let expectedRoyaltyAmount = "0";
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
 
         // Now, set default fee as 10%
         feeNumerator = "1000"; //10%
@@ -488,7 +488,7 @@ describe("IBosonVoucher", function () {
         expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(feeNumerator).div("10000").toString();
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
       context("💔 Revert Reasons", async function () {
@@ -542,7 +542,7 @@ describe("IBosonVoucher", function () {
         let expectedRoyaltyAmount = "0";
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
       context("💔 Revert Reasons", async function () {
@@ -579,7 +579,7 @@ describe("IBosonVoucher", function () {
         let expectedRoyaltyAmount = "0";
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
 
         // Now, set default fee as 10%
         feeNumerator = "1000"; //10%
@@ -592,7 +592,7 @@ describe("IBosonVoucher", function () {
         expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(feeNumerator).div("10000").toString();
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
 
         // Any random address can check the royalty info
         // Now, set default fee as 20%
@@ -606,7 +606,7 @@ describe("IBosonVoucher", function () {
         expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(feeNumerator).div("10000").toString();
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
-        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
     });
   });
