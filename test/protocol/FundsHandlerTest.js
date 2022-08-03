@@ -114,7 +114,10 @@ describe("IBosonFundsHandler", function () {
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
-      "AccountHandlerFacet",
+      "SellerHandlerFacet",
+      "BuyerHandlerFacet",
+      "AgentHandlerFacet",
+      "DisputeResolverHandlerFacet",
       "FundsHandlerFacet",
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
@@ -170,7 +173,7 @@ describe("IBosonFundsHandler", function () {
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
 
-    // Cast Diamond to IBosonAccountHandler
+    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
 
     // Cast Diamond to IBosonFundsHandler
