@@ -82,7 +82,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Wallet address is zero address
      * - Active is not true
      * - Wallet address is not unique to this agent
-     * - Fee percentage is greater than 10000 (100%)
+     * - Fee percentage + protocol fee percentage is greater than the max allowable fee percentage for an offer
      *
      * @param _agent - the fully populated struct with agent id set to 0x0
      */
@@ -149,7 +149,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Wallet address is zero address
      * - Wallet address is not unique to this agent
      * - Agent does not exist
-     * - Fee percentage is greater than 10000 (100%)
+     * - Fee percentage + protocol fee percentage is greater than the max allowable fee percentage for an offer
      *
      * @param _agent - the fully populated agent struct
      */
