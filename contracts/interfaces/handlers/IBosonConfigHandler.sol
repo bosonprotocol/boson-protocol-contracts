@@ -17,9 +17,9 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a TokenAddressChanged event.
      *
-     * @param _token - the address of the token contract
+     * @param _tokenAddress - the address of the token contract
      */
-    function setTokenAddress(address payable _token) external;
+    function setTokenAddress(address payable _tokenAddress) external;
 
     /**
      * @notice The token address getter
