@@ -7,6 +7,12 @@ exports.RevertReasons = {
   NOT_BUYER_OR_SELLER: "Not buyer or seller",
   NOT_VOUCHER_HOLDER: "Not current voucher holder",
 
+  // Pause related
+  NO_REGIONS_SPECIFIED: "Must specify at least one region to pause",
+  ALREADY_PAUSED: "Protocol is already paused",
+  NOT_PAUSED: "Protocol is not currently paused",
+  REGION_PAUSED: "This region of the protocol is currently paused",
+
   // General
   INVALID_ADDRESS: "Invalid address",
   INVALID_STATE: "Invalid state",

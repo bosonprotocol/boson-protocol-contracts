@@ -8,8 +8,8 @@ pragma solidity ^0.8.0;
  */
 
 contract BosonTypes {
-
     enum PausableRegion {
+        Config,
         Offers,
         Twins,
         Bundles,
@@ -20,7 +20,8 @@ contract BosonTypes {
         Agents,
         Exchanges,
         Disputes,
-        Funds
+        Funds,
+        Orchestration
     }
 
     enum EvaluationMethod {

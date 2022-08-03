@@ -10,5 +10,5 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
  */
 interface IBosonPauseEvents {
     event ProtocolPaused(BosonTypes.PausableRegion[] regions, address executedBy);
-    event ProtocolUnoaused(address executedBy);
+    event ProtocolUnpaused(address executedBy);
 }

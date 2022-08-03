@@ -41,11 +41,10 @@ abstract contract ProtocolBase is BosonTypes {
      *
      * @param _region the region to check pause status for
      */
-    function paused(PausableRegion _region) internal view returns (bool)
-    {
-        uint256 scenario = 0; // TODO store scenario in ProtocolStorage
-
-        return true;
+    function paused(PausableRegion _region) internal view returns (bool) {
+        // Region enum value must be used as the exponent in a power of 2
+        uint256 powerOfTwo = 2**uint256(_region);
+        return (protocolStatus().pauseScenario & powerOfTwo) == powerOfTwo;
     }
 
     /**

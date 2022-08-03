@@ -14,6 +14,18 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
  */
 contract TwinBase is ProtocolBase, IBosonTwinEvents {
     /**
+     * @dev Modifier that checks the Twins region is not paused
+     *
+     * Reverts if region is paused
+     *
+     * See: {BosonTypes.PausableRegion}
+     */
+    modifier twinsNotPaused() {
+        require(!paused(PausableRegion.Twins), REGION_PAUSED);
+        _;
+    }
+
+    /**
      * @notice Creates a Twin.
      *
      * Emits a TwinCreated event if successful.
@@ -28,7 +40,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
      */
-    function createTwinInternal(Twin memory _twin) internal {
+    function createTwinInternal(Twin memory _twin) internal twinsNotPaused {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
         require(exists, NOT_OPERATOR);

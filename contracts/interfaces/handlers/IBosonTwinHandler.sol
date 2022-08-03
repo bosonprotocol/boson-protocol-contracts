@@ -18,12 +18,28 @@ interface IBosonTwinHandler is IBosonTwinEvents {
      * Emits a TwinCreated event if successful.
      *
      * Reverts if:
-     * - seller does not exist
+     * - The twins region of protocol is paused
+     * - Seller does not exist
      * - Not approved to transfer the seller's token
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
      */
     function createTwin(BosonTypes.Twin memory _twin) external;
+
+    /**
+     * @notice Removes the twin.
+     *
+     * Emits a TwinDeleted event if successful.
+     *
+     * Reverts if:
+     * - The twins region of protocol is paused
+     * - Caller is not the seller.
+     * - Twin does not exist.
+     * - Twin has bundles.
+     *
+     * @param _twinId - the id of the twin to check.
+     */
+    function removeTwin(uint256 _twinId) external;
 
     /**
      * @notice Gets the details about a given twin.
@@ -42,18 +58,4 @@ interface IBosonTwinHandler is IBosonTwinEvents {
      * @return nextTwinId - the next twin id
      */
     function getNextTwinId() external view returns (uint256 nextTwinId);
-
-    /**
-     * @notice Removes the twin.
-     *
-     * Emits a TwinDeleted event if successful.
-     *
-     * Reverts if:
-     * - caller is not the seller.
-     * - Twin does not exist.
-     * - Twin has bundles.
-     *
-     * @param _twinId - the id of the twin to check.
-     */
-    function removeTwin(uint256 _twinId) external;
 }
