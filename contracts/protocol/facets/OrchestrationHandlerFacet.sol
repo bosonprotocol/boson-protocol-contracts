@@ -17,7 +17,6 @@ import { BundleBase } from "../bases/BundleBase.sol";
  */
 contract OrchestrationHandlerFacet is
     SellerBase,
-    //AgentBase,
     OfferBase,
     GroupBase,
     TwinBase,
