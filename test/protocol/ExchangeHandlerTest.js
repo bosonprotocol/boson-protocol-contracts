@@ -290,12 +290,14 @@ describe("IBosonExchangeHandler", function () {
 
       // Required voucher constructor params
       voucher = mockVoucher();
+      voucher.redeemedDate = "0";
       voucherStruct = voucher.toStruct();
 
       // Mock exchange
       exchange = mockExchange();
+      exchange.voucher = voucher;
       exchange.buyerId = buyerId;
-      expect(exchange.isValid()).is.true;
+      exchange.finalizedDate = "0";
       exchangeStruct = [id, offerId, buyerId, finalizedDate, voucherStruct, state];
 
       // Deposit seller funds so the commit will succeed
@@ -323,7 +325,6 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the struct
         exchangeStruct = exchange.toStruct();
-
         assert.equal(event.exchangeId.toString(), id, "Exchange id is incorrect");
         assert.equal(event.offerId.toString(), offerId, "Offer id is incorrect");
         assert.equal(event.buyerId.toString(), buyerId, "Buyer id is incorrect");
