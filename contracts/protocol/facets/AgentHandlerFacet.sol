@@ -114,7 +114,10 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
     function storeAgent(Agent memory _agent) internal {
         // Make sure agent fee percentage + protocol fee percentage is less than or equal the max.
         // This will lessen the likelihood that creation of offers using this agent will fail
-        require((_agent.feePercentage + protocolFees().percentage) <= protocolLimits().maxTotalOfferFeePercentage, INVALID_AGENT_FEE_PERCENTAGE);
+        require(
+            (_agent.feePercentage + protocolFees().percentage) <= protocolLimits().maxTotalOfferFeePercentage,
+            INVALID_AGENT_FEE_PERCENTAGE
+        );
 
         // Get storage location for agent
         (, Agent storage agent) = fetchAgent(_agent.id);
