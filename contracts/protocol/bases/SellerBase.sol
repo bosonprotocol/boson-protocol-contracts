@@ -3,15 +3,15 @@ pragma solidity ^0.8.0;
 
 import "./../../domain/BosonConstants.sol";
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
-import { ProtocolBase } from "./../bases/ProtocolBase.sol";
+import { ProtocolBase } from "./ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 
 /**
- * @title AccountBase
+ * @title SellerBase
  *
  * @dev Provides methods for seller creation that can be shared accross facets
  */
-contract AccountBase is ProtocolBase, IBosonAccountEvents {
+contract SellerBase is ProtocolBase, IBosonAccountEvents {
     /**
      * @notice Creates a seller
      *
@@ -85,92 +85,6 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
     }
 
     /**
-     * @notice Creates a Buyer
-     *
-     * Emits an BuyerCreated event if successful.
-     *
-     * Reverts if:
-     * - Wallet address is zero address
-     * - Active is not true
-     * - Wallet address is not unique to this buyer
-     *
-     * @param _buyer - the fully populated struct with buyer id set to 0x0
-     */
-    function createBuyerInternal(Buyer memory _buyer) internal {
-        //Check for zero address
-        require(_buyer.wallet != address(0), INVALID_ADDRESS);
-
-        //Check active is not set to false
-        require(_buyer.active, MUST_BE_ACTIVE);
-
-        // Get the next account Id and increment the counter
-        uint256 buyerId = protocolCounters().nextAccountId++;
-
-        //check that the wallet address is unique to one buyer Id
-        require(protocolLookups().buyerIdByWallet[_buyer.wallet] == 0, BUYER_ADDRESS_MUST_BE_UNIQUE);
-
-        _buyer.id = buyerId;
-        storeBuyer(_buyer);
-
-        //Notify watchers of state change
-        emit BuyerCreated(_buyer.id, _buyer, msgSender());
-    }
-
-    /**
-     * @notice Creates a marketplace agent
-     *
-     * Emits an AgentCreated event if successful.
-     *
-     * Reverts if:
-     * - Wallet address is zero address
-     * - Active is not true
-     * - Wallet address is not unique to this agent
-     * - Fee percentage is greater than 10000 (100%)
-     *
-     * @param _agent - the fully populated struct with agent id set to 0x0
-     */
-    function createAgentInternal(Agent memory _agent) internal {
-        //Check for zero address
-        require(_agent.wallet != address(0), INVALID_ADDRESS);
-
-        //Check active is not set to false
-        require(_agent.active, MUST_BE_ACTIVE);
-
-        // Make sure percentage is less than or equal to 10000
-        require(_agent.feePercentage <= 10000, FEE_PERCENTAGE_INVALID);
-
-        // Get the next account Id and increment the counter
-        uint256 agentId = protocolCounters().nextAccountId++;
-
-        //check that the wallet address is unique to one agent Id
-        require(protocolLookups().agentIdByWallet[_agent.wallet] == 0, AGENT_ADDRESS_MUST_BE_UNIQUE);
-
-        _agent.id = agentId;
-        storeAgent(_agent);
-
-        //Notify watchers of state change
-        emit AgentCreated(_agent.id, _agent, msgSender());
-    }
-
-    /**
-     * @notice Stores buyer struct in storage
-     *
-     * @param _buyer - the fully populated struct with buyer id set
-     */
-    function storeBuyer(Buyer memory _buyer) internal {
-        // Get storage location for buyer
-        (, Buyer storage buyer) = fetchBuyer(_buyer.id);
-
-        // Set buyer props individually since memory structs can't be copied to storage
-        buyer.id = _buyer.id;
-        buyer.wallet = _buyer.wallet;
-        buyer.active = _buyer.active;
-
-        //Map the buyer's wallet address to the buyerId.
-        protocolLookups().buyerIdByWallet[_buyer.wallet] = _buyer.id;
-    }
-
-    /**
      * @notice Validates seller struct and stores it to storage, along with auth token if present
      *
      * Reverts if:
@@ -216,25 +130,6 @@ contract AccountBase is ProtocolBase, IBosonAccountEvents {
         //Map the seller's other addresses to the seller Id. It's not necessary to map the treasury address, as it only receives funds
         protocolLookups().sellerIdByOperator[_seller.operator] = _seller.id;
         protocolLookups().sellerIdByClerk[_seller.clerk] = _seller.id;
-    }
-
-    /**
-     * @notice Stores agent struct in storage
-     *
-     * @param _agent - the fully populated struct with agent id set
-     */
-    function storeAgent(Agent memory _agent) internal {
-        // Get storage location for agent
-        (, Agent storage agent) = fetchAgent(_agent.id);
-
-        // Set agent props individually since memory structs can't be copied to storage
-        agent.id = _agent.id;
-        agent.wallet = _agent.wallet;
-        agent.active = _agent.active;
-        agent.feePercentage = _agent.feePercentage;
-
-        //Map the agent's wallet address to the agentId.
-        protocolLookups().agentIdByWallet[_agent.wallet] = _agent.id;
     }
 
     /**

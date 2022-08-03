@@ -56,7 +56,8 @@ describe("IBosonVoucher", function () {
     await deployProtocolHandlerFacets(protocolDiamond, [
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
-      "AccountHandlerFacet",
+      "SellerHandlerFacet",
+      "DisputeResolverHandlerFacet",
       "FundsHandlerFacet",
     ]);
 
