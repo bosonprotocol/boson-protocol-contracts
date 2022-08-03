@@ -25,7 +25,7 @@ const interfaces = [
 
 // manually add the interfaces that currently cannot be calculated
 const otherInterfaces = {
-  IBosonVoucher: "0x9e128cde",
+  IBosonVoucher: "0x9e128cde", //TODO - Verify correct Id. Doesn't match current value in IBosonVoucher.sol
   IERC1155: "0xd9b67a26",
   IERC721: "0x80ac58cd",
 };
