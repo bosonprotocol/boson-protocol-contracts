@@ -8,7 +8,6 @@ const Dispute = require("../../scripts/domain/Dispute");
 const Receipt = require("../../scripts/domain/Receipt");
 const TwinReceipt = require("../../scripts/domain/TwinReceipt");
 const Exchange = require("../../scripts/domain/Exchange");
-const Voucher = require("../../scripts/domain/Voucher");
 const Seller = require("../../scripts/domain/Seller");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
@@ -28,7 +27,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { mockOffer, mockTwin, mockDisputeResolver } = require("../utils/mock");
+const { mockOffer, mockTwin, mockDisputeResolver, mockVoucher, mockExchange } = require("../utils/mock");
 const {
   getEvent,
   setNextBlockTimestamp,
@@ -77,7 +76,7 @@ describe("IBosonExchangeHandler", function () {
   let voucherRedeemableFrom;
   let fulfillmentPeriod, voucherValid;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
-  let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
+  let voucher, voucherStruct, validUntilDate;
   let exchange, finalizedDate, state, exchangeStruct, response, exists, buyerStruct;
   let disputeResolver, disputeResolverFees;
   let foreign20, foreign721, foreign1155;
@@ -290,17 +289,13 @@ describe("IBosonExchangeHandler", function () {
       sellerPool = ethers.utils.parseUnits("15", "ether").toString();
 
       // Required voucher constructor params
-      committedDate = "0";
-      validUntilDate = "0";
-      redeemedDate = "0";
-      expired = false;
-      voucher = new Voucher(committedDate, validUntilDate, redeemedDate, expired);
-      voucherStruct = [committedDate, validUntilDate, redeemedDate, expired];
+      voucher = mockVoucher();
+      voucherStruct = voucher.toStruct();
 
-      // Required exchange constructor params
-      finalizedDate = "0";
-      state = ExchangeState.Committed;
-      exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
+      // Mock exchange
+      exchange = mockExchange();
+      exchange.buyerId = buyerId;
+      expect(exchange.isValid()).is.true;
       exchangeStruct = [id, offerId, buyerId, finalizedDate, voucherStruct, state];
 
       // Deposit seller funds so the commit will succeed

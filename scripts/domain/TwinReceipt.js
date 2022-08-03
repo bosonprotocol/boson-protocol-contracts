@@ -44,12 +44,11 @@ class TwinReceipt {
   static fromStruct(struct) {
     // destructure struct
     let [twinId, tokenId, amount, tokenAddress, tokenType] = struct;
-
     return TwinReceipt.fromObject({
       twinId: twinId.toString(),
       tokenId: tokenId.toString(),
       amount: amount.toString(),
-      tokenAddress: tokenAddress.toString(),
+      tokenAddress: tokenAddress,
       tokenType,
     });
   }

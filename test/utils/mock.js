@@ -4,9 +4,16 @@ const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferFees = require("../../scripts/domain/OfferFees");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
+const ExchangeState = require("../../scripts/domain/ExchangeState");
+const DisputeState = require("../../scripts/domain/DisputeState");
 const Twin = require("../../scripts/domain/Twin.js");
+const Exchange = require("../../scripts/domain/Exchange.js");
+const TwinReceipt = require("../../scripts/domain/TwinReceipt.js");
 const TokenType = require("../../scripts/domain/TokenType.js");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
+const Receipt = require("../../scripts/domain/Receipt");
+const Voucher = require("../../scripts/domain/Voucher");
+const Dispute = require("../../scripts/domain/Dispute");
 const { applyPercentage } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("./constants.js");
 
@@ -102,6 +109,54 @@ function mockOfferFees(protocolFee, agentFee) {
   return new OfferFees(protocolFee, agentFee);
 }
 
+function mockTwinReceipt(tokenAddress, tokenType) {
+  tokenType = tokenType ?? TokenType.FungibleToken;
+  const twinId = "1";
+  const tokenId = "1";
+  const amount = "0";
+  return new TwinReceipt(twinId, tokenId, amount, tokenAddress, tokenType);
+}
+
+function mockVoucher() {
+  // Required voucher constructor params
+  const committedDate = "1661441758";
+  const validUntilDate = "166145000";
+  const redeemedDate = "1661442001";
+  const expired = false;
+  return new Voucher(committedDate, validUntilDate, redeemedDate, expired);
+}
+
+function mockExchange() {
+  const id = "1";
+  const offerId = "1";
+  const buyerId = "1";
+  const finalizedDate = "1661447000";
+  const voucher = mockVoucher();
+  const state = ExchangeState.Committed;
+  return new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
+}
+function mockDispute() {
+  const exchangeId = "1";
+  const complaint = "Tastes weird";
+  const state = DisputeState.Resolving;
+  const buyerPercent = "500";
+
+  return new Dispute(exchangeId, complaint, state, buyerPercent);
+}
+
+async function mockReceipt() {
+  const exchange = mockExchange();
+  const { offer } = await mockOffer();
+  const dispute = mockDispute();
+  const twinReceipt = mockTwinReceipt(ethers.constants.AddressZero);
+  return new Receipt(exchange, offer, dispute, twinReceipt);
+}
+
 exports.mockOffer = mockOffer;
 exports.mockTwin = mockTwin;
 exports.mockDisputeResolver = mockDisputeResolver;
+exports.mockTwinReceipt = mockTwinReceipt;
+exports.mockVoucher = mockVoucher;
+exports.mockExchange = mockExchange;
+exports.mockReceipt = mockReceipt;
+exports.mockDispute = mockDispute;

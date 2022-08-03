@@ -74,7 +74,7 @@ class Receipt {
    * @returns {string}
    */
   toStruct() {
-    return [this.exchange, this.offer, this.dispute, this.twinReceipt];
+    return [this.exchange.toStruct(), this.offer.toStruct(), this.dispute.toStruct(), this.twinReceipt.toStruct()];
   }
 
   /**
