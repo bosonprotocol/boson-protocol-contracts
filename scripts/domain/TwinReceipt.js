@@ -1,4 +1,7 @@
+const ethers = require("ethers");
+const eip55 = require("eip55");
 const TokenType = require("./TokenType");
+
 /**
  * Boson Protocol Domain Entity: TwinReceipt
  *
@@ -7,7 +10,7 @@ const TokenType = require("./TokenType");
 class TwinReceipt {
   /*
       struct TwinReceipt {
-          uint256 id;
+          uint256 twinId;
           uint256 tokenId; // only for ERC721 and ERC1155
           uint256 amount; // only for ERC1155 and ERC20
           address tokenAddress;
@@ -15,8 +18,8 @@ class TwinReceipt {
         }
 */
 
-  constructor(id, tokenId, amount, tokenAddress, tokenType) {
-    this.id = id;
+  constructor(twinId, tokenId, amount, tokenAddress, tokenType) {
+    this.twinId = twinId;
     this.tokenId = tokenId;
     this.amount = amount;
     this.tokenAddress = tokenAddress;
@@ -29,8 +32,8 @@ class TwinReceipt {
    * @returns {TwinReceipt}
    */
   static fromObject(o) {
-    const { id, tokenId, amount, tokenAddress, tokenType } = o;
-    return new TwinReceipt(id, tokenId, amount, tokenAddress, tokenType);
+    const { twinId, tokenId, amount, tokenAddress, tokenType } = o;
+    return new TwinReceipt(twinId, tokenId, amount, tokenAddress, tokenType);
   }
 
   /**
@@ -40,13 +43,13 @@ class TwinReceipt {
    */
   static fromStruct(struct) {
     // destructure struct
-    let [id, tokenId, amount, tokenAddress, tokenType] = struct;
+    let [twinId, tokenId, amount, tokenAddress, tokenType] = struct;
 
     return TwinReceipt.fromObject({
-      id,
-      tokenId,
-      amount,
-      tokenAddress,
+      twinId: twinId.toString(),
+      tokenId: tokenId.toString(),
+      amount: amount.toString(),
+      tokenAddress: tokenAddress.toString(),
       tokenType,
     });
   }
@@ -72,7 +75,7 @@ class TwinReceipt {
    * @returns {string}
    */
   toStruct() {
-    return [this.id, this.tokenId, this.amount, this.tokenAddress, this.tokenType];
+    return [this.twinId, this.tokenId, this.amount, this.tokenAddress, this.tokenType];
   }
 
   /**
@@ -84,7 +87,63 @@ class TwinReceipt {
   }
 
   /**
-   * Is this Twin instance's tokenType field valid?
+   * Is this TwinReceipt instance's twinId field valid?
+   * Must be a string representation of a big number
+   * @returns {boolean}
+   */
+  twinIdIsValid() {
+    let valid = false;
+    let { twinId } = this;
+    try {
+      valid = typeof twinId === "string" && typeof ethers.BigNumber.from(twinId) === "object";
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this TwinReceipt instance's tokenId field valid?
+   * Must be an empty string or a string representation of a big number
+   * @returns {boolean}
+   */
+  tokenIdIsValid() {
+    let valid = false;
+    let { tokenId } = this;
+    try {
+      valid = typeof tokenId === "string" && (tokenId === "" || typeof ethers.BigNumber.from(tokenId) === "object");
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this TwinReceipt instance's amount field valid?
+   * Must be a string representation of a big number
+   * @returns {boolean}
+   */
+  amountIsValid() {
+    let valid = false;
+    let { amount } = this;
+    try {
+      valid = typeof amount === "string" && typeof ethers.BigNumber.from(amount) === "object";
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this TwinReceipt instance's tokenAddress field valid?
+   * Must be a eip55 compliant Ethereum address
+   * @returns {boolean}
+   */
+  tokenAddressIsValid() {
+    let valid = false;
+    let { tokenAddress } = this;
+    try {
+      valid = eip55.verify(eip55.encode(tokenAddress));
+    } catch (e) {}
+    return valid;
+  }
+
+  /**
+   * Is this TwinReceipt instance's tokenType field valid?
    * @returns {boolean}
    */
   tokenTypeIsValid() {
@@ -94,6 +153,20 @@ class TwinReceipt {
       valid = TokenType.Types.includes(tokenType);
     } catch (e) {}
     return valid;
+  }
+
+  /**
+   * Is this TwinReceipt instance valid?
+   * @returns {boolean}
+   */
+  isValid() {
+    return (
+      this.twinIdIsValid() &&
+      this.amountIsValid() &&
+      this.tokenIdIsValid() &&
+      this.tokenAddressIsValid() &&
+      this.tokenTypeIsValid()
+    );
   }
 }
 

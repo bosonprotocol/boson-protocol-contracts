@@ -619,6 +619,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
 
                     emit TwinTransferFailed(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 } else {
+                    // Store twinReceiptByExchange
                     protocolLookups().twinReceiptByExchange[exchangeId] = TwinReceipt(
                         twin.id,
                         tokenId,
@@ -626,6 +627,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                         twin.tokenAddress,
                         twin.tokenType
                     );
+
                     emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 }
             }
@@ -794,27 +796,47 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
         }
     }
 
+    /**
+     * @notice Get exchange receipt
+     *
+     * Reverts if:
+     * - Exchange is not in a final state
+     *
+     * @param _exchangeId - the exchange id
+     * @return receipt - the receipt for the exchange. See {BosonTypes.Receipt}
+     */
     function getReceipt(uint256 _exchangeId) external view returns (Receipt memory receipt) {
         // Get the exchange, should be in one of the finalized states
         (bool exists, Exchange storage exchange) = fetchExchange(_exchangeId);
-        require(exists);
+        require(exists, NO_SUCH_EXCHANGE);
 
         // Verify if exchange is finalized, returns true if exchange is in one of the final states
         (, bool isFinalized) = isExchangeFinalized(_exchangeId);
-        require(isFinalized);
+        require(isFinalized, EXCHANGE_IS_NOT_IN_A_FINAL_STATE);
 
+        // Add exchange to receipt
         receipt.exchange = exchange;
+
+        // Fetch offer, we assume offer exist if exchange exist
         (, Offer memory offer) = fetchOffer(exchange.offerId);
+
+        // Add offer to receipt
         receipt.offer = offer;
 
         // Fetch the dispute, it exists if exchange is in Disputed state
-        (bool disputeExists, Dispute memory dispute, DisputeDates memory disputeDates) = fetchDispute(_exchangeId);
+        (bool disputeExists, Dispute storage dispute, ) = fetchDispute(_exchangeId);
 
+        // Add dispute to receipt if exists
         if (disputeExists) {
             receipt.dispute = dispute;
         }
 
-        TwinReceipt memory twinReceipt = protocolLookups().twinReceiptByExchange[_exchangeId];
-        receipt.twinReceipt = twinReceipt;
+        // Fetch the twin receipt, it existis if offer was bundled with a twin
+        (bool twinExists, TwinReceipt storage twinReceipt) = fetchTwinReceipt(_exchangeId);
+
+        // Add twin to receipt if exists
+        if (twinExists) {
+            receipt.twinReceipt = twinReceipt;
+        }
     }
 }

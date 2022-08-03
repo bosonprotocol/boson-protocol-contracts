@@ -660,4 +660,23 @@ abstract contract ProtocolBase is BosonTypes {
         // Get the offerFees's slot
         offerFees = protocolEntities().offerFees[_offerId];
     }
+
+    /**
+     * @notice Fetches a given twin receipt from storage by exchange id
+     *
+     * @param _exchangeId - the id of the exchange
+     * @return exists - whether the twin receipt exists
+     * @return twinReceipt - the twin receipt details. See {BosonTypes.TwinReceipt}
+     */
+    function fetchTwinReceipt(uint256 _exchangeId)
+        internal
+        view
+        returns (bool exists, TwinReceipt storage twinReceipt)
+    {
+        // Get the twin's slot
+        twinReceipt = protocolLookups().twinReceiptByExchange[_exchangeId];
+
+        // Determine existence
+        exists = (_exchangeId > 0 && twinReceipt.twinId > 0);
+    }
 }

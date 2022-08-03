@@ -193,13 +193,13 @@ contract BosonTypes {
         uint256 sellerId;
         uint256 amount; // ERC1155 / ERC20 (amount to be transferred to each buyer on redemption)
         uint256 supplyAvailable; // all
-        uint256 tokenId; // ERC1155 / ERC721 (must be initialized with the initial pointer position of the ERC-721 ids available range)
+        uint256 tokenId; // ERC1155 / ERC721 (must be initialized with the initial pointer position of the ERC721 ids available range)
         address tokenAddress; // all
         TokenType tokenType;
     }
 
     struct TwinReceipt {
-        uint256 id;
+        uint256 twinId;
         uint256 tokenId; // only for ERC721 and ERC1155
         uint256 amount; // only for ERC1155 and ERC20
         address tokenAddress;

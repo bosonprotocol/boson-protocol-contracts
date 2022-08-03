@@ -2867,7 +2867,7 @@ describe("IBosonExchangeHandler", function () {
       });
     });
 
-    context.only("getReceipt", async function () {
+    context("getReceipt", async function () {
       beforeEach(async () => {
         // Commit to offer
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -2924,10 +2924,12 @@ describe("IBosonExchangeHandler", function () {
         const receiptObject = Receipt.fromStruct(receipt);
 
         const expectedReceipt = new Receipt(exchange, offer);
+        expect(expectedReceipt.isValid()).is.true;
+
         expect(receiptObject).to.eql(expectedReceipt);
       });
 
-      it("Receipt should contain dispute data if dispute was raised for exchange", async function () {
+      it("Receipt should contain dispute data if a dispute was raised for exchange", async function () {
         const complaint = "Tastes weird";
 
         // Raise a dispute on the exchange
@@ -2956,12 +2958,15 @@ describe("IBosonExchangeHandler", function () {
         const receiptObject = Receipt.fromStruct(receipt);
 
         const expectedDispute = new Dispute(exchange.id, complaint, DisputeState.Retracted, "0");
+        expect(expectedDispute.isValid()).is.true;
+
         const expectedReceipt = new Receipt(exchange, offer, expectedDispute);
+        expect(expectedReceipt.isValid()).is.true;
 
         expect(receiptObject).to.eql(expectedReceipt);
       });
 
-      it.only("Receipt should contain twin receipt data if offer was bundled with twiwn", async function () {
+      it("Receipt should contain twin receipt data if offer was bundled with twin", async function () {
         // Mint some tokens to be bundled
         await foreign20.connect(operator).mint(operator.address, "500");
 
@@ -3055,20 +3060,33 @@ describe("IBosonExchangeHandler", function () {
         const receiptObject = Receipt.fromStruct(receipt);
 
         const expectedTwinReceipt = new TwinReceipt(
-          ethers.BigNumber.from("1"),
-          ethers.BigNumber.from("0"),
-          ethers.BigNumber.from("3"),
-          "0xb9202878D9342c418155bD26C0b43e4514787F95",
-          TokenType.FungibleToken
+          twin20.id,
+          twin20.tokenId,
+          twin20.amount,
+          twin20.tokenAddress,
+          twin20.tokenType
         );
+        expect(expectedTwinReceipt.isValid()).is.true;
+
         const expectedReceipt = new Receipt(exchange, offer, undefined, expectedTwinReceipt);
+        expect(expectedReceipt.isValid()).is.true;
         expect(receiptObject).to.eql(expectedReceipt);
       });
 
-      it("should revert if the exchange is not in completed state", async function () {
-        await expect(exchangeHandler.connect(rando).getReceipt(exchange.id)).to.be.revertedWith(
-          RevertReasons.INVALID_STATE
-        );
+      context("💔 Revert Reasons", async function () {
+        it("Exchange is not in a final state", async function () {
+          await expect(exchangeHandler.connect(rando).getReceipt(exchange.id)).to.be.revertedWith(
+            RevertReasons.EXCHANGE_IS_NOT_IN_A_FINAL_STATE
+          );
+        });
+
+        it("Exchange id is invalid", async function () {
+          const invalidExchangeId = "666";
+
+          await expect(exchangeHandler.connect(rando).getReceipt(invalidExchangeId)).to.be.revertedWith(
+            RevertReasons.NO_SUCH_EXCHANGE
+          );
+        });
       });
     });
   });
