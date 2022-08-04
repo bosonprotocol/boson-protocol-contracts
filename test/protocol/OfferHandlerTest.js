@@ -14,6 +14,7 @@ const OfferDurations = require("../../scripts/domain/OfferDurations");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const OfferFees = require("../../scripts/domain/OfferFees");
+const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -64,7 +65,7 @@ describe("IBosonOfferHandler", function () {
     disputeResolutionTermsStructs,
     disputeResolutionTermsList;
   let DRFeeNative, DRFeeToken;
-  let contractURI;
+  let voucherInitValues, contractURI, royaltyPercentage;
   let emptyAuthToken;
   let agent, agentId, agentFeePercentage, nonZeroAgentIds;
   let sellerAllowList, allowedSellersToAdd;
@@ -178,12 +179,17 @@ describe("IBosonOfferHandler", function () {
       // Create a valid seller, then set fields in tests directly
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
+
+      // VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
       emptyAuthToken = new AuthToken("0", AuthTokenType.None);
       expect(emptyAuthToken.isValid()).is.true;
-      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(
@@ -726,7 +732,8 @@ describe("IBosonOfferHandler", function () {
         it("Seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           allowedSellersToAdd = ["3"]; // DR is "1", existing seller is "2", new seller is "3"
           await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
@@ -955,12 +962,11 @@ describe("IBosonOfferHandler", function () {
           // caller is an operator of another seller
           // Create a valid seller, then set fields in tests directly
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
           // AuthToken
           emptyAuthToken = new AuthToken("0", AuthTokenType.None);
           expect(emptyAuthToken.isValid()).is.true;
-          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Attempt to update the offer, expecting revert
           await expect(offerHandler.connect(rando).voidOffer(id)).to.revertedWith(RevertReasons.NOT_OPERATOR);
@@ -1043,12 +1049,11 @@ describe("IBosonOfferHandler", function () {
           // caller is an operator of another seller
           // Create a valid seller, then set fields in tests directly
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
           // AuthToken
           emptyAuthToken = new AuthToken("0", AuthTokenType.None);
           expect(emptyAuthToken.isValid()).is.true;
-          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Attempt to update the offer, expecting revert
           await expect(offerHandler.connect(rando).extendOffer(id, offerDates.validUntil)).to.revertedWith(
@@ -1274,12 +1279,17 @@ describe("IBosonOfferHandler", function () {
       // Create a valid seller, then set fields in tests directly
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
+
+      // VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
       emptyAuthToken = new AuthToken("0", AuthTokenType.None);
       expect(emptyAuthToken.isValid()).is.true;
-      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(
@@ -1940,7 +1950,8 @@ describe("IBosonOfferHandler", function () {
         it("For some offer seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           allowedSellersToAdd = ["3"];
           await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
@@ -2244,12 +2255,12 @@ describe("IBosonOfferHandler", function () {
 
           // caller is an operator of another seller
           seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, active);
-          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
           // AuthToken
           emptyAuthToken = new AuthToken("0", AuthTokenType.None);
           expect(emptyAuthToken.isValid()).is.true;
-          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Attempt to update the offer, expecting revert
           await expect(offerHandler.connect(rando).voidOfferBatch(offersToVoid)).to.revertedWith(
@@ -2358,12 +2369,11 @@ describe("IBosonOfferHandler", function () {
 
           // caller is an operator of another seller
           seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, active);
-          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
           // AuthToken
           emptyAuthToken = new AuthToken("0", AuthTokenType.None);
           expect(emptyAuthToken.isValid()).is.true;
-          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Attempt to extend the offers, expecting revert
           await expect(offerHandler.connect(rando).extendOfferBatch(offersToExtend, newValidUntilDate)).to.revertedWith(

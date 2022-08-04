@@ -141,4 +141,7 @@ exports.RevertReasons = {
 
   // Config related
   FEE_PERCENTAGE_INVALID: "Percentage representation must be less than 10000",
+
+  // ERC2981 related
+  ROYALTY_FEE_INVALID: "ERC2981: royalty fee will exceed salePrice",
 };

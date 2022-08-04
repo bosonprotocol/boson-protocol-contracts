@@ -227,4 +227,9 @@ contract BosonTypes {
         uint256 protocolFee;
         uint256 agentFee;
     }
+
+    struct VoucherInitValues {
+        string contractURI;
+        uint96 royaltyPercentage;
+    }
 }

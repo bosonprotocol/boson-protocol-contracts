@@ -8,6 +8,7 @@ const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { DisputeResolverFee, DisputeResolverFeeList } = require("../../scripts/domain/DisputeResolverFee");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
+const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
@@ -41,7 +42,7 @@ describe("DisputeResolverHandler", function () {
   let metadataUriDR;
   let invalidAccountId, id, key, value, exists;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
-  let contractURI;
+  let voucherInitValues, contractURI, royaltyPercentage;
 
   async function isValidDisputeResolverEvent(
     tx,
@@ -223,10 +224,15 @@ describe("DisputeResolverHandler", function () {
         active
       );
 
+      // VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
-      await accountHandler.connect(admin).createSeller(seller2, contractURI, emptyAuthToken);
-      await accountHandler.connect(admin).createSeller(seller3, contractURI, emptyAuthToken);
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      expect(voucherInitValues.isValid()).is.true;
+
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+      await accountHandler.connect(admin).createSeller(seller2, emptyAuthToken, voucherInitValues);
+      await accountHandler.connect(admin).createSeller(seller3, emptyAuthToken, voucherInitValues);
 
       // Make a sellerAllowList
       sellerAllowList = ["3", "1"];
@@ -1632,13 +1638,12 @@ describe("DisputeResolverHandler", function () {
           other3.address,
           active
         );
-        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
         // AuthToken
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
         expect(emptyAuthToken.isValid()).is.true;
 
-        await accountHandler.connect(admin).createSeller(seller4, contractURI, emptyAuthToken);
+        await accountHandler.connect(admin).createSeller(seller4, emptyAuthToken, voucherInitValues);
 
         sellerAllowList = ["1", "3"];
         allowedSellersToAdd = ["2", "4"];
@@ -1787,13 +1792,12 @@ describe("DisputeResolverHandler", function () {
           other3.address,
           active
         );
-        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
         // AuthToken
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
         expect(emptyAuthToken.isValid()).is.true;
 
-        await accountHandler.connect(admin).createSeller(seller4, contractURI, emptyAuthToken);
+        await accountHandler.connect(admin).createSeller(seller4, emptyAuthToken, voucherInitValues);
 
         sellerAllowList = ["1", "3", "2", "4"];
         allowedSellersToRemove = ["1", "2"];
@@ -1897,8 +1901,8 @@ describe("DisputeResolverHandler", function () {
           other4.address,
           active
         );
-        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        await accountHandler.connect(admin).createSeller(seller6, contractURI, emptyAuthToken);
+
+        await accountHandler.connect(admin).createSeller(seller6, emptyAuthToken, voucherInitValues);
 
         // check that mappings of allowed selleres were updated
         idsToCheck = ["1", "2", "3", "4", "5", "6"];
@@ -1962,8 +1966,8 @@ describe("DisputeResolverHandler", function () {
             other4.address,
             active
           );
-          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-          await accountHandler.connect(admin).createSeller(seller6, contractURI, emptyAuthToken);
+
+          await accountHandler.connect(admin).createSeller(seller6, emptyAuthToken, voucherInitValues);
 
           // seller exists, it's not approved
           allowedSellersToRemove = ["2", "4", "6"];

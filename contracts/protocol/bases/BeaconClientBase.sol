@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "../../domain/BosonConstants.sol";
 import { IBosonOfferHandler } from "../../interfaces/handlers/IBosonOfferHandler.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
+import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { BeaconClientLib } from "../libs/BeaconClientLib.sol";
 import { IClientExternalAddresses } from "../../interfaces/clients/IClientExternalAddresses.sol";
@@ -54,5 +55,18 @@ abstract contract BeaconClientBase is BosonTypes {
     function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) internal {
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
         IBosonExchangeHandler(protocolDiamond).onVoucherTransferred(_exchangeId, _newBuyer);
+    }
+
+    /**
+     * @notice Get the info about the seller associated with the sellerId.
+     *
+     * @param _sellerId - the id of the seller
+     * @return exists - the seller was found
+     * @return seller - the seller associated with the _sellerId
+     */
+    function getBosonSeller(uint256 _sellerId) internal view returns (bool exists, Seller memory seller) {
+        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+
+        (exists, seller, ) = IBosonAccountHandler(protocolDiamond).getSeller(_sellerId);
     }
 }

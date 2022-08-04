@@ -7,6 +7,7 @@ const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Agent = require("../../scripts/domain/Agent");
+const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
@@ -36,7 +37,7 @@ describe("IBosonAccountHandler", function () {
   let expected, nextAccountId;
   let support, id;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
-  let contractURI;
+  let voucherInitValues, contractURI, royaltyPercentage;
 
   before(async function () {
     // get interface Ids
@@ -143,8 +144,11 @@ describe("IBosonAccountHandler", function () {
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
 
-      // Contract URI
+      // VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
       emptyAuthToken = new AuthToken("0", AuthTokenType.None);
@@ -194,7 +198,7 @@ describe("IBosonAccountHandler", function () {
         expect(emptyAuthToken.isValid()).is.true;
 
         // Create a seller
-        await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // id of the current seller and increment nextAccountId
         id = nextAccountId++;
@@ -218,7 +222,7 @@ describe("IBosonAccountHandler", function () {
         seller.clerk = other2.address;
 
         // Create another seller
-        await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+        await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // What we expect the next account id to be
         expected = ++nextAccountId;
