@@ -198,13 +198,12 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         // get offer
         (bool offerExists, Offer memory offer) = getBosonOffer(_tokenId);
 
-        // Calculate royalty amount
-        royaltyAmount = (_salePrice * _royaltyPercentage) / 10000;
-
         if (offerExists) {
             (, Seller memory seller) = getBosonSeller(offer.sellerId);
             // get receiver
             receiver = seller.treasury;
+            // Calculate royalty amount
+            royaltyAmount = (_salePrice * _royaltyPercentage) / 10000;
         }
     }
 

@@ -302,7 +302,7 @@ describe("SellerHandler", function () {
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
-        let expectedRoyaltyAmount = "0"; // Zero Fee because royaltyPercentage is 0%.
+        let expectedRoyaltyAmount = "0"; // Zero Fee when exchange id does not exist
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
@@ -336,10 +336,7 @@ describe("SellerHandler", function () {
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
-        let expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice)
-          .mul(voucherInitValues.royaltyPercentage)
-          .div("10000")
-          .toString(); //10% of offer price because royaltyPercentage is 10%
+        let expectedRoyaltyAmount = "0"; // Zero Fee when exchange id does not exist
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
