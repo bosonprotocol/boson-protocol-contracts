@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
-
+import "hardhat/console.sol";
 import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
@@ -625,6 +625,7 @@ abstract contract ProtocolBase is BosonTypes {
         // Make sure the exchange exists
         require(exchangeExists, NO_SUCH_EXCHANGE);
         // Make sure the exchange is in expected state
+        console.log(uint256(exchange.state));
         require(exchange.state == _expectedState, INVALID_STATE);
     }
 
@@ -662,21 +663,21 @@ abstract contract ProtocolBase is BosonTypes {
     }
 
     /**
-     * @notice Fetches a given twin receipt from storage by exchange id
+     * @notice Fetches a list of twin receipts from storage by exchange id
      *
      * @param _exchangeId - the id of the exchange
-     * @return exists - whether the twin receipt exists
-     * @return twinReceipt - the twin receipt details. See {BosonTypes.TwinReceipt}
+     * @return exists - whether one or more twin receipt exists
+     * @return twinReceipts - the list of twin receipts. See {BosonTypes.TwinReceipt}
      */
-    function fetchTwinReceipt(uint256 _exchangeId)
+    function fetchTwinReceipts(uint256 _exchangeId)
         internal
         view
-        returns (bool exists, TwinReceipt storage twinReceipt)
+        returns (bool exists, TwinReceipt[] storage twinReceipts)
     {
         // Get the twin's slot
-        twinReceipt = protocolLookups().twinReceiptByExchange[_exchangeId];
+        twinReceipts = protocolLookups().twinReceiptsByExchange[_exchangeId];
 
         // Determine existence
-        exists = (_exchangeId > 0 && twinReceipt.twinId > 0);
+        exists = (_exchangeId > 0 && twinReceipts.length > 0);
     }
 }

@@ -186,7 +186,7 @@ describe("TwinReceipt", function () {
 
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
-      // Create a valid twinReceiptwinReceipthen set fields in tests directly
+      // Create a valid TwinReceipt then set fields in tests directly
       twinReceipt = mockTwinReceipt(tokenAddress);
       expect(twinReceipt.isValid()).is.true;
 

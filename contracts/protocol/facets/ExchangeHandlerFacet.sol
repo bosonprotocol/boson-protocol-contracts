@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
+import "hardhat/console.sol";
 import { IBosonExchangeHandler } from "../../interfaces/handlers/IBosonExchangeHandler.sol";
 import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHandler.sol";
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
@@ -137,6 +138,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
      */
     function completeExchange(uint256 _exchangeId) public override {
         // Get the exchange, should be in redeemed state
+        console.log("aqui");
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
         uint256 offerId = exchange.offerId;
 
@@ -550,6 +552,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
             // Variable to track whether some twin transfer failed
             bool transferFailed;
 
+            uint256 exchangeId = _exchange.id;
+
             // Visit the twins
             for (uint256 i = 0; i < twinIds.length; i++) {
                 // Get the twin
@@ -612,20 +616,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                     );
                 }
 
-                uint256 exchangeId = _exchange.id;
                 // If token transfer failed
                 if (!success) {
                     transferFailed = true;
 
                     emit TwinTransferFailed(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 } else {
-                    // Store twinReceiptByExchange
-                    protocolLookups().twinReceiptByExchange[exchangeId] = TwinReceipt(
-                        twin.id,
-                        tokenId,
-                        twin.amount,
-                        twin.tokenAddress,
-                        twin.tokenType
+                    // Store twin receipt on twinReceiptsByExchange
+                    protocolLookups().twinReceiptsByExchange[exchangeId].push(
+                        TwinReceipt(twin.id, tokenId, twin.amount, twin.tokenAddress, twin.tokenType)
                     );
 
                     emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
@@ -640,6 +639,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
                     raiseDisputeInternal(_exchange, complaint, seller.id);
                 } else {
                     // Revoke voucher if caller is an EOA
+                    console.log("taqui");
                     revokeVoucherInternal(_exchange);
                     // N.B.: If voucher was revoked because transfer twin failed, then voucher was already burned
                     shouldBurnVoucher = false;
@@ -806,7 +806,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
      * @return receipt - the receipt for the exchange. See {BosonTypes.Receipt}
      */
     function getReceipt(uint256 _exchangeId) external view returns (Receipt memory receipt) {
-        // Get the exchange, should be in one of the finalized states
+        // Get the exchange
         (bool exists, Exchange storage exchange) = fetchExchange(_exchangeId);
         require(exists, NO_SUCH_EXCHANGE);
 
@@ -823,20 +823,20 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase
         // Add offer to receipt
         receipt.offer = offer;
 
-        // Fetch the dispute, it exists if exchange is in Disputed state
-        (bool disputeExists, Dispute storage dispute, ) = fetchDispute(_exchangeId);
+        if (exchange.state == ExchangeState.Disputed) {
+            // Fetch the dispute, we assume dispute exist if exchange is in disputed state
+            (, Dispute storage dispute, ) = fetchDispute(_exchangeId);
 
-        // Add dispute to receipt if exists
-        if (disputeExists) {
+            // Add dispute to receipt if exists
             receipt.dispute = dispute;
         }
 
-        // Fetch the twin receipt, it existis if offer was bundled with a twin
-        (bool twinExists, TwinReceipt storage twinReceipt) = fetchTwinReceipt(_exchangeId);
+        // Fetch the twin receipt, it exists if offer was bundled with a twin
+        (bool twinsExists, TwinReceipt[] storage twinReceipts) = fetchTwinReceipts(_exchangeId);
 
         // Add twin to receipt if exists
-        if (twinExists) {
-            receipt.twinReceipt = twinReceipt;
+        if (twinsExists) {
+            receipt.twinReceipts = twinReceipts;
         }
     }
 }

@@ -1,4 +1,3 @@
-const ethers = require("ethers");
 const Exchange = require("./Exchange.js");
 const Dispute = require("./Dispute.js");
 const Offer = require("./Offer.js");
@@ -15,15 +14,15 @@ class Receipt {
             Exchange exchange,
             Offer offer,
             Dispute dispute,
-            TwinReceipt twinReceipt;
+            TwinReceipt twinReceipts;
           }
 */
 
-  constructor(exchange, offer, dispute, twinReceipt) {
+  constructor(exchange, offer, dispute, twinReceipts) {
     this.exchange = exchange;
     this.offer = offer;
     this.dispute = dispute ?? new Dispute("0", "", 0, "0");
-    this.twinReceipt = twinReceipt ?? new TwinReceipt("0", "0", "0", ethers.constants.AddressZero, 0);
+    this.twinReceipts = twinReceipts ?? [];
   }
 
   /**
@@ -32,8 +31,8 @@ class Receipt {
    * @returns {Receipt}
    */
   static fromObject(o) {
-    const { exchange, offer, dispute, twinReceipt } = o;
-    return new Receipt(exchange, offer, dispute, twinReceipt);
+    const { exchange, offer, dispute, twinReceipts } = o;
+    return new Receipt(exchange, offer, dispute, twinReceipts);
   }
 
   /**
@@ -43,13 +42,13 @@ class Receipt {
    */
   static fromStruct(struct) {
     // destructure struct
-    let [exchange, offer, dispute, twinReceipt] = struct;
+    let [exchange, offer, dispute, twinReceipts] = struct;
 
     return Receipt.fromObject({
       exchange: Exchange.fromStruct(exchange),
       offer: Offer.fromStruct(offer),
       dispute: Dispute.fromStruct(dispute),
-      twinReceipt: TwinReceipt.fromStruct(twinReceipt),
+      twinReceipts: twinReceipts.map((twinReceipt) => TwinReceipt.fromStruct(twinReceipt)),
     });
   }
 
@@ -74,7 +73,7 @@ class Receipt {
    * @returns {string}
    */
   toStruct() {
-    return [this.exchange.toStruct(), this.offer.toStruct(), this.dispute.toStruct(), this.twinReceipt.toStruct()];
+    return [this.exchange.toStruct(), this.offer.toStruct(), this.dispute.toStruct(), this.twinReceipts.toStruct()];
   }
 
   /**
@@ -128,16 +127,22 @@ class Receipt {
   }
 
   /**
-   * Is this Receipt instance's twinReceipt field valid?
-   * If present, must be a valid TwinReceipt instance
+   * Is this Receipt instance's twinReceipts field valid?
+   * If present, must be a valid array of TwinReceipt instance
    * @returns {boolean}
    */
-  twinReceiptIsValid() {
+  twinReceiptsIsValid() {
     let valid = false;
-    let { twinReceipt } = this;
+    let { twinReceipts } = this;
     try {
-      valid =
-        twinReceipt === null || twinReceipt === undefined || (typeof twinReceipt === "object" && twinReceipt.isValid());
+      const twinReceiptsArray = Array.isArray(twinReceipts);
+      if (twinReceiptsArray && twinReceiptsArray.length > 0) {
+        twinReceipts.forEach((twinReceipt) => {
+          valid = typeof twinReceipt === "object" && twinReceipt.isValid();
+        });
+      } else {
+        valid = true;
+      }
     } catch (e) {}
     return valid;
   }
@@ -147,7 +152,7 @@ class Receipt {
    * @returns {boolean}
    */
   isValid() {
-    return this.exchangeIsValid() && this.offerIsValid() && this.disputeIsValid() && this.twinReceiptIsValid();
+    return this.exchangeIsValid() && this.offerIsValid() && this.disputeIsValid() && this.twinReceiptsIsValid();
   }
 }
 

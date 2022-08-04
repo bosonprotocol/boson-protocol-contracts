@@ -180,7 +180,7 @@ contract BosonTypes {
         Exchange exchange;
         Offer offer;
         Dispute dispute;
-        TwinReceipt twinReceipt;
+        TwinReceipt[] twinReceipts;
     }
 
     struct TokenRange {
