@@ -31,7 +31,7 @@ function getInterfaceId(contract) {
     return acc;
   }, []);
   let interfaceId = selectors.reduce((pv, cv) => pv.xor(cv), ethers.BigNumber.from("0x00000000"));
-  return interfaceId.isZero() ? "0x00000000" : interfaceId.toHexString();
+  return interfaceId.isZero() ? "0x00000000" : ethers.utils.hexZeroPad(interfaceId.toHexString(), 4);
 }
 
 // get function selector from function signature

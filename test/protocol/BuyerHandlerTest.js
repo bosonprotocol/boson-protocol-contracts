@@ -9,6 +9,7 @@ const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
+const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
@@ -37,7 +38,7 @@ describe("BuyerHandler", function () {
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let offerId;
   let bosonVoucher;
-  let contractURI;
+  let voucherInitValues, contractURI, royaltyPercentage;
 
   beforeEach(async function () {
     // Make accounts available
@@ -81,10 +82,10 @@ describe("BuyerHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: "0x0000000000000000000000000000000000000000",
-        tokenAddress: "0x0000000000000000000000000000000000000000",
-        voucherBeaconAddress: beacon.address,
-        beaconProxyAddress: proxy.address,
+        treasury: ethers.constants.AddressZero,
+        token: ethers.constants.AddressZero,
+        voucherBeacon: beacon.address,
+        beaconProxy: proxy.address,
       },
       // Protocol limits
       {
@@ -402,11 +403,14 @@ describe("BuyerHandler", function () {
           emptyAuthToken = new AuthToken("0", AuthTokenType.None);
           expect(emptyAuthToken.isValid()).is.true;
 
-          // Contract URI
+          // VoucherInitValues
           contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+          royaltyPercentage = "0"; // 0%
+          voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+          expect(voucherInitValues.isValid()).is.true;
 
           // Create a seller
-          await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+          await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           [exists] = await accountHandler.connect(rando).getSellerByAddress(operator.address);
           expect(exists).is.true;
