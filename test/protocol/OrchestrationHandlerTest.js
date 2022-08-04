@@ -81,7 +81,7 @@ describe("IBosonOrchestrationHandler", function () {
   let foreign721, foreign1155, fallbackError;
   let disputeResolutionTerms, disputeResolutionTermsStruct;
   let DRFeeNative, DRFeeToken;
-  let voucherInitValues, contractURI, royaltyReceiver;
+  let voucherInitValues, contractURI, royaltyPercentage;
   let expectedCloneAddress, bosonVoucher;
   let tx;
   let authToken, authTokenStruct, emptyAuthToken, emptyAuthTokenStruct;
@@ -480,7 +480,7 @@ describe("IBosonOrchestrationHandler", function () {
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
       });
 
-      it("should update state when voucherInitValues has zero royaltyPercentage", async function () {
+      it("should update state when voucherInitValues has zero royaltyPercentage and exchangeId does not exist", async function () {
         seller.admin = ethers.constants.AddressZero;
 
         // ERC2981 Royalty fee is 0%
@@ -518,7 +518,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Get Royalty Information for Exchange id i.e. Voucher NFT token id
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
@@ -528,7 +528,7 @@ describe("IBosonOrchestrationHandler", function () {
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
-      it("should update state when voucherInitValues has non zero royaltyPercentage", async function () {
+      it("should update state when voucherInitValues has non zero royaltyPercentage and exchangeId does not exist", async function () {
         seller.admin = ethers.constants.AddressZero;
 
         // ERC2981 Royalty fee is 10%
@@ -566,7 +566,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Get Royalty Information for Exchange id i.e. Voucher NFT token id
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
@@ -4735,7 +4735,7 @@ describe("IBosonOrchestrationHandler", function () {
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
       });
 
-      it("should update state when voucherInitValues has zero royaltyPercentage", async function () {
+      it("should update state when voucherInitValues has zero royaltyPercentage and exchangeId does not exist", async function () {
         // ERC2981 Royalty fee is 0%
         voucherInitValues.royaltyPercentage = "0"; //0%
         expect(voucherInitValues.isValid()).is.true;
@@ -4773,7 +4773,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Get Royalty Information for Exchange id i.e. Voucher NFT token id
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
@@ -4783,7 +4783,7 @@ describe("IBosonOrchestrationHandler", function () {
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
-      it("should update state when voucherInitValues has non zero royaltyPercentage", async function () {
+      it("should update state when voucherInitValues has non zero royaltyPercentage and exchangeId does not exist", async function () {
         // ERC2981 Royalty fee is 10%
         voucherInitValues.royaltyPercentage = "1000"; //10%
         expect(voucherInitValues.isValid()).is.true;
@@ -4821,7 +4821,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Get Royalty Information for Exchange id i.e. Voucher NFT token id
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
@@ -5228,7 +5228,7 @@ describe("IBosonOrchestrationHandler", function () {
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
       });
 
-      it("should update state when voucherInitValues has zero royaltyPercentage", async function () {
+      it("should update state when voucherInitValues has zero royaltyPercentage and exchangeId does not exist", async function () {
         // ERC2981 Royalty fee is 0%
         voucherInitValues.royaltyPercentage = "0"; //0%
         expect(voucherInitValues.isValid()).is.true;
@@ -5269,7 +5269,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Get Royalty Information for Exchange id i.e. Voucher NFT token id
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
@@ -5279,7 +5279,7 @@ describe("IBosonOrchestrationHandler", function () {
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
-      it("should update state when voucherInitValues has non zero royaltyPercentage", async function () {
+      it("should update state when voucherInitValues has non zero royaltyPercentage and exchangeId does not exist", async function () {
         // ERC2981 Royalty fee is 10%
         voucherInitValues.royaltyPercentage = "1000"; //10%
         expect(voucherInitValues.isValid()).is.true;
@@ -5320,7 +5320,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Get Royalty Information for Exchange id i.e. Voucher NFT token id
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
@@ -5807,7 +5807,7 @@ describe("IBosonOrchestrationHandler", function () {
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + seller.id, "Wrong voucher client symbol");
       });
 
-      it("should update state when voucherInitValues has zero royaltyPercentage", async function () {
+      it("should update state when voucherInitValues has zero royaltyPercentage and exchangeId does not exist", async function () {
         // ERC2981 Royalty fee is 0%
         voucherInitValues.royaltyPercentage = "0"; //0%
         expect(voucherInitValues.isValid()).is.true;
@@ -5849,7 +5849,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Get Royalty Information for Exchange id i.e. Voucher NFT token id
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist
@@ -5859,7 +5859,7 @@ describe("IBosonOrchestrationHandler", function () {
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
-      it("should update state when voucherInitValues has non zero royaltyPercentage", async function () {
+      it("should update state when voucherInitValues has non zero royaltyPercentage and exchangeId does not exist", async function () {
         // ERC2981 Royalty fee is 10%
         voucherInitValues.royaltyPercentage = "1000"; //10%
         expect(voucherInitValues.isValid()).is.true;
@@ -5901,7 +5901,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         // Get Royalty Information for Exchange id i.e. Voucher NFT token id
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = ethers.constants.AddressZero; //expect zero address when exchange id does not exist

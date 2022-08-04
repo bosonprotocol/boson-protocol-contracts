@@ -369,7 +369,7 @@ describe("IBosonVoucher", function () {
         await bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage);
 
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).callStatic.royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = seller.treasury;
@@ -382,7 +382,7 @@ describe("IBosonVoucher", function () {
         royaltyPercentage = "1000"; //10%
         await bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage);
 
-        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).callStatic.royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         expectedRecipient = seller.treasury;
@@ -429,7 +429,7 @@ describe("IBosonVoucher", function () {
         await bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage);
 
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         let expectedRecipient = seller.treasury;
@@ -442,7 +442,7 @@ describe("IBosonVoucher", function () {
         royaltyPercentage = "1000"; //10%
         await bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage);
 
-        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).callStatic.royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(operator).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         expectedRecipient = seller.treasury;
@@ -456,7 +456,7 @@ describe("IBosonVoucher", function () {
         royaltyPercentage = "2000"; //20%
         await bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage);
 
-        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).callStatic.royaltyInfo(exchangeId, offerPrice);
+        [receiver, royaltyAmount] = await bosonVoucher.connect(rando).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         expectedRecipient = seller.treasury;

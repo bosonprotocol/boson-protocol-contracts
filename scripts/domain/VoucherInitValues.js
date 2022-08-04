@@ -93,14 +93,17 @@ class VoucherInitValues {
 
   /**
    * Is this VoucherInitValues instance's royaltyPercentage valid?
-   * Must be a string representation of a big number
+   * Must be a string representation of a big number less than or equal to 10000, i.e. <= 100%
    * @returns {boolean}
    */
   royaltyPercentageIsValid() {
     let valid = false;
     let { royaltyPercentage } = this;
     try {
-      valid = typeof royaltyPercentage === "string" && typeof ethers.BigNumber.from(royaltyPercentage) === "object";
+      valid =
+        typeof royaltyPercentage === "string" &&
+        typeof ethers.BigNumber.from(royaltyPercentage) === "object" &&
+        ethers.BigNumber.from(royaltyPercentage).lte(ethers.BigNumber.from("10000"));
     } catch (e) {}
     return valid;
   }

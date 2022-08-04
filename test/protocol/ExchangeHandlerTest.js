@@ -483,9 +483,7 @@ describe("IBosonExchangeHandler", function () {
         // Make sure that vouchers have correct royalty fee for exchangeId 1
         exchangeId = "1";
         let receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucherClone
-          .connect(operator)
-          .callStatic.royaltyInfo(exchangeId, offer.price);
+        [receiver, royaltyAmount] = await bosonVoucherClone.connect(operator).royaltyInfo(exchangeId, offer.price);
 
         // Expectations
         let expectedRecipient = seller1Treasury; //Expect 1st seller's treasury address as exchange id exists
@@ -500,9 +498,7 @@ describe("IBosonExchangeHandler", function () {
         seller2Treasury = seller.treasury;
 
         receiver, royaltyAmount;
-        [receiver, royaltyAmount] = await bosonVoucherClone2
-          .connect(operator)
-          .callStatic.royaltyInfo(exchangeId, offer.price);
+        [receiver, royaltyAmount] = await bosonVoucherClone2.connect(operator).royaltyInfo(exchangeId, offer.price);
 
         // Expectations
         expectedRecipient = seller2Treasury; //Expect 2nd seller's treasury address as exchange id exists

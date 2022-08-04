@@ -144,7 +144,7 @@ describe("IBosonAccountHandler", function () {
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
 
-      // Contract URI
+      // VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
       royaltyPercentage = "0"; // 0%
       voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
