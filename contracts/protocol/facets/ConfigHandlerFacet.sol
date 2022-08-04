@@ -31,10 +31,10 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         DiamondLib.addSupportedInterface(type(IBosonConfigHandler).interfaceId);
 
         // Initialize protocol config params
-        setTokenAddress(_addresses.tokenAddress);
-        setTreasuryAddress(_addresses.treasuryAddress);
-        setVoucherBeaconAddress(_addresses.voucherBeaconAddress);
-        setBeaconProxyAddress(_addresses.beaconProxyAddress);
+        setTokenAddress(_addresses.token);
+        setTreasuryAddress(_addresses.treasury);
+        setVoucherBeaconAddress(_addresses.voucherBeacon);
+        setBeaconProxyAddress(_addresses.beaconProxy);
         setProtocolFeePercentage(_fees.percentage);
         setProtocolFeeFlatBoson(_fees.flatBoson);
         setMaxExchangesPerBatch(_limits.maxExchangesPerBatch);
@@ -72,15 +72,15 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _tokenAddress - the address of the token contract
      */
     function setTokenAddress(address payable _tokenAddress) public override onlyRole(ADMIN) {
-        protocolAddresses().tokenAddress = _tokenAddress;
+        protocolAddresses().token = _tokenAddress;
         emit TokenAddressChanged(_tokenAddress, msgSender());
     }
 
     /**
-     * @notice The tokenAddress getter
+     * @notice The token address getter
      */
     function getTokenAddress() external view override returns (address payable) {
-        return protocolAddresses().tokenAddress;
+        return protocolAddresses().token;
     }
 
     /**
@@ -91,15 +91,15 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _treasuryAddress - the address of the multi-sig wallet
      */
     function setTreasuryAddress(address payable _treasuryAddress) public override onlyRole(ADMIN) {
-        protocolAddresses().treasuryAddress = _treasuryAddress;
+        protocolAddresses().treasury = _treasuryAddress;
         emit TreasuryAddressChanged(_treasuryAddress, msgSender());
     }
 
     /**
-     * @notice The treasuryAddress getter
+     * @notice The treasury address getter
      */
     function getTreasuryAddress() external view override returns (address payable) {
-        return protocolAddresses().treasuryAddress;
+        return protocolAddresses().treasury;
     }
 
     /**
@@ -110,15 +110,15 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _voucherBeaconAddress - the address of the Boson Voucher beacon contract.
      */
     function setVoucherBeaconAddress(address _voucherBeaconAddress) public override onlyRole(ADMIN) {
-        protocolAddresses().voucherBeaconAddress = _voucherBeaconAddress;
+        protocolAddresses().voucherBeacon = _voucherBeaconAddress;
         emit VoucherBeaconAddressChanged(_voucherBeaconAddress, msgSender());
     }
 
     /**
-     * @notice The voucherBeaconAddress getter
+     * @notice The voucherBeacon address getter
      */
     function getVoucherBeaconAddress() external view override returns (address) {
-        return protocolAddresses().voucherBeaconAddress;
+        return protocolAddresses().voucherBeacon;
     }
 
     /**
@@ -129,15 +129,15 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _beaconProxyAddress - the address of the reference proxy implementation
      */
     function setBeaconProxyAddress(address _beaconProxyAddress) public override onlyRole(ADMIN) {
-        protocolAddresses().beaconProxyAddress = _beaconProxyAddress;
+        protocolAddresses().beaconProxy = _beaconProxyAddress;
         emit BeaconProxyAddressChanged(_beaconProxyAddress, msgSender());
     }
 
     /**
-     * @notice The beaconProxyAddress getter
+     * @notice The beaconProxy address getter
      */
     function getBeaconProxyAddress() external view override returns (address) {
-        return protocolAddresses().beaconProxyAddress;
+        return protocolAddresses().beaconProxy;
     }
 
     /**
