@@ -148,8 +148,8 @@ async function mockReceipt() {
   const exchange = mockExchange();
   const { offer } = await mockOffer();
   const dispute = mockDispute();
-  const twinReceipt = mockTwinReceipt(ethers.constants.AddressZero);
-  return new Receipt(exchange, offer, dispute, twinReceipt);
+  const twinReceipts = mockTwinReceipt(ethers.constants.AddressZero);
+  return new Receipt(exchange, offer, dispute, [twinReceipts]);
 }
 
 exports.mockOffer = mockOffer;

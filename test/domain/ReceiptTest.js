@@ -17,7 +17,7 @@ describe("Receipt", function () {
       expect(receipt.exchangeIsValid()).is.true;
       expect(receipt.offerIsValid()).is.true;
       expect(receipt.disputeIsValid()).is.true;
-      expect(receipt.twinReceiptIsValid()).is.true;
+      expect(receipt.twinReceiptsIsValid()).is.true;
       expect(receipt.isValid()).is.true;
     });
   });
@@ -29,7 +29,7 @@ describe("Receipt", function () {
       expect(receipt.exchangeIsValid()).is.true;
       expect(receipt.offerIsValid()).is.true;
       expect(receipt.disputeIsValid()).is.true;
-      expect(receipt.twinReceiptIsValid()).is.true;
+      expect(receipt.twinReceiptsIsValid()).is.true;
       expect(receipt.isValid()).is.true;
     });
 
@@ -117,28 +117,28 @@ describe("Receipt", function () {
 
     it("TwinReceipt must be a valid twinReceipt instance", async function () {
       // Invalid field value
-      receipt.twinReceipt = 12;
-      expect(receipt.twinReceiptIsValid()).is.false;
+      receipt.twinReceipts = 12;
+      expect(receipt.twinReceiptsIsValid()).is.false;
       expect(receipt.isValid()).is.false;
 
       // Invalid field value
-      receipt.twinReceipt = "zedzdeadbaby";
-      expect(receipt.twinReceiptIsValid()).is.false;
+      receipt.twinReceipts = "zedzdeadbaby";
+      expect(receipt.twinReceiptsIsValid()).is.false;
       expect(receipt.isValid()).is.false;
 
       // Valid field value
-      receipt.twinReceipt = true;
-      expect(receipt.twinReceiptIsValid()).is.false;
+      receipt.twinReceipts = true;
+      expect(receipt.twinReceiptsIsValid()).is.false;
       expect(receipt.isValid()).is.false;
 
       // Valid field value
-      receipt.twinReceipt = new Date();
-      expect(receipt.twinReceiptIsValid()).is.false;
+      receipt.twinReceipts = new Date();
+      expect(receipt.twinReceiptsIsValid()).is.false;
       expect(receipt.isValid()).is.false;
 
       // Valid field value
-      receipt.twinReceipt = mockTwinReceipt(ethers.constants.AddressZero);
-      expect(receipt.twinReceiptIsValid()).is.true;
+      receipt.twinReceipts = [mockTwinReceipt(ethers.constants.AddressZero)];
+      expect(receipt.twinReceiptsIsValid()).is.true;
       expect(receipt.isValid()).is.true;
     });
 
@@ -148,18 +148,23 @@ describe("Receipt", function () {
         receipt = await mockReceipt();
         expect(receipt.isValid()).is.true;
 
-        const { exchange, offer, dispute, twinReceipt } = receipt;
+        const { exchange, offer, dispute, twinReceipts } = receipt;
 
         // Get plain object
         object = {
           exchange,
           offer,
           dispute,
-          twinReceipt,
+          twinReceipts,
         };
 
         // Struct representation
-        struct = [exchange.toStruct(), offer.toStruct(), dispute.toStruct(), twinReceipt.toStruct()];
+        struct = [
+          exchange.toStruct(),
+          offer.toStruct(),
+          dispute.toStruct(),
+          twinReceipts.map((twinReceipt) => twinReceipt.toStruct()),
+        ];
       });
 
       context("👉 Static", async function () {

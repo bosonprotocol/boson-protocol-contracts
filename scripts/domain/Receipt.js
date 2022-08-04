@@ -43,7 +43,6 @@ class Receipt {
   static fromStruct(struct) {
     // destructure struct
     let [exchange, offer, dispute, twinReceipts] = struct;
-
     return Receipt.fromObject({
       exchange: Exchange.fromStruct(exchange),
       offer: Offer.fromStruct(offer),
@@ -73,7 +72,12 @@ class Receipt {
    * @returns {string}
    */
   toStruct() {
-    return [this.exchange.toStruct(), this.offer.toStruct(), this.dispute.toStruct(), this.twinReceipts.toStruct()];
+    return [
+      this.exchange.toStruct(),
+      this.offer.toStruct(),
+      this.dispute.toStruct(),
+      this.twinReceipts.map((twinReceipt) => twinReceipt.toStruct()),
+    ];
   }
 
   /**
@@ -136,12 +140,14 @@ class Receipt {
     let { twinReceipts } = this;
     try {
       const twinReceiptsArray = Array.isArray(twinReceipts);
-      if (twinReceiptsArray && twinReceiptsArray.length > 0) {
-        twinReceipts.forEach((twinReceipt) => {
-          valid = typeof twinReceipt === "object" && twinReceipt.isValid();
-        });
-      } else {
-        valid = true;
+      if (twinReceiptsArray) {
+        if (twinReceipts.length == 0) {
+          valid = false;
+        } else {
+          twinReceipts.forEach((twinReceipt) => {
+            valid = typeof twinReceipt === "object" && twinReceipt.isValid();
+          });
+        }
       }
     } catch (e) {}
     return valid;
