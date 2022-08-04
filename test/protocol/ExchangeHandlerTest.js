@@ -152,10 +152,10 @@ describe("IBosonExchangeHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: ethers.constants.AddressZero,
-        tokenAddress: ethers.constants.AddressZero,
-        voucherBeaconAddress: beacon.address,
-        beaconProxyAddress: proxy.address,
+        treasury: ethers.constants.AddressZero,
+        token: ethers.constants.AddressZero,
+        voucherBeacon: beacon.address,
+        beaconProxy: proxy.address,
       },
       // Protocol limits
       {

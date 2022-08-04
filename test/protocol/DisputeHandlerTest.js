@@ -143,10 +143,10 @@ describe("IBosonDisputeHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: "0x0000000000000000000000000000000000000000",
-        tokenAddress: bosonToken.address,
-        voucherBeaconAddress: beacon.address,
-        beaconProxyAddress: proxy.address,
+        treasury: ethers.constants.AddressZero,
+        token: bosonToken.address,
+        voucherBeacon: beacon.address,
+        beaconProxy: proxy.address,
       },
       // Protocol limits
       {

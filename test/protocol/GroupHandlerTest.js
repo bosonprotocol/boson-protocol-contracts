@@ -81,10 +81,10 @@ describe("IBosonGroupHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: ethers.constants.AddressZero,
-        tokenAddress: bosonToken.address,
-        voucherBeaconAddress: ethers.constants.AddressZero,
-        beaconProxyAddress: ethers.constants.AddressZero,
+        treasury: ethers.constants.AddressZero,
+        token: bosonToken.address,
+        voucherBeacon: ethers.constants.AddressZero,
+        beaconProxy: ethers.constants.AddressZero,
       },
       // Protocol limits
       {

@@ -80,10 +80,10 @@ describe("IBosonAccountHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: "0x0000000000000000000000000000000000000000",
-        tokenAddress: "0x0000000000000000000000000000000000000000",
-        voucherBeaconAddress: beacon.address,
-        beaconProxyAddress: proxy.address,
+        treasury: ethers.constants.AddressZero,
+        token: ethers.constants.AddressZero,
+        voucherBeacon: beacon.address,
+        beaconProxy: proxy.address,
       },
       // Protocol limits
       {

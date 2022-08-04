@@ -147,7 +147,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         ProtocolLib.ProtocolAddresses storage pa = protocolAddresses();
 
         // Load beacon proxy contract address
-        bytes20 targetBytes = bytes20(pa.beaconProxyAddress);
+        bytes20 targetBytes = bytes20(pa.beaconProxy);
 
         // create a minimal clone
         assembly {
@@ -159,7 +159,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         }
 
         // Initialize the clone
-        IInitializableClone(cloneAddress).initialize(pa.voucherBeaconAddress);
+        IInitializableClone(cloneAddress).initialize(pa.voucherBeacon);
         IInitializableClone(cloneAddress).initializeVoucher(_sellerId, _operator, _contractURI);
     }
 }
