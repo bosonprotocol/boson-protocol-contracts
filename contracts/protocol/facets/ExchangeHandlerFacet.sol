@@ -7,7 +7,7 @@ import { IBosonAccountHandler } from "../../interfaces/handlers/IBosonAccountHan
 import { IBosonVoucher } from "../../interfaces/clients/IBosonVoucher.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
-import { AccountBase } from "../bases/AccountBase.sol";
+import { BuyerBase } from "../bases/BuyerBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
@@ -27,7 +27,7 @@ interface MultiToken {
  *
  * @notice Handles exchanges associated with offers within the protocol
  */
-contract ExchangeHandlerFacet is IBosonExchangeHandler, AccountBase, DisputeBase {
+contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     /**
      * @notice Facet Initializer
      */

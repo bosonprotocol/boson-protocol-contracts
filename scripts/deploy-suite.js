@@ -140,6 +140,10 @@ function getAuthTokenContracts() {
 function getNoArgFacetNames() {
   return [
     "AccountHandlerFacet",
+    "SellerHandlerFacet",
+    "BuyerHandlerFacet",
+    "DisputeResolverHandlerFacet",
+    "AgentHandlerFacet",
     "BundleHandlerFacet",
     "DisputeHandlerFacet",
     "ExchangeHandlerFacet",

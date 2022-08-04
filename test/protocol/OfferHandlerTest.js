@@ -89,7 +89,12 @@ describe("IBosonOfferHandler", function () {
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet", "OfferHandlerFacet"]);
+    await deployProtocolHandlerFacets(protocolDiamond, [
+      "SellerHandlerFacet",
+      "AgentHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "OfferHandlerFacet",
+    ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
@@ -141,7 +146,7 @@ describe("IBosonOfferHandler", function () {
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
 
-    // Cast Diamond to IBosonAccountHandler
+    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
 
     // Cast Diamond to IBosonOfferHandler
