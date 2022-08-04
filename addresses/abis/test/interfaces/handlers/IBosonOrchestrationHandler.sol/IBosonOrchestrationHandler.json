@@ -2027,11 +2027,6 @@
           "type": "tuple"
         },
         {
-          "internalType": "string",
-          "name": "_contractURI",
-          "type": "string"
-        },
-        {
           "components": [
             {
               "internalType": "uint256",
@@ -2157,6 +2152,23 @@
           ],
           "internalType": "struct BosonTypes.AuthToken",
           "name": "_authToken",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "contractURI",
+              "type": "string"
+            },
+            {
+              "internalType": "uint96",
+              "name": "royaltyPercentage",
+              "type": "uint96"
+            }
+          ],
+          "internalType": "struct BosonTypes.VoucherInitValues",
+          "name": "_voucherInitValues",
           "type": "tuple"
         },
         {
@@ -2210,11 +2222,6 @@
           "type": "tuple"
         },
         {
-          "internalType": "string",
-          "name": "_contractURI",
-          "type": "string"
-        },
-        {
           "components": [
             {
               "internalType": "uint256",
@@ -2382,6 +2389,23 @@
           ],
           "internalType": "struct BosonTypes.AuthToken",
           "name": "_authToken",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "contractURI",
+              "type": "string"
+            },
+            {
+              "internalType": "uint96",
+              "name": "royaltyPercentage",
+              "type": "uint96"
+            }
+          ],
+          "internalType": "struct BosonTypes.VoucherInitValues",
+          "name": "_voucherInitValues",
           "type": "tuple"
         },
         {
@@ -2435,11 +2459,6 @@
           "type": "tuple"
         },
         {
-          "internalType": "string",
-          "name": "_contractURI",
-          "type": "string"
-        },
-        {
           "components": [
             {
               "internalType": "uint256",
@@ -2605,6 +2624,23 @@
           "type": "tuple"
         },
         {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "contractURI",
+              "type": "string"
+            },
+            {
+              "internalType": "uint96",
+              "name": "royaltyPercentage",
+              "type": "uint96"
+            }
+          ],
+          "internalType": "struct BosonTypes.VoucherInitValues",
+          "name": "_voucherInitValues",
+          "type": "tuple"
+        },
+        {
           "internalType": "uint256",
           "name": "_agentId",
           "type": "uint256"
@@ -2653,11 +2689,6 @@
           "internalType": "struct BosonTypes.Seller",
           "name": "_seller",
           "type": "tuple"
-        },
-        {
-          "internalType": "string",
-          "name": "_contractURI",
-          "type": "string"
         },
         {
           "components": [
@@ -2864,6 +2895,23 @@
           ],
           "internalType": "struct BosonTypes.AuthToken",
           "name": "_authToken",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "contractURI",
+              "type": "string"
+            },
+            {
+              "internalType": "uint96",
+              "name": "royaltyPercentage",
+              "type": "uint96"
+            }
+          ],
+          "internalType": "struct BosonTypes.VoucherInitValues",
+          "name": "_voucherInitValues",
           "type": "tuple"
         },
         {
