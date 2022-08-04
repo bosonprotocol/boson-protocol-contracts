@@ -900,7 +900,7 @@ describe("IBosonOfferHandler", function () {
           it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "4"; // argument sent to contract for createAgent will be ignored
-            agentFeePercentage = "3000"; //930%
+            agentFeePercentage = "3000"; //30%
 
             active = true;
 
