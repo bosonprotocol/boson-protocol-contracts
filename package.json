@@ -33,8 +33,9 @@
     "deploy-suite:test": "npx hardhat run --network test scripts/deploy-suite.js  >> logs/test.deploy.contracts.txt",
     "deploy-suite:mainnet": "npx hardhat run --network mainnet scripts/deploy-suite.js >> logs/mainnet.deploy.contracts.txt",
     "deploy-suite:mumbai": "npx hardhat run --network mumbai scripts/deploy-suite.js >> logs/mumbai.deploy.contracts.txt",
-    "manage-roles:mainnet": " npx hardhat --network mainnet run scripts/manage-roles.js >> logs/mainnet.manage.roles.txt",
-    "manage-roles:mumbai": " npx hardhat --network mumbai run scripts/manage-roles.js >> logs/mumbai.manage.roles.txt"
+    "manage-roles:mainnet": "npx hardhat --network mainnet run scripts/manage-roles.js >> logs/mainnet.manage.roles.txt",
+    "manage-roles:mumbai": "npx hardhat --network mumbai run scripts/manage-roles.js >> logs/mumbai.manage.roles.txt",
+    "manage-roles:test": "npx hardhat --network test run scripts/manage-roles.js >> logs/test.manage.roles.txt"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.1",

@@ -1,3 +1,4 @@
+const environments = require("../../environments");
 const { ContractAddresses } = require("./contract-addresses");
 const Role = require("../domain/Role");
 
@@ -17,7 +18,7 @@ const Role = require("../domain/Role");
 exports.RoleAssignments = {
   mumbai: {
     "Deployer / role admin address": {
-      address: "",
+      address: environments.mumbai.adminAddress,
       roles: [Role.ADMIN, Role.UPGRADER],
     },
 
@@ -30,13 +31,26 @@ exports.RoleAssignments = {
 
   mainnet: {
     "Deployer / role admin address": {
-      address: "",
+      address: environments.mainnet.adminAddress,
       roles: [Role.ADMIN, Role.UPGRADER],
     },
 
     // For minting vouchers
     "ProtocolDiamond contract": {
       address: ContractAddresses.mainnet.ProtocolDiamond,
+      roles: [Role.PROTOCOL],
+    },
+  },
+
+  test: {
+    "Deployer / role admin address": {
+      address: environments.test.adminAddress,
+      roles: [Role.ADMIN, Role.UPGRADER],
+    },
+
+    // For minting vouchers
+    "ProtocolDiamond contract": {
+      address: ContractAddresses.test.ProtocolDiamond,
       roles: [Role.PROTOCOL],
     },
   },
