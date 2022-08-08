@@ -25,6 +25,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * Emits an OfferCreated event if successful.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
      * - Caller is not an operator
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
@@ -57,7 +58,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _agentId
-    ) external override {
+    ) external override offersNotPaused {
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
     }
 
@@ -67,6 +68,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * Emits an OfferCreated event for every offer if successful.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
      * - Number of offers exceeds maximum allowed number per batch
      * - Number of elements in offers, offerDates and offerDurations do not match
      * - for any offer:
@@ -102,7 +104,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         OfferDurations[] calldata _offerDurations,
         uint256[] calldata _disputeResolverIds,
         uint256[] calldata _agentIds
-    ) external override {
+    ) external override offersNotPaused {
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offers.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
         // number of offer dates structs, offer durations structs and _disputeResolverIds must match the number of offers
@@ -130,13 +132,14 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * No further vouchers can be issued against a voided offer.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
      * - Offer ID is invalid
      * - Caller is not the operator of the offer
      * - Offer has already been voided
      *
      * @param _offerId - the id of the offer to check
      */
-    function voidOffer(uint256 _offerId) public override {
+    function voidOffer(uint256 _offerId) public override offersNotPaused {
         // Get offer, make sure the caller is the operator
         Offer storage offer = getValidOffer(_offerId);
 
@@ -157,6 +160,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * No further vouchers can be issued against a voided offer.
      *
      * Reverts if, for any offer:
+     * - The offers region of protocol is paused
      * - Number of offers exceeds maximum allowed number per batch
      * - Offer ID is invalid
      * - Caller is not the operator of the offer
@@ -164,7 +168,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * @param _offerIds - the id of the offer to check
      */
-    function voidOfferBatch(uint256[] calldata _offerIds) external override {
+    function voidOfferBatch(uint256[] calldata _offerIds) external override offersNotPaused {
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offerIds.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
         for (uint256 i = 0; i < _offerIds.length; i++) {
@@ -178,6 +182,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * Emits an OfferExtended event if successful.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
      * - Offer does not exist
      * - Caller is not the operator of the offer
      * - New valid until date is before existing valid until dates
@@ -186,7 +191,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *  @param _offerId - the id of the offer to check
      *  @param _validUntilDate - new valid until date
      */
-    function extendOffer(uint256 _offerId, uint256 _validUntilDate) public override {
+    function extendOffer(uint256 _offerId, uint256 _validUntilDate) public override offersNotPaused {
         // Make sure the caller is the operator, offer exists and is not voided
         Offer storage offer = getValidOffer(_offerId);
 
@@ -214,6 +219,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * Emits an OfferExtended event if successful.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
      * - Number of offers exceeds maximum allowed number per batch
      * - For any of the offers:
      *   - Offer does not exist
@@ -224,7 +230,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *  @param _offerIds - list of ids of the offers to extemd
      *  @param _validUntilDate - new valid until date
      */
-    function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external override {
+    function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external override offersNotPaused {
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offerIds.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
         for (uint256 i = 0; i < _offerIds.length; i++) {

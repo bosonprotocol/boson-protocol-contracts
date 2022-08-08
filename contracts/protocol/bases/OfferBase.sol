@@ -13,6 +13,18 @@ import "./../../domain/BosonConstants.sol";
  */
 contract OfferBase is ProtocolBase, IBosonOfferEvents {
     /**
+     * @dev Modifier that checks the Offers region is not paused
+     *
+     * Reverts if region is paused
+     *
+     * See: {BosonTypes.PausableRegion}
+     */
+    modifier offersNotPaused() {
+        require(!paused(PausableRegion.Offers), REGION_PAUSED);
+        _;
+    }
+
+    /**
      * @dev Internal helper to create offer, which can be reused among different facets
      *
      * Emits an OfferCreated event if successful.

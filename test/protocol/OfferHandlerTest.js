@@ -15,6 +15,7 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const OfferFees = require("../../scripts/domain/OfferFees");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
+const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -38,6 +39,7 @@ describe("IBosonOfferHandler", function () {
     accountHandler,
     offerHandler,
     configHandler,
+    pauseHandler,
     bosonToken,
     offerStruct,
     key,
@@ -120,6 +122,7 @@ describe("IBosonOfferHandler", function () {
       "AgentHandlerFacet",
       "DisputeResolverHandlerFacet",
       "OfferHandlerFacet",
+      "PauseHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -178,8 +181,11 @@ describe("IBosonOfferHandler", function () {
     // Cast Diamond to IBosonOfferHandler
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
 
-    //Cast Diamond to IBosonConfigHancler
+    //Cast Diamond to IBosonConfigHandler
     configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
+
+    //Cast Diamond to IBosonPauseHandler
+    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -552,6 +558,16 @@ describe("IBosonOfferHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The offers region of protocol is paused", async function () {
+          // Pause the offers region of the protocol
+          await pauseHandler.pause([PausableRegion.Offers]);
+
+          // Attempt to create an offer expecting revert
+          await expect(
+            offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -971,6 +987,14 @@ describe("IBosonOfferHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The offers region of protocol is paused", async function () {
+          // Pause the offers region of the protocol
+          await pauseHandler.pause([PausableRegion.Offers]);
+
+          // Attempt to void an offer expecting revert
+          await expect(offerHandler.connect(operator).voidOffer(id)).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Offer does not exist", async function () {
           // Set invalid id
           id = "444";
@@ -1052,6 +1076,16 @@ describe("IBosonOfferHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The offers region of protocol is paused", async function () {
+          // Pause the offers region of the protocol
+          await pauseHandler.pause([PausableRegion.Offers]);
+
+          // Attempt to extend an offer expecting revert
+          await expect(offerHandler.connect(operator).extendOffer(offer.id, offerDates.validUntil)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
+
         it("Offer does not exist", async function () {
           // Set invalid id
           id = "444";
@@ -1707,6 +1741,18 @@ describe("IBosonOfferHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The offers region of protocol is paused", async function () {
+          // Pause the offers region of the protocol
+          await pauseHandler.pause([PausableRegion.Offers]);
+
+          // Attempt to create offer batch, expecting revert
+          await expect(
+            offerHandler
+              .connect(operator)
+              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Caller not operator of any seller", async function () {
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -2262,6 +2308,16 @@ describe("IBosonOfferHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The offers region of protocol is paused", async function () {
+          // Pause the offers region of the protocol
+          await pauseHandler.pause([PausableRegion.Offers]);
+
+          // Attempt to void offer batch, expecting revert
+          await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
+
         it("Offer does not exist", async function () {
           // Set invalid id
           offersToVoid = ["1", "432", "2"];
@@ -2376,6 +2432,16 @@ describe("IBosonOfferHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The offers region of protocol is paused", async function () {
+          // Pause the offers region of the protocol
+          await pauseHandler.pause([PausableRegion.Offers]);
+
+          // Attempt to void offer batch, expecting revert
+          await expect(
+            offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Offer does not exist", async function () {
           // Set invalid id
           offersToExtend = ["1", "432", "2"];
