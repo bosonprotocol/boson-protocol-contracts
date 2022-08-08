@@ -49,7 +49,8 @@ describe("IBosonOrchestrationHandler", function () {
     operatorDR,
     adminDR,
     clerkDR,
-    treasuryDR;
+    treasuryDR,
+    protocolAdmin;
   let erc165,
     protocolDiamond,
     accessController,
@@ -60,6 +61,7 @@ describe("IBosonOrchestrationHandler", function () {
     twinHandler,
     bundleHandler,
     orchestrationHandler,
+    configHandler,
     offerStruct,
     key,
     value;
@@ -109,6 +111,7 @@ describe("IBosonOrchestrationHandler", function () {
       adminDR,
       clerkDR,
       treasuryDR,
+      protocolAdmin,
     ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
@@ -116,6 +119,10 @@ describe("IBosonOrchestrationHandler", function () {
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
+
+    //Grant ADMIN role to and address that can call restricted functions.
+    //This ADMIN role is a protocol-level role. It is not the same an admin address for an account type
+    await accessController.grantRole(Role.ADMIN, protocolAdmin.address);
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
@@ -197,6 +204,9 @@ describe("IBosonOrchestrationHandler", function () {
 
     // Cast Diamond to IOrchestrationHandler
     orchestrationHandler = await ethers.getContractAt("IBosonOrchestrationHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonConfigHandler
+    configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -1573,7 +1583,7 @@ describe("IBosonOrchestrationHandler", function () {
           it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "3"; // argument sent to contract for createAgent will be ignored
-            agentFeePercentage = "9900"; //99%
+            agentFeePercentage = "3000"; //30%
 
             active = true;
 
@@ -1583,6 +1593,9 @@ describe("IBosonOrchestrationHandler", function () {
 
             // Create an agent
             await accountHandler.connect(rando).createAgent(agent);
+
+            //Change protocol fee after creating agent
+            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
 
             // Attempt to Create an offer, expecting revert
             await expect(
@@ -2303,7 +2316,7 @@ describe("IBosonOrchestrationHandler", function () {
           it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "4"; // argument sent to contract for createAgent will be ignored
-            agentFeePercentage = "9900"; //99%
+            agentFeePercentage = "3000"; //30%
 
             active = true;
 
@@ -2313,6 +2326,9 @@ describe("IBosonOrchestrationHandler", function () {
 
             // Create an agent
             await accountHandler.connect(rando).createAgent(agent);
+
+            //Change protocol fee after creating agent
+            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
 
             // Attempt to Create an offer, expecting revert
             await expect(
@@ -3058,7 +3074,7 @@ describe("IBosonOrchestrationHandler", function () {
           it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "4"; // argument sent to contract for createAgent will be ignored
-            agentFeePercentage = "9900"; //99%
+            agentFeePercentage = "3000"; //30%
 
             active = true;
 
@@ -3068,6 +3084,9 @@ describe("IBosonOrchestrationHandler", function () {
 
             // Create an agent
             await accountHandler.connect(rando).createAgent(agent);
+
+            //Change protocol fee after creating agent
+            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
 
             // Attempt to Create an offer, expecting revert
             await expect(
@@ -3867,7 +3886,7 @@ describe("IBosonOrchestrationHandler", function () {
           it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "4"; // argument sent to contract for createAgent will be ignored
-            agentFeePercentage = "9900"; //99%
+            agentFeePercentage = "3000"; //30%
 
             active = true;
 
@@ -3877,6 +3896,9 @@ describe("IBosonOrchestrationHandler", function () {
 
             // Create an agent
             await accountHandler.connect(rando).createAgent(agent);
+
+            //Change protocol fee after creating agent
+            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
 
             // Attempt to Create an offer, expecting revert
             await expect(
@@ -4528,7 +4550,7 @@ describe("IBosonOrchestrationHandler", function () {
           it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "4"; // argument sent to contract for createAgent will be ignored
-            agentFeePercentage = "9900"; //99%
+            agentFeePercentage = "3000"; //30%
 
             active = true;
 
@@ -4538,6 +4560,9 @@ describe("IBosonOrchestrationHandler", function () {
 
             // Create an agent
             await accountHandler.connect(rando).createAgent(agent);
+
+            //Change protocol fee after creating agent
+            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
 
             // Attempt to Create an offer, expecting revert
             await expect(
@@ -4989,7 +5014,7 @@ describe("IBosonOrchestrationHandler", function () {
           it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "3"; // argument sent to contract for createAgent will be ignored
-            agentFeePercentage = "9900"; //99%
+            agentFeePercentage = "3000"; //30%
 
             active = true;
 
@@ -4999,6 +5024,9 @@ describe("IBosonOrchestrationHandler", function () {
 
             // Create an agent
             await accountHandler.connect(rando).createAgent(agent);
+
+            //Change protocol fee after creating agent
+            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
 
             // Attempt to Create an offer, expecting revert
             await expect(
@@ -5519,7 +5547,7 @@ describe("IBosonOrchestrationHandler", function () {
           it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "3"; // argument sent to contract for createAgent will be ignored
-            agentFeePercentage = "9900"; //99%
+            agentFeePercentage = "3000"; //30%
 
             active = true;
 
@@ -5529,6 +5557,9 @@ describe("IBosonOrchestrationHandler", function () {
 
             // Create an agent
             await accountHandler.connect(rando).createAgent(agent);
+
+            //Change protocol fee after creating agent
+            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
 
             // Attempt to Create an offer, expecting revert
             await expect(
@@ -6122,7 +6153,7 @@ describe("IBosonOrchestrationHandler", function () {
           it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "3"; // argument sent to contract for createAgent will be ignored
-            agentFeePercentage = "9900"; //99%
+            agentFeePercentage = "3000"; //30%
 
             active = true;
 
@@ -6132,6 +6163,9 @@ describe("IBosonOrchestrationHandler", function () {
 
             // Create an agent
             await accountHandler.connect(rando).createAgent(agent);
+
+            //Change protocol fee after creating agent
+            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
 
             // Attempt to Create an offer, expecting revert
             await expect(
