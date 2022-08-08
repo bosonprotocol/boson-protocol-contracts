@@ -44,6 +44,7 @@ contract OrchestrationHandlerFacet is
      * Emits a SellerCreated and an OfferCreated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
      * - The offers region of protocol is paused
      * - caller is not the same as operator address
      * - Admin address is zero address and AuthTokenType == None
@@ -90,7 +91,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override offersNotPaused {
+    ) external override sellersNotPaused offersNotPaused {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
     }
@@ -331,6 +332,7 @@ contract OrchestrationHandlerFacet is
      * Emits a SellerCreated, an OfferCreated and a GroupCreated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
      * - The offers region of protocol is paused
      * - caller is not the same as operator address
      * - Admin address is zero address and AuthTokenType == None
@@ -381,7 +383,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override offersNotPaused {
+    ) external override sellersNotPaused offersNotPaused {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
     }
@@ -400,6 +402,7 @@ contract OrchestrationHandlerFacet is
      * Emits a SellerCreated, an OfferCreated, a TwinCreated and a BundleCreated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
      * - The offers region of protocol is paused
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
@@ -453,7 +456,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override offersNotPaused twinsNotPaused bundlesNotPaused {
+    ) external override sellersNotPaused offersNotPaused twinsNotPaused bundlesNotPaused {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin, _agentId);
     }
@@ -472,6 +475,7 @@ contract OrchestrationHandlerFacet is
      * Emits an SellerCreated, OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
      * - The offers region of protocol is paused
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
@@ -528,7 +532,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override offersNotPaused twinsNotPaused bundlesNotPaused {
+    ) external override sellersNotPaused offersNotPaused twinsNotPaused bundlesNotPaused {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferWithConditionAndTwinAndBundle(
             _offer,

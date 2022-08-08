@@ -6,6 +6,7 @@ const Seller = require("../../scripts/domain/Seller");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
+const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
@@ -35,7 +36,7 @@ describe("SellerHandler", function () {
     other7,
     other8,
     authTokenOwner;
-  let protocolDiamond, accessController, accountHandler, exchangeHandler, configHandler, gasLimit;
+  let protocolDiamond, accessController, accountHandler, exchangeHandler, configHandler, pauseHandler, gasLimit;
   let seller, sellerStruct, active, seller2, id2, seller3, seller4;
   let authToken, authTokenStruct, emptyAuthToken, emptyAuthTokenStruct, authToken2, authToken3;
   let nextAccountId;
@@ -81,6 +82,7 @@ describe("SellerHandler", function () {
       "SellerHandlerFacet",
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
+      "PauseHandlerFacet",
     ]);
 
     // Deploy mock ERC721 tokens
@@ -136,7 +138,10 @@ describe("SellerHandler", function () {
     // Cast Diamond to IBosonExchangeHandler
     exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
 
-    //Cast Diamond to IBosonConfigHancler
+    //Cast Diamond to IBosonPauseHandler
+    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
+
+    //Cast Diamond to IBosonConfigHandler
     configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
     await expect(
@@ -518,6 +523,16 @@ describe("SellerHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The sellers region of protocol is paused", async function () {
+          // Pause the sellers region of the protocol
+          await pauseHandler.pause([PausableRegion.Sellers]);
+
+          // Attempt to create a seller expecting revert
+          await expect(
+            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("active is false", async function () {
           seller.active = false;
 
@@ -1623,6 +1638,16 @@ describe("SellerHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The sellers region of protocol is paused", async function () {
+          // Pause the sellers region of the protocol
+          await pauseHandler.pause([PausableRegion.Sellers]);
+
+          // Attempt to update a seller expecting revert
+          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
+
         it("Seller does not exist", async function () {
           // Set invalid id
           seller.id = "444";

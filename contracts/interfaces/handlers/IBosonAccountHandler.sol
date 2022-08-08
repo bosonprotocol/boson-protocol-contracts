@@ -18,6 +18,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a SellerCreated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Active is not true
      * - Addresses are not unique to this seller
@@ -94,6 +95,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a SellerUpdated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
      * - Caller is not the admin address of the seller
