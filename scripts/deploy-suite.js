@@ -69,9 +69,9 @@ function getConfig() {
   // Boson voucher beacon contract address
   const BEACON = {
     mainnet: ethers.constants.AddressZero,
-    ropsten: ethers.constants.AddressZero,
     hardhat: ethers.constants.AddressZero,
     test: ethers.constants.AddressZero,
+    mumbai: ethers.constants.AddressZero,
   };
 
   // Beacon proxy contract address
