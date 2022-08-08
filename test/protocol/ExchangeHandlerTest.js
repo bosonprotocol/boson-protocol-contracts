@@ -1574,10 +1574,14 @@ describe("IBosonExchangeHandler", function () {
             // Remove the approval for the protocal to transfer the seller's tokens
             await foreign20.connect(operator).approve(protocolDiamond.address, "0");
 
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+            await expect(tx)
               .to.emit(exchangeHandler, "VoucherRevoked")
               .withArgs(exchange.offerId, exchange.id, buyer.address)
-              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
               .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address);
 
             // Get the exchange state
@@ -1602,9 +1606,20 @@ describe("IBosonExchangeHandler", function () {
 
             let exchangeId = ++exchange.id;
             // Protocol should raised dispute automatically if transfer twin failed
-            await expect(testProtocolFunctions.redeem(exchangeId))
+            const tx = await testProtocolFunctions.redeem(exchangeId);
+
+            await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(
+                exchangeId,
+                ++exchange.buyerId,
+                sellerId,
+                "Twin transfer failed and buyer address is a contract",
+                testProtocolFunctions.address
+              );
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
               .withArgs(
                 twin20.id,
                 twin20.tokenAddress,

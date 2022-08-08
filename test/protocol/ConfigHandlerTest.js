@@ -114,37 +114,69 @@ describe("IBosonConfigHandler", function () {
 
         await expect(cutTransaction)
           .to.emit(configHandler, "TokenAddressChanged")
-          .withArgs(token.address, deployer.address)
+          .withArgs(token.address, deployer.address);
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "TreasuryAddressChanged")
-          .withArgs(treasury.address, deployer.address)
+          .withArgs(treasury.address, deployer.address);
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "VoucherBeaconAddressChanged")
-          .withArgs(beacon.address, deployer.address)
+          .withArgs(beacon.address, deployer.address);
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "BeaconProxyAddressChanged")
-          .withArgs(proxy.address, deployer.address)
+          .withArgs(proxy.address, deployer.address);
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "ProtocolFeePercentageChanged")
-          .withArgs(protocolFeePercentage, deployer.address)
+          .withArgs(protocolFeePercentage, deployer.address);
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "ProtocolFeeFlatBosonChanged")
-          .withArgs(protocolFeeFlatBoson, deployer.address)
+          .withArgs(protocolFeeFlatBoson, deployer.address);
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "MaxExchangesPerBatchChanged")
-          .withArgs(maxExchangesPerBatch, deployer.address)
+          .withArgs(maxExchangesPerBatch, deployer.address);
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "MaxOffersPerGroupChanged")
-          .withArgs(maxOffersPerGroup, deployer.address)
+          .withArgs(maxOffersPerGroup, deployer.address);
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "MaxTwinsPerBundleChanged")
-          .withArgs(maxTwinsPerBundle, deployer.address)
+          .withArgs(maxTwinsPerBundle, deployer.address);
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "MaxOffersPerBundleChanged")
-          .withArgs(maxOffersPerBundle, deployer.address)
+          .withArgs(maxOffersPerBundle, deployer.address);
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "MaxOffersPerBatchChanged")
-          .withArgs(maxOffersPerBatch, deployer.address)
+          .withArgs(maxOffersPerBatch, deployer.address);
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "MaxTokensPerWithdrawalChanged")
-          .withArgs(maxTokensPerWithdrawal, deployer.address)
+          .withArgs(maxTokensPerWithdrawal, deployer.address);
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "MaxFeesPerDisputeResolverChanged")
-          .withArgs(maxFeesPerDisputeResolver, deployer.address)
+          .withArgs(maxFeesPerDisputeResolver, deployer.address);
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "MaxEscalationResponsePeriodChanged")
-          .withArgs(maxEscalationResponsePeriod, deployer.address)
+          .withArgs(maxEscalationResponsePeriod, deployer.address);
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "MaxDisputesPerBatchChanged")
-          .withArgs(maxDisputesPerBatch, deployer.address)
+          .withArgs(maxDisputesPerBatch, deployer.address);
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "MaxAllowedSellersChanged")
-          .withArgs(maxAllowedSellers, deployer.address)
+          .withArgs(maxAllowedSellers, deployer.address);
+
+        await expect(cutTransaction)
           .to.emit(configHandler, "BuyerEscalationFeePercentageChanged")
           .withArgs(buyerEscalationDepositPercentage, deployer.address);
       });

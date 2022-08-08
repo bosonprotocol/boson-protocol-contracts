@@ -2196,10 +2196,17 @@ describe("IBosonDisputeHandler", function () {
           await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
           // Expire the disputes, testing for the event
-          await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire))
+          const tx = disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire);
+          await expect(tx)
             .to.emit(disputeHandler, "DisputeExpired")
-            .withArgs("2", rando.address)
-            .withArgs("3", rando.address)
+            .withArgs("2", rando.address);
+
+          await expect(tx)
+          .to.emit(disputeHandler, "DisputeExpired")
+            .withArgs("3", rando.address);
+
+          await expect(tx)
+          .to.emit(disputeHandler, "DisputeExpired")
             .withArgs("4", rando.address);
         });
 
