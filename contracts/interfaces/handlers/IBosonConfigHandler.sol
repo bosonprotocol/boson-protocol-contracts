@@ -17,12 +17,12 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * Emits a TokenAddressChanged event.
      *
-     * @param _token - the address of the token contract
+     * @param _tokenAddress - the address of the token contract
      */
-    function setTokenAddress(address payable _token) external;
+    function setTokenAddress(address payable _tokenAddress) external;
 
     /**
-     * @notice The tokenAddress getter
+     * @notice The token address getter
      */
     function getTokenAddress() external view returns (address payable);
 
@@ -36,7 +36,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     function setTreasuryAddress(address payable _treasuryAddress) external;
 
     /**
-     * @notice The treasuryAddress getter
+     * @notice The treasury address getter
      */
     function getTreasuryAddress() external view returns (address payable);
 
@@ -50,7 +50,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     function setVoucherBeaconAddress(address _voucherBeaconAddress) external;
 
     /**
-     * @notice The voucherBeaconAddress getter
+     * @notice The voucherBeacon address getter
      */
     function getVoucherBeaconAddress() external view returns (address);
 
@@ -64,7 +64,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     function setBeaconProxyAddress(address _beaconProxyAddress) external;
 
     /**
-     * @notice The beaconProxyAddress getter
+     * @notice The beaconProxy address getter
      */
     function getBeaconProxyAddress() external view returns (address);
 

@@ -12,6 +12,7 @@ const TokenType = require("../../scripts/domain/TokenType");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
+const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -43,7 +44,7 @@ describe("IBosonGroupHandler", function () {
   let groupStruct;
   let offerIdsToAdd, offerIdsToRemove;
   let disputeResolver, disputeResolverFees, disputeResolverId;
-  let contractURI;
+  let voucherInitValues, contractURI, royaltyPercentage;
   let emptyAuthToken;
   let agentId;
 
@@ -65,7 +66,7 @@ describe("IBosonGroupHandler", function () {
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet"]);
+    await deployProtocolHandlerFacets(protocolDiamond, ["SellerHandlerFacet", "DisputeResolverHandlerFacet"]);
     await deployProtocolHandlerFacets(protocolDiamond, ["OfferHandlerFacet"]);
     await deployProtocolHandlerFacets(protocolDiamond, ["GroupHandlerFacet"]);
 
@@ -81,10 +82,10 @@ describe("IBosonGroupHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: ethers.constants.AddressZero,
-        tokenAddress: bosonToken.address,
-        voucherBeaconAddress: ethers.constants.AddressZero,
-        beaconProxyAddress: ethers.constants.AddressZero,
+        treasury: ethers.constants.AddressZero,
+        token: bosonToken.address,
+        voucherBeacon: ethers.constants.AddressZero,
+        beaconProxy: ethers.constants.AddressZero,
       },
       // Protocol limits
       {
@@ -111,7 +112,7 @@ describe("IBosonGroupHandler", function () {
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
-    // Cast Diamond to IBosonAccountHandler
+    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
     // Cast Diamond to IOfferHandler
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
@@ -145,13 +146,18 @@ describe("IBosonGroupHandler", function () {
       // Create a valid seller, then set fields in tests directly
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
+
+      // VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
       emptyAuthToken = new AuthToken("0", AuthTokenType.None);
       expect(emptyAuthToken.isValid()).is.true;
 
-      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(
@@ -329,8 +335,8 @@ describe("IBosonGroupHandler", function () {
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
 
           // add offer belonging to another seller
@@ -498,8 +504,8 @@ describe("IBosonGroupHandler", function () {
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
 
           // add offer belonging to another seller

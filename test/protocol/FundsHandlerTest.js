@@ -9,6 +9,7 @@ const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
+const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -64,7 +65,7 @@ describe("IBosonFundsHandler", function () {
   let buyerPercent;
   let resolutionType, customSignatureType, message, r, s, v;
   let disputedDate, escalatedDate, timeout;
-  let contractURI;
+  let voucherInitValues, contractURI, royaltyPercentage;
   let emptyAuthToken;
   let agent,
     agentId,
@@ -114,7 +115,10 @@ describe("IBosonFundsHandler", function () {
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
-      "AccountHandlerFacet",
+      "SellerHandlerFacet",
+      "BuyerHandlerFacet",
+      "AgentHandlerFacet",
+      "DisputeResolverHandlerFacet",
       "FundsHandlerFacet",
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
@@ -138,10 +142,10 @@ describe("IBosonFundsHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: "0x0000000000000000000000000000000000000000",
-        tokenAddress: bosonToken.address,
-        voucherBeaconAddress: beacon.address,
-        beaconProxyAddress: proxy.address,
+        treasury: ethers.constants.AddressZero,
+        token: bosonToken.address,
+        voucherBeacon: beacon.address,
+        beaconProxy: proxy.address,
       },
       // Protocol limits
       {
@@ -170,7 +174,7 @@ describe("IBosonFundsHandler", function () {
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
 
-    // Cast Diamond to IBosonAccountHandler
+    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
 
     // Cast Diamond to IBosonFundsHandler
@@ -211,13 +215,18 @@ describe("IBosonFundsHandler", function () {
       // Create a valid seller, then set fields in tests directly
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
+
+      // VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
       emptyAuthToken = new AuthToken("0", AuthTokenType.None);
       expect(emptyAuthToken.isValid()).is.true;
 
-      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
       // top up operators account
       await mockToken.mint(operator.address, "1000000");
@@ -1376,13 +1385,18 @@ describe("IBosonFundsHandler", function () {
       // Create a valid seller
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
       expect(seller.isValid()).is.true;
+
+      // VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
       emptyAuthToken = new AuthToken("0", AuthTokenType.None);
       expect(emptyAuthToken.isValid()).is.true;
 
-      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(

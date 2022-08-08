@@ -12,6 +12,7 @@ const Dispute = require("../../scripts/domain/Dispute");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const DisputeDates = require("../../scripts/domain/DisputeDates");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
+const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -78,7 +79,7 @@ describe("IBosonDisputeHandler", function () {
   let resolutionType, customSignatureType, message, r, s, v;
   let returnedDispute, returnedDisputeDates;
   let DRFeeNative, DRFeeToken, buyerEscalationDepositNative, buyerEscalationDepositToken;
-  let contractURI;
+  let voucherInitValues, contractURI, royaltyPercentage;
   let emptyAuthToken;
   let agentId;
 
@@ -116,7 +117,9 @@ describe("IBosonDisputeHandler", function () {
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
-      "AccountHandlerFacet",
+      "SellerHandlerFacet",
+      "BuyerHandlerFacet",
+      "DisputeResolverHandlerFacet",
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
       "FundsHandlerFacet",
@@ -141,10 +144,10 @@ describe("IBosonDisputeHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: "0x0000000000000000000000000000000000000000",
-        tokenAddress: bosonToken.address,
-        voucherBeaconAddress: beacon.address,
-        beaconProxyAddress: proxy.address,
+        treasury: ethers.constants.AddressZero,
+        token: bosonToken.address,
+        voucherBeacon: beacon.address,
+        beaconProxy: proxy.address,
       },
       // Protocol limits
       {
@@ -174,7 +177,7 @@ describe("IBosonDisputeHandler", function () {
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
 
-    // Cast Diamond to IBosonAccountHandler
+    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
 
     // Cast Diamond to IBosonOfferHandler
@@ -216,13 +219,18 @@ describe("IBosonDisputeHandler", function () {
       // Create a valid seller
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
       expect(seller.isValid()).is.true;
+
+      // VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
       emptyAuthToken = new AuthToken("0", AuthTokenType.None);
       expect(emptyAuthToken.isValid()).is.true;
 
-      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(
@@ -881,8 +889,8 @@ describe("IBosonDisputeHandler", function () {
             // Create a valid seller with buyer's wallet
             seller = new Seller(id, buyer.address, buyer.address, buyer.address, buyer.address, true);
             expect(seller.isValid()).is.true;
-            contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-            await accountHandler.connect(buyer).createSeller(seller, contractURI, emptyAuthToken);
+
+            await accountHandler.connect(buyer).createSeller(seller, emptyAuthToken, voucherInitValues);
 
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v))
@@ -1121,9 +1129,9 @@ describe("IBosonDisputeHandler", function () {
             // Wallet with seller account, but not the seller in this exchange
             // Create a valid seller
             seller = new Seller(id, other1.address, other1.address, other1.address, other1.address, true);
-            contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
             expect(seller.isValid()).is.true;
-            await accountHandler.connect(other1).createSeller(seller, contractURI, emptyAuthToken);
+
+            await accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues);
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(other1).resolveDispute(exchangeId, buyerPercent, r, s, v)

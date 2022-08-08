@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "../../domain/BosonConstants.sol";
 import { IBosonOrchestrationHandler } from "../../interfaces/handlers/IBosonOrchestrationHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
-import { AccountBase } from "../bases/AccountBase.sol";
+import { SellerBase } from "../bases/SellerBase.sol";
 import { GroupBase } from "../bases/GroupBase.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
 import { TwinBase } from "../bases/TwinBase.sol";
@@ -16,7 +16,7 @@ import { BundleBase } from "../bases/BundleBase.sol";
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  */
 contract OrchestrationHandlerFacet is
-    AccountBase,
+    SellerBase,
     OfferBase,
     GroupBase,
     TwinBase,
@@ -73,24 +73,24 @@ contract OrchestrationHandlerFacet is
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _seller - the fully populated seller struct
-     * @param _contractURI - contract metadata URI
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
      */
     function createSellerAndOffer(
         Seller memory _seller,
-        string calldata _contractURI,
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         AuthToken calldata _authToken,
+        VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
     ) external override {
-        checkAndCreateSeller(_seller, _contractURI, _authToken);
+        checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
     }
 
@@ -385,27 +385,27 @@ contract OrchestrationHandlerFacet is
      *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _seller - the fully populated seller struct
-     * @param _contractURI - contract metadata URI
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
      */
     function createSellerAndOfferWithCondition(
         Seller memory _seller,
-        string calldata _contractURI,
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         Condition memory _condition,
         AuthToken calldata _authToken,
+        VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
     ) external override {
-        checkAndCreateSeller(_seller, _contractURI, _authToken);
+        checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
     }
 
@@ -454,27 +454,27 @@ contract OrchestrationHandlerFacet is
      *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _seller - the fully populated seller struct
-     * @param _contractURI - contract metadata URI
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _twin - the fully populated twin struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
      */
     function createSellerAndOfferAndTwinWithBundle(
         Seller memory _seller,
-        string calldata _contractURI,
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         Twin memory _twin,
         AuthToken calldata _authToken,
+        VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
     ) external override {
-        checkAndCreateSeller(_seller, _contractURI, _authToken);
+        checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin, _agentId);
     }
 
@@ -524,7 +524,6 @@ contract OrchestrationHandlerFacet is
      *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _seller - the fully populated seller struct
-     * @param _contractURI - contract metadata URI
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
@@ -532,11 +531,11 @@ contract OrchestrationHandlerFacet is
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
      */
     function createSellerAndOfferWithConditionAndTwinAndBundle(
         Seller memory _seller,
-        string calldata _contractURI,
         Offer memory _offer,
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
@@ -544,9 +543,10 @@ contract OrchestrationHandlerFacet is
         Condition memory _condition,
         Twin memory _twin,
         AuthToken calldata _authToken,
+        VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
     ) external override {
-        checkAndCreateSeller(_seller, _contractURI, _authToken);
+        checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferWithConditionAndTwinAndBundle(
             _offer,
             _offerDates,
@@ -573,18 +573,18 @@ contract OrchestrationHandlerFacet is
      *   - Seller is not active (if active == false)
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
-     * @param _contractURI - contract metadata URI
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      */
     function checkAndCreateSeller(
         Seller memory _seller,
-        string calldata _contractURI,
-        AuthToken calldata _authToken
+        AuthToken calldata _authToken,
+        VoucherInitValues calldata _voucherInitValues
     ) internal {
         // Caller should be the operator, specified in seller
         require(_seller.operator == msgSender(), NOT_OPERATOR);
 
         // create seller and update structs values to represent true state
-        createSellerInternal(_seller, _contractURI, _authToken);
+        createSellerInternal(_seller, _authToken, _voucherInitValues);
     }
 }

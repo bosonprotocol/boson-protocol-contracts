@@ -192,7 +192,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             require(_offer.buyerCancelPenalty <= offerPrice, OFFER_PENALTY_INVALID);
 
             // Calculate and set the protocol fee
-            uint256 protocolFee = _offer.exchangeToken == protocolAddresses().tokenAddress
+            uint256 protocolFee = _offer.exchangeToken == protocolAddresses().token
                 ? protocolFees().flatBoson
                 : (protocolFees().percentage * offerPrice) / 10000;
 

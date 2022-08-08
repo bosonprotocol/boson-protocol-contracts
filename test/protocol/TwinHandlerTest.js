@@ -11,7 +11,7 @@ const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
 const TokenType = require("../../scripts/domain/TokenType.js");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
-
+const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -53,7 +53,7 @@ describe("IBosonTwinHandler", function () {
     sellerId;
   let bundleId, offerIds, twinIds, bundle;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
-  let contractURI;
+  let voucherInitValues, contractURI, royaltyPercentage;
   let emptyAuthToken;
 
   before(async function () {
@@ -73,7 +73,7 @@ describe("IBosonTwinHandler", function () {
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
-      "AccountHandlerFacet",
+      "SellerHandlerFacet",
       "TwinHandlerFacet",
       "BundleHandlerFacet",
       "PauseHandlerFacet",
@@ -91,10 +91,10 @@ describe("IBosonTwinHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: ethers.constants.AddressZero,
-        tokenAddress: bosonToken.address,
-        voucherBeaconAddress: ethers.constants.AddressZero,
-        beaconProxyAddress: ethers.constants.AddressZero,
+        treasury: ethers.constants.AddressZero,
+        token: bosonToken.address,
+        voucherBeacon: ethers.constants.AddressZero,
+        beaconProxy: ethers.constants.AddressZero,
       },
       // Protocol limits
       {
@@ -123,7 +123,7 @@ describe("IBosonTwinHandler", function () {
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
 
-    // Cast Diamond to IBosonAccountHandler
+    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
 
     // Cast Diamond to IBosonTwinHandler
@@ -160,12 +160,17 @@ describe("IBosonTwinHandler", function () {
       // Create a valid seller, then set fields in tests directly
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
+
+      // VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
       emptyAuthToken = new AuthToken("0", AuthTokenType.None);
       expect(emptyAuthToken.isValid()).is.true;
-      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
       // The first twin id
       nextTwinId = sellerId = "1";
@@ -612,12 +617,11 @@ describe("IBosonTwinHandler", function () {
         // Create another valid seller.
         seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
         expect(seller.isValid()).is.true;
-        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
         // AuthToken
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
         expect(emptyAuthToken.isValid()).is.true;
-        await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // Approving the twinHandler contract to transfer seller's tokens
         await bosonToken.connect(rando).approve(twinHandler.address, 1);

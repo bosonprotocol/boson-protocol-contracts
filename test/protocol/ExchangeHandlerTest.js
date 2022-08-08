@@ -17,6 +17,7 @@ const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
+const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -80,7 +81,7 @@ describe("IBosonExchangeHandler", function () {
   let twin20, twin721, twin1155, twinIds, bundle, balance, owner;
   let expectedCloneAddress;
   let method, tokenType, tokenAddress, tokenId, threshold, maxCommits, groupId, offerIds, condition, group;
-  let contractURI;
+  let voucherInitValues, contractURI, royaltyPercentage1, royaltyPercentage2, seller1Treasury, seller2Treasury;
   let emptyAuthToken;
   let agentId;
   let exchangesToComplete, exchangeId;
@@ -120,6 +121,9 @@ describe("IBosonExchangeHandler", function () {
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
       "AccountHandlerFacet",
+      "SellerHandlerFacet",
+      "BuyerHandlerFacet",
+      "DisputeResolverHandlerFacet",
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
       "FundsHandlerFacet",
@@ -149,10 +153,10 @@ describe("IBosonExchangeHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: ethers.constants.AddressZero,
-        tokenAddress: ethers.constants.AddressZero,
-        voucherBeaconAddress: beacon.address,
-        beaconProxyAddress: proxy.address,
+        treasury: ethers.constants.AddressZero,
+        token: ethers.constants.AddressZero,
+        voucherBeacon: beacon.address,
+        beaconProxy: proxy.address,
       },
       // Protocol limits
       {
@@ -182,7 +186,7 @@ describe("IBosonExchangeHandler", function () {
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
 
-    // Cast Diamond to IBosonAccountHandler
+    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
 
     // Cast Diamond to IBosonOfferHandler
@@ -234,13 +238,19 @@ describe("IBosonExchangeHandler", function () {
       // Create a valid seller
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
       expect(seller.isValid()).is.true;
-      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
       // AuthToken
       emptyAuthToken = new AuthToken("0", AuthTokenType.None);
       expect(emptyAuthToken.isValid()).is.true;
 
-      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+      // VoucherInitValues
+      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      seller1Treasury = seller.treasury;
+      royaltyPercentage1 = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage1);
+      expect(voucherInitValues.isValid()).is.true;
+
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
       expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
 
       // Create a valid dispute resolver
@@ -349,8 +359,8 @@ describe("IBosonExchangeHandler", function () {
         sellerId = "3"; // "1" is the first seller, "2" is DR
         seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, true);
         expect(seller.isValid()).is.true;
-        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+
+        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
         expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
         const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
@@ -416,6 +426,86 @@ describe("IBosonExchangeHandler", function () {
         // boson voucher implemenation should not have vouchers with id 1 and 2
         await expect(voucherImplementation.ownerOf("1")).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
         await expect(voucherImplementation.ownerOf("2")).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+      });
+
+      it("ERC2981: issued voucher should have royalty fees", async function () {
+        // Cast expectedCloneAddress to IBosonVoucher (existing clone)
+        bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+        // Create a new seller to get new clone
+        sellerId = "3"; // "1" is the first seller, "2" is DR
+        seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, true);
+        expect(seller.isValid()).is.true;
+
+        // VoucherInitValues
+        voucherInitValues.royaltyPercentage = "3000"; // 30%
+        expect(voucherInitValues.isValid()).is.true;
+
+        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+        expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
+        const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+        // Create an offer with new seller
+        const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+
+        // Create the offer
+        await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+        // Deposit seller funds so the commit will succeed
+        await fundsHandler
+          .connect(rando)
+          .depositFunds(sellerId, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
+
+        const buyer2 = newOwner;
+
+        // Commit to offer, creating a new exchange
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+        const tx2 = await exchangeHandler.connect(deployer).commitToOffer(buyer2.address, ++offerId, { value: price });
+
+        expect(tx).to.emit(bosonVoucherClone, "Transfer").withArgs(ethers.constants.Zero, buyer.address, "1");
+        expect(tx2).to.emit(bosonVoucherClone2, "Transfer").withArgs(ethers.constants.Zero, buyer2.address, "2");
+
+        // buyer should own 1 voucher on the clone1 address and buyer2 should own 1 voucher on clone2
+        expect(await bosonVoucherClone.balanceOf(buyer.address)).to.equal("1", "Clone 1: buyer 1 balance should be 1");
+        expect(await bosonVoucherClone.balanceOf(buyer2.address)).to.equal("0", "Clone 1: buyer 2 balance should be 0");
+        expect(await bosonVoucherClone2.balanceOf(buyer.address)).to.equal("0", "Clone 2: buyer 1 balance should be 0");
+        expect(await bosonVoucherClone2.balanceOf(buyer2.address)).to.equal(
+          "1",
+          "Clone 2: buyer 2 balance should be 1"
+        );
+
+        // Make sure that vouchers belong to correct buyers and that exist on the correct clone
+        expect(await bosonVoucherClone.ownerOf("1")).to.equal(buyer.address, "Voucher 1: Wrong buyer address");
+        await expect(bosonVoucherClone.ownerOf("2")).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+        expect(await bosonVoucherClone2.ownerOf("2")).to.equal(buyer2.address, "Voucher 2: Wrong buyer address");
+        await expect(bosonVoucherClone2.ownerOf("1")).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+
+        // Make sure that vouchers have correct royalty fee for exchangeId 1
+        exchangeId = "1";
+        let receiver, royaltyAmount;
+        [receiver, royaltyAmount] = await bosonVoucherClone.connect(operator).royaltyInfo(exchangeId, offer.price);
+
+        // Expectations
+        let expectedRecipient = seller1Treasury; //Expect 1st seller's treasury address as exchange id exists
+        let expectedRoyaltyAmount = ethers.BigNumber.from(price).mul(royaltyPercentage1).div("10000").toString(); //0% of offer price because royaltyPercentage1 is 0%
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+
+        // Make sure that vouchers have correct royalty fee for exchangeId 2
+        exchangeId = "2";
+        royaltyPercentage2 = voucherInitValues.royaltyPercentage; // 30%
+        seller2Treasury = seller.treasury;
+
+        receiver, royaltyAmount;
+        [receiver, royaltyAmount] = await bosonVoucherClone2.connect(operator).royaltyInfo(exchangeId, offer.price);
+
+        // Expectations
+        expectedRecipient = seller2Treasury; //Expect 2nd seller's treasury address as exchange id exists
+        expectedRoyaltyAmount = ethers.BigNumber.from(price).mul(royaltyPercentage2).div("10000").toString(); //30% of offer price because royaltyPercentage2 is 30%
+
+        assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
+        assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
       it("should allow redemption period to be defined by date rather than duration", async function () {
@@ -2327,8 +2417,8 @@ describe("IBosonExchangeHandler", function () {
           // Create a new seller to get new clone
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, true);
           expect(seller.isValid()).is.true;
-          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
           const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 

@@ -21,13 +21,13 @@ library ProtocolLib {
     // Protocol addresses storage
     struct ProtocolAddresses {
         // Address of the Boson Protocol treasury
-        address payable treasuryAddress;
+        address payable treasury;
         // Address of the Boson Token (ERC-20 contract)
-        address payable tokenAddress;
+        address payable token;
         // Address of the Boson Protocol Voucher beacon
-        address voucherBeaconAddress;
+        address voucherBeacon;
         // Address of the Boson Beacon proxy implementation
-        address beaconProxyAddress;
+        address beaconProxy;
     }
 
     // Protocol limits storage
