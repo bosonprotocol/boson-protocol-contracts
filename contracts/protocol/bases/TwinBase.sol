@@ -40,7 +40,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
      */
-    function createTwinInternal(Twin memory _twin) internal twinsNotPaused {
+    function createTwinInternal(Twin memory _twin) internal {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
         require(exists, NOT_OPERATOR);

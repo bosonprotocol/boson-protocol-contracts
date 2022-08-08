@@ -247,7 +247,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         Twin memory _twin,
         uint256 _agentId
-    ) public override {
+    ) public override twinsNotPaused bundlesNotPaused {
         // create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -301,7 +301,7 @@ contract OrchestrationHandlerFacet is
         Condition memory _condition,
         Twin memory _twin,
         uint256 _agentId
-    ) public override {
+    ) public override twinsNotPaused bundlesNotPaused {
         // create offer with condition first
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
         // create twin and pack everything into a bundle
@@ -473,7 +473,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override {
+    ) external override twinsNotPaused bundlesNotPaused {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin, _agentId);
     }
@@ -545,7 +545,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override {
+    ) external override twinsNotPaused bundlesNotPaused {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferWithConditionAndTwinAndBundle(
             _offer,

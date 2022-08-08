@@ -8,8 +8,9 @@ const Seller = require("../../scripts/domain/Seller");
 const Bundle = require("../../scripts/domain/Bundle");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
-const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
+const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
+const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -36,6 +37,7 @@ describe("IBosonBundleHandler", function () {
     bundleHandler,
     exchangeHandler,
     fundsHandler,
+    pauseHandler,
     bosonToken,
     twin,
     support,
@@ -95,6 +97,7 @@ describe("IBosonBundleHandler", function () {
       "BundleHandlerFacet",
       "ExchangeHandlerFacet",
       "FundsHandlerFacet",
+      "PauseHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -148,16 +151,18 @@ describe("IBosonBundleHandler", function () {
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-    // Cast Diamond to ITwinHandler
+    // Cast Diamond to IBosonTwinHandler
     twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
-    // Cast Diamond to IBundleHandler
+    // Cast Diamond to IBosonBundleHandler
     bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
-    // Cast Diamond to IOfferHandler
+    // Cast Diamond to IBosonOfferHandler
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
     // Cast Diamond to IBosonExchangeHandler
     exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
     // Cast Diamond to IBosonFundsHandler
     fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
+    // Cast Diamond to IBosonPauseHandler
+    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
 
     // Deploy the mock tokens
     [bosonToken] = await deployMockTokens(gasLimit);
@@ -364,6 +369,16 @@ describe("IBosonBundleHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The bundles region of protocol is paused", async function () {
+          // Pause the bundles region of the protocol
+          await pauseHandler.pause([PausableRegion.Offers, PausableRegion.Twins, PausableRegion.Bundles]);
+
+          // Attempt to create a bundle, expecting revert
+          await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
+
         it("Caller not operator of any seller", async function () {
           // Attempt to Create a bundle, expecting revert
           await expect(bundleHandler.connect(rando).createBundle(bundle)).to.revertedWith(RevertReasons.NOT_OPERATOR);
