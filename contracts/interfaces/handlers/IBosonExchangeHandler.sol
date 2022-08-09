@@ -138,6 +138,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @notice Inform protocol of new buyer associated with an exchange
      *
      * Reverts if
+     * - The buyers region of protocol is paused
      * - Caller is not a clone address associated with the seller
      * - Exchange does not exist
      * - Exchange is not in committed state

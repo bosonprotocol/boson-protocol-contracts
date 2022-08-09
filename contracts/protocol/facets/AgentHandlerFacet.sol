@@ -8,6 +8,18 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
 contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**
+     * @dev Modifier that checks the Agents region is not paused
+     *
+     * Reverts if region is paused
+     *
+     * See: {BosonTypes.PausableRegion}
+     */
+    modifier agentsNotPaused() {
+        require(!paused(PausableRegion.Agents), REGION_PAUSED);
+        _;
+    }
+
+    /**
      * @notice Facet Initializer
      */
     function initialize() public {
@@ -29,7 +41,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
      *
      * @param _agent - the fully populated struct with agent id set to 0x0
      */
-    function createAgent(Agent memory _agent) external {
+    function createAgent(Agent memory _agent) external agentsNotPaused {
         //Check for zero address
         require(_agent.wallet != address(0), INVALID_ADDRESS);
 
@@ -63,7 +75,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
      *
      * @param _agent - the fully populated agent struct
      */
-    function updateAgent(Agent memory _agent) external {
+    function updateAgent(Agent memory _agent) external agentsNotPaused {
         //Check for zero address
         require(_agent.wallet != address(0), INVALID_ADDRESS);
 

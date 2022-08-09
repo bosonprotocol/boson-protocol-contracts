@@ -4,6 +4,7 @@ const { expect } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
 const Agent = require("../../scripts/domain/Agent");
+const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
@@ -17,7 +18,7 @@ const { oneMonth } = require("../utils/constants");
 describe("AgentHandler", function () {
   // Common vars
   let deployer, rando, other1, other2, other3;
-  let protocolDiamond, accessController, accountHandler, gasLimit;
+  let protocolDiamond, accessController, accountHandler, pauseHandler, gasLimit;
   let agent, agentStruct, feePercentage, agent2, agent2Struct, active;
   let nextAccountId;
   let invalidAccountId, id, id2, key, value, exists;
@@ -37,7 +38,11 @@ describe("AgentHandler", function () {
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet", "AgentHandlerFacet"]);
+    await deployProtocolHandlerFacets(protocolDiamond, [
+      "AccountHandlerFacet",
+      "AgentHandlerFacet",
+      "PauseHandlerFacet"
+    ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
@@ -85,6 +90,9 @@ describe("AgentHandler", function () {
 
     // Cast Diamond to IBosonAccountHandler
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonPauseHandler
+    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
   });
 
   // All supported Agent methods
@@ -201,6 +209,16 @@ describe("AgentHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The agents region of protocol is paused", async function () {
+          // Pause the agents region of the protocol
+          await pauseHandler.pause([PausableRegion.Agents]);
+
+          // Attempt to create an agent, expecting revert
+          await expect(
+            accountHandler.connect(rando).createAgent(agent)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("active is false", async function () {
           agent.active = false;
 
@@ -485,6 +503,16 @@ describe("AgentHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The agents region of protocol is paused", async function () {
+          // Pause the agents region of the protocol
+          await pauseHandler.pause([PausableRegion.Agents]);
+
+          // Attempt to update an agent, expecting revert
+          await expect(
+            accountHandler.connect(other1).updateAgent(agent)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Agent does not exist", async function () {
           // Set invalid id
           agent.id = "444";
