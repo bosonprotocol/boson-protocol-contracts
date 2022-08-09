@@ -38,15 +38,17 @@ module.exports = {
     //  - Replace key with pk for deployment
     "test": {
         "txNode": process.env.DEPLOYER_TEST_TXNODE,
-        "keys": [process.env.DEPLOYER_TEST_KEY]
+        "keys": [process.env.DEPLOYER_TEST_KEY],
+        "adminAddress": process.env.ADMIN_ADDRESS_TEST
     },
 
-    // Ethereum Mainnet
+    // Mainnet
     //  - placeholder private key is first address of test HDWallet used in hardhat network config
     //  - Replace key with multisig pk for deployment
     "mainnet": {
         "txNode": process.env.DEPLOYER_MAINNET_TXNODE,
-        "keys": [process.env.DEPLOYER_MAINNET_KEY]
+        "keys": [process.env.DEPLOYER_MAINNET_KEY],
+        "adminAddress": process.env.ADMIN_ADDRESS_MAINNET
     },
 
     // Polygon Mumbai testnet
@@ -54,7 +56,8 @@ module.exports = {
     //  - Replace key with multisig pk for deployment
     "mumbai": {
         "txNode": process.env.DEPLOYER_MUMBAI_TXNODE,
-        "keys": [process.env.DEPLOYER_MUMBAI_KEY]
+        "keys": [process.env.DEPLOYER_MUMBAI_KEY],
+        "adminAddress": process.env.ADMIN_ADDRESS_MUMBAI
     }  
 
 };
