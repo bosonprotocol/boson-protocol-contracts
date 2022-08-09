@@ -13,7 +13,7 @@ const { deployProtocolHandlerFacets } = require("./util/deploy-protocol-handler-
 const {
   delay,
   deploymentComplete,
-  verifyOnEtherscan,
+  verifyOnBlockExplorer,
   verifyOnTestEnv,
   writeContracts,
 } = require("./util/report-verify-deployments");
@@ -213,7 +213,7 @@ async function main() {
     const deployedFacet = deployedFacets[i];
     deploymentComplete(deployedFacet.name, deployedFacet.contract.address, [], contracts);
   }
-
+  
   console.log(`\n⧉ Deploying Protocol Client implementation/proxy pairs...`);
 
   // Deploy the Protocol Client implementation/proxy pairs
@@ -228,8 +228,8 @@ async function main() {
 
   // Report and prepare for verification
   deploymentComplete("BosonVoucher Logic", bosonVoucherImpl.address, [], contracts);
-  deploymentComplete("BosonVoucher Beacon", bosonClientBeacon.address, [], contracts);
-  deploymentComplete("BosonVoucher Proxy", bosonVoucherProxy.address, bosonVoucherProxyArgs, contracts);
+  deploymentComplete("BosonVoucher Beacon", bosonClientBeacon.address, bosonVoucherProxyArgs, contracts);
+  deploymentComplete("BosonVoucher Proxy", bosonVoucherProxy.address, [], contracts);
 
   console.log(`\n🌐️Configuring and granting roles...`);
 
@@ -287,7 +287,7 @@ async function main() {
     console.log("🔍 Verifying contracts on block explorer...");
     while (contracts.length) {
       const contract = contracts.shift();
-      await verifyOnEtherscan(contract);
+      await verifyOnBlockExplorer(contract);
     }
   });
 
