@@ -18,7 +18,7 @@ const confirmations = environments.confirmations;
 async function deployProtocolConfigFacet(diamond, config, gasLimit) {
   // Deploy the ConfigHandler Facet
   const ConfigHandlerFacet = await ethers.getContractFactory("ConfigHandlerFacet");
-  const configHandlerFacet = await ConfigHandlerFacet.deploy({ gasLimit});
+  const configHandlerFacet = await ConfigHandlerFacet.deploy({ gasLimit });
   await configHandlerFacet.deployTransaction.wait(confirmations);
 
   // Cast Diamond to DiamondCutFacet

@@ -16,7 +16,7 @@ const confirmations = environments.confirmations;
  */
 async function deployProtocolHandlerFacets(diamond, facetNames, gasLimit) {
   let deployedFacets = [];
- 
+
   // Deploy all the no-arg initializer handler facets
   while (facetNames.length) {
     //nonce = ++nonce;
@@ -45,7 +45,9 @@ async function deployProtocolHandlerFacets(diamond, facetNames, gasLimit) {
   for (let i = 0; i < deployedFacets.length; i++) {
     const deployedFacet = deployedFacets[i];
     const facetCut = getFacetAddCut(deployedFacet.contract, [initFunction]);
-    const transactionResponse = await diamondCutFacet.diamondCut([facetCut], deployedFacet.contract.address, callData, { gasLimit });
+    const transactionResponse = await diamondCutFacet.diamondCut([facetCut], deployedFacet.contract.address, callData, {
+      gasLimit,
+    });
     await transactionResponse.wait(confirmations);
   }
 

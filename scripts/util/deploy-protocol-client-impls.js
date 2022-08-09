@@ -18,11 +18,9 @@ const confirmations = environments.confirmations;
  * @returns {Promise<(*|*|*)[]>}
  */
 async function deployProtocolClientImpls(gasLimit) {
-
-
   // Deploy the BosonVoucher contract
   const BosonVoucher = await ethers.getContractFactory("BosonVoucher");
-  const bosonVoucher = await BosonVoucher.deploy({ gasLimit});
+  const bosonVoucher = await BosonVoucher.deploy({ gasLimit });
   await bosonVoucher.deployTransaction.wait(confirmations);
 
   return [bosonVoucher];

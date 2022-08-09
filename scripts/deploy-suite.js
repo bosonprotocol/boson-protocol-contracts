@@ -198,7 +198,7 @@ async function main() {
   console.log(`\n💎 Granting UPGRADER role...`);
 
   // Temporarily grant UPGRADER role to deployer account
-  transactionResponse =  await accessController.grantRole(Role.UPGRADER, deployer.address);
+  transactionResponse = await accessController.grantRole(Role.UPGRADER, deployer.address);
   await transactionResponse.wait(confirmations);
 
   console.log(`\n💎 Deploying and initializing config facet...`);
@@ -252,7 +252,10 @@ async function main() {
   await transactionResponse.wait(confirmations);
 
   //Add NFT auth token addresses to protocol config
-  transactionResponse = await bosonConfigHandler.setAuthTokenContract(AuthTokenType.Lens, authTokenContracts.lensAddress);
+  transactionResponse = await bosonConfigHandler.setAuthTokenContract(
+    AuthTokenType.Lens,
+    authTokenContracts.lensAddress
+  );
   await transactionResponse.wait(confirmations);
 
   transactionResponse = await bosonConfigHandler.setAuthTokenContract(AuthTokenType.ENS, authTokenContracts.ensAddress);
@@ -263,7 +266,6 @@ async function main() {
   // Add roles to contracts and addresses that need it
   transactionResponse = await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
   await transactionResponse.wait(confirmations);
-
 
   console.log(`✅ Granted roles to appropriate contract and addresses.`);
 
