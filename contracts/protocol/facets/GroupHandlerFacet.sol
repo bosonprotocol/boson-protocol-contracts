@@ -26,7 +26,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * Emits a GroupCreated event if successful.
      *
      * Reverts if:
-     *
+     * - The groups region of protocol is paused
      * - caller is not an operator
      * - any of offers belongs to different seller
      * - any of offers does not exist
@@ -45,7 +45,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * Emits a GroupUpdated event if successful.
      *
      * Reverts if:
-     *
+     * - The groups region of protocol is paused
      * - caller is not the seller
      * - offer ids is an empty list
      * - number of offers exceeds maximum allowed number per group
@@ -68,7 +68,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * Emits a GroupUpdated event if successful.
      *
      * Reverts if:
-     *
+     * - The groups region of protocol is paused
      * - caller is not the seller
      * - offer ids is an empty list
      * - number of offers exceeds maximum allowed number per group
@@ -114,7 +114,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * Emits a GroupUpdated event if successful.
      *
      * Reverts if:
-     *
+     * - The groups region of protocol is paused
      * - condition includes invalid combination of fields
      * - seller does not match caller
      * - group does not exist

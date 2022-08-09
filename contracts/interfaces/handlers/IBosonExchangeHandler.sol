@@ -120,6 +120,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @notice Redeem a voucher.
      *
      * Reverts if
+     * - The buyers region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Caller does not own voucher

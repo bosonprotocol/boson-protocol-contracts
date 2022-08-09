@@ -18,6 +18,7 @@ const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
+const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -64,7 +65,8 @@ describe("IBosonExchangeHandler", function () {
     disputeHandler,
     twinHandler,
     bundleHandler,
-    groupHandler;
+    groupHandler,
+    pauseHandler;
   let bosonVoucher, voucherImplementation;
   let bosonVoucherClone, bosonVoucherCloneAddress;
   let id, buyerId, offerId, seller, sellerId, nextExchangeId, nextAccountId;
@@ -131,6 +133,7 @@ describe("IBosonExchangeHandler", function () {
       "TwinHandlerFacet",
       "BundleHandlerFacet",
       "GroupHandlerFacet",
+      "PauseHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -209,6 +212,9 @@ describe("IBosonExchangeHandler", function () {
 
     // Cast Diamond to IGroupHandler
     groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonPauseHandler
+    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
 
     // Deploy the mock tokens
     [foreign20, foreign721, foreign1155] = await deployMockTokens(gasLimit, ["Foreign20", "Foreign721", "Foreign1155"]);
@@ -2397,14 +2403,15 @@ describe("IBosonExchangeHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
-        /**
-         * Reverts if
-         * - Caller is not a clone address associated with the seller
-         * - Exchange does not exist
-         * - Exchange is not in committed state
-         * - Voucher has expired
-         * - New buyer's existing account is deactivated
-         */
+        it("The buyers region of protocol is paused", async function () {
+          // Pause the buyers region of the protocol
+          await pauseHandler.pause([PausableRegion.Buyers]);
+
+          // Attempt to create a buyer, expecting revert
+          await expect(
+            bosonVoucherClone.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
 
         it("Caller is not a clone address", async function () {
           // Attempt to call onVoucherTransferred, expecting revert

@@ -36,6 +36,8 @@ interface IBosonOrchestrationHandler is
      * Emits a SellerCreated and an OfferCreated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
+     * - The offers region of protocol is paused
      * - caller is not the same as operator address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -89,6 +91,8 @@ interface IBosonOrchestrationHandler is
      * Emits an OfferCreated and a GroupCreated event if successful.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
+     * - The groups region of protocol is paused
      * - in offer struct:
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
@@ -133,6 +137,8 @@ interface IBosonOrchestrationHandler is
      * Emits an OfferCreated and a GroupUpdated event if successful.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
+     * - The groups region of protocol is paused
      * - in offer struct:
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
@@ -179,6 +185,8 @@ interface IBosonOrchestrationHandler is
      * Emits an OfferCreated, a TwinCreated and a BundleCreated event if successful.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
+     * - The twins region of protocol is paused
      * - in offer struct:
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
@@ -224,6 +232,10 @@ interface IBosonOrchestrationHandler is
      * Emits an OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event if successful.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
+     * - The groups region of protocol is paused
+     * - The twins region of protocol is paused
+     * - The bundles region of protocol is paused
      * - in offer struct:
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
@@ -280,6 +292,9 @@ interface IBosonOrchestrationHandler is
      * Emits a SellerCreated, an OfferCreated and a GroupCreated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
+     * - The offers region of protocol is paused
+     * - The groups region of protocol is paused
      * - caller is not the same as operator address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -345,6 +360,10 @@ interface IBosonOrchestrationHandler is
      * Emits a SellerCreated, an OfferCreated, a TwinCreated and a BundleCreated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
+     * - The offers region of protocol is paused
+     * - The twins region of protocol is paused
+     * - The bundles region of protocol is paused
      * - caller is not the same as operator address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -411,6 +430,11 @@ interface IBosonOrchestrationHandler is
      * Emits an SellerCreated, OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
+     * - The offers region of protocol is paused
+     * - The groups region of protocol is paused
+     * - The twins region of protocol is paused
+     * - The bundles region of protocol is paused
      * - caller is not the same as operator address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller

@@ -103,6 +103,7 @@ contract OrchestrationHandlerFacet is
      *
      * Reverts if:
      * - The offers region of protocol is paused
+     * - The groups region of protocol is paused
      * - in offer struct:
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
@@ -160,6 +161,7 @@ contract OrchestrationHandlerFacet is
      *
      * Reverts if:
      * - The offers region of protocol is paused
+     * - The groups region of protocol is paused
      * - in offer struct:
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
@@ -269,6 +271,7 @@ contract OrchestrationHandlerFacet is
      *
      * Reverts if:
      * - The offers region of protocol is paused
+     * - The groups region of protocol is paused
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
      * - in offer struct:
@@ -334,6 +337,7 @@ contract OrchestrationHandlerFacet is
      * Reverts if:
      * - The sellers region of protocol is paused
      * - The offers region of protocol is paused
+     * - The groups region of protocol is paused
      * - caller is not the same as operator address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -477,6 +481,7 @@ contract OrchestrationHandlerFacet is
      * Reverts if:
      * - The sellers region of protocol is paused
      * - The offers region of protocol is paused
+     * - The groups region of protocol is paused
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
      * - caller is not the same as operator address

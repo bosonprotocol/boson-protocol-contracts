@@ -10,6 +10,7 @@ const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee"
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
+const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
@@ -25,7 +26,8 @@ const { mockOffer } = require("../utils/mock.js");
 describe("BuyerHandler", function () {
   // Common vars
   let deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, other4;
-  let protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, fundsHandler, gasLimit;
+  let protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, fundsHandler, pauseHandler;
+  let gasLimit;
   let seller, active, id2;
   let emptyAuthToken;
   let buyer, buyerStruct, buyer2, buyer2Struct;
@@ -65,6 +67,7 @@ describe("BuyerHandler", function () {
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
       "FundsHandlerFacet",
+      "PauseHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -122,6 +125,9 @@ describe("BuyerHandler", function () {
 
     // Cast Diamond to IBosonFundsHandler
     fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonPauseHandler
+    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
   });
 
   // All supported Buyer methods
@@ -186,6 +192,14 @@ describe("BuyerHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The buyers region of protocol is paused", async function () {
+          // Pause the buyers region of the protocol
+          await pauseHandler.pause([PausableRegion.Buyers]);
+
+          // Attempt to create a buyer, expecting revert
+          await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("active is false", async function () {
           buyer.active = false;
 
@@ -475,6 +489,14 @@ describe("BuyerHandler", function () {
           bosonVoucher = await ethers.getContractAt("IBosonVoucher", bosonVoucherCloneAddress);
           const balance = await bosonVoucher.connect(rando).balanceOf(other1.address);
           expect(balance).equal(1);
+        });
+
+        it("The buyers region of protocol is paused", async function () {
+          // Pause the buyers region of the protocol
+          await pauseHandler.pause([PausableRegion.Buyers]);
+
+          // Attempt to update a buyer, expecting revert
+          await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
         it("Buyer does not exist", async function () {
