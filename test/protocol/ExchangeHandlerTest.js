@@ -589,22 +589,25 @@ describe("IBosonExchangeHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
-        /*
-         * Reverts if:
-         * - offerId is invalid
-         * - offer has been voided                    // TODO asap
-         * - offer has expired                        // TODO asap
-         * - offer is not yet available for commits   // TODO asap
-         * - offer's quantity available is zero       // TODO asap
-         * - buyer address is zero
-         * - buyer account is inactive                // TODO when deactivateBuyer works
-         * - buyer is token-gated (conditional commit requirements not met or already used)  // TODO asap
-         * - offer price is in native token and buyer caller does not send enough  // TODO asap
-         * - offer price is in some ERC20 token and caller also send native currency  // TODO asap
-         * - contract at token address does not support erc20 function transferFrom  // TODO asap
-         * - calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)   // TODO asap
-         * - seller has less funds available than sellerDeposit  // TODO asap
-         */
+        it("The exchanges region of protocol is paused", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.pause([PausableRegion.Exchanges]);
+
+          // Attempt to create an exchange, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
+        it("The buyers region of protocol is paused", async function () {
+          // Pause the buyers region of the protocol
+          await pauseHandler.pause([PausableRegion.Buyers]);
+
+          // Attempt to create a buyer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
 
         it("buyer address is the zero address", async function () {
           // Attempt to commit, expecting revert
@@ -1038,12 +1041,15 @@ describe("IBosonExchangeHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
-        /*
-         * Reverts if:
-         * - Exchange does not exist
-         * - Exchange is not in redeemed state
-         * - Caller is not buyer and offer fulfillment period has not elapsed
-         */
+        it("The exchanges region of protocol is paused", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.pause([PausableRegion.Exchanges]);
+
+          // Attempt to complete an exchange, expecting revert
+          await expect(exchangeHandler.connect(operator).completeExchange(id)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
 
         it("exchange id is invalid", async function () {
           // An invalid exchange id
@@ -1093,6 +1099,170 @@ describe("IBosonExchangeHandler", function () {
       });
     });
 
+    context("👉 completeExchangeBatch()", async function () {
+      beforeEach(async function () {
+        // Set time forward to the offer's voucherRedeemableFrom
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+        for (exchangeId = 1; exchangeId <= 5; exchangeId++) {
+          // Commit to offer, creating a new exchange
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Redeem voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+        }
+
+        exchangesToComplete = ["1", "2", "3", "4", "5"];
+      });
+
+      it("should emit a ExchangeCompleted event for all events", async function () {
+        // Complete the exchange, expecting event
+        await expect(exchangeHandler.connect(buyer).completeExchangeBatch(exchangesToComplete))
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchangesToComplete[0], buyer.address)
+          .withArgs(offerId, buyerId, exchangesToComplete[1], buyer.address)
+          .withArgs(offerId, buyerId, exchangesToComplete[2], buyer.address)
+          .withArgs(offerId, buyerId, exchangesToComplete[3], buyer.address)
+          .withArgs(offerId, buyerId, exchangesToComplete[4], buyer.address);
+      });
+
+      it("should update state", async function () {
+        // Complete the exchange
+        await expect(exchangeHandler.connect(buyer).completeExchangeBatch(exchangesToComplete));
+
+        for (exchangeId = 1; exchangeId <= 5; exchangeId++) {
+          // Get the exchange state
+          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
+
+          // It should match ExchangeState.Completed
+          assert.equal(response, ExchangeState.Completed, "Exchange state is incorrect");
+        }
+      });
+
+      it("should emit an ExchangeCompleted event if operator calls after fulfillment period", async function () {
+        // Get the current block info
+        blockNumber = await ethers.provider.getBlockNumber();
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Set time forward to run out the fulfillment period
+        newTime = ethers.BigNumber.from(block.timestamp).add(fulfillmentPeriod).add(1).toNumber();
+        await setNextBlockTimestamp(newTime);
+
+        // Complete exchange
+        await expect(exchangeHandler.connect(operator).completeExchangeBatch(exchangesToComplete))
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchangesToComplete[0], operator.address)
+          .withArgs(offerId, buyerId, exchangesToComplete[1], operator.address)
+          .withArgs(offerId, buyerId, exchangesToComplete[2], operator.address)
+          .withArgs(offerId, buyerId, exchangesToComplete[3], operator.address)
+          .withArgs(offerId, buyerId, exchangesToComplete[4], operator.address);
+      });
+
+      it("should emit an ExchangeCompleted event if anyone calls after fulfillment period", async function () {
+        // Get the current block info
+        blockNumber = await ethers.provider.getBlockNumber();
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Set time forward to run out the fulfillment period
+        newTime = ethers.BigNumber.from(block.timestamp).add(fulfillmentPeriod).add(1).toNumber();
+        await setNextBlockTimestamp(newTime);
+
+        // Complete exchange
+        await expect(exchangeHandler.connect(rando).completeExchangeBatch(exchangesToComplete))
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchangesToComplete[0], rando.address)
+          .withArgs(offerId, buyerId, exchangesToComplete[1], rando.address)
+          .withArgs(offerId, buyerId, exchangesToComplete[2], rando.address)
+          .withArgs(offerId, buyerId, exchangesToComplete[3], rando.address)
+          .withArgs(offerId, buyerId, exchangesToComplete[4], rando.address);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("The exchanges region of protocol is paused", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.pause([PausableRegion.Exchanges]);
+
+          // Attempt to complete an exchange, expecting revert
+          await expect(exchangeHandler.connect(buyer).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
+
+        it("Completing too many exchanges", async function () {
+          // Try to complete more than 50 exchanges
+          exchangesToComplete = [...Array(51).keys()];
+
+          // Attempt to complete the exchange, expecting revert
+          await expect(exchangeHandler.connect(rando).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
+            RevertReasons.TOO_MANY_EXCHANGES
+          );
+        });
+
+        it("exchange id is invalid", async function () {
+          // An invalid exchange id
+          exchangeId = "666";
+
+          // Add new exchange id to the array
+          exchangesToComplete = [exchangeId, ...exchangesToComplete];
+
+          // Attempt to complete the exchange, expecting revert
+          await expect(exchangeHandler.connect(operator).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
+            RevertReasons.NO_SUCH_EXCHANGE
+          );
+        });
+
+        it("exchange is not in redeemed state", async function () {
+          // Create exchange with id 6
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          exchangeId = "6";
+          // Cancel the voucher for any 1 exchange
+          await exchangeHandler.connect(buyer).cancelVoucher(exchangeId);
+
+          // Add new exchange id to the array
+          exchangesToComplete = [exchangeId, ...exchangesToComplete];
+
+          // Attempt to complete the exchange, expecting revert
+          await expect(exchangeHandler.connect(operator).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
+            RevertReasons.INVALID_STATE
+          );
+        });
+
+        it("caller is not buyer and offer fulfillment period has not elapsed", async function () {
+          // Create exchange with id 6
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          exchangeId = "6";
+
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+          // Add new exchange id to the array
+          exchangesToComplete = [exchangeId, ...exchangesToComplete];
+
+          // Attempt to complete the exchange, expecting revert
+          await expect(exchangeHandler.connect(rando).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
+            RevertReasons.FULFILLMENT_PERIOD_NOT_ELAPSED
+          );
+        });
+
+        it("caller is seller's operator and offer fulfillment period has not elapsed", async function () {
+          // Create exchange with id 6
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          exchangeId = "6";
+
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+          // Attempt to complete the exchange, expecting revert
+          await expect(exchangeHandler.connect(operator).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
+            RevertReasons.FULFILLMENT_PERIOD_NOT_ELAPSED
+          );
+        });
+      });
+    });
+
     context("👉 revokeVoucher()", async function () {
       beforeEach(async function () {
         // Commit to offer
@@ -1131,12 +1301,15 @@ describe("IBosonExchangeHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
-        /*
-         * Reverts if
-         * - Exchange does not exist
-         * - Exchange is not in committed state
-         * - Caller is not seller's operator
-         */
+        it("The exchanges region of protocol is paused", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.pause([PausableRegion.Exchanges]);
+
+          // Attempt to complete an exchange, expecting revert
+          await expect(exchangeHandler.connect(operator).revokeVoucher(exchange.id)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
 
         it("exchange id is invalid", async function () {
           // An invalid exchange id
@@ -1217,12 +1390,15 @@ describe("IBosonExchangeHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
-        /*
-         * Reverts if
-         * - Exchange does not exist
-         * - Exchange is not in committed state
-         * - Caller does not own voucher
-         */
+        it("The exchanges region of protocol is paused", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.pause([PausableRegion.Exchanges]);
+
+          // Attempt to complete an exchange, expecting revert
+          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
 
         it("exchange id is invalid", async function () {
           // An invalid exchange id
@@ -1315,12 +1491,13 @@ describe("IBosonExchangeHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
-        /*
-         * Reverts if
-         * - Exchange does not exist
-         * - Exchange is not in committed state
-         * - Redemption period has not yet elapsed
-         */
+        it("The exchanges region of protocol is paused", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.pause([PausableRegion.Exchanges]);
+
+          // Attempt to complete an exchange, expecting revert
+          await expect(exchangeHandler.connect(buyer).expireVoucher(id)).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
 
         it("exchange id is invalid", async function () {
           // Set time forward past the voucher's validUntilDate
@@ -1400,14 +1577,13 @@ describe("IBosonExchangeHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
-        /*
-         * Reverts if
-         * - Exchange does not exist
-         * - Exchange is not in committed state
-         * - Caller does not own voucher
-         * - Current time is prior to offer.voucherRedeemableFrom
-         * - Current time is after exchange.voucher.validUntilDate
-         */
+        it("The exchanges region of protocol is paused", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.pause([PausableRegion.Exchanges]);
+
+          // Attempt to complete an exchange, expecting revert
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(id)).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
 
         it("exchange id is invalid", async function () {
           // An invalid exchange id
@@ -2242,13 +2418,15 @@ describe("IBosonExchangeHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
-        /*
-         * Reverts if
-         * - Exchange does not exist
-         * - Exchange is not in committed state
-         * - Caller is not seller's operator
-         * - New date is not later than the current one
-         */
+        it("The exchanges region of protocol is paused", async function () {
+          // Pause the exchanges region of the protocol
+          await pauseHandler.pause([PausableRegion.Exchanges]);
+
+          // Attempt to complete an exchange, expecting revert
+          await expect(exchangeHandler.connect(operator).extendVoucher(id, validUntilDate)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
 
         it("exchange id is invalid", async function () {
           // An invalid exchange id
@@ -2792,169 +2970,6 @@ describe("IBosonExchangeHandler", function () {
 
         // It should match ExchangeState.Committed
         assert.equal(response, ExchangeState.Committed, "Exchange state is incorrect");
-      });
-    });
-
-    context("👉 completeExchangeBatch()", async function () {
-      beforeEach(async function () {
-        // Set time forward to the offer's voucherRedeemableFrom
-        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
-
-        for (exchangeId = 1; exchangeId <= 5; exchangeId++) {
-          // Commit to offer, creating a new exchange
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-          // Redeem voucher
-          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-        }
-
-        exchangesToComplete = ["1", "2", "3", "4", "5"];
-      });
-
-      it("should emit a ExchangeCompleted event for all events", async function () {
-        // Complete the exchange, expecting event
-        await expect(exchangeHandler.connect(buyer).completeExchangeBatch(exchangesToComplete))
-          .to.emit(exchangeHandler, "ExchangeCompleted")
-          .withArgs(offerId, buyerId, exchangesToComplete[0], buyer.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[1], buyer.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[2], buyer.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[3], buyer.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[4], buyer.address);
-      });
-
-      it("should update state", async function () {
-        // Complete the exchange
-        await expect(exchangeHandler.connect(buyer).completeExchangeBatch(exchangesToComplete));
-
-        for (exchangeId = 1; exchangeId <= 5; exchangeId++) {
-          // Get the exchange state
-          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchangeId);
-
-          // It should match ExchangeState.Completed
-          assert.equal(response, ExchangeState.Completed, "Exchange state is incorrect");
-        }
-      });
-
-      it("should emit an ExchangeCompleted event if operator calls after fulfillment period", async function () {
-        // Get the current block info
-        blockNumber = await ethers.provider.getBlockNumber();
-        block = await ethers.provider.getBlock(blockNumber);
-
-        // Set time forward to run out the fulfillment period
-        newTime = ethers.BigNumber.from(block.timestamp).add(fulfillmentPeriod).add(1).toNumber();
-        await setNextBlockTimestamp(newTime);
-
-        // Complete exchange
-        await expect(exchangeHandler.connect(operator).completeExchangeBatch(exchangesToComplete))
-          .to.emit(exchangeHandler, "ExchangeCompleted")
-          .withArgs(offerId, buyerId, exchangesToComplete[0], operator.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[1], operator.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[2], operator.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[3], operator.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[4], operator.address);
-      });
-
-      it("should emit an ExchangeCompleted event if anyone calls after fulfillment period", async function () {
-        // Get the current block info
-        blockNumber = await ethers.provider.getBlockNumber();
-        block = await ethers.provider.getBlock(blockNumber);
-
-        // Set time forward to run out the fulfillment period
-        newTime = ethers.BigNumber.from(block.timestamp).add(fulfillmentPeriod).add(1).toNumber();
-        await setNextBlockTimestamp(newTime);
-
-        // Complete exchange
-        await expect(exchangeHandler.connect(rando).completeExchangeBatch(exchangesToComplete))
-          .to.emit(exchangeHandler, "ExchangeCompleted")
-          .withArgs(offerId, buyerId, exchangesToComplete[0], rando.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[1], rando.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[2], rando.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[3], rando.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[4], rando.address);
-      });
-
-      context("💔 Revert Reasons", async function () {
-        /*
-         * Reverts if:
-         * - Number of exchanges exceeds maximum allowed number per batch
-         * - for any exchange:
-         *   - Exchange does not exist
-         *   - Exchange is not in redeemed state
-         *   - Caller is not buyer and offer fulfillment period has not elapsed
-         */
-
-        it("Completing too many exchanges", async function () {
-          // Try to complete more than 50 exchanges
-          exchangesToComplete = [...Array(51).keys()];
-
-          // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(rando).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
-            RevertReasons.TOO_MANY_EXCHANGES
-          );
-        });
-
-        it("exchange id is invalid", async function () {
-          // An invalid exchange id
-          exchangeId = "666";
-
-          // Add new exchange id to the array
-          exchangesToComplete = [exchangeId, ...exchangesToComplete];
-
-          // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
-            RevertReasons.NO_SUCH_EXCHANGE
-          );
-        });
-
-        it("exchange is not in redeemed state", async function () {
-          // Create exchange with id 6
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-          exchangeId = "6";
-          // Cancel the voucher for any 1 exchange
-          await exchangeHandler.connect(buyer).cancelVoucher(exchangeId);
-
-          // Add new exchange id to the array
-          exchangesToComplete = [exchangeId, ...exchangesToComplete];
-
-          // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
-            RevertReasons.INVALID_STATE
-          );
-        });
-
-        it("caller is not buyer and offer fulfillment period has not elapsed", async function () {
-          // Create exchange with id 6
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-          exchangeId = "6";
-
-          // Redeem the voucher
-          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-
-          // Add new exchange id to the array
-          exchangesToComplete = [exchangeId, ...exchangesToComplete];
-
-          // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(rando).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
-            RevertReasons.FULFILLMENT_PERIOD_NOT_ELAPSED
-          );
-        });
-
-        it("caller is seller's operator and offer fulfillment period has not elapsed", async function () {
-          // Create exchange with id 6
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-          exchangeId = "6";
-
-          // Redeem the voucher
-          await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
-
-          // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
-            RevertReasons.FULFILLMENT_PERIOD_NOT_ELAPSED
-          );
-        });
       });
     });
   });
