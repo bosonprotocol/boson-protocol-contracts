@@ -37,7 +37,7 @@ describe("SellerHandler", function () {
     other8,
     authTokenOwner;
   let protocolDiamond, accessController, accountHandler, exchangeHandler, configHandler, pauseHandler, gasLimit;
-  let seller, sellerStruct, active, seller2, id2, seller3, seller4;
+  let seller, sellerStruct, active, seller2, id2, seller3, seller4, expectedSeller, expectedSellerStruct;
   let authToken, authTokenStruct, emptyAuthToken, emptyAuthTokenStruct, authToken2, authToken3;
   let nextAccountId;
   let invalidAccountId, id, key, value, exists;
@@ -1195,15 +1195,20 @@ describe("SellerHandler", function () {
         seller.clerk = other3.address;
         seller.treasury = other4.address;
         seller.active = false;
+        expect(seller.isValid()).is.true;
 
-        sellerStruct = seller.toStruct();
+        //Update should not change id or active flag
+        expectedSeller = seller.clone();
+        expectedSeller.active = true;
+        expect(expectedSeller.isValid()).is.true;
+        expectedSellerStruct = expectedSeller.toStruct();
 
         const tx = await accountHandler.connect(admin).updateSeller(seller, authToken);
 
         // Update a seller, testing for the event
         await expect(tx)
           .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, sellerStruct, authTokenStruct, admin.address);
+          .withArgs(seller.id, expectedSellerStruct, authTokenStruct, admin.address);
 
         // Voucher clone contract
         const bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
@@ -1228,14 +1233,17 @@ describe("SellerHandler", function () {
         await expect(tx).to.not.emit(bosonVoucher, "OwnershipTransferred");
       });
 
-      it("should update state of all fields exceipt Id", async function () {
+      it("should update state of all fields except Id and active flag", async function () {
         seller.operator = other1.address;
         seller.admin = ethers.constants.AddressZero;
         seller.clerk = other3.address;
         seller.treasury = other4.address;
         seller.active = false;
 
-        sellerStruct = seller.toStruct();
+        //Update should not change id or active flag
+        expectedSeller = seller.clone();
+        expectedSeller.active = true;
+        expect(expectedSeller.isValid()).is.true;
 
         // Update a seller
         await accountHandler.connect(admin).updateSeller(seller, authToken);
@@ -1247,8 +1255,8 @@ describe("SellerHandler", function () {
         let returnedSeller = Seller.fromStruct(sellerStruct);
         let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
 
-        // Returned values should match the input in updateSeller
-        for ([key, value] of Object.entries(seller)) {
+        // Returned values should match the expected values
+        for ([key, value] of Object.entries(expectedSeller)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
         }
 
@@ -1306,6 +1314,11 @@ describe("SellerHandler", function () {
         seller2.treasury = other8.address;
         seller2.active = false;
 
+        //Update should not change id or active flag
+        expectedSeller = seller2.clone();
+        expectedSeller.active = true;
+        expect(expectedSeller.isValid()).is.true;
+
         // Update seller
         await accountHandler.connect(authTokenOwner).updateSeller(seller2, emptyAuthToken);
 
@@ -1316,8 +1329,8 @@ describe("SellerHandler", function () {
         let returnedSeller = Seller.fromStruct(sellerStruct);
         let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
 
-        // Returned values should match the input in updateSeller
-        for ([key, value] of Object.entries(seller2)) {
+        // Returned values should match the expected values
+        for ([key, value] of Object.entries(expectedSeller)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
         }
 
@@ -1379,6 +1392,11 @@ describe("SellerHandler", function () {
         authToken2 = new AuthToken("0", AuthTokenType.ENS);
         expect(authToken2.isValid()).is.true;
 
+        //Update should not change id or active flag
+        expectedSeller = seller2.clone();
+        expectedSeller.active = true;
+        expect(expectedSeller.isValid()).is.true;
+
         // Update seller
         await accountHandler.connect(authTokenOwner).updateSeller(seller2, authToken2);
 
@@ -1389,8 +1407,8 @@ describe("SellerHandler", function () {
         let returnedSeller = Seller.fromStruct(sellerStruct);
         let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
 
-        // Returned values should match the input in updateSeller
-        for ([key, value] of Object.entries(seller2)) {
+        // Returned values should match the expected values
+        for ([key, value] of Object.entries(expectedSeller)) {
           expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
         }
 
@@ -1454,32 +1472,6 @@ describe("SellerHandler", function () {
         expect(await bosonVoucher.owner()).to.equal(seller.operator, "Wrong voucher clone owner");
       });
 
-      it("should update only active flag", async function () {
-        seller.active = false;
-
-        sellerStruct = seller.toStruct();
-
-        // Update a seller
-        await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
-
-        // Get the seller as a struct
-        [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller(seller.id);
-
-        // Parse into entity
-        let returnedSeller = Seller.fromStruct(sellerStruct);
-        let returnedAuthToken = AuthToken.fromStruct(authTokenStruct);
-
-        // Returned values should match the input in updateSeller
-        for ([key, value] of Object.entries(seller)) {
-          expect(JSON.stringify(returnedSeller[key]) === JSON.stringify(value)).is.true;
-        }
-
-        // Returned auth token values should match the input in updateSeller
-        for ([key, value] of Object.entries(emptyAuthToken)) {
-          expect(JSON.stringify(returnedAuthToken[key]) === JSON.stringify(value)).is.true;
-        }
-      });
-
       it("should update only one address", async function () {
         seller.operator = other1.address;
 
@@ -1536,6 +1528,11 @@ describe("SellerHandler", function () {
         seller2.treasury = rando.address;
         seller2.active = false;
 
+        //Update should not change id or active flag
+        expectedSeller = seller2.clone();
+        expectedSeller.active = true;
+        expect(expectedSeller.isValid()).is.true;
+
         //Seller2 specified wrong token Id in create. Update to correct one now
         authToken2.tokenId = "8400";
 
@@ -1567,7 +1564,7 @@ describe("SellerHandler", function () {
         let returnedAuthToken2 = AuthToken.fromStruct(authTokenStruct);
 
         // returnedSeller2 should contain new values
-        for ([key, value] of Object.entries(seller2)) {
+        for ([key, value] of Object.entries(expectedSeller)) {
           expect(JSON.stringify(returnedSeller2[key]) === JSON.stringify(value)).is.true;
         }
 

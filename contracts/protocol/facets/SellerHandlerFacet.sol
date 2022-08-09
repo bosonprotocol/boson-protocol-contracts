@@ -135,6 +135,8 @@ contract SellerHandlerFacet is SellerBase {
         // store this address of existing seller operator to check if you have to transfer the ownership later
         address oldSellerOperator = seller.operator;
 
+        //Ignore active flag passed in by caller and set to value in storage.
+        _seller.active = seller.active;
         storeSeller(_seller, _authToken);
 
         // If operator changed, transfer the ownership of NFT voucher

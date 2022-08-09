@@ -2470,7 +2470,8 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
-        it("New buyer's existing account is deactivated", async function () {
+        //Unskip after deactivateBuyer function has been implemented
+        it.skip("New buyer's existing account is deactivated", async function () {
           // Get the next buyer id
           nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
