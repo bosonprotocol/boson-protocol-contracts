@@ -2,6 +2,8 @@ const { getFacetAddCut } = require("./diamond-utils.js");
 const { getInterfaceIds } = require("../config/supported-interfaces.js");
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const environments = require("../../environments");
+const confirmations = environments.confirmations;
 
 /**
  * Deploy the ProtocolDiamond
@@ -21,17 +23,17 @@ async function deployProtocolDiamond(gasLimit) {
   // Deploy the AccessController contract
   const AccessController = await ethers.getContractFactory("AccessController");
   const accessController = await AccessController.deploy({ gasLimit });
-  await accessController.deployTransaction.wait("1")
+  await accessController.deployTransaction.wait(confirmations);
 
   // Diamond Loupe Facet
   const DiamondLoupeFacet = await ethers.getContractFactory("DiamondLoupeFacet");
   const dlf = await DiamondLoupeFacet.deploy({ gasLimit });
-  await dlf.deployTransaction.wait("1")
+  await dlf.deployTransaction.wait(confirmations);
 
   // Diamond Cut Facet
   const DiamondCutFacet = await ethers.getContractFactory("DiamondCutFacet");
   const dcf = await DiamondCutFacet.deploy({ gasLimit });
-  await dcf.deployTransaction.wait("1")
+  await dcf.deployTransaction.wait(confirmations);
 
   // Arguments for Diamond constructor
   const diamondArgs = [accessController.address, [getFacetAddCut(dlf), getFacetAddCut(dcf)], interfaces];
@@ -39,7 +41,7 @@ async function deployProtocolDiamond(gasLimit) {
   // Deploy Protocol Diamond
   const ProtocolDiamond = await ethers.getContractFactory("ProtocolDiamond");
   const protocolDiamond = await ProtocolDiamond.deploy(...diamondArgs, { gasLimit });
-  await protocolDiamond.deployTransaction.wait("1");
+  await protocolDiamond.deployTransaction.wait(confirmations);
 
   return [protocolDiamond, dlf, dcf, accessController, diamondArgs];
 }

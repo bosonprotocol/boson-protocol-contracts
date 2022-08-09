@@ -3,6 +3,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const network = hre.network.name;
 const gasLimit = environments.gasLimit;
+const confirmations = environments.confirmations;
 
 const Role = require("./domain/Role");
 const { deployProtocolDiamond } = require("./util/deploy-protocol-diamond.js");
@@ -194,7 +195,7 @@ async function main() {
 
   // Temporarily grant UPGRADER role to deployer account
   transactionResponse =  await accessController.grantRole(Role.UPGRADER, deployer.address);
-  await transactionResponse.wait("1");
+  await transactionResponse.wait(confirmations);
 
   console.log(`\n💎 Deploying and initializing config facet...`);
 
@@ -237,27 +238,27 @@ async function main() {
 
   // Renounce temporarily granted UPGRADER role for deployer account
   transactionResponse = await accessController.renounceRole(Role.UPGRADER, deployer.address);
-  await transactionResponse.wait("1");
+  await transactionResponse.wait(confirmations);
 
   // Add Voucher NFT addresses to protocol config
   transactionResponse = await bosonConfigHandler.setVoucherBeaconAddress(bosonClientBeacon.address);
-  await transactionResponse.wait("1");
+  await transactionResponse.wait(confirmations);
 
   transactionResponse = await bosonConfigHandler.setBeaconProxyAddress(bosonVoucherProxy.address);
-  await transactionResponse.wait("1");
+  await transactionResponse.wait(confirmations);
 
   //Add NFT auth token addresses to protocol config
   transactionResponse = await bosonConfigHandler.setAuthTokenContract(AuthTokenType.Lens, authTokenContracts.lensAddress);
-  await transactionResponse.wait("1");
+  await transactionResponse.wait(confirmations);
 
   transactionResponse = await bosonConfigHandler.setAuthTokenContract(AuthTokenType.ENS, authTokenContracts.ensAddress);
-  await transactionResponse.wait("1");
+  await transactionResponse.wait(confirmations);
 
   console.log(`✅ ConfigHandlerFacet updated with remaining post-initialization config.`);
 
   // Add roles to contracts and addresses that need it
   transactionResponse = await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
-  await transactionResponse.wait("1");
+  await transactionResponse.wait(confirmations);
 
 
   console.log(`✅ Granted roles to appropriate contract and addresses.`);

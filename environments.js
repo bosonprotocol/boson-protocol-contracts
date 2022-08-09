@@ -12,6 +12,8 @@ module.exports = {
     // For helping public deployments succeed if default gas doesn't work
     "gasLimit": parseInt(process.env.DEPLOYER_GAS_LIMIT),
 
+    "confirmations": parseInt(process.env.CONFIRMATIONS),
+
     // Needed for verifying contract code on Etherscan
     "etherscan": {
         "apiKey": process.env.DEPLOYER_ETHERSCAN_API_KEY
