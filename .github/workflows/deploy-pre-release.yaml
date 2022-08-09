@@ -10,6 +10,7 @@ jobs:
       DEPLOYER_MUMBAI_TXNODE: ${{ secrets.DEPLOYER_MUMBAI_TXNODE }}
       DEPLOYER_MUMBAI_KEY: ${{ secrets.DEPLOYER_MUMBAI_KEY }}
       DEPLOYER_POLYGONSCAN_API_KEY: ${{ secrets.POLYGONSCAN_API_KEY }}
+      CONFIRMATIONS: ${{ secrets.CONFIRMATIONS }}
     name: mumbai_deploy
     steps:
       - name: Checkout repository
