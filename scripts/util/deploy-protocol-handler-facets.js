@@ -14,13 +14,17 @@ const ethers = hre.ethers;
  */
 async function deployProtocolHandlerFacets(diamond, facetNames, gasLimit) {
   let deployedFacets = [];
-
+ 
   // Deploy all the no-arg initializer handler facets
   while (facetNames.length) {
+    //nonce = ++nonce;
     let facetName = facetNames.shift();
+    //console.log(`Deploying ✅ ${facetName} with nonce: ${nonce}`);
+
     let FacetContractFactory = await ethers.getContractFactory(facetName);
     const facetContract = await FacetContractFactory.deploy({ gasLimit });
-    await facetContract.deployed();
+    await facetContract.deployTransaction.wait("1");
+
     deployedFacets.push({
       name: facetName,
       contract: facetContract,
@@ -39,7 +43,8 @@ async function deployProtocolHandlerFacets(diamond, facetNames, gasLimit) {
   for (let i = 0; i < deployedFacets.length; i++) {
     const deployedFacet = deployedFacets[i];
     const facetCut = getFacetAddCut(deployedFacet.contract, [initFunction]);
-    await diamondCutFacet.diamondCut([facetCut], deployedFacet.contract.address, callData, { gasLimit });
+    const transactionResponse = await diamondCutFacet.diamondCut([facetCut], deployedFacet.contract.address, callData, { gasLimit });
+    await transactionResponse.wait("1");
   }
 
   // Return an array of objects with facet name and contract properties

@@ -16,10 +16,12 @@ const ethers = hre.ethers;
  * @returns {Promise<(*|*|*)[]>}
  */
 async function deployProtocolClientImpls(gasLimit) {
+
+
   // Deploy the BosonVoucher contract
   const BosonVoucher = await ethers.getContractFactory("BosonVoucher");
-  const bosonVoucher = await BosonVoucher.deploy({ gasLimit });
-  await bosonVoucher.deployed();
+  const bosonVoucher = await BosonVoucher.deploy({ gasLimit});
+  await bosonVoucher.deployTransaction.wait("1");
 
   return [bosonVoucher];
 }

@@ -69,9 +69,9 @@ function getConfig() {
   // Boson voucher beacon contract address
   const BEACON = {
     mainnet: ethers.constants.AddressZero,
-    ropsten: ethers.constants.AddressZero,
     hardhat: ethers.constants.AddressZero,
     test: ethers.constants.AddressZero,
+    mumbai: ethers.constants.AddressZero,
   };
 
   // Beacon proxy contract address
@@ -119,7 +119,7 @@ function getAuthTokenContracts() {
   const LENS = {
     mainnet: "0xDb46d1Dc155634FbC732f92E853b10B288AD5a1d",
     hardhat: "0x60Ae865ee4C725cd04353b5AAb364553f56ceF82",
-    test: ethers.constants.AddressZero,
+    test: "0x60Ae865ee4C725cd04353b5AAb364553f56ceF82", //dummy value required for set function to work. TODO: replace with real address
     mumbai: "0x60Ae865ee4C725cd04353b5AAb364553f56ceF82",
   };
 
@@ -127,7 +127,7 @@ function getAuthTokenContracts() {
   const ENS = {
     mainnet: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
     hardhat: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
-    test: ethers.constants.AddressZero,
+    test: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85", //dummy value required for set function to work.  TODO: replace with real address
     mumbai: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
   };
 
@@ -163,6 +163,8 @@ async function main() {
   // Deployed contracts
   let contracts = [];
 
+  let transactionResponse;
+
   // Output script header
   const divider = "-".repeat(80);
   console.log(`${divider}\nBoson Protocol V2 Contract Suite Deployer\n${divider}`);
@@ -173,9 +175,10 @@ async function main() {
   const authTokenContracts = getAuthTokenContracts();
 
   // Get the accounts
-  const accounts = await ethers.provider.listAccounts();
+  const accounts = await ethers.getSigners();
   const deployer = accounts[0];
-  console.log("🔱 Deployer account: ", deployer ? deployer : "not found" && process.exit());
+
+  console.log("🔱 Deployer account: ", deployer ? deployer.address : "not found" && process.exit());
   console.log(divider);
 
   console.log(`💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...`);
@@ -187,16 +190,21 @@ async function main() {
   deploymentComplete("DiamondCutFacet", dcf.address, [], contracts);
   deploymentComplete("ProtocolDiamond", protocolDiamond.address, diamondArgs, contracts);
 
-  console.log(`\n💎 Deploying and initializing protocol facets...`);
+  console.log(`\n💎 Granting UPGRADER role...`);
 
   // Temporarily grant UPGRADER role to deployer account
-  await accessController.grantRole(Role.UPGRADER, deployer);
+  transactionResponse =  await accessController.grantRole(Role.UPGRADER, deployer.address);
+  await transactionResponse.wait("1");
+
+  console.log(`\n💎 Deploying and initializing config facet...`);
 
   // Cut the ConfigHandlerFacet facet into the Diamond
   const {
     facets: [configHandlerFacet],
   } = await deployProtocolConfigFacet(protocolDiamond, config, gasLimit);
   deploymentComplete("ConfigHandlerFacet", configHandlerFacet.address, [], contracts);
+
+  console.log(`\n💎 Deploying and initializing protocol handler facets...`);
 
   // Deploy and cut facets
   const deployedFacets = await deployProtocolHandlerFacets(protocolDiamond, getNoArgFacetNames(), gasLimit);
@@ -228,20 +236,29 @@ async function main() {
   const bosonConfigHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
   // Renounce temporarily granted UPGRADER role for deployer account
-  await accessController.renounceRole(Role.UPGRADER, deployer);
+  transactionResponse = await accessController.renounceRole(Role.UPGRADER, deployer.address);
+  await transactionResponse.wait("1");
 
   // Add Voucher NFT addresses to protocol config
-  await bosonConfigHandler.setVoucherBeaconAddress(bosonClientBeacon.address);
-  await bosonConfigHandler.setBeaconProxyAddress(bosonVoucherProxy.address);
+  transactionResponse = await bosonConfigHandler.setVoucherBeaconAddress(bosonClientBeacon.address);
+  await transactionResponse.wait("1");
+
+  transactionResponse = await bosonConfigHandler.setBeaconProxyAddress(bosonVoucherProxy.address);
+  await transactionResponse.wait("1");
 
   //Add NFT auth token addresses to protocol config
-  await bosonConfigHandler.setAuthTokenContract(AuthTokenType.Lens, authTokenContracts.lensAddress);
-  await bosonConfigHandler.setAuthTokenContract(AuthTokenType.ENS, authTokenContracts.ensAddress);
+  transactionResponse = await bosonConfigHandler.setAuthTokenContract(AuthTokenType.Lens, authTokenContracts.lensAddress);
+  await transactionResponse.wait("1");
+
+  transactionResponse = await bosonConfigHandler.setAuthTokenContract(AuthTokenType.ENS, authTokenContracts.ensAddress);
+  await transactionResponse.wait("1");
 
   console.log(`✅ ConfigHandlerFacet updated with remaining post-initialization config.`);
 
   // Add roles to contracts and addresses that need it
-  await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+  transactionResponse = await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+  await transactionResponse.wait("1");
+
 
   console.log(`✅ Granted roles to appropriate contract and addresses.`);
 
@@ -263,10 +280,10 @@ async function main() {
   // Bail now if deploying locally
   if (hre.network.name === "hardhat" || hre.network.name === "test") process.exit();
 
-  // Wait a minute after deployment completes and then verify contracts on etherscan
-  console.log("⏲ Pause one minute, allowing deployments to propagate to Etherscan backend...");
+  // Wait a minute after deployment completes and then verify contracts on block exporer
+  console.log("⏲ Pause one minute, allowing deployments to propagate before verifying..");
   await delay(60000).then(async () => {
-    console.log("🔍 Verifying contracts on Etherscan...");
+    console.log("🔍 Verifying contracts on block explorer...");
     while (contracts.length) {
       const contract = contracts.shift();
       await verifyOnEtherscan(contract);

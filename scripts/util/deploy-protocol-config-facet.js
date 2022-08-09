@@ -16,8 +16,8 @@ const ethers = hre.ethers;
 async function deployProtocolConfigFacet(diamond, config, gasLimit) {
   // Deploy the ConfigHandler Facet
   const ConfigHandlerFacet = await ethers.getContractFactory("ConfigHandlerFacet");
-  const configHandlerFacet = await ConfigHandlerFacet.deploy({ gasLimit });
-  await configHandlerFacet.deployed();
+  const configHandlerFacet = await ConfigHandlerFacet.deploy({ gasLimit});
+  await configHandlerFacet.deployTransaction.wait("1");
 
   // Cast Diamond to DiamondCutFacet
   const cutFacet = await ethers.getContractAt("DiamondCutFacet", diamond.address);
@@ -28,6 +28,9 @@ async function deployProtocolConfigFacet(diamond, config, gasLimit) {
   const diamondCut = await cutFacet.diamondCut([configHandlerCut], configHandlerFacet.address, configCallData, {
     gasLimit,
   });
+
+  await diamondCut.wait("1");
+
   // Return the cut transaction to test the events emitted by the initializer function
   return { facets: [configHandlerFacet], cutTransaction: diamondCut };
 }

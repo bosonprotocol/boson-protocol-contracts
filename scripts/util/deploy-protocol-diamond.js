@@ -21,17 +21,17 @@ async function deployProtocolDiamond(gasLimit) {
   // Deploy the AccessController contract
   const AccessController = await ethers.getContractFactory("AccessController");
   const accessController = await AccessController.deploy({ gasLimit });
-  await accessController.deployed();
+  await accessController.deployTransaction.wait("1")
 
   // Diamond Loupe Facet
   const DiamondLoupeFacet = await ethers.getContractFactory("DiamondLoupeFacet");
   const dlf = await DiamondLoupeFacet.deploy({ gasLimit });
-  await dlf.deployed();
+  await dlf.deployTransaction.wait("1")
 
   // Diamond Cut Facet
   const DiamondCutFacet = await ethers.getContractFactory("DiamondCutFacet");
   const dcf = await DiamondCutFacet.deploy({ gasLimit });
-  await dcf.deployed();
+  await dcf.deployTransaction.wait("1")
 
   // Arguments for Diamond constructor
   const diamondArgs = [accessController.address, [getFacetAddCut(dlf), getFacetAddCut(dcf)], interfaces];
@@ -39,7 +39,7 @@ async function deployProtocolDiamond(gasLimit) {
   // Deploy Protocol Diamond
   const ProtocolDiamond = await ethers.getContractFactory("ProtocolDiamond");
   const protocolDiamond = await ProtocolDiamond.deploy(...diamondArgs, { gasLimit });
-  await protocolDiamond.deployed();
+  await protocolDiamond.deployTransaction.wait("1");
 
   return [protocolDiamond, dlf, dcf, accessController, diamondArgs];
 }
