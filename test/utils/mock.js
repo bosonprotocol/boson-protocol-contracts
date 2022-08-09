@@ -1,5 +1,7 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const Condition = require("../../scripts/domain/Condition");
+const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferFees = require("../../scripts/domain/OfferFees");
@@ -146,10 +148,50 @@ function mockDispute() {
 
 async function mockReceipt() {
   const exchange = mockExchange();
-  const { offer } = await mockOffer();
-  const dispute = mockDispute();
-  const twinReceipts = mockTwinReceipt(ethers.constants.AddressZero);
-  return new Receipt(exchange, offer, dispute, [twinReceipts]);
+  const mo = await mockOffer();
+  const offer = mo.offer;
+  const offerFees = mo.offerFees;
+  const buyerId = "1";
+  const sellerId = "2";
+  const agentId = "3";
+  const twinReceipt = mockTwinReceipt(ethers.constants.AddressZero);
+
+  return new Receipt(
+    exchange.id,
+    offer.id,
+    buyerId,
+    ethers.constants.AddressZero,
+    sellerId,
+    ethers.constants.AddressZero,
+    offer.price,
+    offer.sellerDeposit,
+    offer.buyerCancelPenalty,
+    offerFees,
+    agentId,
+    ethers.constants.AddressZero,
+    offer.exchangeToken,
+    exchange.finalizedDate,
+    undefined,
+    exchange.voucher.committedDate,
+    exchange.voucher.redeemedDate,
+    exchange.voucher.expired,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    [twinReceipt]
+  );
+}
+
+function mockCondition(tokenAddress) {
+  const method = EvaluationMethod.Threshold;
+  const tokenType = TokenType.FungibleToken;
+  const tokenId = "0";
+  const threshold = "1";
+  const maxCommits = "1";
+
+  return new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
 }
 
 exports.mockOffer = mockOffer;
@@ -160,3 +202,4 @@ exports.mockVoucher = mockVoucher;
 exports.mockExchange = mockExchange;
 exports.mockReceipt = mockReceipt;
 exports.mockDispute = mockDispute;
+exports.mockCondition = mockCondition;

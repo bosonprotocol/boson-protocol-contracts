@@ -1,10 +1,6 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
 const { expect } = require("chai");
+const { mockCondition } = require("./../utils/mock");
 const Group = require("../../scripts/domain/Group");
-const Condition = require("../../scripts/domain/Condition");
-const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
-const TokenType = require("../../scripts/domain/TokenType");
 
 /**
  *  Test the Group domain entity
@@ -12,27 +8,15 @@ const TokenType = require("../../scripts/domain/TokenType");
 describe("Group", function () {
   // Suite-wide scope
   let group, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
-  let accounts, id, sellerId, offerIds, condition;
+  let id, sellerId, offerIds, condition;
 
   beforeEach(async function () {
-    // Get a list of accounts
-    accounts = await ethers.getSigners();
-
-    // Required constructor params for Condition
-    method = EvaluationMethod.Threshold;
-    tokenType = TokenType.MultiToken;
-    tokenAddress = accounts[0].address; // just need an address
-    tokenId = "5150";
-    threshold = "1";
-    maxCommits = "1";
-
     // Required constructor params for Group
     id = "2112";
     sellerId = "12";
     offerIds = ["1", "2", "4", "8"];
 
-    condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+    condition = mockCondition();
     expect(condition.isValid()).to.be.true;
   });
 

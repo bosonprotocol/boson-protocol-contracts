@@ -177,9 +177,29 @@ contract BosonTypes {
     }
 
     struct Receipt {
-        Exchange exchange;
-        Offer offer;
-        Dispute dispute;
+        uint256 exchangeId;
+        uint256 offerId;
+        uint256 buyerId;
+        address buyerAddress;
+        uint256 sellerId;
+        address sellerOperatorAddress;
+        uint256 price;
+        uint256 sellerDeposit;
+        uint256 buyerCancelPenalty;
+        OfferFees offerFees; // protocol and agent fee
+        uint256 agentId;
+        address agentAddress;
+        address exchangeToken;
+        uint256 finalizedDate;
+        Condition condition;
+        uint256 committedDate;
+        uint256 redeemedDate;
+        bool voucherExpired;
+        uint256 disputeResolverId;
+        address disputeResolverOperatorAddress;
+        uint256 disputedDate; // DisputeDates.disputed
+        uint256 escalatedDate; // DisputeDate.escalated
+        DisputeState disputeState;
         TwinReceipt[] twinReceipts;
     }
 

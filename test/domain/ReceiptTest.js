@@ -2,22 +2,24 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
 const Receipt = require("../../scripts/domain/Receipt.js");
-const { mockReceipt, mockExchange, mockOffer, mockDispute, mockTwinReceipt } = require("../utils/mock");
+const { mockReceipt, mockOffer, mockTwinReceipt, mockCondition } = require("../utils/mock");
+const DisputeState = require("../../scripts/domain/DisputeState");
 
 /**
  *  Test the Twin domain entity
  */
 describe("Receipt", function () {
   // Suite-wide scope
-  let receipt, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
+  let receipt, object, promoted, clone, dehydrated, rehydrated, key, value, struct, accounts;
+
+  beforeEach(async function () {
+    // Get a list of accounts
+    accounts = await ethers.getSigners();
+  });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated Receipt instance", async function () {
       receipt = await mockReceipt();
-      expect(receipt.exchangeIsValid()).is.true;
-      expect(receipt.offerIsValid()).is.true;
-      expect(receipt.disputeIsValid()).is.true;
-      expect(receipt.twinReceiptsIsValid()).is.true;
       expect(receipt.isValid()).is.true;
     });
   });
@@ -26,96 +28,582 @@ describe("Receipt", function () {
     beforeEach(async function () {
       // Create a valid receipt, then set fields in tests directly
       receipt = await mockReceipt();
-      expect(receipt.exchangeIsValid()).is.true;
-      expect(receipt.offerIsValid()).is.true;
-      expect(receipt.disputeIsValid()).is.true;
+      expect(receipt.exchangeIdIsValid()).is.true;
+      expect(receipt.offerIdIsValid()).is.true;
+      expect(receipt.buyerIdIsValid()).is.true;
+      expect(receipt.buyerAddressIsValid()).is.true;
+      expect(receipt.sellerIdIsValid()).is.true;
+      expect(receipt.sellerOperatorAddressIsValid()).is.true;
+      expect(receipt.priceIsValid()).is.true;
+      expect(receipt.sellerDepositIsValid()).is.true;
+      expect(receipt.buyerCancelPenaltyIsValid()).is.true;
+      expect(receipt.offerFeesIsValid()).is.true;
+      expect(receipt.agentIdIsValid()).is.true;
+      expect(receipt.agentAddressIsValid()).is.true;
+      expect(receipt.exchangeTokenIsValid()).is.true;
+      expect(receipt.finalizedDateIsValid()).is.true;
+      expect(receipt.conditionIsValid()).is.true;
+      expect(receipt.committedDateIsValid()).is.true;
+      expect(receipt.redeemedDateIsValid()).is.true;
+      expect(receipt.voucherExpiredIsValid()).is.true;
+      expect(receipt.disputeResolverIdIsValid()).is.true;
+      expect(receipt.disputeResolverOperatorAddressIsValid()).is.true;
+      expect(receipt.disputedDateIsValid()).is.true;
+      expect(receipt.escalatedDateIsValid()).is.true;
+      expect(receipt.disputeStateIsValid()).is.true;
       expect(receipt.twinReceiptsIsValid()).is.true;
       expect(receipt.isValid()).is.true;
     });
 
-    it("Exchange must be a valid exchange instance", async function () {
+    it("Always present, exchangeId must be the string representation of a non-zero BigNumber", async function () {
       // Invalid field value
-      receipt.exchange = 12;
-      expect(receipt.exchangeIsValid()).is.false;
+      receipt.exchangeId = "zedzdeadbaby";
+      expect(receipt.exchangeIdIsValid()).is.false;
       expect(receipt.isValid()).is.false;
 
       // Invalid field value
-      receipt.exchange = "zedzdeadbaby";
-      expect(receipt.exchangeIsValid()).is.false;
+      receipt.exchangeId = new Date();
+      expect(receipt.exchangeIdIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.exchangeId = 12;
+      expect(receipt.exchangeIdIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.exchangeId = "0";
+      expect(receipt.exchangeIdIsValid()).is.false;
       expect(receipt.isValid()).is.false;
 
       // Valid field value
-      receipt.exchange = true;
-      expect(receipt.exchangeIsValid()).is.false;
-      expect(receipt.isValid()).is.false;
-
-      // Valid field value
-      receipt.exchange = new Date();
-      expect(receipt.exchangeIsValid()).is.false;
-      expect(receipt.isValid()).is.false;
-
-      // Valid field value
-      receipt.exchange = mockExchange();
-      expect(receipt.exchangeIsValid()).is.true;
+      receipt.exchangeId = "126";
+      expect(receipt.exchangeIdIsValid()).is.true;
       expect(receipt.isValid()).is.true;
     });
 
-    it("Offer must be a valid offer instance", async function () {
+    it("Always present, offerId must be the string representation of a non-zero BigNumber", async function () {
       // Invalid field value
-      receipt.offer = 12;
-      expect(receipt.offerIsValid()).is.false;
+      receipt.offerId = "zedzdeadbaby";
+      expect(receipt.offerIdIsValid()).is.false;
       expect(receipt.isValid()).is.false;
 
       // Invalid field value
-      receipt.offer = "zedzdeadbaby";
-      expect(receipt.offerIsValid()).is.false;
+      receipt.offerId = new Date();
+      expect(receipt.offerIdIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.offerId = 12;
+      expect(receipt.offerIdIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.offerId = "0";
+      expect(receipt.offerIdIsValid()).is.false;
       expect(receipt.isValid()).is.false;
 
       // Valid field value
-      receipt.offer = true;
-      expect(receipt.offerIsValid()).is.false;
-      expect(receipt.isValid()).is.false;
-
-      // Valid field value
-      receipt.offer = new Date();
-      expect(receipt.offerIsValid()).is.false;
-      expect(receipt.isValid()).is.false;
-
-      // Valid field value
-      const { offer } = await mockOffer();
-      receipt.offer = offer;
-      expect(receipt.offerIsValid()).is.true;
+      receipt.offerId = "126";
+      expect(receipt.offerIdIsValid()).is.true;
       expect(receipt.isValid()).is.true;
     });
 
-    it("Dispute must be a valid dispute instance", async function () {
+    it("Always present, buyerId must be the string representation of a non-zero BigNumber", async function () {
       // Invalid field value
-      receipt.dispute = 12;
-      expect(receipt.disputeIsValid()).is.false;
+      receipt.buyerId = "zedzdeadbaby";
+      expect(receipt.buyerIdIsValid()).is.false;
       expect(receipt.isValid()).is.false;
 
       // Invalid field value
-      receipt.dispute = "zedzdeadbaby";
-      expect(receipt.disputeIsValid()).is.false;
+      receipt.buyerId = new Date();
+      expect(receipt.buyerIdIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.buyerId = 12;
+      expect(receipt.buyerIdIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.buyerId = "0";
+      expect(receipt.buyerIdIsValid()).is.false;
       expect(receipt.isValid()).is.false;
 
       // Valid field value
-      receipt.dipsute = true;
-      expect(receipt.disputeIsValid()).is.false;
-      expect(receipt.isValid()).is.false;
-
-      // Valid field value
-      receipt.dispute = new Date();
-      expect(receipt.disputeIsValid()).is.false;
-      expect(receipt.isValid()).is.false;
-
-      // Valid field value
-      receipt.dispute = mockDispute();
-      expect(receipt.disputeIsValid()).is.true;
+      receipt.buyerId = "126";
+      expect(receipt.buyerIdIsValid()).is.true;
       expect(receipt.isValid()).is.true;
     });
 
-    it("TwinReceipt must be a valid twinReceipt instance", async function () {
+    it("Always present, buyerAddress must be a string representation of an EIP-55 compliant address", async function () {
+      // Invalid field value
+      receipt.buyerAddress = "0xASFADF";
+      expect(receipt.buyerAddressIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.buyerAddress = "zedzdeadbaby";
+      expect(receipt.buyerAddressIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.buyerAddress = accounts[0].address;
+      expect(receipt.buyerAddressIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+
+      // Valid field value
+      receipt.buyerAddress = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
+      expect(receipt.buyerAddressIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("Always present, price must be the string representation of BigNumber", async function () {
+      // Invalid field value
+      receipt.price = "zedzdeadbaby";
+      expect(receipt.priceIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.price = new Date();
+      expect(receipt.priceIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.price = 12;
+      expect(receipt.priceIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.price = "0";
+      expect(receipt.priceIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+
+      // Valid field value
+      receipt.price = "126";
+      expect(receipt.priceIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("Always present, sellerDeposit must be the string representation of BigNumber", async function () {
+      // Invalid field value
+      receipt.sellerDeposit = "zedzdeadbaby";
+      expect(receipt.sellerDepositIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.sellerDeposit = new Date();
+      expect(receipt.sellerDepositIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.sellerDeposit = 12;
+      expect(receipt.sellerDepositIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.sellerDeposit = "0";
+      expect(receipt.sellerDepositIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+
+      // Valid field value
+      receipt.sellerDeposit = "126";
+      expect(receipt.sellerDepositIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("Always present, buyerCancelPenalty must be the string representation of BigNumber", async function () {
+      // Invalid field value
+      receipt.buyerCancelPenalty = "zedzdeadbaby";
+      expect(receipt.buyerCancelPenaltyIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.buyerCancelPenalty = new Date();
+      expect(receipt.buyerCancelPenaltyIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.buyerCancelPenalty = 12;
+      expect(receipt.buyerCancelPenaltyIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.buyerCancelPenalty = "0";
+      expect(receipt.buyerCancelPenaltyIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+
+      // Valid field value
+      receipt.buyerCancelPenalty = "126";
+      expect(receipt.buyerCancelPenaltyIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("Always present, offerFees must be a valid OfferFees instance", async function () {
+      // Invalid field value
+      receipt.offerFees = 12;
+      expect(receipt.offerFeesIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.offerFees = "zedzdeadbaby";
+      expect(receipt.offerFeesIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.offerFees = true;
+      expect(receipt.offerFeesIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.offerFees = new Date();
+      expect(receipt.offerFeesIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      const mo = await mockOffer();
+      // Valid field value
+      receipt.offerFees = mo.offerFees;
+      expect(receipt.offerFeesIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("If present, agentId must be the string representation of BigNumber", async function () {
+      // Invalid field value
+      receipt.agentId = "zedzdeadbaby";
+      expect(receipt.agentIdIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.agentId = new Date();
+      expect(receipt.agentIdIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.agentId = 12;
+      expect(receipt.agentIdIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.agentId = "0";
+      expect(receipt.priceIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+
+      // Valid field value
+      receipt.agentId = "126";
+      expect(receipt.agentIdIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("If present, agentAddress must be a string representation of an EIP-55 compliant address", async function () {
+      // Invalid field value
+      receipt.agentAddress = "0xASFADF";
+      expect(receipt.agentAddressIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.agentAddress = "zedzdeadbaby";
+      expect(receipt.agentAddressIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.agentAddress = accounts[0].address;
+      expect(receipt.agentAddressIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+
+      // Valid field value
+      receipt.agentAddress = ethers.constants.AddressZero;
+      expect(receipt.agentAddressIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+
+      // Valid field value
+      receipt.agentAddress = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
+      expect(receipt.agentAddressIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("Always present, exchangeToken must be a string representation of an EIP-55 compliant address", async function () {
+      // Invalid field value
+      receipt.exchangeToken = "0xASFADF";
+      expect(receipt.exchangeTokenIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.exchangeToken = "zedzdeadbaby";
+      expect(receipt.exchangeTokenIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.exchangeToken = accounts[0].address;
+      expect(receipt.exchangeTokenIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+
+      // Valid field value
+      receipt.exchangeToken = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
+      expect(receipt.exchangeTokenIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("If present, finalizedDate must be the string representation of BigNumber", async function () {
+      // Invalid field value
+      receipt.finalizedDate = "zedzdeadbaby";
+      expect(receipt.finalizedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.finalizedDate = new Date();
+      expect(receipt.finalizedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.finalizedDate = 12;
+      expect(receipt.finalizedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.finalizedDate = "0";
+      expect(receipt.finalizedDateIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+
+      // Valid field value
+      receipt.finalizedDate = "126";
+      expect(receipt.finalizedDateIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("If present, condition must be a valid Condition instance", async function () {
+      // Invalid field value
+      receipt.condition = "zedzdeadbaby";
+      expect(receipt.conditionIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.condition = new Date();
+      expect(receipt.conditionIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.condition = 12;
+      expect(receipt.conditionIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.condition = "126";
+      expect(receipt.conditionIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.condition = mockCondition();
+      expect(receipt.conditionIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("Always present, committedDate must be the string representation of BigNumber", async function () {
+      // Invalid field value
+      receipt.committedDate = "zedzdeadbaby";
+      expect(receipt.committedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.committedDate = new Date();
+      expect(receipt.committedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.committedDate = 12;
+      expect(receipt.committedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.committedDate = "126";
+      expect(receipt.committedDateIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("If present, redeemedDate must be the string representation of BigNumber", async function () {
+      // Invalid field value
+      receipt.redeemedDate = "zedzdeadbaby";
+      expect(receipt.redeemedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.redeemedDate = new Date();
+      expect(receipt.redeemedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.redeemedDate = 12;
+      expect(receipt.redeemedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.redeemedDate = "0";
+      expect(receipt.redeemedDateIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+
+      // Valid field value
+      receipt.redeemedDate = "126";
+      expect(receipt.redeemedDateIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("Always present, voucherExpired must be a boolean", async function () {
+      // Invalid field value
+      receipt.voucherExpired = 12;
+      expect(receipt.voucherExpiredIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.voucherExpired = "zedzdeadbaby";
+      expect(receipt.voucherExpiredIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.voucherExpired = false;
+      expect(receipt.voucherExpiredIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+
+      // Valid field value
+      receipt.voucherExpired = true;
+      expect(receipt.voucherExpiredIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("If present, disputeResolverId must be the string representation of BigNumber", async function () {
+      // Invalid field value
+      receipt.disputeResolverId = "zedzdeadbaby";
+      expect(receipt.disputeResolverIdIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.disputeResolverId = new Date();
+      expect(receipt.disputeResolverIdIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.disputeResolverId = 12;
+      expect(receipt.disputeResolverIdIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.disputeResolverId = "0";
+      expect(receipt.disputeResolverIdIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+
+      // Valid field value
+      receipt.disputeResolverId = "126";
+      expect(receipt.disputeResolverIdIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("If present, disputeResolverOperatorAddress must be a string representation of an EIP-55 compliant address", async function () {
+      // Invalid field value
+      receipt.disputeResolverOperatorAddress = "0xASFADF";
+      expect(receipt.disputeResolverOperatorAddressIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.disputeResolverOperatorAddress = "zedzdeadbaby";
+      expect(receipt.disputeResolverOperatorAddressIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.disputeResolverOperatorAddress = accounts[0].address;
+      expect(receipt.disputeResolverOperatorAddressIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+
+      // Valid field value
+      receipt.disputeResolverOperatorAddress = ethers.constants.AddressZero;
+      expect(receipt.disputeResolverOperatorAddressIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+
+      // Valid field value
+      receipt.disputeResolverOperatorAddress = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
+      expect(receipt.disputeResolverOperatorAddressIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("If present, disputedDate must be the string representation of BigNumber", async function () {
+      // Invalid field value
+      receipt.disputedDate = "zedzdeadbaby";
+      expect(receipt.disputedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.disputedDate = new Date();
+      expect(receipt.disputedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.disputedDate = 12;
+      expect(receipt.disputedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.disputedDate = "0";
+      expect(receipt.disputedDateIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+
+      // Valid field value
+      receipt.disputedDate = "126";
+      expect(receipt.disputedDateIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("If present, escalatedDate must be the string representation of BigNumber", async function () {
+      // Invalid field value
+      receipt.escalatedDate = "zedzdeadbaby";
+      expect(receipt.escalatedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.escalatedDate = new Date();
+      expect(receipt.escalatedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.escalatedDate = 12;
+      expect(receipt.escalatedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.escalatedDate = "0";
+      expect(receipt.escalatedDateIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+
+      // Valid field value
+      receipt.escalatedDate = "126";
+      expect(receipt.escalatedDateIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("If present, disputeState must be the string representation of a BigNumber", async function () {
+      // Invalid field value
+      receipt.disputeState = "zedzdeadbaby";
+      expect(receipt.disputeStateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.disputeState = "0";
+      expect(receipt.disputeStateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.disputeState = "126";
+      expect(receipt.disputeStateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Invalid field value
+      receipt.disputeState = new Date();
+      expect(receipt.disputeStateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
+
+      // Valid field value
+      receipt.disputeState = DisputeState.Resolving;
+      expect(receipt.disputeStateIsValid()).is.true;
+      expect(receipt.isValid()).is.true;
+    });
+
+    it("twinReceipt must be a valid TwinReceipt instance", async function () {
       // Invalid field value
       receipt.twinReceipts = 12;
       expect(receipt.twinReceiptsIsValid()).is.false;
@@ -145,24 +633,61 @@ describe("Receipt", function () {
     context("📋 Utility functions", async function () {
       beforeEach(async function () {
         // Create a valid receipt then set fields in tests directly
-        receipt = await mockReceipt();
+        receipt = object = await mockReceipt();
         expect(receipt.isValid()).is.true;
 
-        const { exchange, offer, dispute, twinReceipts } = receipt;
-
-        // Get plain object
-        object = {
-          exchange,
-          offer,
-          dispute,
+        const {
+          exchangeId,
+          offerId,
+          buyerId,
+          buyerAddress,
+          sellerId,
+          sellerOperatorAddress,
+          price,
+          sellerDeposit,
+          buyerCancelPenalty,
+          offerFees,
+          agentId,
+          agentAddress,
+          exchangeToken,
+          finalizedDate,
+          condition,
+          committedDate,
+          redeemedDate,
+          voucherExpired,
+          disputeResolverId,
+          disputeResolverOperatorAddress,
+          disputedDate,
+          escalatedDate,
+          disputeState,
           twinReceipts,
-        };
+        } = receipt;
 
         // Struct representation
         struct = [
-          exchange.toStruct(),
-          offer.toStruct(),
-          dispute.toStruct(),
+          exchangeId,
+          offerId,
+          buyerId,
+          buyerAddress,
+          sellerId,
+          sellerOperatorAddress,
+          price,
+          sellerDeposit,
+          buyerCancelPenalty,
+          offerFees.toStruct(),
+          agentId,
+          agentAddress,
+          exchangeToken,
+          finalizedDate,
+          condition.toStruct(),
+          committedDate,
+          redeemedDate,
+          voucherExpired,
+          disputeResolverId,
+          disputeResolverOperatorAddress,
+          disputedDate,
+          escalatedDate,
+          disputeState,
           twinReceipts.map((twinReceipt) => twinReceipt.toStruct()),
         ];
       });

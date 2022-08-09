@@ -625,7 +625,6 @@ abstract contract ProtocolBase is BosonTypes {
         // Make sure the exchange exists
         require(exchangeExists, NO_SUCH_EXCHANGE);
         // Make sure the exchange is in expected state
-        console.log(uint256(exchange.state));
         require(exchange.state == _expectedState, INVALID_STATE);
     }
 
@@ -674,10 +673,22 @@ abstract contract ProtocolBase is BosonTypes {
         view
         returns (bool exists, TwinReceipt[] storage twinReceipts)
     {
-        // Get the twin's slot
+        // Get the twin receipts slot
         twinReceipts = protocolLookups().twinReceiptsByExchange[_exchangeId];
 
         // Determine existence
         exists = (_exchangeId > 0 && twinReceipts.length > 0);
+    }
+
+    function fetchConditionByExchange(uint256 _exchangeId)
+        internal
+        view
+        returns (bool exists, Condition storage condition)
+    {
+        // Get the condition slot
+        condition = protocolLookups().exchangeCondition[_exchangeId];
+
+        // Determine existence
+        exists = (_exchangeId > 0 && condition.method != EvaluationMethod.None);
     }
 }

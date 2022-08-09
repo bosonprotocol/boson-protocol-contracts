@@ -159,6 +159,8 @@ library ProtocolLib {
         mapping(uint256 => uint256[]) allowedSellers;
         // dispute resolver id => seller id => index of allowed seller in allowedSellers
         mapping(uint256 => mapping(uint256 => uint256)) allowedSellerIndex;
+        // exchange id => condition
+        mapping(uint256 => BosonTypes.Condition) exchangeCondition;
     }
 
     // Incrementing ID counters
