@@ -32,7 +32,9 @@ contract BuyerHandlerFacet is BuyerBase {
     }
 
     /**
-     * @notice Updates a buyer. All fields should be filled, even those staying the same. The wallet address cannot be updated if the current wallet address has oustanding vouchers
+     * @notice Updates a buyer, with the exception of the active flag.
+     *         All other fields should be filled, even those staying the same.
+     * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a BuyerUpdated event if successful.
      *
@@ -76,6 +78,8 @@ contract BuyerHandlerFacet is BuyerBase {
         //Delete current mappings
         delete protocolLookups().buyerIdByWallet[msgSender()];
 
+        //Ignore active flag passed in by caller and set to value in storage.
+        _buyer.active = buyer.active;
         storeBuyer(_buyer);
 
         // Notify watchers of state change

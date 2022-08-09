@@ -31,8 +31,17 @@ const { mockOffer, mockDisputeResolver } = require("../utils/mock");
 describe("IBosonOfferHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR, other;
-  let erc165, protocolDiamond, accessController, accountHandler, offerHandler, bosonToken, offerStruct, key, value;
+  let deployer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR, other, protocolAdmin;
+  let erc165,
+    protocolDiamond,
+    accessController,
+    accountHandler,
+    offerHandler,
+    configHandler,
+    bosonToken,
+    offerStruct,
+    key,
+    value;
   let offer, nextOfferId, invalidOfferId, support, expected, exists, nextAccountId;
   let seller, active;
   let id, sellerId, price, voided;
@@ -77,8 +86,20 @@ describe("IBosonOfferHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, operatorDR, adminDR, clerkDR, treasuryDR, other] =
-      await ethers.getSigners();
+    [
+      deployer,
+      operator,
+      admin,
+      clerk,
+      treasury,
+      rando,
+      operatorDR,
+      adminDR,
+      clerkDR,
+      treasuryDR,
+      other,
+      protocolAdmin,
+    ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -88,6 +109,10 @@ describe("IBosonOfferHandler", function () {
 
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+
+    //Grant ADMIN role to and address that can call restricted functions.
+    //This ADMIN role is a protocol-level role. It is not the same an admin address for an account type
+    await accessController.grantRole(Role.ADMIN, protocolAdmin.address);
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
@@ -152,6 +177,9 @@ describe("IBosonOfferHandler", function () {
 
     // Cast Diamond to IBosonOfferHandler
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
+
+    //Cast Diamond to IBosonConfigHancler
+    configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -879,7 +907,7 @@ describe("IBosonOfferHandler", function () {
           it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "4"; // argument sent to contract for createAgent will be ignored
-            agentFeePercentage = "9900"; //99%
+            agentFeePercentage = "3000"; //30%
 
             active = true;
 
@@ -889,6 +917,9 @@ describe("IBosonOfferHandler", function () {
 
             // Create an agent
             await accountHandler.connect(rando).createAgent(agent);
+
+            //Change protocol fee after creating agent
+            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
 
             // Attempt to Create an offer, expecting revert
             await expect(
@@ -2153,7 +2184,7 @@ describe("IBosonOfferHandler", function () {
           it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "4"; // argument sent to contract for createAgent will be ignored
-            agentFeePercentage = "9900"; //99%
+            agentFeePercentage = "3000"; //30%
 
             active = true;
 
@@ -2163,6 +2194,9 @@ describe("IBosonOfferHandler", function () {
 
             // Create an agent
             await accountHandler.connect(rando).createAgent(agent);
+
+            //Change protocol fee after creating agent
+            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
 
             nonZeroAgentIds[1] = id;
 

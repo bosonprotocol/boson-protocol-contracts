@@ -28,7 +28,7 @@ describe("BuyerHandler", function () {
   let protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, fundsHandler, gasLimit;
   let seller, active, id2;
   let emptyAuthToken;
-  let buyer, buyerStruct, buyer2, buyer2Struct;
+  let buyer, buyerStruct, buyer2, buyer2Struct, expectedBuyer, expectedBuyerStruct;
   let disputeResolver;
   let disputeResolverFees;
   let sellerAllowList;
@@ -226,12 +226,16 @@ describe("BuyerHandler", function () {
         buyer.active = false;
         expect(buyer.isValid()).is.true;
 
-        buyerStruct = buyer.toStruct();
+        //Update should not change id or active flag
+        expectedBuyer = buyer.clone();
+        expectedBuyer.active = true;
+        expect(expectedBuyer.isValid()).is.true;
+        expectedBuyerStruct = expectedBuyer.toStruct();
 
         //Update a buyer, testing for the event
         await expect(accountHandler.connect(other1).updateBuyer(buyer))
           .to.emit(accountHandler, "BuyerUpdated")
-          .withArgs(buyer.id, buyerStruct, other1.address);
+          .withArgs(buyer.id, expectedBuyerStruct, other1.address);
       });
 
       it("should emit a BuyerUpdated event with correct values if values stay the same", async function () {
@@ -241,12 +245,15 @@ describe("BuyerHandler", function () {
           .withArgs(buyer.id, buyerStruct, other1.address);
       });
 
-      it("should update state of all fields exceipt Id", async function () {
+      it("should update state of all fields except Id and active flag", async function () {
         buyer.wallet = other2.address;
         buyer.active = false;
         expect(buyer.isValid()).is.true;
 
-        buyerStruct = buyer.toStruct();
+        //Update should not change id or active flag
+        expectedBuyer = buyer.clone();
+        expectedBuyer.active = true;
+        expect(expectedBuyer.isValid()).is.true;
 
         // Update buyer
         await accountHandler.connect(other1).updateBuyer(buyer);
@@ -257,34 +264,13 @@ describe("BuyerHandler", function () {
         // Parse into entity
         let returnedBuyer = Buyer.fromStruct(buyerStruct);
 
-        // Returned values should match the input in updateBuyer
-        for ([key, value] of Object.entries(buyer)) {
+        // Returned values should match the expected values
+        for ([key, value] of Object.entries(expectedBuyer)) {
           expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
         }
       });
 
       it("should update state correctly if values are the same", async function () {
-        // Update buyer
-        await accountHandler.connect(other1).updateBuyer(buyer);
-
-        // Get the buyer as a struct
-        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
-
-        // Parse into entity
-        let returnedBuyer = Buyer.fromStruct(buyerStruct);
-
-        // Returned values should match the input in updateBuyer
-        for ([key, value] of Object.entries(buyer)) {
-          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
-        }
-      });
-
-      it("should update only active flag", async function () {
-        buyer.active = false;
-        expect(buyer.isValid()).is.true;
-
-        buyerStruct = buyer.toStruct();
-
         // Update buyer
         await accountHandler.connect(other1).updateBuyer(buyer);
 
@@ -336,7 +322,6 @@ describe("BuyerHandler", function () {
 
         //Update first buyer
         buyer.wallet = other2.address;
-        buyer.active = false;
         expect(buyer.isValid()).is.true;
 
         buyerStruct = buyer.toStruct();

@@ -18,7 +18,7 @@ describe("AgentHandler", function () {
   // Common vars
   let deployer, rando, other1, other2, other3;
   let protocolDiamond, accessController, accountHandler, gasLimit;
-  let agent, agentStruct, feePercentage, agent2, agent2Struct, active;
+  let agent, agentStruct, feePercentage, agent2, agent2Struct, active, expectedAgent, expectedAgentStruct;
   let nextAccountId;
   let invalidAccountId, id, id2, key, value, exists;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
@@ -174,9 +174,10 @@ describe("AgentHandler", function () {
         }
       });
 
-      it("should allow feePercentage of 100%", async function () {
-        // Create a valid agent with feePercentage = 10000 (100%). Not handy for seller, but technically possible
-        agent = new Agent(id, "10000", other1.address, active);
+      it("should allow feePercentage plus protocol fee percentage == max", async function () {
+        //Agent with feePercentage that, when added to the protocol fee percentage = maxTotalOfferFeePercentage
+        //protocol fee percentage = 200 (2%), max = 4000 (40%)
+        agent = new Agent(id, "3800", other1.address, active); //38%
         expect(agent.isValid()).is.true;
 
         // How that agent looks as a returned struct
@@ -224,14 +225,15 @@ describe("AgentHandler", function () {
           );
         });
 
-        it("feePercentage is above 100%", async function () {
-          //Agent with feePercentage > 10000 (100%)
-          agent = new Agent(id, "10001", other1.address, active);
-          expect(agent.isValid()).is.false;
+        it("feePercentage plus protocol fee percentage is above max", async function () {
+          //Agent with feePercentage that, when added to the protocol fee percentage is above the maxTotalOfferFeePercentage
+          //protocol fee percentage = 200 (2%), max = 4000 (40%)
+          agent = new Agent(id, "3900", other1.address, active); //39%
+          expect(agent.isValid()).is.true;
 
           // Attempt to create another buyer with same wallet address
           await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(
-            RevertReasons.FEE_PERCENTAGE_INVALID
+            RevertReasons.INVALID_AGENT_FEE_PERCENTAGE
           );
         });
       });
@@ -249,14 +251,19 @@ describe("AgentHandler", function () {
       it("should emit an AgentUpdated event with correct values if values change", async function () {
         agent.wallet = other2.address;
         agent.active = false;
+        agent.feePercentage = "3000"; //30%
         expect(agent.isValid()).is.true;
 
-        agentStruct = agent.toStruct();
+        //Update should not change id or active flag
+        expectedAgent = agent.clone();
+        expectedAgent.active = true;
+        expect(expectedAgent.isValid()).is.true;
+        expectedAgentStruct = expectedAgent.toStruct();
 
         //Update a agent, testing for the event
         await expect(accountHandler.connect(other1).updateAgent(agent))
           .to.emit(accountHandler, "AgentUpdated")
-          .withArgs(agent.id, agentStruct, other1.address);
+          .withArgs(agent.id, expectedAgentStruct, other1.address);
       });
 
       it("should emit an AgentUpdated event with correct values if values stay the same", async function () {
@@ -266,13 +273,16 @@ describe("AgentHandler", function () {
           .withArgs(agent.id, agentStruct, other1.address);
       });
 
-      it("should update state of all fields exceipt Id", async function () {
+      it("should update state of all fields except Id and active flag", async function () {
         agent.wallet = other2.address;
         agent.active = false;
-        agent.feePercentage = "5000";
+        agent.feePercentage = "3000"; //30%
         expect(agent.isValid()).is.true;
 
-        agentStruct = agent.toStruct();
+        //Update should not change id or active flag
+        expectedAgent = agent.clone();
+        expectedAgent.active = true;
+        expect(expectedAgent.isValid()).is.true;
 
         // Update agent
         await accountHandler.connect(other1).updateAgent(agent);
@@ -283,8 +293,8 @@ describe("AgentHandler", function () {
         // Parse into entity
         let returnedAgent = Agent.fromStruct(agentStruct);
 
-        // Returned values should match the input in updateAgent
-        for ([key, value] of Object.entries(agent)) {
+        // Returned values should match the expected values
+        for ([key, value] of Object.entries(expectedAgent)) {
           expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
         }
       });
@@ -305,29 +315,8 @@ describe("AgentHandler", function () {
         }
       });
 
-      it("should update only active flag", async function () {
-        agent.active = false;
-        expect(agent.isValid()).is.true;
-
-        agentStruct = agent.toStruct();
-
-        // Update agent
-        await accountHandler.connect(other1).updateAgent(agent);
-
-        // Get the agent as a struct
-        [, agentStruct] = await accountHandler.connect(rando).getAgent(agent.id);
-
-        // Parse into entity
-        let returnedAgent = Agent.fromStruct(agentStruct);
-
-        // Returned values should match the input in updateAgent
-        for ([key, value] of Object.entries(agent)) {
-          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
-        }
-      });
-
       it("should update only feePercentage", async function () {
-        agent.feePercentage = "5000";
+        agent.feePercentage = "3000"; //30%
         expect(agent.isValid()).is.true;
 
         agentStruct = agent.toStruct();
@@ -383,12 +372,10 @@ describe("AgentHandler", function () {
 
         //Update first agent
         agent.wallet = other2.address;
-        agent.active = false;
+        agent.feePercentage = "3000"; //30%
         expect(agent.isValid()).is.true;
 
-        agentStruct = agent.toStruct();
-
-        // Update a agent
+        // Update agent
         await accountHandler.connect(other1).updateAgent(agent);
 
         // Get the first agent as a struct
@@ -435,6 +422,53 @@ describe("AgentHandler", function () {
         await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(RevertReasons.NOT_AGENT_WALLET);
       });
 
+      it("should allow feePercentage of 0", async function () {
+        agent.feePercentage = "0";
+        expect(agent.isValid()).is.true;
+        agentStruct = agent.toStruct();
+
+        // Update agent, testing for the event
+        await expect(accountHandler.connect(other1).updateAgent(agent))
+          .to.emit(accountHandler, "AgentUpdated")
+          .withArgs(agent.id, agentStruct, other1.address);
+
+        // Get the agent as a struct
+        [, agentStruct] = await accountHandler.connect(rando).getAgent(id);
+
+        // Parse into entity
+        let returnedAgent = Agent.fromStruct(agentStruct);
+
+        // Returned values should match the input in createAgent
+        for ([key, value] of Object.entries(agent)) {
+          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should allow feePercentage plus protocol fee percentage == max", async function () {
+        //Agent with feePercentage that, when added to the protocol fee percentage = maxTotalOfferFeePercentage
+        //protocol fee percentage = 200 (2%), max = 4000 (40%)
+        //agent = new Agent(id, "3800", other1.address, active); //38%
+        agent.feePercentage = "3800";
+        expect(agent.isValid()).is.true;
+        agentStruct = agent.toStruct();
+
+        // Update agent, testing for the event
+        await expect(accountHandler.connect(other1).updateAgent(agent))
+          .to.emit(accountHandler, "AgentUpdated")
+          .withArgs(agent.id, agentStruct, other1.address);
+
+        // Get the agent as a struct
+        [, agentStruct] = await accountHandler.connect(rando).getAgent(id);
+
+        // Parse into entity
+        let returnedAgent = Agent.fromStruct(agentStruct);
+
+        // Returned values should match the input in createAgent
+        for ([key, value] of Object.entries(agent)) {
+          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
       context("💔 Revert Reasons", async function () {
         it("Agent does not exist", async function () {
           // Set invalid id
@@ -466,14 +500,15 @@ describe("AgentHandler", function () {
           );
         });
 
-        it("feePercentage is above 100%", async function () {
-          //Agent with feePercentage > 10000 (100%)
-          agent.feePercentage = "10001";
-          expect(agent.isValid()).is.false;
+        it("feePercentage plus protocol fee percentage is above max", async function () {
+          //Agent with feePercentage that, when added to the protocol fee percentage is above the maxTotalOfferFeePercentage
+          //protocol fee percentage = 200 (2%), max = 4000 (40%)
+          agent.feePercentage = "3900"; //39%
+          expect(agent.isValid()).is.true;
 
           // Attempt to update the agent, expecting revert
           await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(
-            RevertReasons.FEE_PERCENTAGE_INVALID
+            RevertReasons.INVALID_AGENT_FEE_PERCENTAGE
           );
         });
 
