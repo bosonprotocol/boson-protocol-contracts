@@ -13,6 +13,7 @@ const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
+const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -30,7 +31,8 @@ describe("IBosonGroupHandler", function () {
   // Common vars
   let InterfaceIds;
   let accounts, deployer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
-  let erc165, protocolDiamond, accessController, accountHandler, offerHandler, groupHandler, bosonToken, key, value;
+  let erc165, protocolDiamond, accessController, accountHandler, offerHandler, groupHandler, pauseHandler;
+  let bosonToken, key, value;
   let offer, support, expected, exists;
   let seller, active;
   let id, sellerId, nextAccountId;
@@ -66,9 +68,13 @@ describe("IBosonGroupHandler", function () {
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, ["SellerHandlerFacet", "DisputeResolverHandlerFacet"]);
-    await deployProtocolHandlerFacets(protocolDiamond, ["OfferHandlerFacet"]);
-    await deployProtocolHandlerFacets(protocolDiamond, ["GroupHandlerFacet"]);
+    await deployProtocolHandlerFacets(protocolDiamond, [
+      "SellerHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "OfferHandlerFacet",
+      "GroupHandlerFacet",
+      "PauseHandlerFacet",
+    ]);
 
     // Deploy the boson token
     [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
@@ -118,6 +124,8 @@ describe("IBosonGroupHandler", function () {
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
     // Cast Diamond to IGroupHandler
     groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamond.address);
+    // Cast Diamond to IBosonPauseHandler
+    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -327,6 +335,14 @@ describe("IBosonGroupHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The groups region of protocol is paused", async function () {
+          // Pause the groups region of the protocol
+          await pauseHandler.pause([PausableRegion.Groups]);
+
+          // Attempt to create a group expecting revert
+          await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Caller not operator of any seller", async function () {
           // Attempt to Create a group, expecting revert
           await expect(groupHandler.connect(rando).createGroup(group)).to.revertedWith(RevertReasons.NOT_OPERATOR);
@@ -476,6 +492,16 @@ describe("IBosonGroupHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The groups region of protocol is paused", async function () {
+          // Pause the groups region of the protocol
+          await pauseHandler.pause([PausableRegion.Groups]);
+
+          // Attempt to add offers to a group, expecting revert
+          await expect(groupHandler.connect(operator).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
+
         it("Group does not exist", async function () {
           // Set invalid id
           group.id = "444";
@@ -625,6 +651,16 @@ describe("IBosonGroupHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The groups region of protocol is paused", async function () {
+          // Pause the groups region of the protocol
+          await pauseHandler.pause([PausableRegion.Groups]);
+
+          // Attempt to remove offers to a group, expecting revert
+          await expect(
+            groupHandler.connect(operator).removeOffersFromGroup(group.id, offerIdsToRemove)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Group does not exist", async function () {
           // Set invalid id
           group.id = "444";
@@ -750,6 +786,16 @@ describe("IBosonGroupHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The groups region of protocol is paused", async function () {
+          // Pause the groups region of the protocol
+          await pauseHandler.pause([PausableRegion.Groups]);
+
+          // Attempt to set group condition, expecting revert
+          await expect(groupHandler.connect(operator).setGroupCondition(group.id, condition)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
+
         it("Group does not exist", async function () {
           // Set invalid id
           group.id = "444";

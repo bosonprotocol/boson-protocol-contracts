@@ -139,7 +139,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         Condition memory _condition,
         uint256 _agentId
-    ) public override offersNotPaused {
+    ) public override offersNotPaused groupsNotPaused {
         // create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -198,7 +198,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         uint256 _groupId,
         uint256 _agentId
-    ) external override offersNotPaused {
+    ) external override offersNotPaused groupsNotPaused {
         // create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -311,7 +311,7 @@ contract OrchestrationHandlerFacet is
         Condition memory _condition,
         Twin memory _twin,
         uint256 _agentId
-    ) public override offersNotPaused twinsNotPaused bundlesNotPaused {
+    ) public override offersNotPaused groupsNotPaused twinsNotPaused bundlesNotPaused {
         // create offer with condition first
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
         // create twin and pack everything into a bundle
@@ -383,7 +383,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override sellersNotPaused offersNotPaused {
+    ) external override sellersNotPaused offersNotPaused groupsNotPaused {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
     }
@@ -532,7 +532,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override sellersNotPaused offersNotPaused twinsNotPaused bundlesNotPaused {
+    ) external override sellersNotPaused offersNotPaused groupsNotPaused twinsNotPaused bundlesNotPaused {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferWithConditionAndTwinAndBundle(
             _offer,

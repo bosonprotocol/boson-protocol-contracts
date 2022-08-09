@@ -35,7 +35,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      *
      * @param _group - the fully populated struct with group id set to 0x0
      */
-    function createGroup(Group memory _group) external override {
+    function createGroup(Group memory _group) external override groupsNotPaused {
         createGroupInternal(_group);
     }
 
@@ -58,7 +58,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @param _groupId  - the id of the group to be updated
      * @param _offerIds - array of offer ids to be added to the group
      */
-    function addOffersToGroup(uint256 _groupId, uint256[] calldata _offerIds) external override {
+    function addOffersToGroup(uint256 _groupId, uint256[] calldata _offerIds) external override groupsNotPaused {
         addOffersToGroupInternal(_groupId, _offerIds);
     }
 
@@ -78,7 +78,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @param _groupId  - the id of the group to be updated
      * @param _offerIds - array of offer ids to be removed to the group
      */
-    function removeOffersFromGroup(uint256 _groupId, uint256[] calldata _offerIds) external override {
+    function removeOffersFromGroup(uint256 _groupId, uint256[] calldata _offerIds) external override groupsNotPaused {
         // check if group can be updated
         (uint256 sellerId, Group storage group) = preUpdateChecks(_groupId, _offerIds);
 
@@ -123,7 +123,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @param _condition - fully populated condition struct
      *
      */
-    function setGroupCondition(uint256 _groupId, Condition calldata _condition) external override {
+    function setGroupCondition(uint256 _groupId, Condition calldata _condition) external override groupsNotPaused {
         // validate condition parameters
         require(validateCondition(_condition), INVALID_CONDITION_PARAMETERS);
 
