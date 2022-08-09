@@ -41,7 +41,7 @@ describe("AgentHandler", function () {
     await deployProtocolHandlerFacets(protocolDiamond, [
       "AccountHandlerFacet",
       "AgentHandlerFacet",
-      "PauseHandlerFacet"
+      "PauseHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -214,9 +214,7 @@ describe("AgentHandler", function () {
           await pauseHandler.pause([PausableRegion.Agents]);
 
           // Attempt to create an agent, expecting revert
-          await expect(
-            accountHandler.connect(rando).createAgent(agent)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
         it("active is false", async function () {
@@ -508,9 +506,7 @@ describe("AgentHandler", function () {
           await pauseHandler.pause([PausableRegion.Agents]);
 
           // Attempt to update an agent, expecting revert
-          await expect(
-            accountHandler.connect(other1).updateAgent(agent)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
         it("Agent does not exist", async function () {
