@@ -2,7 +2,7 @@ const environments = require("../environments");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const network = hre.network.name;
-const gasLimit = environments.gasLimit;
+let gasLimit;
 const confirmations = environments.confirmations;
 
 const Role = require("./domain/Role");
@@ -166,6 +166,10 @@ async function main() {
 
   let transactionResponse;
 
+  gasLimit = environments[network].gasLimit;
+
+  console.log("gasLimit ", gasLimit);
+
   // Output script header
   const divider = "-".repeat(80);
   console.log(`${divider}\nBoson Protocol V2 Contract Suite Deployer\n${divider}`);
@@ -213,7 +217,7 @@ async function main() {
     const deployedFacet = deployedFacets[i];
     deploymentComplete(deployedFacet.name, deployedFacet.contract.address, [], contracts);
   }
-  
+
   console.log(`\n⧉ Deploying Protocol Client implementation/proxy pairs...`);
 
   // Deploy the Protocol Client implementation/proxy pairs
