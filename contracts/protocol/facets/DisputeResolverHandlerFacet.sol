@@ -119,8 +119,9 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
     /**
      * @notice Updates a dispute resolver, not including DisputeResolverFees, allowed seller list or active flag.
-     * All DisputeResolver fields should be filled, even those staying the same.
-     * Use addFeesToDisputeResolver and removeFeesFromDisputeResolver
+     *         All DisputeResolver fields should be filled, even those staying the same.
+     *         Use removeFeesFromDisputeResolver
+     * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a DisputeResolverUpdated event if successful.
      *

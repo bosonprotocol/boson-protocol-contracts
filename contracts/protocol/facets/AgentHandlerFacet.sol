@@ -50,7 +50,9 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Updates an agent. All fields should be filled, even those staying the same.
+     * @notice Updates an agent except, with the exception of the active flag.
+     *         All other fields should be filled, even those staying the same.
+     * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a AgentUpdated event if successful.
      *
@@ -89,6 +91,8 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
         //Delete current mappings
         delete protocolLookups().agentIdByWallet[msgSender()];
 
+        //Ignore active flag passed in by caller and set to value in storage.
+        _agent.active = agent.active;
         storeAgent(_agent);
 
         // Notify watchers of state change

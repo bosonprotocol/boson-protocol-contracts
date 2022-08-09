@@ -18,7 +18,7 @@ describe("AgentHandler", function () {
   // Common vars
   let deployer, rando, other1, other2, other3;
   let protocolDiamond, accessController, accountHandler, gasLimit;
-  let agent, agentStruct, feePercentage, agent2, agent2Struct, active;
+  let agent, agentStruct, feePercentage, agent2, agent2Struct, active, expectedAgent, expectedAgentStruct;
   let nextAccountId;
   let invalidAccountId, id, id2, key, value, exists;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
@@ -251,14 +251,19 @@ describe("AgentHandler", function () {
       it("should emit an AgentUpdated event with correct values if values change", async function () {
         agent.wallet = other2.address;
         agent.active = false;
+        agent.feePercentage = "3000"; //30%
         expect(agent.isValid()).is.true;
 
-        agentStruct = agent.toStruct();
+        //Update should not change id or active flag
+        expectedAgent = agent.clone();
+        expectedAgent.active = true;
+        expect(expectedAgent.isValid()).is.true;
+        expectedAgentStruct = expectedAgent.toStruct();
 
         //Update a agent, testing for the event
         await expect(accountHandler.connect(other1).updateAgent(agent))
           .to.emit(accountHandler, "AgentUpdated")
-          .withArgs(agent.id, agentStruct, other1.address);
+          .withArgs(agent.id, expectedAgentStruct, other1.address);
       });
 
       it("should emit an AgentUpdated event with correct values if values stay the same", async function () {
@@ -268,13 +273,16 @@ describe("AgentHandler", function () {
           .withArgs(agent.id, agentStruct, other1.address);
       });
 
-      it("should update state of all fields except Id", async function () {
+      it("should update state of all fields except Id and active flag", async function () {
         agent.wallet = other2.address;
         agent.active = false;
         agent.feePercentage = "3000"; //30%
         expect(agent.isValid()).is.true;
 
-        agentStruct = agent.toStruct();
+        //Update should not change id or active flag
+        expectedAgent = agent.clone();
+        expectedAgent.active = true;
+        expect(expectedAgent.isValid()).is.true;
 
         // Update agent
         await accountHandler.connect(other1).updateAgent(agent);
@@ -285,34 +293,13 @@ describe("AgentHandler", function () {
         // Parse into entity
         let returnedAgent = Agent.fromStruct(agentStruct);
 
-        // Returned values should match the input in updateAgent
-        for ([key, value] of Object.entries(agent)) {
+        // Returned values should match the expected values
+        for ([key, value] of Object.entries(expectedAgent)) {
           expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
         }
       });
 
       it("should update state correctly if values are the same", async function () {
-        // Update agent
-        await accountHandler.connect(other1).updateAgent(agent);
-
-        // Get the agent as a struct
-        [, agentStruct] = await accountHandler.connect(rando).getAgent(agent.id);
-
-        // Parse into entity
-        let returnedAgent = Agent.fromStruct(agentStruct);
-
-        // Returned values should match the input in updateAgent
-        for ([key, value] of Object.entries(agent)) {
-          expect(JSON.stringify(returnedAgent[key]) === JSON.stringify(value)).is.true;
-        }
-      });
-
-      it("should update only active flag", async function () {
-        agent.active = false;
-        expect(agent.isValid()).is.true;
-
-        agentStruct = agent.toStruct();
-
         // Update agent
         await accountHandler.connect(other1).updateAgent(agent);
 
@@ -385,12 +372,10 @@ describe("AgentHandler", function () {
 
         //Update first agent
         agent.wallet = other2.address;
-        agent.active = false;
+        agent.feePercentage = "3000"; //30%
         expect(agent.isValid()).is.true;
 
-        agentStruct = agent.toStruct();
-
-        // Update a agent
+        // Update agent
         await accountHandler.connect(other1).updateAgent(agent);
 
         // Get the first agent as a struct
