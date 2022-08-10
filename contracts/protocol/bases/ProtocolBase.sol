@@ -680,6 +680,13 @@ abstract contract ProtocolBase is BosonTypes {
         exists = (_exchangeId > 0 && twinReceipts.length > 0);
     }
 
+    /**
+     * @notice Fetches a condition from storage by exchange id
+     *
+     * @param _exchangeId - the id of the exchange
+     * @return exists - whether one or more twin receipt exists
+     * @return condition - the condition. See {BosonTypes.Condition}
+     */
     function fetchConditionByExchange(uint256 _exchangeId)
         internal
         view

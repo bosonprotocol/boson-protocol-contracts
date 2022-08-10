@@ -197,43 +197,6 @@ describe("Exchange", function () {
     });
   });
 
-  it("Always present, finalizedDate must be the string representation of a non-zero BigNumber", async function () {
-    // Invalid field value
-    exchange.finalizedDate = "zedzdeadbaby";
-    expect(exchange.finalizedDateIsValid()).is.false;
-    expect(exchange.isValid()).is.false;
-
-    // Invalid field value
-    exchange.finalizedDate = new Date();
-    expect(exchange.finalizedDateIsValid()).is.false;
-    expect(exchange.isValid()).is.false;
-
-    // Invalid field value
-    exchange.finalizedDate = 12;
-    expect(exchange.finalizedDateIsValid()).is.false;
-    expect(exchange.isValid()).is.false;
-
-    // Valid field value
-    exchange.finalizedDate = "0";
-    expect(exchange.finalizedDateIsValid()).is.false;
-    expect(exchange.isValid()).is.false;
-
-    // Valid field value
-    exchange.finalizedDate = "126";
-    expect(exchange.finalizedDateIsValid()).is.true;
-    expect(exchange.isValid()).is.true;
-
-    // Valid field value
-    exchange.finalizedDate = null;
-    expect(exchange.finalizedDateIsValid()).is.true;
-    expect(exchange.isValid()).is.true;
-
-    // Valid field value
-    exchange.finalizedDate = undefined;
-    expect(exchange.finalizedDateIsValid()).is.true;
-    expect(exchange.isValid()).is.true;
-  });
-
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid exchange, then set fields in tests directly
