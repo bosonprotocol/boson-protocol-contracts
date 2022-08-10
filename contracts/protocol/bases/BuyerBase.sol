@@ -13,18 +13,6 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
  */
 contract BuyerBase is ProtocolBase, IBosonAccountEvents {
     /**
-     * @dev Modifier that checks the Buyers region is not paused
-     *
-     * Reverts if region is paused
-     *
-     * See: {BosonTypes.PausableRegion}
-     */
-    modifier buyersNotPaused() {
-        require(!paused(PausableRegion.Buyers), REGION_PAUSED);
-        _;
-    }
-
-    /**
      * @notice Creates a Buyer
      *
      * Emits an BuyerCreated event if successful.

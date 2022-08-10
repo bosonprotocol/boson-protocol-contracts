@@ -10,6 +10,7 @@ const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
+const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -41,7 +42,8 @@ describe("IBosonFundsHandler", function () {
     exchangeHandler,
     offerHandler,
     configHandler,
-    disputeHandler;
+    disputeHandler,
+    pauseHandler;
   let support;
   let seller, active;
   let id, buyer, offerToken, offerNative, sellerId, nextAccountId;
@@ -122,6 +124,7 @@ describe("IBosonFundsHandler", function () {
       "FundsHandlerFacet",
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
+      "PauseHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -185,6 +188,9 @@ describe("IBosonFundsHandler", function () {
 
     // Cast Diamond to IBosonExchangeHandler
     exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonPauseHandler
+    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
 
     // Deploy the mock token
     [mockToken] = await deployMockTokens(gasLimit, ["Foreign20"]);
@@ -306,6 +312,16 @@ describe("IBosonFundsHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The funds region of protocol is paused", async function () {
+          // Pause the funds region of the protocol
+          await pauseHandler.pause([PausableRegion.Funds]);
+
+          // Attempt to deposit funds, expecting revert
+          await expect(
+            fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Seller id does not exist", async function () {
           // Attempt to deposit the funds, expecting revert
           seller.id = "555";
@@ -364,29 +380,6 @@ describe("IBosonFundsHandler", function () {
             fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount)
           ).to.revertedWith(RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE);
         });
-      });
-    });
-
-    context("👉 getAvailableFunds()", async function () {
-      it("Returns info also for ERC20 tokens without the name", async function () {
-        // Deploy the mock token with no name
-        [mockToken] = await deployMockTokens(gasLimit, ["Foreign20NoName"]);
-        // top up operators account
-        await mockToken.mint(operator.address, "1000000");
-        // approve protocol to transfer the tokens
-        await mockToken.connect(operator).approve(protocolDiamond.address, "1000000");
-
-        // Deposit token
-        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount);
-
-        // Read on chain state
-        let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-
-        // Chain state should match the expected available funds
-        let expectedAvailableFunds = new FundsList([
-          new Funds(mockToken.address, "Token name unspecified", depositAmount),
-        ]);
-        expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
       });
     });
 
@@ -841,6 +834,22 @@ describe("IBosonFundsHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
+          it("The funds region of protocol is paused", async function () {
+            // Withdraw tokens
+            tokenListBuyer = [ethers.constants.AddressZero, mockToken.address];
+
+            // Withdraw amounts
+            tokenAmountsBuyer = [buyerPayoff, ethers.BigNumber.from(buyerPayoff).div("5").toString()];
+
+            // Pause the funds region of the protocol
+            await pauseHandler.pause([PausableRegion.Funds]);
+
+            // Attempt to withdraw funds, expecting revert
+            await expect(
+              fundsHandler.connect(buyer).withdrawFunds(buyerId, tokenListBuyer, tokenAmountsBuyer)
+            ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          });
+
           it("Caller is not authorized to withdraw", async function () {
             // Attempt to withdraw the buyer funds, expecting revert
             await expect(fundsHandler.connect(rando).withdrawFunds(buyerId, [], [])).to.revertedWith(
@@ -1250,6 +1259,20 @@ describe("IBosonFundsHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
+          it("The funds region of protocol is paused", async function () {
+            // Withdraw funds, testing for the event
+            tokenList = [mockToken.address, ethers.constants.AddressZero];
+            tokenAmounts = [protocolPayoff, protocolPayoff];
+
+            // Pause the funds region of the protocol
+            await pauseHandler.pause([PausableRegion.Funds]);
+
+            // Attempt to withdraw funds, expecting revert
+            await expect(
+              fundsHandler.connect(feeCollector).withdrawProtocolFees(tokenList, tokenAmounts)
+            ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          });
+
           it("Caller is not authorized to withdraw", async function () {
             // Attempt to withdraw the protocol fees, expecting revert
             await expect(fundsHandler.connect(rando).withdrawProtocolFees([], [])).to.revertedWith(
@@ -1370,6 +1393,29 @@ describe("IBosonFundsHandler", function () {
             );
           });
         });
+      });
+    });
+
+    context("👉 getAvailableFunds()", async function () {
+      it("Returns info also for ERC20 tokens without the name", async function () {
+        // Deploy the mock token with no name
+        [mockToken] = await deployMockTokens(gasLimit, ["Foreign20NoName"]);
+        // top up operators account
+        await mockToken.mint(operator.address, "1000000");
+        // approve protocol to transfer the tokens
+        await mockToken.connect(operator).approve(protocolDiamond.address, "1000000");
+
+        // Deposit token
+        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount);
+
+        // Read on chain state
+        let returnedAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+
+        // Chain state should match the expected available funds
+        let expectedAvailableFunds = new FundsList([
+          new Funds(mockToken.address, "Token name unspecified", depositAmount),
+        ]);
+        expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
       });
     });
   });

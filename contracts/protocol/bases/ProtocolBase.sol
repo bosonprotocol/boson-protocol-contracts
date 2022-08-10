@@ -4,15 +4,16 @@ pragma solidity ^0.8.0;
 import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
-import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { PausableBase } from "./PausableBase.sol";
 
 /**
  * @title ProtocolBase
  *
  * @notice Provides domain and common modifiers to Protocol facets
  */
-abstract contract ProtocolBase is BosonTypes {
+abstract contract ProtocolBase is PausableBase {
     /**
      * @dev Modifier to protect initializer function from being invoked twice.
      */
@@ -34,17 +35,6 @@ abstract contract ProtocolBase is BosonTypes {
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
         require(ds.accessController.hasRole(_role, msgSender()), ACCESS_DENIED);
         _;
-    }
-
-    /**
-     * @dev Check if a region of the protocol is paused.
-     *
-     * @param _region the region to check pause status for
-     */
-    function paused(PausableRegion _region) internal view returns (bool) {
-        // Region enum value must be used as the exponent in a power of 2
-        uint256 powerOfTwo = 2**uint256(_region);
-        return (protocolStatus().pauseScenario & powerOfTwo) == powerOfTwo;
     }
 
     /**

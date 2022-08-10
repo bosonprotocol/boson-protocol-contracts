@@ -13,18 +13,6 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
  */
 contract BundleBase is ProtocolBase, IBosonBundleEvents {
     /**
-     * @dev Modifier that checks the Bundles region is not paused
-     *
-     * Reverts if region is paused
-     *
-     * See: {BosonTypes.PausableRegion}
-     */
-    modifier bundlesNotPaused() {
-        require(!paused(PausableRegion.Bundles), REGION_PAUSED);
-        _;
-    }
-
-    /**
      * @notice Creates a Bundle.
      *
      * Emits a BundleCreated event if successful.

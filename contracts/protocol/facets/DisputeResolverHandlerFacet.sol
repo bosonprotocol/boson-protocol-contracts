@@ -9,18 +9,6 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
 contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**
-     * @dev Modifier that checks the DisputeResolvers region is not paused
-     *
-     * Reverts if region is paused
-     *
-     * See: {BosonTypes.PausableRegion}
-     */
-    modifier disputeResolversNotPaused() {
-        require(!paused(PausableRegion.DisputeResolvers), REGION_PAUSED);
-        _;
-    }
-
-    /**
      * @notice Facet Initializer
      */
     function initialize() public {

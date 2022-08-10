@@ -8,18 +8,6 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
 contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**
-     * @dev Modifier that checks the Agents region is not paused
-     *
-     * Reverts if region is paused
-     *
-     * See: {BosonTypes.PausableRegion}
-     */
-    modifier agentsNotPaused() {
-        require(!paused(PausableRegion.Agents), REGION_PAUSED);
-        _;
-    }
-
-    /**
      * @notice Facet Initializer
      */
     function initialize() public {

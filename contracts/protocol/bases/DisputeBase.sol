@@ -13,18 +13,6 @@ import "../../domain/BosonConstants.sol";
  */
 contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
     /**
-     * @dev Modifier that checks the Disputes region is not paused
-     *
-     * Reverts if region is paused
-     *
-     * See: {BosonTypes.PausableRegion}
-     */
-    modifier disputesNotPaused() {
-        require(!paused(PausableRegion.Disputes), REGION_PAUSED);
-        _;
-    }
-
-    /**
      * @notice Raise a dispute
      *
      *

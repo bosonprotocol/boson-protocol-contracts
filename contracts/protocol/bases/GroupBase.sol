@@ -13,18 +13,6 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
  */
 contract GroupBase is ProtocolBase, IBosonGroupEvents {
     /**
-     * @dev Modifier that checks the Groups region is not paused
-     *
-     * Reverts if region is paused
-     *
-     * See: {BosonTypes.PausableRegion}
-     */
-    modifier groupsNotPaused() {
-        require(!paused(PausableRegion.Groups), REGION_PAUSED);
-        _;
-    }
-
-    /**
      * @notice Creates a group.
      *
      * Emits a GroupCreated event if successful.

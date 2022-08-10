@@ -14,18 +14,6 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
  */
 contract TwinBase is ProtocolBase, IBosonTwinEvents {
     /**
-     * @dev Modifier that checks the Twins region is not paused
-     *
-     * Reverts if region is paused
-     *
-     * See: {BosonTypes.PausableRegion}
-     */
-    modifier twinsNotPaused() {
-        require(!paused(PausableRegion.Twins), REGION_PAUSED);
-        _;
-    }
-
-    /**
      * @notice Creates a Twin.
      *
      * Emits a TwinCreated event if successful.

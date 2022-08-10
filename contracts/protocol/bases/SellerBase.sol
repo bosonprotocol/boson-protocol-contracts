@@ -14,18 +14,6 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
  */
 contract SellerBase is ProtocolBase, IBosonAccountEvents {
     /**
-     * @dev Modifier that checks the Sellers region is not paused
-     *
-     * Reverts if region is paused
-     *
-     * See: {BosonTypes.PausableRegion}
-     */
-    modifier sellersNotPaused() {
-        require(!paused(PausableRegion.Sellers), REGION_PAUSED);
-        _;
-    }
-
-    /**
      * @notice Creates a seller
      *
      * Emits a SellerCreated event if successful.

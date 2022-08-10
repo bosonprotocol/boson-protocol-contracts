@@ -28,18 +28,6 @@ interface MultiToken {
  */
 contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     /**
-     * @dev Modifier that checks the Exchanges region is not paused
-     *
-     * Reverts if region is paused
-     *
-     * See: {BosonTypes.PausableRegion}
-     */
-    modifier exchangesNotPaused() {
-        require(!paused(PausableRegion.Exchanges), REGION_PAUSED);
-        _;
-    }
-
-    /**
      * @notice Facet Initializer
      */
     function initialize() public onlyUnInitialized(type(IBosonExchangeHandler).interfaceId) {
