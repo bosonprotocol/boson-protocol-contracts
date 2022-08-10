@@ -2197,17 +2197,11 @@ describe("IBosonDisputeHandler", function () {
 
           // Expire the disputes, testing for the event
           const tx = disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire);
-          await expect(tx)
-            .to.emit(disputeHandler, "DisputeExpired")
-            .withArgs("2", rando.address);
+          await expect(tx).to.emit(disputeHandler, "DisputeExpired").withArgs("2", rando.address);
 
-          await expect(tx)
-          .to.emit(disputeHandler, "DisputeExpired")
-            .withArgs("3", rando.address);
+          await expect(tx).to.emit(disputeHandler, "DisputeExpired").withArgs("3", rando.address);
 
-          await expect(tx)
-          .to.emit(disputeHandler, "DisputeExpired")
-            .withArgs("4", rando.address);
+          await expect(tx).to.emit(disputeHandler, "DisputeExpired").withArgs("4", rando.address);
         });
 
         it("should update state", async function () {

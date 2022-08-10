@@ -591,20 +591,20 @@ describe("IBosonOrchestrationHandler", function () {
         offer.id = "555";
 
         // Create a seller and an offer, testing for the event
-        await expect(
-          orchestrationHandler
-            .connect(operator)
-            .createSellerAndOffer(
-              seller,
-              offer,
-              offerDates,
-              offerDurations,
-              disputeResolverId,
-              emptyAuthToken,
-              voucherInitValues,
-              agentId
-            )
-        )
+        tx = await orchestrationHandler
+          .connect(operator)
+          .createSellerAndOffer(
+            seller,
+            offer,
+            offerDates,
+            offerDurations,
+            disputeResolverId,
+            emptyAuthToken,
+            voucherInitValues,
+            agentId
+          );
+
+        await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(
             nextAccountId,
@@ -612,7 +612,9 @@ describe("IBosonOrchestrationHandler", function () {
             calculateContractAddress(orchestrationHandler.address, "1"),
             emptyAuthTokenStruct,
             operator.address
-          )
+          );
+
+        await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -1519,20 +1521,20 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("should emit a SellerCreated and OfferCreated events", async function () {
           // Create a seller and an offer, testing for the event
-          await expect(
-            orchestrationHandler
-              .connect(operator)
-              .createSellerAndOffer(
-                seller,
-                offer,
-                offerDates,
-                offerDurations,
-                disputeResolverId,
-                emptyAuthToken,
-                voucherInitValues,
-                agentId
-              )
-          )
+          const tx = await orchestrationHandler
+            .connect(operator)
+            .createSellerAndOffer(
+              seller,
+              offer,
+              offerDates,
+              offerDurations,
+              disputeResolverId,
+              emptyAuthToken,
+              voucherInitValues,
+              agentId
+            );
+
+          await expect(tx)
             .to.emit(orchestrationHandler, "SellerCreated")
             .withArgs(
               seller.id,
@@ -1540,7 +1542,9 @@ describe("IBosonOrchestrationHandler", function () {
               calculateContractAddress(orchestrationHandler.address, "1"),
               emptyAuthTokenStruct,
               operator.address
-            )
+            );
+
+          await expect(tx)
             .to.emit(orchestrationHandler, "OfferCreated")
             .withArgs(
               nextOfferId,
@@ -4634,7 +4638,9 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address)
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
+
+        await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -4876,12 +4882,14 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(
-            seller.id,
-            calculateContractAddress(orchestrationHandler.address, "1"),
+            sellerId,
             sellerStruct,
+            calculateContractAddress(orchestrationHandler.address, "1"),
             emptyAuthTokenStruct,
             operator.address
-          )
+          );
+
+        await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -4960,7 +4968,9 @@ describe("IBosonOrchestrationHandler", function () {
               calculateContractAddress(orchestrationHandler.address, "1"),
               emptyAuthTokenStruct,
               operator.address
-            )
+            );
+
+          await expect(tx)
             .to.emit(orchestrationHandler, "OfferCreated")
             .withArgs(
               nextOfferId,
@@ -5101,7 +5111,9 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address)
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
+
+        await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -5379,12 +5391,14 @@ describe("IBosonOrchestrationHandler", function () {
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
           .withArgs(
-            seller.id,
+            sellerId,
             sellerStruct,
             calculateContractAddress(orchestrationHandler.address, "1"),
             emptyAuthTokenStruct,
             operator.address
-          )
+          );
+
+        await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -5481,7 +5495,9 @@ describe("IBosonOrchestrationHandler", function () {
               calculateContractAddress(orchestrationHandler.address, "1"),
               emptyAuthTokenStruct,
               operator.address
-            )
+            );
+
+          await expect(tx)
             .to.emit(orchestrationHandler, "OfferCreated")
             .withArgs(
               nextOfferId,
@@ -5660,7 +5676,9 @@ describe("IBosonOrchestrationHandler", function () {
         // SellerCreated and OfferCreated events
         await expect(tx)
           .to.emit(orchestrationHandler, "SellerCreated")
-          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address)
+          .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
+
+        await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -5966,7 +5984,9 @@ describe("IBosonOrchestrationHandler", function () {
             calculateContractAddress(orchestrationHandler.address, "1"),
             emptyAuthTokenStruct,
             operator.address
-          )
+          );
+
+        await expect(tx)
           .to.emit(orchestrationHandler, "OfferCreated")
           .withArgs(
             nextOfferId,
@@ -6078,7 +6098,9 @@ describe("IBosonOrchestrationHandler", function () {
               calculateContractAddress(orchestrationHandler.address, "1"),
               authTokenStruct,
               operator.address
-            )
+            );
+
+          await expect(tx)
             .to.emit(orchestrationHandler, "OfferCreated")
             .withArgs(
               nextOfferId,
