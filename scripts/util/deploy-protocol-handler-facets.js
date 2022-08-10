@@ -1,6 +1,8 @@
 const { getFacetAddCut } = require("./diamond-utils.js");
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const environments = require("../../environments");
+const confirmations = environments.confirmations;
 
 /**
  * Cut the Protocol Handler facets
@@ -20,7 +22,8 @@ async function deployProtocolHandlerFacets(diamond, facetNames, gasLimit) {
     let facetName = facetNames.shift();
     let FacetContractFactory = await ethers.getContractFactory(facetName);
     const facetContract = await FacetContractFactory.deploy({ gasLimit });
-    await facetContract.deployed();
+    await facetContract.deployTransaction.wait(confirmations);
+
     deployedFacets.push({
       name: facetName,
       contract: facetContract,
@@ -39,7 +42,10 @@ async function deployProtocolHandlerFacets(diamond, facetNames, gasLimit) {
   for (let i = 0; i < deployedFacets.length; i++) {
     const deployedFacet = deployedFacets[i];
     const facetCut = getFacetAddCut(deployedFacet.contract, [initFunction]);
-    await diamondCutFacet.diamondCut([facetCut], deployedFacet.contract.address, callData, { gasLimit });
+    const transactionResponse = await diamondCutFacet.diamondCut([facetCut], deployedFacet.contract.address, callData, {
+      gasLimit,
+    });
+    await transactionResponse.wait(confirmations);
   }
 
   // Return an array of objects with facet name and contract properties

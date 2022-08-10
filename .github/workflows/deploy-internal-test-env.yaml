@@ -9,9 +9,10 @@ jobs:
     runs-on: contracts
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     env:
-      DEPLOYER_GAS_LIMIT: ${{ secrets.DEPLOYER_GAS_LIMIT }}
+      DEPLOYER_GAS_LIMIT_TEST: ${{ secrets.DEPLOYER_TEST_GAS_LIMIT }}
       DEPLOYER_TEST_TXNODE: ${{ secrets.DEPLOYER_TEST_TXNODE }}
       DEPLOYER_TEST_KEY: ${{ secrets.DEPLOYER_TEST_KEY }}
+      CONFIRMATIONS: ${{ secrets.CONFIRMATIONS }}
     name: test_deploy
     steps:
       - name: Checkout repository

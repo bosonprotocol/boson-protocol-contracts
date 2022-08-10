@@ -8,9 +8,7 @@
 require('dotenv').config()
 
 module.exports = {
-
-    // For helping public deployments succeed if default gas doesn't work
-    "gasLimit": parseInt(process.env.DEPLOYER_GAS_LIMIT),
+    "confirmations": parseInt(process.env.CONFIRMATIONS),
 
     // Needed for verifying contract code on Etherscan
     "etherscan": {
@@ -30,7 +28,8 @@ module.exports = {
     // Hardhat testnet
     //  - throwaway HDWallet mnemonic for running unit tests, which require more than one address
     "hardhat": {
-        "mnemonic": process.env.DEPLOYER_HARDHAT_MNEMONIC
+        "mnemonic": process.env.DEPLOYER_HARDHAT_MNEMONIC,
+        "gasLimit": parseInt(process.env.DEPLOYER_GAS_LIMIT_TEST),
     },
 
     // Internal test env
@@ -39,6 +38,7 @@ module.exports = {
     "test": {
         "txNode": process.env.DEPLOYER_TEST_TXNODE,
         "keys": [process.env.DEPLOYER_TEST_KEY],
+        "gasLimit": parseInt(process.env.DEPLOYER_GAS_LIMIT_TEST),
         "adminAddress": process.env.ADMIN_ADDRESS_TEST
     },
 
@@ -48,6 +48,7 @@ module.exports = {
     "mainnet": {
         "txNode": process.env.DEPLOYER_MAINNET_TXNODE,
         "keys": [process.env.DEPLOYER_MAINNET_KEY],
+        "gasLimit": parseInt(process.env.DEPLOYER_GAS_LIMIT),
         "adminAddress": process.env.ADMIN_ADDRESS_MAINNET
     },
 
@@ -57,6 +58,7 @@ module.exports = {
     "mumbai": {
         "txNode": process.env.DEPLOYER_MUMBAI_TXNODE,
         "keys": [process.env.DEPLOYER_MUMBAI_KEY],
+        "gasLimit": parseInt(process.env.DEPLOYER_GAS_LIMIT),
         "adminAddress": process.env.ADMIN_ADDRESS_MUMBAI
     }  
 

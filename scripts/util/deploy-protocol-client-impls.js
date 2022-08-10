@@ -1,5 +1,7 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const environments = require("../../environments");
+const confirmations = environments.confirmations;
 
 /**
  * Deploy the Protocol Client implementation contracts
@@ -19,7 +21,7 @@ async function deployProtocolClientImpls(gasLimit) {
   // Deploy the BosonVoucher contract
   const BosonVoucher = await ethers.getContractFactory("BosonVoucher");
   const bosonVoucher = await BosonVoucher.deploy({ gasLimit });
-  await bosonVoucher.deployed();
+  await bosonVoucher.deployTransaction.wait(confirmations);
 
   return [bosonVoucher];
 }
