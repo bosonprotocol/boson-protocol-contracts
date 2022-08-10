@@ -19,15 +19,25 @@ function deploymentComplete(name, address, args, contracts) {
   console.log(`✅ ${name} deployed to: ${address}`);
 }
 
-async function verifyOnEtherscan(contract) {
+async function verifyOnBlockExplorer(contract) {
   console.log(`\n📋 Verifying ${contract.name}`);
+
+  console.log("contract object in verify function ", contract);
   try {
-    await hre.run("verify:verify", {
-      address: contract.address,
-      constructorArguments: contract.args,
-    });
+    if (contract.name == "BosonVoucher Beacon") {
+      await hre.run("verify:verify", {
+        contract: "contracts/protocol/clients/proxy/BosonClientBeacon.sol:BosonClientBeacon",
+        address: contract.address,
+        constructorArguments: contract.args,
+      });
+    } else {
+      await hre.run("verify:verify", {
+        address: contract.address,
+        constructorArguments: contract.args,
+      });
+    }
   } catch (e) {
-    console.log(`❌ Failed to verify ${contract.name} on etherscan. ${e.message}`);
+    console.log(`❌ Failed to verify ${contract.name} on block explorer. ${e.message}`);
   }
 }
 
@@ -76,6 +86,6 @@ async function verifyOnTestEnv(contracts) {
 
 exports.delay = delay;
 exports.deploymentComplete = deploymentComplete;
-exports.verifyOnEtherscan = verifyOnEtherscan;
+exports.verifyOnBlockExplorer = verifyOnBlockExplorer;
 exports.writeContracts = writeContracts;
 exports.verifyOnTestEnv = verifyOnTestEnv;
