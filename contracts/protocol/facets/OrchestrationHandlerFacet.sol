@@ -9,6 +9,7 @@ import { GroupBase } from "../bases/GroupBase.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
 import { TwinBase } from "../bases/TwinBase.sol";
 import { BundleBase } from "../bases/BundleBase.sol";
+import { PausableBase } from "../bases/PausableBase.sol";
 
 /**
  * @title OrchestrationHandlerFacet
@@ -16,6 +17,7 @@ import { BundleBase } from "../bases/BundleBase.sol";
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  */
 contract OrchestrationHandlerFacet is
+    PausableBase,
     SellerBase,
     OfferBase,
     GroupBase,
@@ -46,6 +48,7 @@ contract OrchestrationHandlerFacet is
      * Reverts if:
      * - The sellers region of protocol is paused
      * - The offers region of protocol is paused
+     * - The orchestration region of protocol is paused
      * - caller is not the same as operator address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -91,7 +94,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override sellersNotPaused offersNotPaused {
+    ) external override sellersNotPaused offersNotPaused orchestrationNotPaused {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
     }
@@ -104,6 +107,7 @@ contract OrchestrationHandlerFacet is
      * Reverts if:
      * - The offers region of protocol is paused
      * - The groups region of protocol is paused
+     * - The orchestration region of protocol is paused
      * - in offer struct:
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
@@ -140,7 +144,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         Condition memory _condition,
         uint256 _agentId
-    ) public override offersNotPaused groupsNotPaused {
+    ) public override offersNotPaused groupsNotPaused orchestrationNotPaused {
         // create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -162,6 +166,7 @@ contract OrchestrationHandlerFacet is
      * Reverts if:
      * - The offers region of protocol is paused
      * - The groups region of protocol is paused
+     * - The orchestration region of protocol is paused
      * - in offer struct:
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
@@ -200,7 +205,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         uint256 _groupId,
         uint256 _agentId
-    ) external override offersNotPaused groupsNotPaused {
+    ) external override offersNotPaused groupsNotPaused orchestrationNotPaused {
         // create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -219,6 +224,7 @@ contract OrchestrationHandlerFacet is
      * - The offers region of protocol is paused
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
+     * - The orchestration region of protocol is paused
      * - in offer struct:
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
@@ -256,7 +262,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         Twin memory _twin,
         uint256 _agentId
-    ) public override offersNotPaused twinsNotPaused bundlesNotPaused {
+    ) public override offersNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused {
         // create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -274,6 +280,7 @@ contract OrchestrationHandlerFacet is
      * - The groups region of protocol is paused
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
+     * - The orchestration region of protocol is paused
      * - in offer struct:
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
@@ -314,7 +321,7 @@ contract OrchestrationHandlerFacet is
         Condition memory _condition,
         Twin memory _twin,
         uint256 _agentId
-    ) public override offersNotPaused groupsNotPaused twinsNotPaused bundlesNotPaused {
+    ) public override offersNotPaused groupsNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused {
         // create offer with condition first
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
         // create twin and pack everything into a bundle
@@ -338,6 +345,7 @@ contract OrchestrationHandlerFacet is
      * - The sellers region of protocol is paused
      * - The offers region of protocol is paused
      * - The groups region of protocol is paused
+     * - The orchestration region of protocol is paused
      * - caller is not the same as operator address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -387,7 +395,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override sellersNotPaused offersNotPaused groupsNotPaused {
+    ) external override sellersNotPaused offersNotPaused groupsNotPaused orchestrationNotPaused {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
     }
@@ -410,6 +418,7 @@ contract OrchestrationHandlerFacet is
      * - The offers region of protocol is paused
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
+     * - The orchestration region of protocol is paused
      * - caller is not the same as operator address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -460,7 +469,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override sellersNotPaused offersNotPaused twinsNotPaused bundlesNotPaused {
+    ) external override sellersNotPaused offersNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin, _agentId);
     }
@@ -484,6 +493,7 @@ contract OrchestrationHandlerFacet is
      * - The groups region of protocol is paused
      * - The twins region of protocol is paused
      * - The bundles region of protocol is paused
+     * - The orchestration region of protocol is paused
      * - caller is not the same as operator address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -537,7 +547,16 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override sellersNotPaused offersNotPaused groupsNotPaused twinsNotPaused bundlesNotPaused {
+    )
+        external
+        override
+        sellersNotPaused
+        offersNotPaused
+        groupsNotPaused
+        twinsNotPaused
+        bundlesNotPaused
+        orchestrationNotPaused
+    {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferWithConditionAndTwinAndBundle(
             _offer,

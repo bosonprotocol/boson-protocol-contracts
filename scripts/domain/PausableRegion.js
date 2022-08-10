@@ -15,7 +15,7 @@ PausableRegion.Agents = 8;
 PausableRegion.Exchanges = 9;
 PausableRegion.Disputes = 10;
 PausableRegion.Funds = 11;
-PausableRegion.Orchestration = 11;
+PausableRegion.Orchestration = 12;
 
 PausableRegion.Regions = [
   PausableRegion.Config,
