@@ -2966,7 +2966,7 @@ describe("IBosonExchangeHandler", function () {
       });
     });
 
-    context("getReceipt", async function () {
+    context.only("getReceipt", async function () {
       beforeEach(async () => {
         // Commit to offer
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -3268,6 +3268,9 @@ describe("IBosonExchangeHandler", function () {
           bundle = new Bundle("1", sellerId, [offerId], [twin20.id, twin721.id]);
           expect(bundle.isValid()).is.true;
           await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
           // Commit to offer
           let tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
@@ -3572,7 +3575,7 @@ describe("IBosonExchangeHandler", function () {
           agent.wallet,
           offer.exchangeToken,
           exchange.finalizedDate,
-          condition,
+          undefined,
           exchange.voucher.committedDate,
           exchange.voucher.redeemedDate,
           exchange.voucher.expired

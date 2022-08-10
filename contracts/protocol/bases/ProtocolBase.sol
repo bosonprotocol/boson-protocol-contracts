@@ -684,7 +684,7 @@ abstract contract ProtocolBase is BosonTypes {
      * @notice Fetches a condition from storage by exchange id
      *
      * @param _exchangeId - the id of the exchange
-     * @return exists - whether one or more twin receipt exists
+     * @return exists - whether one condition exists for the exchange
      * @return condition - the condition. See {BosonTypes.Condition}
      */
     function fetchConditionByExchange(uint256 _exchangeId)
