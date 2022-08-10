@@ -371,7 +371,7 @@ describe("IBosonBundleHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The bundles region of protocol is paused", async function () {
           // Pause the bundles region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers, PausableRegion.Twins, PausableRegion.Bundles]);
+          await pauseHandler.pause([PausableRegion.Bundles]);
 
           // Attempt to create a bundle, expecting revert
           await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(

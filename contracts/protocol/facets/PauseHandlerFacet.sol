@@ -37,7 +37,8 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
         // Make sure the protocol isn't already paused
         require(protocolStatus().pauseScenario == 0, ALREADY_PAUSED);
 
-        // Build the pause scenario from the regions
+        // Build the pause scenario from the regions by
+        // summing all the region enum values as powers of 2
         uint256 region;
         uint256 scenario;
         for (uint256 i = 0; i < _regions.length; i++) {
