@@ -9,6 +9,7 @@ const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
+const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
@@ -27,7 +28,7 @@ describe("BuyerHandler", function () {
   let protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, fundsHandler, gasLimit;
   let seller, active, id2;
   let emptyAuthToken;
-  let buyer, buyerStruct, buyer2, buyer2Struct;
+  let buyer, buyerStruct, buyer2, buyer2Struct, expectedBuyer, expectedBuyerStruct;
   let disputeResolver;
   let disputeResolverFees;
   let sellerAllowList;
@@ -37,7 +38,7 @@ describe("BuyerHandler", function () {
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let offerId;
   let bosonVoucher;
-  let contractURI;
+  let voucherInitValues, contractURI, royaltyPercentage;
 
   beforeEach(async function () {
     // Make accounts available
@@ -81,10 +82,10 @@ describe("BuyerHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: "0x0000000000000000000000000000000000000000",
-        tokenAddress: "0x0000000000000000000000000000000000000000",
-        voucherBeaconAddress: beacon.address,
-        beaconProxyAddress: proxy.address,
+        treasury: ethers.constants.AddressZero,
+        token: ethers.constants.AddressZero,
+        voucherBeacon: beacon.address,
+        beaconProxy: proxy.address,
       },
       // Protocol limits
       {
@@ -225,12 +226,16 @@ describe("BuyerHandler", function () {
         buyer.active = false;
         expect(buyer.isValid()).is.true;
 
-        buyerStruct = buyer.toStruct();
+        //Update should not change id or active flag
+        expectedBuyer = buyer.clone();
+        expectedBuyer.active = true;
+        expect(expectedBuyer.isValid()).is.true;
+        expectedBuyerStruct = expectedBuyer.toStruct();
 
         //Update a buyer, testing for the event
         await expect(accountHandler.connect(other1).updateBuyer(buyer))
           .to.emit(accountHandler, "BuyerUpdated")
-          .withArgs(buyer.id, buyerStruct, other1.address);
+          .withArgs(buyer.id, expectedBuyerStruct, other1.address);
       });
 
       it("should emit a BuyerUpdated event with correct values if values stay the same", async function () {
@@ -240,12 +245,15 @@ describe("BuyerHandler", function () {
           .withArgs(buyer.id, buyerStruct, other1.address);
       });
 
-      it("should update state of all fields exceipt Id", async function () {
+      it("should update state of all fields except Id and active flag", async function () {
         buyer.wallet = other2.address;
         buyer.active = false;
         expect(buyer.isValid()).is.true;
 
-        buyerStruct = buyer.toStruct();
+        //Update should not change id or active flag
+        expectedBuyer = buyer.clone();
+        expectedBuyer.active = true;
+        expect(expectedBuyer.isValid()).is.true;
 
         // Update buyer
         await accountHandler.connect(other1).updateBuyer(buyer);
@@ -256,34 +264,13 @@ describe("BuyerHandler", function () {
         // Parse into entity
         let returnedBuyer = Buyer.fromStruct(buyerStruct);
 
-        // Returned values should match the input in updateBuyer
-        for ([key, value] of Object.entries(buyer)) {
+        // Returned values should match the expected values
+        for ([key, value] of Object.entries(expectedBuyer)) {
           expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
         }
       });
 
       it("should update state correctly if values are the same", async function () {
-        // Update buyer
-        await accountHandler.connect(other1).updateBuyer(buyer);
-
-        // Get the buyer as a struct
-        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
-
-        // Parse into entity
-        let returnedBuyer = Buyer.fromStruct(buyerStruct);
-
-        // Returned values should match the input in updateBuyer
-        for ([key, value] of Object.entries(buyer)) {
-          expect(JSON.stringify(returnedBuyer[key]) === JSON.stringify(value)).is.true;
-        }
-      });
-
-      it("should update only active flag", async function () {
-        buyer.active = false;
-        expect(buyer.isValid()).is.true;
-
-        buyerStruct = buyer.toStruct();
-
         // Update buyer
         await accountHandler.connect(other1).updateBuyer(buyer);
 
@@ -335,7 +322,6 @@ describe("BuyerHandler", function () {
 
         //Update first buyer
         buyer.wallet = other2.address;
-        buyer.active = false;
         expect(buyer.isValid()).is.true;
 
         buyerStruct = buyer.toStruct();
@@ -402,11 +388,14 @@ describe("BuyerHandler", function () {
           emptyAuthToken = new AuthToken("0", AuthTokenType.None);
           expect(emptyAuthToken.isValid()).is.true;
 
-          // Contract URI
+          // VoucherInitValues
           contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+          royaltyPercentage = "0"; // 0%
+          voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+          expect(voucherInitValues.isValid()).is.true;
 
           // Create a seller
-          await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+          await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           [exists] = await accountHandler.connect(rando).getSellerByAddress(operator.address);
           expect(exists).is.true;

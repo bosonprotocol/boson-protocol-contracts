@@ -13,7 +13,7 @@ import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
  *
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  *
- * The ERC-165 identifier for this interface is: 0xbfb8b741
+ * The ERC-165 identifier for this interface is: 0xc411e7c6
  */
 interface IBosonOrchestrationHandler is
     IBosonAccountEvents,
@@ -64,22 +64,22 @@ interface IBosonOrchestrationHandler is
      *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _seller - the fully populated seller struct
-     * @param _contractURI - contract metadata URI
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
      */
     function createSellerAndOffer(
         BosonTypes.Seller calldata _seller,
-        string calldata _contractURI,
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         BosonTypes.AuthToken calldata _authToken,
+        BosonTypes.VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
     ) external;
 
@@ -310,24 +310,24 @@ interface IBosonOrchestrationHandler is
      *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _seller - the fully populated seller struct
-     * @param _contractURI - contract metadata URI
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _condition - the fully populated condition struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
      */
     function createSellerAndOfferWithCondition(
         BosonTypes.Seller memory _seller,
-        string calldata _contractURI,
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         BosonTypes.Condition memory _condition,
         BosonTypes.AuthToken calldata _authToken,
+        BosonTypes.VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
     ) external;
 
@@ -376,24 +376,24 @@ interface IBosonOrchestrationHandler is
      *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _seller - the fully populated seller struct
-     * @param _contractURI - contract metadata URI
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
      * @param _twin - the fully populated twin struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
      */
     function createSellerAndOfferAndTwinWithBundle(
         BosonTypes.Seller memory _seller,
-        string calldata _contractURI,
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         BosonTypes.Twin memory _twin,
         BosonTypes.AuthToken calldata _authToken,
+        BosonTypes.VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
     ) external;
 
@@ -443,7 +443,6 @@ interface IBosonOrchestrationHandler is
      *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
      * @param _seller - the fully populated seller struct
-     * @param _contractURI - contract metadata URI
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
@@ -451,11 +450,11 @@ interface IBosonOrchestrationHandler is
      * @param _condition - the fully populated condition struct
      * @param _twin - the fully populated twin struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @param _agentId - the id of agent
      */
     function createSellerAndOfferWithConditionAndTwinAndBundle(
         BosonTypes.Seller memory _seller,
-        string calldata _contractURI,
         BosonTypes.Offer memory _offer,
         BosonTypes.OfferDates calldata _offerDates,
         BosonTypes.OfferDurations calldata _offerDurations,
@@ -463,6 +462,7 @@ interface IBosonOrchestrationHandler is
         BosonTypes.Condition memory _condition,
         BosonTypes.Twin memory _twin,
         BosonTypes.AuthToken calldata _authToken,
+        BosonTypes.VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
     ) external;
 }

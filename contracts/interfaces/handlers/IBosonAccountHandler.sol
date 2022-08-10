@@ -9,7 +9,7 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  *
  * @notice Handles creation, update, retrieval of accounts within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0xa6cf31c1
+ * The ERC-165 identifier for this interface is: 0xde21f0d4
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
@@ -25,13 +25,13 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - AuthTokenType is not unique to this seller
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
-     * @param _contractURI - contract metadata URI
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      */
     function createSeller(
         BosonTypes.Seller memory _seller,
-        string calldata _contractURI,
-        BosonTypes.AuthToken calldata _authToken
+        BosonTypes.AuthToken calldata _authToken,
+        BosonTypes.VoucherInitValues calldata _voucherInitValues
     ) external;
 
     /**
@@ -82,14 +82,16 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Wallet address is zero address
      * - Active is not true
      * - Wallet address is not unique to this agent
-     * - Fee percentage is greater than 10000 (100%)
+     * - Fee percentage + protocol fee percentage is greater than the max allowable fee percentage for an offer
      *
      * @param _agent - the fully populated struct with agent id set to 0x0
      */
     function createAgent(BosonTypes.Agent memory _agent) external;
 
     /**
-     * @notice Updates a seller
+     * @notice Updates a seller, with the exception of the active flag.
+     *         All other fields should be filled, even those staying the same.
+     * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a SellerUpdated event if successful.
      *
@@ -107,7 +109,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function updateSeller(BosonTypes.Seller memory _seller, BosonTypes.AuthToken calldata _authToken) external;
 
     /**
-     * @notice Updates a buyer. All fields should be filled, even those staying the same. The wallet address cannot be updated if the current wallet address has oustanding vouchers
+     * @notice Updates a buyer, with the exception of the active flag.
+     *         All other fields should be filled, even those staying the same.
+     * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a BuyerUpdated event if successful.
      *
@@ -124,8 +128,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
 
     /**
      * @notice Updates a dispute resolver, not including DisputeResolverFees, allowed seller list or active flag.
-     * All DisputeResolver fields should be filled, even those staying the same.
-     * Use removeFeesFromDisputeResolver
+     *         All DisputeResolver fields should be filled, even those staying the same.
+     *         Use removeFeesFromDisputeResolver
+     * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a DisputeResolverUpdated event if successful.
      *
@@ -140,7 +145,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver) external;
 
     /**
-     * @notice Updates an agent. All fields should be filled, even those staying the same.
+     * @notice Updates an agent except, with the exception of the active flag.
+     *         All other fields should be filled, even those staying the same.
+     * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a AgentUpdated event if successful.
      *
@@ -149,7 +156,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Wallet address is zero address
      * - Wallet address is not unique to this agent
      * - Agent does not exist
-     * - Fee percentage is greater than 10000 (100%)
+     * - Fee percentage + protocol fee percentage is greater than the max allowable fee percentage for an offer
      *
      * @param _agent - the fully populated agent struct
      */

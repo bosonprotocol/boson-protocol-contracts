@@ -13,6 +13,7 @@ const DisputeState = require("../../scripts/domain/DisputeState");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const Voucher = require("../../scripts/domain/Voucher");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
+const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -77,7 +78,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let complaint, validDisputeDetails;
   let buyerPercent, validDisputeResolutionDetails, signatureSplits;
   let sellerAllowList;
-  let contractURI;
+  let voucherInitValues, contractURI, royaltyPercentage;
   let emptyAuthToken;
   let agentId;
 
@@ -132,10 +133,10 @@ describe("IBosonMetaTransactionsHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: ethers.constants.AddressZero,
-        tokenAddress: bosonToken.address,
-        voucherBeaconAddress: beacon.address,
-        beaconProxyAddress: proxy.address,
+        treasury: ethers.constants.AddressZero,
+        token: bosonToken.address,
+        voucherBeacon: beacon.address,
+        beaconProxy: proxy.address,
       },
       // Protocol limits
       {
@@ -234,7 +235,12 @@ describe("IBosonMetaTransactionsHandler", function () {
         id = "1";
         seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
         expect(seller.isValid()).is.true;
+
+        // VoucherInitValues
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        royaltyPercentage = "0"; // 0%
+        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+        expect(voucherInitValues.isValid()).is.true;
 
         // AuthToken
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
@@ -243,8 +249,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Prepare the function signature for the facet function.
         functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
           seller,
-          contractURI,
           emptyAuthToken,
+          voucherInitValues,
         ]);
 
         // Set the message Type
@@ -265,7 +271,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         message.nonce = parseInt(nonce);
         message.from = operator.address;
         message.contractAddress = accountHandler.address;
-        message.functionName = "createSeller((uint256,address,address,address,address,bool),string,(uint256,uint8))";
+        message.functionName =
+          "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -319,7 +326,12 @@ describe("IBosonMetaTransactionsHandler", function () {
         id = "1";
         seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
         expect(seller.isValid()).is.true;
+
+        // VoucherInitValues
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        royaltyPercentage = "0"; // 0%
+        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+        expect(voucherInitValues.isValid()).is.true;
 
         // AuthToken
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
@@ -338,14 +350,15 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Prepare the function signature for the facet function.
         functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
           seller,
-          contractURI,
           emptyAuthToken,
+          voucherInitValues,
         ]);
 
         // Prepare the message
         message.from = operator.address;
         message.contractAddress = accountHandler.address;
-        message.functionName = "createSeller((uint256,address,address,address,address,bool),string,(uint256,uint8))";
+        message.functionName =
+          "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -379,14 +392,15 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Prepare the function signature for the facet function.
         functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
           seller,
-          contractURI,
           emptyAuthToken,
+          voucherInitValues,
         ]);
 
         // Prepare the message
         message.from = operator.address;
         message.contractAddress = accountHandler.address;
-        message.functionName = "createSeller((uint256,address,address,address,address,bool),string,(uint256,uint8))";
+        message.functionName =
+          "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
         message.functionSignature = functionSignature;
 
         // Collect the signature components
@@ -415,13 +429,16 @@ describe("IBosonMetaTransactionsHandler", function () {
       context("👉 msg.sender is replaced with msgSender()", async function () {
         context("TwinHandler", async function () {
           beforeEach(async function () {
-            // Create the seller
+            // VoucherInitValues
             contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+            royaltyPercentage = "0"; // 0%
+            voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+            expect(voucherInitValues.isValid()).is.true;
 
             // AuthToken
             emptyAuthToken = new AuthToken("0", AuthTokenType.None);
             expect(emptyAuthToken.isValid()).is.true;
-            await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+            await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
             // Create a valid twin, then set fields in tests directly
             twin = mockTwin(bosonToken.address);
@@ -527,8 +544,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Prepare the function signature for the facet function.
           functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
             seller,
-            contractURI,
             emptyAuthToken,
+            voucherInitValues,
           ]);
 
           // Prepare the message
@@ -564,14 +581,15 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Prepare the function signature for the facet function.
           functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
             seller,
-            contractURI,
             emptyAuthToken,
+            voucherInitValues,
           ]);
 
           // Prepare the message
           message.from = operator.address;
           message.contractAddress = accountHandler.address;
-          message.functionName = "createSeller((uint256,address,address,address,address,bool),string,(uint256,uint8))";
+          message.functionName =
+            "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
           message.functionSignature = functionSignature;
 
           // Collect the signature components
@@ -612,14 +630,15 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Prepare the function signature for the facet function.
           functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
             seller,
-            contractURI,
             emptyAuthToken,
+            voucherInitValues,
           ]);
 
           // Prepare the message
           message.from = rando.address;
           message.contractAddress = accountHandler.address;
-          message.functionName = "createSeller((uint256,address,address,address,address,bool),string,(uint256,uint8))";
+          message.functionName =
+            "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
           message.functionSignature = functionSignature;
 
           // Collect the signature components
@@ -660,13 +679,18 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Create a valid seller
         seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
         expect(seller.isValid()).is.true;
+
+        // VoucherInitValues
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        royaltyPercentage = "0"; // 0%
+        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+        expect(voucherInitValues.isValid()).is.true;
 
         // AuthToken
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
         expect(emptyAuthToken.isValid()).is.true;
 
-        await accountHandler.connect(operator).createSeller(seller, contractURI, emptyAuthToken);
+        await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // Create a valid dispute resolver
         disputeResolver = await mockDisputeResolver(
@@ -924,12 +948,17 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Create a valid seller
         seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
         expect(seller.isValid()).is.true;
+
+        // VoucherInitValues
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        royaltyPercentage = "0"; // 0%
+        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+        expect(voucherInitValues.isValid()).is.true;
 
         // AuthToken
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
         expect(emptyAuthToken.isValid()).is.true;
-        await accountHandler.connect(operator).createSeller(seller, contractURI, emptyAuthToken);
+        await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // Create a valid dispute resolver
         disputeResolver = await mockDisputeResolver(
@@ -2287,6 +2316,247 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
     });
 
+    context("👉 OfferHandlerFacet 👉 createOffer() ", async function () {
+      beforeEach(async function () {
+        // Set a random nonce
+        nonce = parseInt(ethers.utils.randomBytes(8));
+
+        // Initial ids for all the things
+        id = offerId = nextAccountId = "1";
+
+        active = true;
+
+        // Create a valid seller
+        seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
+        expect(seller.isValid()).is.true;
+
+        // VoucherInitValues
+        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        royaltyPercentage = "0"; // 0%
+        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+        expect(voucherInitValues.isValid()).is.true;
+
+        // AuthToken
+        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        expect(emptyAuthToken.isValid()).is.true;
+
+        await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+        // Create a valid dispute resolver
+        disputeResolver = await mockDisputeResolver(
+          operatorDR.address,
+          adminDR.address,
+          clerkDR.address,
+          treasuryDR.address,
+          false
+        );
+        expect(disputeResolver.isValid()).is.true;
+
+        //Create DisputeResolverFee array so offer creation will succeed
+        disputeResolverFees = [new DisputeResolverFee(mockToken.address, "mockToken", "0")];
+
+        // Make empty seller list, so every seller is allowed
+        sellerAllowList = [];
+
+        // Register and activate the dispute resolver
+        await accountHandler
+          .connect(rando)
+          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+        await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+
+        // Valid offer domains
+        ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+        offer.exchangeToken = mockToken.address;
+
+        // Check if domains are valid
+        expect(offer.isValid()).is.true;
+        expect(offerDates.isValid()).is.true;
+        expect(offerDurations.isValid()).is.true;
+
+        // Set used variables
+        sellerDeposit = offer.sellerDeposit;
+        price = offer.price;
+        voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+
+        // top up seller's and buyer's account
+        await mockToken.mint(operator.address, sellerDeposit);
+        await mockToken.mint(buyer.address, price);
+
+        // approve protocol to transfer the tokens
+        await mockToken.connect(operator).approve(protocolDiamond.address, sellerDeposit);
+        await mockToken.connect(buyer).approve(protocolDiamond.address, price);
+
+        // deposit to seller's pool
+        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, sellerDeposit);
+
+        // Prepare the function signature for the facet function.
+        functionSignature = offerHandler.interface.encodeFunctionData("createOffer", [
+          offer,
+          offerDates,
+          offerDurations,
+          disputeResolverId,
+          agentId,
+        ]);
+
+        // Set the message Type
+        metaTransactionType = [
+          { name: "nonce", type: "uint256" },
+          { name: "from", type: "address" },
+          { name: "contractAddress", type: "address" },
+          { name: "functionName", type: "string" },
+          { name: "functionSignature", type: "bytes" },
+        ];
+
+        customTransactionType = {
+          MetaTransaction: metaTransactionType,
+        };
+
+        // Prepare the message
+        message = {};
+        message.nonce = parseInt(nonce);
+        message.from = operator.address;
+        message.contractAddress = offerHandler.address;
+        message.functionName =
+          "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256)";
+        message.functionSignature = functionSignature;
+      });
+
+      it("Should emit MetaTransactionExecuted event and update state", async () => {
+        // Collect the signature components
+        let { r, s, v } = await prepareDataSignatureParameters(
+          operator,
+          customTransactionType,
+          "MetaTransaction",
+          message,
+          metaTransactionsHandler.address
+        );
+
+        // send a meta transaction, check for event
+        await expect(
+          metaTransactionsHandler.executeMetaTransaction(
+            operator.address,
+            message.functionName,
+            functionSignature,
+            nonce,
+            r,
+            s,
+            v
+          )
+        )
+          .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+          .withArgs(operator.address, deployer.address, message.functionName, nonce);
+
+        // Verify that nonce is used. Expect true.
+        let expectedResult = true;
+        result = await metaTransactionsHandler.connect(operator).isUsedNonce(nonce);
+        assert.equal(result, expectedResult, "Nonce is unused");
+      });
+
+      it("does not modify revert reasons", async function () {
+        // Reverse the from and until dates
+        offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
+        offerDates.validUntil = ethers.BigNumber.from(Date.now()).toString(); // now
+
+        // Prepare the function signature for the facet function.
+        functionSignature = offerHandler.interface.encodeFunctionData("createOffer", [
+          offer,
+          offerDates,
+          offerDurations,
+          disputeResolverId,
+          agentId,
+        ]);
+
+        // Prepare the message
+        message.functionSignature = functionSignature;
+
+        // Collect the signature components
+        let { r, s, v } = await prepareDataSignatureParameters(
+          operator,
+          customTransactionType,
+          "MetaTransaction",
+          message,
+          metaTransactionsHandler.address
+        );
+
+        // Execute meta transaction, expecting revert.
+        await expect(
+          metaTransactionsHandler.executeMetaTransaction(
+            operator.address,
+            message.functionName,
+            functionSignature,
+            nonce,
+            r,
+            s,
+            v
+          )
+        ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("Should fail when replay transaction", async function () {
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            operator,
+            customTransactionType,
+            "MetaTransaction",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Execute the meta transaction.
+          await metaTransactionsHandler.executeMetaTransaction(
+            operator.address,
+            message.functionName,
+            functionSignature,
+            nonce,
+            r,
+            s,
+            v
+          );
+
+          // Execute meta transaction again with the same nonce, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTransaction(
+              operator.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
+          ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+        });
+
+        it("Should fail when Signer and Signature do not match", async function () {
+          // Prepare the message
+          message.from = rando.address;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            rando, // Different user, not seller's operator.
+            customTransactionType,
+            "MetaTransaction",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Execute meta transaction, expecting revert.
+          await expect(
+            metaTransactionsHandler.executeMetaTransaction(
+              operator.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
+          ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+        });
+      });
+    });
+
     context("👉 FundsHandlerFacet 👉 withdrawFunds()", async function () {
       beforeEach(async function () {
         // Set a random nonce
@@ -2300,12 +2570,17 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Create a valid seller
         seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
         expect(seller.isValid()).is.true;
+
+        // VoucherInitValues
         contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+        royaltyPercentage = "0"; // 0%
+        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+        expect(voucherInitValues.isValid()).is.true;
 
         // AuthToken
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
         expect(emptyAuthToken.isValid()).is.true;
-        await accountHandler.connect(operator).createSeller(seller, contractURI, emptyAuthToken);
+        await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // Create a valid dispute resolver
         disputeResolver = await mockDisputeResolver(

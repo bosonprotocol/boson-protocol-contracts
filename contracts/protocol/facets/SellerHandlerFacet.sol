@@ -30,16 +30,16 @@ contract SellerHandlerFacet is SellerBase {
      * - AuthTokenType is not unique to this seller
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
-     * @param _contractURI - contract metadata URI
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      */
     function createSeller(
         Seller memory _seller,
-        string calldata _contractURI,
-        AuthToken calldata _authToken
+        AuthToken calldata _authToken,
+        VoucherInitValues calldata _voucherInitValues
     ) external {
         // create seller and update structs values to represent true state
-        createSellerInternal(_seller, _contractURI, _authToken);
+        createSellerInternal(_seller, _authToken, _voucherInitValues);
     }
 
     /**
@@ -135,6 +135,8 @@ contract SellerHandlerFacet is SellerBase {
         // store this address of existing seller operator to check if you have to transfer the ownership later
         address oldSellerOperator = seller.operator;
 
+        //Ignore active flag passed in by caller and set to value in storage.
+        _seller.active = seller.active;
         storeSeller(_seller, _authToken);
 
         // If operator changed, transfer the ownership of NFT voucher

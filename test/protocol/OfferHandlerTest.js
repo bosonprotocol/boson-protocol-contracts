@@ -14,6 +14,7 @@ const OfferDurations = require("../../scripts/domain/OfferDurations");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const OfferFees = require("../../scripts/domain/OfferFees");
+const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -30,8 +31,17 @@ const { mockOffer, mockDisputeResolver } = require("../utils/mock");
 describe("IBosonOfferHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR, other;
-  let erc165, protocolDiamond, accessController, accountHandler, offerHandler, bosonToken, offerStruct, key, value;
+  let deployer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR, other, protocolAdmin;
+  let erc165,
+    protocolDiamond,
+    accessController,
+    accountHandler,
+    offerHandler,
+    configHandler,
+    bosonToken,
+    offerStruct,
+    key,
+    value;
   let offer, nextOfferId, invalidOfferId, support, expected, exists, nextAccountId;
   let seller, active;
   let id, sellerId, price, voided;
@@ -64,7 +74,7 @@ describe("IBosonOfferHandler", function () {
     disputeResolutionTermsStructs,
     disputeResolutionTermsList;
   let DRFeeNative, DRFeeToken;
-  let contractURI;
+  let voucherInitValues, contractURI, royaltyPercentage;
   let emptyAuthToken;
   let agent, agentId, agentFeePercentage, nonZeroAgentIds;
   let sellerAllowList, allowedSellersToAdd;
@@ -76,8 +86,20 @@ describe("IBosonOfferHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, operatorDR, adminDR, clerkDR, treasuryDR, other] =
-      await ethers.getSigners();
+    [
+      deployer,
+      operator,
+      admin,
+      clerk,
+      treasury,
+      rando,
+      operatorDR,
+      adminDR,
+      clerkDR,
+      treasuryDR,
+      other,
+      protocolAdmin,
+    ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -87,6 +109,10 @@ describe("IBosonOfferHandler", function () {
 
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+
+    //Grant ADMIN role to and address that can call restricted functions.
+    //This ADMIN role is a protocol-level role. It is not the same an admin address for an account type
+    await accessController.grantRole(Role.ADMIN, protocolAdmin.address);
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
@@ -114,10 +140,10 @@ describe("IBosonOfferHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasuryAddress: "0x0000000000000000000000000000000000000000",
-        tokenAddress: bosonToken.address,
-        voucherBeaconAddress: beacon.address,
-        beaconProxyAddress: proxy.address,
+        treasury: ethers.constants.AddressZero,
+        token: bosonToken.address,
+        voucherBeacon: beacon.address,
+        beaconProxy: proxy.address,
       },
       // Protocol limits
       {
@@ -151,6 +177,9 @@ describe("IBosonOfferHandler", function () {
 
     // Cast Diamond to IBosonOfferHandler
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
+
+    //Cast Diamond to IBosonConfigHancler
+    configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -178,12 +207,17 @@ describe("IBosonOfferHandler", function () {
       // Create a valid seller, then set fields in tests directly
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
+
+      // VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
       emptyAuthToken = new AuthToken("0", AuthTokenType.None);
       expect(emptyAuthToken.isValid()).is.true;
-      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(
@@ -726,7 +760,8 @@ describe("IBosonOfferHandler", function () {
         it("Seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           allowedSellersToAdd = ["3"]; // DR is "1", existing seller is "2", new seller is "3"
           await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
@@ -872,7 +907,7 @@ describe("IBosonOfferHandler", function () {
           it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "4"; // argument sent to contract for createAgent will be ignored
-            agentFeePercentage = "9900"; //99%
+            agentFeePercentage = "3000"; //30%
 
             active = true;
 
@@ -882,6 +917,9 @@ describe("IBosonOfferHandler", function () {
 
             // Create an agent
             await accountHandler.connect(rando).createAgent(agent);
+
+            //Change protocol fee after creating agent
+            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
 
             // Attempt to Create an offer, expecting revert
             await expect(
@@ -955,12 +993,11 @@ describe("IBosonOfferHandler", function () {
           // caller is an operator of another seller
           // Create a valid seller, then set fields in tests directly
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
           // AuthToken
           emptyAuthToken = new AuthToken("0", AuthTokenType.None);
           expect(emptyAuthToken.isValid()).is.true;
-          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Attempt to update the offer, expecting revert
           await expect(offerHandler.connect(rando).voidOffer(id)).to.revertedWith(RevertReasons.NOT_OPERATOR);
@@ -1043,12 +1080,11 @@ describe("IBosonOfferHandler", function () {
           // caller is an operator of another seller
           // Create a valid seller, then set fields in tests directly
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
           // AuthToken
           emptyAuthToken = new AuthToken("0", AuthTokenType.None);
           expect(emptyAuthToken.isValid()).is.true;
-          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Attempt to update the offer, expecting revert
           await expect(offerHandler.connect(rando).extendOffer(id, offerDates.validUntil)).to.revertedWith(
@@ -1274,12 +1310,17 @@ describe("IBosonOfferHandler", function () {
       // Create a valid seller, then set fields in tests directly
       seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
       expect(seller.isValid()).is.true;
+
+      // VoucherInitValues
       contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+      royaltyPercentage = "0"; // 0%
+      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
       emptyAuthToken = new AuthToken("0", AuthTokenType.None);
       expect(emptyAuthToken.isValid()).is.true;
-      await accountHandler.connect(admin).createSeller(seller, contractURI, emptyAuthToken);
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
       // Create a valid dispute resolver
       disputeResolver = await mockDisputeResolver(
@@ -1940,7 +1981,8 @@ describe("IBosonOfferHandler", function () {
         it("For some offer seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
           seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
-          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           allowedSellersToAdd = ["3"];
           await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
@@ -2142,7 +2184,7 @@ describe("IBosonOfferHandler", function () {
           it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "4"; // argument sent to contract for createAgent will be ignored
-            agentFeePercentage = "9900"; //99%
+            agentFeePercentage = "3000"; //30%
 
             active = true;
 
@@ -2152,6 +2194,9 @@ describe("IBosonOfferHandler", function () {
 
             // Create an agent
             await accountHandler.connect(rando).createAgent(agent);
+
+            //Change protocol fee after creating agent
+            await configHandler.connect(protocolAdmin).setProtocolFeePercentage("1100"); //11%
 
             nonZeroAgentIds[1] = id;
 
@@ -2244,12 +2289,12 @@ describe("IBosonOfferHandler", function () {
 
           // caller is an operator of another seller
           seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, active);
-          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
           // AuthToken
           emptyAuthToken = new AuthToken("0", AuthTokenType.None);
           expect(emptyAuthToken.isValid()).is.true;
-          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Attempt to update the offer, expecting revert
           await expect(offerHandler.connect(rando).voidOfferBatch(offersToVoid)).to.revertedWith(
@@ -2358,12 +2403,11 @@ describe("IBosonOfferHandler", function () {
 
           // caller is an operator of another seller
           seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, active);
-          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
 
           // AuthToken
           emptyAuthToken = new AuthToken("0", AuthTokenType.None);
           expect(emptyAuthToken.isValid()).is.true;
-          await accountHandler.connect(rando).createSeller(seller, contractURI, emptyAuthToken);
+          await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Attempt to extend the offers, expecting revert
           await expect(offerHandler.connect(rando).extendOfferBatch(offersToExtend, newValidUntilDate)).to.revertedWith(

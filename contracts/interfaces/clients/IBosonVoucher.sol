@@ -10,10 +10,11 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
  *
  * @notice This is the interface for the Boson Protocol ERC-721 Voucher NFT contract.
  *
- * The ERC-165 identifier for this interface is: 0x17c286ab
+ * The ERC-165 identifier for this interface is: 0x2b2ac434
  */
 interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     event ContractURIChanged(string contractURI);
+    event RoyaltyPercentageChanged(uint96 royaltyPercentage);
 
     /**
      * @notice Issue a voucher to a buyer
@@ -55,4 +56,31 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @param _newContractURI new contract metadata URI
      */
     function setContractURI(string calldata _newContractURI) external;
+
+    /**
+     * @notice Called with the sale price to determine how much royalty
+     *  is owed and to whom.
+     *
+     * @param _tokenId - the NFT asset queried for royalty information
+     * @param _salePrice - the sale price of the NFT asset specified by _tokenId
+     *
+     * @return receiver - address of who should be sent the royalty payment
+     * @return royaltyAmount - the royalty payment amount for the given sale price
+     */
+    function royaltyInfo(uint256 _tokenId, uint256 _salePrice)
+        external
+        view
+        returns (address receiver, uint256 royaltyAmount);
+
+    /**
+     * @notice Sets the royalty percentage.
+     * Can only be called by the owner or during the initialization
+     *
+     * Reverts if:
+     * - caller is not the owner.
+     * - `royaltyPercentage` is greater than 100%.
+     *
+     * @param _newRoyaltyPercentage fee in percentage. e.g. 500 = 5%
+     */
+    function setRoyaltyPercentage(uint96 _newRoyaltyPercentage) external;
 }

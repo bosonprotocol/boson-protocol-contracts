@@ -21,6 +21,7 @@ import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
  */
 contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
     string private _contractURI;
+    uint96 private _royaltyPercentage;
 
     /**
      * @notice Initializer
@@ -28,7 +29,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     function initializeVoucher(
         uint256 _sellerId,
         address _newOwner,
-        string calldata _newContractURI
+        VoucherInitValues calldata voucherInitValues
     ) public initializer {
         string memory sellerId = Strings.toString(_sellerId);
         // TODO: When we move to solidity 0.8.12 or greater, change this to use string.concat()
@@ -40,7 +41,9 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         // we dont call init on ownable, but rather just set the ownership to correct owner
         _transferOwnership(_newOwner);
 
-        _setContractURI(_newContractURI);
+        _setContractURI(voucherInitValues.contractURI);
+
+        _setRoyaltyPercentage(voucherInitValues.royaltyPercentage);
     }
 
     /**
@@ -174,5 +177,61 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         _contractURI = _newContractURI;
 
         emit ContractURIChanged(_newContractURI);
+    }
+
+    /**
+     * @notice Called with the sale price to determine how much royalty
+     *  is owed and to whom.
+     *
+     * @param _tokenId - the NFT asset queried for royalty information
+     * @param _salePrice - the sale price of the NFT asset specified by _tokenId
+     *
+     * @return receiver - address of who should be sent the royalty payment
+     * @return royaltyAmount - the royalty payment amount for the given sale price
+     */
+    function royaltyInfo(uint256 _tokenId, uint256 _salePrice)
+        external
+        view
+        override
+        returns (address receiver, uint256 royaltyAmount)
+    {
+        // get offer
+        (bool offerExists, Offer memory offer) = getBosonOffer(_tokenId);
+
+        if (offerExists) {
+            (, Seller memory seller) = getBosonSeller(offer.sellerId);
+            // get receiver
+            receiver = seller.treasury;
+            // Calculate royalty amount
+            royaltyAmount = (_salePrice * _royaltyPercentage) / 10000;
+        }
+    }
+
+    /**
+     * @notice Sets the royalty percentage.
+     * Can only be called by the owner or during the initialization
+     *
+     * Reverts if:
+     * - caller is not the owner.
+     * - `royaltyPercentage` is greater than 100%.
+     *
+     * @param _newRoyaltyPercentage fee in percentage. e.g. 500 = 5%
+     */
+    function setRoyaltyPercentage(uint96 _newRoyaltyPercentage) external override onlyOwner {
+        _setRoyaltyPercentage(_newRoyaltyPercentage);
+    }
+
+    /**
+     * @notice Sets royalty percentage
+     * Can only be called by the owner or during the initialization
+     *
+     * @param _newRoyaltyPercentage new royalty percentage
+     */
+    function _setRoyaltyPercentage(uint96 _newRoyaltyPercentage) internal {
+        require(_newRoyaltyPercentage <= 10000, "ERC2981: royalty fee will exceed salePrice");
+
+        _royaltyPercentage = _newRoyaltyPercentage;
+
+        emit RoyaltyPercentageChanged(_newRoyaltyPercentage);
     }
 }

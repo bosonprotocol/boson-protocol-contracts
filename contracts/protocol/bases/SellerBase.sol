@@ -5,6 +5,7 @@ import "./../../domain/BosonConstants.sol";
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
 import { ProtocolBase } from "./ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
 
 /**
  * @title SellerBase
@@ -25,13 +26,13 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      * - AuthTokenType is not unique to this seller
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
-     * @param _contractURI - contract metadata URI
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      */
     function createSellerInternal(
         Seller memory _seller,
-        string calldata _contractURI,
-        AuthToken calldata _authToken
+        AuthToken calldata _authToken,
+        VoucherInitValues calldata _voucherInitValues
     ) internal {
         //Check active is not set to false
         require(_seller.active, MUST_BE_ACTIVE);
@@ -77,7 +78,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         storeSeller(_seller, _authToken);
 
         // create clone and store its address cloneAddress
-        address voucherCloneAddress = cloneBosonVoucher(sellerId, _seller.operator, _contractURI);
+        address voucherCloneAddress = cloneBosonVoucher(sellerId, _seller.operator, _voucherInitValues);
         protocolLookups().cloneAddress[sellerId] = voucherCloneAddress;
 
         // Notify watchers of state change
@@ -135,19 +136,21 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
     /**
      * @notice Creates a minimal clone of the Boson Voucher Contract
      *
+     * @param _sellerId - id of the seller
      * @param _operator - address of the operator
+     * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      * @return cloneAddress - the address of newly created clone
      */
     function cloneBosonVoucher(
         uint256 _sellerId,
         address _operator,
-        string calldata _contractURI
+        VoucherInitValues calldata _voucherInitValues
     ) internal returns (address cloneAddress) {
         // Pointer to stored addresses
         ProtocolLib.ProtocolAddresses storage pa = protocolAddresses();
 
         // Load beacon proxy contract address
-        bytes20 targetBytes = bytes20(pa.beaconProxyAddress);
+        bytes20 targetBytes = bytes20(pa.beaconProxy);
 
         // create a minimal clone
         assembly {
@@ -159,8 +162,8 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         }
 
         // Initialize the clone
-        IInitializableClone(cloneAddress).initialize(pa.voucherBeaconAddress);
-        IInitializableClone(cloneAddress).initializeVoucher(_sellerId, _operator, _contractURI);
+        IInitializableClone(cloneAddress).initialize(pa.voucherBeacon);
+        IInitializableClone(cloneAddress).initializeVoucher(_sellerId, _operator, _voucherInitValues);
     }
 }
 
@@ -170,6 +173,6 @@ interface IInitializableClone {
     function initializeVoucher(
         uint256 _sellerId,
         address _newOwner,
-        string calldata _newContractURI
+        BosonTypes.VoucherInitValues calldata _voucherInitValues
     ) external;
 }

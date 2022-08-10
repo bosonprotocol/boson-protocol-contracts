@@ -25,7 +25,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - Wallet address is zero address
      * - Active is not true
      * - Wallet address is not unique to this agent
-     * - Fee percentage is greater than 10000 (100%)
+     * - Fee percentage + protocol fee percentage is greater than the max allowable fee percentage for an offer
      *
      * @param _agent - the fully populated struct with agent id set to 0x0
      */
@@ -35,9 +35,6 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
         //Check active is not set to false
         require(_agent.active, MUST_BE_ACTIVE);
-
-        // Make sure percentage is less than or equal to 10000
-        require(_agent.feePercentage <= 10000, FEE_PERCENTAGE_INVALID);
 
         // Get the next account Id and increment the counter
         uint256 agentId = protocolCounters().nextAccountId++;
@@ -53,7 +50,9 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Updates an agent. All fields should be filled, even those staying the same.
+     * @notice Updates an agent except, with the exception of the active flag.
+     *         All other fields should be filled, even those staying the same.
+     * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a AgentUpdated event if successful.
      *
@@ -62,7 +61,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - Wallet address is zero address
      * - Wallet address is not unique to this agent
      * - Agent does not exist
-     * - Fee percentage is greater than 10000 (100%)
+     * - Fee percentage + protocol fee percentage is greater than the max allowable fee percentage for an offer
      *
      * @param _agent - the fully populated agent struct
      */
@@ -82,9 +81,6 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
         //Check that msg.sender is the wallet address for this agent
         require(agent.wallet == msgSender(), NOT_AGENT_WALLET);
 
-        // Make sure percentage is less than or equal to 10000
-        require(_agent.feePercentage <= 10000, FEE_PERCENTAGE_INVALID);
-
         //check that the wallet address is unique to one agent Id if new
         require(
             protocolLookups().agentIdByWallet[_agent.wallet] == 0 ||
@@ -95,6 +91,8 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
         //Delete current mappings
         delete protocolLookups().agentIdByWallet[msgSender()];
 
+        //Ignore active flag passed in by caller and set to value in storage.
+        _agent.active = agent.active;
         storeAgent(_agent);
 
         // Notify watchers of state change
@@ -118,6 +116,13 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @param _agent - the fully populated struct with agent id set
      */
     function storeAgent(Agent memory _agent) internal {
+        // Make sure agent fee percentage + protocol fee percentage is less than or equal the max.
+        // This will lessen the likelihood that creation of offers using this agent will fail
+        require(
+            (_agent.feePercentage + protocolFees().percentage) <= protocolLimits().maxTotalOfferFeePercentage,
+            INVALID_AGENT_FEE_PERCENTAGE
+        );
+
         // Get storage location for agent
         (, Agent storage agent) = fetchAgent(_agent.id);
 

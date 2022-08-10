@@ -69,6 +69,8 @@ exports.RevertReasons = {
   SELLER_NOT_APPROVED: "Seller id is not approved",
   INVALID_AMOUNT_ALLOWED_SELLERS:
     "Allowed sellers not present or exceeds maximum allowed sellers in a single transaction",
+  INVALID_AGENT_FEE_PERCENTAGE:
+    "Sum of Agent fee percentage and protocol fee percentage should be <= max fee percentage limit",
 
   // Twin related
   NO_SUCH_TWIN: "No such twin",
@@ -142,4 +144,7 @@ exports.RevertReasons = {
 
   // Config related
   FEE_PERCENTAGE_INVALID: "Percentage representation must be less than 10000",
+
+  // ERC2981 related
+  ROYALTY_FEE_INVALID: "ERC2981: royalty fee will exceed salePrice",
 };
