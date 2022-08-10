@@ -1574,10 +1574,14 @@ describe("IBosonExchangeHandler", function () {
             // Remove the approval for the protocal to transfer the seller's tokens
             await foreign20.connect(operator).approve(protocolDiamond.address, "0");
 
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+            await expect(tx)
               .to.emit(exchangeHandler, "VoucherRevoked")
-              .withArgs(exchange.offerId, exchange.id, buyer.address)
-              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(exchange.offerId, exchange.id, buyer.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
               .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address);
 
             // Get the exchange state
@@ -1602,9 +1606,20 @@ describe("IBosonExchangeHandler", function () {
 
             let exchangeId = ++exchange.id;
             // Protocol should raised dispute automatically if transfer twin failed
-            await expect(testProtocolFunctions.redeem(exchangeId))
+            const tx = await testProtocolFunctions.redeem(exchangeId);
+
+            await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(
+                exchangeId,
+                ++exchange.buyerId,
+                sellerId,
+                "Twin transfer failed and buyer address is a contract",
+                testProtocolFunctions.address
+              );
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
               .withArgs(
                 twin20.id,
                 twin20.tokenAddress,
@@ -1778,10 +1793,14 @@ describe("IBosonExchangeHandler", function () {
             // Remove the approval for the protocal to transfer the seller's tokens
             await foreign721.connect(operator).setApprovalForAll(protocolDiamond.address, false);
 
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+            await expect(tx)
               .to.emit(exchangeHandler, "VoucherRevoked")
-              .withArgs(exchange.offerId, exchange.id, buyer.address)
-              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(exchange.offerId, exchange.id, buyer.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
               .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "9", "0", buyer.address);
 
             // Get the exchange state
@@ -1802,9 +1821,20 @@ describe("IBosonExchangeHandler", function () {
             await testProtocolFunctions.commit(offerId, { value: price });
 
             // Protocol should raised dispute automatically if transfer twin failed
-            await expect(testProtocolFunctions.connect(buyer).redeem(++exchange.id))
+            const tx = await testProtocolFunctions.connect(buyer).redeem(++exchange.id);
+
+            await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(
+                exchange.id,
+                ++exchange.buyerId,
+                sellerId,
+                "Twin transfer failed and buyer address is a contract",
+                testProtocolFunctions.address
+              );
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
               .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "9", "0", testProtocolFunctions.address);
 
             // Get the exchange state
@@ -1898,10 +1928,13 @@ describe("IBosonExchangeHandler", function () {
             // Remove the approval for the protocal to transfer the seller's tokens
             await foreign1155.connect(operator).setApprovalForAll(protocolDiamond.address, false);
 
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+            await expect(tx)
               .to.emit(exchangeHandler, "VoucherRevoked")
-              .withArgs(exchange.offerId, exchange.id, buyer.address)
-              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(exchange.offerId, exchange.id, buyer.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
               .withArgs(
                 twin1155.id,
                 twin1155.tokenAddress,
@@ -1929,9 +1962,19 @@ describe("IBosonExchangeHandler", function () {
             await testProtocolFunctions.commit(offerId, { value: price });
 
             // Protocol should raised dispute automatically if transfer twin failed
-            await expect(testProtocolFunctions.redeem(++exchange.id))
+            const tx = await testProtocolFunctions.redeem(++exchange.id);
+            await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(
+                exchange.id,
+                ++exchange.buyerId,
+                sellerId,
+                "Twin transfer failed and buyer address is a contract",
+                testProtocolFunctions.address
+              );
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
               .withArgs(
                 twin1155.id,
                 twin1155.tokenAddress,
@@ -1981,12 +2024,26 @@ describe("IBosonExchangeHandler", function () {
           expect(balance).to.equal(0);
 
           let exchangeId = exchange.id;
+
           // Redeem the voucher
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId))
+          const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+          await expect(tx)
             .to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin1155.id, twin1155.tokenAddress, exchangeId, tokenIdMultiToken, twin1155.amount, buyer.address)
+            .withArgs(
+              twin1155.id,
+              twin1155.tokenAddress,
+              exchangeId,
+              tokenIdMultiToken,
+              twin1155.amount,
+              buyer.address
+            );
+
+          await expect(tx)
             .and.to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin20.id, twin20.tokenAddress, exchangeId, "0", twin20.amount, buyer.address)
+            .withArgs(twin20.id, twin20.tokenAddress, exchangeId, "0", twin20.amount, buyer.address);
+
+          await expect(tx)
             .and.to.emit(exchangeHandler, "TwinTransferred")
             .withArgs(twin721.id, twin721.tokenAddress, exchangeId, tokenIdNonFungible, twin721.amount, buyer.address);
 
@@ -2058,11 +2115,17 @@ describe("IBosonExchangeHandler", function () {
 
           it("Should not decrease twin supplyAvailable if supply is unlimited", async function () {
             // Redeem the voucher
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchange.id))
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+            await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferred")
-              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "0", twin721.amount, buyer.address)
+              .withArgs(twin721.id, twin721.tokenAddress, exchange.id, "0", twin721.amount, buyer.address);
+
+            await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferred")
-              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address)
+              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, twin20.tokenId, twin20.amount, buyer.address);
+
+            await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferred")
               .withArgs(
                 twin1155.id,
@@ -2129,14 +2192,22 @@ describe("IBosonExchangeHandler", function () {
             await foreign20.connect(operator).approve(protocolDiamond.address, "0");
 
             let exchangeId = exchange.id;
-            await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId))
+            const tx = await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+            await expect(tx)
               .to.emit(exchangeHandler, "VoucherRevoked")
-              .withArgs(exchange.offerId, exchangeId, buyer.address)
-              .and.to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin20.id, twin20.tokenAddress, exchangeId, "0", twin20.amount, buyer.address)
-              .and.to.emit(exchangeHandler, "TwinTransferred")
-              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, "9", "0", buyer.address)
-              .and.to.emit(exchangeHandler, "TwinTransferred")
+              .withArgs(exchange.offerId, exchangeId, buyer.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin20.id, twin20.tokenAddress, exchangeId, "0", twin20.amount, buyer.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferred")
+              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, "9", "0", buyer.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferred")
               .withArgs(
                 twin1155.id,
                 twin1155.tokenAddress,
@@ -2167,14 +2238,29 @@ describe("IBosonExchangeHandler", function () {
             await testProtocolFunctions.commit(offerId, { value: price });
 
             let exchangeId = ++exchange.id;
+
             // Protocol should raised dispute automatically if transfer twin failed
-            await expect(testProtocolFunctions.redeem(exchangeId))
+            const tx = await testProtocolFunctions.redeem(exchangeId);
+            await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .and.to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin20.id, twin20.tokenAddress, exchangeId, "0", twin20.amount, testProtocolFunctions.address)
-              .and.to.emit(exchangeHandler, "TwinTransferFailed")
-              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, "9", "0", testProtocolFunctions.address)
-              .and.to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(
+                exchangeId,
+                ++exchange.buyerId,
+                sellerId,
+                "Twin transfer failed and buyer address is a contract",
+                testProtocolFunctions.address
+              );
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin20.id, twin20.tokenAddress, exchangeId, "0", twin20.amount, testProtocolFunctions.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin721.id, twin721.tokenAddress, exchangeId, "9", "0", testProtocolFunctions.address);
+
+            await expect(tx)
+              .to.emit(exchangeHandler, "TwinTransferFailed")
               .withArgs(
                 twin1155.id,
                 twin1155.tokenAddress,
@@ -2806,12 +2892,25 @@ describe("IBosonExchangeHandler", function () {
 
       it("should emit a ExchangeCompleted event for all events", async function () {
         // Complete the exchange, expecting event
-        await expect(exchangeHandler.connect(buyer).completeExchangeBatch(exchangesToComplete))
+        const tx = await exchangeHandler.connect(buyer).completeExchangeBatch(exchangesToComplete);
+        await expect(tx)
           .to.emit(exchangeHandler, "ExchangeCompleted")
-          .withArgs(offerId, buyerId, exchangesToComplete[0], buyer.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[1], buyer.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[2], buyer.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[3], buyer.address)
+          .withArgs(offerId, buyerId, exchangesToComplete[0], buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchangesToComplete[1], buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchangesToComplete[2], buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchangesToComplete[3], buyer.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ExchangeCompleted")
           .withArgs(offerId, buyerId, exchangesToComplete[4], buyer.address);
       });
 
@@ -2838,12 +2937,25 @@ describe("IBosonExchangeHandler", function () {
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
-        await expect(exchangeHandler.connect(operator).completeExchangeBatch(exchangesToComplete))
+        const tx = await exchangeHandler.connect(operator).completeExchangeBatch(exchangesToComplete);
+        await expect(tx)
           .to.emit(exchangeHandler, "ExchangeCompleted")
-          .withArgs(offerId, buyerId, exchangesToComplete[0], operator.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[1], operator.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[2], operator.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[3], operator.address)
+          .withArgs(offerId, buyerId, exchangesToComplete[0], operator.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchangesToComplete[1], operator.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchangesToComplete[2], operator.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchangesToComplete[3], operator.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ExchangeCompleted")
           .withArgs(offerId, buyerId, exchangesToComplete[4], operator.address);
       });
 
@@ -2857,12 +2969,25 @@ describe("IBosonExchangeHandler", function () {
         await setNextBlockTimestamp(newTime);
 
         // Complete exchange
-        await expect(exchangeHandler.connect(rando).completeExchangeBatch(exchangesToComplete))
+        const tx = await exchangeHandler.connect(rando).completeExchangeBatch(exchangesToComplete);
+        await expect(tx)
           .to.emit(exchangeHandler, "ExchangeCompleted")
-          .withArgs(offerId, buyerId, exchangesToComplete[0], rando.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[1], rando.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[2], rando.address)
-          .withArgs(offerId, buyerId, exchangesToComplete[3], rando.address)
+          .withArgs(offerId, buyerId, exchangesToComplete[0], rando.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchangesToComplete[1], rando.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchangesToComplete[2], rando.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offerId, buyerId, exchangesToComplete[3], rando.address);
+
+        await expect(tx)
+          .to.emit(exchangeHandler, "ExchangeCompleted")
           .withArgs(offerId, buyerId, exchangesToComplete[4], rando.address);
       });
 
