@@ -2,6 +2,7 @@ const dotEnvConfig = require('dotenv');
 dotEnvConfig.config();
 
 const environments = require('./environments');
+const { task } = require("hardhat/config");
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-web3");
@@ -9,6 +10,15 @@ require('hardhat-contract-sizer');
 require("hardhat-gas-reporter");
 require("solidity-coverage");
 
+const lazyImport = async (module) => {
+	return await require(module);
+}
+
+task("deploy-mock-nft-auth", "Deploy mock NFT Auth tokens and mint tokens to addresses")
+	.setAction( async () => {
+    const { deployAndMintMockNFTAuthTokens } = await lazyImport('./scripts/util/deploy-mock-tokens')
+		await deployAndMintMockNFTAuthTokens();
+	})
 
 module.exports = {
   defaultNetwork: "hardhat",
