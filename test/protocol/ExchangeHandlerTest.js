@@ -28,7 +28,15 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { mockOffer, mockTwin, mockDisputeResolver, mockVoucher, mockExchange, mockCondition } = require("../utils/mock");
+const {
+  mockOffer,
+  mockTwin,
+  mockDisputeResolver,
+  mockVoucher,
+  mockExchange,
+  mockCondition,
+  mockAgent,
+} = require("../utils/mock");
 const {
   getEvent,
   setNextBlockTimestamp,
@@ -41,7 +49,7 @@ const { oneWeek, oneMonth } = require("../utils/constants");
 /**
  *  Test the Boson Exchange Handler interface
  */
-describe.only("IBosonExchangeHandler", function () {
+describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer,
@@ -86,7 +94,7 @@ describe.only("IBosonExchangeHandler", function () {
   let method, tokenType, tokenAddress, tokenId, threshold, maxCommits, groupId, offerIds, condition, group;
   let voucherInitValues, contractURI, royaltyPercentage1, royaltyPercentage2, seller1Treasury, seller2Treasury;
   let emptyAuthToken;
-  let agentId;
+  let agentId, agent;
   let exchangesToComplete, exchangeId;
   let offer, offerFees;
 
@@ -125,6 +133,7 @@ describe.only("IBosonExchangeHandler", function () {
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
       "AccountHandlerFacet",
+      "AgentHandlerFacet",
       "SellerHandlerFacet",
       "BuyerHandlerFacet",
       "DisputeResolverHandlerFacet",
@@ -3457,10 +3466,121 @@ describe.only("IBosonExchangeHandler", function () {
         );
         expect(expectedReceipt.isValid()).is.true;
 
-        console.log(expectedReceipt);
         expect(receiptObject).to.eql(expectedReceipt);
       });
 
+      it("Receipt should contain agentId and agentAddress if agent for offer exists", async function () {
+        // Create a valid agent
+        agent = mockAgent(rando.address);
+        // Set new agentId
+        agentId = agent.id = "4";
+        expect(agent.isValid()).is.true;
+
+        // Create an agent
+        await accountHandler.connect(rando).createAgent(agent);
+
+        // Update agentFee
+        const agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
+        offerFees.agentFee = agentFee;
+
+        // Create a new offer
+        const mo = await mockOffer();
+        const { offerDates, offerDurations } = mo;
+        offer = mo.offer;
+        offer.id = offerId = "2";
+        disputeResolverId = mo.disputeResolverId;
+
+        // Update voucherRedeemableFrom
+        voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+
+        // Check if domains are valid
+        expect(offer.isValid()).is.true;
+        expect(offerDates.isValid()).is.true;
+        expect(offerDurations.isValid()).is.true;
+
+        // Create the offer
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+        // Commit to offer
+        let tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+        // Decrease offer quantityAvailable
+        offer.quantityAvailable = "0";
+
+        // Increase expected id and offerId in exchange struct
+        exchange.id = "2";
+        exchange.offerId = "2";
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        exchange.voucher.committedDate = block.timestamp.toString();
+
+        // Update the validUntilDate date in the expected exchange struct
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        // Set time forward to the offer's voucherRedeemableFrom
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+        // Redeem the voucher
+        tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Update the redeemedDate date in the expected exchange struct
+        exchange.voucher.redeemedDate = block.timestamp.toString();
+
+        // Complete the exchange
+        tx = await exchangeHandler.connect(buyer).completeExchange(exchange.id);
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Update the finalizedDate date in the expected exchange struct
+        exchange.finalizedDate = block.timestamp.toString();
+
+        // Update the state in the expected exchange struct
+        exchange.state = ExchangeState.Completed;
+
+        // Get the exchange state
+        [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+        // It should match ExchangeState.Completed
+        assert.equal(response, ExchangeState.Completed, "Exchange state is incorrect");
+
+        // Get receipt
+        const receipt = await exchangeHandler.connect(buyer).getReceipt(exchange.id);
+        const receiptObject = Receipt.fromStruct(receipt);
+
+        const expectedReceipt = new Receipt(
+          exchange.id,
+          offer.id,
+          buyerId,
+          buyer.address,
+          sellerId,
+          seller.operator,
+          price,
+          offer.sellerDeposit,
+          offer.buyerCancelPenalty,
+          offerFees,
+          agentId,
+          agent.wallet,
+          offer.exchangeToken,
+          exchange.finalizedDate,
+          condition,
+          exchange.voucher.committedDate,
+          exchange.voucher.redeemedDate,
+          exchange.voucher.expired
+        );
+        expect(expectedReceipt.isValid()).is.true;
+
+        expect(receiptObject).to.eql(expectedReceipt);
+      });
       context("💔 Revert Reasons", async function () {
         it("Exchange is not in a final state", async function () {
           await expect(exchangeHandler.connect(rando).getReceipt(exchange.id)).to.be.revertedWith(

@@ -5,6 +5,7 @@ const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferFees = require("../../scripts/domain/OfferFees");
+const Agent = require("../../scripts/domain/Agent");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const DisputeState = require("../../scripts/domain/DisputeState");
@@ -194,6 +195,14 @@ function mockCondition(tokenAddress) {
   return new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
 }
 
+function mockAgent(wallet) {
+  const agentId = "3";
+  const agentFeePercentage = "500"; //5%
+  const active = true;
+
+  return new Agent(agentId, agentFeePercentage, wallet, active);
+}
+
 exports.mockOffer = mockOffer;
 exports.mockTwin = mockTwin;
 exports.mockDisputeResolver = mockDisputeResolver;
@@ -203,3 +212,4 @@ exports.mockExchange = mockExchange;
 exports.mockReceipt = mockReceipt;
 exports.mockDispute = mockDispute;
 exports.mockCondition = mockCondition;
+exports.mockAgent = mockAgent;
