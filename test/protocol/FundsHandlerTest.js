@@ -3715,9 +3715,14 @@ describe("IBosonFundsHandler", function () {
             it("should emit a FundsReleased event", async function () {
               // Expire the dispute, expecting event
               const tx = await disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId);
+
               await expect(tx)
                 .to.emit(disputeHandler, "FundsReleased")
-                .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, rando.address);
+                .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, operatorDR.address);
+
+              await expect(tx)
+                .to.emit(disputeHandler, "FundsReleased")
+                .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, operatorDR.address);
 
               await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
               // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?

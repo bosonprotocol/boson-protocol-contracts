@@ -6070,8 +6070,7 @@ describe("IBosonOrchestrationHandler", function () {
           // Approving the twinHandler contract to transfer seller's tokens
           await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
 
-          // Seller can have admin address OR auth token
-          seller.admin = ethers.constants.AddressZero;
+          expectedCloneAddress = calculateContractAddress(orchestrationHandler.address, "1");
 
           // Create a seller, an offer with condition, twin and bundle
           const tx = await orchestrationHandler
@@ -6084,7 +6083,7 @@ describe("IBosonOrchestrationHandler", function () {
               disputeResolverId,
               condition,
               twin,
-              authToken,
+              emptyAuthToken,
               voucherInitValues,
               agentId
             );
@@ -6092,13 +6091,7 @@ describe("IBosonOrchestrationHandler", function () {
           // SellerCreated and OfferCreated events
           await expect(tx)
             .to.emit(orchestrationHandler, "SellerCreated")
-            .withArgs(
-              seller.id,
-              sellerStruct,
-              calculateContractAddress(orchestrationHandler.address, "1"),
-              authTokenStruct,
-              operator.address
-            );
+            .withArgs(seller.id, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, operator.address);
 
           await expect(tx)
             .to.emit(orchestrationHandler, "OfferCreated")
@@ -6146,6 +6139,20 @@ describe("IBosonOrchestrationHandler", function () {
           assert.equal(eventBundleCreated.bundleId.toString(), bundle.id, "Bundle Id is incorrect");
           assert.equal(eventBundleCreated.sellerId.toString(), bundle.sellerId, "Seller Id is incorrect");
           assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
+
+          // Voucher clone contract
+          bosonVoucher = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
+
+          await expect(tx).to.emit(bosonVoucher, "ContractURIChanged").withArgs(contractURI);
+          await expect(tx)
+            .to.emit(bosonVoucher, "RoyaltyPercentageChanged")
+            .withArgs(voucherInitValues.royaltyPercentage);
+
+          bosonVoucher = await ethers.getContractAt("OwnableUpgradeable", expectedCloneAddress);
+
+          await expect(tx)
+            .to.emit(bosonVoucher, "OwnershipTransferred")
+            .withArgs(ethers.constants.AddressZero, operator.address);
         });
 
         context("💔 Revert Reasons", async function () {
