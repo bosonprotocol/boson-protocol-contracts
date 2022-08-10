@@ -19,10 +19,7 @@ async function deployProtocolHandlerFacets(diamond, facetNames, gasLimit) {
 
   // Deploy all the no-arg initializer handler facets
   while (facetNames.length) {
-    //nonce = ++nonce;
     let facetName = facetNames.shift();
-    //console.log(`Deploying ✅ ${facetName} with nonce: ${nonce}`);
-
     let FacetContractFactory = await ethers.getContractFactory(facetName);
     const facetContract = await FacetContractFactory.deploy({ gasLimit });
     await facetContract.deployTransaction.wait(confirmations);
