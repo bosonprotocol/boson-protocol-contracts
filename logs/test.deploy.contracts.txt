@@ -4970,3 +4970,363 @@ Boson Protocol V2 Contract Suite Deployer
 📋 Verifying on test env BosonVoucher Beacon
 
 📋 Verifying on test env BosonVoucher Proxy
+Downloading compiler 0.8.9
+Compiled 109 Solidity files successfully
+Nothing to compile
+gasLimit  8000000
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: test
+📅 Wed Aug 10 2022 18:12:19 GMT+0000 (Coordinated Universal Time)
+🔱 Deployer account:  0xd3aE0500e21008c89CA4746be7522340C67F5730
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x019E18C5328DaF0A0Dc2B4964266c1309905d847
+✅ DiamondLoupeFacet deployed to: 0x85a7a9a4aa7Aa0FA67D0dfb69e65A0Af2C41C4E2
+✅ DiamondCutFacet deployed to: 0x35701e21016F02cA5cc888efC436270D769c4041
+✅ ProtocolDiamond deployed to: 0x8064076498a9dfFCB69bDeA7537bE7634aF46d11
+
+💎 Granting UPGRADER role...
+
+💎 Deploying and initializing config facet...
+✅ ConfigHandlerFacet deployed to: 0x2AebBbda9F36A74287e15ACB807318e8ad2c1746
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0xAf19201C5A998Db619bdC55755FbdE8c18cEb669
+✅ SellerHandlerFacet deployed to: 0xb4A750414ce565c07373158ef260a5D00f654eEb
+✅ BuyerHandlerFacet deployed to: 0x6739a6C177d702501E1de548EC6d36Bb70C27953
+✅ DisputeResolverHandlerFacet deployed to: 0x83b40D45388A070be206a3Dc885Ae81888D604a6
+✅ AgentHandlerFacet deployed to: 0x3BD300c42f692C4967654676401304EA8e27D6d6
+✅ BundleHandlerFacet deployed to: 0x7C51E7BA99b5E583717DE2128189E225a899C352
+✅ DisputeHandlerFacet deployed to: 0xB9cEe611EF1a99f553c6e2fcB4682e56242f31D8
+✅ ExchangeHandlerFacet deployed to: 0xA6907a3D696D1e69315E6145D642C167D97ECC72
+✅ FundsHandlerFacet deployed to: 0x9d041C8AE3C2fE8bf74053C0520F676AFcb9c22B
+✅ GroupHandlerFacet deployed to: 0x693093482eA4E3A1cA7075bCe12EED02A2052578
+✅ MetaTransactionsHandlerFacet deployed to: 0x469AFF54d2c9B4340a1046F6357F6165Fa072084
+✅ OfferHandlerFacet deployed to: 0xC1AE3cc890438c955856b3C7D8d050af65C06DE2
+✅ OrchestrationHandlerFacet deployed to: 0x1150baf01CAE15E365Cd7Ae40DEef6c6c5ed20ca
+✅ TwinHandlerFacet deployed to: 0x8028EfD6FdEe7365d9446dcd94914e5D8DF8914F
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0x16a6700C58c95B395757137568E3D4Fb7AB555e8
+✅ BosonVoucher Beacon deployed to: 0xB2Dc591F4cB89eA348737f58051F3515daee23D8
+✅ BosonVoucher Proxy deployed to: 0x8881415C04f040Dc135923293660f0cC9Ef9e392
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+
+📋 Verifying on test env AccessController
+
+📋 Verifying on test env DiamondLoupeFacet
+
+📋 Verifying on test env DiamondCutFacet
+
+📋 Verifying on test env ProtocolDiamond
+
+📋 Verifying on test env ConfigHandlerFacet
+
+📋 Verifying on test env AccountHandlerFacet
+
+📋 Verifying on test env SellerHandlerFacet
+
+📋 Verifying on test env BuyerHandlerFacet
+
+📋 Verifying on test env DisputeResolverHandlerFacet
+
+📋 Verifying on test env AgentHandlerFacet
+
+📋 Verifying on test env BundleHandlerFacet
+
+📋 Verifying on test env DisputeHandlerFacet
+
+📋 Verifying on test env ExchangeHandlerFacet
+
+📋 Verifying on test env FundsHandlerFacet
+
+📋 Verifying on test env GroupHandlerFacet
+
+📋 Verifying on test env MetaTransactionsHandlerFacet
+
+📋 Verifying on test env OfferHandlerFacet
+
+📋 Verifying on test env OrchestrationHandlerFacet
+
+📋 Verifying on test env TwinHandlerFacet
+
+📋 Verifying on test env BosonVoucher Logic
+
+📋 Verifying on test env BosonVoucher Beacon
+
+📋 Verifying on test env BosonVoucher Proxy
+Downloading compiler 0.8.9
+Compiled 109 Solidity files successfully
+Nothing to compile
+gasLimit  8000000
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: test
+📅 Wed Aug 10 2022 18:46:00 GMT+0000 (Coordinated Universal Time)
+🔱 Deployer account:  0xd3aE0500e21008c89CA4746be7522340C67F5730
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x5c89c4f36fe8Dd4222BDC95054b440453f64DAD0
+✅ DiamondLoupeFacet deployed to: 0xF9255E52F030BA7404E1985691eec6B02520c301
+✅ DiamondCutFacet deployed to: 0xE3aa71118Fbe3B39B51bB2491CFecdA0F056154f
+✅ ProtocolDiamond deployed to: 0xE20249d46da26666f203Df2468E2c9Df1D50c417
+
+💎 Granting UPGRADER role...
+
+💎 Deploying and initializing config facet...
+✅ ConfigHandlerFacet deployed to: 0xed5c516a4608FbFa3D8275F42fcfD84bdb43368F
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0xC3f07e57c4Ac9283B0C1446A47F7492D64CDD1EB
+✅ SellerHandlerFacet deployed to: 0x95900EC2af43C8B6710a2B67486939E7f6f47E1c
+✅ BuyerHandlerFacet deployed to: 0xcdae8bA8B4dEa903900891cd233fbeDA779579B9
+✅ DisputeResolverHandlerFacet deployed to: 0x059EAB1e50916198D16751990b8Ef1847313247D
+✅ AgentHandlerFacet deployed to: 0x3a47966F92829041324120903D3ba53dCCc0A40c
+✅ BundleHandlerFacet deployed to: 0x0d30c8d028F5d66267FE9B9a27A4d54d6911af2a
+✅ DisputeHandlerFacet deployed to: 0x8191D9eeeBE1f00D134C19E1D117CfFD26c890Ee
+✅ ExchangeHandlerFacet deployed to: 0x9be1146DA0b622BB50E0ed5afC3BDf435B8a590C
+✅ FundsHandlerFacet deployed to: 0xcCCC6837d9Fce0c30DD90F8B9203b68DD9660340
+✅ GroupHandlerFacet deployed to: 0x432F95a4C992Cec823Fc8591eA2E24E84424B8D5
+✅ MetaTransactionsHandlerFacet deployed to: 0xb33Fa681dfF99C3d1cEee2F434167DEeE76E2dd2
+✅ OfferHandlerFacet deployed to: 0x600437D8E41e585aDD0BD7d999247EdE2b31a282
+✅ OrchestrationHandlerFacet deployed to: 0xafB94cCD3298Fee3e98a87B56f44F155e1551684
+✅ TwinHandlerFacet deployed to: 0x3dAA0523D2a5cd48e435b9Fc7A19d0d7332E173f
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0xb4F5a13cbbe1373581Af59e65C5aEDfc482b5EC0
+✅ BosonVoucher Beacon deployed to: 0x928D879Dd69342Ca3d162fAC1DA551A3e4Cf51c1
+✅ BosonVoucher Proxy deployed to: 0x21fB07c36CfC18E32b8cCA502be1Db8786eD061F
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+
+📋 Verifying on test env AccessController
+
+📋 Verifying on test env DiamondLoupeFacet
+
+📋 Verifying on test env DiamondCutFacet
+
+📋 Verifying on test env ProtocolDiamond
+
+📋 Verifying on test env ConfigHandlerFacet
+
+📋 Verifying on test env AccountHandlerFacet
+
+📋 Verifying on test env SellerHandlerFacet
+
+📋 Verifying on test env BuyerHandlerFacet
+
+📋 Verifying on test env DisputeResolverHandlerFacet
+
+📋 Verifying on test env AgentHandlerFacet
+
+📋 Verifying on test env BundleHandlerFacet
+
+📋 Verifying on test env DisputeHandlerFacet
+
+📋 Verifying on test env ExchangeHandlerFacet
+
+📋 Verifying on test env FundsHandlerFacet
+
+📋 Verifying on test env GroupHandlerFacet
+
+📋 Verifying on test env MetaTransactionsHandlerFacet
+
+📋 Verifying on test env OfferHandlerFacet
+
+📋 Verifying on test env OrchestrationHandlerFacet
+
+📋 Verifying on test env TwinHandlerFacet
+
+📋 Verifying on test env BosonVoucher Logic
+
+📋 Verifying on test env BosonVoucher Beacon
+
+📋 Verifying on test env BosonVoucher Proxy
+Downloading compiler 0.8.9
+Compiled 109 Solidity files successfully
+Nothing to compile
+gasLimit  8000000
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: test
+📅 Thu Aug 11 2022 13:46:47 GMT+0000 (Coordinated Universal Time)
+🔱 Deployer account:  0xd3aE0500e21008c89CA4746be7522340C67F5730
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0xc789E3976EcCD217A4039E5F6e166a9D9006286A
+✅ DiamondLoupeFacet deployed to: 0x61a7EC0066336EDCBD7368E899b18Ec7Ba8cBa1e
+✅ DiamondCutFacet deployed to: 0x98d53cf81e94816264606e8aa086E1203937B351
+✅ ProtocolDiamond deployed to: 0xC730cA7652e3DaB45A93EA055735678cC3fEd0b0
+
+💎 Granting UPGRADER role...
+
+💎 Deploying and initializing config facet...
+✅ ConfigHandlerFacet deployed to: 0x4441AE612B1B8DD00f7a6F6F9f626C9443F0Ac63
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0x81E1a5a4F729794D7a37f6B4481c9B1e30F51E77
+✅ SellerHandlerFacet deployed to: 0x3f5795142dAB2dCd0EFdc052e0cA26644f279aB0
+✅ BuyerHandlerFacet deployed to: 0x82a1dF53Ddf62Aca86cFB2BA0F38CB80B7B84734
+✅ DisputeResolverHandlerFacet deployed to: 0x0DdFA3925cB2b5A74b785A1A0097b95ECD022e03
+✅ AgentHandlerFacet deployed to: 0xDaC4d2C954c56a93fa3929ad86e427Bca31B3186
+✅ BundleHandlerFacet deployed to: 0xd5C9a494958363EF69ef13Ef54da9E478C8b67B8
+✅ DisputeHandlerFacet deployed to: 0xF6D8339934371B64b3aEf45F95a75466766f3ff5
+✅ ExchangeHandlerFacet deployed to: 0xA4A34f562C38aF5d7dedC4C031a4962c8fd9F733
+✅ FundsHandlerFacet deployed to: 0xc9d0b386443711034d5a85EF8B7db54cE7064256
+✅ GroupHandlerFacet deployed to: 0x8195A1950fceDE4da26C2d9dE08EB1aA46bA7cCE
+✅ MetaTransactionsHandlerFacet deployed to: 0x529C18DAA07a873C02fE150b2eF10FF063386aBD
+✅ OfferHandlerFacet deployed to: 0xC37758655Bab9aC02Ae40531161ce775aC22515c
+✅ OrchestrationHandlerFacet deployed to: 0xb87d0f68EA9eD280c56c4D4798859F40c0ec4ffd
+✅ TwinHandlerFacet deployed to: 0x628a309ea564FdA07347caD1Af6bdbD437dc4CBF
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0x4cEF8D6D82735C17A3B3557fB6a28C6F2aA44B70
+✅ BosonVoucher Beacon deployed to: 0xF02c5dDE82DDb9bA94D7505cF3b33fa4a507B783
+✅ BosonVoucher Proxy deployed to: 0x00670229ebEa592e81fC099334169418B40D66aE
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+
+📋 Verifying on test env AccessController
+
+📋 Verifying on test env DiamondLoupeFacet
+
+📋 Verifying on test env DiamondCutFacet
+
+📋 Verifying on test env ProtocolDiamond
+
+📋 Verifying on test env ConfigHandlerFacet
+
+📋 Verifying on test env AccountHandlerFacet
+
+📋 Verifying on test env SellerHandlerFacet
+
+📋 Verifying on test env BuyerHandlerFacet
+
+📋 Verifying on test env DisputeResolverHandlerFacet
+
+📋 Verifying on test env AgentHandlerFacet
+
+📋 Verifying on test env BundleHandlerFacet
+
+📋 Verifying on test env DisputeHandlerFacet
+
+📋 Verifying on test env ExchangeHandlerFacet
+
+📋 Verifying on test env FundsHandlerFacet
+
+📋 Verifying on test env GroupHandlerFacet
+
+📋 Verifying on test env MetaTransactionsHandlerFacet
+
+📋 Verifying on test env OfferHandlerFacet
+
+📋 Verifying on test env OrchestrationHandlerFacet
+
+📋 Verifying on test env TwinHandlerFacet
+
+📋 Verifying on test env BosonVoucher Logic
+
+📋 Verifying on test env BosonVoucher Beacon
+
+📋 Verifying on test env BosonVoucher Proxy
+Downloading compiler 0.8.9
+Compiled 109 Solidity files successfully
+Nothing to compile
+gasLimit  8000000
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: test
+📅 Thu Aug 11 2022 16:48:40 GMT+0000 (Coordinated Universal Time)
+🔱 Deployer account:  0xd3aE0500e21008c89CA4746be7522340C67F5730
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0xdE3F65945a387232a1DcAD473FC02F85f156172E
+✅ DiamondLoupeFacet deployed to: 0x5137d4B71E453ebBCc2ef0E65F2A2480fC8A4909
+✅ DiamondCutFacet deployed to: 0xEF1140c57a3661404966509c3acc44ADD9a8fBE3
+✅ ProtocolDiamond deployed to: 0x4BE581fA3828228A54045a51C0927770b24873AD
+
+💎 Granting UPGRADER role...
+
+💎 Deploying and initializing config facet...
+✅ ConfigHandlerFacet deployed to: 0xab3209Ee87cf05524505D449dA4608e4bf787dF3
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0x170D82B998085CEc646CC2855f39F908d7183d7F
+✅ SellerHandlerFacet deployed to: 0x9687075bb6B2893Ec92047fb016D0C59103F043C
+✅ BuyerHandlerFacet deployed to: 0xB0573c4257fc2D06aaBa6b7125458DfB5e82B3f5
+✅ DisputeResolverHandlerFacet deployed to: 0x9e671195239721373F05927F589A709914CEf019
+✅ AgentHandlerFacet deployed to: 0x30f1daf1C83A67A270AaC7deABb1aA335FA6a926
+✅ BundleHandlerFacet deployed to: 0x09DE99D0088C78402Ee9128BA7d06eF356271ac0
+✅ DisputeHandlerFacet deployed to: 0xD9EEF2bcb5B80A53E88773425e33bb94a606b973
+✅ ExchangeHandlerFacet deployed to: 0x5ad56874CC2187c54978FaA57edf702d726cffD7
+✅ FundsHandlerFacet deployed to: 0x824b70f2326a712727A23916C04F76101D77A4c5
+✅ GroupHandlerFacet deployed to: 0xD5Dc090284a8F3ee9d48208DA459DF803bB84269
+✅ MetaTransactionsHandlerFacet deployed to: 0xc1620dC9266b30dA1c34960d711263DB248139AF
+✅ OfferHandlerFacet deployed to: 0xB68158dB4adC418A3ec31aB69935Ed92FB6cb4de
+✅ OrchestrationHandlerFacet deployed to: 0x4d6F90Aa3E0f8964b71f7396Cf4dbD623957A3A2
+✅ TwinHandlerFacet deployed to: 0x799f4765eA6823a29B5248D7721eD3c2e5fF6101
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0xD116978fE8dd02B4fdC32C56f33754615d14e8C3
+✅ BosonVoucher Beacon deployed to: 0x9a1aeC49B83183eF2B5757D019b10F6C0DfC567e
+✅ BosonVoucher Proxy deployed to: 0x6F2c8Ac745CC194230b4C6411EEDaE619fd56C9d
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+
+📋 Verifying on test env AccessController
+
+📋 Verifying on test env DiamondLoupeFacet
+
+📋 Verifying on test env DiamondCutFacet
+
+📋 Verifying on test env ProtocolDiamond
+
+📋 Verifying on test env ConfigHandlerFacet
+
+📋 Verifying on test env AccountHandlerFacet
+
+📋 Verifying on test env SellerHandlerFacet
+
+📋 Verifying on test env BuyerHandlerFacet
+
+📋 Verifying on test env DisputeResolverHandlerFacet
+
+📋 Verifying on test env AgentHandlerFacet
+
+📋 Verifying on test env BundleHandlerFacet
+
+📋 Verifying on test env DisputeHandlerFacet
+
+📋 Verifying on test env ExchangeHandlerFacet
+
+📋 Verifying on test env FundsHandlerFacet
+
+📋 Verifying on test env GroupHandlerFacet
+
+📋 Verifying on test env MetaTransactionsHandlerFacet
+
+📋 Verifying on test env OfferHandlerFacet
+
+📋 Verifying on test env OrchestrationHandlerFacet
+
+📋 Verifying on test env TwinHandlerFacet
+
+📋 Verifying on test env BosonVoucher Logic
+
+📋 Verifying on test env BosonVoucher Beacon
+
+📋 Verifying on test env BosonVoucher Proxy

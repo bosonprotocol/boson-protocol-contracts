@@ -9,9 +9,10 @@ jobs:
     runs-on: contracts
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     env:
-      DEPLOYER_GAS_LIMIT: ${{ secrets.DEPLOYER_GAS_LIMIT }}
+      DEPLOYER_GAS_LIMIT_TEST: ${{ secrets.DEPLOYER_TEST_GAS_LIMIT }}
       DEPLOYER_TEST_TXNODE: ${{ secrets.DEPLOYER_TEST_TXNODE }}
       DEPLOYER_TEST_KEY: ${{ secrets.DEPLOYER_TEST_KEY }}
+      CONFIRMATIONS: ${{ secrets.CONFIRMATIONS }}
     name: test_deploy
     steps:
       - name: Checkout repository
@@ -51,6 +52,7 @@ jobs:
         run: |
           git config --local user.email "bsn-ci@users.noreply.github.com"
           git config --local user.name "GitHub Actions Bot"
+          git add addresses/ logs/
           git commit -a \
             -m "[skip ci] Add json file with addresses for test environment" \
             -m "[Test Environment] New deployed addresses" \

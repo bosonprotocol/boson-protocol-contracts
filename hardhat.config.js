@@ -15,22 +15,22 @@ module.exports = {
   networks: {
     hardhat: {
       accounts: {mnemonic: environments.hardhat.mnemonic},
-      gas: environments.gasLimit
+      gas:  environments.hardhat.gasLimit
     },
     test: {
       url: environments.test.txNode,
       accounts: environments.test.keys,
-      gas: environments.gasLimit
+      gas: environments.test.gasLimit
     },
     mainnet: {
       url: environments.mainnet.txNode,
       accounts: environments.mainnet.keys,
-      gas: environments.gasLimit
+      gas: environments.mainnet.gasLimit
     },
     mumbai: {
       url: environments.mumbai.txNode,
       accounts: environments.mumbai.keys,
-      gas: environments.gasLimit
+      gas: environments.mumbai.gasLimit
     }
   },
   etherscan: {

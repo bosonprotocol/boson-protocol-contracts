@@ -10,6 +10,7 @@ jobs:
       DEPLOYER_MUMBAI_TXNODE: ${{ secrets.DEPLOYER_MUMBAI_TXNODE }}
       DEPLOYER_MUMBAI_KEY: ${{ secrets.DEPLOYER_MUMBAI_KEY }}
       DEPLOYER_POLYGONSCAN_API_KEY: ${{ secrets.POLYGONSCAN_API_KEY }}
+      CONFIRMATIONS: ${{ secrets.CONFIRMATIONS }}
     name: mumbai_deploy
     steps:
       - name: Checkout repository
@@ -22,7 +23,7 @@ jobs:
         with:
           node-version: '16.14.x'
           cache: 'npm'
-      - run: npm install
+      - run: npm ci
       - name: Prepare Environment
         shell: bash
         run: |
@@ -49,6 +50,7 @@ jobs:
         run: |
           git config --local user.email "bsn-ci@users.noreply.github.com"
           git config --local user.name "GitHub Actions Bot"
+          git add addresses/ logs/
           git commit -a \
             -m "[skip ci] Add json file with addresses for staging environment" \
             -m "[Staging Environment] New deployed addresses" \

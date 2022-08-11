@@ -1373,6 +1373,8 @@ describe("IBosonOfferHandler", function () {
         offerDurations.voucherValid = voucherValid = `${(i + 1) * oneMonth}`;
         offerDurations.resolutionPeriod = resolutionPeriod = `${(i + 1) * oneWeek}`;
 
+        offerFees.protocolFee = applyPercentage(offer.price, protocolFeePercentage);
+
         // Check if domains are valid
         expect(offer.isValid()).is.true;
         expect(offerDates.isValid()).is.true;
@@ -1438,11 +1440,11 @@ describe("IBosonOfferHandler", function () {
     context("👉 createOfferBatch()", async function () {
       it("should emit an OfferCreated events for all offers", async function () {
         // Create an offer, testing for the event
-        await expect(
-          offerHandler
-            .connect(operator)
-            .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-        )
+        const tx = await offerHandler
+          .connect(operator)
+          .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds);
+
+        await expect(tx)
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "1",
@@ -1454,7 +1456,10 @@ describe("IBosonOfferHandler", function () {
             offerFeesStructs[0],
             agentIds[0],
             operator.address
-          )
+          );
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "2",
             offer.sellerId,
@@ -1465,7 +1470,10 @@ describe("IBosonOfferHandler", function () {
             offerFeesStructs[1],
             agentIds[1],
             operator.address
-          )
+          );
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "3",
             offer.sellerId,
@@ -1476,7 +1484,10 @@ describe("IBosonOfferHandler", function () {
             offerFeesStructs[2],
             agentIds[2],
             operator.address
-          )
+          );
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "4",
             offer.sellerId,
@@ -1487,7 +1498,10 @@ describe("IBosonOfferHandler", function () {
             offerFeesStructs[3],
             agentIds[3],
             operator.address
-          )
+          );
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "5",
             offer.sellerId,
@@ -1543,11 +1557,11 @@ describe("IBosonOfferHandler", function () {
         offers[4].id = "888";
 
         // Create an offer, testing for the event
-        await expect(
-          offerHandler
-            .connect(operator)
-            .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-        )
+        const tx = await offerHandler
+          .connect(operator)
+          .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds);
+
+        await expect(tx)
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "1",
@@ -1559,7 +1573,10 @@ describe("IBosonOfferHandler", function () {
             offerFeesStructs[0],
             agentIds[0],
             operator.address
-          )
+          );
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "2",
             offer.sellerId,
@@ -1570,7 +1587,10 @@ describe("IBosonOfferHandler", function () {
             offerFeesStructs[1],
             agentIds[1],
             operator.address
-          )
+          );
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "3",
             offer.sellerId,
@@ -1581,7 +1601,10 @@ describe("IBosonOfferHandler", function () {
             offerFeesStructs[2],
             agentIds[2],
             operator.address
-          )
+          );
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "4",
             offer.sellerId,
@@ -1592,7 +1615,10 @@ describe("IBosonOfferHandler", function () {
             offerFeesStructs[3],
             agentIds[3],
             operator.address
-          )
+          );
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "5",
             offer.sellerId,
@@ -1625,11 +1651,11 @@ describe("IBosonOfferHandler", function () {
         offers[4].sellerId = "567";
 
         // Create an offer, testing for the event
-        await expect(
-          offerHandler
-            .connect(operator)
-            .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
-        )
+        const tx = await offerHandler
+          .connect(operator)
+          .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds);
+
+        await expect(tx)
           .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "1",
@@ -1641,7 +1667,10 @@ describe("IBosonOfferHandler", function () {
             offerFeesStructs[0],
             agentIds[0],
             operator.address
-          )
+          );
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "2",
             sellerId,
@@ -1652,7 +1681,10 @@ describe("IBosonOfferHandler", function () {
             offerFeesStructs[1],
             agentIds[1],
             operator.address
-          )
+          );
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "3",
             sellerId,
@@ -1663,7 +1695,10 @@ describe("IBosonOfferHandler", function () {
             offerFeesStructs[2],
             agentIds[2],
             operator.address
-          )
+          );
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "4",
             sellerId,
@@ -1674,7 +1709,10 @@ describe("IBosonOfferHandler", function () {
             offerFeesStructs[3],
             agentIds[3],
             operator.address
-          )
+          );
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferCreated")
           .withArgs(
             "5",
             sellerId,
@@ -2089,7 +2127,12 @@ describe("IBosonOfferHandler", function () {
             nonZeroAgentIds.push(agentId);
 
             // Set updated offerFees
-            let protocolFee = applyPercentage(offers[i].price, protocolFeePercentage);
+            let protocolFee;
+            if (offers[i].exchangeToken == bosonToken.address) {
+              protocolFee = protocolFeeFlatBoson;
+            } else {
+              protocolFee = applyPercentage(offers[i].price, protocolFeePercentage);
+            }
             let agentFee = ethers.BigNumber.from(offers[i].price).mul(agentFeePercentage).div("10000").toString();
             offerFees = new OfferFees(protocolFee, agentFee);
 
@@ -2100,11 +2143,11 @@ describe("IBosonOfferHandler", function () {
 
         it("should emit an OfferCreated events for all offers with updated agent ids", async function () {
           // Create an offer, testing for the event
-          await expect(
-            offerHandler
-              .connect(operator)
-              .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, nonZeroAgentIds)
-          )
+          const tx = await offerHandler
+            .connect(operator)
+            .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, nonZeroAgentIds);
+
+          await expect(tx)
             .to.emit(offerHandler, "OfferCreated")
             .withArgs(
               "1",
@@ -2116,7 +2159,10 @@ describe("IBosonOfferHandler", function () {
               offerFeesStructs[0],
               nonZeroAgentIds[0],
               operator.address
-            )
+            );
+
+          await expect(tx)
+            .to.emit(offerHandler, "OfferCreated")
             .withArgs(
               "2",
               offer.sellerId,
@@ -2127,7 +2173,10 @@ describe("IBosonOfferHandler", function () {
               offerFeesStructs[1],
               nonZeroAgentIds[1],
               operator.address
-            )
+            );
+
+          await expect(tx)
+            .to.emit(offerHandler, "OfferCreated")
             .withArgs(
               "3",
               offer.sellerId,
@@ -2138,7 +2187,10 @@ describe("IBosonOfferHandler", function () {
               offerFeesStructs[2],
               nonZeroAgentIds[2],
               operator.address
-            )
+            );
+
+          await expect(tx)
+            .to.emit(offerHandler, "OfferCreated")
             .withArgs(
               "4",
               offer.sellerId,
@@ -2149,7 +2201,10 @@ describe("IBosonOfferHandler", function () {
               offerFeesStructs[3],
               nonZeroAgentIds[3],
               operator.address
-            )
+            );
+
+          await expect(tx)
+            .to.emit(offerHandler, "OfferCreated")
             .withArgs(
               "5",
               offer.sellerId,
@@ -2224,10 +2279,17 @@ describe("IBosonOfferHandler", function () {
         [, offerStruct] = await offerHandler.getOffer(offersToVoid[0]);
 
         // Void offers, testing for the event
-        await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid))
+        const tx = await offerHandler.connect(operator).voidOfferBatch(offersToVoid);
+        await expect(tx)
           .to.emit(offerHandler, "OfferVoided")
-          .withArgs(offersToVoid[0], offerStruct.sellerId, operator.address)
-          .withArgs(offersToVoid[1], offerStruct.sellerId, operator.address)
+          .withArgs(offersToVoid[0], offerStruct.sellerId, operator.address);
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferVoided")
+          .withArgs(offersToVoid[1], offerStruct.sellerId, operator.address);
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferVoided")
           .withArgs(offersToVoid[2], offerStruct.sellerId, operator.address);
       });
 
@@ -2346,10 +2408,17 @@ describe("IBosonOfferHandler", function () {
 
       it("should emit OfferExtended events", async function () {
         // Extend the valid until date, testing for the event
-        await expect(offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate))
+        const tx = await offerHandler.connect(operator).extendOfferBatch(offersToExtend, newValidUntilDate);
+        await expect(tx)
           .to.emit(offerHandler, "OfferExtended")
-          .withArgs(offersToExtend[0], offer.sellerId, newValidUntilDate, operator.address)
-          .withArgs(offersToExtend[1], offer.sellerId, newValidUntilDate, operator.address)
+          .withArgs(offersToExtend[0], offer.sellerId, newValidUntilDate, operator.address);
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferExtended")
+          .withArgs(offersToExtend[1], offer.sellerId, newValidUntilDate, operator.address);
+
+        await expect(tx)
+          .to.emit(offerHandler, "OfferExtended")
           .withArgs(offersToExtend[2], offer.sellerId, newValidUntilDate, operator.address);
       });
 
