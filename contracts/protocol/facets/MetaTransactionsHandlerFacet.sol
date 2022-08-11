@@ -35,14 +35,13 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         pmti.inputType[COMPLETE_EXCHANGE] = MetaTxInputType.Exchange;
         pmti.inputType[RETRACT_DISPUTE] = MetaTxInputType.Exchange;
         pmti.inputType[ESCALATE_DISPUTE] = MetaTxInputType.Exchange;
-        pmti.inputType[RAISE_DISPUTE] = MetaTxInputType.RaiseDispute;
+        pmti.inputType[RAISE_DISPUTE] = MetaTxInputType.Exchange;
 
         // set the hash info to the input type
         pmti.hashInfo[MetaTxInputType.Generic] = HashInfo(META_TRANSACTION_TYPEHASH, hashGenericDetails);
         pmti.hashInfo[MetaTxInputType.CommitToOffer] = HashInfo(META_TX_COMMIT_TO_OFFER_TYPEHASH, hashOfferDetails);
         pmti.hashInfo[MetaTxInputType.Funds] = HashInfo(META_TX_FUNDS_TYPEHASH, hashFundDetails);
         pmti.hashInfo[MetaTxInputType.Exchange] = HashInfo(META_TX_EXCHANGE_TYPEHASH, hashExchangeDetails);
-        pmti.hashInfo[MetaTxInputType.RaiseDispute] = HashInfo(META_TX_DISPUTES_TYPEHASH, hashDisputeDetails);
         pmti.hashInfo[MetaTxInputType.ResolveDispute] = HashInfo(
             META_TX_DISPUTE_RESOLUTIONS_TYPEHASH,
             hashDisputeResolutionDetails
@@ -132,15 +131,6 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             );
     }
 
-    /**
-     * @notice Returns hashed representation of the dispute details struct.
-     *
-     * @param _disputeDetails - the dispute details
-     */
-    function hashDisputeDetails(bytes memory _disputeDetails) internal pure returns (bytes32) {
-        uint256 exchangeId = abi.decode(_disputeDetails, (uint256));
-        return keccak256(abi.encode(DISPUTE_DETAILS_TYPEHASH, exchangeId));
-    }
 
     /**
      * @notice Returns hashed representation of the dispute resolution details struct.

@@ -181,10 +181,6 @@ bytes32 constant FUND_DETAILS_TYPEHASH = keccak256(
 bytes32 constant META_TX_FUNDS_TYPEHASH = keccak256(
     "MetaTxFund(uint256 nonce,address from,address contractAddress,string functionName,MetaTxFundDetails fundDetails)MetaTxFundDetails(uint256 entityId,address[] tokenList,uint256[] tokenAmounts)"
 );
-bytes32 constant DISPUTE_DETAILS_TYPEHASH = keccak256("MetaTxDisputeDetails(uint256 exchangeId)");
-bytes32 constant META_TX_DISPUTES_TYPEHASH = keccak256(
-    "MetaTxDispute(uint256 nonce,address from,address contractAddress,string functionName,MetaTxDisputeDetails disputeDetails)MetaTxDisputeDetails(uint256 exchangeId)"
-);
 bytes32 constant DISPUTE_RESOLUTION_DETAILS_TYPEHASH = keccak256(
     "MetaTxDisputeResolutionDetails(uint256 exchangeId,uint256 buyerPercent,bytes32 sigR,bytes32 sigS,uint8 sigV)"
 );

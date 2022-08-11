@@ -78,7 +78,6 @@ describe("IBosonMetaTransactionsHandler", function () {
     expectedBuyerAvailableFunds,
     tokenListBuyer,
     tokenAmountsBuyer;
-  let validDisputeDetails;
   let buyerPercent, validDisputeResolutionDetails, signatureSplits;
   let sellerAllowList;
   let voucherInitValues;
@@ -1693,31 +1692,31 @@ describe("IBosonMetaTransactionsHandler", function () {
 
       context("👉 DisputeHandlerFacet 👉 raiseDispute()", async function () {
         beforeEach(async function () {
-          // prepare validDisputeDetails
-          validDisputeDetails = {
+          // prepare validExchangeDetails
+          validExchangeDetails = {
             exchangeId: exchange.id,
           };
 
-          // Set the dispute Type
-          let disputeType = [{ name: "exchangeId", type: "uint256" }];
+          // Set the exchange Type
+          exchangeType = [{ name: "exchangeId", type: "uint256" }];
 
           // Set the message Type
-          let metaTxDisputeType = [
+          metaTxExchangeType = [
             { name: "nonce", type: "uint256" },
             { name: "from", type: "address" },
             { name: "contractAddress", type: "address" },
             { name: "functionName", type: "string" },
-            { name: "disputeDetails", type: "MetaTxDisputeDetails" },
+            { name: "exchangeDetails", type: "MetaTxExchangeDetails" },
           ];
 
           customTransactionType = {
-            MetaTxDispute: metaTxDisputeType,
-            MetaTxDisputeDetails: disputeType,
+            MetaTxExchange: metaTxExchangeType,
+            MetaTxExchangeDetails: exchangeType,
           };
 
           // Prepare the message
           message.functionName = "raiseDispute(uint256)";
-          message.disputeDetails = validDisputeDetails;
+          message.exchangeDetails = validExchangeDetails;
           message.from = buyer.address;
 
           // Set time forward to the offer's voucherRedeemableFrom
@@ -1732,14 +1731,14 @@ describe("IBosonMetaTransactionsHandler", function () {
           let { r, s, v } = await prepareDataSignatureParameters(
             buyer,
             customTransactionType,
-            "MetaTxDispute",
+            "MetaTxExchange",
             message,
             metaTransactionsHandler.address
           );
 
           // Prepare the function signature
           functionSignature = disputeHandler.interface.encodeFunctionData("raiseDispute", [
-            validDisputeDetails.exchangeId,
+            validExchangeDetails.exchangeId,
           ]);
 
           // send a meta transaction, check for event
@@ -1773,26 +1772,26 @@ describe("IBosonMetaTransactionsHandler", function () {
           // An invalid exchange id
           id = "666";
 
-          // prepare validDisputeDetails
-          validDisputeDetails = {
+          // prepare validExchangeDetails
+          validExchangeDetails = {
             exchangeId: id,
           };
 
           // Prepare the message
-          message.disputeDetails = validDisputeDetails;
+          message.exchangeDetails = validExchangeDetails;
 
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             buyer,
             customTransactionType,
-            "MetaTxDispute",
+            "MetaTxExchange",
             message,
             metaTransactionsHandler.address
           );
 
           // Prepare the function signature
           functionSignature = disputeHandler.interface.encodeFunctionData("raiseDispute", [
-            validDisputeDetails.exchangeId,
+            validExchangeDetails.exchangeId,
           ]);
 
           // Execute meta transaction, expecting revert.
@@ -1813,7 +1812,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           beforeEach(async function () {
             // Prepare the function signature
             functionSignature = disputeHandler.interface.encodeFunctionData("raiseDispute", [
-              validDisputeDetails.exchangeId,
+              validExchangeDetails.exchangeId,
             ]);
           });
 
@@ -1822,7 +1821,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             let { r, s, v } = await prepareDataSignatureParameters(
               buyer,
               customTransactionType,
-              "MetaTxDispute",
+              "MetaTxExchange",
               message,
               metaTransactionsHandler.address
             );
@@ -1860,7 +1859,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             let { r, s, v } = await prepareDataSignatureParameters(
               rando, // Different user, not buyer.
               customTransactionType,
-              "MetaTxDispute",
+              "MetaTxExchange",
               message,
               metaTransactionsHandler.address
             );
