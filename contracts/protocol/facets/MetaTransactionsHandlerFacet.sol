@@ -131,7 +131,6 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
             );
     }
 
-
     /**
      * @notice Returns hashed representation of the dispute resolution details struct.
      *
