@@ -20,6 +20,8 @@ interface IBosonPauseHandler is IBosonPauseEvents {
      * Reverts if:
      * - caller does not have PAUSER role
      * - no regions are specified
+     * - protocol is already paused
+     * - a region is specified more than once
      *
      * @param _regions - an array of regions to pause. See: {BosonTypes.PausableRegion}
      */
@@ -32,7 +34,7 @@ interface IBosonPauseHandler is IBosonPauseEvents {
      *
      * Reverts if:
      * - caller does not have PAUSER role
-     * - no part of the protocol is currently paused
+     * - protocol is not currently paused
      */
     function unpause() external;
 }

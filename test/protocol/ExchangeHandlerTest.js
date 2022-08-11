@@ -43,6 +43,7 @@ describe("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer,
+    pauser,
     operator,
     admin,
     clerk,
@@ -97,6 +98,7 @@ describe("IBosonExchangeHandler", function () {
     // Make accounts available
     [
       deployer,
+      pauser,
       operator,
       admin,
       clerk,
@@ -119,6 +121,9 @@ describe("IBosonExchangeHandler", function () {
 
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
@@ -589,9 +594,9 @@ describe("IBosonExchangeHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
-        it("The exchanges region of protocol is paused", async function () {
+        it.only("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
-          await pauseHandler.pause([PausableRegion.Exchanges]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to create an exchange, expecting revert
           await expect(
@@ -601,7 +606,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("The buyers region of protocol is paused", async function () {
           // Pause the buyers region of the protocol
-          await pauseHandler.pause([PausableRegion.Buyers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
 
           // Attempt to create a buyer, expecting revert
           await expect(
@@ -1043,7 +1048,7 @@ describe("IBosonExchangeHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
-          await pauseHandler.pause([PausableRegion.Exchanges]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
           await expect(exchangeHandler.connect(operator).completeExchange(id)).to.revertedWith(
@@ -1219,7 +1224,7 @@ describe("IBosonExchangeHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
-          await pauseHandler.pause([PausableRegion.Exchanges]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
           await expect(exchangeHandler.connect(buyer).completeExchangeBatch(exchangesToComplete)).to.revertedWith(
@@ -1342,7 +1347,7 @@ describe("IBosonExchangeHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
-          await pauseHandler.pause([PausableRegion.Exchanges]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
           await expect(exchangeHandler.connect(operator).revokeVoucher(exchange.id)).to.revertedWith(
@@ -1431,7 +1436,7 @@ describe("IBosonExchangeHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
-          await pauseHandler.pause([PausableRegion.Exchanges]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
           await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id)).to.revertedWith(
@@ -1532,7 +1537,7 @@ describe("IBosonExchangeHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
-          await pauseHandler.pause([PausableRegion.Exchanges]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
           await expect(exchangeHandler.connect(buyer).expireVoucher(id)).to.revertedWith(RevertReasons.REGION_PAUSED);
@@ -1618,7 +1623,7 @@ describe("IBosonExchangeHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
-          await pauseHandler.pause([PausableRegion.Exchanges]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
           await expect(exchangeHandler.connect(buyer).redeemVoucher(id)).to.revertedWith(RevertReasons.REGION_PAUSED);
@@ -2545,7 +2550,7 @@ describe("IBosonExchangeHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
-          await pauseHandler.pause([PausableRegion.Exchanges]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
           await expect(exchangeHandler.connect(operator).extendVoucher(id, validUntilDate)).to.revertedWith(
@@ -2708,7 +2713,7 @@ describe("IBosonExchangeHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The buyers region of protocol is paused", async function () {
           // Pause the buyers region of the protocol
-          await pauseHandler.pause([PausableRegion.Buyers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
 
           // Attempt to create a buyer, expecting revert
           await expect(

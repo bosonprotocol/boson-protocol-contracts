@@ -30,7 +30,7 @@ const { mockOffer, mockDisputeResolver } = require("../utils/mock");
 describe("IBosonGroupHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
+  let accounts, deployer, pauser, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
   let erc165, protocolDiamond, accessController, accountHandler, offerHandler, groupHandler, pauseHandler;
   let bosonToken, key, value;
   let offer, support, expected, exists;
@@ -57,7 +57,7 @@ describe("IBosonGroupHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR] =
+    [deployer, pauser, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR] =
       await ethers.getSigners();
     accounts = await ethers.getSigners();
 
@@ -66,6 +66,9 @@ describe("IBosonGroupHandler", function () {
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
+
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
@@ -337,7 +340,7 @@ describe("IBosonGroupHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The groups region of protocol is paused", async function () {
           // Pause the groups region of the protocol
-          await pauseHandler.pause([PausableRegion.Groups]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
 
           // Attempt to create a group expecting revert
           await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(RevertReasons.REGION_PAUSED);
@@ -494,7 +497,7 @@ describe("IBosonGroupHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The groups region of protocol is paused", async function () {
           // Pause the groups region of the protocol
-          await pauseHandler.pause([PausableRegion.Groups]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
 
           // Attempt to add offers to a group, expecting revert
           await expect(groupHandler.connect(operator).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
@@ -653,7 +656,7 @@ describe("IBosonGroupHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The groups region of protocol is paused", async function () {
           // Pause the groups region of the protocol
-          await pauseHandler.pause([PausableRegion.Groups]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
 
           // Attempt to remove offers to a group, expecting revert
           await expect(
@@ -788,7 +791,7 @@ describe("IBosonGroupHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The groups region of protocol is paused", async function () {
           // Pause the groups region of the protocol
-          await pauseHandler.pause([PausableRegion.Groups]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
 
           // Attempt to set group condition, expecting revert
           await expect(groupHandler.connect(operator).setGroupCondition(group.id, condition)).to.revertedWith(

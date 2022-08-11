@@ -39,6 +39,7 @@ describe("IBosonOrchestrationHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer,
+    pauser,
     rando,
     operator,
     admin,
@@ -101,6 +102,7 @@ describe("IBosonOrchestrationHandler", function () {
     // Make accounts available
     [
       deployer,
+      pauser,
       operator,
       admin,
       clerk,
@@ -125,6 +127,9 @@ describe("IBosonOrchestrationHandler", function () {
     //Grant ADMIN role to and address that can call restricted functions.
     //This ADMIN role is a protocol-level role. It is not the same an admin address for an account type
     await accessController.grantRole(Role.ADMIN, protocolAdmin.address);
+
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
@@ -903,7 +908,7 @@ describe("IBosonOrchestrationHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The orchestration region of protocol is paused", async function () {
           // Pause the orchestration region of the protocol
-          await pauseHandler.pause([PausableRegion.Orchestration]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Orchestration]);
 
           // Attempt to orchestrate, expecting revert
           await expect(
@@ -924,7 +929,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The sellers region of protocol is paused", async function () {
           // Pause the sellers region of the protocol
-          await pauseHandler.pause([PausableRegion.Sellers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
           // Attempt to create a offer expecting revert
           await expect(
@@ -945,7 +950,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to create a offer expecting revert
           await expect(
@@ -2029,7 +2034,7 @@ describe("IBosonOrchestrationHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The orchestration region of protocol is paused", async function () {
           // Pause the orchestration region of the protocol
-          await pauseHandler.pause([PausableRegion.Orchestration]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Orchestration]);
 
           // Attempt to create an offer expecting revert
           await expect(
@@ -2050,7 +2055,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to orchestrate, expecting revert
           await expect(
@@ -2062,7 +2067,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The groups region of protocol is paused", async function () {
           // Pause the groups region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to create a group, expecting revert
           await expect(
@@ -2838,7 +2843,7 @@ describe("IBosonOrchestrationHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The orchestration region of protocol is paused", async function () {
           // Pause the orchestration region of the protocol
-          await pauseHandler.pause([PausableRegion.Orchestration]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Orchestration]);
 
           // Attempt to orchestrate expecting revert
           await expect(
@@ -2850,7 +2855,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to create a offer expecting revert
           await expect(
@@ -2862,7 +2867,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The groups region of protocol is paused", async function () {
           // Pause the groups region of the protocol
-          await pauseHandler.pause([PausableRegion.Groups]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
 
           // Attempt to create a group expecting revert
           await expect(
@@ -3643,7 +3648,7 @@ describe("IBosonOrchestrationHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The orchestration region of protocol is paused", async function () {
           // Pause the orchestration region of the protocol
-          await pauseHandler.pause([PausableRegion.Orchestration]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Orchestration]);
 
           // Attempt to orchestrate expecting revert
           await expect(
@@ -3655,7 +3660,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to create a offer, expecting revert
           await expect(
@@ -3667,7 +3672,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The bundles region of protocol is paused", async function () {
           // Pause the bundles region of the protocol
-          await pauseHandler.pause([PausableRegion.Bundles]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Bundles]);
 
           // Attempt to create a bundle, expecting revert
           await expect(
@@ -3679,7 +3684,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The twins region of protocol is paused", async function () {
           // Pause the twins region of the protocol
-          await pauseHandler.pause([PausableRegion.Twins]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Twins]);
 
           // Attempt to create a twin, expecting revert
           await expect(
@@ -4787,7 +4792,7 @@ describe("IBosonOrchestrationHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The orchestration region of protocol is paused", async function () {
           // Pause the orchestration region of the protocol
-          await pauseHandler.pause([PausableRegion.Orchestration]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Orchestration]);
 
           // Attempt to orchestrate expecting revert
           await expect(
@@ -4807,7 +4812,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to create an offer, expecting revert
           await expect(
@@ -4827,7 +4832,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The groups region of protocol is paused", async function () {
           // Pause the groups region of the protocol
-          await pauseHandler.pause([PausableRegion.Groups]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
 
           // Attempt to create a group, expecting revert
           await expect(
@@ -4847,7 +4852,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The bundles region of protocol is paused", async function () {
           // Pause the bundles region of the protocol
-          await pauseHandler.pause([PausableRegion.Bundles]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Bundles]);
 
           // Attempt to create a bundle, expecting revert
           await expect(
@@ -4867,7 +4872,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The twins region of protocol is paused", async function () {
           // Pause the twins region of the protocol
-          await pauseHandler.pause([PausableRegion.Twins]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Twins]);
 
           // Attempt to create a twin, expecting revert
           await expect(
@@ -5361,7 +5366,7 @@ describe("IBosonOrchestrationHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The orchestration region of protocol is paused", async function () {
           // Pause the orchestration region of the protocol
-          await pauseHandler.pause([PausableRegion.Orchestration]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Orchestration]);
 
           // Attempt to orchestrate expecting revert
           await expect(
@@ -5383,7 +5388,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The sellers region of protocol is paused", async function () {
           // Pause the sellers region of the protocol
-          await pauseHandler.pause([PausableRegion.Sellers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
           // Attempt to create a seller, expecting revert
           await expect(
@@ -5405,7 +5410,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to create an offer, expecting revert
           await expect(
@@ -5427,7 +5432,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The groups region of protocol is paused", async function () {
           // Pause the groups region of the protocol
-          await pauseHandler.pause([PausableRegion.Groups]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
 
           // Attempt to create an group, expecting revert
           await expect(
@@ -5990,7 +5995,7 @@ describe("IBosonOrchestrationHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The orchestration region of protocol is paused", async function () {
           // Pause the orchestration region of the protocol
-          await pauseHandler.pause([PausableRegion.Orchestration]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Orchestration]);
 
           // Attempt to orchestrate expecting revert
           await expect(
@@ -6012,7 +6017,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The sellers region of protocol is paused", async function () {
           // Pause the sellers region of the protocol
-          await pauseHandler.pause([PausableRegion.Sellers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
           // Attempt to create a seller, expecting revert
           await expect(
@@ -6034,7 +6039,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to create an offer, expecting revert
           await expect(
@@ -6056,7 +6061,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The bundles region of protocol is paused", async function () {
           // Pause the bundles region of the protocol
-          await pauseHandler.pause([PausableRegion.Bundles]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Bundles]);
 
           // Attempt to create a bundle, expecting revert
           await expect(
@@ -6078,7 +6083,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The twins region of protocol is paused", async function () {
           // Pause the twins region of the protocol
-          await pauseHandler.pause([PausableRegion.Twins]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Twins]);
 
           // Attempt to create a twin expecting revert
           await expect(
@@ -6543,7 +6548,7 @@ describe("IBosonOrchestrationHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The orchestration region of protocol is paused", async function () {
           // Pause the orchestration region of the protocol
-          await pauseHandler.pause([PausableRegion.Orchestration]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Orchestration]);
 
           // Attempt to orchestrate expecting revert
           await expect(
@@ -6566,7 +6571,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The sellers region of protocol is paused", async function () {
           // Pause the sellers region of the protocol
-          await pauseHandler.pause([PausableRegion.Sellers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
           // Attempt to create a seller, expecting revert
           await expect(
@@ -6589,7 +6594,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to create an offer, expecting revert
           await expect(
@@ -6612,7 +6617,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to create an offer, expecting revert
           await expect(
@@ -6635,7 +6640,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The groups region of protocol is paused", async function () {
           // Pause the groups region of the protocol
-          await pauseHandler.pause([PausableRegion.Groups]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
 
           // Attempt to create a group, expecting revert
           await expect(
@@ -6658,7 +6663,7 @@ describe("IBosonOrchestrationHandler", function () {
 
         it("The twins region of protocol is paused", async function () {
           // Pause the twins region of the protocol
-          await pauseHandler.pause([PausableRegion.Twins]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Twins]);
 
           // Attempt to create a twin expecting revert
           await expect(

@@ -32,7 +32,19 @@ const { mockOffer, mockDisputeResolver } = require("../utils/mock");
 describe("IBosonOfferHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR, other, protocolAdmin;
+  let deployer,
+    pauser,
+    rando,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    operatorDR,
+    adminDR,
+    clerkDR,
+    treasuryDR,
+    other,
+    protocolAdmin;
   let erc165,
     protocolDiamond,
     accessController,
@@ -90,6 +102,7 @@ describe("IBosonOfferHandler", function () {
     // Make accounts available
     [
       deployer,
+      pauser,
       operator,
       admin,
       clerk,
@@ -115,6 +128,9 @@ describe("IBosonOfferHandler", function () {
     //Grant ADMIN role to and address that can call restricted functions.
     //This ADMIN role is a protocol-level role. It is not the same an admin address for an account type
     await accessController.grantRole(Role.ADMIN, protocolAdmin.address);
+
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
@@ -560,7 +576,7 @@ describe("IBosonOfferHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to create an offer expecting revert
           await expect(
@@ -989,7 +1005,7 @@ describe("IBosonOfferHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to void an offer expecting revert
           await expect(offerHandler.connect(operator).voidOffer(id)).to.revertedWith(RevertReasons.REGION_PAUSED);
@@ -1078,7 +1094,7 @@ describe("IBosonOfferHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to extend an offer expecting revert
           await expect(offerHandler.connect(operator).extendOffer(offer.id, offerDates.validUntil)).to.revertedWith(
@@ -1781,7 +1797,7 @@ describe("IBosonOfferHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to create offer batch, expecting revert
           await expect(
@@ -2372,7 +2388,7 @@ describe("IBosonOfferHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to void offer batch, expecting revert
           await expect(offerHandler.connect(operator).voidOfferBatch(offersToVoid)).to.revertedWith(
@@ -2503,7 +2519,7 @@ describe("IBosonOfferHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The offers region of protocol is paused", async function () {
           // Pause the offers region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Offers]);
 
           // Attempt to void offer batch, expecting revert
           await expect(

@@ -27,22 +27,34 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
      * Reverts if:
      * - caller does not have PAUSER role
      * - no regions are specified
+     * - protocol is already paused
+     * - a region is specified more than once
      *
      * @param _regions - an array of regions to pause. See: {BosonTypes.PausableRegion}
      */
-    function pause(BosonTypes.PausableRegion[] calldata _regions) external {
+    function pause(BosonTypes.PausableRegion[] calldata _regions) external onlyRole(PAUSER) {
         // Make sure at least one region is specified
         require(_regions.length > 0, NO_REGIONS_SPECIFIED);
 
         // Make sure the protocol isn't already paused
         require(protocolStatus().pauseScenario == 0, ALREADY_PAUSED);
 
-        // Build the pause scenario from the regions by
-        // summing all the region enum values as powers of 2
+        // Build the pause scenario by summing the supplied
+        // enum values, first converted to powers of two
+        uint8 enumVal;
         uint256 region;
         uint256 scenario;
+        uint256[] memory used = new uint256[](20); // arbitrarily a little more than # of regions
         for (uint256 i = 0; i < _regions.length; i++) {
-            region = 2**uint256(_regions[i]);
+            // Get enum value as power of 2
+            enumVal = uint8(_regions[i]);
+            region = 2**uint256(enumVal);
+
+            // Prevent duplicates
+            require(used[enumVal] != region, REGION_DUPLICATED);
+            used[enumVal] = region;
+
+            // Sum maskable region representation into scenario
             scenario += region;
         }
 
@@ -60,9 +72,9 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
      *
      * Reverts if:
      * - caller does not have PAUSER role
-     * - no part of the protocol is currently paused
+     * - protocol is not currently paused
      */
-    function unpause() external {
+    function unpause() external onlyRole(PAUSER) {
         // Make sure the protocol is already paused
         require(protocolStatus().pauseScenario > 0, NOT_PAUSED);
 

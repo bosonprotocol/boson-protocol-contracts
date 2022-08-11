@@ -28,7 +28,7 @@ const { oneMonth } = require("../utils/constants");
 describe("IBosonBundleHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, admin, clerk, treasury, buyer, operatorDR, adminDR, clerkDR, treasuryDR;
+  let deployer, pauser, rando, operator, admin, clerk, treasury, buyer, operatorDR, adminDR, clerkDR, treasuryDR;
   let erc165,
     protocolDiamond,
     accessController,
@@ -76,7 +76,7 @@ describe("IBosonBundleHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, buyer, operatorDR, adminDR, clerkDR, treasuryDR] =
+    [deployer, pauser, operator, admin, clerk, treasury, rando, buyer, operatorDR, adminDR, clerkDR, treasuryDR] =
       await ethers.getSigners();
 
     // Deploy the Protocol Diamond
@@ -87,6 +87,9 @@ describe("IBosonBundleHandler", function () {
 
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
@@ -371,7 +374,7 @@ describe("IBosonBundleHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The bundles region of protocol is paused", async function () {
           // Pause the bundles region of the protocol
-          await pauseHandler.pause([PausableRegion.Bundles]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Bundles]);
 
           // Attempt to create a bundle, expecting revert
           await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(

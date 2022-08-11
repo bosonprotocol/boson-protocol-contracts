@@ -28,7 +28,7 @@ const { oneMonth } = require("../utils/constants");
 describe("IBosonTwinHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, admin, clerk, treasury;
+  let deployer, pauser, rando, operator, admin, clerk, treasury;
   let seller, active;
   let erc165,
     protocolDiamond,
@@ -63,13 +63,16 @@ describe("IBosonTwinHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando] = await ethers.getSigners();
+    [deployer, pauser, operator, admin, clerk, treasury, rando] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
+
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
@@ -291,7 +294,9 @@ describe("IBosonTwinHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The twins region of protocol is paused", async function () {
           // Pause the twins region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers, PausableRegion.Twins, PausableRegion.Bundles]);
+          await pauseHandler
+            .connect(pauser)
+            .pause([PausableRegion.Offers, PausableRegion.Twins, PausableRegion.Bundles]);
 
           // Attempt to Remove a twin, expecting revert
           await expect(twinHandler.connect(operator).removeTwin(twin.id)).to.revertedWith(RevertReasons.REGION_PAUSED);
@@ -534,7 +539,9 @@ describe("IBosonTwinHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The twins region of protocol is paused", async function () {
           // Pause the twins region of the protocol
-          await pauseHandler.pause([PausableRegion.Offers, PausableRegion.Twins, PausableRegion.Bundles]);
+          await pauseHandler
+            .connect(pauser)
+            .pause([PausableRegion.Offers, PausableRegion.Twins, PausableRegion.Bundles]);
 
           // Attempt to Remove a twin, expecting revert
           await expect(twinHandler.connect(operator).removeTwin(twin.id)).to.revertedWith(RevertReasons.REGION_PAUSED);

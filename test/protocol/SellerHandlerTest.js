@@ -22,6 +22,7 @@ const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 describe("SellerHandler", function () {
   // Common vars
   let deployer,
+    pauser,
     rando,
     operator,
     admin,
@@ -51,6 +52,7 @@ describe("SellerHandler", function () {
     // Make accounts available
     [
       deployer,
+      pauser,
       operator,
       admin,
       clerk,
@@ -75,6 +77,9 @@ describe("SellerHandler", function () {
 
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
@@ -525,7 +530,7 @@ describe("SellerHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The sellers region of protocol is paused", async function () {
           // Pause the sellers region of the protocol
-          await pauseHandler.pause([PausableRegion.Sellers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
           // Attempt to create a seller expecting revert
           await expect(
@@ -1637,7 +1642,7 @@ describe("SellerHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The sellers region of protocol is paused", async function () {
           // Pause the sellers region of the protocol
-          await pauseHandler.pause([PausableRegion.Sellers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
 
           // Attempt to update a seller expecting revert
           await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWith(

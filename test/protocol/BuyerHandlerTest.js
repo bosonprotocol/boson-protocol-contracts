@@ -25,7 +25,7 @@ const { mockOffer } = require("../utils/mock.js");
  */
 describe("BuyerHandler", function () {
   // Common vars
-  let deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, other4;
+  let deployer, pauser, rando, operator, admin, clerk, treasury, other1, other2, other3, other4;
   let protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, fundsHandler, pauseHandler;
   let gasLimit;
   let seller, active, id2;
@@ -44,7 +44,8 @@ describe("BuyerHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, other1, other2, other3, other4] = await ethers.getSigners();
+    [deployer, pauser, operator, admin, clerk, treasury, rando, other1, other2, other3, other4] =
+      await ethers.getSigners();
 
     //Dispute Resolver metadata URI
     metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
@@ -57,6 +58,9 @@ describe("BuyerHandler", function () {
 
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
@@ -194,7 +198,7 @@ describe("BuyerHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The buyers region of protocol is paused", async function () {
           // Pause the buyers region of the protocol
-          await pauseHandler.pause([PausableRegion.Buyers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
 
           // Attempt to create a buyer, expecting revert
           await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(RevertReasons.REGION_PAUSED);
@@ -478,7 +482,7 @@ describe("BuyerHandler", function () {
 
         it("The buyers region of protocol is paused", async function () {
           // Pause the buyers region of the protocol
-          await pauseHandler.pause([PausableRegion.Buyers]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
 
           // Attempt to update a buyer, expecting revert
           await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.REGION_PAUSED);

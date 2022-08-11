@@ -36,6 +36,7 @@ describe("IBosonDisputeHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer,
+    pauser,
     operator,
     admin,
     clerk,
@@ -94,6 +95,7 @@ describe("IBosonDisputeHandler", function () {
     // Make accounts available
     [
       deployer,
+      pauser,
       operator,
       admin,
       clerk,
@@ -116,6 +118,9 @@ describe("IBosonDisputeHandler", function () {
 
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
@@ -349,7 +354,7 @@ describe("IBosonDisputeHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("The disputes region of protocol is paused", async function () {
             // Pause the disputes region of the protocol
-            await pauseHandler.pause([PausableRegion.Disputes]);
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to raise a dispute, expecting revert
             await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId, complaint)).to.revertedWith(
@@ -499,7 +504,7 @@ describe("IBosonDisputeHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("The disputes region of protocol is paused", async function () {
             // Pause the disputes region of the protocol
-            await pauseHandler.pause([PausableRegion.Disputes]);
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to retract a dispute, expecting revert
             await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWith(
@@ -635,7 +640,7 @@ describe("IBosonDisputeHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("The disputes region of protocol is paused", async function () {
             // Pause the disputes region of the protocol
-            await pauseHandler.pause([PausableRegion.Disputes]);
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to extend a dispute timeout, expecting revert
             await expect(
@@ -778,7 +783,7 @@ describe("IBosonDisputeHandler", function () {
             await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
             // Pause the disputes region of the protocol
-            await pauseHandler.pause([PausableRegion.Disputes]);
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to expire a dispute, expecting revert
             await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWith(
@@ -1128,7 +1133,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("The disputes region of protocol is paused", async function () {
             // Pause the disputes region of the protocol
-            await pauseHandler.pause([PausableRegion.Disputes]);
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to resolve a dispute, expecting revert
             await expect(
@@ -1391,7 +1396,7 @@ describe("IBosonDisputeHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("The disputes region of protocol is paused", async function () {
             // Pause the disputes region of the protocol
-            await pauseHandler.pause([PausableRegion.Disputes]);
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to escalate a dispute, expecting revert
             await expect(
@@ -1595,7 +1600,7 @@ describe("IBosonDisputeHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("The disputes region of protocol is paused", async function () {
             // Pause the disputes region of the protocol
-            await pauseHandler.pause([PausableRegion.Disputes]);
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to decide a dispute, expecting revert
             await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
@@ -1755,7 +1760,7 @@ describe("IBosonDisputeHandler", function () {
             await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
             // Pause the disputes region of the protocol
-            await pauseHandler.pause([PausableRegion.Disputes]);
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to expire an escalated dispute, expecting revert
             await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWith(
@@ -1895,7 +1900,7 @@ describe("IBosonDisputeHandler", function () {
         context("💔 Revert Reasons", async function () {
           it("The disputes region of protocol is paused", async function () {
             // Pause the disputes region of the protocol
-            await pauseHandler.pause([PausableRegion.Disputes]);
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to refuse an escalated dispute, expecting revert
             await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
@@ -2361,7 +2366,7 @@ describe("IBosonDisputeHandler", function () {
             await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
             // Pause the disputes region of the protocol
-            await pauseHandler.pause([PausableRegion.Disputes]);
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to expire a dispute batch, expecting revert
             await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWith(

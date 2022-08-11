@@ -17,7 +17,7 @@ const { oneMonth } = require("../utils/constants");
  */
 describe("AgentHandler", function () {
   // Common vars
-  let deployer, rando, other1, other2, other3;
+  let deployer, pauser, rando, other1, other2, other3;
   let protocolDiamond, accessController, accountHandler, pauseHandler, gasLimit;
   let agent, agentStruct, feePercentage, agent2, agent2Struct, active, expectedAgent, expectedAgentStruct;
   let nextAccountId;
@@ -26,7 +26,7 @@ describe("AgentHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, rando, other1, other2, other3] = await ethers.getSigners();
+    [deployer, pauser, rando, other1, other2, other3] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -36,6 +36,9 @@ describe("AgentHandler", function () {
 
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
@@ -211,7 +214,7 @@ describe("AgentHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The agents region of protocol is paused", async function () {
           // Pause the agents region of the protocol
-          await pauseHandler.pause([PausableRegion.Agents]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Agents]);
 
           // Attempt to create an agent, expecting revert
           await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(RevertReasons.REGION_PAUSED);
@@ -488,7 +491,7 @@ describe("AgentHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The agents region of protocol is paused", async function () {
           // Pause the agents region of the protocol
-          await pauseHandler.pause([PausableRegion.Agents]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Agents]);
 
           // Attempt to update an agent, expecting revert
           await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(RevertReasons.REGION_PAUSED);

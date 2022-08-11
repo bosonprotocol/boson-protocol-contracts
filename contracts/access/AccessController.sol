@@ -19,6 +19,7 @@ contract AccessController is AccessControlUpgradeable {
     constructor() {
         _setupRole(ADMIN, msg.sender);
         _setRoleAdmin(ADMIN, ADMIN);
+        _setRoleAdmin(PAUSER, ADMIN);
         _setRoleAdmin(PROTOCOL, ADMIN);
         _setRoleAdmin(CLIENT, ADMIN);
         _setRoleAdmin(UPGRADER, ADMIN);

@@ -33,7 +33,19 @@ const { mockOffer, mockDisputeResolver } = require("../utils/mock");
 describe("IBosonFundsHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, admin, clerk, treasury, feeCollector, operatorDR, adminDR, clerkDR, treasuryDR, other;
+  let deployer,
+    pauser,
+    rando,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    feeCollector,
+    operatorDR,
+    adminDR,
+    clerkDR,
+    treasuryDR,
+    other;
   let erc165,
     protocolDiamond,
     accessController,
@@ -92,6 +104,7 @@ describe("IBosonFundsHandler", function () {
     // Make accounts available
     [
       deployer,
+      pauser,
       operator,
       admin,
       clerk,
@@ -114,6 +127,9 @@ describe("IBosonFundsHandler", function () {
 
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
@@ -314,7 +330,7 @@ describe("IBosonFundsHandler", function () {
       context("💔 Revert Reasons", async function () {
         it("The funds region of protocol is paused", async function () {
           // Pause the funds region of the protocol
-          await pauseHandler.pause([PausableRegion.Funds]);
+          await pauseHandler.connect(pauser).pause([PausableRegion.Funds]);
 
           // Attempt to deposit funds, expecting revert
           await expect(
@@ -863,7 +879,7 @@ describe("IBosonFundsHandler", function () {
             tokenAmountsBuyer = [buyerPayoff, ethers.BigNumber.from(buyerPayoff).div("5").toString()];
 
             // Pause the funds region of the protocol
-            await pauseHandler.pause([PausableRegion.Funds]);
+            await pauseHandler.connect(pauser).pause([PausableRegion.Funds]);
 
             // Attempt to withdraw funds, expecting revert
             await expect(
@@ -1298,7 +1314,7 @@ describe("IBosonFundsHandler", function () {
             tokenAmounts = [protocolPayoff, protocolPayoff];
 
             // Pause the funds region of the protocol
-            await pauseHandler.pause([PausableRegion.Funds]);
+            await pauseHandler.connect(pauser).pause([PausableRegion.Funds]);
 
             // Attempt to withdraw funds, expecting revert
             await expect(

@@ -3,22 +3,20 @@
  */
 class PausableRegion {}
 
-PausableRegion.Config = 0;
-PausableRegion.Offers = 1;
-PausableRegion.Twins = 2;
-PausableRegion.Bundles = 3;
-PausableRegion.Groups = 4;
-PausableRegion.Sellers = 5;
-PausableRegion.Buyers = 6;
-PausableRegion.DisputeResolvers = 7;
-PausableRegion.Agents = 8;
-PausableRegion.Exchanges = 9;
-PausableRegion.Disputes = 10;
-PausableRegion.Funds = 11;
-PausableRegion.Orchestration = 12;
+PausableRegion.Offers = 0;
+PausableRegion.Twins = 1;
+PausableRegion.Bundles = 2;
+PausableRegion.Groups = 3;
+PausableRegion.Sellers = 4;
+PausableRegion.Buyers = 5;
+PausableRegion.DisputeResolvers = 6;
+PausableRegion.Agents = 7;
+PausableRegion.Exchanges = 8;
+PausableRegion.Disputes = 9;
+PausableRegion.Funds = 10;
+PausableRegion.Orchestration = 11;
 
 PausableRegion.Regions = [
-  PausableRegion.Config,
   PausableRegion.Offers,
   PausableRegion.Twins,
   PausableRegion.Bundles,
