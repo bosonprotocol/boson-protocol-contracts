@@ -52,6 +52,7 @@ jobs:
         run: |
           git config --local user.email "bsn-ci@users.noreply.github.com"
           git config --local user.name "GitHub Actions Bot"
+          git add addresses/ logs/
           git commit -a \
             -m "[skip ci] Add json file with addresses for test environment" \
             -m "[Test Environment] New deployed addresses" \
