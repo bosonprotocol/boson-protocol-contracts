@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: '16.14.x'
           cache: 'npm'
-      - run: npm install
+      - run: npm ci
       - name: Prepare Environment
         shell: bash
         run: |
