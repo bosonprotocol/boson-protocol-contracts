@@ -209,6 +209,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      *
      * Reverts if:
      * - Exchange is not in a final state
+     * - Exchange id is invalid
      *
      * @param _exchangeId - the exchange id
      * @return receipt - the receipt for the exchange. See {BosonTypes.Receipt}

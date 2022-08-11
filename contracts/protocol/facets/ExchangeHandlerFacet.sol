@@ -808,6 +808,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * Reverts if:
      * - Exchange is not in a final state
+     * - Exchange id is invalid
      *
      * @param _exchangeId - the exchange id
      * @return receipt - the receipt for the exchange. See {BosonTypes.Receipt}
@@ -885,7 +886,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             receipt.escalatedDate = disputeDates.escalated;
         }
 
-        // Fetch the twin receipt, it exists if offer was bundled with a twin
+        // Fetch the twin receipt, it exists if offer was bundled with twins
         (bool twinsExists, TwinReceipt[] storage twinReceipts) = fetchTwinReceipts(exchange.id);
 
         // Add twin to receipt if exists

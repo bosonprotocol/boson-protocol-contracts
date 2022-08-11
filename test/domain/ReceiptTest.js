@@ -359,10 +359,10 @@ describe("Receipt", function () {
       expect(receipt.finalizedDateIsValid()).is.false;
       expect(receipt.isValid()).is.false;
 
-      // Valid field value
+      // Invalid field value
       receipt.finalizedDate = "0";
-      expect(receipt.finalizedDateIsValid()).is.true;
-      expect(receipt.isValid()).is.true;
+      expect(receipt.finalizedDateIsValid()).is.false;
+      expect(receipt.isValid()).is.false;
 
       // Valid field value
       receipt.finalizedDate = "126";

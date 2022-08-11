@@ -75,7 +75,8 @@ describe("IBosonExchangeHandler", function () {
     disputeHandler,
     twinHandler,
     bundleHandler,
-    groupHandler;
+    groupHandler,
+    configHandler;
   let bosonVoucher, voucherImplementation;
   let bosonVoucherClone, bosonVoucherCloneAddress;
   let id, buyerId, offerId, seller, sellerId, nextExchangeId, nextAccountId, disputeResolverId;
@@ -222,6 +223,9 @@ describe("IBosonExchangeHandler", function () {
 
     // Cast Diamond to IGroupHandler
     groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamond.address);
+
+    // Cast Diamond to IConfigHandler
+    configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
     // Deploy the mock tokens
     [foreign20, foreign721, foreign1155] = await deployMockTokens(gasLimit, ["Foreign20", "Foreign721", "Foreign1155"]);
@@ -3047,19 +3051,75 @@ describe("IBosonExchangeHandler", function () {
         expect(receiptObject).to.eql(expectedReceipt);
       });
 
-      it("Receipt should contain dispute data if a dispute was raised for exchange", async function () {
-        const complaint = "Tastes weird";
-        // Raise a dispute on the exchange
-        tx = await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+      it("price, sellerDeposit and disputeResolverId must be 0 if is an absolute zero offer", async function () {
+        // Set protocolFee to zero so we don't get the error AGENT_FEE_AMOUNT_TOO_HIGH
+        protocolFeePercentage = "0";
+        await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
+        offerFees.protocolFee = "0";
+
+        // Create a new offer with params price, sellerDeposit and disputeResolverId = 0
+        const mo = await mockOffer();
+        const { offerDates, offerDurations } = mo;
+        offer = mo.offer;
+        offer.id = offerId = "2";
+        offer.buyerCancelPenalty = "0";
+        offer.price = "0";
+        // set a dummy token address otherwise protocol token and offer token will be the same and we will get the error AGENT_FEE_AMOUNT_TOO_HIGH
+        offer.exchangeToken = foreign20.address;
+        disputeResolverId = "0";
+        offer.sellerDeposit = "0";
+
+        // Update voucherRedeemableFrom
+        voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+
+        // Check if domains are valid
+        expect(offer.isValid()).is.true;
+        expect(offerDates.isValid()).is.true;
+        expect(offerDurations.isValid()).is.true;
+
+        // Create the offer
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+
+        // Commit to offer
+        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+
+        // Decrease offer quantityAvailable
+        offer.quantityAvailable = "0";
+        // Increase exchange.id as is a new commitToOffer
+        exchange.id = "2";
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
 
-        const disputedDate = block.timestamp.toString();
+        // Update the committed date in the expected exchange struct with the block timestamp of the tx
+        exchange.voucher.committedDate = block.timestamp.toString();
 
-        // Retract dispute
-        tx = await disputeHandler.connect(buyer).retractDispute(exchange.id);
+        // Update the validUntilDate date in the expected exchange struct
+        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+
+        // Set time forward to the offer's voucherRedeemableFrom
+        await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+        // Redeem the voucher
+        tx = await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Update the redeemedDate date in the expected exchange struct
+        exchange.voucher.redeemedDate = block.timestamp.toString();
+
+        // Get the block timestamp of the confirmed tx
+        blockNumber = tx.blockNumber;
+        block = await ethers.provider.getBlock(blockNumber);
+
+        // Update the redeemedDate date in the expected exchange struct
+        exchange.voucher.redeemedDate = block.timestamp.toString();
+
+        // Complete the exchange
+        tx = await exchangeHandler.connect(buyer).completeExchange(exchange.id);
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
@@ -3069,19 +3129,17 @@ describe("IBosonExchangeHandler", function () {
         exchange.finalizedDate = block.timestamp.toString();
 
         // Update the state in the expected exchange struct
-        exchange.state = ExchangeState.Disputed;
+        exchange.state = ExchangeState.Completed;
 
         // Get the exchange state
         [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
 
         // It should match ExchangeState.Completed
-        assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+        assert.equal(response, ExchangeState.Completed, "Exchange state is incorrect");
 
+        // Get receipt
         const receipt = await exchangeHandler.connect(buyer).getReceipt(exchange.id);
         const receiptObject = Receipt.fromStruct(receipt);
-
-        const expectedDispute = new Dispute(exchange.id, complaint, DisputeState.Retracted, "0");
-        expect(expectedDispute.isValid()).is.true;
 
         const expectedReceipt = new Receipt(
           exchange.id,
@@ -3090,7 +3148,7 @@ describe("IBosonExchangeHandler", function () {
           buyer.address,
           sellerId,
           seller.operator,
-          price,
+          offer.price,
           offer.sellerDeposit,
           offer.buyerCancelPenalty,
           offerFees,
@@ -3101,18 +3159,149 @@ describe("IBosonExchangeHandler", function () {
           undefined,
           exchange.voucher.committedDate,
           exchange.voucher.redeemedDate,
-          exchange.voucher.expired,
-          disputeResolverId,
-          disputeResolver.operator,
-          disputedDate,
-          undefined,
-          DisputeState.Retracted
+          exchange.voucher.expired
         );
         expect(expectedReceipt.isValid()).is.true;
 
         expect(receiptObject).to.eql(expectedReceipt);
       });
 
+      context("Disputed was raised", async function () {
+        let disputedDate;
+        let complaint;
+        beforeEach(async function () {
+          complaint = "Tastes weird";
+          // Raise a dispute on the exchange
+          const tx = await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+
+          // Get the block timestamp of the confirmed tx
+          blockNumber = tx.blockNumber;
+          block = await ethers.provider.getBlock(blockNumber);
+
+          disputedDate = block.timestamp.toString();
+        });
+
+        it("Receipt should contain dispute data if a dispute was raised for exchange", async function () {
+          // Retract dispute
+          const tx = await disputeHandler.connect(buyer).retractDispute(exchange.id);
+
+          // Get the block timestamp of the confirmed tx
+          blockNumber = tx.blockNumber;
+          block = await ethers.provider.getBlock(blockNumber);
+
+          // Update the finalizedDate date in the expected exchange struct
+          exchange.finalizedDate = block.timestamp.toString();
+
+          // Update the state in the expected exchange struct
+          exchange.state = ExchangeState.Disputed;
+
+          // Get the exchange state
+          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+          // It should match ExchangeState.Completed
+          assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+
+          const receipt = await exchangeHandler.connect(buyer).getReceipt(exchange.id);
+          const receiptObject = Receipt.fromStruct(receipt);
+
+          const expectedDispute = new Dispute(exchange.id, complaint, DisputeState.Retracted, "0");
+          expect(expectedDispute.isValid()).is.true;
+
+          const expectedReceipt = new Receipt(
+            exchange.id,
+            offer.id,
+            buyerId,
+            buyer.address,
+            sellerId,
+            seller.operator,
+            price,
+            offer.sellerDeposit,
+            offer.buyerCancelPenalty,
+            offerFees,
+            agentId,
+            ethers.constants.AddressZero,
+            offer.exchangeToken,
+            exchange.finalizedDate,
+            undefined,
+            exchange.voucher.committedDate,
+            exchange.voucher.redeemedDate,
+            exchange.voucher.expired,
+            disputeResolverId,
+            disputeResolver.operator,
+            disputedDate,
+            undefined,
+            DisputeState.Retracted
+          );
+          expect(expectedReceipt.isValid()).is.true;
+
+          expect(receiptObject).to.eql(expectedReceipt);
+        });
+
+        it("Receipt should contain escalatedDate if a dispute was raised and escalated", async function () {
+          // Escalate a dispute
+          let tx = await disputeHandler.connect(buyer).escalateDispute(exchange.id);
+
+          // Get the block timestamp of the confirmed tx
+          blockNumber = tx.blockNumber;
+          block = await ethers.provider.getBlock(blockNumber);
+
+          const escalatedDate = block.timestamp.toString();
+
+          // Retract dispute
+          tx = await disputeHandler.connect(buyer).retractDispute(exchange.id);
+
+          // Get the block timestamp of the confirmed tx
+          blockNumber = tx.blockNumber;
+          block = await ethers.provider.getBlock(blockNumber);
+
+          // Update the finalizedDate date in the expected exchange struct
+          exchange.finalizedDate = block.timestamp.toString();
+
+          // Update the state in the expected exchange struct
+          exchange.state = ExchangeState.Disputed;
+
+          // Get the exchange state
+          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+          // It should match ExchangeState.Completed
+          assert.equal(response, ExchangeState.Disputed, "Exchange state is incorrect");
+
+          const receipt = await exchangeHandler.connect(buyer).getReceipt(exchange.id);
+          const receiptObject = Receipt.fromStruct(receipt);
+
+          const expectedDispute = new Dispute(exchange.id, complaint, DisputeState.Retracted, "0");
+          expect(expectedDispute.isValid()).is.true;
+
+          const expectedReceipt = new Receipt(
+            exchange.id,
+            offer.id,
+            buyerId,
+            buyer.address,
+            sellerId,
+            seller.operator,
+            price,
+            offer.sellerDeposit,
+            offer.buyerCancelPenalty,
+            offerFees,
+            agentId,
+            ethers.constants.AddressZero,
+            offer.exchangeToken,
+            exchange.finalizedDate,
+            undefined,
+            exchange.voucher.committedDate,
+            exchange.voucher.redeemedDate,
+            exchange.voucher.expired,
+            disputeResolverId,
+            disputeResolver.operator,
+            disputedDate,
+            escalatedDate,
+            DisputeState.Retracted
+          );
+          expect(expectedReceipt.isValid()).is.true;
+
+          expect(receiptObject).to.eql(expectedReceipt);
+        });
+      });
       context("TwinReceipt tests", async function () {
         beforeEach(async function () {
           // Mint some tokens to be bundled
@@ -3584,6 +3773,7 @@ describe("IBosonExchangeHandler", function () {
 
         expect(receiptObject).to.eql(expectedReceipt);
       });
+
       context("💔 Revert Reasons", async function () {
         it("Exchange is not in a final state", async function () {
           await expect(exchangeHandler.connect(rando).getReceipt(exchange.id)).to.be.revertedWith(

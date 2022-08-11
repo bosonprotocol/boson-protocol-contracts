@@ -355,7 +355,7 @@ class Receipt {
    * @returns {boolean}
    */
   finalizedDateIsValid() {
-    return bigNumberIsValid(this.finalizedDate);
+    return bigNumberNonZeroIsValid(this.finalizedDate);
   }
 
   /**
