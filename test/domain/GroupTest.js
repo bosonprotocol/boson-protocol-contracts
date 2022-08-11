@@ -1,3 +1,5 @@
+const hre = require("hardhat");
+const ethers = hre.ethers;
 const { expect } = require("chai");
 const { mockCondition } = require("./../utils/mock");
 const Group = require("../../scripts/domain/Group");
@@ -16,7 +18,7 @@ describe("Group", function () {
     sellerId = "12";
     offerIds = ["1", "2", "4", "8"];
 
-    condition = mockCondition();
+    condition = mockCondition(ethers.constants.AddressZero);
     expect(condition.isValid()).to.be.true;
   });
 
