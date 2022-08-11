@@ -138,8 +138,8 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @param _disputeDetails - the dispute details
      */
     function hashDisputeDetails(bytes memory _disputeDetails) internal pure returns (bytes32) {
-        (uint256 exchangeId, string memory complaint) = abi.decode(_disputeDetails, (uint256, string));
-        return keccak256(abi.encode(DISPUTE_DETAILS_TYPEHASH, exchangeId, keccak256(bytes(complaint))));
+        uint256 exchangeId = abi.decode(_disputeDetails, (uint256));
+        return keccak256(abi.encode(DISPUTE_DETAILS_TYPEHASH, exchangeId));
     }
 
     /**

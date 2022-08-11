@@ -673,9 +673,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             if (transferFailed) {
                 // Raise a dispute if caller is a contract
                 if (isContract(sender)) {
-                    string memory complaint = "Twin transfer failed and buyer address is a contract";
-
-                    raiseDisputeInternal(_exchange, complaint, seller.id);
+                    raiseDisputeInternal(_exchange, seller.id);
                 } else {
                     // Revoke voucher if caller is an EOA
                     revokeVoucherInternal(_exchange);

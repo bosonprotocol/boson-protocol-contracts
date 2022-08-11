@@ -23,13 +23,11 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * - caller does not hold a voucher for the given exchange id
      * - exchange does not exist
      * - exchange is not in a redeemed state
-     * - the complaint is blank
      * - fulfillment period has elapsed already
      *
      * @param _exchangeId - the id of the associated offer
-     * @param _complaint - the buyer's complaint description
      */
-    function raiseDispute(uint256 _exchangeId, string calldata _complaint) external;
+    function raiseDispute(uint256 _exchangeId) external;
 
     /**
      * @notice Retract the dispute and release the funds

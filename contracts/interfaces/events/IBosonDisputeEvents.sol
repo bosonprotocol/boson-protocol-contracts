@@ -13,7 +13,6 @@ interface IBosonDisputeEvents {
         uint256 indexed exchangeId,
         uint256 indexed buyerId,
         uint256 indexed sellerId,
-        string complaint,
         address executedBy
     );
     event DisputeRetracted(uint256 indexed exchangeId, address indexed executedBy);
