@@ -6,7 +6,7 @@ const { mockReceipt, mockOffer, mockTwinReceipt, mockCondition } = require("../u
 const DisputeState = require("../../scripts/domain/DisputeState");
 
 /**
- *  Test the Twin domain entity
+ *  Test the Receipt domain entity
  */
 describe("Receipt", function () {
   // Suite-wide scope
@@ -729,7 +729,7 @@ describe("Receipt", function () {
           // Get plain object
           clone = receipt.clone();
 
-          // Is an Twin instance
+          // Is an Receipt instance
           expect(clone instanceof Receipt).is.true;
 
           // Key values all match
@@ -755,10 +755,10 @@ describe("Receipt", function () {
           // Get struct from receipt
           struct = receipt.toStruct();
 
-          // Marshal back to a twin instance
+          // Marshal back to a receipt instance
           receipt = Receipt.fromStruct(struct);
 
-          // Ensure it marshals back to a valid twin
+          // Ensure it marshals back to a valid receipt
           expect(receipt.isValid()).to.be.true;
         });
       });

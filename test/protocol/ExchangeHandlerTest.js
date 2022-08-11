@@ -2966,7 +2966,7 @@ describe("IBosonExchangeHandler", function () {
       });
     });
 
-    context.only("getReceipt", async function () {
+    context("getReceipt", async function () {
       beforeEach(async () => {
         // Commit to offer
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });

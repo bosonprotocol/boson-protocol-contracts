@@ -6,7 +6,7 @@ const TokenType = require("../../scripts/domain/TokenType.js");
 const { mockTwinReceipt } = require("../utils/mock");
 
 /**
- *  Test the Twin domain entity
+ *  Test the TwinReceipt domain entity
  */
 describe("TwinReceipt", function () {
   // Suite-wide scope
@@ -268,10 +268,10 @@ describe("TwinReceipt", function () {
         // Get struct from twinReceipt
         struct = twinReceipt.toStruct();
 
-        // Marshal back to a twin instance
+        // Marshal back to a twinReceipt instance
         twinReceipt = TwinReceipt.fromStruct(struct);
 
-        // Ensure it marshals back to a valid twin
+        // Ensure it marshals back to a valid twinReceipt
         expect(twinReceipt.isValid()).to.be.true;
       });
     });
