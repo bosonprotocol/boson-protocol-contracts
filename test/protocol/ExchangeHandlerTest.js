@@ -32,6 +32,7 @@ const {
   calculateVoucherExpiry,
   prepareDataSignatureParameters,
   calculateContractAddress,
+  applyPercentage,
 } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
 
@@ -439,7 +440,7 @@ describe("IBosonExchangeHandler", function () {
         expect(seller.isValid()).is.true;
 
         // VoucherInitValues
-        voucherInitValues.royaltyPercentage = "3000"; // 30%
+        voucherInitValues.royaltyPercentage = "800"; // 8%
         expect(voucherInitValues.isValid()).is.true;
 
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -488,14 +489,14 @@ describe("IBosonExchangeHandler", function () {
 
         // Expectations
         let expectedRecipient = seller1Treasury; //Expect 1st seller's treasury address as exchange id exists
-        let expectedRoyaltyAmount = ethers.BigNumber.from(price).mul(royaltyPercentage1).div("10000").toString(); //0% of offer price because royaltyPercentage1 is 0%
+        let expectedRoyaltyAmount = applyPercentage(price, royaltyPercentage1); //0% of offer price because royaltyPercentage1 is 0%
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
 
         // Make sure that vouchers have correct royalty fee for exchangeId 2
         exchangeId = "2";
-        royaltyPercentage2 = voucherInitValues.royaltyPercentage; // 30%
+        royaltyPercentage2 = voucherInitValues.royaltyPercentage; // 8%
         seller2Treasury = seller.treasury;
 
         receiver, royaltyAmount;
@@ -503,7 +504,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Expectations
         expectedRecipient = seller2Treasury; //Expect 2nd seller's treasury address as exchange id exists
-        expectedRoyaltyAmount = ethers.BigNumber.from(price).mul(royaltyPercentage2).div("10000").toString(); //30% of offer price because royaltyPercentage2 is 30%
+        expectedRoyaltyAmount = applyPercentage(price, royaltyPercentage2); //8% of offer price because royaltyPercentage2 is 30%
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
