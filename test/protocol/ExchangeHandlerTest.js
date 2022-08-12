@@ -1495,6 +1495,25 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
+        it("cannot cancel when exchange is in Redeemed state", async function () {
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          // Redeem voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Get the exchange state
+          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+          // It should match ExchangeState.Redeemed
+          assert.equal(response, ExchangeState.Redeemed, "Exchange state is incorrect");
+
+          // Attempt to cancel the voucher, expecting revert
+          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE
+          );
+        });
+
         it("exchange is not in committed state", async function () {
           // Revoke the voucher
           await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
