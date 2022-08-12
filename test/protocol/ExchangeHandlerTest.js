@@ -7,8 +7,6 @@ const Role = require("../../scripts/domain/Role");
 const Exchange = require("../../scripts/domain/Exchange");
 const Voucher = require("../../scripts/domain/Voucher");
 const Seller = require("../../scripts/domain/Seller");
-const AuthToken = require("../../scripts/domain/AuthToken");
-const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Buyer = require("../../scripts/domain/Buyer");
 const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
@@ -17,7 +15,6 @@ const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
-const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -25,7 +22,14 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { mockOffer, mockTwin, mockDisputeResolver } = require("../utils/mock");
+const {
+  mockOffer,
+  mockTwin,
+  mockDisputeResolver,
+  mockAuthToken,
+  mockVoucherInitValues,
+  mockSeller,
+} = require("../utils/mock");
 const {
   getEvent,
   setNextBlockTimestamp,
@@ -38,7 +42,7 @@ const { oneWeek, oneMonth } = require("../utils/constants");
 /**
  *  Test the Boson Exchange Handler interface
  */
-describe("IBosonExchangeHandler", function () {
+describe.only("IBosonExchangeHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer,
@@ -81,7 +85,7 @@ describe("IBosonExchangeHandler", function () {
   let twin20, twin721, twin1155, twinIds, bundle, balance, owner;
   let expectedCloneAddress;
   let method, tokenType, tokenAddress, tokenId, threshold, maxCommits, groupId, offerIds, condition, group;
-  let voucherInitValues, contractURI, royaltyPercentage1, royaltyPercentage2, seller1Treasury, seller2Treasury;
+  let voucherInitValues, royaltyPercentage1, royaltyPercentage2, seller1Treasury, seller2Treasury;
   let emptyAuthToken;
   let agentId;
   let exchangesToComplete, exchangeId;
@@ -222,7 +226,7 @@ describe("IBosonExchangeHandler", function () {
         support = await erc165.supportsInterface(InterfaceIds.IBosonExchangeHandler);
 
         // Test
-        await expect(support, "IBosonExchangeHandler interface not supported").is.true;
+        expect(support, "IBosonExchangeHandler interface not supported").is.true;
       });
     });
   });
@@ -236,25 +240,24 @@ describe("IBosonExchangeHandler", function () {
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller
-      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
+      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
       // AuthToken
-      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      emptyAuthToken = mockAuthToken();
       expect(emptyAuthToken.isValid()).is.true;
 
       // VoucherInitValues
-      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
       seller1Treasury = seller.treasury;
       royaltyPercentage1 = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage1);
+      voucherInitValues = mockVoucherInitValues();
       expect(voucherInitValues.isValid()).is.true;
 
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
       expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
 
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver(
+      disputeResolver = mockDisputeResolver(
         operatorDR.address,
         adminDR.address,
         clerkDR.address,
@@ -357,7 +360,8 @@ describe("IBosonExchangeHandler", function () {
 
         // Create a new seller to get new clone
         sellerId = "3"; // "1" is the first seller, "2" is DR
-        seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, true);
+        seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+        seller.id = sellerId;
         expect(seller.isValid()).is.true;
 
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);

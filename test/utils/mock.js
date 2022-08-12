@@ -7,6 +7,12 @@ const OfferDurations = require("../../scripts/domain/OfferDurations");
 const Twin = require("../../scripts/domain/Twin.js");
 const TokenType = require("../../scripts/domain/TokenType.js");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
+const Seller = require("../../scripts/domain/Seller");
+const Buyer = require("../../scripts/domain/Buyer");
+const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
+const AuthToken = require("../../scripts/domain/AuthToken");
+const AuthTokenType = require("../../scripts/domain/AuthTokenType");
+const Agent = require("../../scripts/domain/Agent");
 const { applyPercentage } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("./constants.js");
 
@@ -84,24 +90,51 @@ function mockTwin(tokenAddress, tokenType) {
 }
 
 function mockDisputeResolver(operatorAddress, adminAddress, clerkAddress, treasuryAddress, active) {
-  const id = "1";
   const metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
   return new DisputeResolver(
-    id.toString(),
+    "1",
     oneMonth.toString(),
     operatorAddress,
     adminAddress,
     clerkAddress,
     treasuryAddress,
     metadataUriDR,
-    active
+    active ?? true
   );
+}
+
+function mockSeller(operatorAddress, adminAddress, clerkAddress, treasuryAddress) {
+  return new Seller("1", operatorAddress, adminAddress, clerkAddress, treasuryAddress, true);
+}
+
+function mockBuyer(wallet) {
+  return new Buyer("1", wallet, true);
+}
+
+function mockAgent(wallet) {
+  const feePercentage = "500"; //5%
+  return new Agent("1", feePercentage, wallet, true);
 }
 
 function mockOfferFees(protocolFee, agentFee) {
   return new OfferFees(protocolFee, agentFee);
 }
 
+function mockVoucherInitValues() {
+  const contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+  const royaltyPercentage = "0"; // 0%
+  return new VoucherInitValues(contractURI, royaltyPercentage);
+}
+
+function mockAuthToken() {
+  return new AuthToken("0", AuthTokenType.None);
+}
+
 exports.mockOffer = mockOffer;
 exports.mockTwin = mockTwin;
 exports.mockDisputeResolver = mockDisputeResolver;
+exports.mockSeller = mockSeller;
+exports.mockBuyer = mockBuyer;
+exports.mockVoucherInitValues = mockVoucherInitValues;
+exports.mockAuthToken = mockAuthToken;
+exports.mockAgent = mockAgent;
