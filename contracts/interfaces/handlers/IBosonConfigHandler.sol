@@ -296,4 +296,23 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Get the maximum exchanges per batch
      */
     function getMaxExchangesPerBatch() external view returns (uint16);
+
+    /**
+     * @notice Sets the maximal royalty percentage that can be set by the seller
+     *
+     * Emits a MaxRoyaltyPecentageChanged event.
+     *
+     * Reverts if the _maxRoyaltyPecentage is greater than 10000.
+     *
+     * @param _maxRoyaltyPecentage - the limit of total offer fee percentage.
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
+     */
+    function setMaxRoyaltyPecentage(uint16 _maxRoyaltyPecentage) external;
+
+    /**
+     * @notice Get the maximum total of offer fees allowed in an offer fee
+     */
+    function getMaxRoyaltyPecentage() external view returns (uint16);
 }
