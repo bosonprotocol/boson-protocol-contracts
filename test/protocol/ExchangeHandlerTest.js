@@ -1094,6 +1094,19 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
+        it("cannot complete an exchange when it is in the committed state", async function () {
+          // Get the exchange state
+          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+          // It should match ExchangeState.Committed
+          assert.equal(response, ExchangeState.Committed, "Exchange state is incorrect");
+
+          // Attempt to complete the exchange, expecting revert
+          await expect(exchangeHandler.connect(operator).completeExchange(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE
+          );
+        });
+
         it("exchange is not in redeemed state", async function () {
           // Cancel the voucher
           await exchangeHandler.connect(buyer).cancelVoucher(exchange.id);
