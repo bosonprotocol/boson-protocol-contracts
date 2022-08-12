@@ -19,9 +19,10 @@ const { assert, expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 const { oneMonth } = require("../../utils/constants");
 const { mockDisputeResolver } = require("../../utils/mock");
+const { applyPercentage } = require("../../../scripts/util/test-utils.js");
 
 describe("IBosonVoucher", function () {
-  let interfaceId;
+  let interfaceIds;
   let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler;
   let deployer,
     protocol,
@@ -43,8 +44,8 @@ describe("IBosonVoucher", function () {
 
   before(async function () {
     // Get interface id
-    const { IBosonVoucher } = await getInterfaceIds();
-    interfaceId = IBosonVoucher;
+    const { IBosonVoucher, IERC721, IERC2981 } = await getInterfaceIds();
+    interfaceIds = { IBosonVoucher, IERC721, IERC2981 };
   });
 
   beforeEach(async function () {
@@ -122,10 +123,18 @@ describe("IBosonVoucher", function () {
   // Interface support
   context("📋 Interfaces", async function () {
     context("👉 supportsInterface()", async function () {
-      it("should indicate support for IBosonVoucher interface", async function () {
-        const support = await bosonVoucher.supportsInterface(interfaceId);
+      it("should indicate support for IBosonVoucher, IERC721 and IERC2981 interface", async function () {
+        // IBosonVoucher interface
+        let support = await bosonVoucher.supportsInterface(interfaceIds["IBosonVoucher"]);
+        expect(support, "IBosonVoucher interface not supported").is.true;
 
-        await expect(support, "IBosonVoucher interface not supported").is.true;
+        // IERC721 interface
+        support = await bosonVoucher.supportsInterface(interfaceIds["IERC721"]);
+        expect(support, "IERC721 interface not supported").is.true;
+
+        // IERC2981 interface
+        support = await bosonVoucher.supportsInterface(interfaceIds["IERC2981"]);
+        expect(support, "IERC2981 interface not supported").is.true;
       });
     });
   });
@@ -387,7 +396,7 @@ describe("IBosonVoucher", function () {
 
         // Expectations
         expectedRecipient = seller.treasury;
-        expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(royaltyPercentage).div("10000").toString();
+        expectedRoyaltyAmount = applyPercentage(offerPrice, royaltyPercentage);
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
@@ -406,11 +415,11 @@ describe("IBosonVoucher", function () {
           );
         });
 
-        it("should revert if royaltyPercentage is greater than 100%", async function () {
-          // Set royalty fee as 101%
-          royaltyPercentage = "10001"; //101%
+        it("should revert if royaltyPercentage is greater than max royalty percentage defined in the protocol", async function () {
+          // Set royalty fee as 15% (protocol limit is 10%)
+          royaltyPercentage = "1500"; //15%
 
-          // random caller
+          // royalty percentage too high, expectig revert
           await expect(bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage)).to.be.revertedWith(
             RevertReasons.ROYALTY_FEE_INVALID
           );
@@ -447,24 +456,40 @@ describe("IBosonVoucher", function () {
 
         // Expectations
         expectedRecipient = seller.treasury;
-        expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(royaltyPercentage).div("10000").toString();
+        expectedRoyaltyAmount = applyPercentage(offerPrice, royaltyPercentage);
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
 
         // Any random address can check the royalty info
-        // Now, set royalty fee as 20%
-        royaltyPercentage = "2000"; //20%
+        // Now, set royalty fee as 8%
+        royaltyPercentage = "800"; //8%
         await bosonVoucher.connect(operator).setRoyaltyPercentage(royaltyPercentage);
 
         [receiver, royaltyAmount] = await bosonVoucher.connect(rando).royaltyInfo(exchangeId, offerPrice);
 
         // Expectations
         expectedRecipient = seller.treasury;
-        expectedRoyaltyAmount = ethers.BigNumber.from(offerPrice).mul(royaltyPercentage).div("10000").toString();
+        expectedRoyaltyAmount = applyPercentage(offerPrice, royaltyPercentage);
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
+      });
+    });
+
+    context("💔 Revert Reasons", async function () {
+      it("should revert during create seller if royaltyPercentage is greater than max royalty percentage defined in the protocol", async function () {
+        // create invalid voucherInitValues
+        royaltyPercentage = "2000"; // 20%
+        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+
+        // create another seller
+        seller = new Seller("2", rando.address, rando.address, rando.address, rando.address, true);
+
+        // royalty percentage too high, expectig revert
+        await expect(
+          accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues)
+        ).to.be.revertedWith(RevertReasons.ROYALTY_FEE_INVALID);
       });
     });
   });
