@@ -947,6 +947,13 @@ describe("IBosonExchangeHandler", function () {
            * - buyer does not meet conditions for commit
            */
 
+          it("token id does not exist", async function () {
+            // Attempt to commit, expecting revert
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+            ).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+          });
+
           it("buyer does not meet condition for commit", async function () {
             // mint correct token but to another user
             await foreign721.connect(rando).mint(tokenId, "1");
