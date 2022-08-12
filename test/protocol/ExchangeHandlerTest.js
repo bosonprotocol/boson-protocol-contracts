@@ -1616,6 +1616,25 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
+        it("cannot expire voucher when exchange is in Redeemed state", async function () {
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Get the exchange state
+          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+          // It should match ExchangeState.Redeemed
+          assert.equal(response, ExchangeState.Redeemed, "Exchange state is incorrect");
+
+          // Attempt to expire the voucher, expecting revert
+          await expect(exchangeHandler.connect(buyer).expireVoucher(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE
+          );
+        });
+
         it("exchange is not in committed state", async function () {
           // Set time forward past the voucher's validUntilDate
           await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
