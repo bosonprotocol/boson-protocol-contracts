@@ -1,10 +1,16 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const Condition = require("../../scripts/domain/Condition");
+const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferFees = require("../../scripts/domain/OfferFees");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
+const ExchangeState = require("../../scripts/domain/ExchangeState");
+const DisputeState = require("../../scripts/domain/DisputeState");
 const Twin = require("../../scripts/domain/Twin.js");
+const Exchange = require("../../scripts/domain/Exchange.js");
+const TwinReceipt = require("../../scripts/domain/TwinReceipt.js");
 const TokenType = require("../../scripts/domain/TokenType.js");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const Seller = require("../../scripts/domain/Seller");
@@ -13,6 +19,9 @@ const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Agent = require("../../scripts/domain/Agent");
+const Receipt = require("../../scripts/domain/Receipt");
+const Voucher = require("../../scripts/domain/Voucher");
+const Dispute = require("../../scripts/domain/Dispute");
 const { applyPercentage } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("./constants.js");
 
@@ -130,6 +139,89 @@ function mockAuthToken() {
   return new AuthToken("0", AuthTokenType.None);
 }
 
+function mockTwinReceipt(tokenAddress, tokenType) {
+  tokenType = tokenType ?? TokenType.FungibleToken;
+  const twinId = "1";
+  const tokenId = "1";
+  const amount = "0";
+  return new TwinReceipt(twinId, tokenId, amount, tokenAddress, tokenType);
+}
+
+function mockVoucher() {
+  // Required voucher constructor params
+  const committedDate = "1661441758";
+  const validUntilDate = "166145000";
+  const redeemedDate = "1661442001";
+  const expired = false;
+  return new Voucher(committedDate, validUntilDate, redeemedDate, expired);
+}
+
+function mockExchange() {
+  const id = "1";
+  const offerId = "1";
+  const buyerId = "1";
+  const finalizedDate = "1661447000";
+  const voucher = mockVoucher();
+  const state = ExchangeState.Committed;
+  return new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
+}
+function mockDispute() {
+  const exchangeId = "1";
+  const complaint = "Tastes weird";
+  const state = DisputeState.Resolving;
+  const buyerPercent = "500";
+
+  return new Dispute(exchangeId, complaint, state, buyerPercent);
+}
+
+async function mockReceipt() {
+  const exchange = mockExchange();
+  const mo = await mockOffer();
+  const offer = mo.offer;
+  const offerFees = mo.offerFees;
+  const buyerId = "1";
+  const sellerId = "2";
+  const agentId = "3";
+  const twinReceipt = mockTwinReceipt(ethers.constants.AddressZero);
+
+  return new Receipt(
+    exchange.id,
+    offer.id,
+    buyerId,
+    ethers.constants.AddressZero,
+    sellerId,
+    ethers.constants.AddressZero,
+    offer.price,
+    offer.sellerDeposit,
+    offer.buyerCancelPenalty,
+    offerFees,
+    agentId,
+    ethers.constants.AddressZero,
+    offer.exchangeToken,
+    exchange.finalizedDate,
+    undefined,
+    exchange.voucher.committedDate,
+    exchange.voucher.redeemedDate,
+    exchange.voucher.expired,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    [twinReceipt]
+  );
+}
+
+function mockCondition(tokenAddress) {
+  const method = EvaluationMethod.Threshold;
+  const tokenType = TokenType.FungibleToken;
+  const tokenId = "0";
+  const threshold = "1";
+  const maxCommits = "1";
+
+  return new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+}
+
 exports.mockOffer = mockOffer;
 exports.mockTwin = mockTwin;
 exports.mockDisputeResolver = mockDisputeResolver;
@@ -137,4 +229,10 @@ exports.mockSeller = mockSeller;
 exports.mockBuyer = mockBuyer;
 exports.mockVoucherInitValues = mockVoucherInitValues;
 exports.mockAuthToken = mockAuthToken;
+exports.mockTwinReceipt = mockTwinReceipt;
+exports.mockVoucher = mockVoucher;
+exports.mockExchange = mockExchange;
+exports.mockReceipt = mockReceipt;
+exports.mockDispute = mockDispute;
+exports.mockCondition = mockCondition;
 exports.mockAgent = mockAgent;
