@@ -187,7 +187,7 @@ describe("IBosonVoucher", function () {
       await accessController.grantRole(Role.PROTOCOL, rando.address);
 
       // Prepare to burn voucher as a random user
-      await bosonVoucher.connect(protocol).issueVoucher(0, new Buyer(1, buyer.address, true).toStruct());
+      await bosonVoucher.connect(protocol).issueVoucher(0, mockBuyer(buyer.address).toStruct());
       const balanceBefore = await bosonVoucher.balanceOf(buyer.address);
 
       //Attempt to burn voucher as a random user
