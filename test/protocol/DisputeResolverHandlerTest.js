@@ -3,12 +3,8 @@ const ethers = hre.ethers;
 const { expect, assert } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
-const Seller = require("../../scripts/domain/Seller");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { DisputeResolverFee, DisputeResolverFeeList } = require("../../scripts/domain/DisputeResolverFee");
-const AuthToken = require("../../scripts/domain/AuthToken");
-const AuthTokenType = require("../../scripts/domain/AuthTokenType");
-const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -17,6 +13,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
+const { mockSeller, mockDisputeResolver, mockVoucherInitValues, mockAuthToken } = require("../utils/mock");
 
 /**
  *  Test the Boson Dispute Resolver Handler
@@ -25,7 +22,7 @@ describe("DisputeResolverHandler", function () {
   // Common vars
   let deployer, pauser, rando, operator, admin, clerk, treasury, other1, other2, other3, other4, other5, protocolAdmin;
   let protocolDiamond, accessController, accountHandler, configHandler, pauseHandler, gasLimit;
-  let seller, active, seller2, id2;
+  let seller, seller2, id2;
   let emptyAuthToken;
   let disputeResolver,
     disputeResolverStruct,
@@ -40,10 +37,9 @@ describe("DisputeResolverHandler", function () {
     disputeResolverFees2,
     feeTokenAddressesToRemove;
   let sellerAllowList, returnedSellerAllowList, idsToCheck, expectedStatus, allowedSellersToAdd, allowedSellersToRemove;
-  let metadataUriDR;
   let invalidAccountId, id, key, value, exists;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
-  let voucherInitValues, contractURI, royaltyPercentage;
+  let voucherInitValues;
 
   async function isValidDisputeResolverEvent(
     tx,
@@ -98,9 +94,6 @@ describe("DisputeResolverHandler", function () {
     // Make accounts available
     [deployer, pauser, operator, admin, clerk, treasury, rando, other1, other2, other3, other4, other5, protocolAdmin] =
       await ethers.getSigners();
-
-    //Dispute Resolver metadata URI
-    metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -188,20 +181,9 @@ describe("DisputeResolverHandler", function () {
 
       // Required constructor params
       id = "1"; // argument sent to contract for createDisputeResolver will be ignored
-
-      active = true; //will be ignored by create and update functions
-
       // Create a valid dispute resolver, then set fields in tests directly
-      disputeResolver = new DisputeResolver(
-        id,
-        oneMonth.toString(),
-        operator.address,
-        admin.address,
-        clerk.address,
-        treasury.address,
-        metadataUriDR,
-        active
-      );
+
+      disputeResolver = mockDisputeResolver(operator.address, admin.address, clerk.address, treasury.address);
       expect(disputeResolver.isValid()).is.true;
 
       // How that dispute resolver looks as a returned struct
@@ -217,25 +199,18 @@ describe("DisputeResolverHandler", function () {
       disputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFees);
 
       // AuthToken
-      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      emptyAuthToken = mockAuthToken();
       expect(emptyAuthToken.isValid()).is.true;
 
       // Create two additional sellers and create seller allow list
-      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
-      seller2 = new Seller((++id).toString(), other1.address, other1.address, other1.address, other1.address, active);
-      let seller3 = new Seller(
-        (++id).toString(),
-        other2.address,
-        other2.address,
-        other2.address,
-        other2.address,
-        active
-      );
+      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+      seller2 = mockSeller(other1.address, other1.address, other1.address, other1.address);
+      seller2.id = (++id).toString();
+      let seller3 = mockSeller(other2.address, other2.address, other2.address, other2.address);
+      seller3.id = (++id).toString();
 
       // VoucherInitValues
-      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      royaltyPercentage = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      voucherInitValues = mockVoucherInitValues();
       expect(voucherInitValues.isValid()).is.true;
 
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -248,16 +223,14 @@ describe("DisputeResolverHandler", function () {
 
     context("👉 createDisputeResolver()", async function () {
       beforeEach(async function () {
-        expectedDisputeResolver = new DisputeResolver(
-          (++id).toString(),
-          oneMonth.toString(),
+        expectedDisputeResolver = mockDisputeResolver(
           operator.address,
           admin.address,
           clerk.address,
           treasury.address,
-          metadataUriDR,
           false
         );
+        expectedDisputeResolver.id = (++id).toString();
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
       });
 
@@ -407,16 +380,8 @@ describe("DisputeResolverHandler", function () {
 
         // Create a dispute resolver 2
         id2 = ++id;
-        disputeResolver2 = new DisputeResolver(
-          id2.toString(),
-          oneMonth.toString(),
-          other1.address,
-          other2.address,
-          other3.address,
-          other4.address,
-          metadataUriDR,
-          false
-        );
+        disputeResolver2 = mockDisputeResolver(other1.address, other2.address, other3.address, other4.address, false);
+        disputeResolver2.id = id2.toString();
         expect(disputeResolver2.isValid()).is.true;
 
         await accountHandler
@@ -493,16 +458,8 @@ describe("DisputeResolverHandler", function () {
         expect(valid).is.true;
 
         // Create a valid dispute resolver, then set fields in tests directly
-        disputeResolver2 = new DisputeResolver(
-          (++id).toString(),
-          oneMonth.toString(),
-          other1.address,
-          other2.address,
-          other3.address,
-          treasury.address,
-          metadataUriDR,
-          false
-        );
+        disputeResolver2 = mockDisputeResolver(other1.address, other2.address, other3.address, treasury.address, false);
+        disputeResolver2.id = (++id).toString();
         expect(disputeResolver2.isValid()).is.true;
         expectedDisputeResolverStruct = disputeResolver2.toStruct();
 
@@ -569,16 +526,8 @@ describe("DisputeResolverHandler", function () {
         it("Any address is not unique to this dispute resolver Id for the the same role", async function () {
           id = await accountHandler.connect(rando).getNextAccountId();
 
-          disputeResolver2 = new DisputeResolver(
-            id.toString(),
-            oneMonth.toString(),
-            operator.address,
-            other2.address,
-            other3.address,
-            other4.address,
-            metadataUriDR,
-            active
-          );
+          disputeResolver2 = mockDisputeResolver(operator.address, other2.address, other3.address, other4.address);
+          disputeResolver2.id = id.toString();
           expect(disputeResolver2.isValid()).is.true;
           disputeResolver2Struct = disputeResolver2.toStruct();
 
@@ -612,16 +561,8 @@ describe("DisputeResolverHandler", function () {
           id = await accountHandler.connect(rando).getNextAccountId();
 
           //Set dispute resolver 2's admin address to dispute resolver 1's operator address
-          disputeResolver2 = new DisputeResolver(
-            id.toString(),
-            oneMonth.toString(),
-            other1.address,
-            operator.address,
-            other3.address,
-            other4.address,
-            metadataUriDR,
-            active
-          );
+          disputeResolver2 = mockDisputeResolver(other1.address, operator.address, other3.address, other4.address);
+          disputeResolver2.id = id.toString();
           expect(disputeResolver2.isValid()).is.true;
           disputeResolver2Struct = disputeResolver2.toStruct();
 
@@ -1038,16 +979,8 @@ describe("DisputeResolverHandler", function () {
       it("should update the correct dispute resolver", async function () {
         // Configure another dispute resolver
         id2 = ++id;
-        disputeResolver2 = new DisputeResolver(
-          id2.toString(),
-          oneMonth.toString(),
-          other1.address,
-          other2.address,
-          other3.address,
-          other4.address,
-          metadataUriDR,
-          active
-        );
+        disputeResolver2 = mockDisputeResolver(other1.address, other2.address, other3.address, other4.address);
+        disputeResolver2.id = id2.toString();
         expect(disputeResolver2.isValid()).is.true;
 
         const expectedDisputeResolver2 = disputeResolver2.clone();
@@ -1252,16 +1185,8 @@ describe("DisputeResolverHandler", function () {
         it("Any address is not unique to this dispute resolver Id for the same role", async function () {
           id = await accountHandler.connect(rando).getNextAccountId();
 
-          disputeResolver2 = new DisputeResolver(
-            id.toString(),
-            oneMonth.toString(),
-            other1.address,
-            other2.address,
-            other3.address,
-            other4.address,
-            metadataUriDR,
-            active
-          );
+          disputeResolver2 = mockDisputeResolver(other1.address, other2.address, other3.address, other4.address);
+          disputeResolver2.id = id.toString();
           expect(disputeResolver2.isValid()).is.true;
           disputeResolver2Struct = disputeResolver2.toStruct();
           await accountHandler
@@ -1296,16 +1221,8 @@ describe("DisputeResolverHandler", function () {
         it("Any address is not unique to this dispute resolver Id for a different role", async function () {
           id = await accountHandler.connect(rando).getNextAccountId();
 
-          disputeResolver2 = new DisputeResolver(
-            id.toString(),
-            oneMonth.toString(),
-            other1.address,
-            other2.address,
-            other3.address,
-            other4.address,
-            metadataUriDR,
-            active
-          );
+          disputeResolver2 = mockDisputeResolver(other1.address, other2.address, other3.address, other4.address);
+          disputeResolver2.id = id.toString();
 
           expect(disputeResolver2.isValid()).is.true;
           //disputeResolver2Struct = disputeResolver2.toStruct();
@@ -1684,17 +1601,11 @@ describe("DisputeResolverHandler", function () {
     context("👉 addSellersToAllowList()", async function () {
       beforeEach(async function () {
         // make another seller with id = "4"
-        let seller4 = new Seller(
-          (++id).toString(),
-          other3.address,
-          other3.address,
-          other3.address,
-          other3.address,
-          active
-        );
+        let seller4 = mockSeller(other3.address, other3.address, other3.address, other3.address);
+        seller4.id = (++id).toString();
 
         // AuthToken
-        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        emptyAuthToken = mockAuthToken();
         expect(emptyAuthToken.isValid()).is.true;
 
         await accountHandler.connect(admin).createSeller(seller4, emptyAuthToken, voucherInitValues);
@@ -1848,17 +1759,10 @@ describe("DisputeResolverHandler", function () {
     context("👉 removeSellersFromAllowList()", async function () {
       beforeEach(async function () {
         // make another seller with id = "4"
-        const seller4 = new Seller(
-          (++id).toString(),
-          other3.address,
-          other3.address,
-          other3.address,
-          other3.address,
-          active
-        );
-
-        // AuthToken
-        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        const seller4 = mockSeller(other3.address, other3.address, other3.address, other3.address);
+        (seller4.id = (++id).toString()),
+          // AuthToken
+          (emptyAuthToken = mockAuthToken());
         expect(emptyAuthToken.isValid()).is.true;
 
         await accountHandler.connect(admin).createSeller(seller4, emptyAuthToken, voucherInitValues);
@@ -1957,16 +1861,9 @@ describe("DisputeResolverHandler", function () {
         expect(returnedSellerAllowList.toString()).to.eql(expectedSellerAllowList.toString(), "Allowed list wrong");
 
         // make another seller with id = "6"
-        const seller6 = new Seller(
-          (++id).toString(),
-          other4.address,
-          other4.address,
-          other4.address,
-          other4.address,
-          active
-        );
-
-        await accountHandler.connect(admin).createSeller(seller6, emptyAuthToken, voucherInitValues);
+        const seller6 = mockSeller(other4.address, other4.address, other4.address, other4.address);
+        (seller6.id = (++id).toString()),
+          await accountHandler.connect(admin).createSeller(seller6, emptyAuthToken, voucherInitValues);
 
         // check that mappings of allowed selleres were updated
         idsToCheck = ["1", "2", "3", "4", "5", "6"];
@@ -2032,16 +1929,9 @@ describe("DisputeResolverHandler", function () {
 
         it("Seller id is not approved", async function () {
           // make another seller with id = "6"
-          const seller6 = new Seller(
-            (++id).toString(),
-            other4.address,
-            other4.address,
-            other4.address,
-            other4.address,
-            active
-          );
-
-          await accountHandler.connect(admin).createSeller(seller6, emptyAuthToken, voucherInitValues);
+          const seller6 = mockSeller(other4.address, other4.address, other4.address, other4.address);
+          (seller6.id = (++id).toString()),
+            await accountHandler.connect(admin).createSeller(seller6, emptyAuthToken, voucherInitValues);
 
           // seller exists, it's not approved
           allowedSellersToRemove = ["2", "4", "6"];

@@ -3,13 +3,8 @@ const ethers = hre.ethers;
 const { expect } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
-const Seller = require("../../scripts/domain/Seller");
 const Buyer = require("../../scripts/domain/Buyer");
-const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
-const AuthToken = require("../../scripts/domain/AuthToken");
-const AuthTokenType = require("../../scripts/domain/AuthTokenType");
-const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -18,7 +13,14 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { calculateContractAddress } = require("../../scripts/util/test-utils.js");
 const { oneMonth } = require("../utils/constants");
-const { mockOffer } = require("../utils/mock.js");
+const {
+  mockOffer,
+  mockSeller,
+  mockBuyer,
+  mockDisputeResolver,
+  mockVoucherInitValues,
+  mockAuthToken,
+} = require("../utils/mock.js");
 
 /**
  *  Test the Boson Buyer Handler
@@ -26,29 +28,24 @@ const { mockOffer } = require("../utils/mock.js");
 describe("BuyerHandler", function () {
   // Common vars
   let deployer, pauser, rando, operator, admin, clerk, treasury, other1, other2, other3, other4;
-  let protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, fundsHandler, pauseHandler;
-  let gasLimit;
-  let seller, active, id2;
+  let protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, fundsHandler, pauseHandler, gasLimit;
+  let seller, id2;
   let emptyAuthToken;
   let buyer, buyerStruct, buyer2, buyer2Struct, expectedBuyer, expectedBuyerStruct;
   let disputeResolver;
   let disputeResolverFees;
   let sellerAllowList;
-  let metadataUriDR;
   let nextAccountId;
   let invalidAccountId, id, key, value, exists;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let offerId;
   let bosonVoucher;
-  let voucherInitValues, contractURI, royaltyPercentage;
+  let voucherInitValues;
 
   beforeEach(async function () {
     // Make accounts available
     [deployer, pauser, operator, admin, clerk, treasury, rando, other1, other2, other3, other4] =
       await ethers.getSigners();
-
-    //Dispute Resolver metadata URI
-    metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -141,13 +138,8 @@ describe("BuyerHandler", function () {
       nextAccountId = "1";
       invalidAccountId = "666";
 
-      // Required constructor params
-      id = "1"; // argument sent to contract for createBuyer will be ignored
-
-      active = true;
-
       // Create a valid buyer, then set fields in tests directly
-      buyer = new Buyer(id, other1.address, active);
+      buyer = mockBuyer(other1.address);
       expect(buyer.isValid()).is.true;
 
       // How that buyer looks as a returned struct
@@ -167,7 +159,7 @@ describe("BuyerHandler", function () {
         await accountHandler.connect(rando).createBuyer(buyer);
 
         // Get the buyer as a struct
-        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(id);
+        [, buyerStruct] = await accountHandler.connect(rando).getBuyer(buyer.id);
 
         // Parse into entity
         let returnedBuyer = Buyer.fromStruct(buyerStruct);
@@ -328,7 +320,8 @@ describe("BuyerHandler", function () {
       it("should update the correct buyer", async function () {
         // Confgiure another buyer
         id2 = nextAccountId++;
-        buyer2 = new Buyer(id2.toString(), other3.address, active);
+        buyer2 = mockBuyer(other3.address);
+        buyer2.id = id2.toString();
         expect(buyer2.isValid()).is.true;
 
         buyer2Struct = buyer2.toStruct();
@@ -399,17 +392,16 @@ describe("BuyerHandler", function () {
           let agentId = "0"; // agent id is optional while creating an offer
 
           // Create a valid seller
-          seller = new Seller(id.toString(), operator.address, admin.address, clerk.address, treasury.address, active);
+          seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+          seller.id = id.toString();
           expect(seller.isValid()).is.true;
 
           // AuthTokens
-          emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+          emptyAuthToken = mockAuthToken();
           expect(emptyAuthToken.isValid()).is.true;
 
           // VoucherInitValues
-          contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-          royaltyPercentage = "0"; // 0%
-          voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+          voucherInitValues = mockVoucherInitValues();
           expect(voucherInitValues.isValid()).is.true;
 
           // Create a seller
@@ -419,17 +411,8 @@ describe("BuyerHandler", function () {
           expect(exists).is.true;
 
           // Create a valid dispute resolver
-          active = true;
-          disputeResolver = new DisputeResolver(
-            id.add(1).toString(),
-            oneMonth.toString(),
-            operator.address,
-            admin.address,
-            clerk.address,
-            treasury.address,
-            metadataUriDR,
-            active
-          );
+          disputeResolver = mockDisputeResolver(operator.address, admin.address, clerk.address, treasury.address);
+          disputeResolver.id = id.add(1).toString();
           expect(disputeResolver.isValid()).is.true;
 
           //Create DisputeResolverFee array
@@ -521,7 +504,8 @@ describe("BuyerHandler", function () {
         it("wallet address is unique to this seller Id", async function () {
           id = await accountHandler.connect(rando).getNextAccountId();
 
-          buyer2 = new Buyer(id.toString(), other2.address, active);
+          buyer2 = mockBuyer(other2.address);
+          buyer2.id = id.toString();
           buyer2Struct = buyer2.toStruct();
 
           //Create second buyer, testing for the event

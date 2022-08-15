@@ -4,15 +4,10 @@ const { expect, assert } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
 const Exchange = require("../../scripts/domain/Exchange");
-const Seller = require("../../scripts/domain/Seller");
-const AuthToken = require("../../scripts/domain/AuthToken");
-const AuthTokenType = require("../../scripts/domain/AuthTokenType");
-const Buyer = require("../../scripts/domain/Buyer");
 const Dispute = require("../../scripts/domain/Dispute");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const DisputeDates = require("../../scripts/domain/DisputeDates");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
-const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -27,7 +22,14 @@ const {
   applyPercentage,
 } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
-const { mockOffer, mockDisputeResolver } = require("../utils/mock");
+const {
+  mockOffer,
+  mockDisputeResolver,
+  mockSeller,
+  mockAuthToken,
+  mockVoucherInitValues,
+  mockBuyer,
+} = require("../utils/mock");
 
 /**
  *  Test the Boson Dispute Handler interface
@@ -59,7 +61,7 @@ describe("IBosonDisputeHandler", function () {
     disputeHandler,
     pauseHandler;
   let bosonToken, gasLimit;
-  let id, buyerId, offer, offerId, seller, sellerId, nextAccountId;
+  let buyerId, offer, offerId, seller, nextAccountId;
   let block, blockNumber, tx;
   let support, newTime;
   let price, quantityAvailable, resolutionPeriod, fulfillmentPeriod, sellerDeposit;
@@ -77,12 +79,12 @@ describe("IBosonDisputeHandler", function () {
     disputesToExpire;
   let disputeDates, disputeDatesStruct;
   let exists, response;
-  let disputeResolver, active, disputeResolverFees, disputeResolverId;
+  let disputeResolver, disputeResolverFees, disputeResolverId;
   let buyerPercent;
   let resolutionType, customSignatureType, message, r, s, v;
   let returnedDispute, returnedDisputeDates;
   let DRFeeNative, DRFeeToken, buyerEscalationDepositNative, buyerEscalationDepositToken;
-  let voucherInitValues, contractURI, royaltyPercentage;
+  let voucherInitValues;
   let emptyAuthToken;
   let agentId;
 
@@ -212,7 +214,7 @@ describe("IBosonDisputeHandler", function () {
         support = await erc165.supportsInterface(InterfaceIds.IBosonDisputeHandler);
 
         // Test
-        await expect(support, "IBosonDisputeHandler interface not supported").is.true;
+        expect(support, "IBosonDisputeHandler interface not supported").is.true;
       });
     });
   });
@@ -221,36 +223,29 @@ describe("IBosonDisputeHandler", function () {
   context("📋 Dispute Handler Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
-      id = offerId = sellerId = nextAccountId = "1";
+      offerId = nextAccountId = "1";
       buyerId = "3"; // created after seller and dispute resolver
       agentId = "0"; // agent id is optional while creating an offer
 
-      active = true;
-
       // Create a valid seller
-      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
+      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
-      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      royaltyPercentage = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      voucherInitValues = mockVoucherInitValues();
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
-      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      emptyAuthToken = mockAuthToken();
       expect(emptyAuthToken.isValid()).is.true;
 
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
+      ++nextAccountId;
+
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver(
-        operatorDR.address,
-        adminDR.address,
-        clerkDR.address,
-        treasuryDR.address,
-        false
-      );
+      disputeResolver = mockDisputeResolver(operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address);
+      disputeResolver.id = nextAccountId.toString();
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
@@ -262,7 +257,7 @@ describe("IBosonDisputeHandler", function () {
 
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+      await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // buyer escalation deposit used in multiple tests
       buyerEscalationDepositNative = applyPercentage(DRFeeNative, buyerEscalationDepositPercentage);
@@ -318,7 +313,7 @@ describe("IBosonDisputeHandler", function () {
           // Raise a dispute, testing for the event
           await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId, complaint))
             .to.emit(disputeHandler, "DisputeRaised")
-            .withArgs(exchangeId, buyerId, sellerId, complaint, buyer.address);
+            .withArgs(exchangeId, buyerId, seller.id, complaint, buyer.address);
         });
 
         it("should update state", async function () {
@@ -941,7 +936,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Buyer can also have a seller account and this will work", async function () {
             // Create a valid seller with buyer's wallet
-            seller = new Seller(id, buyer.address, buyer.address, buyer.address, buyer.address, true);
+            seller = mockSeller(buyer.address, buyer.address, buyer.address, buyer.address);
             expect(seller.isValid()).is.true;
 
             await accountHandler.connect(buyer).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -1063,7 +1058,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Operator can also have a buyer account and this will work", async function () {
             // Create a valid buyer with operator's wallet
-            buyer = new Buyer(id, operator.address, active);
+            buyer = mockBuyer(operator.address);
             expect(buyer.isValid()).is.true;
             await accountHandler.connect(operator).createBuyer(buyer);
 
@@ -1192,7 +1187,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Wallet with seller account, but not the seller in this exchange
             // Create a valid seller
-            seller = new Seller(id, other1.address, other1.address, other1.address, other1.address, true);
+            seller = mockSeller(other1.address, other1.address, other1.address, other1.address);
             expect(seller.isValid()).is.true;
 
             await accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -1203,9 +1198,10 @@ describe("IBosonDisputeHandler", function () {
 
             // Wallet with buyer account, but not the buyer in this exchange
             // Create a valid buyer
-            buyer = new Buyer(id, other2.address, active);
+            buyer = mockBuyer(other2.address);
             expect(buyer.isValid()).is.true;
             await accountHandler.connect(other2).createBuyer(buyer);
+
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(other2).resolveDispute(exchangeId, buyerPercent, r, s, v)
