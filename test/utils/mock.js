@@ -5,7 +5,6 @@ const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferFees = require("../../scripts/domain/OfferFees");
-const Agent = require("../../scripts/domain/Agent");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const DisputeState = require("../../scripts/domain/DisputeState");
@@ -14,6 +13,12 @@ const Exchange = require("../../scripts/domain/Exchange.js");
 const TwinReceipt = require("../../scripts/domain/TwinReceipt.js");
 const TokenType = require("../../scripts/domain/TokenType.js");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
+const Seller = require("../../scripts/domain/Seller");
+const Buyer = require("../../scripts/domain/Buyer");
+const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
+const AuthToken = require("../../scripts/domain/AuthToken");
+const AuthTokenType = require("../../scripts/domain/AuthTokenType");
+const Agent = require("../../scripts/domain/Agent");
 const Receipt = require("../../scripts/domain/Receipt");
 const Voucher = require("../../scripts/domain/Voucher");
 const Dispute = require("../../scripts/domain/Dispute");
@@ -94,22 +99,44 @@ function mockTwin(tokenAddress, tokenType) {
 }
 
 function mockDisputeResolver(operatorAddress, adminAddress, clerkAddress, treasuryAddress, active) {
-  const id = "1";
   const metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
   return new DisputeResolver(
-    id.toString(),
+    "1",
     oneMonth.toString(),
     operatorAddress,
     adminAddress,
     clerkAddress,
     treasuryAddress,
     metadataUriDR,
-    active
+    active ?? true
   );
+}
+
+function mockSeller(operatorAddress, adminAddress, clerkAddress, treasuryAddress) {
+  return new Seller("1", operatorAddress, adminAddress, clerkAddress, treasuryAddress, true);
+}
+
+function mockBuyer(wallet) {
+  return new Buyer("1", wallet, true);
+}
+
+function mockAgent(wallet) {
+  const feePercentage = "500"; //5%
+  return new Agent("1", feePercentage, wallet, true);
 }
 
 function mockOfferFees(protocolFee, agentFee) {
   return new OfferFees(protocolFee, agentFee);
+}
+
+function mockVoucherInitValues() {
+  const contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
+  const royaltyPercentage = "0"; // 0%
+  return new VoucherInitValues(contractURI, royaltyPercentage);
+}
+
+function mockAuthToken() {
+  return new AuthToken("0", AuthTokenType.None);
 }
 
 function mockTwinReceipt(tokenAddress, tokenType) {
@@ -195,17 +222,13 @@ function mockCondition(tokenAddress) {
   return new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
 }
 
-function mockAgent(wallet) {
-  const agentId = "3";
-  const agentFeePercentage = "500"; //5%
-  const active = true;
-
-  return new Agent(agentId, agentFeePercentage, wallet, active);
-}
-
 exports.mockOffer = mockOffer;
 exports.mockTwin = mockTwin;
 exports.mockDisputeResolver = mockDisputeResolver;
+exports.mockSeller = mockSeller;
+exports.mockBuyer = mockBuyer;
+exports.mockVoucherInitValues = mockVoucherInitValues;
+exports.mockAuthToken = mockAuthToken;
 exports.mockTwinReceipt = mockTwinReceipt;
 exports.mockVoucher = mockVoucher;
 exports.mockExchange = mockExchange;
