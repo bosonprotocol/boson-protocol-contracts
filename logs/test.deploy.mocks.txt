@@ -1,0 +1,18 @@
+
+ Deploying and Minting Mock Auth Tokens
+⛓  Network: test
+📅 Wed Aug 10 2022 19:47:25 GMT-0400 (Eastern Daylight Time)
+✅ Mock Lens NFT Token deployed to: 0x478c6B18c1694AF49D5814238183EfBc62211834
+✅ Mock ENS NFT Token deployed to: 0x13E03B861B96d2fC9553D4c52ba1a914f73f50a4
+
+ Tokens will be minted to addresses  [
+  '0x2EC98F3F99aa31d4439869Ad2466394b60cd4DFF',
+  '0x1b05Ba94aCc29d0D66a0114a0bC7Daa139153BE5',
+  '0x56334e16d24db1df8bd54708b88f96b8dd112145'
+]
+✅ Owner of Lens token Id 100 is  0x2EC98F3F99aa31d4439869Ad2466394b60cd4DFF
+✅ Owner of ENS token Id 200 is  0x2EC98F3F99aa31d4439869Ad2466394b60cd4DFF
+✅ Owner of Lens token Id 101 is  0x1b05Ba94aCc29d0D66a0114a0bC7Daa139153BE5
+✅ Owner of ENS token Id 201 is  0x1b05Ba94aCc29d0D66a0114a0bC7Daa139153BE5
+✅ Owner of Lens token Id 102 is  0x56334e16D24DB1dF8bd54708B88f96b8dd112145
+✅ Owner of ENS token Id 202 is  0x56334e16D24DB1dF8bd54708B88f96b8dd112145
