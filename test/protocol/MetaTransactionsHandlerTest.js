@@ -791,6 +791,10 @@ describe("IBosonMetaTransactionsHandler", function () {
           validOfferDetails.offerId,
         ]);
 
+        // Expect that buyer has token balance matching the offer price.
+        const buyerBalanceBefore = await mockToken.balanceOf(buyer.address);
+        assert.equal(buyerBalanceBefore, price, "Buyer initial token balance mismatch");
+
         // send a meta transaction, check for event
         await expect(
           metaTransactionsHandler.executeMetaTransaction(
@@ -805,6 +809,10 @@ describe("IBosonMetaTransactionsHandler", function () {
         )
           .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
           .withArgs(buyer.address, deployer.address, message.functionName, nonce);
+
+        // Expect that buyer (meta tx signer) has paid the tokens to commit to an offer.
+        const buyerBalanceAfter = await mockToken.balanceOf(buyer.address);
+        assert.equal(buyerBalanceAfter, "0", "Buyer final token balance mismatch");
 
         // Verify that nonce is used. Expect true.
         let expectedResult = true;

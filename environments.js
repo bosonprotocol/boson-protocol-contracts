@@ -39,7 +39,8 @@ module.exports = {
         "txNode": process.env.DEPLOYER_TEST_TXNODE,
         "keys": [process.env.DEPLOYER_TEST_KEY],
         "gasLimit": parseInt(process.env.DEPLOYER_GAS_LIMIT_TEST),
-        "adminAddress": process.env.ADMIN_ADDRESS_TEST
+        "adminAddress": process.env.ADMIN_ADDRESS_TEST,
+        "nftAuthTokenHolders": process.env.AUTH_TOKEN_OWNERS_TEST
     },
 
     // Mainnet
