@@ -84,8 +84,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         require(block.timestamp < offerDates.validUntil, OFFER_HAS_EXPIRED);
         require(offer.quantityAvailable > 0, OFFER_SOLD_OUT);
 
+        uint256 exchangeId = protocolCounters().nextExchangeId++;
+
         // Authorize the buyer to commit if offer is in a conditional group
-        require(authorizeCommit(_buyer, offer), CANNOT_COMMIT);
+        require(authorizeCommit(_buyer, offer, exchangeId), CANNOT_COMMIT);
 
         // Fetch or create buyer
         (uint256 buyerId, Buyer storage buyer) = getValidBuyer(_buyer);
@@ -94,7 +96,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         FundsLib.encumberFunds(_offerId, buyerId);
 
         // Create and store a new exchange
-        uint256 exchangeId = protocolCounters().nextExchangeId++;
         Exchange storage exchange = protocolEntities().exchanges[exchangeId];
         exchange.id = exchangeId;
         exchange.offerId = _offerId;
@@ -435,7 +436,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @return exists - true if the exchange exists
      * @return isFinalized - true if the exchange is finalized
      */
-    function isExchangeFinalized(uint256 _exchangeId) external view override returns (bool exists, bool isFinalized) {
+    function isExchangeFinalized(uint256 _exchangeId) public view override returns (bool exists, bool isFinalized) {
         Exchange storage exchange;
 
         // Get the exchange
@@ -590,6 +591,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             // Variable to track whether some twin transfer failed
             bool transferFailed;
 
+            uint256 exchangeId = _exchange.id;
+
             // Visit the twins
             for (uint256 i = 0; i < twinIds.length; i++) {
                 // Get the twin
@@ -599,7 +602,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 // N.B. Using call here so as to normalize the revert reason
                 bytes memory result;
                 bool success;
-                uint256 amount = twin.amount;
                 uint256 tokenId = twin.tokenId;
                 TokenType tokenType = twin.tokenType;
 
@@ -608,7 +610,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                     // Decrement by 1 if token type is NonFungible otherwise decrement amount (i.e, tokenType is MultiToken or FungibleToken)
                     twin.supplyAvailable = twin.tokenType == TokenType.NonFungibleToken
                         ? twin.supplyAvailable - 1
-                        : twin.supplyAvailable - amount;
+                        : twin.supplyAvailable - twin.amount;
                 }
 
                 if (tokenType == TokenType.FungibleToken && twin.supplyAvailable >= twin.amount) {
@@ -618,7 +620,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                             "transferFrom(address,address,uint256)",
                             seller.operator,
                             msgSender(),
-                            amount
+                            twin.amount
                         )
                     );
                 } else if (tokenType == TokenType.NonFungibleToken && twin.supplyAvailable > 0) {
@@ -647,7 +649,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                             seller.operator,
                             msgSender(),
                             tokenId,
-                            amount,
+                            twin.amount,
                             ""
                         )
                     );
@@ -656,9 +658,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 // If token transfer failed
                 if (!success) {
                     transferFailed = true;
-                    emit TwinTransferFailed(twin.id, twin.tokenAddress, _exchange.id, tokenId, amount, sender);
+
+                    emit TwinTransferFailed(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 } else {
-                    emit TwinTransferred(twin.id, twin.tokenAddress, _exchange.id, tokenId, amount, sender);
+                    // Store twin receipt on twinReceiptsByExchange
+                    protocolLookups().twinReceiptsByExchange[exchangeId].push(
+                        TwinReceipt(twin.id, tokenId, twin.amount, twin.tokenAddress, twin.tokenType)
+                    );
+
+                    emit TwinTransferred(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 }
             }
 
@@ -726,10 +734,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _buyer buyer address
      * @param _offer the offer
+     * @param exchangeId - the exchange id
      *
      * @return bool true if buyer is authorized to commit
      */
-    function authorizeCommit(address _buyer, Offer storage _offer) internal returns (bool) {
+    function authorizeCommit(
+        address _buyer,
+        Offer storage _offer,
+        uint256 exchangeId
+    ) internal returns (bool) {
         // Allow by default
         bool allow = true;
 
@@ -751,8 +764,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         ? holdsThreshold(_buyer, group.condition)
                         : holdsSpecificToken(_buyer, group.condition);
 
-                    // Increment number of commits to the group for this address if they are allowed to commit
-                    if (allow) protocolLookups().conditionalCommitsByAddress[_buyer][groupId] = ++commitCount;
+                    if (allow) {
+                        // Increment number of commits to the group for this address if they are allowed to commit
+                        protocolLookups().conditionalCommitsByAddress[_buyer][groupId] = ++commitCount;
+                        // Store the condition to be returned afterward on getReceipt function
+                        protocolLookups().exchangeCondition[exchangeId] = group.condition;
+                    }
                 } else {
                     // Buyer has exhausted their allowable commits
                     allow = false;
@@ -800,5 +817,105 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      */
     function isContract(address _address) private view returns (bool) {
         return _address.code.length > 0;
+    }
+
+    /**
+     * @notice Get exchange receipt
+     *
+     * Reverts if:
+     * - Exchange is not in a final state
+     * - Exchange id is invalid
+     *
+     * @param _exchangeId - the exchange id
+     * @return receipt - the receipt for the exchange. See {BosonTypes.Receipt}
+     */
+    function getReceipt(uint256 _exchangeId) external view returns (Receipt memory receipt) {
+        // Get the exchange
+        (bool exists, Exchange storage exchange) = fetchExchange(_exchangeId);
+        require(exists, NO_SUCH_EXCHANGE);
+
+        // Verify if exchange is finalized, returns true if exchange is in one of the final states
+        (, bool isFinalized) = isExchangeFinalized(_exchangeId);
+        require(isFinalized, EXCHANGE_IS_NOT_IN_A_FINAL_STATE);
+
+        // Add exchange to receipt
+        receipt.exchangeId = exchange.id;
+        receipt.buyerId = exchange.buyerId;
+        receipt.finalizedDate = exchange.finalizedDate;
+        receipt.committedDate = exchange.voucher.committedDate;
+        receipt.redeemedDate = exchange.voucher.redeemedDate;
+        receipt.voucherExpired = exchange.voucher.expired;
+
+        // Fetch offer, we assume offer exist if exchange exist
+        (, Offer storage offer) = fetchOffer(exchange.offerId);
+        receipt.offerId = offer.id;
+        receipt.sellerId = offer.sellerId;
+        receipt.price = offer.price;
+        receipt.sellerDeposit = offer.sellerDeposit;
+        receipt.buyerCancelPenalty = offer.buyerCancelPenalty;
+        receipt.exchangeToken = offer.exchangeToken;
+
+        // Fetch buyer
+        (, Buyer storage buyer) = fetchBuyer(exchange.buyerId);
+        receipt.buyerAddress = buyer.wallet;
+
+        // Fetch seller
+        (, Seller storage seller, ) = fetchSeller(offer.sellerId);
+        receipt.sellerOperatorAddress = seller.operator;
+
+        // Fetch offer fees
+        OfferFees storage offerFees = fetchOfferFees(offer.id);
+        receipt.offerFees = offerFees;
+
+        // Fetch agent
+        (bool agentExists, uint256 agentId) = fetchAgentIdByOffer(offer.id);
+
+        // Add agent data to receipt if exists
+        if (agentExists) {
+            (, Agent storage agent) = fetchAgent(agentId);
+            receipt.agentAddress = agent.wallet;
+            receipt.agentId = agentId;
+        }
+
+        // We assume dispute exist if exchange is in disputed state
+        if (exchange.state == ExchangeState.Disputed) {
+            // Fetch dispute resolution terms
+            DisputeResolutionTerms storage disputeResolutionTerms = fetchDisputeResolutionTerms(offer.id);
+
+            // Add disputeResolverId to receipt
+            receipt.disputeResolverId = disputeResolutionTerms.disputeResolverId;
+
+            // Fetch disputeResolver account
+            (, DisputeResolver storage disputeResolver, ) = fetchDisputeResolver(
+                disputeResolutionTerms.disputeResolverId
+            );
+
+            // Add disputeResolverOperatorAddress to receipt
+            receipt.disputeResolverOperatorAddress = disputeResolver.operator;
+
+            // Fetch dispute and dispute dates
+            (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
+
+            // Add dispute data to receipt
+            receipt.disputeState = dispute.state;
+            receipt.disputedDate = disputeDates.disputed;
+            receipt.escalatedDate = disputeDates.escalated;
+        }
+
+        // Fetch the twin receipt, it exists if offer was bundled with twins
+        (bool twinsExists, TwinReceipt[] storage twinReceipts) = fetchTwinReceipts(exchange.id);
+
+        // Add twin to receipt if exists
+        if (twinsExists) {
+            receipt.twinReceipts = twinReceipts;
+        }
+
+        // Fetch condition
+        (bool conditionExists, Condition storage condition) = fetchConditionByExchange(exchange.id);
+
+        // Add condition to receipt if exists
+        if (conditionExists) {
+            receipt.condition = condition;
+        }
     }
 }

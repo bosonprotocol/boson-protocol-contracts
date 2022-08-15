@@ -365,8 +365,12 @@ describe("IBosonBundleHandler", function () {
         // Validate the instance
         expect(bundleInstance.isValid()).to.be.true;
 
+        //Get seller id by operator which created the bundle
+        const [, sellerStruct] = await accountHandler.connect(rando).getSellerByAddress(operator.address);
+        let expectedSellerId = sellerStruct.id;
+
         assert.equal(event.bundleId.toString(), nextBundleId, "Bundle Id is incorrect");
-        assert.equal(event.sellerId.toString(), sellerId, "Seller Id is incorrect");
+        assert.equal(event.sellerId.toString(), expectedSellerId.toString(), "Seller Id is incorrect");
         assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(bundleInstance.toStruct().toString(), bundleStruct.toString(), "Bundle struct is incorrect");
       });
