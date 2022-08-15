@@ -8,8 +8,6 @@ const Dispute = require("../../scripts/domain/Dispute");
 const Receipt = require("../../scripts/domain/Receipt");
 const TwinReceipt = require("../../scripts/domain/TwinReceipt");
 const Exchange = require("../../scripts/domain/Exchange");
-const Seller = require("../../scripts/domain/Seller");
-const Buyer = require("../../scripts/domain/Buyer");
 const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
@@ -36,6 +34,7 @@ const {
   mockExchange,
   mockCondition,
   mockAgent,
+  mockBuyer,
 } = require("../utils/mock");
 const {
   getEvent,
@@ -453,7 +452,8 @@ describe("IBosonExchangeHandler", function () {
 
         // Create a new seller to get new clone
         sellerId = "3"; // "1" is the first seller, "2" is DR
-        seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, true);
+        seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+        seller.id = sellerId;
         expect(seller.isValid()).is.true;
 
         // VoucherInitValues
@@ -2426,7 +2426,7 @@ describe("IBosonExchangeHandler", function () {
         nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
         // Create a buyer account for the new owner
-        await accountHandler.connect(newOwner).createBuyer(new Buyer("0", newOwner.address, true));
+        await accountHandler.connect(newOwner).createBuyer(mockBuyer(newOwner.address));
 
         // Call onVoucherTransferred
         await bosonVoucherClone.connect(buyer).transferFrom(buyer.address, newOwner.address, exchange.id);
@@ -2475,10 +2475,12 @@ describe("IBosonExchangeHandler", function () {
         nextExchangeId = await exchangeHandler.getNextExchangeId();
 
         // Get a buyer struct
-        buyerStruct = new Buyer(nextAccountId, newOwner.address, true).toStruct();
+        buyer = mockBuyer(newOwner.address);
+        buyer.id = nextAccountId;
+        buyerStruct = buyer.toStruct();
 
         // Create a buyer account
-        await accountHandler.connect(newOwner).createBuyer(new Buyer("0", newOwner.address, true));
+        await accountHandler.connect(newOwner).createBuyer(mockBuyer(newOwner.address));
 
         // Grant PROTOCOL role to EOA address for test
         await accessController.grantRole(Role.PROTOCOL, rando.address);
@@ -2520,7 +2522,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("Caller is not a clone address associated with the seller", async function () {
           // Create a new seller to get new clone
-          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, true);
+          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
           expect(seller.isValid()).is.true;
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -2530,7 +2532,10 @@ describe("IBosonExchangeHandler", function () {
           // For the sake of test, mint token on bv2 with the id of token on bv1
           // Temporarily grant PROTOCOL role to deployer account
           await accessController.grantRole(Role.PROTOCOL, deployer.address);
-          await bosonVoucherClone2.issueVoucher(exchange.id, new Buyer(buyerId, buyer.address, true));
+
+          const newBuyer = mockBuyer(buyer.address);
+          newBuyer.id = buyerId;
+          await bosonVoucherClone2.issueVoucher(exchange.id, newBuyer);
 
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(
@@ -2574,10 +2579,13 @@ describe("IBosonExchangeHandler", function () {
           nextAccountId = await accountHandler.connect(rando).getNextAccountId();
 
           // Create a buyer account for the new owner
-          await accountHandler.connect(newOwner).createBuyer(new Buyer("0", newOwner.address, true));
+          buyer = mockBuyer(newOwner.address);
+          await accountHandler.connect(newOwner).createBuyer(buyer);
 
+          buyer.active = false;
+          buyer.id = nextAccountId;
           // Update buyer account, deactivating it
-          await accountHandler.connect(newOwner).updateBuyer(new Buyer(nextAccountId, newOwner.address, false));
+          await accountHandler.connect(newOwner).updateBuyer(buyer);
 
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(

@@ -3,7 +3,6 @@ const ethers = hre.ethers;
 const { expect } = require("chai");
 const { gasLimit } = require("../../environments");
 
-const Agent = require("../../scripts/domain/Agent");
 const Role = require("../../scripts/domain/Role");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
@@ -46,7 +45,7 @@ describe("IBosonOfferHandler", function () {
     key,
     value;
   let offer, nextOfferId, invalidOfferId, support, expected, exists, nextAccountId;
-  let seller, active;
+  let seller;
   let id, sellerId, price, voided;
   let validFrom,
     validUntil,
@@ -79,7 +78,7 @@ describe("IBosonOfferHandler", function () {
   let DRFeeNative, DRFeeToken;
   let voucherInitValues;
   let emptyAuthToken;
-  let agent, agentId, agentFeePercentage, nonZeroAgentIds;
+  let agent, agentId, nonZeroAgentIds;
   let sellerAllowList, allowedSellersToAdd;
 
   before(async function () {
@@ -774,6 +773,7 @@ describe("IBosonOfferHandler", function () {
         beforeEach(async function () {
           // Create a valid agent, then set fields in tests directly
           agent = mockAgent(other.address);
+          agent.id = "3";
           agentId = agent.id;
           expect(agent.isValid()).is.true;
 
@@ -2082,9 +2082,8 @@ describe("IBosonOfferHandler", function () {
           offerFeesStructs = [];
 
           // Create an agent: Required constructor params
-          agentFeePercentage = "500"; //5%
-          active = true;
-          agent = new Agent(agentId, agentFeePercentage, other.address, active);
+          agent = mockAgent(other.address);
+          agent.id = agentId;
           expect(agent.isValid()).is.true;
           // Create a valid agent
           await accountHandler.connect(rando).createAgent(agent);
@@ -2100,7 +2099,7 @@ describe("IBosonOfferHandler", function () {
             } else {
               protocolFee = applyPercentage(offers[i].price, protocolFeePercentage);
             }
-            let agentFee = ethers.BigNumber.from(offers[i].price).mul(agentFeePercentage).div("10000").toString();
+            let agentFee = ethers.BigNumber.from(offers[i].price).mul(agent.feePercentage).div("10000").toString();
             offerFees = new OfferFees(protocolFee, agentFee);
 
             offerFeesList.push(offerFees);
@@ -2201,12 +2200,11 @@ describe("IBosonOfferHandler", function () {
           it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "4"; // argument sent to contract for createAgent will be ignored
-            agentFeePercentage = "3000"; //30%
-
-            active = true;
 
             // Create a valid agent, then set fields in tests directly
-            agent = new Agent(id, agentFeePercentage, operator.address, active);
+            agent = mockAgent(operator.address);
+            agent.id = id;
+            agent.feePercentage = "3000"; // 30%
             expect(agent.isValid()).is.true;
 
             // Create an agent
@@ -2242,8 +2240,8 @@ describe("IBosonOfferHandler", function () {
       });
 
       it("should emit OfferVoided events", async function () {
-        // call getOffer with offerId to check the seller id in the event
         [, offerStruct] = await offerHandler.getOffer(offersToVoid[0]);
+        // call getOffer with offerId to check the seller id in the event
 
         // Void offers, testing for the event
         const tx = await offerHandler.connect(operator).voidOfferBatch(offersToVoid);

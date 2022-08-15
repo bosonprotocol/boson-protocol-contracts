@@ -6,19 +6,20 @@ const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol
 const { getInterfaceIds } = require("../../../scripts/config/supported-interfaces.js");
 const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../../scripts/util/deploy-protocol-handler-facets.js");
-const Buyer = require("../../../scripts/domain/Buyer");
 const Role = require("../../../scripts/domain/Role");
-const Seller = require("../../../scripts/domain/Seller");
-const AuthToken = require("../../../scripts/domain/AuthToken");
-const AuthTokenType = require("../../../scripts/domain/AuthTokenType");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
-const VoucherInitValues = require("../../../scripts/domain/VoucherInitValues");
 const { mockOffer } = require("../../utils/mock.js");
 const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
 const { assert, expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 const { oneMonth } = require("../../utils/constants");
-const { mockDisputeResolver } = require("../../utils/mock");
+const {
+  mockDisputeResolver,
+  mockSeller,
+  mockVoucherInitValues,
+  mockAuthToken,
+  mockBuyer,
+} = require("../../utils/mock");
 
 describe("IBosonVoucher", function () {
   let interfaceId;
@@ -124,7 +125,7 @@ describe("IBosonVoucher", function () {
       it("should indicate support for IBosonVoucher interface", async function () {
         const support = await bosonVoucher.supportsInterface(interfaceId);
 
-        await expect(support, "IBosonVoucher interface not supported").is.true;
+        expect(support, "IBosonVoucher interface not supported").is.true;
       });
     });
   });
@@ -133,7 +134,7 @@ describe("IBosonVoucher", function () {
     let buyerStruct;
 
     before(function () {
-      buyerStruct = new Buyer(1, buyer.address, true).toStruct();
+      buyerStruct = mockBuyer(buyer.address).toStruct();
     });
 
     it("should issue a voucher with success", async function () {
@@ -155,7 +156,7 @@ describe("IBosonVoucher", function () {
 
   context("burnVoucher()", function () {
     it("should burn a voucher with success", async function () {
-      await bosonVoucher.connect(protocol).issueVoucher(0, new Buyer(1, buyer.address, true).toStruct());
+      await bosonVoucher.connect(protocol).issueVoucher(0, mockBuyer(buyer.address).toStruct());
 
       const balanceBefore = await bosonVoucher.balanceOf(buyer.address);
 
@@ -175,16 +176,14 @@ describe("IBosonVoucher", function () {
     let metadataUri;
 
     beforeEach(async function () {
-      seller = new Seller("1", operator.address, admin.address, clerk.address, treasury.address, true);
+      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
 
       // prepare the VoucherInitValues
-      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      royaltyPercentage = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      voucherInitValues = mockVoucherInitValues();
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
-      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      emptyAuthToken = mockAuthToken();
       expect(emptyAuthToken.isValid()).is.true;
 
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -192,7 +191,7 @@ describe("IBosonVoucher", function () {
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver(
+      disputeResolver = mockDisputeResolver(
         operatorDR.address,
         adminDR.address,
         clerkDR.address,
@@ -300,16 +299,14 @@ describe("IBosonVoucher", function () {
 
   context("ERC2981 NFT Royalty fee", function () {
     beforeEach(async function () {
-      seller = new Seller("1", operator.address, admin.address, clerk.address, treasury.address, true);
+      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
 
       // prepare the VoucherInitValues
-      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      royaltyPercentage = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      voucherInitValues = mockVoucherInitValues();
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
-      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      emptyAuthToken = mockAuthToken();
       expect(emptyAuthToken.isValid()).is.true;
 
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -317,7 +314,7 @@ describe("IBosonVoucher", function () {
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver(
+      disputeResolver = mockDisputeResolver(
         operatorDR.address,
         adminDR.address,
         clerkDR.address,
