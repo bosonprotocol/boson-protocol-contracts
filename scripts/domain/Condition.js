@@ -54,9 +54,9 @@ class Condition {
       method: parseInt(method),
       tokenType,
       tokenAddress,
-      tokenId,
-      threshold,
-      maxCommits,
+      tokenId: tokenId.toString(),
+      threshold: threshold.toString(),
+      maxCommits: maxCommits.toString(),
     });
   }
 

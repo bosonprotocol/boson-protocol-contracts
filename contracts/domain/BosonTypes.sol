@@ -177,9 +177,30 @@ contract BosonTypes {
     }
 
     struct Receipt {
-        Offer offer;
-        Exchange exchange;
-        Dispute dispute;
+        uint256 exchangeId;
+        uint256 offerId;
+        uint256 buyerId;
+        address buyerAddress;
+        uint256 sellerId;
+        address sellerOperatorAddress;
+        uint256 price;
+        uint256 sellerDeposit;
+        uint256 buyerCancelPenalty;
+        OfferFees offerFees; // protocol and agent fee
+        uint256 agentId;
+        address agentAddress;
+        address exchangeToken;
+        uint256 finalizedDate;
+        Condition condition;
+        uint256 committedDate;
+        uint256 redeemedDate;
+        bool voucherExpired;
+        uint256 disputeResolverId;
+        address disputeResolverOperatorAddress;
+        uint256 disputedDate; // DisputeDates.disputed
+        uint256 escalatedDate; // DisputeDate.escalated
+        DisputeState disputeState;
+        TwinReceipt[] twinReceipts;
     }
 
     struct TokenRange {
@@ -190,10 +211,18 @@ contract BosonTypes {
     struct Twin {
         uint256 id;
         uint256 sellerId;
-        uint256 amount; // ERC-1155 / ERC-20 (amount to be transferred to each buyer on redemption)
+        uint256 amount; // ERC1155 / ERC20 (amount to be transferred to each buyer on redemption)
         uint256 supplyAvailable; // all
-        uint256 tokenId; // ERC-1155 / ERC-721 (must be initialized with the initial pointer position of the ERC-721 ids available range)
+        uint256 tokenId; // ERC1155 / ERC721 (must be initialized with the initial pointer position of the ERC721 ids available range)
         address tokenAddress; // all
+        TokenType tokenType;
+    }
+
+    struct TwinReceipt {
+        uint256 twinId;
+        uint256 tokenId; // only for ERC721 and ERC1155
+        uint256 amount; // only for ERC1155 and ERC20
+        address tokenAddress;
         TokenType tokenType;
     }
 
