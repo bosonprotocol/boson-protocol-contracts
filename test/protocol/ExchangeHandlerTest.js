@@ -78,7 +78,7 @@ describe("IBosonExchangeHandler", function () {
     twinHandler,
     bundleHandler,
     groupHandler,
-    pauseHandler;
+    pauseHandler,
     configHandler;
   let bosonVoucher, voucherImplementation;
   let bosonVoucherClone, bosonVoucherCloneAddress;
@@ -613,7 +613,7 @@ describe("IBosonExchangeHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
-        it.only("The exchanges region of protocol is paused", async function () {
+        it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
@@ -3033,7 +3033,7 @@ describe("IBosonExchangeHandler", function () {
         expect(nextExchangeId).to.equal(id);
       });
     });
-    
+
     context("👉 getExchange()", async function () {
       beforeEach(async function () {
         // Commit to offer

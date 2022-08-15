@@ -23,6 +23,7 @@ contract SellerHandlerFacet is SellerBase {
      * Emits a SellerCreated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
      * - Seller is not active (if active == false)
