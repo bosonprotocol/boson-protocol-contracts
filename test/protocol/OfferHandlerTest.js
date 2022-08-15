@@ -24,7 +24,7 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { applyPercentage } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
-const { mockOffer, mockDisputeResolver } = require("../utils/mock");
+const { mockOffer, mockDisputeResolver, mockAgent } = require("../utils/mock");
 /**
  *  Test the Boson Offer Handler interface
  */
@@ -786,20 +786,15 @@ describe("IBosonOfferHandler", function () {
 
       context("When offer has non zero agent id", async function () {
         beforeEach(async function () {
-          // Required constructor params
-          agentId = "3"; // argument sent to contract for createAgent will be ignored
-          agentFeePercentage = "500"; //5%
-
-          active = true;
-
           // Create a valid agent, then set fields in tests directly
-          agent = new Agent(agentId, agentFeePercentage, other.address, active);
+          agent = mockAgent(other.address);
+          agentId = agent.id;
           expect(agent.isValid()).is.true;
 
           // Create an agent
           await accountHandler.connect(rando).createAgent(agent);
 
-          agentFee = ethers.BigNumber.from(offer.price).mul(agentFeePercentage).div("10000").toString();
+          agentFee = ethers.BigNumber.from(offer.price).mul(agent.feePercentage).div("10000").toString();
           offerFees.agentFee = agentFee;
           offerFeesStruct = offerFees.toStruct();
         });

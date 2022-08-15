@@ -35,10 +35,8 @@ class OfferFees {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let protocolFee, agentFee;
-
     // destructure struct
-    [protocolFee, agentFee] = struct;
+    let [protocolFee, agentFee] = struct;
 
     return OfferFees.fromObject({
       protocolFee: protocolFee.toString(),

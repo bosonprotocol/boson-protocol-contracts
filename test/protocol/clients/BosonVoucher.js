@@ -23,6 +23,7 @@ const { applyPercentage } = require("../../../scripts/util/test-utils.js");
 
 describe("IBosonVoucher", function () {
   let interfaceIds;
+  let protocolDiamond, accessController;
   let bosonVoucher, offerHandler, accountHandler, exchangeHandler, fundsHandler;
   let deployer,
     protocol,
@@ -54,7 +55,7 @@ describe("IBosonVoucher", function () {
       await ethers.getSigners();
 
     // Deploy diamond
-    const [protocolDiamond, , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , accessController] = await deployProtocolDiamond();
 
     // Cast Diamond to contract interfaces
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
@@ -157,9 +158,20 @@ describe("IBosonVoucher", function () {
     });
 
     it("should revert if caller does not have PROTOCOL role", async function () {
+      // Expect revert if random user attempts to issue voucher
       await expect(bosonVoucher.connect(rando).issueVoucher(0, buyerStruct)).to.be.revertedWith(
         RevertReasons.ACCESS_DENIED
       );
+
+      // Grant PROTOCOL role to random user address
+      await accessController.grantRole(Role.PROTOCOL, rando.address);
+
+      //Attempt to issue voucher again as a random user
+      const balanceBefore = await bosonVoucher.balanceOf(buyer.address);
+      await bosonVoucher.connect(rando).issueVoucher(0, buyerStruct);
+      const balanceAfter = await bosonVoucher.balanceOf(buyer.address);
+
+      expect(balanceAfter.sub(balanceBefore)).eq(1);
     });
   });
 
@@ -177,7 +189,21 @@ describe("IBosonVoucher", function () {
     });
 
     it("should revert if caller does not have PROTOCOL role", async function () {
+      // Expect revert if random user attempts to burn voucher
       await expect(bosonVoucher.connect(rando).burnVoucher(0)).to.be.revertedWith(RevertReasons.ACCESS_DENIED);
+
+      // Grant PROTOCOL role to random user address
+      await accessController.grantRole(Role.PROTOCOL, rando.address);
+
+      // Prepare to burn voucher as a random user
+      await bosonVoucher.connect(protocol).issueVoucher(0, new Buyer(1, buyer.address, true).toStruct());
+      const balanceBefore = await bosonVoucher.balanceOf(buyer.address);
+
+      //Attempt to burn voucher as a random user
+      await bosonVoucher.connect(protocol).burnVoucher(0);
+      const balanceAfter = await bosonVoucher.balanceOf(buyer.address);
+
+      expect(balanceBefore.sub(balanceAfter)).eq(1);
     });
   });
 
