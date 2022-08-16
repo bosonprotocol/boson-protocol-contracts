@@ -102,7 +102,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
             group.offerIds.pop();
             // update the offer id index for the previous last offer id
             protocolLookups().offerIdIndexByGroup[groupId][offerIdLocationMoved] = index;
-            // remove index pointer for removed offerId 
+            // remove index pointer for removed offerId
             delete protocolLookups().offerIdIndexByGroup[groupId][offerId];
         }
 
