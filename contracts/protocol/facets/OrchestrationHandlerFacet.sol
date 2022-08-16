@@ -142,7 +142,7 @@ contract OrchestrationHandlerFacet is
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        Condition memory _condition,
+        Condition calldata _condition,
         uint256 _agentId
     ) public override offersNotPaused groupsNotPaused orchestrationNotPaused {
         // create offer and update structs values to represent true state
@@ -151,11 +151,11 @@ contract OrchestrationHandlerFacet is
         // construct new group
         // - groupid is 0, and it is ignored
         // - note that _offer fields are updated during createOfferInternal, so they represent correct values
-        Group memory _group = Group(0, _offer.sellerId, new uint256[](1), _condition);
+        Group memory _group = Group(0, _offer.sellerId, new uint256[](1));
         _group.offerIds[0] = _offer.id;
 
         // create group and update structs values to represent true state
-        createGroupInternal(_group);
+        createGroupInternal(_group, _condition);
     }
 
     /**
@@ -318,7 +318,7 @@ contract OrchestrationHandlerFacet is
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        Condition memory _condition,
+        Condition calldata _condition,
         Twin memory _twin,
         uint256 _agentId
     ) public override offersNotPaused groupsNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused {
@@ -391,7 +391,7 @@ contract OrchestrationHandlerFacet is
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        Condition memory _condition,
+        Condition calldata _condition,
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
@@ -542,7 +542,7 @@ contract OrchestrationHandlerFacet is
         OfferDates calldata _offerDates,
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
-        Condition memory _condition,
+        Condition calldata _condition,
         Twin memory _twin,
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,

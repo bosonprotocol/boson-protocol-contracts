@@ -431,6 +431,17 @@ abstract contract ProtocolBase is PausableBase {
     }
 
     /**
+     * @notice Fetches the Condition from storage by group id
+     *
+     * @param _groupId - the id of the group
+     * @return condition - the condition details. See {BosonTypes.Condition}
+     */
+    function fetchCondition(uint256 _groupId) internal view returns (BosonTypes.Condition storage condition) {
+        // Get the offerDates's slot
+        condition = protocolEntities().conditions[_groupId];
+    }
+
+    /**
      * @notice Fetches a given exchange from storage by id
      *
      * @param _exchangeId - the id of the exchange

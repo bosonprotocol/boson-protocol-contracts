@@ -26,8 +26,9 @@ interface IBosonGroupHandler is IBosonGroupEvents {
      * - number of offers exceeds maximum allowed number per group
      *
      * @param _group - the fully populated struct with group id set to 0x0
+     * @param _condition - the fully populated condition struct
      */
-    function createGroup(BosonTypes.Group memory _group) external;
+    function createGroup(BosonTypes.Group memory _group, BosonTypes.Condition calldata _condition) external;
 
     /**
      * @notice Adds offers to an existing group
@@ -90,8 +91,16 @@ interface IBosonGroupHandler is IBosonGroupEvents {
      * @param _groupId - the id of the group to check
      * @return exists - the group was found
      * @return group - the group details. See {BosonTypes.Group}
+     * @return condition - the group's condition details. See {BosonTypes.Condition}
      */
-    function getGroup(uint256 _groupId) external view returns (bool exists, BosonTypes.Group memory group);
+    function getGroup(uint256 _groupId)
+        external
+        view
+        returns (
+            bool exists,
+            BosonTypes.Group memory group,
+            BosonTypes.Condition memory condition
+        );
 
     /**
      * @notice Gets the next group id.

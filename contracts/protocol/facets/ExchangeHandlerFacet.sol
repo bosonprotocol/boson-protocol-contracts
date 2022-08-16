@@ -747,26 +747,26 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // For there to be a condition, there must be a group.
         (bool exists, uint256 groupId) = getGroupIdByOffer(_offer.id);
         if (exists) {
-            // Get the group
-            (, Group storage group) = fetchGroup(groupId);
+            // Get the condition
+            Condition storage condition = fetchCondition(groupId);
 
             // If a condition is set, investigate, otherwise all buyers are allowed
-            if (group.condition.method != EvaluationMethod.None) {
+            if (condition.method != EvaluationMethod.None) {
                 // How many times has this address committed to offers in the group?
                 uint256 commitCount = protocolLookups().conditionalCommitsByAddress[_buyer][groupId];
 
                 // Evaluate condition if buyer hasn't exhausted their allowable commits, otherwise disallow
-                if (commitCount < group.condition.maxCommits) {
+                if (commitCount < condition.maxCommits) {
                     // Buyer is allowed if they meet the group's condition
-                    allow = (group.condition.method == EvaluationMethod.Threshold)
-                        ? holdsThreshold(_buyer, group.condition)
-                        : holdsSpecificToken(_buyer, group.condition);
+                    allow = (condition.method == EvaluationMethod.Threshold)
+                        ? holdsThreshold(_buyer, condition)
+                        : holdsSpecificToken(_buyer, condition);
 
                     if (allow) {
                         // Increment number of commits to the group for this address if they are allowed to commit
                         protocolLookups().conditionalCommitsByAddress[_buyer][groupId] = ++commitCount;
                         // Store the condition to be returned afterward on getReceipt function
-                        protocolLookups().exchangeCondition[exchangeId] = group.condition;
+                        protocolLookups().exchangeCondition[exchangeId] = condition;
                     }
                 } else {
                     // Buyer has exhausted their allowable commits

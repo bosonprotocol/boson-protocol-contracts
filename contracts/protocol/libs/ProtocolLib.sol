@@ -94,6 +94,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.Agent) agents;
         // group id => group
         mapping(uint256 => BosonTypes.Group) groups;
+        // group id => condition
+        mapping(uint256 => BosonTypes.Condition) conditions;
         // bundle id => bundle
         mapping(uint256 => BosonTypes.Bundle) bundles;
         // twin id => twin
