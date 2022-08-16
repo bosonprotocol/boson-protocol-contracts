@@ -562,6 +562,19 @@ describe("IBosonOfferHandler", function () {
       });
 
       it("Should allow creation of an offer if DR has a sellerAllowList and seller is on it", async function () {
+        // Create new seller so sellerAllowList can have an entry
+        seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+
+        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+        allowedSellersToAdd = ["3"];
+        await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
+
+        // Attempt to Create an offer, expecting revert
+        await expect(
+          offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId)
+        ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
+
         // add seller to allow list
         allowedSellersToAdd = ["1"]; // existing seller is "1", DR is "2", new seller is "3"
         await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
@@ -1757,6 +1770,21 @@ describe("IBosonOfferHandler", function () {
       });
 
       it("Should allow creation of an offer if DR has a sellerAllowList and seller is on it", async function () {
+        // Create new seller so sellerAllowList can have an entry
+        seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+
+        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+        allowedSellersToAdd = ["3"];
+        await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
+
+        // Attempt to Create an offer, expecting revert
+        await expect(
+          offerHandler
+            .connect(operator)
+            .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
+        ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
+
         // add seller to allow list
         allowedSellersToAdd = ["1"]; // existing seller is "1", DR is "2", new seller is "3"
         await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
