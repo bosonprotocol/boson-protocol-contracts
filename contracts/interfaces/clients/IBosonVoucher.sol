@@ -78,7 +78,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      *
      * Reverts if:
      * - caller is not the owner.
-     * - `royaltyPercentage` is greater than 100%.
+     * - `royaltyPercentage` is greater than max royalty percentage defined in the protocol
      *
      * @param _newRoyaltyPercentage fee in percentage. e.g. 500 = 5%
      */
