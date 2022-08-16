@@ -8,21 +8,19 @@ const DisputeState = require("../../scripts/domain/DisputeState");
 describe("Dispute", function () {
   // Suite-wide scope
   let dispute, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let exchangeId, complaint, state, buyerPercent;
+  let exchangeId, state, buyerPercent;
 
   beforeEach(async function () {
     // Required constructor params
     exchangeId = "2112";
-    complaint = "complain text";
     state = DisputeState.Resolving;
     buyerPercent = "500";
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated Dispute instance", async function () {
-      dispute = new Dispute(exchangeId, complaint, state, buyerPercent);
+      dispute = new Dispute(exchangeId, state, buyerPercent);
       expect(dispute.exchangeIdIsValid()).is.true;
-      expect(dispute.complaintIsValid()).is.true;
       expect(dispute.stateIsValid()).is.true;
       expect(dispute.buyerPercentIsValid()).is.true;
       expect(dispute.isValid()).is.true;
@@ -32,7 +30,7 @@ describe("Dispute", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid dispute, then set fields in tests directly
-      dispute = new Dispute(exchangeId, complaint, state, buyerPercent);
+      dispute = new Dispute(exchangeId, state, buyerPercent);
       expect(dispute.isValid()).is.true;
     });
 
@@ -60,23 +58,6 @@ describe("Dispute", function () {
       // Valid field value
       dispute.exchangeId = "126";
       expect(dispute.exchangeIdIsValid()).is.true;
-      expect(dispute.isValid()).is.true;
-    });
-
-    it("Always present, complaint must be the string representation of a BigNumber", async function () {
-      // Invalid field value
-      dispute.complaint = null;
-      expect(dispute.complaintIsValid()).is.false;
-      expect(dispute.isValid()).is.false;
-
-      // Valid field value
-      dispute.complaint = "zedzdeadbaby";
-      expect(dispute.complaintIsValid()).is.true;
-      expect(dispute.isValid()).is.true;
-
-      // Valid field value
-      dispute.complaint = "126";
-      expect(dispute.complaintIsValid()).is.true;
       expect(dispute.isValid()).is.true;
     });
 
@@ -138,19 +119,18 @@ describe("Dispute", function () {
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid dispute, then set fields in tests directly
-      dispute = new Dispute(exchangeId, complaint, state, buyerPercent);
+      dispute = new Dispute(exchangeId, state, buyerPercent);
       expect(dispute.isValid()).is.true;
 
       // Get plain object
       object = {
         exchangeId,
-        complaint,
         state,
         buyerPercent,
       };
 
       // Struct representation
-      struct = [exchangeId, complaint, state, buyerPercent];
+      struct = [exchangeId, state, buyerPercent];
     });
 
     context("👉 Static", async function () {

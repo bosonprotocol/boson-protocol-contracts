@@ -835,7 +835,7 @@ describe("IBosonFundsHandler", function () {
             disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
 
             // raise the dispute
-            await disputeHandler.connect(buyer).raiseDispute(exchangeId, "Wrong size");
+            await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
             // retract from the dispute
             await disputeHandler.connect(buyer).retractDispute(exchangeId);
@@ -2427,7 +2427,7 @@ describe("IBosonFundsHandler", function () {
           await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
           // raise the dispute
-          tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId, "Wrong size");
+          tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
           // Get the block timestamp of the confirmed tx and set disputedDate
           blockNumber = tx.blockNumber;
@@ -2542,7 +2542,7 @@ describe("IBosonFundsHandler", function () {
               await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
               // raise the dispute
-              await disputeHandler.connect(buyer).raiseDispute(exchangeId, "Wrong size");
+              await disputeHandler.connect(buyer).raiseDispute(exchangeId);
             });
 
             it("should emit a FundsReleased event", async function () {
@@ -2717,7 +2717,7 @@ describe("IBosonFundsHandler", function () {
               await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
               // raise the dispute
-              tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId, "Wrong size");
+              tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
               // Get the block timestamp of the confirmed tx and set disputedDate
               blockNumber = tx.blockNumber;
@@ -2913,7 +2913,7 @@ describe("IBosonFundsHandler", function () {
               await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
               // raise the dispute
-              await disputeHandler.connect(buyer).raiseDispute(exchangeId, "Wrong size");
+              await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
               buyerPercent = "5566"; // 55.66%
 
@@ -3118,7 +3118,7 @@ describe("IBosonFundsHandler", function () {
               await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
               // raise the dispute
-              await disputeHandler.connect(buyer).raiseDispute(exchangeId, "Wrong size");
+              await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
               // escalate the dispute
               await mockToken.mint(buyer.address, buyerEscalationDeposit);
@@ -3299,7 +3299,7 @@ describe("IBosonFundsHandler", function () {
               await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
               // raise the dispute
-              await disputeHandler.connect(buyer).raiseDispute(exchangeId, "Wrong size");
+              await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
               buyerPercent = "5566"; // 55.66%
 
@@ -3501,7 +3501,7 @@ describe("IBosonFundsHandler", function () {
               await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
               // raise the dispute
-              tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId, "Wrong size");
+              tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
               // Get the block timestamp of the confirmed tx and set disputedDate
               blockNumber = tx.blockNumber;
@@ -3683,7 +3683,7 @@ describe("IBosonFundsHandler", function () {
                 await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
                 // raise the dispute
-                tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId, "Wrong size");
+                tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
                 // expected payoffs
                 // buyer: price + buyerEscalationDeposit
@@ -3851,7 +3851,7 @@ describe("IBosonFundsHandler", function () {
                 await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
                 // raise the dispute
-                await disputeHandler.connect(buyer).raiseDispute(exchangeId, "Wrong size");
+                await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
                 // expected payoffs
                 // buyer: price + buyerEscalationDeposit

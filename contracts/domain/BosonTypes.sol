@@ -179,7 +179,6 @@ contract BosonTypes {
 
     struct Dispute {
         uint256 exchangeId;
-        string complaint;
         DisputeState state;
         uint256 buyerPercent;
     }

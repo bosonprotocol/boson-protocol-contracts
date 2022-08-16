@@ -1857,13 +1857,7 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(
-                exchangeId,
-                ++exchange.buyerId,
-                sellerId,
-                "Twin transfer failed and buyer address is a contract",
-                testProtocolFunctions.address
-              );
+              .withArgs(exchangeId, ++exchange.buyerId, sellerId, testProtocolFunctions.address);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -2072,13 +2066,7 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(
-                exchange.id,
-                ++exchange.buyerId,
-                sellerId,
-                "Twin transfer failed and buyer address is a contract",
-                testProtocolFunctions.address
-              );
+              .withArgs(exchange.id, ++exchange.buyerId, sellerId, testProtocolFunctions.address);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -2212,13 +2200,7 @@ describe("IBosonExchangeHandler", function () {
             const tx = await testProtocolFunctions.redeem(++exchange.id);
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(
-                exchange.id,
-                ++exchange.buyerId,
-                sellerId,
-                "Twin transfer failed and buyer address is a contract",
-                testProtocolFunctions.address
-              );
+              .withArgs(exchange.id, ++exchange.buyerId, sellerId, testProtocolFunctions.address);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -2490,13 +2472,7 @@ describe("IBosonExchangeHandler", function () {
             const tx = await testProtocolFunctions.redeem(exchangeId);
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(
-                exchangeId,
-                ++exchange.buyerId,
-                sellerId,
-                "Twin transfer failed and buyer address is a contract",
-                testProtocolFunctions.address
-              );
+              .withArgs(exchangeId, ++exchange.buyerId, sellerId, testProtocolFunctions.address);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -2912,7 +2888,7 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
           // Raise a dispute on the exchange
-          await disputeHandler.connect(buyer).raiseDispute(exchange.id, "Tastes weird");
+          await disputeHandler.connect(buyer).raiseDispute(exchange.id);
         });
 
         it("should return false if exchange has a dispute in Disputed state", async function () {
@@ -3330,11 +3306,9 @@ describe("IBosonExchangeHandler", function () {
 
       context("Disputed was raised", async function () {
         let disputedDate;
-        let complaint;
         beforeEach(async function () {
-          complaint = "Tastes weird";
           // Raise a dispute on the exchange
-          const tx = await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+          const tx = await disputeHandler.connect(buyer).raiseDispute(exchange.id);
 
           // Get the block timestamp of the confirmed tx
           blockNumber = tx.blockNumber;
@@ -3366,7 +3340,7 @@ describe("IBosonExchangeHandler", function () {
           const receipt = await exchangeHandler.connect(buyer).getReceipt(exchange.id);
           const receiptObject = Receipt.fromStruct(receipt);
 
-          const expectedDispute = new Dispute(exchange.id, complaint, DisputeState.Retracted, "0");
+          const expectedDispute = new Dispute(exchange.id, DisputeState.Retracted, "0");
           expect(expectedDispute.isValid()).is.true;
 
           const expectedReceipt = new Receipt(
@@ -3431,7 +3405,7 @@ describe("IBosonExchangeHandler", function () {
           const receipt = await exchangeHandler.connect(buyer).getReceipt(exchange.id);
           const receiptObject = Receipt.fromStruct(receipt);
 
-          const expectedDispute = new Dispute(exchange.id, complaint, DisputeState.Retracted, "0");
+          const expectedDispute = new Dispute(exchange.id, DisputeState.Retracted, "0");
           expect(expectedDispute.isValid()).is.true;
 
           const expectedReceipt = new Receipt(
