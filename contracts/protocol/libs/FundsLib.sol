@@ -315,17 +315,17 @@ library FundsLib {
         // if availableFunds are totally emptied, the token address is removed from the seller's tokenList
         if (availableFunds == _amount) {
             uint256 len = pl.tokenList[_entityId].length;
+            // find token index in the tokenList
             uint256 index = pl.tokenIndexByAccount[_entityId][_tokenAddress];
-
-            // get the last token address in the list to move it to the current index
+            // temporary variable to store the last token address in the list
             address tokenLocationChanged = pl.tokenList[_entityId][len - 1];
             // replace token to be removed with the last token address
             pl.tokenList[_entityId][index] = tokenLocationChanged;
-            // remove last token address from the list as it is now located on the removed token index
+            // remove last token address from the list as it is now located in the index of the removed token
             pl.tokenList[_entityId].pop();
-            // update the token index for the previous last token address
+            // update the token index of the last token address
             pl.tokenIndexByAccount[_entityId][tokenLocationChanged] = index;
-            // remove index pointer for removed token
+            // delete index pointer for removed token
             delete pl.tokenIndexByAccount[_entityId][_tokenAddress];
         }
     }

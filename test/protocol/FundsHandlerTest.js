@@ -32,7 +32,7 @@ const {
 /**
  *  Test the Boson Funds Handler interface
  */
-describe.only("IBosonFundsHandler", function () {
+describe("IBosonFundsHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer,
@@ -480,7 +480,7 @@ describe.only("IBosonFundsHandler", function () {
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: offerNative.price });
       });
 
-      context.only("👉 withdrawFunds()", async function () {
+      context("👉 withdrawFunds()", async function () {
         beforeEach(async function () {
           // cancel the voucher, so both seller and buyer have something to withdraw
           await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
@@ -1651,7 +1651,7 @@ describe.only("IBosonFundsHandler", function () {
         ).to.eql(sellerDeposit, "Native currency seller available funds mismatch");
       });
 
-      it.only("if seller's available funds drop to 0, token should be removed from the tokenList", async function () {
+      it("if seller's available funds drop to 0, token should be removed from the tokenList", async function () {
         // seller's available funds
         let sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
         expect(sellersAvailableFunds.funds.length).to.eql(2, "Funds length mismatch");
