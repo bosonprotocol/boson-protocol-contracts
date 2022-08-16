@@ -24,3 +24,6 @@ node_modules
 
 # Test Coverage
 coverage*
+
+## addresses for test environment
+/addresses/31337*
