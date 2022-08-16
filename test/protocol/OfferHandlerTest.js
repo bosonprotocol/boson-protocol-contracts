@@ -3,18 +3,13 @@ const ethers = hre.ethers;
 const { expect } = require("chai");
 const { gasLimit } = require("../../environments");
 
-const Agent = require("../../scripts/domain/Agent");
 const Role = require("../../scripts/domain/Role");
-const Seller = require("../../scripts/domain/Seller");
-const AuthToken = require("../../scripts/domain/AuthToken");
-const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Offer = require("../../scripts/domain/Offer");
 const OfferDates = require("../../scripts/domain/OfferDates");
 const OfferDurations = require("../../scripts/domain/OfferDurations");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const DisputeResolutionTerms = require("../../scripts/domain/DisputeResolutionTerms");
 const OfferFees = require("../../scripts/domain/OfferFees");
-const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -24,7 +19,14 @@ const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-cl
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { applyPercentage } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
-const { mockOffer, mockDisputeResolver, mockAgent } = require("../utils/mock");
+const {
+  mockOffer,
+  mockDisputeResolver,
+  mockAgent,
+  mockSeller,
+  mockVoucherInitValues,
+  mockAuthToken,
+} = require("../utils/mock");
 /**
  *  Test the Boson Offer Handler interface
  */
@@ -43,7 +45,7 @@ describe("IBosonOfferHandler", function () {
     key,
     value;
   let offer, nextOfferId, invalidOfferId, support, expected, exists, nextAccountId;
-  let seller, active;
+  let seller;
   let id, sellerId, price, voided;
   let validFrom,
     validUntil,
@@ -74,9 +76,9 @@ describe("IBosonOfferHandler", function () {
     disputeResolutionTermsStructs,
     disputeResolutionTermsList;
   let DRFeeNative, DRFeeToken;
-  let voucherInitValues, contractURI, royaltyPercentage;
+  let voucherInitValues;
   let emptyAuthToken;
-  let agent, agentId, agentFeePercentage, nonZeroAgentIds;
+  let agent, agentId, nonZeroAgentIds;
   let sellerAllowList, allowedSellersToAdd;
 
   before(async function () {
@@ -191,7 +193,7 @@ describe("IBosonOfferHandler", function () {
         support = await erc165.supportsInterface(InterfaceIds.IBosonOfferHandler);
 
         // Test
-        await expect(support, "IBosonOfferHandler interface not supported").is.true;
+        expect(support, "IBosonOfferHandler interface not supported").is.true;
       });
     });
   });
@@ -203,25 +205,21 @@ describe("IBosonOfferHandler", function () {
       // Required constructor params
       id = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
 
-      active = true;
-
       // Create a valid seller, then set fields in tests directly
-      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
+      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
-      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      royaltyPercentage = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      voucherInitValues = mockVoucherInitValues();
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
-      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      emptyAuthToken = mockAuthToken();
       expect(emptyAuthToken.isValid()).is.true;
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver(
+      disputeResolver = mockDisputeResolver(
         operatorDR.address,
         adminDR.address,
         clerkDR.address,
@@ -688,13 +686,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
-          disputeResolver = await mockDisputeResolver(
-            rando.address,
-            rando.address,
-            rando.address,
-            rando.address,
-            false
-          );
+          disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
           await accountHandler
             .connect(rando)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -729,13 +721,7 @@ describe("IBosonOfferHandler", function () {
 
         it("For absolute zero offer, specified dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
-          disputeResolver = await mockDisputeResolver(
-            rando.address,
-            rando.address,
-            rando.address,
-            rando.address,
-            false
-          );
+          disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
           await accountHandler
             .connect(rando)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -760,7 +746,7 @@ describe("IBosonOfferHandler", function () {
 
         it("Seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
-          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
@@ -788,6 +774,7 @@ describe("IBosonOfferHandler", function () {
         beforeEach(async function () {
           // Create a valid agent, then set fields in tests directly
           agent = mockAgent(other.address);
+          agent.id = "3";
           agentId = agent.id;
           expect(agent.isValid()).is.true;
 
@@ -901,14 +888,10 @@ describe("IBosonOfferHandler", function () {
           });
 
           it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
-            // Create new agent
-            let id = "4"; // argument sent to contract for createAgent will be ignored
-            agentFeePercentage = "3000"; //30%
-
-            active = true;
-
             // Create a valid agent, then set fields in tests directly
-            agent = new Agent(id, agentFeePercentage, operator.address, active);
+            agent = mockAgent(operator.address);
+            agent.id = "4";
+            agent.feePercentage = "3000"; //30%
             expect(agent.isValid()).is.true;
 
             // Create an agent
@@ -988,10 +971,10 @@ describe("IBosonOfferHandler", function () {
 
           // caller is an operator of another seller
           // Create a valid seller, then set fields in tests directly
-          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
 
           // AuthToken
-          emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+          emptyAuthToken = mockAuthToken();
           expect(emptyAuthToken.isValid()).is.true;
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
@@ -1075,10 +1058,10 @@ describe("IBosonOfferHandler", function () {
 
           // caller is an operator of another seller
           // Create a valid seller, then set fields in tests directly
-          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
 
           // AuthToken
-          emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+          emptyAuthToken = mockAuthToken();
           expect(emptyAuthToken.isValid()).is.true;
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
@@ -1301,25 +1284,21 @@ describe("IBosonOfferHandler", function () {
       // Required constructor params
       id = sellerId = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
 
-      active = true;
-
       // Create a valid seller, then set fields in tests directly
-      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
+      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
-      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      royaltyPercentage = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      voucherInitValues = mockVoucherInitValues();
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
-      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      emptyAuthToken = mockAuthToken();
       expect(emptyAuthToken.isValid()).is.true;
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver(
+      disputeResolver = mockDisputeResolver(
         operatorDR.address,
         adminDR.address,
         clerkDR.address,
@@ -1932,13 +1911,7 @@ describe("IBosonOfferHandler", function () {
 
         it("For some offer, dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
-          disputeResolver = await mockDisputeResolver(
-            rando.address,
-            rando.address,
-            rando.address,
-            rando.address,
-            false
-          );
+          disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
           await accountHandler
             .connect(rando)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -1979,13 +1952,7 @@ describe("IBosonOfferHandler", function () {
 
         it("For some absolute zero offer, specified dispute resolver is not active", async function () {
           // create another dispute resolver, but don't activate it
-          disputeResolver = await mockDisputeResolver(
-            rando.address,
-            rando.address,
-            rando.address,
-            rando.address,
-            false
-          );
+          disputeResolver = mockDisputeResolver(rando.address, rando.address, rando.address, rando.address, false);
           await accountHandler
             .connect(rando)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -2014,7 +1981,7 @@ describe("IBosonOfferHandler", function () {
 
         it("For some offer seller is not on dispute resolver's seller allow list", async function () {
           // Create new seller so sellerAllowList can have an entry
-          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
@@ -2116,9 +2083,8 @@ describe("IBosonOfferHandler", function () {
           offerFeesStructs = [];
 
           // Create an agent: Required constructor params
-          agentFeePercentage = "500"; //5%
-          active = true;
-          agent = new Agent(agentId, agentFeePercentage, other.address, active);
+          agent = mockAgent(other.address);
+          agent.id = agentId;
           expect(agent.isValid()).is.true;
           // Create a valid agent
           await accountHandler.connect(rando).createAgent(agent);
@@ -2134,7 +2100,7 @@ describe("IBosonOfferHandler", function () {
             } else {
               protocolFee = applyPercentage(offers[i].price, protocolFeePercentage);
             }
-            let agentFee = ethers.BigNumber.from(offers[i].price).mul(agentFeePercentage).div("10000").toString();
+            let agentFee = ethers.BigNumber.from(offers[i].price).mul(agent.feePercentage).div("10000").toString();
             offerFees = new OfferFees(protocolFee, agentFee);
 
             offerFeesList.push(offerFees);
@@ -2235,12 +2201,11 @@ describe("IBosonOfferHandler", function () {
           it("Sum of Agent fee amount and protocol fee amount should be <= than the offer fee limit", async function () {
             // Create new agent
             let id = "4"; // argument sent to contract for createAgent will be ignored
-            agentFeePercentage = "3000"; //30%
-
-            active = true;
 
             // Create a valid agent, then set fields in tests directly
-            agent = new Agent(id, agentFeePercentage, operator.address, active);
+            agent = mockAgent(operator.address);
+            agent.id = id;
+            agent.feePercentage = "3000"; // 30%
             expect(agent.isValid()).is.true;
 
             // Create an agent
@@ -2276,8 +2241,8 @@ describe("IBosonOfferHandler", function () {
       });
 
       it("should emit OfferVoided events", async function () {
-        // call getOffer with offerId to check the seller id in the event
         [, offerStruct] = await offerHandler.getOffer(offersToVoid[0]);
+        // call getOffer with offerId to check the seller id in the event
 
         // Void offers, testing for the event
         const tx = await offerHandler.connect(operator).voidOfferBatch(offersToVoid);
@@ -2346,10 +2311,10 @@ describe("IBosonOfferHandler", function () {
           );
 
           // caller is an operator of another seller
-          seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, active);
+          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
 
           // AuthToken
-          emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+          emptyAuthToken = mockAuthToken();
           expect(emptyAuthToken.isValid()).is.true;
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -2467,10 +2432,10 @@ describe("IBosonOfferHandler", function () {
           );
 
           // caller is an operator of another seller
-          seller = new Seller(sellerId, rando.address, rando.address, rando.address, rando.address, active);
+          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
 
           // AuthToken
-          emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+          emptyAuthToken = mockAuthToken();
           expect(emptyAuthToken.isValid()).is.true;
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 

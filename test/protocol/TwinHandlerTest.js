@@ -4,12 +4,8 @@ const { expect, assert } = require("chai");
 const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
-const Seller = require("../../scripts/domain/Seller");
-const AuthToken = require("../../scripts/domain/AuthToken");
-const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
-const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -17,7 +13,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { mockTwin } = require("../utils/mock");
+const { mockSeller, mockTwin, mockAuthToken, mockVoucherInitValues } = require("../utils/mock");
 const TokenType = require("../../scripts/domain/TokenType.js");
 const { oneMonth } = require("../utils/constants");
 
@@ -28,7 +24,7 @@ describe("IBosonTwinHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer, rando, operator, admin, clerk, treasury;
-  let seller, active;
+  let seller;
   let erc165,
     protocolDiamond,
     accessController,
@@ -51,7 +47,7 @@ describe("IBosonTwinHandler", function () {
     sellerId;
   let bundleId, offerIds, twinIds, bundle;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
-  let voucherInitValues, contractURI, royaltyPercentage;
+  let voucherInitValues;
   let emptyAuthToken;
 
   before(async function () {
@@ -139,7 +135,7 @@ describe("IBosonTwinHandler", function () {
         support = await erc165.supportsInterface(InterfaceIds.IBosonTwinHandler);
 
         // Test
-        await expect(support, "IBosonTwinHandler interface not supported").is.true;
+        expect(support, "IBosonTwinHandler interface not supported").is.true;
       });
     });
   });
@@ -150,20 +146,17 @@ describe("IBosonTwinHandler", function () {
       // create a seller
       // Required constructor params
       id = "1"; // argument sent to contract for createSeller will be ignored
-      active = true;
 
       // Create a valid seller, then set fields in tests directly
-      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
+      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
-      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      royaltyPercentage = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      voucherInitValues = mockVoucherInitValues();
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
-      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      emptyAuthToken = mockAuthToken();
       expect(emptyAuthToken.isValid()).is.true;
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
@@ -519,11 +512,11 @@ describe("IBosonTwinHandler", function () {
     context("👉 getNextTwinId()", async function () {
       beforeEach(async function () {
         // Create another valid seller.
-        seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+        seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
         expect(seller.isValid()).is.true;
 
         // AuthToken
-        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        emptyAuthToken = mockAuthToken();
         expect(emptyAuthToken.isValid()).is.true;
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 

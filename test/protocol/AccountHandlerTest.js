@@ -3,20 +3,21 @@ const ethers = hre.ethers;
 const { expect } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
-const Seller = require("../../scripts/domain/Seller");
-const Buyer = require("../../scripts/domain/Buyer");
-const DisputeResolver = require("../../scripts/domain/DisputeResolver");
-const Agent = require("../../scripts/domain/Agent");
-const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
-const AuthToken = require("../../scripts/domain/AuthToken");
-const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { oneMonth } = require("../utils/constants");
+const {
+  mockDisputeResolver,
+  mockBuyer,
+  mockVoucherInitValues,
+  mockSeller,
+  mockAuthToken,
+  mockAgent,
+} = require("../utils/mock");
 
 /**
  *  Test the Boson Account Handler interface
@@ -26,21 +27,21 @@ describe("IBosonAccountHandler", function () {
   let InterfaceIds;
   let deployer, rando, operator, admin, clerk, treasury, other1, other2, other3;
   let erc165, protocolDiamond, accessController, accountHandler, gasLimit;
-  let seller, active;
+  let seller;
   let emptyAuthToken;
   let buyer;
   let disputeResolver;
   let disputeResolverFees;
   let sellerAllowList;
-  let metadataUriDR;
-  let agent, feePercentage;
+  let agent;
   let expected, nextAccountId;
-  let support, id;
+  let support;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
-  let voucherInitValues, contractURI, royaltyPercentage;
+  let voucherInitValues;
 
   before(async function () {
     // get interface Ids
+
     InterfaceIds = await getInterfaceIds();
   });
 
@@ -137,42 +138,24 @@ describe("IBosonAccountHandler", function () {
       // The first seller id
       nextAccountId = "1";
 
-      // Required constructor params
-      id = "1"; // argument sent to contract for createSeller will be ignored
-      active = true;
-
       // Create a valid seller, then set fields in tests directly
-      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
+      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
-      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      royaltyPercentage = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      voucherInitValues = mockVoucherInitValues();
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
-      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      emptyAuthToken = mockAuthToken();
       expect(emptyAuthToken.isValid()).is.true;
 
       // Create a valid buyer
-      buyer = new Buyer(id, other1.address, active);
+      buyer = mockBuyer(other1.address);
       expect(buyer.isValid()).is.true;
 
-      //Dispute Resolver metadata URI
-      metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
-
       // Create a valid dispute resolver
-      disputeResolver = new DisputeResolver(
-        id,
-        oneMonth.toString(),
-        operator.address,
-        admin.address,
-        clerk.address,
-        treasury.address,
-        metadataUriDR,
-        active
-      );
+      disputeResolver = mockDisputeResolver(operator.address, admin.address, clerk.address, treasury.address);
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array
@@ -185,24 +168,22 @@ describe("IBosonAccountHandler", function () {
       // Make a sellerAllowList
       sellerAllowList = ["1"];
 
-      feePercentage = "500"; //5%
-
       // Create a valid agent, then set fields in tests directly
-      agent = new Agent(id, feePercentage, other1.address, active);
+      agent = mockAgent(other1.address);
       expect(agent.isValid()).is.true;
     });
 
     context("👉 getNextAccountId()", async function () {
       beforeEach(async function () {
         // AuthToken
-        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        emptyAuthToken = mockAuthToken();
         expect(emptyAuthToken.isValid()).is.true;
 
         // Create a seller
         await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-        // id of the current seller and increment nextAccountId
-        id = nextAccountId++;
+        // increment nextAccountId
+        nextAccountId++;
       });
 
       it("should return the next account id", async function () {

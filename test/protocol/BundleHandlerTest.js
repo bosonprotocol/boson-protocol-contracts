@@ -4,12 +4,8 @@ const { expect, assert } = require("chai");
 const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
-const Seller = require("../../scripts/domain/Seller");
 const Bundle = require("../../scripts/domain/Bundle");
-const AuthToken = require("../../scripts/domain/AuthToken");
-const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
-const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -18,7 +14,14 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { mockOffer, mockTwin, mockDisputeResolver } = require("../utils/mock");
+const {
+  mockOffer,
+  mockTwin,
+  mockDisputeResolver,
+  mockSeller,
+  mockVoucherInitValues,
+  mockAuthToken,
+} = require("../utils/mock");
 const { oneMonth } = require("../utils/constants");
 
 /**
@@ -39,13 +42,12 @@ describe("IBosonBundleHandler", function () {
     bosonToken,
     twin,
     support,
-    id,
     sellerId,
     key,
     value,
     invalidTwinId;
   let offerHandler, bundleHandlerFacet_Factory;
-  let seller, active, nextAccountId;
+  let seller, nextAccountId;
   let bundleStruct;
   let bundle, bundleId, offerIds, twinId, twinIds, nextBundleId, invalidBundleId, bundleInstance;
   let offer, exists, expected;
@@ -53,7 +55,7 @@ describe("IBosonBundleHandler", function () {
   let offerDates, offerDurations;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let disputeResolver, disputeResolverFees, disputeResolverId;
-  let voucherInitValues, contractURI, royaltyPercentage;
+  let voucherInitValues;
   let emptyAuthToken;
   let agentId;
 
@@ -172,7 +174,7 @@ describe("IBosonBundleHandler", function () {
         support = await erc165.supportsInterface(InterfaceIds.IBosonBundleHandler);
 
         // Test
-        await expect(support, "IBosonBundleHandler interface not supported").is.true;
+        expect(support, "IBosonBundleHandler interface not supported").is.true;
       });
     });
   });
@@ -182,36 +184,34 @@ describe("IBosonBundleHandler", function () {
     beforeEach(async function () {
       // create a seller
       // Required constructor params
-      id = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
-      active = true;
+      nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller, then set fields in tests directly
-      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
+      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
-      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      royaltyPercentage = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      voucherInitValues = mockVoucherInitValues();
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthTokens
-      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      emptyAuthToken = mockAuthToken();
       expect(emptyAuthToken.isValid()).is.true;
 
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-      id = ++nextAccountId;
+      ++nextAccountId;
 
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver(
+      disputeResolver = mockDisputeResolver(
         operatorDR.address,
         adminDR.address,
         clerkDR.address,
         treasuryDR.address,
         false
       );
+      disputeResolver.id = nextAccountId.toString();
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
@@ -222,7 +222,7 @@ describe("IBosonBundleHandler", function () {
 
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(id);
+      await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // create 5 twins
       for (let i = 0; i < 5; i++) {
@@ -377,7 +377,7 @@ describe("IBosonBundleHandler", function () {
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
           let expectedNewOfferId = "6";
-          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           const tx = await offerHandler
@@ -417,7 +417,7 @@ describe("IBosonBundleHandler", function () {
         it("Caller is not the seller of all twins", async function () {
           // create another seller and a twin
           let expectedNewTwinId = "6";
-          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           await bosonToken.connect(rando).approve(twinHandler.address, 1); // approving the twin handler
@@ -575,8 +575,8 @@ describe("IBosonBundleHandler", function () {
         // Create a bundle
         await bundleHandler.connect(operator).createBundle(bundle);
 
-        // id of the current bundle and increment nextBundleId
-        id = nextBundleId++;
+        // increment nextBundleId
+        nextBundleId++;
       });
 
       it("should return true for exists if bundle is found", async function () {
@@ -612,8 +612,8 @@ describe("IBosonBundleHandler", function () {
         // Create a bundle
         await bundleHandler.connect(operator).createBundle(bundle);
 
-        // id of the current bundle and increment nextBundleId
-        id = nextBundleId++;
+        // increment nextBundleId
+        nextBundleId++;
       });
 
       it("should return the next bundle id", async function () {
