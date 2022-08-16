@@ -1602,6 +1602,21 @@ describe("SellerHandler", function () {
           .withArgs(seller.id, sellerStruct, emptyAuthTokenStruct, admin.address);
       });
 
+      it("should be possible to use the same address for operator, admin, clerk, and treasury", async function () {
+        seller.operator = other1.address;
+        seller.admin = other1.address;
+        seller.clerk = other1.address;
+        seller.treasury = other1.address;
+
+        //Create struct again with new addresses
+        sellerStruct = seller.toStruct();
+
+        // Create a seller, testing for the event
+        await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
+          .to.emit(accountHandler, "SellerUpdated")
+          .withArgs(seller.id, sellerStruct, emptyAuthTokenStruct, admin.address);
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The sellers region of protocol is paused", async function () {
           // Pause the sellers region of the protocol
