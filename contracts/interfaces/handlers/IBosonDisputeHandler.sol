@@ -19,6 +19,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * Emits a DisputeRaised event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - caller does not hold a voucher for the given exchange id
      * - exchange does not exist
      * - exchange is not in a redeemed state
@@ -36,6 +37,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * Emits a DisputeRetracted event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - caller is not the buyer for the given exchange id
@@ -53,6 +55,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * Emits a DisputeTimeoutExtened event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - caller is not the seller
@@ -71,6 +74,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * Emits a DisputeExpired event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - dispute is still valid
@@ -86,6 +90,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * Emits a DisputeExpired event for every dispute if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - Number of disputes exceeds maximum allowed number per batch
      * - for any dispute:
      *   - exchange does not exist
@@ -103,6 +108,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * Emits a DisputeResolved event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - specified buyer percent exceeds 100%
      * - dispute has expired (resolution period has ended and dispute was not escalated)
      * - exchange does not exist
@@ -132,6 +138,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * Emits a DisputeEscalated event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - caller is not the buyer
@@ -153,6 +160,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * Emits a DisputeDecided event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - specified buyer percent exceeds 100%
      * - exchange does not exist
      * - exchange is not in the disputed state
@@ -171,6 +179,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * Emits a EscalatedDisputeRefused event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - dispute is in some state other than escalated
@@ -187,6 +196,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * Emits a EscalatedDisputeExpired event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - dispute is in some state other than escalated

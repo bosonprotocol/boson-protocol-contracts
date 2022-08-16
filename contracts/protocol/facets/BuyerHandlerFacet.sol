@@ -21,13 +21,14 @@ contract BuyerHandlerFacet is BuyerBase {
      * Emits an BuyerCreated event if successful.
      *
      * Reverts if:
+     * - The buyers region of protocol is paused
      * - Wallet address is zero address
      * - Active is not true
      * - Wallet address is not unique to this buyer
      *
      * @param _buyer - the fully populated struct with buyer id set to 0x0
      */
-    function createBuyer(Buyer memory _buyer) external {
+    function createBuyer(Buyer memory _buyer) external buyersNotPaused {
         createBuyerInternal(_buyer);
     }
 
@@ -39,6 +40,7 @@ contract BuyerHandlerFacet is BuyerBase {
      * Emits a BuyerUpdated event if successful.
      *
      * Reverts if:
+     * - The buyers region of protocol is paused
      * - Caller is not the wallet address associated with the buyer account
      * - Wallet address is zero address
      * - Address is not unique to this buyer
@@ -47,7 +49,7 @@ contract BuyerHandlerFacet is BuyerBase {
      *
      * @param _buyer - the fully populated buyer struct
      */
-    function updateBuyer(Buyer memory _buyer) external {
+    function updateBuyer(Buyer memory _buyer) external buyersNotPaused {
         //Check for zero address
         require(_buyer.wallet != address(0), INVALID_ADDRESS);
 

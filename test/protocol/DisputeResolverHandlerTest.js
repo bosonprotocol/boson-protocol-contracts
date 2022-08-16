@@ -5,6 +5,7 @@ const { expect, assert } = require("chai");
 const Role = require("../../scripts/domain/Role");
 const DisputeResolver = require("../../scripts/domain/DisputeResolver");
 const { DisputeResolverFee, DisputeResolverFeeList } = require("../../scripts/domain/DisputeResolverFee");
+const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
@@ -19,8 +20,8 @@ const { mockSeller, mockDisputeResolver, mockVoucherInitValues, mockAuthToken } 
  */
 describe("DisputeResolverHandler", function () {
   // Common vars
-  let deployer, rando, operator, admin, clerk, treasury, other1, other2, other3, other4, other5, protocolAdmin;
-  let protocolDiamond, accessController, accountHandler, configHandler, gasLimit;
+  let deployer, pauser, rando, operator, admin, clerk, treasury, other1, other2, other3, other4, other5, protocolAdmin;
+  let protocolDiamond, accessController, accountHandler, configHandler, pauseHandler, gasLimit;
   let seller, seller2, id2;
   let emptyAuthToken;
   let disputeResolver,
@@ -91,7 +92,7 @@ describe("DisputeResolverHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, other1, other2, other3, other4, other5, protocolAdmin] =
+    [deployer, pauser, operator, admin, clerk, treasury, rando, other1, other2, other3, other4, other5, protocolAdmin] =
       await ethers.getSigners();
 
     // Deploy the Protocol Diamond
@@ -107,11 +108,15 @@ describe("DisputeResolverHandler", function () {
     //This ADMIN role is a protocol-level role. It is not the same an admin address for an account type
     await accessController.grantRole(Role.ADMIN, protocolAdmin.address);
 
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
+
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
       "AccountHandlerFacet",
       "SellerHandlerFacet",
       "DisputeResolverHandlerFacet",
+      "PauseHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -163,6 +168,9 @@ describe("DisputeResolverHandler", function () {
 
     //Cast Diamond to IBosonConfigHancler
     configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonPauseHandler
+    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
   });
 
   // All supported Dispute Resolver methods
@@ -472,6 +480,16 @@ describe("DisputeResolverHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The dispute resolvers region of protocol is paused", async function () {
+          // Pause the dispute resolvers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.DisputeResolvers]);
+
+          // Attempt to create a dispute resolver, expecting revert
+          await expect(
+            accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Any address is the zero address", async function () {
           disputeResolver.operator = ethers.constants.AddressZero;
 
@@ -1096,6 +1114,16 @@ describe("DisputeResolverHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The dispute resolvers region of protocol is paused", async function () {
+          // Pause the dispute resolvers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.DisputeResolvers]);
+
+          // Attempt to update a dispute resolver, expecting revert
+          await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
+
         it("Dispute resolver does not exist", async function () {
           // Set invalid id
           disputeResolver.id = "444";
@@ -1332,6 +1360,21 @@ describe("DisputeResolverHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The dispute resolvers region of protocol is paused", async function () {
+          const disputeResolverFeesToAdd = [
+            new DisputeResolverFee(other4.address, "MockToken4", "400"),
+            new DisputeResolverFee(other5.address, "MockToken5", "500"),
+          ];
+
+          // Pause the dispute resolvers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.DisputeResolvers]);
+
+          // Attempt to add dispute resolver fees, expecting revert
+          await expect(
+            accountHandler.connect(admin).addFeesToDisputeResolver(disputeResolver.id, disputeResolverFeesToAdd)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Dispute resolver does not exist", async function () {
           // Set invalid id
           disputeResolver.id = "444";
@@ -1490,6 +1533,17 @@ describe("DisputeResolverHandler", function () {
         beforeEach(async function () {
           feeTokenAddressesToRemove = [other1.address, other2.address, other3.address];
         });
+
+        it("The dispute resolvers region of protocol is paused", async function () {
+          // Pause the dispute resolvers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.DisputeResolvers]);
+
+          // Attempt to remove dispute resolver fees, expecting revert
+          await expect(
+            accountHandler.connect(admin).removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Dispute resolver does not exist", async function () {
           // Set invalid id
           disputeResolver.id = "444";
@@ -1575,7 +1629,7 @@ describe("DisputeResolverHandler", function () {
 
       it("should emit an AllowedSellersAdded event", async function () {
         // add sellers, test for event
-        expect(await accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd))
+        await expect(accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd))
           .to.emit(accountHandler, "AllowedSellersAdded")
           .withArgs(disputeResolver.id, allowedSellersToAdd, admin.address);
       });
@@ -1619,6 +1673,16 @@ describe("DisputeResolverHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The dispute resolvers region of protocol is paused", async function () {
+          // Pause the dispute resolvers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.DisputeResolvers]);
+
+          // Attempt to add sellers to a dispute resolver allow list, expecting revert
+          await expect(
+            accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, allowedSellersToAdd)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Dispute resolver does not exist", async function () {
           // Set invalid id
           disputeResolver.id = "444";
@@ -1810,6 +1874,16 @@ describe("DisputeResolverHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The dispute resolvers region of protocol is paused", async function () {
+          // Pause the dispute resolvers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.DisputeResolvers]);
+
+          // Attempt to remove sellers from a dispute resolver allow list, expecting revert
+          await expect(
+            accountHandler.connect(admin).removeSellersFromAllowList(disputeResolver.id, allowedSellersToRemove)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Dispute resolver does not exist", async function () {
           // Set invalid id
           disputeResolver.id = "444";
@@ -1922,6 +1996,16 @@ describe("DisputeResolverHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The dispute resolvers region of protocol is paused", async function () {
+          // Pause the dispute resolvers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.DisputeResolvers]);
+
+          // Attempt to activate a dispute resolver, expecting revert
+          await expect(
+            accountHandler.connect(protocolAdmin).activateDisputeResolver(disputeResolver.id)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Dispute resolver does not exist", async function () {
           // Set invalid id
           disputeResolver.id = "444";

@@ -26,6 +26,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      * Emits a TwinCreated event if successful.
      *
      * Reverts if:
+     * - The twins region of protocol is paused
      * - seller does not exist
      * - Not approved to transfer the seller's token
      * - supplyAvailable is zero
@@ -35,30 +36,8 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
      */
-    function createTwin(Twin memory _twin) external override {
+    function createTwin(Twin memory _twin) external override twinsNotPaused {
         createTwinInternal(_twin);
-    }
-
-    /**
-     * @notice Gets the details about a given twin.
-     *
-     * @param _twinId - the id of the twin to check
-     * @return exists - the twin was found
-     * @return twin - the twin details. See {BosonTypes.Twin}
-     */
-    function getTwin(uint256 _twinId) external view override returns (bool exists, Twin memory twin) {
-        return fetchTwin(_twinId);
-    }
-
-    /**
-     * @notice Gets the next twin id.
-     *
-     * Does not increment the counter.
-     *
-     * @return nextTwinId - the next twin id
-     */
-    function getNextTwinId() public view override returns (uint256 nextTwinId) {
-        nextTwinId = protocolCounters().nextTwinId;
     }
 
     /**
@@ -67,13 +46,14 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      * Emits a TwinDeleted event if successful.
      *
      * Reverts if:
+     * - The twins region of protocol is paused
      * - caller is not the seller.
      * - Twin does not exist.
      * - Bundle for twin exists
      *
      * @param _twinId - the id of the twin to check.
      */
-    function removeTwin(uint256 _twinId) external override {
+    function removeTwin(uint256 _twinId) external override twinsNotPaused {
         // Get storage location for twin
         (bool exists, Twin memory twin) = fetchTwin(_twinId);
         require(exists, NO_SUCH_TWIN);
@@ -102,6 +82,29 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
             }
         }
 
+        // Notify watchers of state change
         emit TwinDeleted(_twinId, twin.sellerId, msgSender());
+    }
+
+    /**
+     * @notice Gets the details about a given twin.
+     *
+     * @param _twinId - the id of the twin to check
+     * @return exists - the twin was found
+     * @return twin - the twin details. See {BosonTypes.Twin}
+     */
+    function getTwin(uint256 _twinId) external view override returns (bool exists, Twin memory twin) {
+        return fetchTwin(_twinId);
+    }
+
+    /**
+     * @notice Gets the next twin id.
+     *
+     * Does not increment the counter.
+     *
+     * @return nextTwinId - the next twin id
+     */
+    function getNextTwinId() public view override returns (uint256 nextTwinId) {
+        nextTwinId = protocolCounters().nextTwinId;
     }
 }

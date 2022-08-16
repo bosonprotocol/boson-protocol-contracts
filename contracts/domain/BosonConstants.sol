@@ -3,10 +3,18 @@ pragma solidity ^0.8.0;
 
 // Access Control Roles
 bytes32 constant ADMIN = keccak256("ADMIN"); // Role Admin
+bytes32 constant PAUSER = keccak256("PAUSER"); // Role for pausing the protocl
 bytes32 constant PROTOCOL = keccak256("PROTOCOL"); // Role for facets of the ProtocolDiamond
 bytes32 constant CLIENT = keccak256("CLIENT"); // Role for clients of the ProtocolDiamond
 bytes32 constant UPGRADER = keccak256("UPGRADER"); // Role for performing contract and config upgrades
 bytes32 constant FEE_COLLECTOR = keccak256("FEE_COLLECTOR"); // Role for collecting fees from the protocol
+
+// Revert Reasons: Pause related
+string constant NO_REGIONS_SPECIFIED = "Must specify at least one region to pause";
+string constant REGION_DUPLICATED = "A region may only be specified once";
+string constant ALREADY_PAUSED = "Protocol is already paused";
+string constant NOT_PAUSED = "Protocol is not currently paused";
+string constant REGION_PAUSED = "This region of the protocol is currently paused";
 
 // Revert Reasons: General
 string constant INVALID_ADDRESS = "Invalid address";
