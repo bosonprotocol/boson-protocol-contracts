@@ -311,7 +311,7 @@ describe("IBosonDisputeHandler", function () {
           // Raise a dispute, testing for the event
           await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId))
             .to.emit(disputeHandler, "DisputeRaised")
-            .withArgs(exchangeId, buyerId, sellerId, buyer.address);
+            .withArgs(exchangeId, buyerId, seller.id, buyer.address);
         });
 
         it("should update state", async function () {

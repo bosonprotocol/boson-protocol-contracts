@@ -3304,11 +3304,9 @@ describe("IBosonExchangeHandler", function () {
 
       context("Disputed was raised", async function () {
         let disputedDate;
-        let complaint;
         beforeEach(async function () {
-          complaint = "Tastes weird";
           // Raise a dispute on the exchange
-          const tx = await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+          const tx = await disputeHandler.connect(buyer).raiseDispute(exchange.id);
 
           // Get the block timestamp of the confirmed tx
           blockNumber = tx.blockNumber;
@@ -3340,7 +3338,7 @@ describe("IBosonExchangeHandler", function () {
           const receipt = await exchangeHandler.connect(buyer).getReceipt(exchange.id);
           const receiptObject = Receipt.fromStruct(receipt);
 
-          const expectedDispute = new Dispute(exchange.id, complaint, DisputeState.Retracted, "0");
+          const expectedDispute = new Dispute(exchange.id, DisputeState.Retracted, "0");
           expect(expectedDispute.isValid()).is.true;
 
           const expectedReceipt = new Receipt(
@@ -3405,7 +3403,7 @@ describe("IBosonExchangeHandler", function () {
           const receipt = await exchangeHandler.connect(buyer).getReceipt(exchange.id);
           const receiptObject = Receipt.fromStruct(receipt);
 
-          const expectedDispute = new Dispute(exchange.id, complaint, DisputeState.Retracted, "0");
+          const expectedDispute = new Dispute(exchange.id, DisputeState.Retracted, "0");
           expect(expectedDispute.isValid()).is.true;
 
           const expectedReceipt = new Receipt(
