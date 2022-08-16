@@ -1113,6 +1113,22 @@ describe("DisputeResolverHandler", function () {
           .withArgs(disputeResolver.id, expectedDisputeResolverStruct, admin.address);
       });
 
+      it("should be possible to use the same address for operator, admin, clerk, and treasury", async function () {
+        // Update dispute resolver fields
+        disputeResolver.operator = other1.address;
+        disputeResolver.admin = other1.address;
+        disputeResolver.clerk = other1.address;
+        disputeResolver.treasury = other1.address;
+        disputeResolver.active = false;
+        expect(disputeResolver.isValid()).is.true;
+
+        expectedDisputeResolverStruct = disputeResolver.toStruct();
+
+        //Update a dispute resolver, testing for the event
+        await expect(accountHandler.connect(admin).updateDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverUpdated")
+          .withArgs(disputeResolver.id, expectedDisputeResolverStruct, admin.address);
+      });
       context("💔 Revert Reasons", async function () {
         it("The dispute resolvers region of protocol is paused", async function () {
           // Pause the dispute resolvers region of the protocol
