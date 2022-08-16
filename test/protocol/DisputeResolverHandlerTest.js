@@ -152,6 +152,7 @@ describe("DisputeResolverHandler", function () {
         maxDisputesPerBatch: 0,
         maxAllowedSellers: 100,
         maxTotalOfferFeePercentage: 4000, //40%
+        maxRoyaltyPecentage: 1000, //10%
       },
       // Protocol fees
       {
