@@ -224,6 +224,25 @@
         {
           "indexed": false,
           "internalType": "uint16",
+          "name": "maxRoyaltyPecentage",
+          "type": "uint16"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MaxRoyaltyPecentageChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint16",
           "name": "maxTokensPerWithdrawal",
           "type": "uint16"
         },

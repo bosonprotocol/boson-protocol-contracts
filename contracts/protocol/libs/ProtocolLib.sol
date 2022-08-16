@@ -54,6 +54,8 @@ library ProtocolLib {
         uint16 maxAllowedSellers;
         // limit the sum of (Protocol Fee percentage + Agent Fee perpercentagecent) of an offer fee
         uint16 maxTotalOfferFeePercentage;
+        // limit the max royalty percentage that can be set by the seller
+        uint16 maxRoyaltyPecentage;
     }
 
     // Protocol fees storage

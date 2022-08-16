@@ -29,6 +29,7 @@ const otherInterfaces = {
   IBosonVoucher: "0x2b2ac434",
   IERC1155: "0xd9b67a26",
   IERC721: "0x80ac58cd",
+  IERC2981: "0x2a55205a",
 };
 
 async function getInterfaceIds() {
