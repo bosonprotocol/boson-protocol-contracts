@@ -50,7 +50,7 @@ describe("IBosonConfigHandler", function () {
     proxy = accounts[5];
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -73,7 +73,7 @@ describe("IBosonConfigHandler", function () {
     maxRoyaltyPecentage = 1000; // 10%
 
     // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
+    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
 
     // Cast Diamond to IBosonConfigHandler
     configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);

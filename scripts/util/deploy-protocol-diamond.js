@@ -52,7 +52,7 @@ async function deployProtocolDiamond(gasLimit) {
   const protocolDiamond = await ProtocolDiamond.deploy(...diamondArgs, { gasLimit });
   await protocolDiamond.deployTransaction.wait(confirmations);
 
-  return [protocolDiamond, dlf, dcf, accessController, diamondArgs];
+  return [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs];
 }
 
 if (require.main === module) {

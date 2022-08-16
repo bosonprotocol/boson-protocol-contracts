@@ -33,7 +33,7 @@ describe("IBosonPauseHandler", function () {
     [deployer, pauser, rando] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -45,7 +45,7 @@ describe("IBosonPauseHandler", function () {
     await deployProtocolHandlerFacets(protocolDiamond, ["PauseHandlerFacet"]);
 
     // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
+    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
 
     // Cast Diamond to IBosonPauseHandler
     pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
@@ -59,7 +59,7 @@ describe("IBosonPauseHandler", function () {
         support = await erc165.supportsInterface(InterfaceIds.IBosonPauseHandler);
 
         // Test
-        await expect(support, "IBosonPauseHandler interface not supported").is.true;
+        expect(support, "IBosonPauseHandler interface not supported").is.true;
       });
     });
   });
