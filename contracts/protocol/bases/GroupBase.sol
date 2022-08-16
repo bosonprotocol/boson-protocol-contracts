@@ -49,6 +49,9 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
             (bool exist, ) = getGroupIdByOffer(_group.offerIds[i]);
             require(!exist, OFFER_MUST_BE_UNIQUE);
 
+            // store index of offerId in group.offerIds
+            protocolLookups().offerIdIndexByGroup[groupId][_group.offerIds[i]] = i;
+
             // add to groupIdByOffer mapping
             protocolLookups().groupIdByOffer[_group.offerIds[i]] = groupId;
         }
@@ -126,6 +129,9 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
 
             // add to groupIdByOffer mapping
             protocolLookups().groupIdByOffer[offerId] = _groupId;
+
+            // store index of offerId in group.offerIds
+            protocolLookups().offerIdIndexByGroup[_groupId][offerId] = group.offerIds.length;
 
             // add to group struct
             group.offerIds.push(offerId);
