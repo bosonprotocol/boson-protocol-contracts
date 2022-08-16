@@ -18,7 +18,7 @@ const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 /**
  *  Test the Boson Seller Handler
  */
-describe("SellerHandler", function () {
+describe("SellerHandler", function() {
   // Common vars
   let deployer,
     rando,
@@ -46,7 +46,7 @@ describe("SellerHandler", function () {
   let voucherInitValues, contractURI, royaltyPercentage;
   let mockAuthERC721Contract, mockAuthERC721Contract2;
 
-  beforeEach(async function () {
+  beforeEach(async function() {
     // Make accounts available
     [
       deployer,
@@ -155,8 +155,8 @@ describe("SellerHandler", function () {
   });
 
   // All supported Seller methods
-  context("📋 Seller Methods", async function () {
-    beforeEach(async function () {
+  context("📋 Seller Methods", async function() {
+    beforeEach(async function() {
       // The first seller id
       nextAccountId = "1";
       invalidAccountId = "666";
@@ -191,8 +191,8 @@ describe("SellerHandler", function () {
       authTokenStruct = authToken.toStruct();
     });
 
-    context("👉 createSeller()", async function () {
-      it("should emit a SellerCreated event when auth token is empty", async function () {
+    context("👉 createSeller()", async function() {
+      it("should emit a SellerCreated event when auth token is empty", async function() {
         // Create a seller, testing for the event
         const tx = await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
@@ -216,7 +216,7 @@ describe("SellerHandler", function () {
           .withArgs(ethers.constants.AddressZero, operator.address);
       });
 
-      it("should emit a SellerCreated event when auth token is not empty", async function () {
+      it("should emit a SellerCreated event when auth token is not empty", async function() {
         // Create a seller, testing for the event
         seller.admin = ethers.constants.AddressZero;
         sellerStruct = seller.toStruct();
@@ -242,7 +242,7 @@ describe("SellerHandler", function () {
           .withArgs(ethers.constants.AddressZero, operator.address);
       });
 
-      it("should update state when authToken is empty", async function () {
+      it("should update state when authToken is empty", async function() {
         // Create a seller
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
@@ -274,7 +274,7 @@ describe("SellerHandler", function () {
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + id, "Wrong voucher client symbol");
       });
 
-      it("should update state when voucherInitValues has zero royaltyPercentage and exchangeId does not exist", async function () {
+      it("should update state when voucherInitValues has zero royaltyPercentage and exchangeId does not exist", async function() {
         // ERC2981 Royalty fee is 0%
         voucherInitValues.royaltyPercentage = "0"; //0%
         expect(voucherInitValues.isValid()).is.true;
@@ -308,7 +308,7 @@ describe("SellerHandler", function () {
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
-      it("should update state when voucherInitValues has non zero royaltyPercentage and exchangeId does not exist", async function () {
+      it("should update state when voucherInitValues has non zero royaltyPercentage and exchangeId does not exist", async function() {
         // ERC2981 Royalty fee is 10%
         voucherInitValues.royaltyPercentage = "1000"; //10%
         expect(voucherInitValues.isValid()).is.true;
@@ -342,7 +342,7 @@ describe("SellerHandler", function () {
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
       });
 
-      it("should update state when authToken is not empty", async function () {
+      it("should update state when authToken is not empty", async function() {
         seller.admin = ethers.constants.AddressZero;
 
         // Create a seller
@@ -376,7 +376,7 @@ describe("SellerHandler", function () {
         expect(await bosonVoucher.symbol()).to.equal(VOUCHER_SYMBOL + "_" + id, "Wrong voucher client symbol");
       });
 
-      it("should ignore any provided id and assign the next available", async function () {
+      it("should ignore any provided id and assign the next available", async function() {
         seller.id = "444";
 
         // Create a seller, testing for the event
@@ -393,7 +393,7 @@ describe("SellerHandler", function () {
         expect(exists).to.be.true;
       });
 
-      it("should be possible to use the same address for operator, admin, clerk, and treasury", async function () {
+      it("should be possible to use the same address for operator, admin, clerk, and treasury", async function() {
         seller.operator = other1.address;
         seller.admin = other1.address;
         seller.clerk = other1.address;
@@ -408,7 +408,7 @@ describe("SellerHandler", function () {
           .withArgs(nextAccountId, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, rando.address);
       });
 
-      it("should be possible to use non-unique treasury address", async function () {
+      it("should be possible to use non-unique treasury address", async function() {
         // Create a seller, testing for the event
         await expect(accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues))
           .to.emit(accountHandler, "SellerCreated")
@@ -433,7 +433,7 @@ describe("SellerHandler", function () {
           .withArgs(nextAccountId, sellerStruct, expectedCloneAddress, emptyAuthTokenStruct, rando.address);
       });
 
-      it("every seller should get a different clone address", async function () {
+      it("every seller should get a different clone address", async function() {
         // Create a seller, testing for the event
         await expect(accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues))
           .to.emit(accountHandler, "SellerCreated")
@@ -449,7 +449,7 @@ describe("SellerHandler", function () {
           .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, emptyAuthTokenStruct, other1.address);
       });
 
-      it("should be possible to create a seller with same auth token id but different type", async function () {
+      it("should be possible to create a seller with same auth token id but different type", async function() {
         // Set admin == zero address because seller will be created with auth token
         seller.admin = ethers.constants.AddressZero;
 
@@ -483,7 +483,7 @@ describe("SellerHandler", function () {
           .withArgs(nextAccountId, sellerStruct, expectedCloneAddress, authTokenStruct, rando.address);
       });
 
-      it("should be possible to create a seller with same auth token type but different id", async function () {
+      it("should be possible to create a seller with same auth token type but different id", async function() {
         // Set admin == zero address because seller will be created with auth token
         seller.admin = ethers.constants.AddressZero;
 
@@ -517,8 +517,8 @@ describe("SellerHandler", function () {
           .withArgs(nextAccountId, sellerStruct, expectedCloneAddress, authTokenStruct, rando.address);
       });
 
-      context("💔 Revert Reasons", async function () {
-        it("active is false", async function () {
+      context("💔 Revert Reasons", async function() {
+        it("active is false", async function() {
           seller.active = false;
 
           // Attempt to Create a seller, expecting revert
@@ -527,7 +527,7 @@ describe("SellerHandler", function () {
           ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
 
-        it("addresses are the zero address", async function () {
+        it("addresses are the zero address", async function() {
           seller.operator = ethers.constants.AddressZero;
 
           // Attempt to Create a seller, expecting revert
@@ -552,7 +552,7 @@ describe("SellerHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
-        it("addresses are not unique to this seller Id when address used for same role", async function () {
+        it("addresses are not unique to this seller Id when address used for same role", async function() {
           // Create a seller
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
@@ -581,7 +581,7 @@ describe("SellerHandler", function () {
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
 
-        it("addresses are not unique to this seller Id when address used for different role", async function () {
+        it("addresses are not unique to this seller Id when address used for different role", async function() {
           // Create a seller
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
 
@@ -616,14 +616,14 @@ describe("SellerHandler", function () {
           ).to.revertedWith(RevertReasons.SELLER_ADDRESS_MUST_BE_UNIQUE);
         });
 
-        it("admin address is NOT zero address and AuthTokenType is NOT None", async function () {
+        it("admin address is NOT zero address and AuthTokenType is NOT None", async function() {
           // Attempt to Create a seller, expecting revert
           await expect(
             accountHandler.connect(rando).createSeller(seller, authToken, voucherInitValues)
           ).to.revertedWith(RevertReasons.ADMIN_OR_AUTH_TOKEN);
         });
 
-        it("admin address is zero address and AuthTokenType is None", async function () {
+        it("admin address is zero address and AuthTokenType is None", async function() {
           seller.admin = ethers.constants.AddressZero;
 
           // Attempt to Create a seller, expecting revert
@@ -632,7 +632,7 @@ describe("SellerHandler", function () {
           ).to.revertedWith(RevertReasons.ADMIN_OR_AUTH_TOKEN);
         });
 
-        it("authToken is not unique to this seller", async function () {
+        it("authToken is not unique to this seller", async function() {
           // Set admin == zero address because seller will be created with auth token
           seller.admin = ethers.constants.AddressZero;
 
@@ -651,8 +651,8 @@ describe("SellerHandler", function () {
       });
     });
 
-    context("👉 getSeller()", async function () {
-      beforeEach(async function () {
+    context("👉 getSeller()", async function() {
+      beforeEach(async function() {
         // AuthTokens
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
         expect(emptyAuthToken.isValid()).is.true;
@@ -676,7 +676,7 @@ describe("SellerHandler", function () {
         await accountHandler.connect(rando).createSeller(seller2, emptyAuthToken, voucherInitValues);
       });
 
-      it("should return true for exists if seller is found", async function () {
+      it("should return true for exists if seller is found", async function() {
         // Get the exists flag
         [exists] = await accountHandler.connect(rando).getSeller(id);
 
@@ -684,7 +684,7 @@ describe("SellerHandler", function () {
         expect(exists).to.be.true;
       });
 
-      it("should return false for exists if seller is not found", async function () {
+      it("should return false for exists if seller is not found", async function() {
         // Get the exists flag
         [exists] = await accountHandler.connect(rando).getSeller(invalidAccountId);
 
@@ -692,7 +692,7 @@ describe("SellerHandler", function () {
         expect(exists).to.be.false;
       });
 
-      it("should return the details of the correct seller as a struct if found", async function () {
+      it("should return the details of the correct seller as a struct if found", async function() {
         // Get the seller as a struct
         [, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSeller("1");
 
@@ -711,7 +711,7 @@ describe("SellerHandler", function () {
         }
       });
 
-      it("should return the details of the correct seller if seller has empty authToken", async function () {
+      it("should return the details of the correct seller if seller has empty authToken", async function() {
         // Get the seller as a struct
         [, sellerStruct, emptyAuthTokenStruct] = await accountHandler.connect(rando).getSeller("2");
 
@@ -731,8 +731,8 @@ describe("SellerHandler", function () {
       });
     });
 
-    context("👉 getSellerByAddress()", async function () {
-      beforeEach(async function () {
+    context("👉 getSellerByAddress()", async function() {
+      beforeEach(async function() {
         // AuthTokens
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
         expect(emptyAuthToken.isValid()).is.true;
@@ -759,7 +759,7 @@ describe("SellerHandler", function () {
         await accountHandler.connect(rando).createSeller(seller2, emptyAuthToken, voucherInitValues);
       });
 
-      it("should return the correct seller when searching on operator address", async function () {
+      it("should return the correct seller when searching on operator address", async function() {
         [exists, sellerStruct, authTokenStruct] = await accountHandler
           .connect(rando)
           .getSellerByAddress(operator.address);
@@ -781,7 +781,7 @@ describe("SellerHandler", function () {
         }
       });
 
-      it("should return the correct seller when searching on admin address", async function () {
+      it("should return the correct seller when searching on admin address", async function() {
         [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler
           .connect(rando)
           .getSellerByAddress(other2.address);
@@ -803,7 +803,7 @@ describe("SellerHandler", function () {
         }
       });
 
-      it("should return the correct seller when searching on clerk address", async function () {
+      it("should return the correct seller when searching on clerk address", async function() {
         [exists, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSellerByAddress(clerk.address);
 
         expect(exists).is.true;
@@ -823,7 +823,7 @@ describe("SellerHandler", function () {
         }
       });
 
-      it("should return exists false and default values when searching on treasury address", async function () {
+      it("should return exists false and default values when searching on treasury address", async function() {
         [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler
           .connect(rando)
           .getSellerByAddress(treasury.address);
@@ -849,7 +849,7 @@ describe("SellerHandler", function () {
         }
       });
 
-      it("should return exists false and default values when searching on unassociated address", async function () {
+      it("should return exists false and default values when searching on unassociated address", async function() {
         [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler
           .connect(rando)
           .getSellerByAddress(deployer.address);
@@ -875,7 +875,7 @@ describe("SellerHandler", function () {
         }
       });
 
-      it("should return exists false and default values when searching on admin address that is zero address", async function () {
+      it("should return exists false and default values when searching on admin address that is zero address", async function() {
         [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler
           .connect(rando)
           .getSellerByAddress(seller.admin);
@@ -901,7 +901,7 @@ describe("SellerHandler", function () {
         }
       });
 
-      it("should return exists false and default values when searching on zero address", async function () {
+      it("should return exists false and default values when searching on zero address", async function() {
         [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler
           .connect(rando)
           .getSellerByAddress(ethers.constants.AddressZero);
@@ -928,8 +928,8 @@ describe("SellerHandler", function () {
       });
     });
 
-    context("👉 getSellerByAuthToken()", async function () {
-      beforeEach(async function () {
+    context("👉 getSellerByAuthToken()", async function() {
+      beforeEach(async function() {
         // AuthTokens
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
         expect(emptyAuthToken.isValid()).is.true;
@@ -978,7 +978,7 @@ describe("SellerHandler", function () {
         await accountHandler.connect(rando).createSeller(seller3, authToken2, voucherInitValues);
       });
 
-      it("should return the correct seller when searching on valid auth token", async function () {
+      it("should return the correct seller when searching on valid auth token", async function() {
         //Search on authToken
         [exists, sellerStruct, authTokenStruct] = await accountHandler.connect(rando).getSellerByAuthToken(authToken);
 
@@ -1018,7 +1018,7 @@ describe("SellerHandler", function () {
         }
       });
 
-      it("should return the correct seller when two sellers have same auth token Id but different auth token type", async function () {
+      it("should return the correct seller when two sellers have same auth token Id but different auth token type", async function() {
         //create seller with same auth token Id but different auth token type from seller 1
         authToken3 = new AuthToken("8400", AuthTokenType.ENS);
         expect(authToken3.isValid()).is.true;
@@ -1075,7 +1075,7 @@ describe("SellerHandler", function () {
         }
       });
 
-      it("should return the correct seller when two sellers have same auth token type but different auth token id", async function () {
+      it("should return the correct seller when two sellers have same auth token type but different auth token id", async function() {
         //create seller with same auth token Id but different auth token type from seller 1
         authToken3 = new AuthToken("0", AuthTokenType.Lens);
         expect(authToken3.isValid()).is.true;
@@ -1132,7 +1132,7 @@ describe("SellerHandler", function () {
         }
       });
 
-      it("should return exists false and default values when searching on empty auth token", async function () {
+      it("should return exists false and default values when searching on empty auth token", async function() {
         [exists, sellerStruct, emptyAuthTokenStruct] = await accountHandler
           .connect(rando)
           .getSellerByAuthToken(emptyAuthToken);
@@ -1159,8 +1159,8 @@ describe("SellerHandler", function () {
       });
     });
 
-    context("👉 updateSeller()", async function () {
-      beforeEach(async function () {
+    context("👉 updateSeller()", async function() {
+      beforeEach(async function() {
         // AuthTokens
         emptyAuthToken = new AuthToken("0", AuthTokenType.None);
         expect(emptyAuthToken.isValid()).is.true;
@@ -1174,7 +1174,7 @@ describe("SellerHandler", function () {
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
       });
 
-      it("should emit a SellerUpdated and OwnershipTransferred event with correct values if values change", async function () {
+      it("should emit a SellerUpdated and OwnershipTransferred event with correct values if values change", async function() {
         seller.operator = other1.address;
         seller.admin = ethers.constants.AddressZero;
         seller.clerk = other3.address;
@@ -1202,7 +1202,7 @@ describe("SellerHandler", function () {
         await expect(tx).to.emit(bosonVoucher, "OwnershipTransferred").withArgs(operator.address, other1.address);
       });
 
-      it("should emit a SellerUpdated and OwnershipTransferred event with correct values if values stay the same", async function () {
+      it("should emit a SellerUpdated and OwnershipTransferred event with correct values if values stay the same", async function() {
         const tx = await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
         // Update a seller, testing for the event
@@ -1218,7 +1218,7 @@ describe("SellerHandler", function () {
         await expect(tx).to.not.emit(bosonVoucher, "OwnershipTransferred");
       });
 
-      it("should update state of all fields except Id and active flag", async function () {
+      it("should update state of all fields except Id and active flag", async function() {
         seller.operator = other1.address;
         seller.admin = ethers.constants.AddressZero;
         seller.clerk = other3.address;
@@ -1278,7 +1278,7 @@ describe("SellerHandler", function () {
         expect(await bosonVoucher.owner()).to.equal(seller.operator, "Wrong voucher clone owner");
       });
 
-      it("should update state from auth token to empty auth token", async function () {
+      it("should update state from auth token to empty auth token", async function() {
         id2 = ++nextAccountId;
         seller2 = new Seller(
           id2.toString(),
@@ -1351,7 +1351,7 @@ describe("SellerHandler", function () {
         expect(await bosonVoucher.owner()).to.equal(seller.operator, "Wrong voucher clone owner");
       });
 
-      it("should update state from auth token to new auth token", async function () {
+      it("should update state from auth token to new auth token", async function() {
         id2 = ++nextAccountId;
         seller2 = new Seller(
           id2.toString(),
@@ -1429,7 +1429,7 @@ describe("SellerHandler", function () {
         expect(await bosonVoucher.owner()).to.equal(seller.operator, "Wrong voucher clone owner");
       });
 
-      it("should update state correctly if values are the same", async function () {
+      it("should update state correctly if values are the same", async function() {
         // Update a seller
         await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken);
 
@@ -1457,7 +1457,7 @@ describe("SellerHandler", function () {
         expect(await bosonVoucher.owner()).to.equal(seller.operator, "Wrong voucher clone owner");
       });
 
-      it("should update only one address", async function () {
+      it("should update only one address", async function() {
         seller.operator = other1.address;
 
         sellerStruct = seller.toStruct();
@@ -1483,7 +1483,7 @@ describe("SellerHandler", function () {
         }
       });
 
-      it("should update the correct seller", async function () {
+      it("should update the correct seller", async function() {
         // Confgiure another seller
         id2 = ++nextAccountId;
         seller2 = new Seller(
@@ -1559,7 +1559,7 @@ describe("SellerHandler", function () {
         }
       });
 
-      it("should be able to only update with new admin address", async function () {
+      it("should be able to only update with new admin address", async function() {
         seller.admin = other2.address;
         sellerStruct = seller.toStruct();
 
@@ -1582,7 +1582,7 @@ describe("SellerHandler", function () {
         );
       });
 
-      it("should be able to only update with new auth token", async function () {
+      it("should be able to only update with new auth token", async function() {
         seller.admin = ethers.constants.AddressZero;
         sellerStruct = seller.toStruct();
 
@@ -1605,7 +1605,7 @@ describe("SellerHandler", function () {
         );
       });
 
-      it("should be possible to use non-unique treasury address", async function () {
+      it("should be possible to use non-unique treasury address", async function() {
         seller.operator = other1.address;
         seller.admin = other2.address;
         seller.clerk = other3.address;
@@ -1619,8 +1619,23 @@ describe("SellerHandler", function () {
           .withArgs(seller.id, sellerStruct, emptyAuthTokenStruct, admin.address);
       });
 
-      context("💔 Revert Reasons", async function () {
-        it("Seller does not exist", async function () {
+      it("should be possible to use the same address for operator, admin, clerk, and treasury", async function() {
+        seller.operator = other1.address;
+        seller.admin = other1.address;
+        seller.clerk = other1.address;
+        seller.treasury = other1.address;
+
+        //Create struct again with new addresses
+        sellerStruct = seller.toStruct();
+
+        // Create a seller, testing for the event
+        await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
+          .to.emit(accountHandler, "SellerUpdated")
+          .withArgs(seller.id, sellerStruct, emptyAuthTokenStruct, admin.address);
+      });
+
+      context("💔 Revert Reasons", async function() {
+        it("Seller does not exist", async function() {
           // Set invalid id
           seller.id = "444";
 
@@ -1638,14 +1653,14 @@ describe("SellerHandler", function () {
           );
         });
 
-        it("Caller is not seller admin", async function () {
+        it("Caller is not seller admin", async function() {
           // Attempt to update the seller, expecting revert
           await expect(accountHandler.connect(operator).updateSeller(seller, emptyAuthToken)).to.revertedWith(
             RevertReasons.NOT_ADMIN
           );
         });
 
-        it("addresses are the zero address", async function () {
+        it("addresses are the zero address", async function() {
           seller.operator = ethers.constants.AddressZero;
 
           // Attempt to update a seller, expecting revert
@@ -1671,7 +1686,7 @@ describe("SellerHandler", function () {
           );
         });
 
-        it("addresses are not unique to this seller Id when addresses used for same role", async function () {
+        it("addresses are not unique to this seller Id when addresses used for same role", async function() {
           seller.id = "2";
           seller.operator = other1.address;
           seller.admin = other2.address;
@@ -1713,7 +1728,7 @@ describe("SellerHandler", function () {
           );
         });
 
-        it("addresses are not unique to this seller Id when address used for different role", async function () {
+        it("addresses are not unique to this seller Id when address used for different role", async function() {
           seller.id = "2";
           seller.operator = other1.address;
           seller.admin = other2.address;
@@ -1757,14 +1772,14 @@ describe("SellerHandler", function () {
           );
         });
 
-        it("admin address is NOT zero address and AuthTokenType is NOT None", async function () {
+        it("admin address is NOT zero address and AuthTokenType is NOT None", async function() {
           // Attempt to update a seller, expecting revert
           await expect(accountHandler.connect(admin).updateSeller(seller, authToken)).to.revertedWith(
             RevertReasons.ADMIN_OR_AUTH_TOKEN
           );
         });
 
-        it("admin address is zero address and AuthTokenType is None", async function () {
+        it("admin address is zero address and AuthTokenType is None", async function() {
           seller.admin = ethers.constants.AddressZero;
 
           // Attempt to Create a seller, expecting revert
@@ -1773,7 +1788,7 @@ describe("SellerHandler", function () {
           );
         });
 
-        it("authToken is not unique to this seller", async function () {
+        it("authToken is not unique to this seller", async function() {
           // Set admin == zero address because seller will be created with auth token
           seller.admin = ethers.constants.AddressZero;
 
@@ -1796,7 +1811,7 @@ describe("SellerHandler", function () {
           );
         });
 
-        it("seller is not owner of auth token currently stored for seller", async function () {
+        it("seller is not owner of auth token currently stored for seller", async function() {
           //Create seller 2 with auth token
           id2 = ++nextAccountId;
           seller2 = new Seller(
@@ -1827,7 +1842,7 @@ describe("SellerHandler", function () {
           );
         });
 
-        it("auth token id currently stored for seller does not exist", async function () {
+        it("auth token id currently stored for seller does not exist", async function() {
           //Create seller 2 with auth token
           id2 = ++nextAccountId;
           seller2 = new Seller(
