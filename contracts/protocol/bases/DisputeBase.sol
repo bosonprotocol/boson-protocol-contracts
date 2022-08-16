@@ -19,22 +19,13 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
      * Reverts if:
      * - caller does not hold a voucher for the given exchange id
      * - exchange does not exist
-     * - the complaint is blank
      * - exchange is not in a redeemed state
      * - fulfillment period has elapsed already
      *
      * @param exchange - the exchange
-     * @param _complaint - the buyer's or protocol complaint description
      * @param sellerId - the seller id
      */
-    function raiseDisputeInternal(
-        Exchange storage exchange,
-        string memory _complaint,
-        uint256 sellerId
-    ) internal {
-        // Buyer must provide a reason to dispute
-        require(bytes(_complaint).length > 0, COMPLAINT_MISSING);
-
+    function raiseDisputeInternal(Exchange storage exchange, uint256 sellerId) internal {
         // Make sure the fulfillment period has elapsed
         uint256 elapsed = block.timestamp - exchange.voucher.redeemedDate;
         require(elapsed < fetchOfferDurations(exchange.offerId).fulfillmentPeriod, FULFILLMENT_PERIOD_HAS_ELAPSED);
@@ -50,7 +41,6 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
 
         // Set the initial values
         dispute.exchangeId = exchange.id;
-        dispute.complaint = _complaint;
         dispute.state = DisputeState.Resolving;
 
         // Update the disputeDates
@@ -58,6 +48,6 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
         disputeDates.timeout = block.timestamp + fetchOfferDurations(exchange.offerId).resolutionPeriod;
 
         // Notify watchers of state change
-        emit DisputeRaised(exchange.id, exchange.buyerId, sellerId, _complaint, msgSender());
+        emit DisputeRaised(exchange.id, exchange.buyerId, sellerId, msgSender());
     }
 }

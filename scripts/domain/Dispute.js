@@ -9,15 +9,13 @@ class Dispute {
   /*
     struct Dispute {
         uint256 exchangeId;
-        string complaint;
         DisputeState state;
         uint256 buyerPercent;
     }
     */
 
-  constructor(exchangeId, complaint, state, buyerPercent) {
+  constructor(exchangeId, state, buyerPercent) {
     this.exchangeId = exchangeId;
-    this.complaint = complaint;
     this.state = state;
     this.buyerPercent = buyerPercent;
   }
@@ -28,8 +26,8 @@ class Dispute {
    * @returns {Dispute}
    */
   static fromObject(o) {
-    const { exchangeId, complaint, state, buyerPercent } = o;
-    return new Dispute(exchangeId, complaint, state, buyerPercent);
+    const { exchangeId, state, buyerPercent } = o;
+    return new Dispute(exchangeId, state, buyerPercent);
   }
 
   /**
@@ -38,14 +36,13 @@ class Dispute {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let exchangeId, complaint, state, buyerPercent;
+    let exchangeId, state, buyerPercent;
 
     // destructure struct
-    [exchangeId, complaint, state, buyerPercent] = struct;
+    [exchangeId, state, buyerPercent] = struct;
 
     return Dispute.fromObject({
       exchangeId: exchangeId.toString(),
-      complaint,
       state,
       buyerPercent: buyerPercent.toString(),
     });
@@ -72,7 +69,7 @@ class Dispute {
    * @returns {string}
    */
   toStruct() {
-    return [this.exchangeId, this.complaint, this.state, this.buyerPercent];
+    return [this.exchangeId, this.state, this.buyerPercent];
   }
 
   /**
@@ -93,20 +90,6 @@ class Dispute {
     let { exchangeId } = this;
     try {
       valid = typeof exchangeId === "string" && typeof ethers.BigNumber.from(exchangeId) === "object";
-    } catch (e) {}
-    return valid;
-  }
-
-  /**
-   * Is this Dispute instance's complaint field valid?
-   * Must be a string
-   * @returns {boolean}
-   */
-  complaintIsValid() {
-    let valid = false;
-    let { complaint } = this;
-    try {
-      valid = typeof complaint === "string";
     } catch (e) {}
     return valid;
   }
@@ -144,7 +127,7 @@ class Dispute {
    * @returns {boolean}
    */
   isValid() {
-    return this.exchangeIdIsValid() && this.complaintIsValid() && this.stateIsValid() && this.buyerPercentIsValid();
+    return this.exchangeIdIsValid() && this.stateIsValid() && this.buyerPercentIsValid();
   }
 }
 
