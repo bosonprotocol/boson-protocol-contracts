@@ -621,7 +621,7 @@ describe("IBosonOfferHandler", function () {
           offerDates.validFrom = ethers.BigNumber.from(now - (oneMonth / 1000) * 6).toString(); // 6 months ago
 
           // set valid from < valid until
-          offerDates.validUntil = ethers.BigNumber.from(now - (oneMonth / 1000)).toString(); // 1 month ago
+          offerDates.validUntil = ethers.BigNumber.from(now - oneMonth / 1000).toString(); // 1 month ago
 
           // Attempt to Create an offer, expecting revert
           await expect(

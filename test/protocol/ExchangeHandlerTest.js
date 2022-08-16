@@ -651,6 +651,16 @@ describe("IBosonExchangeHandler", function () {
             exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
           ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
         });
+
+        it("offer is voided", async function () {
+          // Void the offer first
+          await offerHandler.connect(operator).voidOffer(offerId);
+
+          // Attempt to commit to the voided offer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
+        });
       });
     });
 
