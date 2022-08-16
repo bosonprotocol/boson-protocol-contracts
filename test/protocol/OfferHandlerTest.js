@@ -615,8 +615,13 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("Valid until date is not in the future", async function () {
-          // Set until date in the past
-          offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom - (oneMonth / 1000) * 6).toString(); // 6 months ago
+          let now = offerDates.validFrom;
+
+          // set validFrom date in the past
+          offerDates.validFrom = ethers.BigNumber.from(now - (oneMonth / 1000) * 6).toString(); // 6 months ago
+
+          // set valid from < valid until
+          offerDates.validUntil = ethers.BigNumber.from(now - (oneMonth / 1000)).toString(); // 1 month ago
 
           // Attempt to Create an offer, expecting revert
           await expect(
