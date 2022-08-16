@@ -30,6 +30,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * Emits a BundleCreated event if successful.
      *
      * Reverts if:
+     * - The bundles region of protocol is paused
      * - Seller does not exist
      * - any of offers belongs to different seller
      * - any of offers does not exist
@@ -45,7 +46,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
-    function createBundle(Bundle memory _bundle) external override {
+    function createBundle(Bundle memory _bundle) external override bundlesNotPaused {
         createBundleInternal(_bundle);
     }
 

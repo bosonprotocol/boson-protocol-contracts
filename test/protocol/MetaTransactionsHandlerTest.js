@@ -6,14 +6,10 @@ const { gasLimit } = require("../../environments");
 const Exchange = require("../../scripts/domain/Exchange");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const Role = require("../../scripts/domain/Role");
-const Seller = require("../../scripts/domain/Seller");
-const AuthToken = require("../../scripts/domain/AuthToken");
-const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const Voucher = require("../../scripts/domain/Voucher");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
-const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -22,7 +18,14 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { prepareDataSignatureParameters, setNextBlockTimestamp } = require("../../scripts/util/test-utils.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { mockOffer, mockTwin, mockDisputeResolver } = require("../utils/mock");
+const {
+  mockOffer,
+  mockTwin,
+  mockDisputeResolver,
+  mockVoucherInitValues,
+  mockSeller,
+  mockAuthToken,
+} = require("../utils/mock");
 const { oneMonth } = require("../utils/constants");
 /**
  *  Test the Boson Meta transactions Handler interface
@@ -59,7 +62,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
-  let disputeResolver, active, disputeResolverFees, disputeResolverId;
+  let disputeResolver, disputeResolverFees, disputeResolverId;
   let twin, success;
   let exchangeId,
     mockToken,
@@ -78,7 +81,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let complaint, validDisputeDetails;
   let buyerPercent, validDisputeResolutionDetails, signatureSplits;
   let sellerAllowList;
-  let voucherInitValues, contractURI, royaltyPercentage;
+  let voucherInitValues;
   let emptyAuthToken;
   let agentId;
 
@@ -199,7 +202,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         support = await erc165.supportsInterface(InterfaceIds.IBosonMetaTransactionsHandler);
 
         // Test
-        await expect(support, "IBosonMetaTransactionsHandler interface not supported").is.true;
+        expect(support, "IBosonMetaTransactionsHandler interface not supported").is.true;
       });
     });
   });
@@ -233,17 +236,15 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Create a valid seller for meta transaction
         id = "1";
-        seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
+        seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
         expect(seller.isValid()).is.true;
 
         // VoucherInitValues
-        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        royaltyPercentage = "0"; // 0%
-        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+        voucherInitValues = mockVoucherInitValues();
         expect(voucherInitValues.isValid()).is.true;
 
         // AuthToken
-        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        emptyAuthToken = mockAuthToken();
         expect(emptyAuthToken.isValid()).is.true;
 
         // Prepare the function signature for the facet function.
@@ -324,17 +325,15 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Create a valid seller for meta transaction
         id = "1";
-        seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
+        seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
         expect(seller.isValid()).is.true;
 
         // VoucherInitValues
-        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        royaltyPercentage = "0"; // 0%
-        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+        voucherInitValues = mockVoucherInitValues();
         expect(voucherInitValues.isValid()).is.true;
 
         // AuthToken
-        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        emptyAuthToken = mockAuthToken();
         expect(emptyAuthToken.isValid()).is.true;
 
         customTransactionType = {
@@ -430,13 +429,11 @@ describe("IBosonMetaTransactionsHandler", function () {
         context("TwinHandler", async function () {
           beforeEach(async function () {
             // VoucherInitValues
-            contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-            royaltyPercentage = "0"; // 0%
-            voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+            voucherInitValues = mockVoucherInitValues();
             expect(voucherInitValues.isValid()).is.true;
 
             // AuthToken
-            emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+            emptyAuthToken = mockAuthToken();
             expect(emptyAuthToken.isValid()).is.true;
             await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
@@ -674,26 +671,22 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Initial ids for all the things
         id = offerId = nextAccountId = "1";
 
-        active = true;
-
         // Create a valid seller
-        seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
+        seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
         expect(seller.isValid()).is.true;
 
         // VoucherInitValues
-        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        royaltyPercentage = "0"; // 0%
-        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+        voucherInitValues = mockVoucherInitValues();
         expect(voucherInitValues.isValid()).is.true;
 
         // AuthToken
-        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        emptyAuthToken = mockAuthToken();
         expect(emptyAuthToken.isValid()).is.true;
 
         await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // Create a valid dispute resolver
-        disputeResolver = await mockDisputeResolver(
+        disputeResolver = mockDisputeResolver(
           operatorDR.address,
           adminDR.address,
           clerkDR.address,
@@ -951,25 +944,21 @@ describe("IBosonMetaTransactionsHandler", function () {
         id = offerId = nextAccountId = "1";
         buyerId = "3"; // created after seller and dispute resolver
 
-        active = true;
-
         // Create a valid seller
-        seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
+        seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
         expect(seller.isValid()).is.true;
 
         // VoucherInitValues
-        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        royaltyPercentage = "0"; // 0%
-        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+        voucherInitValues = mockVoucherInitValues();
         expect(voucherInitValues.isValid()).is.true;
 
         // AuthToken
-        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        emptyAuthToken = mockAuthToken();
         expect(emptyAuthToken.isValid()).is.true;
         await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // Create a valid dispute resolver
-        disputeResolver = await mockDisputeResolver(
+        disputeResolver = mockDisputeResolver(
           operatorDR.address,
           adminDR.address,
           clerkDR.address,
@@ -2332,26 +2321,22 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Initial ids for all the things
         id = offerId = nextAccountId = "1";
 
-        active = true;
-
         // Create a valid seller
-        seller = new Seller(id, operator.address, operator.address, operator.address, operator.address, true);
+        seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
         expect(seller.isValid()).is.true;
 
         // VoucherInitValues
-        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        royaltyPercentage = "0"; // 0%
-        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+        voucherInitValues = mockVoucherInitValues();
         expect(voucherInitValues.isValid()).is.true;
 
         // AuthToken
-        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        emptyAuthToken = mockAuthToken();
         expect(emptyAuthToken.isValid()).is.true;
 
         await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // Create a valid dispute resolver
-        disputeResolver = await mockDisputeResolver(
+        disputeResolver = mockDisputeResolver(
           operatorDR.address,
           adminDR.address,
           clerkDR.address,
@@ -2573,25 +2558,22 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Initial ids for all the things
         id = exchangeId = nextAccountId = "1";
         buyerId = "3"; // created after a seller and a dispute resolver
-        active = true;
 
         // Create a valid seller
-        seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
+        seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
         expect(seller.isValid()).is.true;
 
         // VoucherInitValues
-        contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-        royaltyPercentage = "0"; // 0%
-        voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+        voucherInitValues = mockVoucherInitValues();
         expect(voucherInitValues.isValid()).is.true;
 
         // AuthToken
-        emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+        emptyAuthToken = mockAuthToken();
         expect(emptyAuthToken.isValid()).is.true;
         await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
 
         // Create a valid dispute resolver
-        disputeResolver = await mockDisputeResolver(
+        disputeResolver = mockDisputeResolver(
           operatorDR.address,
           adminDR.address,
           clerkDR.address,

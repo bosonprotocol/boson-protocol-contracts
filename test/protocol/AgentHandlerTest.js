@@ -4,28 +4,30 @@ const { expect } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
 const Agent = require("../../scripts/domain/Agent");
+const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { oneMonth } = require("../utils/constants");
+const { mockAgent } = require("../utils/mock");
 
 /**
  *  Test the Boson Agent Handler
  */
 describe("AgentHandler", function () {
   // Common vars
-  let deployer, rando, other1, other2, other3;
-  let protocolDiamond, accessController, accountHandler, gasLimit;
-  let agent, agentStruct, feePercentage, agent2, agent2Struct, active, expectedAgent, expectedAgentStruct;
+  let deployer, pauser, rando, other1, other2, other3;
+  let protocolDiamond, accessController, accountHandler, pauseHandler, gasLimit;
+  let agent, agentStruct, agent2, agent2Struct, expectedAgent, expectedAgentStruct;
   let nextAccountId;
   let invalidAccountId, id, id2, key, value, exists;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, rando, other1, other2, other3] = await ethers.getSigners();
+    [deployer, pauser, rando, other1, other2, other3] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -36,8 +38,15 @@ describe("AgentHandler", function () {
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
 
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
+
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, ["AccountHandlerFacet", "AgentHandlerFacet"]);
+    await deployProtocolHandlerFacets(protocolDiamond, [
+      "AccountHandlerFacet",
+      "AgentHandlerFacet",
+      "PauseHandlerFacet",
+    ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
@@ -85,6 +94,9 @@ describe("AgentHandler", function () {
 
     // Cast Diamond to IBosonAccountHandler
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonPauseHandler
+    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
   });
 
   // All supported Agent methods
@@ -94,14 +106,8 @@ describe("AgentHandler", function () {
       nextAccountId = "1";
       invalidAccountId = "666";
 
-      // Required constructor params
-      id = "1"; // argument sent to contract for createAgent will be ignored
-      feePercentage = "500"; //5%
-
-      active = true;
-
       // Create a valid agent, then set fields in tests directly
-      agent = new Agent(id, feePercentage, other1.address, active);
+      agent = mockAgent(other1.address);
       expect(agent.isValid()).is.true;
 
       // How that agent looks as a returned struct
@@ -121,7 +127,7 @@ describe("AgentHandler", function () {
         await accountHandler.connect(rando).createAgent(agent);
 
         // Get the agent as a struct
-        [, agentStruct] = await accountHandler.connect(rando).getAgent(id);
+        [, agentStruct] = await accountHandler.connect(rando).getAgent(agent.id);
 
         // Parse into entity
         let returnedAgent = Agent.fromStruct(agentStruct);
@@ -151,7 +157,7 @@ describe("AgentHandler", function () {
 
       it("should allow feePercentage of 0", async function () {
         // Create a valid agent with feePercentage = 0, as it is optional
-        agent = new Agent(id, "0", other1.address, active);
+        agent.feePercentage = "0";
         expect(agent.isValid()).is.true;
 
         // How that agent looks as a returned struct
@@ -163,7 +169,7 @@ describe("AgentHandler", function () {
           .withArgs(nextAccountId, agentStruct, rando.address);
 
         // Get the agent as a struct
-        [, agentStruct] = await accountHandler.connect(rando).getAgent(id);
+        [, agentStruct] = await accountHandler.connect(rando).getAgent(agent.id);
 
         // Parse into entity
         let returnedAgent = Agent.fromStruct(agentStruct);
@@ -177,7 +183,7 @@ describe("AgentHandler", function () {
       it("should allow feePercentage plus protocol fee percentage == max", async function () {
         //Agent with feePercentage that, when added to the protocol fee percentage = maxTotalOfferFeePercentage
         //protocol fee percentage = 200 (2%), max = 4000 (40%)
-        agent = new Agent(id, "3800", other1.address, active); //38%
+        agent.feePercentage = "3800";
         expect(agent.isValid()).is.true;
 
         // How that agent looks as a returned struct
@@ -189,7 +195,7 @@ describe("AgentHandler", function () {
           .withArgs(nextAccountId, agentStruct, rando.address);
 
         // Get the agent as a struct
-        [, agentStruct] = await accountHandler.connect(rando).getAgent(id);
+        [, agentStruct] = await accountHandler.connect(rando).getAgent(agent.id);
 
         // Parse into entity
         let returnedAgent = Agent.fromStruct(agentStruct);
@@ -201,6 +207,14 @@ describe("AgentHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The agents region of protocol is paused", async function () {
+          // Pause the agents region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Agents]);
+
+          // Attempt to create an agent, expecting revert
+          await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("active is false", async function () {
           agent.active = false;
 
@@ -228,7 +242,7 @@ describe("AgentHandler", function () {
         it("feePercentage plus protocol fee percentage is above max", async function () {
           //Agent with feePercentage that, when added to the protocol fee percentage is above the maxTotalOfferFeePercentage
           //protocol fee percentage = 200 (2%), max = 4000 (40%)
-          agent = new Agent(id, "3900", other1.address, active); //39%
+          agent.feePercentage = "3900";
           expect(agent.isValid()).is.true;
 
           // Attempt to create another buyer with same wallet address
@@ -360,7 +374,8 @@ describe("AgentHandler", function () {
       it("should update the correct agent", async function () {
         // Confgiure another agent
         id2 = nextAccountId++;
-        agent2 = new Agent(id2.toString(), feePercentage, other3.address, active);
+        agent2 = mockAgent(other3.address);
+        agent2.id = id2.toString();
         expect(agent2.isValid()).is.true;
 
         agent2Struct = agent2.toStruct();
@@ -447,7 +462,6 @@ describe("AgentHandler", function () {
       it("should allow feePercentage plus protocol fee percentage == max", async function () {
         //Agent with feePercentage that, when added to the protocol fee percentage = maxTotalOfferFeePercentage
         //protocol fee percentage = 200 (2%), max = 4000 (40%)
-        //agent = new Agent(id, "3800", other1.address, active); //38%
         agent.feePercentage = "3800";
         expect(agent.isValid()).is.true;
         agentStruct = agent.toStruct();
@@ -470,6 +484,14 @@ describe("AgentHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The agents region of protocol is paused", async function () {
+          // Pause the agents region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Agents]);
+
+          // Attempt to update an agent, expecting revert
+          await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Agent does not exist", async function () {
           // Set invalid id
           agent.id = "444";
@@ -515,7 +537,9 @@ describe("AgentHandler", function () {
         it("wallet address is not unique to this agent Id", async function () {
           id = await accountHandler.connect(rando).getNextAccountId();
 
-          agent2 = new Agent(id.toString(), feePercentage, other2.address, active);
+          agent2 = mockAgent(other2.address);
+          agent2.id = id.toString();
+
           agent2Struct = agent2.toStruct();
 
           //Create second agent, testing for the event

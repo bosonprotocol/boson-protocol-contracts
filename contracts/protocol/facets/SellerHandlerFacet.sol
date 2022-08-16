@@ -23,6 +23,7 @@ contract SellerHandlerFacet is SellerBase {
      * Emits a SellerCreated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
      * - Seller is not active (if active == false)
@@ -37,7 +38,7 @@ contract SellerHandlerFacet is SellerBase {
         Seller memory _seller,
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues
-    ) external {
+    ) external sellersNotPaused {
         // create seller and update structs values to represent true state
         createSellerInternal(_seller, _authToken, _voucherInitValues);
     }
@@ -58,7 +59,7 @@ contract SellerHandlerFacet is SellerBase {
      * @param _seller - the fully populated seller struct
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
      */
-    function updateSeller(Seller memory _seller, AuthToken calldata _authToken) external {
+    function updateSeller(Seller memory _seller, AuthToken calldata _authToken) external sellersNotPaused {
         bool exists;
         Seller storage seller;
         AuthToken storage authToken;

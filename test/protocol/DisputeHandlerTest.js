@@ -4,15 +4,11 @@ const { expect, assert } = require("chai");
 
 const Role = require("../../scripts/domain/Role");
 const Exchange = require("../../scripts/domain/Exchange");
-const Seller = require("../../scripts/domain/Seller");
-const AuthToken = require("../../scripts/domain/AuthToken");
-const AuthTokenType = require("../../scripts/domain/AuthTokenType");
-const Buyer = require("../../scripts/domain/Buyer");
 const Dispute = require("../../scripts/domain/Dispute");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const DisputeDates = require("../../scripts/domain/DisputeDates");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
-const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
+const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -26,7 +22,14 @@ const {
   applyPercentage,
 } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
-const { mockOffer, mockDisputeResolver } = require("../utils/mock");
+const {
+  mockOffer,
+  mockDisputeResolver,
+  mockSeller,
+  mockAuthToken,
+  mockVoucherInitValues,
+  mockBuyer,
+} = require("../utils/mock");
 
 /**
  *  Test the Boson Dispute Handler interface
@@ -35,6 +38,7 @@ describe("IBosonDisputeHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer,
+    pauser,
     operator,
     admin,
     clerk,
@@ -54,9 +58,10 @@ describe("IBosonDisputeHandler", function () {
     exchangeHandler,
     offerHandler,
     fundsHandler,
-    disputeHandler;
+    disputeHandler,
+    pauseHandler;
   let bosonToken, gasLimit;
-  let id, buyerId, offer, offerId, seller, sellerId, nextAccountId;
+  let buyerId, offer, offerId, seller, nextAccountId;
   let block, blockNumber, tx;
   let support, newTime;
   let price, quantityAvailable, resolutionPeriod, fulfillmentPeriod, sellerDeposit;
@@ -74,12 +79,12 @@ describe("IBosonDisputeHandler", function () {
     disputesToExpire;
   let disputeDates, disputeDatesStruct;
   let exists, response;
-  let disputeResolver, active, disputeResolverFees, disputeResolverId;
+  let disputeResolver, disputeResolverFees, disputeResolverId;
   let buyerPercent;
   let resolutionType, customSignatureType, message, r, s, v;
   let returnedDispute, returnedDisputeDates;
   let DRFeeNative, DRFeeToken, buyerEscalationDepositNative, buyerEscalationDepositToken;
-  let voucherInitValues, contractURI, royaltyPercentage;
+  let voucherInitValues;
   let emptyAuthToken;
   let agentId;
 
@@ -92,6 +97,7 @@ describe("IBosonDisputeHandler", function () {
     // Make accounts available
     [
       deployer,
+      pauser,
       operator,
       admin,
       clerk,
@@ -115,6 +121,9 @@ describe("IBosonDisputeHandler", function () {
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
 
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
+
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
       "SellerHandlerFacet",
@@ -124,6 +133,7 @@ describe("IBosonDisputeHandler", function () {
       "OfferHandlerFacet",
       "FundsHandlerFacet",
       "DisputeHandlerFacet",
+      "PauseHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -191,6 +201,9 @@ describe("IBosonDisputeHandler", function () {
 
     // Cast Diamond to IBosonDisputeHandler
     disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonPauseHandler
+    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -201,7 +214,7 @@ describe("IBosonDisputeHandler", function () {
         support = await erc165.supportsInterface(InterfaceIds.IBosonDisputeHandler);
 
         // Test
-        await expect(support, "IBosonDisputeHandler interface not supported").is.true;
+        expect(support, "IBosonDisputeHandler interface not supported").is.true;
       });
     });
   });
@@ -210,36 +223,29 @@ describe("IBosonDisputeHandler", function () {
   context("📋 Dispute Handler Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
-      id = offerId = sellerId = nextAccountId = "1";
+      offerId = nextAccountId = "1";
       buyerId = "3"; // created after seller and dispute resolver
       agentId = "0"; // agent id is optional while creating an offer
 
-      active = true;
-
       // Create a valid seller
-      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, true);
+      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
-      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      royaltyPercentage = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      voucherInitValues = mockVoucherInitValues();
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
-      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      emptyAuthToken = mockAuthToken();
       expect(emptyAuthToken.isValid()).is.true;
 
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
+      ++nextAccountId;
+
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver(
-        operatorDR.address,
-        adminDR.address,
-        clerkDR.address,
-        treasuryDR.address,
-        false
-      );
+      disputeResolver = mockDisputeResolver(operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address);
+      disputeResolver.id = nextAccountId.toString();
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
@@ -251,7 +257,7 @@ describe("IBosonDisputeHandler", function () {
 
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+      await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // buyer escalation deposit used in multiple tests
       buyerEscalationDepositNative = applyPercentage(DRFeeNative, buyerEscalationDepositPercentage);
@@ -307,7 +313,7 @@ describe("IBosonDisputeHandler", function () {
           // Raise a dispute, testing for the event
           await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId, complaint))
             .to.emit(disputeHandler, "DisputeRaised")
-            .withArgs(exchangeId, buyerId, sellerId, complaint, buyer.address);
+            .withArgs(exchangeId, buyerId, seller.id, complaint, buyer.address);
         });
 
         it("should update state", async function () {
@@ -341,6 +347,16 @@ describe("IBosonDisputeHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
+            // Pause the disputes region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
+
+            // Attempt to raise a dispute, expecting revert
+            await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId, complaint)).to.revertedWith(
+              RevertReasons.REGION_PAUSED
+            );
+          });
+
           it("Caller does not hold a voucher for the given exchange id", async function () {
             // Attempt to raise a dispute, expecting revert
             await expect(disputeHandler.connect(rando).raiseDispute(exchangeId, complaint)).to.revertedWith(
@@ -481,6 +497,16 @@ describe("IBosonDisputeHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
+            // Pause the disputes region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
+
+            // Attempt to retract a dispute, expecting revert
+            await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.revertedWith(
+              RevertReasons.REGION_PAUSED
+            );
+          });
+
           it("Exchange does not exist", async function () {
             // An invalid exchange id
             const exchangeId = "666";
@@ -607,6 +633,16 @@ describe("IBosonDisputeHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
+            // Pause the disputes region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
+
+            // Attempt to extend a dispute timeout, expecting revert
+            await expect(
+              disputeHandler.connect(operator).extendDisputeTimeout(exchangeId, newDisputeTimeout)
+            ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          });
+
           it("Exchange does not exist", async function () {
             // An invalid exchange id
             const exchangeId = "666";
@@ -737,6 +773,19 @@ describe("IBosonDisputeHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
+            // Set time forward past the dispute resolution period
+            await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+
+            // Pause the disputes region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
+
+            // Attempt to expire a dispute, expecting revert
+            await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWith(
+              RevertReasons.REGION_PAUSED
+            );
+          });
+
           it("Exchange does not exist", async function () {
             // An invalid exchange id
             const exchangeId = "666";
@@ -887,7 +936,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Buyer can also have a seller account and this will work", async function () {
             // Create a valid seller with buyer's wallet
-            seller = new Seller(id, buyer.address, buyer.address, buyer.address, buyer.address, true);
+            seller = mockSeller(buyer.address, buyer.address, buyer.address, buyer.address);
             expect(seller.isValid()).is.true;
 
             await accountHandler.connect(buyer).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -898,7 +947,7 @@ describe("IBosonDisputeHandler", function () {
               .withArgs(exchangeId, buyerPercent, buyer.address);
           });
 
-          it("Dispute can be mutualy resolved even if it's in escalated state", async function () {
+          it("Dispute can be mutually resolved even if it's in escalated state", async function () {
             // escalate dispute
             await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
@@ -908,7 +957,7 @@ describe("IBosonDisputeHandler", function () {
               .withArgs(exchangeId, buyerPercent, buyer.address);
           });
 
-          it("Dispute can be mutualy resolved even if it's in escalated state and past the resolution period", async function () {
+          it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
             // Set time forward before the dispute original expiration date
             await setNextBlockTimestamp(
               ethers.BigNumber.from(disputedDate)
@@ -928,7 +977,7 @@ describe("IBosonDisputeHandler", function () {
               .withArgs(exchangeId, buyerPercent, buyer.address);
           });
 
-          it("Dispute can be mutualy resolved if it's past original timeout, but it was extended", async function () {
+          it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function () {
             // Extend the dispute timeout
             await disputeHandler
               .connect(operator)
@@ -1009,7 +1058,7 @@ describe("IBosonDisputeHandler", function () {
 
           it("Operator can also have a buyer account and this will work", async function () {
             // Create a valid buyer with operator's wallet
-            buyer = new Buyer(id, operator.address, active);
+            buyer = mockBuyer(operator.address);
             expect(buyer.isValid()).is.true;
             await accountHandler.connect(operator).createBuyer(buyer);
 
@@ -1019,7 +1068,7 @@ describe("IBosonDisputeHandler", function () {
               .withArgs(exchangeId, buyerPercent, operator.address);
           });
 
-          it("Dispute can be mutualy resolved even if it's in escalated state", async function () {
+          it("Dispute can be mutually resolved even if it's in escalated state", async function () {
             // escalate dispute
             await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
@@ -1029,7 +1078,7 @@ describe("IBosonDisputeHandler", function () {
               .withArgs(exchangeId, buyerPercent, operator.address);
           });
 
-          it("Dispute can be mutualy resolved even if it's in escalated state and past the resolution period", async function () {
+          it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
             // Set time forward before the dispute original expiration date
             await setNextBlockTimestamp(
               ethers.BigNumber.from(disputedDate)
@@ -1049,7 +1098,7 @@ describe("IBosonDisputeHandler", function () {
               .withArgs(exchangeId, buyerPercent, operator.address);
           });
 
-          it("Dispute can be mutualy resolved if it's past original timeout, but it was extended", async function () {
+          it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function () {
             // Extend the dispute timeout
             await disputeHandler
               .connect(operator)
@@ -1075,6 +1124,16 @@ describe("IBosonDisputeHandler", function () {
               message,
               disputeHandler.address
             ));
+          });
+
+          it("The disputes region of protocol is paused", async function () {
+            // Pause the disputes region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
+
+            // Attempt to resolve a dispute, expecting revert
+            await expect(
+              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v)
+            ).to.revertedWith(RevertReasons.REGION_PAUSED);
           });
 
           it("Specified buyer percent exceeds 100%", async function () {
@@ -1128,7 +1187,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Wallet with seller account, but not the seller in this exchange
             // Create a valid seller
-            seller = new Seller(id, other1.address, other1.address, other1.address, other1.address, true);
+            seller = mockSeller(other1.address, other1.address, other1.address, other1.address);
             expect(seller.isValid()).is.true;
 
             await accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -1139,9 +1198,10 @@ describe("IBosonDisputeHandler", function () {
 
             // Wallet with buyer account, but not the buyer in this exchange
             // Create a valid buyer
-            buyer = new Buyer(id, other2.address, active);
+            buyer = mockBuyer(other2.address);
             expect(buyer.isValid()).is.true;
             await accountHandler.connect(other2).createBuyer(buyer);
+
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(other2).resolveDispute(exchangeId, buyerPercent, r, s, v)
@@ -1330,6 +1390,16 @@ describe("IBosonDisputeHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
+            // Pause the disputes region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
+
+            // Attempt to escalate a dispute, expecting revert
+            await expect(
+              disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative })
+            ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          });
+
           it("Exchange does not exist", async function () {
             // An invalid exchange id
             const exchangeId = "666";
@@ -1524,6 +1594,16 @@ describe("IBosonDisputeHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
+            // Pause the disputes region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
+
+            // Attempt to decide a dispute, expecting revert
+            await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
+              RevertReasons.REGION_PAUSED
+            );
+          });
+
           it("Specified buyer percent exceeds 100%", async function () {
             // Set buyer percent above 100%
             buyerPercent = "12000"; // 120%
@@ -1671,6 +1751,19 @@ describe("IBosonDisputeHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
+            // Set time forward past the dispute escalation period
+            await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
+
+            // Pause the disputes region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
+
+            // Attempt to expire an escalated dispute, expecting revert
+            await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWith(
+              RevertReasons.REGION_PAUSED
+            );
+          });
+
           it("Exchange does not exist", async function () {
             // An invalid exchange id
             const exchangeId = "666";
@@ -1801,6 +1894,16 @@ describe("IBosonDisputeHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
+            // Pause the disputes region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
+
+            // Attempt to refuse an escalated dispute, expecting revert
+            await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
+              RevertReasons.REGION_PAUSED
+            );
+          });
+
           it("Exchange does not exist", async function () {
             // An invalid exchange id
             const exchangeId = "666";
@@ -2166,7 +2269,7 @@ describe("IBosonDisputeHandler", function () {
         }
       });
 
-      context("👉 expireDispute()", async function () {
+      context("👉 expireDisputeBatch()", async function () {
         beforeEach(async function () {
           // Set the dispute reason and buyer percent
           complaint = "Tastes weird";
@@ -2254,6 +2357,19 @@ describe("IBosonDisputeHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
+            // Set time forward past the dispute resolution period
+            await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
+
+            // Pause the disputes region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
+
+            // Attempt to expire a dispute batch, expecting revert
+            await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWith(
+              RevertReasons.REGION_PAUSED
+            );
+          });
+
           it("Exchange does not exist", async function () {
             await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 

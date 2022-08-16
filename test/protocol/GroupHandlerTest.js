@@ -4,15 +4,12 @@ const { assert, expect } = require("chai");
 const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
-const Seller = require("../../scripts/domain/Seller");
 const Group = require("../../scripts/domain/Group");
 const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const TokenType = require("../../scripts/domain/TokenType");
-const AuthToken = require("../../scripts/domain/AuthToken");
-const AuthTokenType = require("../../scripts/domain/AuthTokenType");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
-const VoucherInitValues = require("../../scripts/domain/VoucherInitValues");
+const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -21,7 +18,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { oneMonth } = require("../utils/constants");
-const { mockOffer, mockDisputeResolver } = require("../utils/mock");
+const { mockOffer, mockDisputeResolver, mockSeller, mockAuthToken, mockVoucherInitValues } = require("../utils/mock");
 
 /**
  *  Test the Boson Group Handler interface
@@ -29,10 +26,11 @@ const { mockOffer, mockDisputeResolver } = require("../utils/mock");
 describe("IBosonGroupHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
-  let erc165, protocolDiamond, accessController, accountHandler, offerHandler, groupHandler, bosonToken, key, value;
+  let accounts, deployer, pauser, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
+  let erc165, protocolDiamond, accessController, accountHandler, offerHandler, groupHandler, pauseHandler;
+  let bosonToken, key, value;
   let offer, support, expected, exists;
-  let seller, active;
+  let seller;
   let id, sellerId, nextAccountId;
   let offerDates;
   let offerDurations;
@@ -44,7 +42,7 @@ describe("IBosonGroupHandler", function () {
   let groupStruct;
   let offerIdsToAdd, offerIdsToRemove;
   let disputeResolver, disputeResolverFees, disputeResolverId;
-  let voucherInitValues, contractURI, royaltyPercentage;
+  let voucherInitValues;
   let emptyAuthToken;
   let agentId;
 
@@ -55,7 +53,7 @@ describe("IBosonGroupHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR] =
+    [deployer, pauser, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR] =
       await ethers.getSigners();
     accounts = await ethers.getSigners();
 
@@ -65,10 +63,17 @@ describe("IBosonGroupHandler", function () {
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
+
     // Cut the protocol handler facets into the Diamond
-    await deployProtocolHandlerFacets(protocolDiamond, ["SellerHandlerFacet", "DisputeResolverHandlerFacet"]);
-    await deployProtocolHandlerFacets(protocolDiamond, ["OfferHandlerFacet"]);
-    await deployProtocolHandlerFacets(protocolDiamond, ["GroupHandlerFacet"]);
+    await deployProtocolHandlerFacets(protocolDiamond, [
+      "SellerHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "OfferHandlerFacet",
+      "GroupHandlerFacet",
+      "PauseHandlerFacet",
+    ]);
 
     // Deploy the boson token
     [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
@@ -118,6 +123,8 @@ describe("IBosonGroupHandler", function () {
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
     // Cast Diamond to IGroupHandler
     groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamond.address);
+    // Cast Diamond to IBosonPauseHandler
+    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -141,26 +148,22 @@ describe("IBosonGroupHandler", function () {
       id = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
       agentId = "0"; // agent id is optional while creating an offer
 
-      active = true;
-
       // Create a valid seller, then set fields in tests directly
-      seller = new Seller(id, operator.address, admin.address, clerk.address, treasury.address, active);
+      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
       // VoucherInitValues
-      contractURI = `https://ipfs.io/ipfs/QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ`;
-      royaltyPercentage = "0"; // 0%
-      voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
+      voucherInitValues = mockVoucherInitValues();
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
-      emptyAuthToken = new AuthToken("0", AuthTokenType.None);
+      emptyAuthToken = mockAuthToken();
       expect(emptyAuthToken.isValid()).is.true;
 
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
       // Create a valid dispute resolver
-      disputeResolver = await mockDisputeResolver(
+      disputeResolver = mockDisputeResolver(
         operatorDR.address,
         adminDR.address,
         clerkDR.address,
@@ -327,6 +330,14 @@ describe("IBosonGroupHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The groups region of protocol is paused", async function () {
+          // Pause the groups region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
+
+          // Attempt to create a group expecting revert
+          await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Caller not operator of any seller", async function () {
           // Attempt to Create a group, expecting revert
           await expect(groupHandler.connect(rando).createGroup(group)).to.revertedWith(RevertReasons.NOT_OPERATOR);
@@ -334,7 +345,7 @@ describe("IBosonGroupHandler", function () {
 
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
-          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
@@ -476,6 +487,16 @@ describe("IBosonGroupHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The groups region of protocol is paused", async function () {
+          // Pause the groups region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
+
+          // Attempt to add offers to a group, expecting revert
+          await expect(groupHandler.connect(operator).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
+
         it("Group does not exist", async function () {
           // Set invalid id
           group.id = "444";
@@ -503,7 +524,7 @@ describe("IBosonGroupHandler", function () {
 
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
-          seller = new Seller(id, rando.address, rando.address, rando.address, rando.address, active);
+          seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
 
           await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
           await offerHandler.connect(rando).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId); // creates an offer with id 6
@@ -624,6 +645,16 @@ describe("IBosonGroupHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The groups region of protocol is paused", async function () {
+          // Pause the groups region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
+
+          // Attempt to remove offers to a group, expecting revert
+          await expect(
+            groupHandler.connect(operator).removeOffersFromGroup(group.id, offerIdsToRemove)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Group does not exist", async function () {
           // Set invalid id
           group.id = "444";
@@ -749,6 +780,16 @@ describe("IBosonGroupHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The groups region of protocol is paused", async function () {
+          // Pause the groups region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
+
+          // Attempt to set group condition, expecting revert
+          await expect(groupHandler.connect(operator).setGroupCondition(group.id, condition)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
+
         it("Group does not exist", async function () {
           // Set invalid id
           group.id = "444";

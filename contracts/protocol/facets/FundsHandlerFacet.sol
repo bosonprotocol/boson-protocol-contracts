@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "../../domain/BosonConstants.sol";
 import { IBosonFundsHandler } from "../../interfaces/handlers/IBosonFundsHandler.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
+import { PausableBase } from "../bases/ProtocolBase.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
@@ -27,6 +28,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * @notice Receives funds from the caller and stores it to the seller id, so they can be used during the commitToOffer
      *
      * Reverts if:
+     * - The funds region of protocol is paused
      * - seller id does not exist
      * - it receives some native currency (e.g. ETH), but token address is not zero
      * - it receives some native currency (e.g. ETH), and the amount does not match msg.value
@@ -41,7 +43,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         uint256 _sellerId,
         address _tokenAddress,
         uint256 _amount
-    ) external payable override {
+    ) external payable override fundsNotPaused {
         //Check Seller exists in sellers mapping
         (bool exists, , ) = fetchSeller(_sellerId);
 
@@ -61,6 +63,82 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         FundsLib.increaseAvailableFunds(_sellerId, _tokenAddress, _amount);
 
         emit FundsDeposited(_sellerId, msgSender(), _tokenAddress, _amount);
+    }
+
+    /**
+     * @notice Withdraw the specified funds
+     *
+     * Reverts if:
+     * - The funds region of protocol is paused
+     * - caller is not associated with the entity id
+     * - token list length does not match amount list length
+     * - token list length exceeds the maximum allowed number of tokens
+     * - caller tries to withdraw more that they have in available funds
+     * - there is nothing to withdraw
+     * - transfer of funds is not succesful
+     *
+     * @param _entityId - seller or buyer or agent id
+     * @param _tokenList - list of contract addresses of tokens that are being withdrawn
+     * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
+     */
+    function withdrawFunds(
+        uint256 _entityId,
+        address[] calldata _tokenList,
+        uint256[] calldata _tokenAmounts
+    ) external override fundsNotPaused {
+        // address that will receive the funds
+        address payable destinationAddress;
+
+        // first check if the caller is a buyer
+        (bool exists, uint256 callerId) = getBuyerIdByWallet(msgSender());
+        if (exists && callerId == _entityId) {
+            // caller is a buyer
+            destinationAddress = payable(msgSender());
+        } else {
+            // check if the caller is a clerk
+            (exists, callerId) = getSellerIdByClerk(msgSender());
+            if (exists && callerId == _entityId) {
+                // caller is a clerk. In this case funds are transferred to the treasury address
+                (, Seller storage seller, ) = fetchSeller(callerId);
+                destinationAddress = seller.treasury;
+            } else {
+                (exists, callerId) = getAgentIdByWallet(msgSender());
+                if (exists && callerId == _entityId) {
+                    // caller is an agent
+                    destinationAddress = payable(msgSender());
+                } else {
+                    // in this branch, caller is neither buyer, clerk or agent or does not match the _entityId
+                    revert(NOT_AUTHORIZED);
+                }
+            }
+        }
+
+        withdrawFundsInternal(destinationAddress, _entityId, _tokenList, _tokenAmounts);
+    }
+
+    /**
+     * @notice Withdraw the protocol fees
+     *
+     * Reverts if:
+     * - The funds region of protocol is paused
+     * - caller does not have the FEE_COLLECTOR role
+     * - token list length does not match amount list length
+     * - token list length exceeds the maximum allowed number of tokens
+     * - caller tries to withdraw more that they have in available funds
+     * - there is nothing to withdraw
+     * - transfer of funds is not succesful
+     *
+     * @param _tokenList - list of contract addresses of tokens that are being withdrawn
+     * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
+     */
+    function withdrawProtocolFees(address[] calldata _tokenList, uint256[] calldata _tokenAmounts)
+        external
+        override
+        fundsNotPaused
+        onlyRole(FEE_COLLECTOR)
+    {
+        // withdraw the funds
+        withdrawFundsInternal(payable(msgSender()), 0, _tokenList, _tokenAmounts);
     }
 
     /**
@@ -96,79 +174,6 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             // add entry to the return variable
             availableFunds[i] = Funds(tokenAddress, tokenName, availableAmount);
         }
-    }
-
-    /**
-     * @notice Withdraw the specified funds
-     *
-     * Reverts if:
-     * - caller is not associated with the entity id
-     * - token list length does not match amount list length
-     * - token list length exceeds the maximum allowed number of tokens
-     * - caller tries to withdraw more that they have in available funds
-     * - there is nothing to withdraw
-     * - transfer of funds is not succesful
-     *
-     * @param _entityId - seller or buyer or agent id
-     * @param _tokenList - list of contract addresses of tokens that are being withdrawn
-     * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
-     */
-    function withdrawFunds(
-        uint256 _entityId,
-        address[] calldata _tokenList,
-        uint256[] calldata _tokenAmounts
-    ) external override {
-        // address that will receive the funds
-        address payable destinationAddress;
-
-        // first check if the caller is a buyer
-        (bool exists, uint256 callerId) = getBuyerIdByWallet(msgSender());
-        if (exists && callerId == _entityId) {
-            // caller is a buyer
-            destinationAddress = payable(msgSender());
-        } else {
-            // check if the caller is a clerk
-            (exists, callerId) = getSellerIdByClerk(msgSender());
-            if (exists && callerId == _entityId) {
-                // caller is a clerk. In this case funds are transferred to the treasury address
-                (, Seller storage seller, ) = fetchSeller(callerId);
-                destinationAddress = seller.treasury;
-            } else {
-                (exists, callerId) = getAgentIdByWallet(msgSender());
-                if (exists && callerId == _entityId) {
-                    // caller is an agent
-                    destinationAddress = payable(msgSender());
-                } else {
-                    // in this branch, caller is neither buyer, clerk or agent or does not match the _entityId
-                    revert(NOT_AUTHORIZED);
-                }
-            }
-        }
-
-        withdrawFundsInternal(destinationAddress, _entityId, _tokenList, _tokenAmounts);
-    }
-
-    /**
-     * @notice Withdraw the protocol fees
-     *
-     * Reverts if:
-     * - caller does not have the FEE_COLLECTOR role
-     * - token list length does not match amount list length
-     * - token list length exceeds the maximum allowed number of tokens
-     * - caller tries to withdraw more that they have in available funds
-     * - there is nothing to withdraw
-     * - transfer of funds is not succesful
-     *
-     * @param _tokenList - list of contract addresses of tokens that are being withdrawn
-     * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
-     */
-    function withdrawProtocolFees(address[] calldata _tokenList, uint256[] calldata _tokenAmounts)
-        external
-        override
-        onlyRole(FEE_COLLECTOR)
-    {
-        // withdraw the funds
-        withdrawFundsInternal(payable(msgSender()), 0, _tokenList, _tokenAmounts);
     }
 
     /**

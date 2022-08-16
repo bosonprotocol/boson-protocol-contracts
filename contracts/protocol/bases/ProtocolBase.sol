@@ -4,33 +4,23 @@ pragma solidity ^0.8.0;
 import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
-import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
+import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { PausableBase } from "./PausableBase.sol";
 
 /**
  * @title ProtocolBase
  *
  * @notice Provides domain and common modifiers to Protocol facets
  */
-abstract contract ProtocolBase is BosonTypes {
+abstract contract ProtocolBase is PausableBase {
     /**
      * @dev Modifier to protect initializer function from being invoked twice.
      */
     modifier onlyUnInitialized(bytes4 interfaceId) {
-        ProtocolLib.ProtocolInitializers storage pi = protocolInitializers();
-        require(!pi.initializedInterfaces[interfaceId], ALREADY_INITIALIZED);
-        pi.initializedInterfaces[interfaceId] = true;
-        _;
-    }
-
-    /**
-     * @dev Modifier that checks that an offer exists
-     *
-     * Reverts if the offer does not exist
-     */
-    modifier offerExists(uint256 _offerId) {
-        // Make sure the offer exists TODO: remove me, not used and not the way to check
-        require(_offerId > 0 && _offerId < protocolCounters().nextOfferId, "Offer does not exist");
+        ProtocolLib.ProtocolStatus storage ps = protocolStatus();
+        require(!ps.initializedInterfaces[interfaceId], ALREADY_INITIALIZED);
+        ps.initializedInterfaces[interfaceId] = true;
         _;
     }
 
@@ -111,12 +101,12 @@ abstract contract ProtocolBase is BosonTypes {
     }
 
     /**
-     * @dev Get the Protocol Initializers slot
+     * @dev Get the Protocol Status slot
      *
-     * @return pi the Protocol Initializers slot
+     * @return ps the Protocol Status slot
      */
-    function protocolInitializers() internal pure returns (ProtocolLib.ProtocolInitializers storage pi) {
-        pi = ProtocolLib.protocolInitializers();
+    function protocolStatus() internal pure returns (ProtocolLib.ProtocolStatus storage ps) {
+        ps = ProtocolLib.protocolStatus();
     }
 
     /**
