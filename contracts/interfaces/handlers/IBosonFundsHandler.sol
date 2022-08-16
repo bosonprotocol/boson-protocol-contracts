@@ -17,6 +17,7 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
      * @notice Receives funds from the caller and stores it to the seller id, so they can be used during the commitToOffer
      *
      * Reverts if:
+     * - The funds region of protocol is paused
      * - seller id does not exist
      * - it receives some native currency (e.g. ETH), but token address is not zero
      * - it receives some native currency (e.g. ETH), and the amount does not match msg.value
@@ -34,17 +35,10 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
     ) external payable;
 
     /**
-     * @notice For a given seller or buyer id it returns the information about the funds that can use as a sellerDeposit and/or be withdrawn
-     *
-     * @param _entityId - seller or buyer id to check
-     * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
-     */
-    function getAvailableFunds(uint256 _entityId) external view returns (BosonTypes.Funds[] memory availableFunds);
-
-    /**
      * @notice Withdraw the specified funds
      *
      * Reverts if:
+     * - The funds region of protocol is paused
      * - caller is not associated with the entity id
      * - token list length does not match amount list length
      * - token list length exceeds the maximum allowed number of tokens
@@ -66,6 +60,7 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
      * @notice Withdraw the protocol fees
      *
      * Reverts if:
+     * - The funds region of protocol is paused
      * - caller does not have the FEE_COLLECTOR role
      * - token list length does not match amount list length
      * - token list length exceeds the maximum allowed number of tokens
@@ -77,4 +72,12 @@ interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
      * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
      */
     function withdrawProtocolFees(address[] calldata _tokenList, uint256[] calldata _tokenAmounts) external;
+
+    /**
+     * @notice For a given seller or buyer id it returns the information about the funds that can use as a sellerDeposit and/or be withdrawn
+     *
+     * @param _entityId - seller or buyer id to check
+     * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
+     */
+    function getAvailableFunds(uint256 _entityId) external view returns (BosonTypes.Funds[] memory availableFunds);
 }

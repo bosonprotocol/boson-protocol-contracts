@@ -22,6 +22,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * Emits an AgentCreated event if successful.
      *
      * Reverts if:
+     * - The agents region of protocol is paused
      * - Wallet address is zero address
      * - Active is not true
      * - Wallet address is not unique to this agent
@@ -29,7 +30,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
      *
      * @param _agent - the fully populated struct with agent id set to 0x0
      */
-    function createAgent(Agent memory _agent) external {
+    function createAgent(Agent memory _agent) external agentsNotPaused {
         //Check for zero address
         require(_agent.wallet != address(0), INVALID_ADDRESS);
 
@@ -57,6 +58,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * Emits a AgentUpdated event if successful.
      *
      * Reverts if:
+     * - The agents region of protocol is paused
      * - Caller is not the wallet address associated with the agent account
      * - Wallet address is zero address
      * - Wallet address is not unique to this agent
@@ -65,7 +67,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
      *
      * @param _agent - the fully populated agent struct
      */
-    function updateAgent(Agent memory _agent) external {
+    function updateAgent(Agent memory _agent) external agentsNotPaused {
         //Check for zero address
         require(_agent.wallet != address(0), INVALID_ADDRESS);
 

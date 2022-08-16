@@ -6,6 +6,8 @@ const { gasLimit } = require("../../environments");
 const Role = require("../../scripts/domain/Role");
 const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
+const PausableRegion = require("../../scripts/domain/PausableRegion.js");
+const TokenType = require("../../scripts/domain/TokenType.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -14,7 +16,6 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockSeller, mockTwin, mockAuthToken, mockVoucherInitValues } = require("../utils/mock");
-const TokenType = require("../../scripts/domain/TokenType.js");
 const { oneMonth } = require("../utils/constants");
 
 /**
@@ -23,7 +24,7 @@ const { oneMonth } = require("../utils/constants");
 describe("IBosonTwinHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, admin, clerk, treasury;
+  let deployer, pauser, rando, operator, admin, clerk, treasury;
   let seller;
   let erc165,
     protocolDiamond,
@@ -31,6 +32,7 @@ describe("IBosonTwinHandler", function () {
     twinHandler,
     accountHandler,
     bundleHandler,
+    pauseHandler,
     twinStruct,
     bosonToken,
     foreign721,
@@ -57,7 +59,7 @@ describe("IBosonTwinHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando] = await ethers.getSigners();
+    [deployer, pauser, operator, admin, clerk, treasury, rando] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , accessController] = await deployProtocolDiamond();
@@ -65,11 +67,15 @@ describe("IBosonTwinHandler", function () {
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
+
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
       "SellerHandlerFacet",
       "TwinHandlerFacet",
       "BundleHandlerFacet",
+      "PauseHandlerFacet",
     ]);
 
     // Deploy the mock tokens
@@ -120,11 +126,14 @@ describe("IBosonTwinHandler", function () {
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
 
-    // Cast Diamond to ITwinHandler
+    // Cast Diamond to IBosonTwinHandler
     twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
 
-    // Cast Diamond to IBundleHandler
+    // Cast Diamond to IBosonBundleHandler
     bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonPauseHandler
+    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
@@ -277,12 +286,22 @@ describe("IBosonTwinHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The twins region of protocol is paused", async function () {
+          // Pause the twins region of the protocol
+          await pauseHandler
+            .connect(pauser)
+            .pause([PausableRegion.Offers, PausableRegion.Twins, PausableRegion.Bundles]);
+
+          // Attempt to Remove a twin, expecting revert
+          await expect(twinHandler.connect(operator).removeTwin(twin.id)).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Caller not operator of any seller", async function () {
           // Attempt to Create a twin, expecting revert
           await expect(twinHandler.connect(rando).createTwin(twin)).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
-        it("should revert if protocol is not approved to transfer the ERC20 token", async function () {
+        it("protocol is not approved to transfer the ERC20 token", async function () {
           //ERC20 token address
           twin.tokenAddress = bosonToken.address;
 
@@ -291,7 +310,7 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
-        it("should revert if protocol is not approved to transfer the ERC721 token", async function () {
+        it("protocol is not approved to transfer the ERC721 token", async function () {
           //ERC721 token address
           twin.tokenAddress = foreign721.address;
 
@@ -300,7 +319,7 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
-        it("should revert if protocol is not approved to transfer the ERC1155 token", async function () {
+        it("protocol is not approved to transfer the ERC1155 token", async function () {
           //ERC1155 token address
           twin.tokenAddress = foreign1155.address;
 
@@ -325,7 +344,7 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
-        it("Amount must not be zero if token type is FungibleToken", async function () {
+        it("Amount is zero and token type is FungibleToken", async function () {
           // Approving the twinHandler contract to transfer seller's tokens
           await bosonToken.connect(operator).approve(twinHandler.address, 1);
 
@@ -336,7 +355,7 @@ describe("IBosonTwinHandler", function () {
           await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(RevertReasons.INVALID_AMOUNT);
         });
 
-        it("Amount must not be zero if token type is MultiToken", async function () {
+        it("Amount is zero and token type is MultiToken", async function () {
           // Mint a token and approve twinHandler contract to transfer it
           await foreign1155.connect(operator).mint(twin.tokenId, "1");
           await foreign1155.connect(operator).setApprovalForAll(twinHandler.address, true);
@@ -348,7 +367,7 @@ describe("IBosonTwinHandler", function () {
           await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(RevertReasons.INVALID_AMOUNT);
         });
 
-        it("Amount must be zero if token type is NonFungibleToken", async function () {
+        it("Amount is zero and token type is NonFungibleToken", async function () {
           twin.tokenAddress = foreign721.address;
           twin.tokenType = TokenType.NonFungibleToken;
           twin.amount = "1";
@@ -363,7 +382,7 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
-        it("Should revert if twin range is already being used in another twin", async function () {
+        it("twin range is already being used in another twin", async function () {
           twin.supplyAvailable = "10";
           twin.amount = "0";
           twin.tokenId = "5";
@@ -404,7 +423,7 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
-        it("Should revert if token address has been used in another twin with unlimited supply", async function () {
+        it("token address has been used in another twin with unlimited supply", async function () {
           twin.supplyAvailable = ethers.constants.MaxUint256;
           twin.tokenType = TokenType.NonFungibleToken;
           twin.tokenAddress = foreign721.address;
@@ -465,6 +484,91 @@ describe("IBosonTwinHandler", function () {
               RevertReasons.INVALID_TOKEN_ADDRESS
             );
           });
+        });
+      });
+    });
+
+    context("👉 removeTwin()", async function () {
+      beforeEach(async function () {
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, 1);
+
+        // Create a twin
+        await twinHandler.connect(operator).createTwin(twin);
+      });
+
+      it("should emit a TwinDeleted event", async function () {
+        // Expect twin to be found.
+        [success] = await twinHandler.connect(rando).getTwin(twin.id);
+        expect(success).to.be.true;
+
+        // Remove the twin, testing for the event.
+        await expect(twinHandler.connect(operator).removeTwin(twin.id))
+          .to.emit(twinHandler, "TwinDeleted")
+          .withArgs(twin.id, twin.sellerId, operator.address);
+
+        // Expect twin to be not found.
+        [success] = await twinHandler.connect(rando).getTwin(twin.id);
+        expect(success).to.be.false;
+      });
+
+      it("should make twin range available again if token type is NonFungible", async function () {
+        twin.tokenType = TokenType.NonFungibleToken;
+        twin.tokenAddress = foreign721.address;
+        twin.amount = "0";
+        const expectedNewTwinId = "2";
+
+        await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+        // Create a twin with range: [0,1499]
+        await twinHandler.connect(operator).createTwin(twin);
+
+        // Remove twin
+        await twinHandler.connect(operator).removeTwin(expectedNewTwinId);
+
+        // Twin range must be available and createTwin transaction with same range should succeed
+        await expect(twinHandler.connect(operator).createTwin(twin)).to.not.reverted;
+      });
+
+      context("💔 Revert Reasons", async function () {
+        it("The twins region of protocol is paused", async function () {
+          // Pause the twins region of the protocol
+          await pauseHandler
+            .connect(pauser)
+            .pause([PausableRegion.Offers, PausableRegion.Twins, PausableRegion.Bundles]);
+
+          // Attempt to Remove a twin, expecting revert
+          await expect(twinHandler.connect(operator).removeTwin(twin.id)).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
+        it("Twin does not exist", async function () {
+          let nonExistantTwinId = "999";
+
+          // Attempt to Remove a twin, expecting revert
+          await expect(twinHandler.connect(operator).removeTwin(nonExistantTwinId)).to.revertedWith(
+            RevertReasons.NO_SUCH_TWIN
+          );
+        });
+
+        it("Caller is not the seller", async function () {
+          // Attempt to Remove a twin, expecting revert
+          await expect(twinHandler.connect(rando).removeTwin(twin.id)).to.revertedWith(RevertReasons.NOT_OPERATOR);
+        });
+
+        it("Bundle for twin exists", async function () {
+          // Bundle: Required constructor params
+          bundleId = "1";
+          offerIds = [];
+          twinIds = [twin.id];
+
+          // Create a new bundle
+          bundle = new Bundle(bundleId, sellerId, offerIds, twinIds);
+          await bundleHandler.connect(operator).createBundle(bundle);
+
+          // Attempt to Remove a twin, expecting revert
+          await expect(twinHandler.connect(operator).removeTwin(twin.id)).to.revertedWith(
+            RevertReasons.BUNDLE_FOR_TWIN_EXISTS
+          );
         });
       });
     });
@@ -573,81 +677,6 @@ describe("IBosonTwinHandler", function () {
 
         // Verify expectation
         expect(nextTwinId.toString() == expected).to.be.true;
-      });
-    });
-
-    context("👉 removeTwin()", async function () {
-      beforeEach(async function () {
-        // Approving the twinHandler contract to transfer seller's tokens
-        await bosonToken.connect(operator).approve(twinHandler.address, 1);
-
-        // Create a twin
-        await twinHandler.connect(operator).createTwin(twin);
-      });
-
-      it("should emit a TwinDeleted event", async function () {
-        // Expect twin to be found.
-        [success] = await twinHandler.connect(rando).getTwin(twin.id);
-        expect(success).to.be.true;
-
-        // Remove the twin, testing for the event.
-        await expect(twinHandler.connect(operator).removeTwin(twin.id))
-          .to.emit(twinHandler, "TwinDeleted")
-          .withArgs(twin.id, twin.sellerId, operator.address);
-
-        // Expect twin to be not found.
-        [success] = await twinHandler.connect(rando).getTwin(twin.id);
-        expect(success).to.be.false;
-      });
-
-      it("should make twin range available again if token type is NonFungible", async function () {
-        twin.tokenType = TokenType.NonFungibleToken;
-        twin.tokenAddress = foreign721.address;
-        twin.amount = "0";
-        const expectedNewTwinId = "2";
-
-        await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
-
-        // Create a twin with range: [0,1499]
-        await twinHandler.connect(operator).createTwin(twin);
-
-        // Remove twin
-        await twinHandler.connect(operator).removeTwin(expectedNewTwinId);
-
-        // Twin range must be available and createTwin transaction with same range should succeed
-        await expect(twinHandler.connect(operator).createTwin(twin)).to.not.reverted;
-      });
-
-      context("💔 Revert Reasons", async function () {
-        it("Twin does not exist", async function () {
-          let nonExistantTwinId = "999";
-
-          // Attempt to Remove a twin, expecting revert
-          await expect(twinHandler.connect(operator).removeTwin(nonExistantTwinId)).to.revertedWith(
-            RevertReasons.NO_SUCH_TWIN
-          );
-        });
-
-        it("Caller is not the seller", async function () {
-          // Attempt to Remove a twin, expecting revert
-          await expect(twinHandler.connect(rando).removeTwin(twin.id)).to.revertedWith(RevertReasons.NOT_OPERATOR);
-        });
-
-        it("Bundle for twin exists", async function () {
-          // Bundle: Required constructor params
-          bundleId = "1";
-          offerIds = [];
-          twinIds = [twin.id];
-
-          // Create a new bundle
-          bundle = new Bundle(bundleId, sellerId, offerIds, twinIds);
-          await bundleHandler.connect(operator).createBundle(bundle);
-
-          // Attempt to Remove a twin, expecting revert
-          await expect(twinHandler.connect(operator).removeTwin(twin.id)).to.revertedWith(
-            RevertReasons.BUNDLE_FOR_TWIN_EXISTS
-          );
-        });
       });
     });
   });

@@ -156,6 +156,7 @@ function getNoArgFacetNames() {
     "OfferHandlerFacet",
     "OrchestrationHandlerFacet",
     "TwinHandlerFacet",
+    "PauseHandlerFacet",
   ];
 }
 

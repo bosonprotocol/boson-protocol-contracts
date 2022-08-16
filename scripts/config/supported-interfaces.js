@@ -6,6 +6,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 
 const interfaces = [
+  "IBosonPauseHandler",
   "IBosonConfigHandler",
   "IBosonBundleHandler",
   "IBosonDisputeHandler",

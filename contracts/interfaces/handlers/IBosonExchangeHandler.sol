@@ -21,6 +21,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * Issues a voucher to the buyer address.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
      * - offerId is invalid
      * - offer has been voided
      * - offer has expired
@@ -43,6 +44,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @notice Complete an exchange.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in redeemed state
      * - Caller is not buyer and offer fulfillment period has not elapsed
@@ -55,9 +57,27 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
     function completeExchange(uint256 _exchangeId) external;
 
     /**
+     * @notice Complete a batch of exchanges
+     *
+     * Emits a ExchangeCompleted event for every exchange if finalized to the complete state.
+     *
+     * Reverts if:
+     * - The exchanges region of protocol is paused
+     * - Number of exchanges exceeds maximum allowed number per batch
+     * - for any exchange:
+     *   - Exchange does not exist
+     *   - Exchange is not in redeemed state
+     *   - Caller is not buyer and offer fulfillment period has not elapsed
+     *
+     * @param _exchangeIds - the array of exchanges ids
+     */
+    function completeExchangeBatch(uint256[] calldata _exchangeIds) external;
+
+    /**
      * @notice Revoke a voucher.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Caller is not seller's operator
@@ -73,6 +93,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @notice Cancel a voucher.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Caller does not own voucher
@@ -88,6 +109,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @notice Expire a voucher.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Redemption period has not yet elapsed
@@ -103,6 +125,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @notice Extend a Voucher's validity period.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Caller is not seller's operator
@@ -120,6 +143,8 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @notice Redeem a voucher.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
+     * - The buyers region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Caller does not own voucher
@@ -137,6 +162,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @notice Inform protocol of new buyer associated with an exchange
      *
      * Reverts if
+     * - The buyers region of protocol is paused
      * - Caller is not a clone address associated with the seller
      * - Exchange does not exist
      * - Exchange is not in committed state
@@ -187,22 +213,6 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @return nextExchangeId - the next exchange Id
      */
     function getNextExchangeId() external view returns (uint256 nextExchangeId);
-
-    /**
-     * @notice Complete a batch of exchanges
-     *
-     * Emits a ExchangeCompleted event for every exchange if finalized to the complete state.
-     *
-     * Reverts if:
-     * - Number of exchanges exceeds maximum allowed number per batch
-     * - for any exchange:
-     *   - Exchange does not exist
-     *   - Exchange is not in redeemed state
-     *   - Caller is not buyer and offer fulfillment period has not elapsed
-     *
-     * @param _exchangeIds - the array of exchanges ids
-     */
-    function completeExchangeBatch(uint256[] calldata _exchangeIds) external;
 
     /**
      * @notice Get exchange receipt

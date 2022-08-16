@@ -31,6 +31,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * Emits a DisputeRaised event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - caller does not hold a voucher for the given exchange id
      * - exchange does not exist
      * - exchange is not in a redeemed state
@@ -40,7 +41,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * @param _exchangeId - the id of the associated exchange
      * @param _complaint - the buyer's complaint description
      */
-    function raiseDispute(uint256 _exchangeId, string calldata _complaint) external override {
+    function raiseDispute(uint256 _exchangeId, string calldata _complaint) external override disputesNotPaused {
         // Get the exchange, should be in redeemed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
         // Get the offer, which will exist if the exchange does
@@ -55,6 +56,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * Emits a DisputeRetracted event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - caller is not the buyer for the given exchange id
@@ -63,7 +65,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function retractDispute(uint256 _exchangeId) external override {
+    function retractDispute(uint256 _exchangeId) external override disputesNotPaused {
         // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
@@ -96,6 +98,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * Emits a DisputeTimeoutExtened event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - caller is not the seller
@@ -106,7 +109,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * @param _exchangeId - the id of the associated exchange
      * @param _newDisputeTimeout - new date when resolution period ends
      */
-    function extendDisputeTimeout(uint256 _exchangeId, uint256 _newDisputeTimeout) external override {
+    function extendDisputeTimeout(uint256 _exchangeId, uint256 _newDisputeTimeout) external override disputesNotPaused {
         // Verify that the caller is the seller. Get exchange -> get offer id -> get seller id -> get operator address and compare to msg.sender
         // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
@@ -145,6 +148,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * Emits a DisputeExpired event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - dispute is still valid
@@ -152,7 +156,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function expireDispute(uint256 _exchangeId) public override {
+    function expireDispute(uint256 _exchangeId) public override disputesNotPaused {
         // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
@@ -178,6 +182,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * Emits a DisputeExpired event for every dispute if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - Number of disputes exceeds maximum allowed number per batch
      * - for any dispute:
      *   - exchange does not exist
@@ -187,7 +192,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeIds - the array of ids of the associated exchanges
      */
-    function expireDisputeBatch(uint256[] calldata _exchangeIds) external override {
+    function expireDisputeBatch(uint256[] calldata _exchangeIds) external override disputesNotPaused {
         // limit maximum number of disputes to avoid running into block gas limit in a loop
         require(_exchangeIds.length <= protocolLimits().maxDisputesPerBatch, TOO_MANY_DISPUTES);
 
@@ -203,6 +208,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * Emits a DisputeResolved event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - specified buyer percent exceeds 100%
      * - dispute has expired (resolution period has ended and dispute was not escalated)
      * - exchange does not exist
@@ -224,7 +230,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         bytes32 _sigR,
         bytes32 _sigS,
         uint8 _sigV
-    ) external override {
+    ) external override disputesNotPaused {
         // buyer should get at most 100%
         require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
 
@@ -288,6 +294,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * Emits a DisputeEscalated event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - caller is not the buyer
@@ -301,7 +308,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function escalateDispute(uint256 _exchangeId) external payable override {
+    function escalateDispute(uint256 _exchangeId) external payable override disputesNotPaused {
         // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
@@ -349,6 +356,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * Emits a DisputeDecided event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - specified buyer percent exceeds 100%
      * - exchange does not exist
      * - exchange is not in the disputed state
@@ -359,7 +367,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * @param _exchangeId  - exchange id to resolve dispute
      * @param _buyerPercent - percentage of the pot that goes to the buyer
      */
-    function decideDispute(uint256 _exchangeId, uint256 _buyerPercent) external override {
+    function decideDispute(uint256 _exchangeId, uint256 _buyerPercent) external override disputesNotPaused {
         // buyer should get at most 100%
         require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
 
@@ -381,6 +389,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * Emits a EscalatedDisputeRefused event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - dispute is in some state other than escalated
@@ -389,7 +398,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function refuseEscalatedDispute(uint256 _exchangeId) external override {
+    function refuseEscalatedDispute(uint256 _exchangeId) external override disputesNotPaused {
         // Make sure the dispute is valid and the caller is the dispute resolver
         (Exchange storage exchange, Dispute storage dispute, DisputeDates storage disputeDates) = disputeResolverChecks(
             _exchangeId
@@ -403,55 +412,12 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
-     * @notice Validates that exchange and dispute are in the correct state and that the caller is the dispute resolver for this dispute
-     *
-     * Reverts if:
-     * - exchange does not exist
-     * - exchange is not in a disputed state
-     * - dispute is in some state other than escalated
-     * - dispute escalation response period has elapsed
-     * - caller is not the dispute resolver for this dispute
-     *
-     * @param _exchangeId - the id of the associated exchange
-     */
-    function disputeResolverChecks(uint256 _exchangeId)
-        internal
-        view
-        returns (
-            Exchange storage exchange,
-            Dispute storage dispute,
-            DisputeDates storage disputeDates
-        )
-    {
-        // Get the exchange, should be in disputed state
-        exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
-
-        // Fetch the dispute and dispute dates
-        (, dispute, disputeDates) = fetchDispute(_exchangeId);
-
-        // Make sure the dispute is in the escalated state
-        require(dispute.state == DisputeState.Escalated, INVALID_STATE);
-
-        // Make sure the dispute escalation period not expired already
-        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
-
-        // Fetch the offer to get the info who the seller is
-        (, Offer storage offer) = fetchOffer(exchange.offerId);
-
-        // get dispute resolver id to check if caller is the dispute resolver
-        uint256 disputeResolverId = protocolLookups().disputeResolverIdByOperator[msgSender()];
-        require(
-            disputeResolverId == fetchDisputeResolutionTerms(offer.id).disputeResolverId,
-            NOT_DISPUTE_RESOLVER_OPERATOR
-        );
-    }
-
-    /**
      * @notice Expire the dispute in escalated state and release the funds
      *
      * Emits a EscalatedDisputeExpired event if successful.
      *
      * Reverts if:
+     * - The disputes region of protocol is paused
      * - exchange does not exist
      * - exchange is not in a disputed state
      * - dispute is in some state other than escalated
@@ -459,7 +425,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function expireEscalatedDispute(uint256 _exchangeId) external override {
+    function expireEscalatedDispute(uint256 _exchangeId) external override disputesNotPaused {
         // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
@@ -514,16 +480,6 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
 
         // Release the funds
         FundsLib.releaseFunds(_exchangeId);
-    }
-
-    /**
-     * @notice Returns hashed resolution information. Needed for the verfication in resolveDispute.
-     *
-     * @param _exchangeId - if of the exchange for which dispute was resolved
-     * @param _buyerPercent - percentage of the pot that goes to the buyer
-     */
-    function hashResolution(uint256 _exchangeId, uint256 _buyerPercent) internal pure returns (bytes32) {
-        return keccak256(abi.encode(RESOLUTION_TYPEHASH, _exchangeId, _buyerPercent));
     }
 
     /**
@@ -597,5 +553,59 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
                 dispute.state == DisputeState.Decided ||
                 dispute.state == DisputeState.Refused);
         }
+    }
+
+    /**
+     * @notice Validates that exchange and dispute are in the correct state and that the caller is the dispute resolver for this dispute
+     *
+     * Reverts if:
+     * - exchange does not exist
+     * - exchange is not in a disputed state
+     * - dispute is in some state other than escalated
+     * - dispute escalation response period has elapsed
+     * - caller is not the dispute resolver for this dispute
+     *
+     * @param _exchangeId - the id of the associated exchange
+     */
+    function disputeResolverChecks(uint256 _exchangeId)
+        internal
+        view
+        returns (
+            Exchange storage exchange,
+            Dispute storage dispute,
+            DisputeDates storage disputeDates
+        )
+    {
+        // Get the exchange, should be in disputed state
+        exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+
+        // Fetch the dispute and dispute dates
+        (, dispute, disputeDates) = fetchDispute(_exchangeId);
+
+        // Make sure the dispute is in the escalated state
+        require(dispute.state == DisputeState.Escalated, INVALID_STATE);
+
+        // Make sure the dispute escalation period not expired already
+        require(block.timestamp <= disputeDates.timeout, DISPUTE_HAS_EXPIRED);
+
+        // Fetch the offer to get the info who the seller is
+        (, Offer storage offer) = fetchOffer(exchange.offerId);
+
+        // get dispute resolver id to check if caller is the dispute resolver
+        uint256 disputeResolverId = protocolLookups().disputeResolverIdByOperator[msgSender()];
+        require(
+            disputeResolverId == fetchDisputeResolutionTerms(offer.id).disputeResolverId,
+            NOT_DISPUTE_RESOLVER_OPERATOR
+        );
+    }
+
+    /**
+     * @notice Returns hashed resolution information. Needed for the verfication in resolveDispute.
+     *
+     * @param _exchangeId - if of the exchange for which dispute was resolved
+     * @param _buyerPercent - percentage of the pot that goes to the buyer
+     */
+    function hashResolution(uint256 _exchangeId, uint256 _buyerPercent) internal pure returns (bytes32) {
+        return keccak256(abi.encode(RESOLUTION_TYPEHASH, _exchangeId, _buyerPercent));
     }
 }

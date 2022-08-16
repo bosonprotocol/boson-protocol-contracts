@@ -5,6 +5,7 @@ const Role = require("../../scripts/domain/Role");
 const Seller = require("../../scripts/domain/Seller");
 const AuthToken = require("../../scripts/domain/AuthToken");
 const AuthTokenType = require("../../scripts/domain/AuthTokenType");
+const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
@@ -21,6 +22,7 @@ const { mockSeller, mockAuthToken, mockVoucherInitValues } = require("../utils/m
 describe("SellerHandler", function () {
   // Common vars
   let deployer,
+    pauser,
     rando,
     operator,
     admin,
@@ -35,7 +37,7 @@ describe("SellerHandler", function () {
     other7,
     other8,
     authTokenOwner;
-  let protocolDiamond, accessController, accountHandler, exchangeHandler, configHandler, gasLimit;
+  let protocolDiamond, accessController, accountHandler, exchangeHandler, configHandler, pauseHandler, gasLimit;
   let seller, sellerStruct, seller2, id2, seller3, seller4, expectedSeller, expectedSellerStruct;
   let authToken, authTokenStruct, emptyAuthToken, emptyAuthTokenStruct, authToken2, authToken3;
   let nextAccountId;
@@ -50,6 +52,7 @@ describe("SellerHandler", function () {
     // Make accounts available
     [
       deployer,
+      pauser,
       operator,
       admin,
       clerk,
@@ -75,12 +78,16 @@ describe("SellerHandler", function () {
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
 
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
+
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
       "AccountHandlerFacet",
       "SellerHandlerFacet",
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
+      "PauseHandlerFacet",
     ]);
 
     // Deploy mock ERC721 tokens
@@ -137,7 +144,10 @@ describe("SellerHandler", function () {
     // Cast Diamond to IBosonExchangeHandler
     exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
 
-    //Cast Diamond to IBosonConfigHancler
+    //Cast Diamond to IBosonPauseHandler
+    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
+
+    //Cast Diamond to IBosonConfigHandler
     configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
     await expect(
@@ -518,6 +528,16 @@ describe("SellerHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The sellers region of protocol is paused", async function () {
+          // Pause the sellers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
+
+          // Attempt to create a seller expecting revert
+          await expect(
+            accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("active is false", async function () {
           seller.active = false;
 
@@ -1583,7 +1603,32 @@ describe("SellerHandler", function () {
           .withArgs(seller.id, sellerStruct, emptyAuthTokenStruct, admin.address);
       });
 
+      it("should be possible to use the same address for operator, admin, clerk, and treasury", async function () {
+        seller.operator = other1.address;
+        seller.admin = other1.address;
+        seller.clerk = other1.address;
+        seller.treasury = other1.address;
+
+        //Create struct again with new addresses
+        sellerStruct = seller.toStruct();
+
+        // Create a seller, testing for the event
+        await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
+          .to.emit(accountHandler, "SellerUpdated")
+          .withArgs(seller.id, sellerStruct, emptyAuthTokenStruct, admin.address);
+      });
+
       context("💔 Revert Reasons", async function () {
+        it("The sellers region of protocol is paused", async function () {
+          // Pause the sellers region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Sellers]);
+
+          // Attempt to update a seller expecting revert
+          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
+
         it("Seller does not exist", async function () {
           // Set invalid id
           seller.id = "444";

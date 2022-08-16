@@ -11,6 +11,7 @@ class Role {}
 
 Role.Names = [
   "ADMIN", // Role Admin
+  "PAUSER", // Role for pausing protocol
   "PROTOCOL", // Role for facets of the ProtocolDiamond
   "CLIENT", // Role for clients of the ProtocolDiamond
   "UPGRADER", // Role for performing contract and config upgrades
