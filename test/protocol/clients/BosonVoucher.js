@@ -8,6 +8,7 @@ const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol
 const { deployProtocolHandlerFacets } = require("../../../scripts/util/deploy-protocol-handler-facets.js");
 const Role = require("../../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../../scripts/domain/DisputeResolverFee");
+const VoucherInitValues = require("../../../scripts/domain/VoucherInitValues");
 const { mockOffer } = require("../../utils/mock.js");
 const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
 const { assert, expect } = require("chai");
@@ -507,7 +508,8 @@ describe("IBosonVoucher", function () {
         voucherInitValues = new VoucherInitValues(contractURI, royaltyPercentage);
 
         // create another seller
-        seller = new Seller("2", rando.address, rando.address, rando.address, rando.address, true);
+        seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+        seller.id = "2";
 
         // royalty percentage too high, expectig revert
         await expect(
