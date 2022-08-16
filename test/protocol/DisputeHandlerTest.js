@@ -350,7 +350,7 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to raise a dispute, expecting revert
-            await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId, complaint)).to.revertedWith(
+            await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWith(
               RevertReasons.REGION_PAUSED
             );
           });
