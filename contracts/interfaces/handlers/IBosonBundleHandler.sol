@@ -18,6 +18,7 @@ interface IBosonBundleHandler is IBosonBundleEvents {
      * Emits a BundleCreated event if successful.
      *
      * Reverts if:
+     * - The bundles region of protocol is paused
      * - Seller does not exist
      * - any of offers belongs to different seller
      * - any of offers does not exist

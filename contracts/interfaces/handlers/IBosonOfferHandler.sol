@@ -18,6 +18,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * Emits an OfferCreated event if successful.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
      * - Caller is not an operator
      * - Valid from date is greater than valid until date
      * - Valid until date is not in the future
@@ -57,6 +58,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * Emits an OfferCreated event for every offer if successful.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
      * - Number of offers exceeds maximum allowed number per batch
      * - Number of elements in offers, offerDates and offerDurations do not match
      * - for any offer:
@@ -104,6 +106,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * No further vouchers can be issued against a voided offer.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
      * - Offer ID is invalid
      * - Caller is not the operator of the offer
      * - Offer has already been voided
@@ -122,6 +125,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * No further vouchers can be issued against a voided offer.
      *
      * Reverts if, for any offer:
+     * - The offers region of protocol is paused
      * - Number of offers exceeds maximum allowed number per batch
      * - Offer ID is invalid
      * - Caller is not the operator of the offer
@@ -137,6 +141,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * Emits an OfferExtended event if successful.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
      * - Offer does not exist
      * - Caller is not the operator of the offer
      * - New valid until date is before existing valid until date
@@ -153,6 +158,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * Emits an OfferExtended event if successful.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
      * - Number of offers exceeds maximum allowed number per batch
      * - For any of the offers:
      *   - Offer does not exist

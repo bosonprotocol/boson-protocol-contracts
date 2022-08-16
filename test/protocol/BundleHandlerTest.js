@@ -5,6 +5,7 @@ const { gasLimit } = require("../../environments");
 
 const Role = require("../../scripts/domain/Role");
 const Bundle = require("../../scripts/domain/Bundle");
+const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -30,7 +31,7 @@ const { oneMonth } = require("../utils/constants");
 describe("IBosonBundleHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, admin, clerk, treasury, buyer, operatorDR, adminDR, clerkDR, treasuryDR;
+  let deployer, pauser, rando, operator, admin, clerk, treasury, buyer, operatorDR, adminDR, clerkDR, treasuryDR;
   let erc165,
     protocolDiamond,
     accessController,
@@ -39,6 +40,7 @@ describe("IBosonBundleHandler", function () {
     bundleHandler,
     exchangeHandler,
     fundsHandler,
+    pauseHandler,
     bosonToken,
     twin,
     support,
@@ -76,7 +78,7 @@ describe("IBosonBundleHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, buyer, operatorDR, adminDR, clerkDR, treasuryDR] =
+    [deployer, pauser, operator, admin, clerk, treasury, rando, buyer, operatorDR, adminDR, clerkDR, treasuryDR] =
       await ethers.getSigners();
 
     // Deploy the Protocol Diamond
@@ -88,6 +90,9 @@ describe("IBosonBundleHandler", function () {
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
 
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
+
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
       "SellerHandlerFacet",
@@ -97,6 +102,7 @@ describe("IBosonBundleHandler", function () {
       "BundleHandlerFacet",
       "ExchangeHandlerFacet",
       "FundsHandlerFacet",
+      "PauseHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -150,16 +156,18 @@ describe("IBosonBundleHandler", function () {
     erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-    // Cast Diamond to ITwinHandler
+    // Cast Diamond to IBosonTwinHandler
     twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
-    // Cast Diamond to IBundleHandler
+    // Cast Diamond to IBosonBundleHandler
     bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
-    // Cast Diamond to IOfferHandler
+    // Cast Diamond to IBosonOfferHandler
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
     // Cast Diamond to IBosonExchangeHandler
     exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
     // Cast Diamond to IBosonFundsHandler
     fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
+    // Cast Diamond to IBosonPauseHandler
+    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
 
     // Deploy the mock tokens
     [bosonToken] = await deployMockTokens(gasLimit);
@@ -368,6 +376,16 @@ describe("IBosonBundleHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The bundles region of protocol is paused", async function () {
+          // Pause the bundles region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.Bundles]);
+
+          // Attempt to create a bundle, expecting revert
+          await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
+        });
+
         it("Caller not operator of any seller", async function () {
           // Attempt to Create a bundle, expecting revert
           await expect(bundleHandler.connect(rando).createBundle(bundle)).to.revertedWith(RevertReasons.NOT_OPERATOR);

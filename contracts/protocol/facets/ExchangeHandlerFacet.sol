@@ -41,6 +41,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * Issues a voucher to the buyer address.
      *
      * Reverts if:
+     * - The exchanges region of protocol is paused
+     * - The buyers region of protocol is paused
      * - offerId is invalid
      * - offer has been voided
      * - offer has expired
@@ -58,7 +60,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
      */
-    function commitToOffer(address payable _buyer, uint256 _offerId) external payable override {
+    function commitToOffer(address payable _buyer, uint256 _offerId)
+        external
+        payable
+        override
+        exchangesNotPaused
+        buyersNotPaused
+    {
         // Make sure buyer address is not zero address
         require(_buyer != address(0), INVALID_ADDRESS);
 
@@ -127,6 +135,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @notice Complete an exchange.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in redeemed state
      * - Caller is not buyer and offer fulfillment period has not elapsed
@@ -136,7 +145,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _exchangeId - the id of the exchange to complete
      */
-    function completeExchange(uint256 _exchangeId) public override {
+    function completeExchange(uint256 _exchangeId) public override exchangesNotPaused {
         // Get the exchange, should be in redeemed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
         uint256 offerId = exchange.offerId;
@@ -165,9 +174,35 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
+     * @notice Complete a batch of exchanges
+     *
+     * Emits a ExchangeCompleted event for every exchange if finalized to the complete state.
+     *
+     * Reverts if:
+     * - The exchanges region of protocol is paused
+     * - Number of exchanges exceeds maximum allowed number per batch
+     * - for any exchange:
+     *   - Exchange does not exist
+     *   - Exchange is not in redeemed state
+     *   - Caller is not buyer and offer fulfillment period has not elapsed
+     *
+     * @param _exchangeIds - the array of exchanges ids
+     */
+    function completeExchangeBatch(uint256[] calldata _exchangeIds) external override exchangesNotPaused {
+        // limit maximum number of exchanges to avoid running into block gas limit in a loop
+        require(_exchangeIds.length <= protocolLimits().maxExchangesPerBatch, TOO_MANY_EXCHANGES);
+
+        for (uint256 i = 0; i < _exchangeIds.length; i++) {
+            // complete the exchange
+            completeExchange(_exchangeIds[i]);
+        }
+    }
+
+    /**
      * @notice Revoke a voucher.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Caller is not seller's operator
@@ -177,7 +212,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _exchangeId - the id of the exchange
      */
-    function revokeVoucher(uint256 _exchangeId) external override {
+    function revokeVoucher(uint256 _exchangeId) external override exchangesNotPaused {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -197,28 +232,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Revoke a voucher.
-     *
-     * Reverts if
-     * - Exchange is not in committed state
-     *
-     * Emits
-     * - VoucherRevoked
-     *
-     * @param exchange - the exchange
-     */
-    function revokeVoucherInternal(Exchange storage exchange) internal {
-        // Finalize the exchange, burning the voucher
-        finalizeExchange(exchange, ExchangeState.Revoked);
-
-        // Notify watchers of state change
-        emit VoucherRevoked(exchange.offerId, exchange.id, msgSender());
-    }
-
-    /**
      * @notice Cancel a voucher.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Caller does not own voucher
@@ -228,7 +245,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _exchangeId - the id of the exchange
      */
-    function cancelVoucher(uint256 _exchangeId) external override {
+    function cancelVoucher(uint256 _exchangeId) external override exchangesNotPaused {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -246,6 +263,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @notice Expire a voucher.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Redemption period has not yet elapsed
@@ -255,7 +273,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _exchangeId - the id of the exchange
      */
-    function expireVoucher(uint256 _exchangeId) external override {
+    function expireVoucher(uint256 _exchangeId) external override exchangesNotPaused {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -276,6 +294,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @notice Extend a Voucher's validity period.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Caller is not seller's operator
@@ -287,7 +306,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchangeId - the id of the exchange
      * @param _validUntilDate - the new voucher expiry date
      */
-    function extendVoucher(uint256 _exchangeId, uint256 _validUntilDate) external {
+    function extendVoucher(uint256 _exchangeId, uint256 _validUntilDate) external exchangesNotPaused {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -318,6 +337,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @notice Redeem a voucher.
      *
      * Reverts if
+     * - The exchanges region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Caller does not own voucher
@@ -329,7 +349,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _exchangeId - the id of the exchange
      */
-    function redeemVoucher(uint256 _exchangeId) external override {
+    function redeemVoucher(uint256 _exchangeId) external override exchangesNotPaused {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
         uint256 offerId = exchange.offerId;
@@ -367,6 +387,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @notice Inform protocol of new buyer associated with an exchange
      *
      * Reverts if
+     * - The buyers region of protocol is paused
      * - Caller is not a clone address associated with the seller
      * - Exchange does not exist
      * - Exchange is not in committed state
@@ -376,7 +397,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchangeId - the id of the exchange
      * @param _newBuyer - the address of the new buyer
      */
-    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) external override {
+    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) external override buyersNotPaused {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -503,6 +524,25 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
         // Release the funds
         FundsLib.releaseFunds(_exchange.id);
+    }
+
+    /**
+     * @notice Revoke a voucher.
+     *
+     * Reverts if
+     * - Exchange is not in committed state
+     *
+     * Emits
+     * - VoucherRevoked
+     *
+     * @param exchange - the exchange
+     */
+    function revokeVoucherInternal(Exchange storage exchange) internal {
+        // Finalize the exchange, burning the voucher
+        finalizeExchange(exchange, ExchangeState.Revoked);
+
+        // Notify watchers of state change
+        emit VoucherRevoked(exchange.offerId, exchange.id, msgSender());
     }
 
     /**
@@ -777,30 +817,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      */
     function isContract(address _address) private view returns (bool) {
         return _address.code.length > 0;
-    }
-
-    /**
-     * @notice Complete a batch of exchanges
-     *
-     * Emits a ExchangeCompleted event for every exchange if finalized to the complete state.
-     *
-     * Reverts if:
-     * - Number of exchanges exceeds maximum allowed number per batch
-     * - for any exchange:
-     *   - Exchange does not exist
-     *   - Exchange is not in redeemed state
-     *   - Caller is not buyer and offer fulfillment period has not elapsed
-     *
-     * @param _exchangeIds - the array of exchanges ids
-     */
-    function completeExchangeBatch(uint256[] calldata _exchangeIds) external override {
-        // limit maximum number of exchanges to avoid running into block gas limit in a loop
-        require(_exchangeIds.length <= protocolLimits().maxExchangesPerBatch, TOO_MANY_EXCHANGES);
-
-        for (uint256 i = 0; i < _exchangeIds.length; i++) {
-            // complete the exchange
-            completeExchange(_exchangeIds[i]);
-        }
     }
 
     /**

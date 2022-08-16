@@ -23,6 +23,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * Emits a DisputeResolverCreated event if successful.
      *
      * Reverts if:
+     * - The dispute resolvers region of protocol is paused
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
      * - Number of DisputeResolverFee structs in array exceeds max
@@ -40,7 +41,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         DisputeResolver memory _disputeResolver,
         DisputeResolverFee[] calldata _disputeResolverFees,
         uint256[] calldata _sellerAllowList
-    ) external {
+    ) external disputeResolversNotPaused {
         //Check for zero address
         require(
             _disputeResolver.admin != address(0) &&
@@ -126,6 +127,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * Emits a DisputeResolverUpdated event if successful.
      *
      * Reverts if:
+     * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
@@ -133,7 +135,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      *
      * @param _disputeResolver - the fully populated buydispute resolver struct
      */
-    function updateDisputeResolver(DisputeResolver memory _disputeResolver) external {
+    function updateDisputeResolver(DisputeResolver memory _disputeResolver) external disputeResolversNotPaused {
         //Check for zero address
         require(
             _disputeResolver.admin != address(0) &&
@@ -197,6 +199,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * Emits a DisputeResolverFeesAdded event if successful.
      *
      * Reverts if:
+     * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
      * - Number of DisputeResolverFee structs in array exceeds max
@@ -208,6 +211,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      */
     function addFeesToDisputeResolver(uint256 _disputeResolverId, DisputeResolverFee[] calldata _disputeResolverFees)
         external
+        disputeResolversNotPaused
     {
         bool exists;
         DisputeResolver storage disputeResolver;
@@ -258,6 +262,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * Emits a DisputeResolverFeesRemoved event if successful.
      *
      * Reverts if:
+     * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
      * - Number of DisputeResolverFee structs in array exceeds max
@@ -267,7 +272,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _feeTokenAddresses - list of adddresses of dispute resolver fee tokens to remove
      */
-    function removeFeesFromDisputeResolver(uint256 _disputeResolverId, address[] calldata _feeTokenAddresses) external {
+    function removeFeesFromDisputeResolver(uint256 _disputeResolverId, address[] calldata _feeTokenAddresses)
+        external
+        disputeResolversNotPaused
+    {
         bool exists;
         DisputeResolver storage disputeResolver;
         DisputeResolverFee[] storage disputeResolverFees;
@@ -320,6 +328,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * Emits a AllowedSellersAdded event if successful.
      *
      * Reverts if:
+     * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
      * - Number of seller ids in array exceeds max
@@ -330,7 +339,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _sellerAllowList - List of seller ids to add to allowed list
      */
-    function addSellersToAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external {
+    function addSellersToAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList)
+        external
+        disputeResolversNotPaused
+    {
         // At least one seller id must be specified and the number of ids cannot exceed the maximum number of seller ids to avoid running into block gas limit in a loop
         require(
             _sellerAllowList.length > 0 && _sellerAllowList.length <= protocolLimits().maxAllowedSellers,
@@ -360,6 +372,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * Emits a AllowedSellersRemoved event if successful.
      *
      * Reverts if:
+     * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
      * - Number of seller ids in array exceeds max
@@ -369,7 +382,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @param _disputeResolverId - Id of the dispute resolver
      * @param _sellerAllowList - list of seller ids to remove from allowed list
      */
-    function removeSellersFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external {
+    function removeSellersFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList)
+        external
+        disputeResolversNotPaused
+    {
         // At least one seller id must be specified and the number of ids cannot exceed the maximum number of seller ids to avoid running into block gas limit in a loop
         require(
             _sellerAllowList.length > 0 && _sellerAllowList.length <= protocolLimits().maxAllowedSellers,
@@ -422,12 +438,13 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * Emits a DisputeResolverActivated event if successful.
      *
      * Reverts if:
+     * - The dispute resolvers region of protocol is paused
      * - Caller does not have the ADMIN role
      * - Dispute resolver does not exist
      *
      * @param _disputeResolverId - Id of the dispute resolver
      */
-    function activateDisputeResolver(uint256 _disputeResolverId) external onlyRole(ADMIN) {
+    function activateDisputeResolver(uint256 _disputeResolverId) external disputeResolversNotPaused onlyRole(ADMIN) {
         bool exists;
         DisputeResolver storage disputeResolver;
 

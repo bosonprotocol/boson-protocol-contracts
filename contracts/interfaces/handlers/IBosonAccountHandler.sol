@@ -18,6 +18,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a SellerCreated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Active is not true
      * - Addresses are not unique to this seller
@@ -40,6 +41,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a BuyerCreated event if successful.
      *
      * Reverts if:
+     * - The buyers region of protocol is paused
      * - Wallet address is zero address
      * - Active is not true
      * - Wallet address is not unique to this buyer
@@ -54,6 +56,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a DisputeResolverCreated event if successful.
      *
      * Reverts if:
+     * - The dispute resolvers region of protocol is paused
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
      * - Number of DisputeResolverFee structs in array exceeds max
@@ -79,6 +82,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits an AgentCreated event if successful.
      *
      * Reverts if:
+     * - The agents region of protocol is paused
      * - Wallet address is zero address
      * - Active is not true
      * - Wallet address is not unique to this agent
@@ -96,6 +100,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a SellerUpdated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
      * - Caller is not the admin address of the seller
@@ -116,6 +121,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a BuyerUpdated event if successful.
      *
      * Reverts if:
+     * - The buyers region of protocol is paused
      * - Caller is not the wallet address associated with the buyer account
      * - Wallet address is zero address
      * - Address is not unique to this buyer
@@ -135,6 +141,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a DisputeResolverUpdated event if successful.
      *
      * Reverts if:
+     * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Any address is zero address
      * - Any address is not unique to this dispute resolver
@@ -152,6 +159,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a AgentUpdated event if successful.
      *
      * Reverts if:
+     * - The agents region of protocol is paused
      * - Caller is not the wallet address associated with the agent account
      * - Wallet address is zero address
      * - Wallet address is not unique to this agent
@@ -168,6 +176,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a DisputeResolverFeesAdded event if successful.
      *
      * Reverts if:
+     * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
      * - Number of DisputeResolverFee structs in array is zero
@@ -188,6 +197,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a DisputeResolverFeesRemoved event if successful.
      *
      * Reverts if:
+     * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
      * - Number of DisputeResolverFee structs in array is zero
@@ -205,6 +215,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a AllowedSellersAdded event if successful.
      *
      * Reverts if:
+     * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
      * - Number of seller ids in array exceeds max
@@ -223,6 +234,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a AllowedSellersRemoved event if successful.
      *
      * Reverts if:
+     * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
      * - Number of seller ids in array exceeds max
@@ -241,6 +253,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * Emits a DisputeResolverActivated event if successful.
      *
      * Reverts if:
+     * - The dispute resolvers region of protocol is paused
      * - Caller does not have the ADMIN role
      * - Dispute resolver does not exist
      *

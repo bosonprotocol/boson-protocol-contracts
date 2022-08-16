@@ -9,6 +9,7 @@ import { GroupBase } from "../bases/GroupBase.sol";
 import { OfferBase } from "../bases/OfferBase.sol";
 import { TwinBase } from "../bases/TwinBase.sol";
 import { BundleBase } from "../bases/BundleBase.sol";
+import { PausableBase } from "../bases/PausableBase.sol";
 
 /**
  * @title OrchestrationHandlerFacet
@@ -16,6 +17,7 @@ import { BundleBase } from "../bases/BundleBase.sol";
  * @notice Combines creation of multiple entities (accounts, offers, groups, twins, bundles) in a single transaction
  */
 contract OrchestrationHandlerFacet is
+    PausableBase,
     SellerBase,
     OfferBase,
     GroupBase,
@@ -44,6 +46,9 @@ contract OrchestrationHandlerFacet is
      * Emits a SellerCreated and an OfferCreated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
+     * - The offers region of protocol is paused
+     * - The orchestration region of protocol is paused
      * - caller is not the same as operator address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -89,7 +94,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override {
+    ) external override sellersNotPaused offersNotPaused orchestrationNotPaused {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
     }
@@ -100,6 +105,9 @@ contract OrchestrationHandlerFacet is
      * Emits an OfferCreated and a GroupCreated event if successful.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
+     * - The groups region of protocol is paused
+     * - The orchestration region of protocol is paused
      * - in offer struct:
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
@@ -136,7 +144,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         Condition memory _condition,
         uint256 _agentId
-    ) public override {
+    ) public override offersNotPaused groupsNotPaused orchestrationNotPaused {
         // create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -156,6 +164,9 @@ contract OrchestrationHandlerFacet is
      * Emits an OfferCreated and a GroupUpdated event if successful.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
+     * - The groups region of protocol is paused
+     * - The orchestration region of protocol is paused
      * - in offer struct:
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
@@ -194,7 +205,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         uint256 _groupId,
         uint256 _agentId
-    ) external override {
+    ) external override offersNotPaused groupsNotPaused orchestrationNotPaused {
         // create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -210,6 +221,10 @@ contract OrchestrationHandlerFacet is
      * Emits an OfferCreated, a TwinCreated and a BundleCreated event if successful.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
+     * - The twins region of protocol is paused
+     * - The bundles region of protocol is paused
+     * - The orchestration region of protocol is paused
      * - in offer struct:
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
@@ -247,7 +262,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         Twin memory _twin,
         uint256 _agentId
-    ) public override {
+    ) public override offersNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused {
         // create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -261,6 +276,11 @@ contract OrchestrationHandlerFacet is
      * Emits an OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event if successful.
      *
      * Reverts if:
+     * - The offers region of protocol is paused
+     * - The groups region of protocol is paused
+     * - The twins region of protocol is paused
+     * - The bundles region of protocol is paused
+     * - The orchestration region of protocol is paused
      * - in offer struct:
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
@@ -301,44 +321,11 @@ contract OrchestrationHandlerFacet is
         Condition memory _condition,
         Twin memory _twin,
         uint256 _agentId
-    ) public override {
+    ) public override offersNotPaused groupsNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused {
         // create offer with condition first
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
         // create twin and pack everything into a bundle
         createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
-    }
-
-    /**
-     * @notice Takes a twin, an offerId and a sellerId, creates a twin, then a bundle with that offer and the given twin
-     *
-     * Emits a TwinCreated and a BundleCreated event if successful.
-     *
-     * Reverts if:
-     * - Condition includes invalid combination of parameters
-     * - when creating twin if
-     *   - Not approved to transfer the seller's token
-     *
-     * @param _twin - the fully populated twin struct
-     * @param _offerId - offerid, obtained in previous steps
-     * @param _sellerId - sellerId, obtained in previous steps
-     */
-    function createTwinAndBundleAfterOffer(
-        Twin memory _twin,
-        uint256 _offerId,
-        uint256 _sellerId
-    ) internal {
-        // create twin and update structs values to represent true state
-        createTwinInternal(_twin);
-
-        // construct new bundle
-        // - bundleId is 0, and it is ignored
-        // - note that _twin fields are updated during createTwinInternal, so they represent correct values
-        Bundle memory _bundle = Bundle(0, _sellerId, new uint256[](1), new uint256[](1));
-        _bundle.offerIds[0] = _offerId;
-        _bundle.twinIds[0] = _twin.id;
-
-        // create bundle and update structs values to represent true state
-        createBundleInternal(_bundle);
     }
 
     /**
@@ -355,6 +342,10 @@ contract OrchestrationHandlerFacet is
      * Emits a SellerCreated, an OfferCreated and a GroupCreated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
+     * - The offers region of protocol is paused
+     * - The groups region of protocol is paused
+     * - The orchestration region of protocol is paused
      * - caller is not the same as operator address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -404,7 +395,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override {
+    ) external override sellersNotPaused offersNotPaused groupsNotPaused orchestrationNotPaused {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
     }
@@ -423,6 +414,11 @@ contract OrchestrationHandlerFacet is
      * Emits a SellerCreated, an OfferCreated, a TwinCreated and a BundleCreated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
+     * - The offers region of protocol is paused
+     * - The twins region of protocol is paused
+     * - The bundles region of protocol is paused
+     * - The orchestration region of protocol is paused
      * - caller is not the same as operator address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -473,7 +469,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override {
+    ) external override sellersNotPaused offersNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferAndTwinWithBundle(_offer, _offerDates, _offerDurations, _disputeResolverId, _twin, _agentId);
     }
@@ -492,6 +488,12 @@ contract OrchestrationHandlerFacet is
      * Emits an SellerCreated, OfferCreated, a GroupCreated, a TwinCreated and a BundleCreated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
+     * - The offers region of protocol is paused
+     * - The groups region of protocol is paused
+     * - The twins region of protocol is paused
+     * - The bundles region of protocol is paused
+     * - The orchestration region of protocol is paused
      * - caller is not the same as operator address
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
@@ -545,7 +547,16 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override {
+    )
+        external
+        override
+        sellersNotPaused
+        offersNotPaused
+        groupsNotPaused
+        twinsNotPaused
+        bundlesNotPaused
+        orchestrationNotPaused
+    {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferWithConditionAndTwinAndBundle(
             _offer,
@@ -586,5 +597,38 @@ contract OrchestrationHandlerFacet is
 
         // create seller and update structs values to represent true state
         createSellerInternal(_seller, _authToken, _voucherInitValues);
+    }
+
+    /**
+     * @notice Takes a twin, an offerId and a sellerId, creates a twin, then a bundle with that offer and the given twin
+     *
+     * Emits a TwinCreated and a BundleCreated event if successful.
+     *
+     * Reverts if:
+     * - Condition includes invalid combination of parameters
+     * - when creating twin if
+     *   - Not approved to transfer the seller's token
+     *
+     * @param _twin - the fully populated twin struct
+     * @param _offerId - offerid, obtained in previous steps
+     * @param _sellerId - sellerId, obtained in previous steps
+     */
+    function createTwinAndBundleAfterOffer(
+        Twin memory _twin,
+        uint256 _offerId,
+        uint256 _sellerId
+    ) internal {
+        // create twin and update structs values to represent true state
+        createTwinInternal(_twin);
+
+        // construct new bundle
+        // - bundleId is 0, and it is ignored
+        // - note that _twin fields are updated during createTwinInternal, so they represent correct values
+        Bundle memory _bundle = Bundle(0, _sellerId, new uint256[](1), new uint256[](1));
+        _bundle.offerIds[0] = _offerId;
+        _bundle.twinIds[0] = _twin.id;
+
+        // create bundle and update structs values to represent true state
+        createBundleInternal(_bundle);
     }
 }
