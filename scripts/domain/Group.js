@@ -16,11 +16,10 @@ class Group {
         }
     */
 
-  constructor(id, sellerId, offerIds, condition) {
+  constructor(id, sellerId, offerIds) {
     this.id = id;
     this.sellerId = sellerId;
     this.offerIds = offerIds;
-    this.condition = condition;
   }
 
   /**
@@ -29,9 +28,8 @@ class Group {
    * @returns {Group}
    */
   static fromObject(o) {
-    const { id, sellerId, offerIds, condition } = o;
-    let c = Condition.fromObject(condition);
-    return new Group(id, sellerId, offerIds, c);
+    const { id, sellerId, offerIds } = o;
+    return new Group(id, sellerId, offerIds);
   }
 
   /**
@@ -40,16 +38,15 @@ class Group {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let id, sellerId, offerIds, condition;
+    let id, sellerId, offerIds;
 
     // destructure struct
-    [id, sellerId, offerIds, condition] = struct;
+    [id, sellerId, offerIds] = struct;
 
     return Group.fromObject({
       id: id.toString(),
       sellerId: sellerId.toString(),
-      offerIds: offerIds.map((offerId) => offerId.toString()),
-      condition: Condition.fromStruct(condition).toObject(),
+      offerIds: offerIds.map((offerId) => offerId.toString())
     });
   }
 
@@ -74,7 +71,7 @@ class Group {
    * @returns {string}
    */
   toStruct() {
-    return [this.id, this.sellerId, this.offerIds, this.condition.toStruct()];
+    return [this.id, this.sellerId, this.offerIds];
   }
 
   /**
@@ -133,25 +130,11 @@ class Group {
   }
 
   /**
-   * Is this Group instance's condition field valid?
-   * Must be an array of numbers
-   * @returns {boolean}
-   */
-  conditionIsValid() {
-    let valid = false;
-    let { condition } = this;
-    try {
-      valid = typeof condition === "object" && condition.constructor.name === "Condition" && condition.isValid();
-    } catch (e) {}
-    return valid;
-  }
-
-  /**
    * Is this Group instance valid?
    * @returns {boolean}
    */
   isValid() {
-    return this.idIsValid() && this.sellerIdIsValid() && this.offerIdsIsValid() && this.conditionIsValid();
+    return this.idIsValid() && this.sellerIdIsValid() && this.offerIdsIsValid();
   }
 }
 

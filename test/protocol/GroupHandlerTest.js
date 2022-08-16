@@ -39,7 +39,7 @@ describe("IBosonGroupHandler", function () {
   let offerIds, condition;
   let groupHandlerFacet_Factory;
   let method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
-  let groupStruct;
+  let groupStruct, conditionStruct;
   let offerIdsToAdd, offerIdsToRemove;
   let disputeResolver, disputeResolverFees, disputeResolverId;
   let voucherInitValues;
@@ -407,10 +407,9 @@ describe("IBosonGroupHandler", function () {
         it("Condition 'None' has some values in other fields", async function () {
           method = EvaluationMethod.None;
           condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
-          group.condition = condition;
 
           // Attempt to create the group, expecting revert
-          await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(
+          await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
             RevertReasons.INVALID_CONDITION_PARAMETERS
           );
         });
@@ -419,10 +418,9 @@ describe("IBosonGroupHandler", function () {
           method = EvaluationMethod.Threshold;
           tokenAddress = ethers.constants.AddressZero;
           condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
-          group.condition = condition;
 
           // Attempt to create the group, expecting revert
-          await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(
+          await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
             RevertReasons.INVALID_CONDITION_PARAMETERS
           );
         });
@@ -431,10 +429,9 @@ describe("IBosonGroupHandler", function () {
           method = EvaluationMethod.SpecificToken;
           tokenAddress = ethers.constants.AddressZero;
           condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
-          group.condition = condition;
 
           // Attempt to create the group, expecting revert
-          await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(
+          await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
             RevertReasons.INVALID_CONDITION_PARAMETERS
           );
         });
@@ -726,12 +723,6 @@ describe("IBosonGroupHandler", function () {
 
     context("👉 setGroupCondition()", async function () {
       beforeEach(async function () {
-        // Create a group
-        await groupHandler.connect(operator).createGroup(group);
-
-        // id of the current group and increment nextGroupId
-        id = nextGroupId++;
-
         // Required constructor params for Condition
         method = EvaluationMethod.SpecificToken;
         tokenType = TokenType.MultiToken;
@@ -742,6 +733,12 @@ describe("IBosonGroupHandler", function () {
 
         condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
         expect(condition.isValid()).to.be.true;
+
+        // Create a group
+        await groupHandler.connect(operator).createGroup(group, condition);
+
+        // id of the current group and increment nextGroupId
+        id = nextGroupId++;
 
         groupStruct = group.toStruct();
       });
@@ -757,8 +754,6 @@ describe("IBosonGroupHandler", function () {
         // Validate the instance
         expect(groupInstance.isValid()).to.be.true;
 
-        group.condition = condition;
-
         assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
         assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
@@ -770,13 +765,10 @@ describe("IBosonGroupHandler", function () {
         await groupHandler.connect(operator).setGroupCondition(group.id, condition);
 
         // Get the group as a struct
-        [, groupStruct] = await groupHandler.connect(rando).getGroup(group.id);
-
-        // Parse into entity
-        const returnedGroup = Group.fromStruct(groupStruct);
+        [, groupStruct, conditionStruct] = await groupHandler.connect(rando).getGroup(group.id);
 
         // Returned values should match the input in setGroupCondition
-        expect(returnedGroup.condition.toString() === condition.toString()).is.true;
+        expect(Condition.fromStruct(conditionStruct).toString() === condition.toString()).is.true;
       });
 
       context("💔 Revert Reasons", async function () {

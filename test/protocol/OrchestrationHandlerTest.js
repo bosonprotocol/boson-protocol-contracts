@@ -2320,7 +2320,6 @@ describe("IBosonOrchestrationHandler", function () {
         it("Condition 'None' has some values in other fields", async function () {
           method = EvaluationMethod.None;
           condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
-          group.condition = condition;
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
@@ -2334,7 +2333,6 @@ describe("IBosonOrchestrationHandler", function () {
           method = EvaluationMethod.Threshold;
           tokenAddress = ethers.constants.AddressZero;
           condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
-          group.condition = condition;
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
@@ -2348,7 +2346,6 @@ describe("IBosonOrchestrationHandler", function () {
           method = EvaluationMethod.SpecificToken;
           tokenAddress = ethers.constants.AddressZero;
           condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
-          group.condition = condition;
 
           // Attempt to create an offer with condition, expecting revert
           await expect(

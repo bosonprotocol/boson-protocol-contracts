@@ -25,13 +25,12 @@ describe("Group", function () {
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated Group instance", async function () {
       // Create a valid group
-      group = new Group(id, sellerId, offerIds, condition);
+      group = new Group(id, sellerId, offerIds);
 
       // Test each member
       expect(group.idIsValid()).is.true;
       expect(group.sellerIdIsValid()).is.true;
       expect(group.offerIdsIsValid()).is.true;
-      expect(group.conditionIsValid()).is.true;
 
       // Test entity
       expect(group.isValid()).is.true;
@@ -41,7 +40,7 @@ describe("Group", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid group, then set fields in tests directly
-      group = new Group(id, sellerId, offerIds, condition);
+      group = new Group(id, sellerId, offerIds);
       expect(group.isValid()).is.true;
     });
 
@@ -124,39 +123,12 @@ describe("Group", function () {
       expect(group.offerIdsIsValid()).is.true;
       expect(group.isValid()).is.true;
     });
-
-    it("Always present, condition must be a valid Condition instance", async function () {
-      // Invalid field value
-      group.condition = "zedzdeadbaby";
-      expect(group.conditionIsValid()).is.false;
-      expect(group.isValid()).is.false;
-
-      // Invalid field value
-      group.condition = new Date();
-      expect(group.conditionIsValid()).is.false;
-      expect(group.isValid()).is.false;
-
-      // Invalid field value
-      group.condition = 12;
-      expect(group.conditionIsValid()).is.false;
-      expect(group.isValid()).is.false;
-
-      // Valid field value
-      group.condition = "126";
-      expect(group.conditionIsValid()).is.false;
-      expect(group.isValid()).is.false;
-
-      // Valid field value
-      group.condition = condition;
-      expect(group.conditionIsValid()).is.true;
-      expect(group.isValid()).is.true;
-    });
   });
 
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid group, then set fields in tests directly
-      group = new Group(id, sellerId, offerIds, condition);
+      group = new Group(id, sellerId, offerIds);
       expect(group.isValid()).is.true;
 
       // Get plain object
