@@ -95,12 +95,6 @@
         },
         {
           "indexed": false,
-          "internalType": "string",
-          "name": "complaint",
-          "type": "string"
-        },
-        {
-          "indexed": false,
           "internalType": "address",
           "name": "executedBy",
           "type": "address"
