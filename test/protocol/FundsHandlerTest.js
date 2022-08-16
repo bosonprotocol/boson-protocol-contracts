@@ -459,18 +459,21 @@ describe("IBosonFundsHandler", function () {
         offerTokenProtocolFee = offerNativeProtocolFee = offerFees.protocolFee;
 
         // top up seller's and buyer's account
-        await mockToken.mint(operator.address, sellerDeposit);
-        await mockToken.mint(buyer.address, price);
+        await Promise.all([mockToken.mint(operator.address, sellerDeposit), mockToken.mint(buyer.address, price)]);
 
         // approve protocol to transfer the tokens
-        await mockToken.connect(operator).approve(protocolDiamond.address, sellerDeposit);
-        await mockToken.connect(buyer).approve(protocolDiamond.address, price);
+        await Promise.all([
+          mockToken.connect(operator).approve(protocolDiamond.address, sellerDeposit),
+          mockToken.connect(buyer).approve(protocolDiamond.address, price),
+        ]);
 
         // deposit to seller's pool
-        await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, sellerDeposit);
-        await fundsHandler.connect(operator).depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, {
-          value: sellerDeposit,
-        });
+        await Promise.all([
+          fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, sellerDeposit),
+          fundsHandler
+            .connect(operator)
+            .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit }),
+        ]);
 
         // commit to both offers
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
@@ -800,7 +803,7 @@ describe("IBosonFundsHandler", function () {
             // Complete the exchange
             await exchangeHandler.connect(buyer).completeExchange(exchangeId);
 
-            agentPayoff = ethers.BigNumber.from(agentOffer.price).mul(agent.feePercentage).div("10000").toString();
+            agentPayoff = applyPercentage(agentOffer.price, agent.feePercentage);
 
             // Check the balance BEFORE withdrawFunds()
             const feeCollectorNativeBalanceBefore = await mockToken.balanceOf(agent.wallet);
@@ -990,7 +993,7 @@ describe("IBosonFundsHandler", function () {
                 fallbackContractBuyerId,
                 [ethers.constants.AddressZero],
                 [offerNative.price]
-              ) // during the revoke it's released more than offerToken.price
+              )
             ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
           });
 
@@ -1017,7 +1020,7 @@ describe("IBosonFundsHandler", function () {
                 fallbackContractBuyerId,
                 [ethers.constants.AddressZero],
                 [offerNative.price]
-              ) // during the revoke it's released more than offerToken.price
+              )
             ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
           });
 
@@ -1057,7 +1060,7 @@ describe("IBosonFundsHandler", function () {
           // buyer: 0
           buyerPayoff = 0;
 
-          // seller: sellerDeposit + buyerCancelPenalty
+          // seller: sellerDeposit + offerToken.price
           sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit).add(offerToken.price).toString();
 
           // protocol: protocolFee
@@ -1394,7 +1397,7 @@ describe("IBosonFundsHandler", function () {
                 fundsHandler.address,
                 [ethers.constants.AddressZero],
                 [offerNativeProtocolFee]
-              ) // during the revoke it's released more than offerToken.price
+              )
             ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
           });
 
@@ -1411,7 +1414,7 @@ describe("IBosonFundsHandler", function () {
                 fundsHandler.address,
                 [ethers.constants.AddressZero],
                 [offerNativeProtocolFee]
-              ) // during the revoke it's released more than offerToken.price
+              )
             ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
           });
 
@@ -1605,7 +1608,7 @@ describe("IBosonFundsHandler", function () {
         // seller's available funds
         const sellersAvailableFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
 
-        // Commit to an offer with tokens
+        // Commit to an offer with erc20 token
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
 
         // Check that token balance increased
@@ -1626,7 +1629,7 @@ describe("IBosonFundsHandler", function () {
             .toString()
         ).to.eql(sellerDeposit, "Token seller available funds mismatch");
 
-        // Commit to an offer with tokens
+        // Commit to an offer with native currency
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
 
         // check that native currency balance increased
@@ -1677,7 +1680,7 @@ describe("IBosonFundsHandler", function () {
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
 
-        // Token address should be removed and have only native currency in the list
+        // Seller available funds must be empty
         sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
         expect(sellersAvailableFunds.funds.length).to.eql(0, "Funds length mismatch");
       });
@@ -2500,6 +2503,7 @@ describe("IBosonFundsHandler", function () {
             sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
+            agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
             expect(sellersAvailableFunds).to.eql(expectedSellerAvailableFunds);
             expect(buyerAvailableFunds).to.eql(expectedBuyerAvailableFunds);
             expect(protocolAvailableFunds).to.eql(expectedProtocolAvailableFunds);
@@ -3605,6 +3609,9 @@ describe("IBosonFundsHandler", function () {
               await expect(tx)
                 .to.emit(disputeHandler, "FundsReleased")
                 .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, rando.address);
+              await expect(tx)
+                .to.emit(disputeHandler, "FundsReleased")
+                .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
 
               await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
               // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
