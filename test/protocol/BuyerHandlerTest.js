@@ -28,7 +28,14 @@ const {
 describe("BuyerHandler", function () {
   // Common vars
   let deployer, pauser, rando, operator, admin, clerk, treasury, other1, other2, other3, other4;
-  let protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, fundsHandler, pauseHandler, gasLimit;
+  let protocolDiamond,
+    accessController,
+    accountHandler,
+    exchangeHandler,
+    offerHandler,
+    fundsHandler,
+    pauseHandler,
+    gasLimit;
   let seller, id2;
   let emptyAuthToken;
   let buyer, buyerStruct, buyer2, buyer2Struct, expectedBuyer, expectedBuyerStruct;
