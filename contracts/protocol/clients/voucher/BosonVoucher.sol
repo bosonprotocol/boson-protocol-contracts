@@ -87,6 +87,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * particular function because you may inherit from several
      * IERC165 contracts, and all concrete ones need to be allowed
      * to respond.
+     *
+     * 0x2a55205a representes ERC2981 interface id
      */
     function supportsInterface(bytes4 interfaceId)
         public
@@ -95,8 +97,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         returns (bool)
     {
         return (interfaceId == type(IBosonVoucher).interfaceId ||
-            super.supportsInterface(interfaceId) ||
-            interfaceId == type(IERC2981Upgradeable).interfaceId);
+            interfaceId == 0x2a55205a ||
+            super.supportsInterface(interfaceId));
     }
 
     /**
