@@ -165,13 +165,13 @@ function mockExchange() {
   const state = ExchangeState.Committed;
   return new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
 }
+
 function mockDispute() {
   const exchangeId = "1";
-  const complaint = "Tastes weird";
   const state = DisputeState.Resolving;
   const buyerPercent = "500";
 
-  return new Dispute(exchangeId, complaint, state, buyerPercent);
+  return new Dispute(exchangeId, state, buyerPercent);
 }
 
 async function mockReceipt() {
