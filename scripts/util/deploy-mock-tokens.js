@@ -15,9 +15,6 @@ const confirmations = environments.confirmations;
 async function deployMockTokens(gasLimit, tokens = ["BosonToken", "Foreign721", "Foreign1155", "FallbackError"]) {
   const deployedTokens = [];
 
-  console.log("\n Deploying Mock BOSON, ERC721, ERC1155, and FallbackError Mocks");
-  console.log(`⛓  Network: ${network}`);
-
   // Deploy all the mock tokens
   while (tokens.length) {
     let token = tokens.shift();
@@ -32,8 +29,8 @@ async function deployMockTokens(gasLimit, tokens = ["BosonToken", "Foreign721", 
 }
 
 async function deployAndMintMockNFTAuthTokens() {
-  console.log("\n Deploying and Minting Mock Auth Tokens");
-  console.log(`⛓  Network: ${hre.network.name}\n📅 ${new Date()}`);
+  //console.log("\n Deploying and Minting Mock Auth Tokens");
+  //console.log(`⛓  Network: ${hre.network.name}\n📅 ${new Date()}`);
 
   const gasLimit = environments[network].gasLimit;
   let addresses = [];
@@ -43,13 +40,13 @@ async function deployAndMintMockNFTAuthTokens() {
   let lensTokenContractFactory = await ethers.getContractFactory("MockNFTAuth721");
   const lensTokenContract = await lensTokenContractFactory.deploy({ gasLimit });
   await lensTokenContract.deployTransaction.wait(confirmations);
-  console.log(`✅ Mock Lens NFT Token deployed to: ${lensTokenContract.address}`);
+  //console.log(`✅ Mock Lens NFT Token deployed to: ${lensTokenContract.address}`);
 
   //Deploy a mock NFT to represent the ENS NFT
   let ensTokenContractFactory = await ethers.getContractFactory("MockNFTAuth721");
   const ensTokenContract = await ensTokenContractFactory.deploy({ gasLimit });
   await ensTokenContract.deployTransaction.wait(confirmations);
-  console.log(`✅ Mock ENS NFT Token deployed to: ${ensTokenContract.address}`);
+  //console.log(`✅ Mock ENS NFT Token deployed to: ${ensTokenContract.address}`);
 
   if (network == "test") {
     //We want to mint auth tokens to speficic addresses

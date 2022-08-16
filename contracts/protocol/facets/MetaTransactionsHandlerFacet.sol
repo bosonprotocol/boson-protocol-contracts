@@ -240,6 +240,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Handles the incoming meta transaction.
      *
      * Reverts if:
+     * - The meta-transactions region of protocol is paused
      * - nonce is already used by another transaction.
      * - function signature matches to executeMetaTransaction.
      * - function name does not match with bytes 4 version of the function signature.
@@ -262,7 +263,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         bytes32 _sigR,
         bytes32 _sigS,
         uint8 _sigV
-    ) public payable override returns (bytes memory) {
+    ) public payable override metaTransactionsNotPaused returns (bytes memory) {
         validateTx(_functionName, _functionSignature, _nonce);
 
         MetaTransaction memory metaTx = MetaTransaction({

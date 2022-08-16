@@ -156,6 +156,18 @@ contract PausableBase is BosonTypes {
     }
 
     /**
+     * @dev Modifier that checks the MetaTransaction region is not paused
+     *
+     * Reverts if region is paused
+     *
+     * See: {BosonTypes.PausableRegion}
+     */
+    modifier metaTransactionsNotPaused() {
+        require(!paused(PausableRegion.MetaTransaction), REGION_PAUSED);
+        _;
+    }
+
+    /**
      * @dev Check if a region of the protocol is paused.
      *
      * @param _region the region to check pause status for
