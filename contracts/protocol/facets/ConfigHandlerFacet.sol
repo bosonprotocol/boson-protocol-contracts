@@ -49,6 +49,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxAllowedSellers(_limits.maxAllowedSellers);
         setBuyerEscalationDepositPercentage(_buyerEscalationDepositPercentage);
         setMaxTotalOfferFeePercentage(_limits.maxTotalOfferFeePercentage);
+        setMaxRoyaltyPecentage(_limits.maxRoyaltyPecentage);
 
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -373,6 +374,36 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getMaxTotalOfferFeePercentage() external view override returns (uint16) {
         return protocolLimits().maxTotalOfferFeePercentage;
+    }
+
+    /**
+     * @notice Sets the maximal royalty percentage that can be set by the seller
+     *
+     * Emits a MaxRoyaltyPecentageChanged event.
+     *
+     * Reverts if the _maxRoyaltyPecentage is greater than 10000.
+     *
+     * @param _maxRoyaltyPecentage - the limit of total offer fee percentage.
+     *
+     * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
+     * e.g, 1.75% = 175, 100% = 10000
+     */
+    function setMaxRoyaltyPecentage(uint16 _maxRoyaltyPecentage) public override onlyRole(ADMIN) {
+        // Make sure percentage is less than 10000
+        require(_maxRoyaltyPecentage <= 10000, FEE_PERCENTAGE_INVALID);
+
+        // Store fee percentage
+        protocolLimits().maxRoyaltyPecentage = _maxRoyaltyPecentage;
+
+        // Notify watchers of state change
+        emit MaxRoyaltyPecentageChanged(_maxRoyaltyPecentage, msgSender());
+    }
+
+    /**
+     * @notice Get the maximum total of offer fees allowed in an offer fee
+     */
+    function getMaxRoyaltyPecentage() external view override returns (uint16) {
+        return protocolLimits().maxRoyaltyPecentage;
     }
 
     /**
