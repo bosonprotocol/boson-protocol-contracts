@@ -35,8 +35,17 @@ async function deployProtocolDiamond(gasLimit) {
   const dcf = await DiamondCutFacet.deploy({ gasLimit });
   await dcf.deployTransaction.wait(confirmations);
 
+  // ERC165 Facet
+  const ERC165Facet = await ethers.getContractFactory("ERC165Facet");
+  const erc165f = await ERC165Facet.deploy({ gasLimit });
+  await erc165f.deployTransaction.wait(confirmations);
+
   // Arguments for Diamond constructor
-  const diamondArgs = [accessController.address, [getFacetAddCut(dlf), getFacetAddCut(dcf)], interfaces];
+  const diamondArgs = [
+    accessController.address,
+    [getFacetAddCut(dlf), getFacetAddCut(dcf), getFacetAddCut(erc165f)],
+    interfaces,
+  ];
 
   // Deploy Protocol Diamond
   const ProtocolDiamond = await ethers.getContractFactory("ProtocolDiamond");

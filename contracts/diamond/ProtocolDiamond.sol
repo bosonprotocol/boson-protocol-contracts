@@ -55,16 +55,6 @@ contract ProtocolDiamond {
     }
 
     /**
-     * @notice Onboard implementation of ERC-165 interface detection standard.
-     *
-     * @param _interfaceId - the sighash of the given interface
-     */
-    function supportsInterface(bytes4 _interfaceId) external view returns (bool) {
-        // Get the DiamondStorage struct
-        return DiamondLib.supportsInterface(_interfaceId);
-    }
-
-    /**
      * Fallback function. Called when the specified function doesn't exist
      *
      * Find facet for function that is called and execute the

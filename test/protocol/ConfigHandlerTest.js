@@ -234,7 +234,7 @@ describe("IBosonConfigHandler", function () {
           support = await erc165.supportsInterface(InterfaceIds.IBosonConfigHandler);
 
           // Test
-          await expect(support, "IBosonConfigHandler interface not supported").is.true;
+          expect(support, "IBosonConfigHandler interface not supported").is.true;
         });
       });
     });
