@@ -35,19 +35,17 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * - caller does not hold a voucher for the given exchange id
      * - exchange does not exist
      * - exchange is not in a redeemed state
-     * - the complaint is blank
      * - fulfillment period has elapsed already
      *
      * @param _exchangeId - the id of the associated exchange
-     * @param _complaint - the buyer's complaint description
      */
-    function raiseDispute(uint256 _exchangeId, string calldata _complaint) external override disputesNotPaused {
+    function raiseDispute(uint256 _exchangeId) external override disputesNotPaused {
         // Get the exchange, should be in redeemed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
         // Get the offer, which will exist if the exchange does
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
-        raiseDisputeInternal(exchange, _complaint, offer.sellerId);
+        raiseDisputeInternal(exchange, offer.sellerId);
     }
 
     /**

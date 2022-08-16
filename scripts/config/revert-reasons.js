@@ -140,7 +140,6 @@ exports.RevertReasons = {
   INVALID_FUNCTION_NAME: "Invalid function name",
 
   // Dispute related
-  COMPLAINT_MISSING: "Complaint missing",
   FULFILLMENT_PERIOD_HAS_ELAPSED: "Fulfillment period has already elapsed",
   DISPUTE_HAS_EXPIRED: "Dispute has expired",
   INVALID_BUYER_PERCENT: "Invalid buyer percent",

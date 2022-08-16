@@ -78,7 +78,6 @@ describe("IBosonMetaTransactionsHandler", function () {
     expectedBuyerAvailableFunds,
     tokenListBuyer,
     tokenAmountsBuyer;
-  let complaint, validDisputeDetails;
   let buyerPercent, validDisputeResolutionDetails, signatureSplits;
   let sellerAllowList;
   let voucherInitValues;
@@ -980,7 +979,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
         // Create the offer
-        ({ offer, offerDates, offerDurations } = await mockOffer());
+        ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
         expect(offer.isValid()).is.true;
         expect(offerDates.isValid()).is.true;
         expect(offerDurations.isValid()).is.true;
@@ -1534,9 +1533,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Redeem the voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
-          // Set the dispute reason
-          let complaint = "Tastes weird";
-          await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+          await disputeHandler.connect(buyer).raiseDispute(exchange.id);
         });
 
         it("Should emit MetaTransactionExecuted event and update state", async () => {
@@ -1695,38 +1692,31 @@ describe("IBosonMetaTransactionsHandler", function () {
 
       context("👉 DisputeHandlerFacet 👉 raiseDispute()", async function () {
         beforeEach(async function () {
-          // Set the dispute reason
-          complaint = "Tastes weird";
-
-          // prepare validDisputeDetails
-          validDisputeDetails = {
+          // prepare validExchangeDetails
+          validExchangeDetails = {
             exchangeId: exchange.id,
-            complaint: complaint,
           };
 
-          // Set the dispute Type
-          let disputeType = [
-            { name: "exchangeId", type: "uint256" },
-            { name: "complaint", type: "string" },
-          ];
+          // Set the exchange Type
+          exchangeType = [{ name: "exchangeId", type: "uint256" }];
 
           // Set the message Type
-          let metaTxDisputeType = [
+          metaTxExchangeType = [
             { name: "nonce", type: "uint256" },
             { name: "from", type: "address" },
             { name: "contractAddress", type: "address" },
             { name: "functionName", type: "string" },
-            { name: "disputeDetails", type: "MetaTxDisputeDetails" },
+            { name: "exchangeDetails", type: "MetaTxExchangeDetails" },
           ];
 
           customTransactionType = {
-            MetaTxDispute: metaTxDisputeType,
-            MetaTxDisputeDetails: disputeType,
+            MetaTxExchange: metaTxExchangeType,
+            MetaTxExchangeDetails: exchangeType,
           };
 
           // Prepare the message
-          message.functionName = "raiseDispute(uint256,string)";
-          message.disputeDetails = validDisputeDetails;
+          message.functionName = "raiseDispute(uint256)";
+          message.exchangeDetails = validExchangeDetails;
           message.from = buyer.address;
 
           // Set time forward to the offer's voucherRedeemableFrom
@@ -1741,15 +1731,14 @@ describe("IBosonMetaTransactionsHandler", function () {
           let { r, s, v } = await prepareDataSignatureParameters(
             buyer,
             customTransactionType,
-            "MetaTxDispute",
+            "MetaTxExchange",
             message,
             metaTransactionsHandler.address
           );
 
           // Prepare the function signature
           functionSignature = disputeHandler.interface.encodeFunctionData("raiseDispute", [
-            validDisputeDetails.exchangeId,
-            validDisputeDetails.complaint,
+            validExchangeDetails.exchangeId,
           ]);
 
           // send a meta transaction, check for event
@@ -1783,28 +1772,26 @@ describe("IBosonMetaTransactionsHandler", function () {
           // An invalid exchange id
           id = "666";
 
-          // prepare validDisputeDetails
-          validDisputeDetails = {
+          // prepare validExchangeDetails
+          validExchangeDetails = {
             exchangeId: id,
-            complaint: complaint,
           };
 
           // Prepare the message
-          message.disputeDetails = validDisputeDetails;
+          message.exchangeDetails = validExchangeDetails;
 
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             buyer,
             customTransactionType,
-            "MetaTxDispute",
+            "MetaTxExchange",
             message,
             metaTransactionsHandler.address
           );
 
           // Prepare the function signature
           functionSignature = disputeHandler.interface.encodeFunctionData("raiseDispute", [
-            validDisputeDetails.exchangeId,
-            validDisputeDetails.complaint,
+            validExchangeDetails.exchangeId,
           ]);
 
           // Execute meta transaction, expecting revert.
@@ -1825,8 +1812,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           beforeEach(async function () {
             // Prepare the function signature
             functionSignature = disputeHandler.interface.encodeFunctionData("raiseDispute", [
-              validDisputeDetails.exchangeId,
-              validDisputeDetails.complaint,
+              validExchangeDetails.exchangeId,
             ]);
           });
 
@@ -1835,7 +1821,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             let { r, s, v } = await prepareDataSignatureParameters(
               buyer,
               customTransactionType,
-              "MetaTxDispute",
+              "MetaTxExchange",
               message,
               metaTransactionsHandler.address
             );
@@ -1873,7 +1859,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             let { r, s, v } = await prepareDataSignatureParameters(
               rando, // Different user, not buyer.
               customTransactionType,
-              "MetaTxDispute",
+              "MetaTxExchange",
               message,
               metaTransactionsHandler.address
             );
@@ -1907,9 +1893,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Redeem the voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
-          // Set the dispute reason
-          let complaint = "Tastes weird";
-          await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+          await disputeHandler.connect(buyer).raiseDispute(exchange.id);
         });
 
         it("Should emit MetaTransactionExecuted event and update state", async () => {
@@ -2074,9 +2058,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Redeem the voucher
           await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
-          // Raise a reason
-          complaint = "Tastes weird";
-          await disputeHandler.connect(buyer).raiseDispute(exchange.id, complaint);
+          await disputeHandler.connect(buyer).raiseDispute(exchange.id);
 
           buyerPercent = "1234";
 
