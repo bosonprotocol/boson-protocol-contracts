@@ -32,7 +32,6 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         VoucherInitValues calldata voucherInitValues
     ) public initializer {
         string memory sellerId = Strings.toString(_sellerId);
-        // TODO: When we move to solidity 0.8.12 or greater, change this to use string.concat()
         string memory voucherName = string(abi.encodePacked(VOUCHER_NAME, " ", sellerId));
         string memory voucherSymbol = string(abi.encodePacked(VOUCHER_SYMBOL, "_", sellerId));
 
