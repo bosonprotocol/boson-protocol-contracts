@@ -707,10 +707,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         });
 
-        it.only("Should fail on reenter", async function () {
-          // Set a random nonce
-          // nonce = parseInt(ethers.utils.randomBytes(8));
-
+        it("Should fail on reenter", async function () {
           // Deploy the boson token
           const [maliciousToken] = await deployMockTokens(gasLimit, ["Foreign20Malicious"]);
           await maliciousToken.setProtocolAddress(protocolDiamond.address);
@@ -720,16 +717,6 @@ describe("IBosonMetaTransactionsHandler", function () {
           buyerId = "3"; // created after a seller and a dispute resolver
 
           // Create a valid seller
-          // seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
-          // expect(seller.isValid()).is.true;
-
-          // // VoucherInitValues
-          // voucherInitValues = mockVoucherInitValues();
-          // expect(voucherInitValues.isValid()).is.true;
-
-          // // AuthToken
-          // emptyAuthToken = mockAuthToken();
-          // expect(emptyAuthToken.isValid()).is.true;
           await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
 
           // Create a valid dispute resolver
@@ -850,23 +837,21 @@ describe("IBosonMetaTransactionsHandler", function () {
           let [, buyerStruct] = await accountHandler.getBuyer(buyerId);
           const buyerBefore = Buyer.fromStruct(buyerStruct);
 
-          console.log("Buyer before", buyerBefore.toString());
-
           // Execute the meta transaction.
-          await metaTransactionsHandler.executeMetaTransaction(
-            buyer.address,
-            message.functionName,
-            functionSignature,
-            nonce,
-            r,
-            s,
-            v
-          );
+          await expect(
+            metaTransactionsHandler.executeMetaTransaction(
+              buyer.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
+          ).to.revertedWith(RevertReasons.REENTRANCY_GUARD);
 
           [, buyerStruct] = await accountHandler.getBuyer(buyerId);
           const buyerAfter = Buyer.fromStruct(buyerStruct);
-
-          console.log("Buyer after", buyerAfter.toString());
           assert.equal(buyerAfter.toString(), buyerBefore.toString(), "Buyer should not change");
         });
       });

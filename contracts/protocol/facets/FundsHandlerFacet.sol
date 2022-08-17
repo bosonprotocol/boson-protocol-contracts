@@ -43,7 +43,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         uint256 _sellerId,
         address _tokenAddress,
         uint256 _amount
-    ) external payable override fundsNotPaused {
+    ) external payable override fundsNotPaused nonReentrant {
         //Check Seller exists in sellers mapping
         (bool exists, , ) = fetchSeller(_sellerId);
 
@@ -85,7 +85,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         uint256 _entityId,
         address[] calldata _tokenList,
         uint256[] calldata _tokenAmounts
-    ) external override fundsNotPaused {
+    ) external override fundsNotPaused nonReentrant {
         // address that will receive the funds
         address payable destinationAddress;
 
@@ -136,6 +136,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         override
         fundsNotPaused
         onlyRole(FEE_COLLECTOR)
+        nonReentrant
     {
         // withdraw the funds
         withdrawFundsInternal(payable(msgSender()), 0, _tokenList, _tokenAmounts);

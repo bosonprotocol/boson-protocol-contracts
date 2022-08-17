@@ -162,6 +162,8 @@ library ProtocolLib {
         mapping(uint256 => mapping(uint256 => uint256)) allowedSellerIndex;
         // exchange id => condition
         mapping(uint256 => BosonTypes.Condition) exchangeCondition;
+        // reentrancy status
+        uint256 reentrancyStatus;
     }
 
     // Incrementing ID counters
