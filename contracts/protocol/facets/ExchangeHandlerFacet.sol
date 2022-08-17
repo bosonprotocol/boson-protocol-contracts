@@ -66,6 +66,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         override
         exchangesNotPaused
         buyersNotPaused
+        nonReentrant
     {
         // Make sure buyer address is not zero address
         require(_buyer != address(0), INVALID_ADDRESS);
@@ -145,7 +146,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _exchangeId - the id of the exchange to complete
      */
-    function completeExchange(uint256 _exchangeId) public override exchangesNotPaused {
+    function completeExchange(uint256 _exchangeId) public override exchangesNotPaused nonReentrant {
         // Get the exchange, should be in redeemed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
         uint256 offerId = exchange.offerId;
@@ -212,7 +213,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _exchangeId - the id of the exchange
      */
-    function revokeVoucher(uint256 _exchangeId) external override exchangesNotPaused {
+    function revokeVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -245,7 +246,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _exchangeId - the id of the exchange
      */
-    function cancelVoucher(uint256 _exchangeId) external override exchangesNotPaused {
+    function cancelVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -273,7 +274,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _exchangeId - the id of the exchange
      */
-    function expireVoucher(uint256 _exchangeId) external override exchangesNotPaused {
+    function expireVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -306,7 +307,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchangeId - the id of the exchange
      * @param _validUntilDate - the new voucher expiry date
      */
-    function extendVoucher(uint256 _exchangeId, uint256 _validUntilDate) external exchangesNotPaused {
+    function extendVoucher(uint256 _exchangeId, uint256 _validUntilDate) external exchangesNotPaused nonReentrant {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 
@@ -349,7 +350,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _exchangeId - the id of the exchange
      */
-    function redeemVoucher(uint256 _exchangeId) external override exchangesNotPaused {
+    function redeemVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
         uint256 offerId = exchange.offerId;
@@ -397,7 +398,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchangeId - the id of the exchange
      * @param _newBuyer - the address of the new buyer
      */
-    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) external override buyersNotPaused {
+    function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer)
+        external
+        override
+        buyersNotPaused
+        nonReentrant
+    {
         // Get the exchange, should be in committed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
 

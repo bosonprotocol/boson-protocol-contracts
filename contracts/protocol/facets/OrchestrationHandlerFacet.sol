@@ -94,7 +94,7 @@ contract OrchestrationHandlerFacet is
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues,
         uint256 _agentId
-    ) external override sellersNotPaused offersNotPaused orchestrationNotPaused {
+    ) external override sellersNotPaused offersNotPaused orchestrationNotPaused nonReentrant {
         checkAndCreateSeller(_seller, _authToken, _voucherInitValues);
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
     }
@@ -144,7 +144,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         Condition calldata _condition,
         uint256 _agentId
-    ) public override offersNotPaused groupsNotPaused orchestrationNotPaused {
+    ) public override offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
         // create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -205,7 +205,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         uint256 _groupId,
         uint256 _agentId
-    ) external override offersNotPaused groupsNotPaused orchestrationNotPaused {
+    ) external override offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
         // create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -262,7 +262,7 @@ contract OrchestrationHandlerFacet is
         uint256 _disputeResolverId,
         Twin memory _twin,
         uint256 _agentId
-    ) public override offersNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused {
+    ) public override offersNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused nonReentrant {
         // create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
@@ -304,6 +304,8 @@ contract OrchestrationHandlerFacet is
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
+     *
+     * N.B. no reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
@@ -374,6 +376,8 @@ contract OrchestrationHandlerFacet is
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
+     *
+     * N.B. no reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
      * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
@@ -448,6 +452,8 @@ contract OrchestrationHandlerFacet is
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
+     *
+     * N.B. no reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
      * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
@@ -524,6 +530,8 @@ contract OrchestrationHandlerFacet is
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
+     *
+     * N.B. no reentrancy guard here since already implemented by called functions. If added here, they would clash.
      *
      * @param _seller - the fully populated seller struct
      * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false

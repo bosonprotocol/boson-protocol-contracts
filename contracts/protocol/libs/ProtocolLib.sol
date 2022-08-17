@@ -202,6 +202,8 @@ library ProtocolLib {
     struct ProtocolStatus {
         // the current pause scenario, a sum of PausableRegions as powers of two
         uint256 pauseScenario;
+        // reentrancy status
+        uint256 reentrancyStatus;
         // interface id => initialized?
         mapping(bytes4 => bool) initializedInterfaces;
     }

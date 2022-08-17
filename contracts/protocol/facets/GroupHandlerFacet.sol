@@ -36,7 +36,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @param _group - the fully populated struct with group id set to 0x0
      * @param _condition - the fully populated condition struct
      */
-    function createGroup(Group memory _group, Condition calldata _condition) external override groupsNotPaused {
+    function createGroup(Group memory _group, Condition calldata _condition) external override groupsNotPaused nonReentrant{
         createGroupInternal(_group, _condition);
     }
 
@@ -59,7 +59,12 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @param _groupId  - the id of the group to be updated
      * @param _offerIds - array of offer ids to be added to the group
      */
-    function addOffersToGroup(uint256 _groupId, uint256[] calldata _offerIds) external override groupsNotPaused {
+    function addOffersToGroup(uint256 _groupId, uint256[] calldata _offerIds)
+        external
+        override
+        groupsNotPaused
+        nonReentrant
+    {
         addOffersToGroupInternal(_groupId, _offerIds);
     }
 
@@ -79,7 +84,12 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @param _groupId  - the id of the group to be updated
      * @param _offerIds - array of offer ids to be removed to the group
      */
-    function removeOffersFromGroup(uint256 _groupId, uint256[] calldata _offerIds) external override groupsNotPaused {
+    function removeOffersFromGroup(uint256 _groupId, uint256[] calldata _offerIds)
+        external
+        override
+        groupsNotPaused
+        nonReentrant
+    {
         // check if group can be updated
         (uint256 sellerId, Group storage group) = preUpdateChecks(_groupId, _offerIds);
 
@@ -127,7 +137,12 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @param _condition - fully populated condition struct
      *
      */
-    function setGroupCondition(uint256 _groupId, Condition calldata _condition) external override groupsNotPaused {
+    function setGroupCondition(uint256 _groupId, Condition calldata _condition)
+        external
+        override
+        groupsNotPaused
+        nonReentrant
+    {
         // validate condition parameters
         require(validateCondition(_condition), INVALID_CONDITION_PARAMETERS);
 
