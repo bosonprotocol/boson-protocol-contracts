@@ -1415,8 +1415,12 @@ describe("IBosonOfferHandler", function () {
         offer.quantityAvailable = `${(i + 1) * 2}`;
 
         let now = offerDates.validFrom;
-        offerDates.validFrom = validFrom = ethers.BigNumber.from(now).add(oneMonth * i).toString();
-        offerDates.validUntil = validUntil = ethers.BigNumber.from(now).add(oneMonth * 6 * (i + 1)).toString();
+        offerDates.validFrom = validFrom = ethers.BigNumber.from(now)
+          .add(oneMonth * i)
+          .toString();
+        offerDates.validUntil = validUntil = ethers.BigNumber.from(now)
+          .add(oneMonth * 6 * (i + 1))
+          .toString();
 
         offerDurations.fulfillmentPeriod = fulfillmentPeriod = `${(i + 1) * oneMonth}`;
         offerDurations.voucherValid = voucherValid = `${(i + 1) * oneMonth}`;
