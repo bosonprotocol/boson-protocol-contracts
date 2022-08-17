@@ -3,6 +3,7 @@ const ethers = hre.ethers;
 const { expect, assert } = require("chai");
 const { gasLimit } = require("../../environments");
 
+const Buyer = require("../../scripts/domain/Buyer");
 const Exchange = require("../../scripts/domain/Exchange");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const Role = require("../../scripts/domain/Role");
@@ -119,6 +120,7 @@ describe("IBosonMetaTransactionsHandler", function () {
       "DisputeHandlerFacet",
       "MetaTransactionsHandlerFacet",
       "PauseHandlerFacet",
+      "BuyerHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -703,6 +705,169 @@ describe("IBosonMetaTransactionsHandler", function () {
               v
             )
           ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+        });
+
+        it.only("Should fail on reenter", async function () {
+          // Set a random nonce
+          // nonce = parseInt(ethers.utils.randomBytes(8));
+
+          // Deploy the boson token
+          const [maliciousToken] = await deployMockTokens(gasLimit, ["Foreign20Malicious"]);
+          await maliciousToken.setProtocolAddress(protocolDiamond.address);
+
+          // Initial ids for all the things
+          id = exchangeId = nextAccountId = "1";
+          buyerId = "3"; // created after a seller and a dispute resolver
+
+          // Create a valid seller
+          // seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+          // expect(seller.isValid()).is.true;
+
+          // // VoucherInitValues
+          // voucherInitValues = mockVoucherInitValues();
+          // expect(voucherInitValues.isValid()).is.true;
+
+          // // AuthToken
+          // emptyAuthToken = mockAuthToken();
+          // expect(emptyAuthToken.isValid()).is.true;
+          await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          // Create a valid dispute resolver
+          disputeResolver = mockDisputeResolver(
+            operatorDR.address,
+            adminDR.address,
+            clerkDR.address,
+            treasuryDR.address,
+            false
+          );
+          expect(disputeResolver.isValid()).is.true;
+
+          //Create DisputeResolverFee array so offer creation will succeed
+          disputeResolverFees = [new DisputeResolverFee(maliciousToken.address, "maliciousToken", "0")];
+
+          // Make empty seller list, so every seller is allowed
+          sellerAllowList = [];
+
+          // Register and activate the dispute resolver
+          await accountHandler
+            .connect(rando)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+          await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+
+          const { offer, ...mo } = await mockOffer();
+          ({ offerDates, offerDurations, disputeResolverId } = mo);
+          offerToken = offer;
+          offerToken.exchangeToken = maliciousToken.address;
+
+          price = offer.price;
+          sellerDeposit = offer.sellerDeposit;
+
+          // Check if domains are valid
+          expect(offerToken.isValid()).is.true;
+          expect(offerDates.isValid()).is.true;
+          expect(offerDurations.isValid()).is.true;
+
+          // Create the offer
+          await offerHandler
+            .connect(operator)
+            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
+
+          // top up seller's and buyer's account
+          await maliciousToken.mint(operator.address, sellerDeposit);
+          await maliciousToken.mint(buyer.address, price);
+
+          // approve protocol to transfer the tokens
+          await maliciousToken.connect(operator).approve(protocolDiamond.address, sellerDeposit);
+          await maliciousToken.connect(buyer).approve(protocolDiamond.address, price);
+
+          // deposit to seller's pool
+          await fundsHandler.connect(operator).depositFunds(seller.id, maliciousToken.address, sellerDeposit);
+
+          // commit to the offer
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+
+          // cancel the voucher, so both seller and buyer have something to withdraw
+          await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
+
+          // expected payoffs - they are the same for token and native currency
+          // buyer: price - buyerCancelPenalty
+          buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
+
+          // prepare validFundDetails
+          tokenListBuyer = [maliciousToken.address];
+          tokenAmountsBuyer = [buyerPayoff];
+          validFundDetails = {
+            entityId: buyerId,
+            tokenList: tokenListBuyer,
+            tokenAmounts: tokenAmountsBuyer,
+          };
+
+          // Prepare the message
+          message = {};
+          message.nonce = parseInt(nonce);
+          message.contractAddress = fundsHandler.address;
+          message.functionName = "withdrawFunds(uint256,address[],uint256[])";
+          message.fundDetails = validFundDetails;
+          message.from = buyer.address;
+
+          // Set the fund Type
+          fundType = [
+            { name: "entityId", type: "uint256" },
+            { name: "tokenList", type: "address[]" },
+            { name: "tokenAmounts", type: "uint256[]" },
+          ];
+
+          // Set the message Type
+          metaTxFundType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
+            { name: "fundDetails", type: "MetaTxFundDetails" },
+          ];
+
+          customTransactionType = {
+            MetaTxFund: metaTxFundType,
+            MetaTxFundDetails: fundType,
+          };
+
+          // Prepare the function signature
+          functionSignature = fundsHandler.interface.encodeFunctionData("withdrawFunds", [
+            validFundDetails.entityId,
+            validFundDetails.tokenList,
+            validFundDetails.tokenAmounts,
+          ]);
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionType,
+            "MetaTxFund",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          let [, buyerStruct] = await accountHandler.getBuyer(buyerId);
+          const buyerBefore = Buyer.fromStruct(buyerStruct);
+
+          console.log("Buyer before", buyerBefore.toString());
+
+          // Execute the meta transaction.
+          await metaTransactionsHandler.executeMetaTransaction(
+            buyer.address,
+            message.functionName,
+            functionSignature,
+            nonce,
+            r,
+            s,
+            v
+          );
+
+          [, buyerStruct] = await accountHandler.getBuyer(buyerId);
+          const buyerAfter = Buyer.fromStruct(buyerStruct);
+
+          console.log("Buyer after", buyerAfter.toString());
+          assert.equal(buyerAfter.toString(), buyerBefore.toString(), "Buyer should not change");
         });
       });
     });
