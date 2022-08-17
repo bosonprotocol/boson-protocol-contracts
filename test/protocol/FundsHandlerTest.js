@@ -2462,8 +2462,6 @@ describe("IBosonFundsHandler", function () {
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address);
-            // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
-            // .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address);
           });
 
           it("should update state", async function () {
@@ -2633,8 +2631,6 @@ describe("IBosonFundsHandler", function () {
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
-            // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
-            // .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, rando.address);
           });
 
           it("should update state", async function () {
@@ -3033,8 +3029,6 @@ describe("IBosonFundsHandler", function () {
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address);
-            // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
-            // .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address);
           });
 
           it("should update state", async function () {
@@ -3614,8 +3608,6 @@ describe("IBosonFundsHandler", function () {
                 .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
 
               await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
-              // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
-              // .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
             });
 
             it("should update state", async function () {
@@ -3782,8 +3774,6 @@ describe("IBosonFundsHandler", function () {
                 .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, operatorDR.address);
 
               await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
-              // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
-              // .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
             });
 
             it("should update state", async function () {
