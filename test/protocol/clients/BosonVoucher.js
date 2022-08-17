@@ -57,7 +57,7 @@ describe("IBosonVoucher", function () {
       await ethers.getSigners();
 
     // Deploy diamond
-    [protocolDiamond, , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
 
     // Cast Diamond to contract interfaces
     offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
