@@ -615,8 +615,13 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("Valid until date is not in the future", async function () {
-          // Set until date in the past
-          offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom - (oneMonth / 1000) * 6).toString(); // 6 months ago
+          let now = offerDates.validFrom;
+
+          // set validFrom date in the past
+          offerDates.validFrom = ethers.BigNumber.from(now - (oneMonth / 1000) * 6).toString(); // 6 months ago
+
+          // set valid until > valid from
+          offerDates.validUntil = ethers.BigNumber.from(now - oneMonth / 1000).toString(); // 1 month ago
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -1409,8 +1414,13 @@ describe("IBosonOfferHandler", function () {
         offer.buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
         offer.quantityAvailable = `${(i + 1) * 2}`;
 
-        offerDates.validFrom = validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
-        offerDates.validUntil = validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
+        let now = offerDates.validFrom;
+        offerDates.validFrom = validFrom = ethers.BigNumber.from(now)
+          .add(oneMonth * i)
+          .toString();
+        offerDates.validUntil = validUntil = ethers.BigNumber.from(now)
+          .add(oneMonth * 6 * (i + 1))
+          .toString();
 
         offerDurations.fulfillmentPeriod = fulfillmentPeriod = `${(i + 1) * oneMonth}`;
         offerDurations.voucherValid = voucherValid = `${(i + 1) * oneMonth}`;
@@ -1833,10 +1843,13 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("Valid until date is not in the future in some offer", async function () {
-          // Set until date in the past
-          offerDatesList[0].validUntil = ethers.BigNumber.from(
-            offerDatesList[0].validFrom - (oneMonth / 1000) * 6
-          ).toString(); // 6 months ago
+          let now = offerDatesList[0].validFrom;
+
+          // set validFrom date in the past
+          offerDatesList[0].validFrom = ethers.BigNumber.from(now - (oneMonth / 1000) * 6).toString(); // 6 months ago
+
+          // set valid until > valid from
+          offerDatesList[0].validUntil = ethers.BigNumber.from(now - oneMonth / 1000).toString(); // 1 month ago
 
           // Attempt to Create an offer, expecting revert
           await expect(
