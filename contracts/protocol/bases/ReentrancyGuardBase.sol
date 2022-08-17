@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts v4.4.1 (security/ReentrancyGuard.sol)
 
 import "../../domain/BosonConstants.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
@@ -8,6 +7,10 @@ pragma solidity ^0.8.0;
 
 /**
  * @dev Contract module that helps prevent reentrant calls to a function.
+ *
+ * The majority of code, comments and general idea is taken from OpenZeppelin implementation.
+ * Code was adjusted to work with the storage layout used in the protocol.
+ * Reference implementation: OpenZeppelin Contracts v4.4.1 (security/ReentrancyGuard.sol)
  *
  * Inheriting from `ReentrancyGuard` will make the {nonReentrant} modifier
  * available, which can be applied to functions to make sure there are no nested
@@ -36,12 +39,6 @@ abstract contract ReentrancyGuardBase {
     // increase the likelihood of the full refund coming into effect.
     uint256 private constant _NOT_ENTERED = 1;
     uint256 private constant _ENTERED = 2;
-
-    // uint256 private _status;
-
-    // constructor() {
-    //     _status = _NOT_ENTERED;
-    // }
 
     /**
      * @dev Prevents a contract from calling itself, directly or indirectly.
