@@ -48,17 +48,17 @@ abstract contract ReentrancyGuardBase {
      * `private` function that does the actual work.
      */
     modifier nonReentrant() {
-        ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
+        ProtocolLib.ProtocolStatus storage ps = ProtocolLib.protocolStatus();
         // On the first call to nonReentrant, _notEntered will be true
-        require(pl.reentrancyStatus != _ENTERED, REENTRANCY_GUARD);
+        require(ps.reentrancyStatus != _ENTERED, REENTRANCY_GUARD);
 
         // Any calls to nonReentrant after this point will fail
-        pl.reentrancyStatus = _ENTERED;
+        ps.reentrancyStatus = _ENTERED;
 
         _;
 
         // By storing the original value once again, a refund is triggered (see
         // https://eips.ethereum.org/EIPS/eip-2200)
-        pl.reentrancyStatus = _NOT_ENTERED;
+        ps.reentrancyStatus = _NOT_ENTERED;
     }
 }
