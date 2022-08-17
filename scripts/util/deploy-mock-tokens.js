@@ -15,9 +15,6 @@ const confirmations = environments.confirmations;
 async function deployMockTokens(gasLimit, tokens = ["BosonToken", "Foreign721", "Foreign1155", "FallbackError"]) {
   const deployedTokens = [];
 
-  console.log("\n Deploying Mock BOSON, ERC721, ERC1155, and FallbackError Mocks");
-  console.log(`⛓  Network: ${network}`);
-
   // Deploy all the mock tokens
   while (tokens.length) {
     let token = tokens.shift();
@@ -52,7 +49,7 @@ async function deployAndMintMockNFTAuthTokens() {
   console.log(`✅ Mock ENS NFT Token deployed to: ${ensTokenContract.address}`);
 
   if (network == "test") {
-    //We want to mint auth tokens to speficic addresses
+    //We want to mint auth tokens to specific addresses
     addresses = environments.test.nftAuthTokenHolders.split(", ");
     console.log("\n Tokens will be minted to addresses ", addresses);
   } else if (network == "hardhat") {
