@@ -224,6 +224,25 @@
         {
           "indexed": false,
           "internalType": "uint16",
+          "name": "maxRoyaltyPecentage",
+          "type": "uint16"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MaxRoyaltyPecentageChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint16",
           "name": "maxTokensPerWithdrawal",
           "type": "uint16"
         },
@@ -521,6 +540,19 @@
     },
     {
       "inputs": [],
+      "name": "getMaxRoyaltyPecentage",
+      "outputs": [
+        {
+          "internalType": "uint16",
+          "name": "",
+          "type": "uint16"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "getMaxTokensPerWithdrawal",
       "outputs": [
         {
@@ -767,6 +799,19 @@
         }
       ],
       "name": "setMaxOffersPerGroup",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint16",
+          "name": "_maxRoyaltyPecentage",
+          "type": "uint16"
+        }
+      ],
+      "name": "setMaxRoyaltyPecentage",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
