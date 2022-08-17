@@ -15,6 +15,7 @@ PausableRegion.Exchanges = 8;
 PausableRegion.Disputes = 9;
 PausableRegion.Funds = 10;
 PausableRegion.Orchestration = 11;
+PausableRegion.MetaTransaction = 12;
 
 PausableRegion.Regions = [
   PausableRegion.Offers,
@@ -29,6 +30,7 @@ PausableRegion.Regions = [
   PausableRegion.Disputes,
   PausableRegion.Funds,
   PausableRegion.Orchestration,
+  PausableRegion.MetaTransaction,
 ];
 
 // Export
