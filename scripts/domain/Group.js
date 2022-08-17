@@ -11,7 +11,6 @@ class Group {
             uint256 id;
             uint256 sellerId;
             Offer[] offerIds;
-            Condition condition;
         }
     */
 
