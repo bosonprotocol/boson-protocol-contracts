@@ -34,6 +34,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * - it receives some native currency (e.g. ETH), and the amount does not match msg.value
      * - if contract at token address does not support erc20 function transferFrom
      * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - actual received ERC20 token amount differs from the expected value
      *
      * @param _sellerId - id of the seller that will be credited
      * @param _tokenAddress - contract address of token that is being deposited (0 for native currency)

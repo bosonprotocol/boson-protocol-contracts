@@ -1751,7 +1751,7 @@ describe("IBosonFundsHandler", function () {
             exchangeHandler
               .connect(buyer)
               .commitToOffer(buyer.address, offerNative.id, { value: ethers.BigNumber.from(price).sub("1").toString() })
-          ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_SENT);
+          ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
         });
 
         it("Native currency sent together with ERC20 token transfer", async function () {
