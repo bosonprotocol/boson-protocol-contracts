@@ -36,7 +36,12 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @param _group - the fully populated struct with group id set to 0x0
      * @param _condition - the fully populated condition struct
      */
-    function createGroup(Group memory _group, Condition calldata _condition) external override groupsNotPaused nonReentrant{
+    function createGroup(Group memory _group, Condition calldata _condition)
+        external
+        override
+        groupsNotPaused
+        nonReentrant
+    {
         createGroupInternal(_group, _condition);
     }
 
