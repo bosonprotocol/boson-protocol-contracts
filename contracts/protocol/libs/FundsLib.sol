@@ -314,17 +314,21 @@ library FundsLib {
 
         // if availableFunds are totally emptied, the token address is removed from the seller's tokenList
         if (availableFunds == _amount) {
-            uint256 len = pl.tokenList[_entityId].length;
-            // find token index in the tokenList
-            uint256 index = pl.tokenIndexByAccount[_entityId][_tokenAddress];
-            // temporary variable to store the last token address in the list
-            address tokenLocationChanged = pl.tokenList[_entityId][len - 1];
-            // replace token to be removed with the last token address
-            pl.tokenList[_entityId][index] = tokenLocationChanged;
+            require(pl.tokenIndexByAccount[_entityId][_tokenAddress] != 0, TOKEN_NOT_FOUND);
+
+            uint256 lastTokenIndex = pl.tokenList[_entityId].length - 1;
+          //Get the index in the tokenList array, which is 1 less than the tokenIndexByAccount index
+            uint256 index = pl.tokenIndexByAccount[_entityId][_tokenAddress] - 1;
+            if(index != lastTokenIndex) { // if index == len - 1 then only pop and delete are needed
+              // Need to fill gap caused by delete if more than one element in storage array
+              address tokenToMove = pl.tokenList[_entityId][lastTokenIndex];
+              // Copy the last token in the array to this index to fill the gap
+              pl.tokenList[_entityId][index] = tokenToMove;
+              //Reset index mapping. Should be index in tokenList array + 1
+              pl.tokenIndexByAccount[_entityId][tokenToMove] = index + 1;
+            }
             // remove last token address from the list as it is now located in the index of the removed token
             pl.tokenList[_entityId].pop();
-            // update the token index of the last token address
-            pl.tokenIndexByAccount[_entityId][tokenLocationChanged] = index;
             // delete index pointer for removed token
             delete pl.tokenIndexByAccount[_entityId][_tokenAddress];
         }

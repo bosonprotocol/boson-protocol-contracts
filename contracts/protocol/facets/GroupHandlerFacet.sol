@@ -92,16 +92,20 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
             // remove groupIdByOffer mapping
             delete protocolLookups().groupIdByOffer[offerId];
 
+            uint256 len = group.offerIds.length;
             // find offerId index in group.offerIds
             uint256 index = protocolLookups().offerIdIndexByGroup[groupId][offerId];
-            // temporary variable to store the last offerId in the group
-            uint256 offerIdLocationMoved = group.offerIds[group.offerIds.length - 1];
-            // replace offerId to be removed with the last offerId
-            group.offerIds[index] = offerIdLocationMoved;
+
+            if(index != len - 1) { // if index == len - 1 then only pop and delete are needed
+              // temporary variable to store the last offerId in the group
+              uint256 offerIdLocationMoved = group.offerIds[len - 1];
+              // replace offerId to be removed with the last offerId
+              group.offerIds[index] = offerIdLocationMoved;
+              // update the offer id index of the last offer id
+              protocolLookups().offerIdIndexByGroup[groupId][offerIdLocationMoved] = index;
+            }
             // remove last offerId from the list as it is now located in the index of the removed token
             group.offerIds.pop();
-            // update the offer id index of the last offer id
-            protocolLookups().offerIdIndexByGroup[groupId][offerIdLocationMoved] = index;
             // delete index pointer for removed offerId
             delete protocolLookups().offerIdIndexByGroup[groupId][offerId];
         }
