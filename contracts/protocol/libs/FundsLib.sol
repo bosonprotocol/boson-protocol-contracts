@@ -49,7 +49,7 @@ library FundsLib {
      * - if contract at token address does not support erc20 function transferFrom
      * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - if seller has less funds available than sellerDeposit
-     * - actual received ERC20 token amount differs from the expected value
+     * - received ERC20 token amount differs from the expected value
      *
      * @param _offerId - id of the offer with the details
      * @param _buyerId - id of the buyer
@@ -86,7 +86,7 @@ library FundsLib {
      * - offer price is in some ERC20 token and caller also send native currency
      * - if contract at token address does not support erc20 function transferFrom
      * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - actual received ERC20 token amount differs from the expected value
+     * - received ERC20 token amount differs from the expected value
      *
      * @param _exchangeToken - address of the token (0x for native currency)
      * @param _value - value expected to receive
@@ -214,7 +214,7 @@ library FundsLib {
      * Reverts if:
      * - contract at token address does not support erc20 function transferFrom
      * - calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - actual received ERC20 token amount differs from the expected value
+     * - received ERC20 token amount differs from the expected value
      *
      * @param _tokenAddress - address of the token to be transferred
      * @param _amount - amount to be transferred

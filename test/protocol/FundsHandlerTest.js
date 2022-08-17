@@ -391,6 +391,20 @@ describe("IBosonFundsHandler", function () {
             fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount)
           ).to.revertedWith(RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE);
         });
+
+        it("Received ERC20 token amount differs from the expected value", async function () {
+          // Deploy ERC20 with fees
+          const [Foreign20WithFee] = await deployMockTokens(gasLimit, ["Foreign20WithFee"]);
+
+          // mint tokens and approve
+          await Foreign20WithFee.mint(operator.address, depositAmount);
+          await Foreign20WithFee.connect(operator).approve(protocolDiamond.address, depositAmount);
+
+          // Attempt to escalate the dispute, expecting revert
+          await expect(
+            fundsHandler.connect(operator).depositFunds(seller.id, Foreign20WithFee.address, depositAmount)
+          ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+        });
       });
     });
 
@@ -1850,6 +1864,39 @@ describe("IBosonFundsHandler", function () {
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price })
           ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+        });
+
+        it("Received ERC20 token amount differs from the expected value", async function () {
+          // Deploy ERC20 with fees
+          const [Foreign20WithFee] = await deployMockTokens(gasLimit, ["Foreign20WithFee"]);
+
+          // add to DR fees
+          DRFee = ethers.utils.parseUnits("2", "ether").toString();
+          await accountHandler
+            .connect(adminDR)
+            .addFeesToDisputeResolver(disputeResolverId, [
+              new DisputeResolverFee(Foreign20WithFee.address, "Foreign20WithFee", DRFee),
+            ]);
+
+          // Create an offer with ERC20 with fees
+          // Prepare an absolute zero offer
+          offerToken.exchangeToken = Foreign20WithFee.address;
+          offerToken.sellerDeposit = "0";
+          offerToken.id++;
+
+          // Create a new offer
+          await offerHandler
+            .connect(operator)
+            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
+
+          // mint tokens and approve
+          await Foreign20WithFee.mint(buyer.address, offerToken.price);
+          await Foreign20WithFee.connect(buyer).approve(protocolDiamond.address, offerToken.price);
+
+          // Attempt to escalate the dispute, expecting revert
+          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
+            RevertReasons.INSUFFICIENT_VALUE_RECEIVED
+          );
         });
       });
     });

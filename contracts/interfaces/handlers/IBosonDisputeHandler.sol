@@ -147,7 +147,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      * - offer price is in some ERC20 token and caller also send native currency
      * - if contract at token address does not support erc20 function transferFrom
      * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - actual received ERC20 token amount differs from the expected value
+     * - received ERC20 token amount differs from the expected value
      *
      * @param _exchangeId - the id of the associated exchange
      */
