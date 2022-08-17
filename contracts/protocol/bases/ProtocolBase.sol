@@ -7,13 +7,14 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { PausableBase } from "./PausableBase.sol";
+import { ReentrancyGuardBase } from "./ReentrancyGuardBase.sol";
 
 /**
  * @title ProtocolBase
  *
  * @notice Provides domain and common modifiers to Protocol facets
  */
-abstract contract ProtocolBase is PausableBase {
+abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     /**
      * @dev Modifier to protect initializer function from being invoked twice.
      */

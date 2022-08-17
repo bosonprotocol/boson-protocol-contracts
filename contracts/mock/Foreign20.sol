@@ -4,6 +4,9 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+import { IBosonAccountHandler } from "../interfaces/handlers/IBosonAccountHandler.sol";
+import { BosonTypes } from "../domain/BosonTypes.sol";
+
 /**
  * @title Foreign20
  *
@@ -50,5 +53,38 @@ contract Foreign20NoName is Foreign20 {
     function name() public pure override returns (string memory) {
         // simulate the contract without "name" implementation.
         revert();
+    }
+}
+
+/**
+ * @title Foreign20 that reenters into protocol
+ *
+ *
+ * @notice Mock ERC-(20) NFT for Unit Testing
+ */
+contract Foreign20Malicious is Foreign20 {
+    address private protocolAddress;
+    address private owner;
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    function setProtocolAddress(address _newProtocolAddress) external {
+        protocolAddress = _newProtocolAddress;
+    }
+
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override {
+        super._beforeTokenTransfer(from, to, amount);
+
+        // When funds are transferred from protocol, reenter
+        if (from == protocolAddress) {
+            // this is for demonstration purposes only, therefore id "3" is hardcoded
+            IBosonAccountHandler(msg.sender).updateBuyer(BosonTypes.Buyer(3, payable(owner), true));
+        }
     }
 }
