@@ -122,10 +122,10 @@ describe("AccessController", function () {
     });
 
     it("ADMIN role should be able to grant ADMIN role", async function () {
-      // Grant Role
-      try {
-        await accessController.connect(admin).grantRole(Role.ADMIN, associate.address);
-      } catch (e) {}
+      // Grant Role, expecting the event
+      await expect(accessController.connect(admin).grantRole(Role.ADMIN, associate.address))
+        .to.emit(accessController, "RoleGranted")
+        .withArgs(Role.ADMIN, associate.address, admin.address);
 
       // Test
       expect(
@@ -135,10 +135,10 @@ describe("AccessController", function () {
     });
 
     it("ADMIN role should be able to grant PROTOCOL role", async function () {
-      // Grant Role
-      try {
-        await accessController.connect(admin).grantRole(Role.PROTOCOL, protocol.address);
-      } catch (e) {}
+      // Grant Role, expecting the event
+      await expect(accessController.connect(admin).grantRole(Role.PROTOCOL, protocol.address))
+        .to.emit(accessController, "RoleGranted")
+        .withArgs(Role.PROTOCOL, protocol.address, admin.address);
 
       // Test
       expect(
@@ -148,10 +148,10 @@ describe("AccessController", function () {
     });
 
     it("ADMIN role should be able to grant UPGRADER role", async function () {
-      // Grant Role
-      try {
-        await accessController.connect(admin).grantRole(Role.UPGRADER, upgrader.address);
-      } catch (e) {}
+      // Grant Role, expecting the event
+      await expect(accessController.connect(admin).grantRole(Role.UPGRADER, upgrader.address))
+        .to.emit(accessController, "RoleGranted")
+        .withArgs(Role.UPGRADER, upgrader.address, admin.address);
 
       // Test
       expect(
@@ -161,30 +161,30 @@ describe("AccessController", function () {
     });
 
     it("ADMIN role should be able to grant PAUSER role", async function () {
-      // Grant Role
-      try {
-        await accessController.connect(admin).grantRole(Role.PAUSER, pauser.address);
-      } catch (e) {}
+      // Grant Role, expecting the event
+      await expect(accessController.connect(admin).grantRole(Role.PAUSER, pauser.address))
+        .to.emit(accessController, "RoleGranted")
+        .withArgs(Role.PAUSER, pauser.address, admin.address);
 
       // Test
       expect(await accessController.hasRole(Role.PAUSER, pauser.address), "ADMIN role can't grant PAUSER role").is.true;
     });
 
     it("ADMIN role should be able to grant CLIENT role", async function () {
-      // Grant Role
-      try {
-        await accessController.connect(admin).grantRole(Role.CLIENT, client.address);
-      } catch (e) {}
+      // Grant Role, expecting the event
+      await expect(accessController.connect(admin).grantRole(Role.CLIENT, client.address))
+        .to.emit(accessController, "RoleGranted")
+        .withArgs(Role.CLIENT, client.address, admin.address);
 
       // Test
       expect(await accessController.hasRole(Role.CLIENT, client.address), "ADMIN role can't grant CLIENT role").is.true;
     });
 
     it("ADMIN role should be able to grant FEE_COLLECTOR role", async function () {
-      // Grant Role
-      try {
-        await accessController.connect(admin).grantRole(Role.FEE_COLLECTOR, feeCollector.address);
-      } catch (e) {}
+      // Grant Role, expecting the event
+      await expect(accessController.connect(admin).grantRole(Role.FEE_COLLECTOR, feeCollector.address))
+        .to.emit(accessController, "RoleGranted")
+        .withArgs(Role.FEE_COLLECTOR, feeCollector.address, admin.address);
 
       // Test
       expect(
@@ -206,10 +206,10 @@ describe("AccessController", function () {
     });
 
     it("ADMIN role should be able to revoke ADMIN role", async function () {
-      // Revoke Role
-      try {
-        await accessController.connect(admin).revokeRole(Role.ADMIN, deployer.address);
-      } catch (e) {}
+      // Revoke Role, expecting the event
+      await expect(accessController.connect(admin).revokeRole(Role.ADMIN, deployer.address))
+        .to.emit(accessController, "RoleRevoked")
+        .withArgs(Role.ADMIN, deployer.address, admin.address);
 
       // Test
       expect(
@@ -219,10 +219,10 @@ describe("AccessController", function () {
     });
 
     it("ADMIN role should be able to revoke PROTOCOL role", async function () {
-      // Revoke Role
-      try {
-        await accessController.connect(admin).revokeRole(Role.PROTOCOL, protocol.address);
-      } catch (e) {}
+      // Revoke Role, expecting the event
+      await expect(accessController.connect(admin).revokeRole(Role.PROTOCOL, protocol.address))
+        .to.emit(accessController, "RoleRevoked")
+        .withArgs(Role.PROTOCOL, protocol.address, admin.address);
 
       // Test
       expect(
@@ -232,10 +232,10 @@ describe("AccessController", function () {
     });
 
     it("ADMIN role should be able to revoke UPGRADER role", async function () {
-      // Revoke Role
-      try {
-        await accessController.connect(admin).revokeRole(Role.UPGRADER, upgrader.address);
-      } catch (e) {}
+      // Revoke Role, expecting the event
+      await expect(accessController.connect(admin).revokeRole(Role.UPGRADER, upgrader.address))
+        .to.emit(accessController, "RoleRevoked")
+        .withArgs(Role.UPGRADER, upgrader.address, admin.address);
 
       // Test
       expect(
@@ -245,10 +245,10 @@ describe("AccessController", function () {
     });
 
     it("ADMIN role should be able to revoke PAUSER role", async function () {
-      // Revoke Role
-      try {
-        await accessController.connect(admin).revokeRole(Role.PAUSER, pauser.address);
-      } catch (e) {}
+      // Revoke Role, expecting the event
+      await expect(accessController.connect(admin).revokeRole(Role.PAUSER, pauser.address))
+        .to.emit(accessController, "RoleRevoked")
+        .withArgs(Role.PAUSER, pauser.address, admin.address);
 
       // Test
       expect(
@@ -258,10 +258,10 @@ describe("AccessController", function () {
     });
 
     it("ADMIN role should be able to revoke CLIENT role", async function () {
-      // Revoke Role
-      try {
-        await accessController.connect(admin).revokeRole(Role.CLIENT, client.address);
-      } catch (e) {}
+      // Revoke Role, expecting the event
+      await expect(accessController.connect(admin).revokeRole(Role.CLIENT, client.address))
+        .to.emit(accessController, "RoleRevoked")
+        .withArgs(Role.CLIENT, client.address, admin.address);
 
       // Test
       expect(
@@ -271,10 +271,10 @@ describe("AccessController", function () {
     });
 
     it("ADMIN role should be able to revoke FEE_COLLECTOR role", async function () {
-      // Revoke Role
-      try {
-        await accessController.connect(admin).revokeRole(Role.FEE_COLLECTOR, feeCollector.address);
-      } catch (e) {}
+      // Revoke Role, expecting the event
+      await expect(accessController.connect(admin).revokeRole(Role.FEE_COLLECTOR, feeCollector.address))
+        .to.emit(accessController, "RoleRevoked")
+        .withArgs(Role.FEE_COLLECTOR, feeCollector.address, admin.address);
 
       // Test
       expect(
@@ -296,10 +296,10 @@ describe("AccessController", function () {
     });
 
     it("ADMIN role should be able to renounce ADMIN role", async function () {
-      // Renounce Role
-      try {
-        await accessController.connect(admin).renounceRole(Role.ADMIN, admin.address);
-      } catch (e) {}
+      // Renounce Role, expecting the event
+      await expect(accessController.connect(admin).renounceRole(Role.ADMIN, admin.address))
+        .to.emit(accessController, "RoleRevoked")
+        .withArgs(Role.ADMIN, admin.address, admin.address);
 
       // Test
       expect(
@@ -309,10 +309,10 @@ describe("AccessController", function () {
     });
 
     it("PROTOCOL role should be able to renounce PROTOCOL role", async function () {
-      // Renounce Role
-      try {
-        await accessController.connect(protocol).renounceRole(Role.PROTOCOL, protocol.address);
-      } catch (e) {}
+      // Renounce Role, expecting the event
+      await expect(accessController.connect(protocol).renounceRole(Role.PROTOCOL, protocol.address))
+        .to.emit(accessController, "RoleRevoked")
+        .withArgs(Role.PROTOCOL, protocol.address, protocol.address);
 
       // Test
       expect(
@@ -322,10 +322,10 @@ describe("AccessController", function () {
     });
 
     it("UPGRADER role should be able to renounce UPGRADER role", async function () {
-      // Renounce Role
-      try {
-        await accessController.connect(upgrader).renounceRole(Role.UPGRADER, upgrader.address);
-      } catch (e) {}
+      // Renounce Role, expecting the event
+      await expect(accessController.connect(upgrader).renounceRole(Role.UPGRADER, upgrader.address))
+        .to.emit(accessController, "RoleRevoked")
+        .withArgs(Role.UPGRADER, upgrader.address, upgrader.address);
 
       // Test
       expect(
@@ -335,10 +335,10 @@ describe("AccessController", function () {
     });
 
     it("PAUSER role should be able to renounce PAUSER role", async function () {
-      // Renounce Role
-      try {
-        await accessController.connect(pauser).renounceRole(Role.PAUSER, pauser.address);
-      } catch (e) {}
+      // Renounce Role, expecting the event
+      await expect(accessController.connect(pauser).renounceRole(Role.PAUSER, pauser.address))
+        .to.emit(accessController, "RoleRevoked")
+        .withArgs(Role.PAUSER, pauser.address, pauser.address);
 
       // Test
       expect(
@@ -348,10 +348,10 @@ describe("AccessController", function () {
     });
 
     it("CLIENT role should be able to renounce CLIENT role", async function () {
-      // Renounce Role
-      try {
-        await accessController.connect(client).renounceRole(Role.CLIENT, client.address);
-      } catch (e) {}
+      // Renounce Role, expecting the event
+      await expect(accessController.connect(client).renounceRole(Role.CLIENT, client.address))
+        .to.emit(accessController, "RoleRevoked")
+        .withArgs(Role.CLIENT, client.address, client.address);
 
       // Test
       expect(
@@ -361,10 +361,10 @@ describe("AccessController", function () {
     });
 
     it("FEE_COLLECTOR role should be able to renounce FEE_COLLECTOR role", async function () {
-      // Renounce Role
-      try {
-        await accessController.connect(feeCollector).renounceRole(Role.FEE_COLLECTOR, feeCollector.address);
-      } catch (e) {}
+      // Renounce Role, expecting the event
+      await expect(accessController.connect(feeCollector).renounceRole(Role.FEE_COLLECTOR, feeCollector.address))
+        .to.emit(accessController, "RoleRevoked")
+        .withArgs(Role.FEE_COLLECTOR, feeCollector.address, feeCollector.address);
 
       // Test
       expect(
