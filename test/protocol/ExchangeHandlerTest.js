@@ -651,6 +651,16 @@ describe("IBosonExchangeHandler", function () {
             exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
           ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
         });
+
+        it("offer is voided", async function () {
+          // Void the offer first
+          await offerHandler.connect(operator).voidOffer(offerId);
+
+          // Attempt to commit to the voided offer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
+        });
       });
     });
 
@@ -947,6 +957,13 @@ describe("IBosonExchangeHandler", function () {
            * - buyer does not meet conditions for commit
            */
 
+          it("token id does not exist", async function () {
+            // Attempt to commit, expecting revert
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+            ).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+          });
+
           it("buyer does not meet condition for commit", async function () {
             // mint correct token but to another user
             await foreign721.connect(rando).mint(tokenId, "1");
@@ -1084,6 +1101,19 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to complete the exchange, expecting revert
           await expect(exchangeHandler.connect(operator).completeExchange(id)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
+          );
+        });
+
+        it("cannot complete an exchange when it is in the committed state", async function () {
+          // Get the exchange state
+          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+          // It should match ExchangeState.Committed
+          assert.equal(response, ExchangeState.Committed, "Exchange state is incorrect");
+
+          // Attempt to complete the exchange, expecting revert
+          await expect(exchangeHandler.connect(operator).completeExchange(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE
           );
         });
 
@@ -1475,6 +1505,25 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
+        it("cannot cancel when exchange is in Redeemed state", async function () {
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          // Redeem voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Get the exchange state
+          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+          // It should match ExchangeState.Redeemed
+          assert.equal(response, ExchangeState.Redeemed, "Exchange state is incorrect");
+
+          // Attempt to cancel the voucher, expecting revert
+          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE
+          );
+        });
+
         it("exchange is not in committed state", async function () {
           // Revoke the voucher
           await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
@@ -1574,6 +1623,25 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to cancel the voucher, expecting revert
           await expect(exchangeHandler.connect(buyer).expireVoucher(id)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
+          );
+        });
+
+        it("cannot expire voucher when exchange is in Redeemed state", async function () {
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Get the exchange state
+          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+          // It should match ExchangeState.Redeemed
+          assert.equal(response, ExchangeState.Redeemed, "Exchange state is incorrect");
+
+          // Attempt to expire the voucher, expecting revert
+          await expect(exchangeHandler.connect(buyer).expireVoucher(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE
           );
         });
 

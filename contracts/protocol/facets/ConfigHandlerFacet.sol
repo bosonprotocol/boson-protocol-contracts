@@ -72,7 +72,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _tokenAddress - the address of the token contract
      */
-    function setTokenAddress(address payable _tokenAddress) public override onlyRole(ADMIN) {
+    function setTokenAddress(address payable _tokenAddress) public override onlyRole(ADMIN) nonReentrant {
         protocolAddresses().token = _tokenAddress;
         emit TokenAddressChanged(_tokenAddress, msgSender());
     }
@@ -91,7 +91,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _treasuryAddress - the address of the multi-sig wallet
      */
-    function setTreasuryAddress(address payable _treasuryAddress) public override onlyRole(ADMIN) {
+    function setTreasuryAddress(address payable _treasuryAddress) public override onlyRole(ADMIN) nonReentrant {
         protocolAddresses().treasury = _treasuryAddress;
         emit TreasuryAddressChanged(_treasuryAddress, msgSender());
     }
@@ -110,7 +110,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _voucherBeaconAddress - the address of the Boson Voucher beacon contract.
      */
-    function setVoucherBeaconAddress(address _voucherBeaconAddress) public override onlyRole(ADMIN) {
+    function setVoucherBeaconAddress(address _voucherBeaconAddress) public override onlyRole(ADMIN) nonReentrant {
         protocolAddresses().voucherBeacon = _voucherBeaconAddress;
         emit VoucherBeaconAddressChanged(_voucherBeaconAddress, msgSender());
     }
@@ -129,7 +129,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _beaconProxyAddress - the address of the reference proxy implementation
      */
-    function setBeaconProxyAddress(address _beaconProxyAddress) public override onlyRole(ADMIN) {
+    function setBeaconProxyAddress(address _beaconProxyAddress) public override onlyRole(ADMIN) nonReentrant {
         protocolAddresses().beaconProxy = _beaconProxyAddress;
         emit BeaconProxyAddressChanged(_beaconProxyAddress, msgSender());
     }
@@ -153,7 +153,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setProtocolFeePercentage(uint16 _protocolFeePercentage) public override onlyRole(ADMIN) {
+    function setProtocolFeePercentage(uint16 _protocolFeePercentage) public override onlyRole(ADMIN) nonReentrant {
         // Make sure percentage is less than 10000
         require(_protocolFeePercentage <= 10000, FEE_PERCENTAGE_INVALID);
 
@@ -179,7 +179,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _protocolFeeFlatBoson - Flat fee taken for exchanges in $BOSON
      *
      */
-    function setProtocolFeeFlatBoson(uint256 _protocolFeeFlatBoson) public override onlyRole(ADMIN) {
+    function setProtocolFeeFlatBoson(uint256 _protocolFeeFlatBoson) public override onlyRole(ADMIN) nonReentrant {
         // Store fee percentage
         protocolFees().flatBoson = _protocolFeeFlatBoson;
 
@@ -201,7 +201,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxOffersPerGroup - the maximum length of {BosonTypes.Group.offerIds}
      */
-    function setMaxOffersPerGroup(uint16 _maxOffersPerGroup) public override onlyRole(ADMIN) {
+    function setMaxOffersPerGroup(uint16 _maxOffersPerGroup) public override onlyRole(ADMIN) nonReentrant {
         protocolLimits().maxOffersPerGroup = _maxOffersPerGroup;
         emit MaxOffersPerGroupChanged(_maxOffersPerGroup, msgSender());
     }
@@ -220,7 +220,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxTwinsPerBundle - the maximum length of {BosonTypes.Bundle.twinIds}
      */
-    function setMaxTwinsPerBundle(uint16 _maxTwinsPerBundle) public override onlyRole(ADMIN) {
+    function setMaxTwinsPerBundle(uint16 _maxTwinsPerBundle) public override onlyRole(ADMIN) nonReentrant {
         protocolLimits().maxTwinsPerBundle = _maxTwinsPerBundle;
         emit MaxTwinsPerBundleChanged(_maxTwinsPerBundle, msgSender());
     }
@@ -239,7 +239,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxOffersPerBundle - the maximum length of {BosonTypes.Bundle.offerIds}
      */
-    function setMaxOffersPerBundle(uint16 _maxOffersPerBundle) public override onlyRole(ADMIN) {
+    function setMaxOffersPerBundle(uint16 _maxOffersPerBundle) public override onlyRole(ADMIN) nonReentrant {
         protocolLimits().maxOffersPerBundle = _maxOffersPerBundle;
         emit MaxOffersPerBundleChanged(_maxOffersPerBundle, msgSender());
     }
@@ -258,7 +258,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Offer[]}
      */
-    function setMaxOffersPerBatch(uint16 _maxOffersPerBatch) public override onlyRole(ADMIN) {
+    function setMaxOffersPerBatch(uint16 _maxOffersPerBatch) public override onlyRole(ADMIN) nonReentrant {
         protocolLimits().maxOffersPerBatch = _maxOffersPerBatch;
         emit MaxOffersPerBatchChanged(_maxOffersPerBatch, msgSender());
     }
@@ -277,7 +277,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxTokensPerWithdrawal - the maximum length of token list when calling {FundsHandlerFacet.withdraw}
      */
-    function setMaxTokensPerWithdrawal(uint16 _maxTokensPerWithdrawal) public override onlyRole(ADMIN) {
+    function setMaxTokensPerWithdrawal(uint16 _maxTokensPerWithdrawal) public override onlyRole(ADMIN) nonReentrant {
         protocolLimits().maxTokensPerWithdrawal = _maxTokensPerWithdrawal;
         emit MaxTokensPerWithdrawalChanged(_maxTokensPerWithdrawal, msgSender());
     }
@@ -296,7 +296,12 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxFeesPerDisputeResolver - the maximum length of dispute resolver fees list when calling {AccountHandlerFacet.createDisputeResolver} or {AccountHandlerFacet.updateDisputeResolver}
      */
-    function setMaxFeesPerDisputeResolver(uint16 _maxFeesPerDisputeResolver) public override onlyRole(ADMIN) {
+    function setMaxFeesPerDisputeResolver(uint16 _maxFeesPerDisputeResolver)
+        public
+        override
+        onlyRole(ADMIN)
+        nonReentrant
+    {
         protocolLimits().maxFeesPerDisputeResolver = _maxFeesPerDisputeResolver;
         emit MaxFeesPerDisputeResolverChanged(_maxFeesPerDisputeResolver, msgSender());
     }
@@ -315,7 +320,12 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxEscalationResponsePeriod - the maximum escalation response period that a {BosonTypes.DisputeResolver} can specify
      */
-    function setMaxEscalationResponsePeriod(uint256 _maxEscalationResponsePeriod) public override onlyRole(ADMIN) {
+    function setMaxEscalationResponsePeriod(uint256 _maxEscalationResponsePeriod)
+        public
+        override
+        onlyRole(ADMIN)
+        nonReentrant
+    {
         protocolLimits().maxEscalationResponsePeriod = _maxEscalationResponsePeriod;
         emit MaxEscalationResponsePeriodChanged(_maxEscalationResponsePeriod, msgSender());
     }
@@ -334,7 +344,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxDisputesPerBatch - the maximum number of disputes that can be expired
      */
-    function setMaxDisputesPerBatch(uint16 _maxDisputesPerBatch) public override onlyRole(ADMIN) {
+    function setMaxDisputesPerBatch(uint16 _maxDisputesPerBatch) public override onlyRole(ADMIN) nonReentrant {
         protocolLimits().maxDisputesPerBatch = _maxDisputesPerBatch;
         emit MaxDisputesPerBatchChanged(_maxDisputesPerBatch, msgSender());
     }
@@ -358,7 +368,12 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setMaxTotalOfferFeePercentage(uint16 _maxTotalOfferFeePercentage) public override onlyRole(ADMIN) {
+    function setMaxTotalOfferFeePercentage(uint16 _maxTotalOfferFeePercentage)
+        public
+        override
+        onlyRole(ADMIN)
+        nonReentrant
+    {
         // Make sure percentage is less than 10000
         require(_maxTotalOfferFeePercentage <= 10000, FEE_PERCENTAGE_INVALID);
 
@@ -388,7 +403,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setMaxRoyaltyPecentage(uint16 _maxRoyaltyPecentage) public override onlyRole(ADMIN) {
+    function setMaxRoyaltyPecentage(uint16 _maxRoyaltyPecentage) public override onlyRole(ADMIN) nonReentrant {
         // Make sure percentage is less than 10000
         require(_maxRoyaltyPecentage <= 10000, FEE_PERCENTAGE_INVALID);
 
@@ -413,7 +428,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxAllowedSellers - the maximum number of seller ids that can be added or removed
      */
-    function setMaxAllowedSellers(uint16 _maxAllowedSellers) public override onlyRole(ADMIN) {
+    function setMaxAllowedSellers(uint16 _maxAllowedSellers) public override onlyRole(ADMIN) nonReentrant {
         protocolLimits().maxAllowedSellers = _maxAllowedSellers;
         emit MaxAllowedSellersChanged(_maxAllowedSellers, msgSender());
     }
@@ -441,6 +456,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         public
         override
         onlyRole(ADMIN)
+        nonReentrant
     {
         // Make sure percentage is less than 10000
         require(_buyerEscalationDepositPercentage <= 10000, FEE_PERCENTAGE_INVALID);
@@ -474,6 +490,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         external
         override
         onlyRole(ADMIN)
+        nonReentrant
     {
         require(_authTokenType != AuthTokenType.None, INVALID_AUTH_TOKEN_TYPE);
         require(_authTokenContract != address(0), INVALID_ADDRESS);
@@ -496,7 +513,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * @param _maxExchangesPerBatch - the maximum length of {BosonTypes.Exchange[]}
      */
-    function setMaxExchangesPerBatch(uint16 _maxExchangesPerBatch) public override onlyRole(ADMIN) {
+    function setMaxExchangesPerBatch(uint16 _maxExchangesPerBatch) public override onlyRole(ADMIN) nonReentrant {
         protocolLimits().maxExchangesPerBatch = _maxExchangesPerBatch;
         emit MaxExchangesPerBatchChanged(_maxExchangesPerBatch, msgSender());
     }

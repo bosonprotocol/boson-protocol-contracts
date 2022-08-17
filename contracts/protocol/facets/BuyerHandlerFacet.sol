@@ -28,7 +28,7 @@ contract BuyerHandlerFacet is BuyerBase {
      *
      * @param _buyer - the fully populated struct with buyer id set to 0x0
      */
-    function createBuyer(Buyer memory _buyer) external buyersNotPaused {
+    function createBuyer(Buyer memory _buyer) external buyersNotPaused nonReentrant {
         createBuyerInternal(_buyer);
     }
 
@@ -49,7 +49,7 @@ contract BuyerHandlerFacet is BuyerBase {
      *
      * @param _buyer - the fully populated buyer struct
      */
-    function updateBuyer(Buyer memory _buyer) external buyersNotPaused {
+    function updateBuyer(Buyer memory _buyer) external buyersNotPaused nonReentrant {
         //Check for zero address
         require(_buyer.wallet != address(0), INVALID_ADDRESS);
 

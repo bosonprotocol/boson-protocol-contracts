@@ -32,7 +32,7 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
      *
      * @param _regions - an array of regions to pause. See: {BosonTypes.PausableRegion}
      */
-    function pause(BosonTypes.PausableRegion[] calldata _regions) external onlyRole(PAUSER) {
+    function pause(BosonTypes.PausableRegion[] calldata _regions) external onlyRole(PAUSER) nonReentrant {
         // Make sure at least one region is specified
         require(_regions.length > 0, NO_REGIONS_SPECIFIED);
 
@@ -74,7 +74,7 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
      * - caller does not have PAUSER role
      * - protocol is not currently paused
      */
-    function unpause() external onlyRole(PAUSER) {
+    function unpause() external onlyRole(PAUSER) nonReentrant {
         // Make sure the protocol is already paused
         require(protocolStatus().pauseScenario > 0, NOT_PAUSED);
 
