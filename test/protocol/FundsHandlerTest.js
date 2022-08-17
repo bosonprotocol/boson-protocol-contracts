@@ -400,7 +400,7 @@ describe("IBosonFundsHandler", function () {
           await Foreign20WithFee.mint(operator.address, depositAmount);
           await Foreign20WithFee.connect(operator).approve(protocolDiamond.address, depositAmount);
 
-          // Attempt to escalate the dispute, expecting revert
+          // Attempt to deposit funds, expecting revert
           await expect(
             fundsHandler.connect(operator).depositFunds(seller.id, Foreign20WithFee.address, depositAmount)
           ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
@@ -1893,7 +1893,7 @@ describe("IBosonFundsHandler", function () {
           await Foreign20WithFee.mint(buyer.address, offerToken.price);
           await Foreign20WithFee.connect(buyer).approve(protocolDiamond.address, offerToken.price);
 
-          // Attempt to escalate the dispute, expecting revert
+          // Attempt to commit to offer, expecting revert
           await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
             RevertReasons.INSUFFICIENT_VALUE_RECEIVED
           );
