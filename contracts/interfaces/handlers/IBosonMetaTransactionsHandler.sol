@@ -23,6 +23,7 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
      * @notice Handles the incoming meta transaction.
      *
      * Reverts if:
+     * - The meta-transactions region of protocol is paused
      * - nonce is already used by another transaction.
      * - function signature matches to executeMetaTransaction.
      * - function name does not match with bytes 4 version of the function signature.
