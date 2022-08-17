@@ -947,7 +947,7 @@ describe("IBosonGroupHandler", function () {
         nextGroupId = await groupHandler.connect(rando).getNextGroupId();
 
         // Verify expectation
-        expect(nextGroupId.toString() === expected).to.be.true;
+        expect(nextGroupId.toString() == expected).to.be.true;
       });
 
       it("should be incremented after a group is created", async function () {
