@@ -2464,10 +2464,16 @@ describe("IBosonFundsHandler", function () {
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address);
-            
+
             //check that FundsReleased event was NOT emitted with buyer Id
             const txReceipt = await tx.wait();
-            const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address]);
+            const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
+              exchangeId,
+              buyerId,
+              offerToken.exchangeToken,
+              buyerPayoff,
+              buyer.address,
+            ]);
             expect(match).to.be.false;
             console.log("match in test case when false is expected ", match);
           });
@@ -2639,10 +2645,16 @@ describe("IBosonFundsHandler", function () {
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
-            
+
             //check that FundsReleased event was NOT emitted with buyer Id
             const txReceipt = await tx.wait();
-            const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, rando.address]);
+            const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
+              exchangeId,
+              buyerId,
+              offerToken.exchangeToken,
+              buyerPayoff,
+              rando.address,
+            ]);
             expect(match).to.be.false;
           });
 
@@ -3045,7 +3057,13 @@ describe("IBosonFundsHandler", function () {
 
             //check that FundsReleased event was NOT emitted with buyer Id
             const txReceipt = await tx.wait();
-            const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address]);
+            const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
+              exchangeId,
+              buyerId,
+              offerToken.exchangeToken,
+              buyerPayoff,
+              buyer.address,
+            ]);
             expect(match).to.be.false;
           });
 
@@ -3795,7 +3813,13 @@ describe("IBosonFundsHandler", function () {
 
               //check that FundsReleased event was NOT emitted with  rando address
               const txReceipt = await tx.wait();
-              const  match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address]);
+              const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
+                exchangeId,
+                sellerId,
+                offerToken.exchangeToken,
+                sellerPayoff,
+                rando.address,
+              ]);
               expect(match).to.be.false;
             });
 

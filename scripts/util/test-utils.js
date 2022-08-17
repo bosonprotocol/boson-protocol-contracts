@@ -44,7 +44,6 @@ function eventEmittedWithArgs(receipt, factory, eventName, args) {
   const iface = new ethers.utils.Interface(eventFragment);
 
   for (const log in receipt.logs) {
- 
     const topics = receipt.logs[log].topics;
 
     for (const index in topics) {
