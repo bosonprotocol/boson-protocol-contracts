@@ -46,7 +46,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
-    function createBundle(Bundle memory _bundle) external override bundlesNotPaused {
+    function createBundle(Bundle memory _bundle) external override bundlesNotPaused nonReentrant {
         createBundleInternal(_bundle);
     }
 

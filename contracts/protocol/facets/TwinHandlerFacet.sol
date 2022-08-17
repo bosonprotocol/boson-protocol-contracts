@@ -36,7 +36,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
      */
-    function createTwin(Twin memory _twin) external override twinsNotPaused {
+    function createTwin(Twin memory _twin) external override twinsNotPaused nonReentrant {
         createTwinInternal(_twin);
     }
 
@@ -53,7 +53,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      *
      * @param _twinId - the id of the twin to check.
      */
-    function removeTwin(uint256 _twinId) external override twinsNotPaused {
+    function removeTwin(uint256 _twinId) external override twinsNotPaused nonReentrant {
         // Get storage location for twin
         (bool exists, Twin memory twin) = fetchTwin(_twinId);
         require(exists, NO_SUCH_TWIN);
