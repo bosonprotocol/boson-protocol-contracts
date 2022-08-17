@@ -42,7 +42,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         DisputeResolver memory _disputeResolver,
         DisputeResolverFee[] calldata _disputeResolverFees,
         uint256[] calldata _sellerAllowList
-    ) external disputeResolversNotPaused {
+    ) external disputeResolversNotPaused nonReentrant {
         //Check for zero address
         require(
             _disputeResolver.admin != address(0) &&
@@ -136,7 +136,11 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      *
      * @param _disputeResolver - the fully populated buydispute resolver struct
      */
-    function updateDisputeResolver(DisputeResolver memory _disputeResolver) external disputeResolversNotPaused {
+    function updateDisputeResolver(DisputeResolver memory _disputeResolver)
+        external
+        disputeResolversNotPaused
+        nonReentrant
+    {
         //Check for zero address
         require(
             _disputeResolver.admin != address(0) &&
@@ -213,6 +217,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     function addFeesToDisputeResolver(uint256 _disputeResolverId, DisputeResolverFee[] calldata _disputeResolverFees)
         external
         disputeResolversNotPaused
+        nonReentrant
     {
         bool exists;
         DisputeResolver storage disputeResolver;
@@ -276,6 +281,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     function removeFeesFromDisputeResolver(uint256 _disputeResolverId, address[] calldata _feeTokenAddresses)
         external
         disputeResolversNotPaused
+        nonReentrant
     {
         bool exists;
         DisputeResolver storage disputeResolver;
@@ -342,6 +348,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     function addSellersToAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList)
         external
         disputeResolversNotPaused
+        nonReentrant
     {
         // At least one seller id must be specified and the number of ids cannot exceed the maximum number of seller ids to avoid running into block gas limit in a loop
         require(
@@ -385,6 +392,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     function removeSellersFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList)
         external
         disputeResolversNotPaused
+        nonReentrant
     {
         // At least one seller id must be specified and the number of ids cannot exceed the maximum number of seller ids to avoid running into block gas limit in a loop
         require(
@@ -444,7 +452,12 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      *
      * @param _disputeResolverId - Id of the dispute resolver
      */
-    function activateDisputeResolver(uint256 _disputeResolverId) external disputeResolversNotPaused onlyRole(ADMIN) {
+    function activateDisputeResolver(uint256 _disputeResolverId)
+        external
+        disputeResolversNotPaused
+        onlyRole(ADMIN)
+        nonReentrant
+    {
         bool exists;
         DisputeResolver storage disputeResolver;
 

@@ -43,6 +43,7 @@ const {
   calculateVoucherExpiry,
   prepareDataSignatureParameters,
   calculateContractAddress,
+  applyPercentage,
 } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
 
@@ -126,7 +127,7 @@ describe("IBosonExchangeHandler", function () {
     ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -192,6 +193,7 @@ describe("IBosonExchangeHandler", function () {
         maxDisputesPerBatch: 100,
         maxAllowedSellers: 100,
         maxTotalOfferFeePercentage: 4000, //40%
+        maxRoyaltyPecentage: 1000, //10%
       },
       // Protocol fees
       {
@@ -205,7 +207,7 @@ describe("IBosonExchangeHandler", function () {
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
     // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
+    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
 
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
@@ -468,7 +470,7 @@ describe("IBosonExchangeHandler", function () {
         expect(seller.isValid()).is.true;
 
         // VoucherInitValues
-        voucherInitValues.royaltyPercentage = "3000"; // 30%
+        voucherInitValues.royaltyPercentage = "800"; // 8%
         expect(voucherInitValues.isValid()).is.true;
 
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
@@ -517,14 +519,14 @@ describe("IBosonExchangeHandler", function () {
 
         // Expectations
         let expectedRecipient = seller1Treasury; //Expect 1st seller's treasury address as exchange id exists
-        let expectedRoyaltyAmount = ethers.BigNumber.from(price).mul(royaltyPercentage1).div("10000").toString(); //0% of offer price because royaltyPercentage1 is 0%
+        let expectedRoyaltyAmount = applyPercentage(price, royaltyPercentage1); //0% of offer price because royaltyPercentage1 is 0%
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
 
         // Make sure that vouchers have correct royalty fee for exchangeId 2
         exchangeId = "2";
-        royaltyPercentage2 = voucherInitValues.royaltyPercentage; // 30%
+        royaltyPercentage2 = voucherInitValues.royaltyPercentage; // 8%
         seller2Treasury = seller.treasury;
 
         receiver, royaltyAmount;
@@ -532,7 +534,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Expectations
         expectedRecipient = seller2Treasury; //Expect 2nd seller's treasury address as exchange id exists
-        expectedRoyaltyAmount = ethers.BigNumber.from(price).mul(royaltyPercentage2).div("10000").toString(); //30% of offer price because royaltyPercentage2 is 30%
+        expectedRoyaltyAmount = applyPercentage(price, royaltyPercentage2); //8% of offer price because royaltyPercentage2 is 30%
 
         assert.equal(receiver, expectedRecipient, "Recipient address is incorrect");
         assert.equal(royaltyAmount.toString(), expectedRoyaltyAmount, "Royalty amount is incorrect");
@@ -648,6 +650,16 @@ describe("IBosonExchangeHandler", function () {
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
           ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+        });
+
+        it("offer is voided", async function () {
+          // Void the offer first
+          await offerHandler.connect(operator).voidOffer(offerId);
+
+          // Attempt to commit to the voided offer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
         });
       });
     });
@@ -945,6 +957,13 @@ describe("IBosonExchangeHandler", function () {
            * - buyer does not meet conditions for commit
            */
 
+          it("token id does not exist", async function () {
+            // Attempt to commit, expecting revert
+            await expect(
+              exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+            ).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
+          });
+
           it("buyer does not meet condition for commit", async function () {
             // mint correct token but to another user
             await foreign721.connect(rando).mint(tokenId, "1");
@@ -1082,6 +1101,19 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to complete the exchange, expecting revert
           await expect(exchangeHandler.connect(operator).completeExchange(id)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
+          );
+        });
+
+        it("cannot complete an exchange when it is in the committed state", async function () {
+          // Get the exchange state
+          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+          // It should match ExchangeState.Committed
+          assert.equal(response, ExchangeState.Committed, "Exchange state is incorrect");
+
+          // Attempt to complete the exchange, expecting revert
+          await expect(exchangeHandler.connect(operator).completeExchange(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE
           );
         });
 
@@ -1473,6 +1505,25 @@ describe("IBosonExchangeHandler", function () {
           );
         });
 
+        it("cannot cancel when exchange is in Redeemed state", async function () {
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          // Redeem voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Get the exchange state
+          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+          // It should match ExchangeState.Redeemed
+          assert.equal(response, ExchangeState.Redeemed, "Exchange state is incorrect");
+
+          // Attempt to cancel the voucher, expecting revert
+          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE
+          );
+        });
+
         it("exchange is not in committed state", async function () {
           // Revoke the voucher
           await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
@@ -1572,6 +1623,25 @@ describe("IBosonExchangeHandler", function () {
           // Attempt to cancel the voucher, expecting revert
           await expect(exchangeHandler.connect(buyer).expireVoucher(id)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
+          );
+        });
+
+        it("cannot expire voucher when exchange is in Redeemed state", async function () {
+          // Set time forward to the offer's voucherRedeemableFrom
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          // Redeem the voucher
+          await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
+
+          // Get the exchange state
+          [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+          // It should match ExchangeState.Redeemed
+          assert.equal(response, ExchangeState.Redeemed, "Exchange state is incorrect");
+
+          // Attempt to expire the voucher, expecting revert
+          await expect(exchangeHandler.connect(buyer).expireVoucher(exchange.id)).to.revertedWith(
+            RevertReasons.INVALID_STATE
           );
         });
 

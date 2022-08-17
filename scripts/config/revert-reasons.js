@@ -18,6 +18,7 @@ exports.RevertReasons = {
   INVALID_ADDRESS: "Invalid address",
   INVALID_STATE: "Invalid state",
   ARRAY_LENGTH_MISMATCH: "Array length mismatch",
+  REENTRANCY_GUARD: "ReentrancyGuard: reentrant call",
 
   // Facet initializer related
   ALREADY_INITIALIZED: "Already initialized",
@@ -152,5 +153,5 @@ exports.RevertReasons = {
   FEE_PERCENTAGE_INVALID: "Percentage representation must be less than 10000",
 
   // ERC2981 related
-  ROYALTY_FEE_INVALID: "ERC2981: royalty fee will exceed salePrice",
+  ROYALTY_FEE_INVALID: "ERC2981: royalty fee exceeds protocol limit",
 };

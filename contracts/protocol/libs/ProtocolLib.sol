@@ -54,6 +54,8 @@ library ProtocolLib {
         uint16 maxAllowedSellers;
         // limit the sum of (Protocol Fee percentage + Agent Fee perpercentagecent) of an offer fee
         uint16 maxTotalOfferFeePercentage;
+        // limit the max royalty percentage that can be set by the seller
+        uint16 maxRoyaltyPecentage;
     }
 
     // Protocol fees storage
@@ -202,6 +204,8 @@ library ProtocolLib {
     struct ProtocolStatus {
         // the current pause scenario, a sum of PausableRegions as powers of two
         uint256 pauseScenario;
+        // reentrancy status
+        uint256 reentrancyStatus;
         // interface id => initialized?
         mapping(bytes4 => bool) initializedInterfaces;
     }

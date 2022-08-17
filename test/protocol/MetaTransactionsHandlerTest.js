@@ -3,12 +3,14 @@ const ethers = hre.ethers;
 const { expect, assert } = require("chai");
 const { gasLimit } = require("../../environments");
 
+const Buyer = require("../../scripts/domain/Buyer");
 const Exchange = require("../../scripts/domain/Exchange");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const Role = require("../../scripts/domain/Role");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
 const Voucher = require("../../scripts/domain/Voucher");
+const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
@@ -33,7 +35,7 @@ const { oneMonth } = require("../utils/constants");
 describe("IBosonMetaTransactionsHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, rando, operator, buyer, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
+  let deployer, pauser, rando, operator, buyer, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
   let erc165,
     protocolDiamond,
     accessController,
@@ -43,6 +45,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     exchangeHandler,
     offerHandler,
     twinHandler,
+    pauseHandler,
     bosonToken,
     support,
     result;
@@ -91,17 +94,20 @@ describe("IBosonMetaTransactionsHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, buyer, rando, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR] =
+    [deployer, pauser, operator, buyer, rando, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR] =
       await ethers.getSigners();
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
     // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
     await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+
+    // Temporarily grant PAUSER role to pauser account
+    await accessController.grantRole(Role.PAUSER, pauser.address);
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
@@ -113,6 +119,8 @@ describe("IBosonMetaTransactionsHandler", function () {
       "TwinHandlerFacet",
       "DisputeHandlerFacet",
       "MetaTransactionsHandlerFacet",
+      "PauseHandlerFacet",
+      "BuyerHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -153,6 +161,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         maxDisputesPerBatch: 100,
         maxAllowedSellers: 100,
         maxTotalOfferFeePercentage: 4000, //40%
+        maxRoyaltyPecentage: 1000, //10%
       },
       // Protocol fees
       {
@@ -166,7 +175,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
     // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
+    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
 
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
@@ -188,6 +197,9 @@ describe("IBosonMetaTransactionsHandler", function () {
 
     // Cast Diamond to IBosonMetaTransactionsHandler
     metaTransactionsHandler = await ethers.getContractAt("IBosonMetaTransactionsHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonPauseHandler
+    pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
 
     // Deploy the mock tokens
     [bosonToken, mockToken] = await deployMockTokens(gasLimit, ["BosonToken", "Foreign20"]);
@@ -493,6 +505,41 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
+        it("The meta transactions region of protocol is paused", async function () {
+          // Prepare the function signature for the facet function.
+          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+            seller,
+            emptyAuthToken,
+            voucherInitValues,
+          ]);
+
+          // Prepare the message
+          message.from = operator.address;
+          message.contractAddress = accountHandler.address;
+          message.functionName =
+            "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
+          message.functionSignature = functionSignature;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            operator,
+            customTransactionType,
+            "MetaTransaction",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // Pause the metatx region of the protocol
+          await pauseHandler.connect(pauser).pause([PausableRegion.MetaTransaction]);
+
+          // Attempt to execute a meta transaction, expecting revert
+          await expect(
+            metaTransactionsHandler
+              .connect(deployer)
+              .executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.REGION_PAUSED);
+        });
+
         it("Should fail when try to call executeMetaTransaction method itself", async function () {
           // Function signature for executeMetaTransaction function.
           functionSignature = metaTransactionsHandler.interface.encodeFunctionData("executeMetaTransaction", [
@@ -658,6 +705,154 @@ describe("IBosonMetaTransactionsHandler", function () {
               v
             )
           ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+        });
+
+        it("Should fail on reenter", async function () {
+          // Deploy the boson token
+          const [maliciousToken] = await deployMockTokens(gasLimit, ["Foreign20Malicious"]);
+          await maliciousToken.setProtocolAddress(protocolDiamond.address);
+
+          // Initial ids for all the things
+          id = exchangeId = nextAccountId = "1";
+          buyerId = "3"; // created after a seller and a dispute resolver
+
+          // Create a valid seller
+          await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          // Create a valid dispute resolver
+          disputeResolver = mockDisputeResolver(
+            operatorDR.address,
+            adminDR.address,
+            clerkDR.address,
+            treasuryDR.address,
+            false
+          );
+          expect(disputeResolver.isValid()).is.true;
+
+          //Create DisputeResolverFee array so offer creation will succeed
+          disputeResolverFees = [new DisputeResolverFee(maliciousToken.address, "maliciousToken", "0")];
+
+          // Make empty seller list, so every seller is allowed
+          sellerAllowList = [];
+
+          // Register and activate the dispute resolver
+          await accountHandler
+            .connect(rando)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+          await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+
+          const { offer, ...mo } = await mockOffer();
+          ({ offerDates, offerDurations, disputeResolverId } = mo);
+          offerToken = offer;
+          offerToken.exchangeToken = maliciousToken.address;
+
+          price = offer.price;
+          sellerDeposit = offer.sellerDeposit;
+
+          // Check if domains are valid
+          expect(offerToken.isValid()).is.true;
+          expect(offerDates.isValid()).is.true;
+          expect(offerDurations.isValid()).is.true;
+
+          // Create the offer
+          await offerHandler
+            .connect(operator)
+            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
+
+          // top up seller's and buyer's account
+          await maliciousToken.mint(operator.address, sellerDeposit);
+          await maliciousToken.mint(buyer.address, price);
+
+          // approve protocol to transfer the tokens
+          await maliciousToken.connect(operator).approve(protocolDiamond.address, sellerDeposit);
+          await maliciousToken.connect(buyer).approve(protocolDiamond.address, price);
+
+          // deposit to seller's pool
+          await fundsHandler.connect(operator).depositFunds(seller.id, maliciousToken.address, sellerDeposit);
+
+          // commit to the offer
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+
+          // cancel the voucher, so both seller and buyer have something to withdraw
+          await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
+
+          // expected payoffs - they are the same for token and native currency
+          // buyer: price - buyerCancelPenalty
+          buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
+
+          // prepare validFundDetails
+          tokenListBuyer = [maliciousToken.address];
+          tokenAmountsBuyer = [buyerPayoff];
+          validFundDetails = {
+            entityId: buyerId,
+            tokenList: tokenListBuyer,
+            tokenAmounts: tokenAmountsBuyer,
+          };
+
+          // Prepare the message
+          message = {};
+          message.nonce = parseInt(nonce);
+          message.contractAddress = fundsHandler.address;
+          message.functionName = "withdrawFunds(uint256,address[],uint256[])";
+          message.fundDetails = validFundDetails;
+          message.from = buyer.address;
+
+          // Set the fund Type
+          fundType = [
+            { name: "entityId", type: "uint256" },
+            { name: "tokenList", type: "address[]" },
+            { name: "tokenAmounts", type: "uint256[]" },
+          ];
+
+          // Set the message Type
+          metaTxFundType = [
+            { name: "nonce", type: "uint256" },
+            { name: "from", type: "address" },
+            { name: "contractAddress", type: "address" },
+            { name: "functionName", type: "string" },
+            { name: "fundDetails", type: "MetaTxFundDetails" },
+          ];
+
+          customTransactionType = {
+            MetaTxFund: metaTxFundType,
+            MetaTxFundDetails: fundType,
+          };
+
+          // Prepare the function signature
+          functionSignature = fundsHandler.interface.encodeFunctionData("withdrawFunds", [
+            validFundDetails.entityId,
+            validFundDetails.tokenList,
+            validFundDetails.tokenAmounts,
+          ]);
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            buyer,
+            customTransactionType,
+            "MetaTxFund",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          let [, buyerStruct] = await accountHandler.getBuyer(buyerId);
+          const buyerBefore = Buyer.fromStruct(buyerStruct);
+
+          // Execute the meta transaction.
+          await expect(
+            metaTransactionsHandler.executeMetaTransaction(
+              buyer.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
+          ).to.revertedWith(RevertReasons.REENTRANCY_GUARD);
+
+          [, buyerStruct] = await accountHandler.getBuyer(buyerId);
+          const buyerAfter = Buyer.fromStruct(buyerStruct);
+          assert.equal(buyerAfter.toString(), buyerBefore.toString(), "Buyer should not change");
         });
       });
     });

@@ -50,6 +50,7 @@ function getConfig() {
   const maxAllowedSellers = "100";
   const buyerEscalationDepositPercentage = "100"; // 1%
   const maxTotalOfferFeePercentage = 4000; // 40%
+  const maxRoyaltyPecentage = 1000; //10%
 
   // Boson Token (ERC-20) contract address
   const TOKEN = {
@@ -102,6 +103,7 @@ function getConfig() {
       maxDisputesPerBatch,
       maxAllowedSellers,
       maxTotalOfferFeePercentage,
+      maxRoyaltyPecentage,
     },
     {
       percentage: feePercentage,
@@ -188,10 +190,11 @@ async function main() {
   console.log(`💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...`);
 
   // Deploy the Diamond
-  const [protocolDiamond, dlf, dcf, accessController, diamondArgs] = await deployProtocolDiamond(gasLimit);
+  const [protocolDiamond, dlf, dcf, erc165f, accessController, diamondArgs] = await deployProtocolDiamond(gasLimit);
   deploymentComplete("AccessController", accessController.address, [], contracts);
   deploymentComplete("DiamondLoupeFacet", dlf.address, [], contracts);
   deploymentComplete("DiamondCutFacet", dcf.address, [], contracts);
+  deploymentComplete("ERC165Facet", erc165f.address, [], contracts);
   deploymentComplete("ProtocolDiamond", protocolDiamond.address, diamondArgs, contracts);
 
   console.log(`\n💎 Granting UPGRADER role...`);

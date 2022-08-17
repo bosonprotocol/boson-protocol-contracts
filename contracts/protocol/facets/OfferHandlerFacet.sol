@@ -58,7 +58,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         OfferDurations calldata _offerDurations,
         uint256 _disputeResolverId,
         uint256 _agentId
-    ) external override offersNotPaused {
+    ) external override offersNotPaused nonReentrant {
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
     }
 
@@ -139,7 +139,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * @param _offerId - the id of the offer to check
      */
-    function voidOffer(uint256 _offerId) public override offersNotPaused {
+    function voidOffer(uint256 _offerId) public override offersNotPaused nonReentrant {
         // Get offer, make sure the caller is the operator
         Offer storage offer = getValidOffer(_offerId);
 
@@ -191,7 +191,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *  @param _offerId - the id of the offer to check
      *  @param _validUntilDate - new valid until date
      */
-    function extendOffer(uint256 _offerId, uint256 _validUntilDate) public override offersNotPaused {
+    function extendOffer(uint256 _offerId, uint256 _validUntilDate) public override offersNotPaused nonReentrant {
         // Make sure the caller is the operator, offer exists and is not voided
         Offer storage offer = getValidOffer(_offerId);
 

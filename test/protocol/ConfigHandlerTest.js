@@ -28,7 +28,8 @@ describe("IBosonConfigHandler", function () {
     maxDisputesPerBatch,
     maxAllowedSellers,
     buyerEscalationDepositPercentage,
-    maxTotalOfferFeePercentage;
+    maxTotalOfferFeePercentage,
+    maxRoyaltyPecentage;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
   let authTokenContract;
@@ -49,7 +50,7 @@ describe("IBosonConfigHandler", function () {
     proxy = accounts[5];
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -69,9 +70,10 @@ describe("IBosonConfigHandler", function () {
     maxAllowedSellers = 100;
     buyerEscalationDepositPercentage = 100;
     maxTotalOfferFeePercentage = 4000; // 40%
+    maxRoyaltyPecentage = 1000; // 10%
 
     // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
+    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
 
     // Cast Diamond to IBosonConfigHandler
     configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
@@ -101,6 +103,7 @@ describe("IBosonConfigHandler", function () {
             maxDisputesPerBatch,
             maxAllowedSellers,
             maxTotalOfferFeePercentage,
+            maxRoyaltyPecentage,
           },
           //Protocol fees
           {
@@ -179,6 +182,10 @@ describe("IBosonConfigHandler", function () {
         await expect(cutTransaction)
           .to.emit(configHandler, "BuyerEscalationFeePercentageChanged")
           .withArgs(buyerEscalationDepositPercentage, deployer.address);
+
+        await expect(cutTransaction)
+          .to.emit(configHandler, "MaxRoyaltyPecentageChanged")
+          .withArgs(maxRoyaltyPecentage, deployer.address);
       });
     });
   });
@@ -207,6 +214,7 @@ describe("IBosonConfigHandler", function () {
           maxDisputesPerBatch,
           maxAllowedSellers,
           maxTotalOfferFeePercentage,
+          maxRoyaltyPecentage,
         },
         // Protocol fees
         {
@@ -226,7 +234,7 @@ describe("IBosonConfigHandler", function () {
           support = await erc165.supportsInterface(InterfaceIds.IBosonConfigHandler);
 
           // Test
-          await expect(support, "IBosonConfigHandler interface not supported").is.true;
+          expect(support, "IBosonConfigHandler interface not supported").is.true;
         });
       });
     });
@@ -782,12 +790,51 @@ describe("IBosonConfigHandler", function () {
             ).to.revertedWith(RevertReasons.ACCESS_DENIED);
           });
 
-          it("protocolFeePercentage must be less than 10000", async function () {
+          it("maxTotalOfferFeePercentage must be less than 10000", async function () {
             // Attempt to set new value for Max Total Offer Fee Percentage, expecting revert
             maxTotalOfferFeePercentage = 10001;
             await expect(
               configHandler.connect(deployer).setMaxTotalOfferFeePercentage(maxTotalOfferFeePercentage)
             ).to.revertedWith(RevertReasons.FEE_PERCENTAGE_INVALID);
+          });
+        });
+      });
+
+      context("👉 setMaxRoyaltyPecentage()", async function () {
+        beforeEach(async function () {
+          // set new value for Max Royalty Percentage
+          maxRoyaltyPecentage = 250;
+        });
+
+        it("should emit a MaxRoyaltyPecentageChanged event", async function () {
+          // set new value for Max Royalty Percentage, testing for the event
+          await expect(configHandler.connect(deployer).setMaxRoyaltyPecentage(maxRoyaltyPecentage))
+            .to.emit(configHandler, "MaxRoyaltyPecentageChanged")
+            .withArgs(maxRoyaltyPecentage, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // set new value for Max Royalty Percentage
+          await configHandler.connect(deployer).setMaxRoyaltyPecentage(maxRoyaltyPecentage);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxRoyaltyPecentage()).to.equal(maxRoyaltyPecentage);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new value for Max Royalty Percentage, expecting revert
+            await expect(configHandler.connect(rando).setMaxRoyaltyPecentage(maxRoyaltyPecentage)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
+          });
+
+          it("maxRoyaltyPecentage must be less than 10000", async function () {
+            // Attempt to set new value for Max Royalty Percentage, expecting revert
+            maxRoyaltyPecentage = 10001;
+            await expect(configHandler.connect(deployer).setMaxRoyaltyPecentage(maxRoyaltyPecentage)).to.revertedWith(
+              RevertReasons.FEE_PERCENTAGE_INVALID
+            );
           });
         });
       });
@@ -929,6 +976,10 @@ describe("IBosonConfigHandler", function () {
         expect(await configHandler.connect(rando).getMaxTotalOfferFeePercentage()).to.equal(
           maxTotalOfferFeePercentage,
           "Invalid max total offer fee percentage"
+        );
+        expect(await configHandler.connect(rando).getMaxRoyaltyPecentage()).to.equal(
+          maxRoyaltyPecentage,
+          "Invalid max royalty percentage"
         );
         //setAuthTokenContract is not called in the initialize function
         expect(await configHandler.connect(rando).getAuthTokenContract(AuthTokenType.Lens)).to.equal(

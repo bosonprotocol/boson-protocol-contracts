@@ -82,7 +82,7 @@ describe("IBosonBundleHandler", function () {
       await ethers.getSigners();
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -141,6 +141,7 @@ describe("IBosonBundleHandler", function () {
         maxDisputesPerBatch: 100,
         maxAllowedSellers: 100,
         maxTotalOfferFeePercentage: 4000, //40%
+        maxRoyaltyPecentage: 1000, //10%
       },
       // Protocol fees
       {
@@ -153,7 +154,7 @@ describe("IBosonBundleHandler", function () {
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
     // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
+    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
     // Cast Diamond to IBosonTwinHandler

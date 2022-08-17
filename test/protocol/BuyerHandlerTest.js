@@ -55,7 +55,7 @@ describe("BuyerHandler", function () {
       await ethers.getSigners();
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -111,6 +111,7 @@ describe("BuyerHandler", function () {
         maxDisputesPerBatch: 0,
         maxAllowedSellers: 100,
         maxTotalOfferFeePercentage: 4000, //40%
+        maxRoyaltyPecentage: 1000, //10%
       },
       // Protocol fees
       {

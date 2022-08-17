@@ -33,7 +33,7 @@ describe("ProtocolDiamond", async function () {
   let InterfaceIds;
   let deployer, admin, upgrader, rando;
   let protocolDiamond, diamondLoupe, diamondCut, accessController;
-  let loupeFacetViaDiamond, cutFacetViaDiamond;
+  let loupeFacetViaDiamond, cutFacetViaDiamond, erc165ViaDiamond;
   let Test1Facet, test1Facet, test1ViaDiamond;
   let Test2Facet, test2Facet, test2ViaDiamond;
   let Test3Facet, test3Facet, test3ViaDiamond;
@@ -53,7 +53,7 @@ describe("ProtocolDiamond", async function () {
     [deployer, admin, upgrader, rando] = await ethers.getSigners();
 
     // Deploy the Diamond
-    [protocolDiamond, diamondLoupe, diamondCut, accessController] = await deployProtocolDiamond();
+    [protocolDiamond, diamondLoupe, diamondCut, erc165, accessController] = await deployProtocolDiamond();
 
     // Cast Diamond to DiamondLoupeFacet
     loupeFacetViaDiamond = await ethers.getContractAt("DiamondLoupeFacet", protocolDiamond.address);
@@ -61,8 +61,8 @@ describe("ProtocolDiamond", async function () {
     // Cast Diamond to DiamondCutFacet
     cutFacetViaDiamond = await ethers.getContractAt("DiamondCutFacet", protocolDiamond.address);
 
-    // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
+    // Cast Diamond to ERC165Facet
+    erc165ViaDiamond = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
 
     // Get the facet addresses
     addresses = Object.assign([], await loupeFacetViaDiamond.facetAddresses());
@@ -80,10 +80,10 @@ describe("ProtocolDiamond", async function () {
     context("👉 supportsInterface()", async function () {
       it("should indicate support for ERC-165 interface", async function () {
         // See https://eips.ethereum.org/EIPS/eip-165#how-a-contract-will-publish-the-interfaces-it-implements
-        support = await erc165.supportsInterface(InterfaceIds.IERC165);
+        support = await erc165ViaDiamond.supportsInterface(InterfaceIds.IERC165);
 
         // Test
-        await expect(support, "ERC-165 interface not supported").is.true;
+        expect(support, "ERC-165 interface not supported").is.true;
       });
     });
   });
@@ -98,7 +98,7 @@ describe("ProtocolDiamond", async function () {
 
       it("should return the correct number of objects", async () => {
         // Make sure the count is correct
-        assert.equal(facets.length, 2);
+        assert.equal(facets.length, 3);
       });
 
       it("should return valid Facet objects", async () => {
@@ -128,9 +128,9 @@ describe("ProtocolDiamond", async function () {
     });
 
     context("👉 facetAddresses()", async () => {
-      it("should return two facet addresses", async () => {
+      it("should return three facet addresses", async () => {
         // Make sure the count is correct
-        assert.equal(addresses.length, 2);
+        assert.equal(addresses.length, 3);
       });
 
       it("facet addresses should be correct and in order", async () => {
@@ -139,6 +139,9 @@ describe("ProtocolDiamond", async function () {
 
         // DiamondCutFacet was second cut
         assert.equal(addresses[1], diamondCut.address);
+
+        // ERC165Facet was last cut
+        assert.equal(addresses[2], erc165.address);
       });
     });
 
@@ -428,7 +431,7 @@ describe("ProtocolDiamond", async function () {
       it("should remove facets when all their functions are removed", async () => {
         // Get all deployed facets
         facets = await loupeFacetViaDiamond.facets();
-        assert.equal(facets.length, 4); // loupe, cut, test1, test2
+        assert.equal(facets.length, 5); // loupe, cut, erc165, test1, test2
 
         // Group the selectors from each facet
         selectors = [];

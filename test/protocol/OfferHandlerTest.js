@@ -119,7 +119,7 @@ describe("IBosonOfferHandler", function () {
     ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -179,6 +179,7 @@ describe("IBosonOfferHandler", function () {
         maxDisputesPerBatch: 100,
         maxAllowedSellers: 100,
         maxTotalOfferFeePercentage: 4000, //40%
+        maxRoyaltyPecentage: 1000, //10%
       },
       // Protocol fees
       {
@@ -191,7 +192,7 @@ describe("IBosonOfferHandler", function () {
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
     // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
+    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
 
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
@@ -561,6 +562,19 @@ describe("IBosonOfferHandler", function () {
       });
 
       it("Should allow creation of an offer if DR has a sellerAllowList and seller is on it", async function () {
+        // Create new seller so sellerAllowList can have an entry
+        seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+
+        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+        allowedSellersToAdd = ["3"];
+        await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
+
+        // Attempt to Create an offer, expecting revert
+        await expect(
+          offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId)
+        ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
+
         // add seller to allow list
         allowedSellersToAdd = ["1"]; // existing seller is "1", DR is "2", new seller is "3"
         await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
@@ -601,8 +615,13 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("Valid until date is not in the future", async function () {
-          // Set until date in the past
-          offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom - (oneMonth / 1000) * 6).toString(); // 6 months ago
+          let now = offerDates.validFrom;
+
+          // set validFrom date in the past
+          offerDates.validFrom = ethers.BigNumber.from(now - (oneMonth / 1000) * 6).toString(); // 6 months ago
+
+          // set valid until > valid from
+          offerDates.validUntil = ethers.BigNumber.from(now - oneMonth / 1000).toString(); // 1 month ago
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -1395,8 +1414,13 @@ describe("IBosonOfferHandler", function () {
         offer.buyerCancelPenalty = ethers.utils.parseUnits(`${0.05 + i * 0.1}`, "ether").toString();
         offer.quantityAvailable = `${(i + 1) * 2}`;
 
-        offerDates.validFrom = validFrom = ethers.BigNumber.from(Date.now() + oneMonth * i).toString();
-        offerDates.validUntil = validUntil = ethers.BigNumber.from(Date.now() + oneMonth * 6 * (i + 1)).toString();
+        let now = offerDates.validFrom;
+        offerDates.validFrom = validFrom = ethers.BigNumber.from(now)
+          .add(oneMonth * i)
+          .toString();
+        offerDates.validUntil = validUntil = ethers.BigNumber.from(now)
+          .add(oneMonth * 6 * (i + 1))
+          .toString();
 
         offerDurations.fulfillmentPeriod = fulfillmentPeriod = `${(i + 1) * oneMonth}`;
         offerDurations.voucherValid = voucherValid = `${(i + 1) * oneMonth}`;
@@ -1756,6 +1780,21 @@ describe("IBosonOfferHandler", function () {
       });
 
       it("Should allow creation of an offer if DR has a sellerAllowList and seller is on it", async function () {
+        // Create new seller so sellerAllowList can have an entry
+        seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+
+        await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+        allowedSellersToAdd = ["3"];
+        await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
+
+        // Attempt to Create an offer, expecting revert
+        await expect(
+          offerHandler
+            .connect(operator)
+            .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds)
+        ).to.revertedWith(RevertReasons.SELLER_NOT_APPROVED);
+
         // add seller to allow list
         allowedSellersToAdd = ["1"]; // existing seller is "1", DR is "2", new seller is "3"
         await accountHandler.connect(adminDR).addSellersToAllowList(disputeResolverId, allowedSellersToAdd);
@@ -1804,10 +1843,13 @@ describe("IBosonOfferHandler", function () {
         });
 
         it("Valid until date is not in the future in some offer", async function () {
-          // Set until date in the past
-          offerDatesList[0].validUntil = ethers.BigNumber.from(
-            offerDatesList[0].validFrom - (oneMonth / 1000) * 6
-          ).toString(); // 6 months ago
+          let now = offerDatesList[0].validFrom;
+
+          // set validFrom date in the past
+          offerDatesList[0].validFrom = ethers.BigNumber.from(now - (oneMonth / 1000) * 6).toString(); // 6 months ago
+
+          // set valid until > valid from
+          offerDatesList[0].validUntil = ethers.BigNumber.from(now - oneMonth / 1000).toString(); // 1 month ago
 
           // Attempt to Create an offer, expecting revert
           await expect(
