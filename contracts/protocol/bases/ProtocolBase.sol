@@ -458,6 +458,17 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
+     * @notice Fetches a given voucher from storage by exchange id
+     *
+     * @param _exchangeId - the id of the exchange associated with the voucher
+     * @return voucher - the voucher details. See {BosonTypes.Voucher}
+     */
+    function fetchVoucher(uint256 _exchangeId) internal view returns (Voucher storage voucher) {
+        // Get the voucher
+        voucher = protocolEntities().vouchers[_exchangeId];
+    }
+
+    /**
      * @notice Fetches a given dispute from storage by exchange id
      *
      * @param _exchangeId - the id of the exchange associated with the dispute
@@ -605,7 +616,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @notice Get a valid exchange
+     * @notice Get a valid exchange and its associated voucher
      *
      * Reverts if
      * - Exchange does not exist
@@ -614,11 +625,12 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @param _exchangeId - the id of the exchange to complete
      * @param _expectedState - the state the exchange should be in
      * @return exchange - the exchange
+     * @return voucher - the voucher
      */
     function getValidExchange(uint256 _exchangeId, ExchangeState _expectedState)
         internal
         view
-        returns (Exchange storage exchange)
+        returns (Exchange storage exchange, Voucher storage voucher)
     {
         // Get the exchange
         bool exchangeExists;
@@ -628,6 +640,9 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
         require(exchangeExists, NO_SUCH_EXCHANGE);
         // Make sure the exchange is in expected state
         require(exchange.state == _expectedState, INVALID_STATE);
+
+        // Get the voucher
+        voucher = fetchVoucher(_exchangeId);
     }
 
     /**

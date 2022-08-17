@@ -13,8 +13,7 @@ import "../../domain/BosonConstants.sol";
  */
 contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
     /**
-     * @notice Raise a dispute
-     *
+     * @dev Raise a dispute
      *
      * Reverts if:
      * - caller does not hold a voucher for the given exchange id
@@ -22,32 +21,37 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
      * - exchange is not in a redeemed state
      * - fulfillment period has elapsed already
      *
-     * @param exchange - the exchange
-     * @param sellerId - the seller id
+     * @param _exchange - the exchange
+     * @param _voucher - the associated voucher
+     * @param _sellerId - the seller id
      */
-    function raiseDisputeInternal(Exchange storage exchange, uint256 sellerId) internal {
+    function raiseDisputeInternal(
+        Exchange storage _exchange,
+        Voucher storage _voucher,
+        uint256 _sellerId
+    ) internal {
         // Make sure the fulfillment period has elapsed
-        uint256 elapsed = block.timestamp - exchange.voucher.redeemedDate;
-        require(elapsed < fetchOfferDurations(exchange.offerId).fulfillmentPeriod, FULFILLMENT_PERIOD_HAS_ELAPSED);
+        uint256 elapsed = block.timestamp - _voucher.redeemedDate;
+        require(elapsed < fetchOfferDurations(_exchange.offerId).fulfillmentPeriod, FULFILLMENT_PERIOD_HAS_ELAPSED);
 
         // Make sure the caller is buyer associated with the exchange
-        checkBuyer(exchange.buyerId);
+        checkBuyer(_exchange.buyerId);
 
-        // Set the exhange state to disputed
-        exchange.state = ExchangeState.Disputed;
+        // Set the exchange state to disputed
+        _exchange.state = ExchangeState.Disputed;
 
         // Fetch the dispute and dispute dates
-        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(exchange.id);
+        (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchange.id);
 
         // Set the initial values
-        dispute.exchangeId = exchange.id;
+        dispute.exchangeId = _exchange.id;
         dispute.state = DisputeState.Resolving;
 
         // Update the disputeDates
         disputeDates.disputed = block.timestamp;
-        disputeDates.timeout = block.timestamp + fetchOfferDurations(exchange.offerId).resolutionPeriod;
+        disputeDates.timeout = block.timestamp + fetchOfferDurations(_exchange.offerId).resolutionPeriod;
 
         // Notify watchers of state change
-        emit DisputeRaised(exchange.id, exchange.buyerId, sellerId, msgSender());
+        emit DisputeRaised(_exchange.id, _exchange.buyerId, _sellerId, msgSender());
     }
 }

@@ -166,7 +166,6 @@ contract BosonTypes {
         uint256 offerId;
         uint256 buyerId;
         uint256 finalizedDate;
-        Voucher voucher;
         ExchangeState state;
     }
 
@@ -194,15 +193,12 @@ contract BosonTypes {
         uint256 exchangeId;
         uint256 offerId;
         uint256 buyerId;
-        address buyerAddress;
         uint256 sellerId;
-        address sellerOperatorAddress;
         uint256 price;
         uint256 sellerDeposit;
         uint256 buyerCancelPenalty;
-        OfferFees offerFees; // protocol and agent fee
+        OfferFees offerFees;
         uint256 agentId;
-        address agentAddress;
         address exchangeToken;
         uint256 finalizedDate;
         Condition condition;
@@ -210,9 +206,8 @@ contract BosonTypes {
         uint256 redeemedDate;
         bool voucherExpired;
         uint256 disputeResolverId;
-        address disputeResolverOperatorAddress;
-        uint256 disputedDate; // DisputeDates.disputed
-        uint256 escalatedDate; // DisputeDate.escalated
+        uint256 disputedDate;
+        uint256 escalatedDate;
         DisputeState disputeState;
         TwinReceipt[] twinReceipts;
     }

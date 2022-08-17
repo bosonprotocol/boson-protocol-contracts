@@ -80,6 +80,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.DisputeResolutionTerms) disputeResolutionTerms;
         // exchange id => exchange
         mapping(uint256 => BosonTypes.Exchange) exchanges;
+        // exchange id => voucher
+        mapping(uint256 => BosonTypes.Voucher) vouchers;
         // exchange id => dispute
         mapping(uint256 => BosonTypes.Dispute) disputes;
         // exchange id => dispute dates
