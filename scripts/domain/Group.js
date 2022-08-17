@@ -1,5 +1,4 @@
 const ethers = require("ethers");
-const Condition = require("./Condition");
 
 /**
  * Boson Protocol Domain Entity: Group
@@ -46,7 +45,7 @@ class Group {
     return Group.fromObject({
       id: id.toString(),
       sellerId: sellerId.toString(),
-      offerIds: offerIds.map((offerId) => offerId.toString())
+      offerIds: offerIds.map((offerId) => offerId.toString()),
     });
   }
 
