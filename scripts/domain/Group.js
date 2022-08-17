@@ -120,9 +120,9 @@ class Group {
     try {
       const offerIdsIsArray = Array.isArray(offerIds);
       if (offerIdsIsArray) {
-        offerIds.forEach((offerId) => {
-          valid = typeof offerId === "string" && typeof ethers.BigNumber.from(offerId) === "object";
-        });
+        valid = offerIds.reduce((flag, offerId) => {
+          return flag && typeof offerId === "string" && typeof ethers.BigNumber.from(offerId) === "object";
+        }, true);
       }
     } catch (e) {}
     return valid;

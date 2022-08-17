@@ -1,7 +1,4 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
 const { expect } = require("chai");
-const { mockCondition } = require("./../utils/mock");
 const Group = require("../../scripts/domain/Group");
 
 /**
@@ -10,16 +7,13 @@ const Group = require("../../scripts/domain/Group");
 describe("Group", function () {
   // Suite-wide scope
   let group, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let id, sellerId, offerIds, condition;
+  let id, sellerId, offerIds;
 
   beforeEach(async function () {
     // Required constructor params for Group
     id = "2112";
     sellerId = "12";
     offerIds = ["1", "2", "4", "8"];
-
-    condition = mockCondition(ethers.constants.AddressZero);
-    expect(condition.isValid()).to.be.true;
   });
 
   context("📋 Constructor", async function () {
@@ -136,11 +130,10 @@ describe("Group", function () {
         id,
         sellerId,
         offerIds,
-        condition: condition.toObject(),
       };
 
       // Struct representation
-      struct = [id, sellerId, offerIds, condition.toStruct()];
+      struct = [id, sellerId, offerIds];
     });
 
     context("👉 Static", async function () {
