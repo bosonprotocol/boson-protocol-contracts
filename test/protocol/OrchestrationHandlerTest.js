@@ -6068,7 +6068,7 @@ describe("IBosonOrchestrationHandler", function () {
       });
     });
 
-    context.only("👉 createSellerAndOfferWithConditionAndTwinAndBundle()", async function () {
+    context("👉 createSellerAndOfferWithConditionAndTwinAndBundle()", async function () {
       beforeEach(async function () {
         // prepare a group struct. We are not passing it as an argument, but just need to validate.
         // The first group id
