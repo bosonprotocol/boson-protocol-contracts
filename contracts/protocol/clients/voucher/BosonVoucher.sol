@@ -10,6 +10,9 @@ import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 
 import { IBosonVoucher } from "../../../interfaces/clients/IBosonVoucher.sol";
 import { BeaconClientBase } from "../../bases/BeaconClientBase.sol";
+import { BeaconClientLib } from "../../libs/BeaconClientLib.sol";
+import { IClientExternalAddresses } from "../../../interfaces/clients/IClientExternalAddresses.sol";
+import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHandler.sol";
 
 /**
  * @title BosonVoucher
@@ -82,6 +85,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * particular function because you may inherit from several
      * IERC165 contracts, and all concrete ones need to be allowed
      * to respond.
+     *
+     * 0x2a55205a representes ERC2981 interface id
      */
     function supportsInterface(bytes4 interfaceId)
         public
@@ -89,7 +94,9 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
         override(ERC721Upgradeable, IERC165Upgradeable)
         returns (bool)
     {
-        return (interfaceId == type(IBosonVoucher).interfaceId || super.supportsInterface(interfaceId));
+        return (interfaceId == type(IBosonVoucher).interfaceId ||
+            interfaceId == 0x2a55205a ||
+            super.supportsInterface(interfaceId));
     }
 
     /**
@@ -210,9 +217,11 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * @notice Sets the royalty percentage.
      * Can only be called by the owner or during the initialization
      *
+     * Emits RoyaltyPercentageChanged if succesful
+     *
      * Reverts if:
      * - caller is not the owner.
-     * - `royaltyPercentage` is greater than 100%.
+     * - `royaltyPercentage` is greater than max royalty percentage defined in the protocol
      *
      * @param _newRoyaltyPercentage fee in percentage. e.g. 500 = 5%
      */
@@ -224,10 +233,17 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * @notice Sets royalty percentage
      * Can only be called by the owner or during the initialization
      *
+     * Emits RoyaltyPercentageChanged if succesful
+     *
      * @param _newRoyaltyPercentage new royalty percentage
      */
     function _setRoyaltyPercentage(uint96 _newRoyaltyPercentage) internal {
-        require(_newRoyaltyPercentage <= 10000, "ERC2981: royalty fee will exceed salePrice");
+        // get max royalty percentage from the protocol
+        address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
+        uint16 maxRoyaltyPecentage = IBosonConfigHandler(protocolDiamond).getMaxRoyaltyPecentage();
+
+        // make sure that new royalty percentage does not exceed the max value set in the protocol
+        require(_newRoyaltyPercentage <= maxRoyaltyPecentage, "ERC2981: royalty fee exceeds protocol limit");
 
         _royaltyPercentage = _newRoyaltyPercentage;
 
