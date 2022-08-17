@@ -50,7 +50,7 @@ describe("IBosonAccountHandler", function () {
     [deployer, operator, admin, clerk, treasury, rando, other1, other2, other3] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
-    [protocolDiamond, , , accessController] = await deployProtocolDiamond();
+    [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
 
     // Temporarily grant UPGRADER role to deployer account
     await accessController.grantRole(Role.UPGRADER, deployer.address);
@@ -113,7 +113,7 @@ describe("IBosonAccountHandler", function () {
     await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
     // Cast Diamond to IERC165
-    erc165 = await ethers.getContractAt("IERC165", protocolDiamond.address);
+    erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
 
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
@@ -127,7 +127,7 @@ describe("IBosonAccountHandler", function () {
         support = await erc165.supportsInterface(InterfaceIds.IBosonAccountHandler);
 
         // Test
-        await expect(support, "IBosonAccountHandler interface not supported").is.true;
+        expect(support, "IBosonAccountHandler interface not supported").is.true;
       });
     });
   });

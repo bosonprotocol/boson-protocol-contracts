@@ -10,4 +10,4 @@
 * Modifications to this domain model should be agreed upon by the team and this diagram updated before building if at possible.
 * If confused, _assume this diagram the source of truth_, not the code.
 
-[Source Lucidcharts Document](https://lucid.app/lucidchart/6730d5ca-be1b-4ddb-b7de-a703cd947724/edit?invitationId=inv_acd60ad1-37f8-417a-a69a-5021af8af579)
+[Source Lucidcharts Document](https://lucid.app/lucidchart/71077137-0b8a-4400-bc8d-d271d5b9109c/edit?page=0_0&invitationId=inv_6dc0004b-1aff-4288-90a5-59e22b5a5490#)

@@ -20,7 +20,8 @@ contract BosonTypes {
         Exchanges,
         Disputes,
         Funds,
-        Orchestration
+        Orchestration,
+        MetaTransaction
     }
 
     enum EvaluationMethod {
