@@ -83,7 +83,7 @@ describe("IBosonOrchestrationHandler", function () {
   let offerFees, offerFeesStruct, agentFee;
   let offerDurations, offerDurationsStruct;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
-  let group, groupStruct, nextGroupId;
+  let group, groupStruct, nextGroupId, conditionStruct;
   let method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
   let offerIds, condition;
   let twin, twinStruct, twinIds, nextTwinId;
@@ -1710,7 +1710,7 @@ describe("IBosonOrchestrationHandler", function () {
         condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
         expect(condition.isValid()).to.be.true;
 
-        group = new Group(nextGroupId, sellerId, offerIds, condition);
+        group = new Group(nextGroupId, sellerId, offerIds);
 
         expect(group.isValid()).is.true;
 
@@ -1789,7 +1789,7 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the group as a struct
-        [, groupStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
+        [, groupStruct, conditionStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
 
         // Parse into entity
         const returnedGroup = Group.fromStruct(groupStruct);
@@ -1797,6 +1797,14 @@ describe("IBosonOrchestrationHandler", function () {
         // Returned values should match what is expected for the silently created group
         for ([key, value] of Object.entries(group)) {
           expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Parse into entity
+        const returnedCondition = Condition.fromStruct(conditionStruct);
+
+        // Returned values should match the condition
+        for ([key, value] of Object.entries(condition)) {
+          expect(JSON.stringify(returnedCondition[key]) === JSON.stringify(value)).is.true;
         }
       });
 
@@ -2321,7 +2329,6 @@ describe("IBosonOrchestrationHandler", function () {
         it("Condition 'None' has some values in other fields", async function () {
           method = EvaluationMethod.None;
           condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
-          group.condition = condition;
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
@@ -2335,7 +2342,6 @@ describe("IBosonOrchestrationHandler", function () {
           method = EvaluationMethod.Threshold;
           tokenAddress = ethers.constants.AddressZero;
           condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
-          group.condition = condition;
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
@@ -2349,7 +2355,6 @@ describe("IBosonOrchestrationHandler", function () {
           method = EvaluationMethod.SpecificToken;
           tokenAddress = ethers.constants.AddressZero;
           condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
-          group.condition = condition;
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
@@ -2509,12 +2514,12 @@ describe("IBosonOrchestrationHandler", function () {
         condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
         expect(condition.isValid()).to.be.true;
 
-        group = new Group(nextGroupId, sellerId, offerIds, condition);
+        group = new Group(nextGroupId, sellerId, offerIds);
 
         expect(group.isValid()).is.true;
 
         // Create a group
-        await groupHandler.connect(operator).createGroup(group);
+        await groupHandler.connect(operator).createGroup(group, condition);
 
         // after another offer is added
         offer.id = nextOfferId.toString(); // not necessary as input parameter
@@ -2596,7 +2601,7 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the group as a struct
-        [, groupStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
+        [, groupStruct, conditionStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
 
         // Parse into entity
         const returnedGroup = Group.fromStruct(groupStruct);
@@ -2604,6 +2609,14 @@ describe("IBosonOrchestrationHandler", function () {
         // Returned values should match what is expected for the update group
         for ([key, value] of Object.entries(group)) {
           expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Parse into entity
+        const returnedCondition = Condition.fromStruct(conditionStruct);
+
+        // Returned values should match the condition
+        for ([key, value] of Object.entries(condition)) {
+          expect(JSON.stringify(returnedCondition[key]) === JSON.stringify(value)).is.true;
         }
       });
 
@@ -4107,7 +4120,7 @@ describe("IBosonOrchestrationHandler", function () {
         condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
         expect(condition.isValid()).to.be.true;
 
-        group = new Group(nextGroupId, sellerId, offerIds, condition);
+        group = new Group(nextGroupId, sellerId, offerIds);
 
         expect(group.isValid()).is.true;
 
@@ -4247,14 +4260,22 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the group as a struct
-        [, groupStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
+        [, groupStruct, conditionStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
 
         // Parse into entity
         const returnedGroup = Group.fromStruct(groupStruct);
 
-        // Returned values should match should match what is expected for the silently created group
+        // Returned values should match what is expected for the silently created group
         for ([key, value] of Object.entries(group)) {
           expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Parse into entity
+        const returnedCondition = Condition.fromStruct(conditionStruct);
+
+        // Returned values should match the condition
+        for ([key, value] of Object.entries(condition)) {
+          expect(JSON.stringify(returnedCondition[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the twin as a struct
@@ -4881,7 +4902,7 @@ describe("IBosonOrchestrationHandler", function () {
         condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
         expect(condition.isValid()).to.be.true;
 
-        group = new Group(nextGroupId, sellerId, offerIds, condition);
+        group = new Group(nextGroupId, sellerId, offerIds);
 
         expect(group.isValid()).is.true;
 
@@ -5013,7 +5034,7 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the group as a struct
-        [, groupStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
+        [, groupStruct, conditionStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
 
         // Parse into entity
         const returnedGroup = Group.fromStruct(groupStruct);
@@ -5021,6 +5042,14 @@ describe("IBosonOrchestrationHandler", function () {
         // Returned values should match what is expected for the silently created group
         for ([key, value] of Object.entries(group)) {
           expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Parse into entity
+        const returnedCondition = Condition.fromStruct(conditionStruct);
+
+        // Returned values should match the condition
+        for ([key, value] of Object.entries(condition)) {
+          expect(JSON.stringify(returnedCondition[key]) === JSON.stringify(value)).is.true;
         }
 
         // Voucher clone contract
@@ -6089,7 +6118,7 @@ describe("IBosonOrchestrationHandler", function () {
         condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
         expect(condition.isValid()).to.be.true;
 
-        group = new Group(nextGroupId, sellerId, offerIds, condition);
+        group = new Group(nextGroupId, sellerId, offerIds);
 
         expect(group.isValid()).is.true;
 
@@ -6273,14 +6302,22 @@ describe("IBosonOrchestrationHandler", function () {
         }
 
         // Get the group as a struct
-        [, groupStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
+        [, groupStruct, conditionStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
 
         // Parse into entity
         const returnedGroup = Group.fromStruct(groupStruct);
 
-        // Returned values should match should match what is expected for the silently created group
+        // Returned values should match what is expected for the silently created group
         for ([key, value] of Object.entries(group)) {
           expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+        }
+
+        // Parse into entity
+        const returnedCondition = Condition.fromStruct(conditionStruct);
+
+        // Returned values should match the condition
+        for ([key, value] of Object.entries(condition)) {
+          expect(JSON.stringify(returnedCondition[key]) === JSON.stringify(value)).is.true;
         }
 
         // Get the twin as a struct

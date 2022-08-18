@@ -150,7 +150,6 @@ contract BosonTypes {
         uint256 id;
         uint256 sellerId;
         uint256[] offerIds;
-        Condition condition;
     }
 
     struct Condition {
