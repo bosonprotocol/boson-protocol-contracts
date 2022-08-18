@@ -116,7 +116,7 @@ exports.RevertReasons = {
   NATIVE_WRONG_ADDRESS: "Native token address must be 0",
   NATIVE_WRONG_AMOUNT: "Transferred value must match amount",
   TOKEN_TRANSFER_FAILED: "Token transfer failed",
-  INSUFFICIENT_VALUE_SENT: "Insufficient value sent",
+  INSUFFICIENT_VALUE_RECEIVED: "Insufficient value received",
   INSUFFICIENT_AVAILABLE_FUNDS: "Insufficient available funds",
   NATIVE_NOT_ALLOWED: "Transfer of native currency not allowed",
   TOO_MANY_TOKENS: "Too many tokens",
