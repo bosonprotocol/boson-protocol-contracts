@@ -1468,7 +1468,7 @@ describe("IBosonDisputeHandler", function () {
               disputeHandler.connect(buyer).escalateDispute(exchangeId, {
                 value: ethers.BigNumber.from(buyerEscalationDepositNative).sub("1").toString(),
               })
-            ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_SENT);
+            ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
           });
 
           it("Native currency sent together with ERC20 token transfer", async function () {
@@ -1495,7 +1495,7 @@ describe("IBosonDisputeHandler", function () {
             );
           });
 
-          it("Token contract revert for another reason", async function () {
+          it("Token contract reverts for another reason", async function () {
             // prepare a disputed exchange
             const mockToken = await createDisputeExchangeWithToken();
 
@@ -1514,6 +1514,45 @@ describe("IBosonDisputeHandler", function () {
             // Attempt to commit to an offer, expecting revert
             await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
               RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE
+            );
+          });
+
+          it("Received ERC20 token amount differs from the expected value", async function () {
+            // Deploy ERC20 with fees
+            const [Foreign20WithFee] = await deployMockTokens(gasLimit, ["Foreign20WithFee"]);
+
+            // add to DR fees
+            DRFeeToken = ethers.utils.parseUnits("2", "ether").toString();
+            await accountHandler
+              .connect(adminDR)
+              .addFeesToDisputeResolver(disputeResolverId, [
+                new DisputeResolverFee(Foreign20WithFee.address, "Foreign20WithFee", DRFeeToken),
+              ]);
+
+            // Create an offer with ERC20 with fees
+            // Prepare an absolute zero offer
+            offer.exchangeToken = Foreign20WithFee.address;
+            offer.sellerDeposit = offer.price = offer.buyerCancelPenalty = "0";
+            offer.id++;
+
+            // Create a new offer
+            await offerHandler
+              .connect(operator)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+            // mint tokens and approve
+            buyerEscalationDepositToken = applyPercentage(DRFeeToken, buyerEscalationDepositPercentage);
+            await Foreign20WithFee.mint(buyer.address, buyerEscalationDepositToken);
+            await Foreign20WithFee.connect(buyer).approve(protocolDiamond.address, buyerEscalationDepositToken);
+
+            // Commit to offer and put exchange all the way to dispute
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id);
+            await exchangeHandler.connect(buyer).redeemVoucher(++exchangeId);
+            await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+
+            // Attempt to escalate the dispute, expecting revert
+            await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId)).to.revertedWith(
+              RevertReasons.INSUFFICIENT_VALUE_RECEIVED
             );
           });
         });
