@@ -1833,14 +1833,14 @@ describe("IBosonDisputeHandler", function () {
         });
 
         it("should emit a EscalatedDisputeRefused event", async function () {
-          // Expire the escalated dispute, testing for the event
+          // Refuse the escalated dispute, testing for the event
           await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId))
             .to.emit(disputeHandler, "EscalatedDisputeRefused")
             .withArgs(exchangeId, operatorDR.address);
         });
 
         it("should update state", async function () {
-          // Expire the dispute
+          // Refuse the dispute
           tx = await disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId);
 
           // Get the block timestamp of the confirmed tx and set finalizedDate
@@ -2052,6 +2052,12 @@ describe("IBosonDisputeHandler", function () {
         beforeEach(async function () {
           // Raise a dispute
           tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+
+          // Get the block timestamp of the confirmed tx and set disputedDate
+          blockNumber = tx.blockNumber;
+          block = await ethers.provider.getBlock(blockNumber);
+          disputedDate = block.timestamp.toString();
+          timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
         });
 
         it("should return true for exists if exchange id is valid", async function () {
@@ -2070,13 +2076,128 @@ describe("IBosonDisputeHandler", function () {
           expect(exists).to.be.false;
         });
 
-        it("should return the expected dispute state if exchange id is valid", async function () {
-          // TODO when retract/resolve/decide is implemented, use it here, since DisputeState.Resolving is default value
+        it("should return the expected dispute state if exchange id is valid and disupte has been raised", async function () {
           // Get the dispute state
           [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
 
           // It should match DisputeState.Resolving
           assert.equal(response, DisputeState.Resolving, "Dispute state is incorrect");
+        });
+
+        it("should return the expected dispute state if exchange id is valid and dispute has been retracted", async function () {
+          // Buyer retracts dispute
+          await disputeHandler.connect(buyer).retractDispute(exchangeId);
+
+          // Get the dispute state
+          [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
+
+          // It should match DisputeState.Retracted
+          assert.equal(response, DisputeState.Retracted, "Dispute state is incorrect");
+        });
+
+        it("should return the expected dispute state if exchange id is valid and dispute has expired", async function () {
+          // Set time forward to the dispute's timeout
+          await setNextBlockTimestamp(Number(timeout));
+
+          // Anyone calls expireDispute
+          await disputeHandler.connect(rando).expireDispute(exchangeId);
+
+          // Get the dispute state
+          [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
+
+          // It should match DisputeState.Retracted
+          assert.equal(response, DisputeState.Retracted, "Dispute state is incorrect");
+        });
+
+        it("should return the expected dispute state if exchange id is valid and dispute has been resolved", async function () {
+          // Get the block timestamp of the confirmed tx and set disputedDate
+          blockNumber = tx.blockNumber;
+          block = await ethers.provider.getBlock(blockNumber);
+          disputedDate = block.timestamp.toString();
+          timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
+
+          buyerPercent = "1234";
+
+          // Set the message Type, needed for signature
+          resolutionType = [
+            { name: "exchangeId", type: "uint256" },
+            { name: "buyerPercent", type: "uint256" },
+          ];
+
+          customSignatureType = {
+            Resolution: resolutionType,
+          };
+
+          message = {
+            exchangeId: exchangeId,
+            buyerPercent,
+          };
+
+          // Collect the signature components
+          ({ r, s, v } = await prepareDataSignatureParameters(
+            operator, // When buyer is the caller, seller should be the signer.
+            customSignatureType,
+            "Resolution",
+            message,
+            disputeHandler.address
+          ));
+
+          // Buyer resolves dispute
+          await disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v);
+
+          // Get the dispute state
+          [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
+
+          // It should match DisputeState.Resolved
+          assert.equal(response, DisputeState.Resolved, "Dispute state is incorrect");
+        });
+
+        it("should return the expected dispute state if exchange id is valid and dispute been escalated", async function () {
+          // Buyer escalates dispute
+          await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+
+          // Get the dispute state
+          [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
+
+          // It should match DisputeState.Escalated
+          assert.equal(response, DisputeState.Escalated, "Dispute state is incorrect");
+        });
+
+        it("should return the expected dispute state if exchange id is valid and dispute been decided", async function () {
+          // Buyer escalates dispute
+          tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+
+          // Get the block timestamp of the confirmed tx and set escalatedDate
+          blockNumber = tx.blockNumber;
+          block = await ethers.provider.getBlock(blockNumber);
+          escalatedDate = block.timestamp.toString();
+          timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
+
+          // buyer percent used in tests
+          buyerPercent = "4321";
+
+          // Decide dispute
+          await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent);
+
+          // Get the dispute state
+          [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
+
+          // It should match DisputeState.Decided
+          assert.equal(response, DisputeState.Decided, "Dispute state is incorrect");
+        });
+
+        it("should return the expected dispute state if exchange id is valid and dispute been refused", async function () {
+          // Buyer escalates dispute
+          tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+
+          // Dispute resolver refuses dispute
+          await disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId);
+
+          // Get the dispute state
+          [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
+
+          // It should match DisputeState.Refused
+          assert.equal(response, DisputeState.Refused, "Dispute state is incorrect");
         });
       });
 
@@ -2207,7 +2328,7 @@ describe("IBosonDisputeHandler", function () {
             // Escalate dispute
             await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
-            // Retract dispute
+            // Decide dispute
             await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent);
 
             // Dispute in decided state, ask if exchange is finalized
