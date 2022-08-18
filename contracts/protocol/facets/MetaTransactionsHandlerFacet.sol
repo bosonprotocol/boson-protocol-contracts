@@ -263,7 +263,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         bytes32 _sigR,
         bytes32 _sigS,
         uint8 _sigV
-    ) public payable override metaTransactionsNotPaused returns (bytes memory) {
+    ) external payable override metaTransactionsNotPaused returns (bytes memory) {
         validateTx(_functionName, _functionSignature, _nonce);
 
         MetaTransaction memory metaTx = MetaTransaction({

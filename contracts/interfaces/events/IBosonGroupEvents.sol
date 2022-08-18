@@ -13,12 +13,14 @@ interface IBosonGroupEvents {
         uint256 indexed groupId,
         uint256 indexed sellerId,
         BosonTypes.Group group,
+        BosonTypes.Condition condition,
         address indexed executedBy
     );
     event GroupUpdated(
         uint256 indexed groupId,
         uint256 indexed sellerId,
         BosonTypes.Group group,
+        BosonTypes.Condition condition,
         address indexed executedBy
     );
 }
