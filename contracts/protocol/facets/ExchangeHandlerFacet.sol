@@ -55,6 +55,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * - offer price is in some ERC20 token and caller also send native currency
      * - contract at token address does not support erc20 function transferFrom
      * - calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - received ERC20 token amount differs from the expected value
      * - seller has less funds available than sellerDeposit
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
