@@ -16,6 +16,7 @@ const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   setNextBlockTimestamp,
   getEvent,
+  eventEmittedWithArgs,
   prepareDataSignatureParameters,
   applyPercentage,
 } = require("../../scripts/util/test-utils.js");
@@ -2510,8 +2511,18 @@ describe("IBosonFundsHandler", function () {
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address);
-            // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
-            // .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address);
+
+            //check that FundsReleased event was NOT emitted with buyer Id
+            const txReceipt = await tx.wait();
+            const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
+              exchangeId,
+              buyerId,
+              offerToken.exchangeToken,
+              buyerPayoff,
+              buyer.address,
+            ]);
+            expect(match).to.be.false;
+            console.log("match in test case when false is expected ", match);
           });
 
           it("should update state", async function () {
@@ -2681,8 +2692,17 @@ describe("IBosonFundsHandler", function () {
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
-            // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
-            // .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, rando.address);
+
+            //check that FundsReleased event was NOT emitted with buyer Id
+            const txReceipt = await tx.wait();
+            const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
+              exchangeId,
+              buyerId,
+              offerToken.exchangeToken,
+              buyerPayoff,
+              rando.address,
+            ]);
+            expect(match).to.be.false;
           });
 
           it("should update state", async function () {
@@ -3081,8 +3101,17 @@ describe("IBosonFundsHandler", function () {
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address);
-            // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
-            // .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address);
+
+            //check that FundsReleased event was NOT emitted with buyer Id
+            const txReceipt = await tx.wait();
+            const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
+              exchangeId,
+              buyerId,
+              offerToken.exchangeToken,
+              buyerPayoff,
+              buyer.address,
+            ]);
+            expect(match).to.be.false;
           });
 
           it("should update state", async function () {
@@ -3662,8 +3691,6 @@ describe("IBosonFundsHandler", function () {
                 .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
 
               await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
-              // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
-              // .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
             });
 
             it("should update state", async function () {
@@ -3830,8 +3857,17 @@ describe("IBosonFundsHandler", function () {
                 .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, operatorDR.address);
 
               await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
-              // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
-              // .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
+
+              //check that FundsReleased event was NOT emitted with  rando address
+              const txReceipt = await tx.wait();
+              const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
+                exchangeId,
+                sellerId,
+                offerToken.exchangeToken,
+                sellerPayoff,
+                rando.address,
+              ]);
+              expect(match).to.be.false;
             });
 
             it("should update state", async function () {
