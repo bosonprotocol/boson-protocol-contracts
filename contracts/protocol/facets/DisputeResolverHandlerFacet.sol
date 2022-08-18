@@ -5,7 +5,6 @@ import "../../domain/BosonConstants.sol";
 import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
-import "hardhat/console.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
 contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
@@ -311,8 +310,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             uint256 disputeResolverFeeArrayIndex = protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][
                 _feeTokenAddresses[i]
             ] - 1; //Get the index in the DisputeResolverFees array, which is 1 less than the disputeResolverFeeTokenIndex index
-            uint256 lastTokenIndex = disputeResolverFees.length - 1;
 
+            uint256 lastTokenIndex = disputeResolverFees.length - 1;
             if (disputeResolverFeeArrayIndex != lastTokenIndex) {
                 // if index == len - 1 then only pop and delete are needed
                 //Need to fill gap caused by delete if more than one element in storage array

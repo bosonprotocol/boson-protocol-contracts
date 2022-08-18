@@ -116,7 +116,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
                 // Copy the last token in the array to this index to fill the gap
                 group.offerIds[index] = offerIdToMove;
                 //Reset index mapping. Should be index in offerIds array + 1
-                protocolLookups().offerIdIndexByGroup[groupId][offerIdToMove] = index;
+                protocolLookups().offerIdIndexByGroup[groupId][offerIdToMove] = index + 1;
             }
             // Delete last offer id in the array, which was just moved to fill the gap
             group.offerIds.pop();

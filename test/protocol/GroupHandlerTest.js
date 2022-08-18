@@ -600,7 +600,7 @@ describe("IBosonGroupHandler", function () {
       });
     });
 
-    context("👉 removeOffersFromGroup()", async function () {
+    context.only("👉 removeOffersFromGroup()", async function () {
       beforeEach(async function () {
         group.offerIds = ["1", "2", "3", "4", "5"];
         // Create a group

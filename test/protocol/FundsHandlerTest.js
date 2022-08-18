@@ -751,7 +751,6 @@ describe("IBosonFundsHandler", function () {
             .withArgs(sellerId, treasury.address, mockToken.address, reduction, clerk.address);
         });
 
-        // TODO
         context("Agent Withdraws funds", async function () {
           beforeEach(async function () {
             // Create a valid agent,

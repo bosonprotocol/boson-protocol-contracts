@@ -41,7 +41,6 @@ contract BosonToken {
      */
     function approve(address spender, uint256 amount) public virtual returns (bool) {
         address owner = msg.sender;
-
         _approve(owner, spender, amount);
         return true;
     }
