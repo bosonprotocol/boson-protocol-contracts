@@ -580,7 +580,11 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @return exists - whether the exchange Ids exist
      * @return exchangeIds  - the exchange Ids.
      */
-    function getExchangeIdsByOffer(uint256 _offerId) internal view returns (bool exists, uint256[] memory exchangeIds) {
+    function getExchangeIdsByOffer(uint256 _offerId)
+        internal
+        view
+        returns (bool exists, uint256[] storage exchangeIds)
+    {
         // Get the exchange Ids
         exchangeIds = protocolLookups().exchangeIdsByOffer[_offerId];
 
