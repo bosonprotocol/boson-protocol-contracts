@@ -294,6 +294,7 @@ library FundsLib {
      *
      * Reverts if:
      * - available funds is less than amount to be decreased
+     * - availableFunds are totally emptied but token index is not found
      *
      * @param _entityId - seller or buyer id, or 0 for protocol
      * @param _tokenAddress - funds contract address or zero address for native currency
@@ -304,35 +305,37 @@ library FundsLib {
         address _tokenAddress,
         uint256 _amount
     ) internal {
-        ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
+        if (_amount > 0) {
+            ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
 
-        // get available fnds from storage
-        uint256 availableFunds = pl.availableFunds[_entityId][_tokenAddress];
+            // get available funds from storage
+            uint256 availableFunds = pl.availableFunds[_entityId][_tokenAddress];
 
-        // make sure that seller has enough funds in the pool and reduce the available funds
-        require(availableFunds >= _amount, INSUFFICIENT_AVAILABLE_FUNDS);
-        pl.availableFunds[_entityId][_tokenAddress] = availableFunds - _amount;
+            // make sure that seller has enough funds in the pool and reduce the available funds
+            require(availableFunds >= _amount, INSUFFICIENT_AVAILABLE_FUNDS);
+            pl.availableFunds[_entityId][_tokenAddress] = availableFunds - _amount;
 
-        // if availableFunds are totally emptied, the token address is removed from the seller's tokenList
-        if (availableFunds == _amount) {
-            require(pl.tokenIndexByAccount[_entityId][_tokenAddress] != 0, TOKEN_NOT_FOUND);
+            // if availableFunds are totally emptied, the token address is removed from the seller's tokenList
+            if (availableFunds == _amount) {
+                require(pl.tokenIndexByAccount[_entityId][_tokenAddress] != 0, TOKEN_NOT_FOUND);
 
-            uint256 lastTokenIndex = pl.tokenList[_entityId].length - 1;
-            //Get the index in the tokenList array, which is 1 less than the tokenIndexByAccount index
-            uint256 index = pl.tokenIndexByAccount[_entityId][_tokenAddress] - 1;
-            if (index != lastTokenIndex) {
-                // if index == len - 1 then only pop and delete are needed
-                // Need to fill gap caused by delete if more than one element in storage array
-                address tokenToMove = pl.tokenList[_entityId][lastTokenIndex];
-                // Copy the last token in the array to this index to fill the gap
-                pl.tokenList[_entityId][index] = tokenToMove;
-                // Reset index mapping. Should be index in tokenList array + 1
-                pl.tokenIndexByAccount[_entityId][tokenToMove] = index + 1;
+                uint256 lastTokenIndex = pl.tokenList[_entityId].length - 1;
+                //Get the index in the tokenList array, which is 1 less than the tokenIndexByAccount index
+                uint256 index = pl.tokenIndexByAccount[_entityId][_tokenAddress] - 1;
+                if (index != lastTokenIndex) {
+                    // if index == len - 1 then only pop and delete are needed
+                    // Need to fill gap caused by delete if more than one element in storage array
+                    address tokenToMove = pl.tokenList[_entityId][lastTokenIndex];
+                    // Copy the last token in the array to this index to fill the gap
+                    pl.tokenList[_entityId][index] = tokenToMove;
+                    // Reset index mapping. Should be index in tokenList array + 1
+                    pl.tokenIndexByAccount[_entityId][tokenToMove] = index + 1;
+                }
+                // Delete last token address in the array, which was just moved to fill the gap
+                pl.tokenList[_entityId].pop();
+                //Delete from index mapping
+                delete pl.tokenIndexByAccount[_entityId][_tokenAddress];
             }
-            // Delete last token address in the array, which was just moved to fill the gap
-            pl.tokenList[_entityId].pop();
-            //Delete from index mapping
-            delete pl.tokenIndexByAccount[_entityId][_tokenAddress];
         }
     }
 }

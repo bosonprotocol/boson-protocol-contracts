@@ -46,6 +46,7 @@ const {
   applyPercentage,
 } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
+const { FundsList } = require("../../scripts/domain/Funds");
 
 /**
  *  Test the Boson Exchange Handler interface
@@ -612,6 +613,42 @@ describe("IBosonExchangeHandler", function () {
         // Offer qunantityAvailable should not be decremented
         [, offer] = await offerHandler.connect(rando).getOffer(offerId);
         expect(offer.quantityAvailable).to.equal(ethers.constants.MaxUint256, "Quantity available should be unlimited");
+      });
+
+      it("Should not decrement seller funds if offer price and sellerDeposit is 0", async function () {
+        // Seller funds before
+        const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+
+        // Set protocolFee to zero so we don't get the error AGENT_FEE_AMOUNT_TOO_HIGH
+        protocolFeePercentage = "0";
+        await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
+        offerFees.protocolFee = "0";
+
+        // Create an absolute zero offer
+        const mo = await mockOffer();
+        const { offerDates, offerDurations } = mo;
+        offer = mo.offer;
+        offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = "0";
+        // set a dummy token address otherwise protocol token (zero address) and offer token will be the same and we will get the error AGENT_FEE_AMOUNT_TOO_HIGH
+        offer.exchangeToken = foreign20.address;
+        disputeResolverId = agentId = "0";
+        exchange.offerId = offerId = "2"; // first offer is created on beforeEach
+
+        // Check if domain entities are valid
+        expect(offer.isValid()).is.true;
+
+        // Create the offer
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+        // Commit to offer
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
+
+        // Seller funds after
+        const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        expect(sellerFundsAfter.toString()).to.equal(
+          sellersFundsBefore.toString(),
+          "Seller funds should not be decremented"
+        );
       });
 
       context("💔 Revert Reasons", async function () {
@@ -3258,6 +3295,7 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("price, sellerDeposit and disputeResolverId must be 0 if is an absolute zero offer", async function () {
+        // aq
         // Set protocolFee to zero so we don't get the error AGENT_FEE_AMOUNT_TOO_HIGH
         protocolFeePercentage = "0";
         await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
@@ -3268,12 +3306,10 @@ describe("IBosonExchangeHandler", function () {
         const { offerDates, offerDurations } = mo;
         offer = mo.offer;
         offer.id = offerId = "2";
-        offer.buyerCancelPenalty = "0";
-        offer.price = "0";
-        // set a dummy token address otherwise protocol token and offer token will be the same and we will get the error AGENT_FEE_AMOUNT_TOO_HIGH
+        offer.price = offer.buyerCancelPenalty = offer.sellerDeposit = "0";
+        // set a dummy token address otherwise protocol token (zero address) and offer token will be the same and we will get the error AGENT_FEE_AMOUNT_TOO_HIGH
         offer.exchangeToken = foreign20.address;
-        disputeResolverId = "0";
-        offer.sellerDeposit = "0";
+        disputeResolverId = agentId = "0";
 
         // Update voucherRedeemableFrom
         voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
@@ -3284,7 +3320,7 @@ describe("IBosonExchangeHandler", function () {
         expect(offerDurations.isValid()).is.true;
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
         // Commit to offer
         tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
