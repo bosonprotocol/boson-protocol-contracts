@@ -3,31 +3,24 @@ const ethers = hre.ethers;
 
 const { gasLimit } = require("../../../environments");
 const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
-const { getInterfaceIds } = require("../../../scripts/config/supported-interfaces.js");
 const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond.js");
 const Role = require("../../../scripts/domain/Role");
-const {  expect } = require("chai");
+const { expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
 
 describe("IClientExternalAddresses", function () {
   let accessController;
-  let deployer,
-    protocol,
-    rando,
-    other1,
-    other2,
-    other3;
+  let deployer, protocol, rando, other1, other2, other3;
   let beacon;
   let voucherImplementation, protocolAddress;
 
   beforeEach(async function () {
     // Set signers
-    [deployer, protocol,rando, other1, other2, other3] =
-      await ethers.getSigners();
+    [deployer, protocol, rando, other1, other2, other3] = await ethers.getSigners();
 
     // Deploy accessController
     [, , , , accessController] = await deployProtocolDiamond();
-   
+
     // grant upgrader role
     await accessController.grantRole(Role.UPGRADER, deployer.address);
 
