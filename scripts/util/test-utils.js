@@ -36,6 +36,52 @@ function getEvent(receipt, factory, eventName) {
   }
 }
 
+function eventEmittedWithArgs(receipt, factory, eventName, args) {
+  let found = false;
+  let match = false;
+
+  const eventFragment = factory.interface.fragments.filter((e) => e.name == eventName);
+  const iface = new ethers.utils.Interface(eventFragment);
+
+  for (const log in receipt.logs) {
+    const topics = receipt.logs[log].topics;
+
+    for (const index in topics) {
+      const encodedTopic = topics[index];
+
+      try {
+        // CHECK IF TOPIC CORRESPONDS TO THE EVENT GIVEN TO FN
+        const event = iface.getEvent(encodedTopic);
+
+        if (event.name == eventName) {
+          found = true;
+          const eventArgs = iface.parseLog(receipt.logs[log]).args;
+          match = compareArgs(eventArgs, args);
+          return match;
+        }
+      } catch (e) {
+        if (e.message.includes("no matching event")) continue;
+        console.log("event error: ", e);
+        throw new Error(e);
+      }
+    }
+  }
+
+  if (!found) {
+    throw new Error(`Event with name ${eventName} was not emitted!`);
+  }
+}
+
+function compareArgs(eventArgs, args) {
+  //loop over args because eventArgs always have 2 entries for each argument
+  let i = args.length;
+  while (i--) {
+    if (args[i] != eventArgs[i]) return false;
+  }
+
+  return true;
+}
+
 async function setNextBlockTimestamp(timestamp) {
   await ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
   await ethers.provider.send("evm_mine", []);
@@ -134,6 +180,7 @@ function calculateContractAddress(senderAddress, senderNonce) {
 
 exports.setNextBlockTimestamp = setNextBlockTimestamp;
 exports.getEvent = getEvent;
+exports.eventEmittedWithArgs = eventEmittedWithArgs;
 exports.prepareDataSignatureParameters = prepareDataSignatureParameters;
 exports.calculateVoucherExpiry = calculateVoucherExpiry;
 exports.calculateContractAddress = calculateContractAddress;
