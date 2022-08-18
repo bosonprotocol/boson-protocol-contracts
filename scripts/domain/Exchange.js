@@ -1,5 +1,4 @@
 const ethers = require("ethers");
-const Voucher = require("./Voucher");
 const ExchangeState = require("./ExchangeState");
 
 /**
@@ -14,17 +13,15 @@ class Exchange {
             uint256 offerId;
             uint256 buyerId;
             uint256 finalizedDate;
-            Voucher voucher;
             ExchangeState state;
       }
    */
 
-  constructor(id, offerId, buyerId, finalizedDate, voucher, state) {
+  constructor(id, offerId, buyerId, finalizedDate, state) {
     this.id = id;
     this.offerId = offerId;
     this.buyerId = buyerId;
     this.finalizedDate = finalizedDate;
-    this.voucher = voucher;
     this.state = state;
   }
 
@@ -35,8 +32,7 @@ class Exchange {
    */
   static fromObject(o) {
     const { id, offerId, buyerId, finalizedDate, state } = o;
-    const voucher = Voucher.fromObject(o.voucher);
-    return new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
+    return new Exchange(id, offerId, buyerId, finalizedDate, state);
   }
 
   /**
@@ -45,17 +41,16 @@ class Exchange {
    * @returns {*}
    */
   static fromStruct(struct) {
-    let id, offerId, buyerId, finalizedDate, voucher, state;
+    let id, offerId, buyerId, finalizedDate, state;
 
     // destructure struct
-    [id, offerId, buyerId, finalizedDate, voucher, state] = struct;
+    [id, offerId, buyerId, finalizedDate, state] = struct;
 
     return Exchange.fromObject({
       id: id.toString(),
       offerId: offerId.toString(),
       buyerId: buyerId.toString(),
       finalizedDate: finalizedDate.toString(),
-      voucher: Voucher.fromStruct(voucher),
       state,
     });
   }
@@ -81,7 +76,7 @@ class Exchange {
    * @returns {string}
    */
   toStruct() {
-    return [this.id, this.offerId, this.buyerId, this.finalizedDate, this.voucher.toStruct(), this.state];
+    return [this.id, this.offerId, this.buyerId, this.finalizedDate, this.state];
   }
 
   /**
@@ -152,20 +147,6 @@ class Exchange {
   }
 
   /**
-   * Is this Exchange instance's voucher field valid?
-   * If present, must be a valid Voucher instance
-   * @returns {boolean}
-   */
-  voucherIsValid() {
-    let valid = false;
-    let { voucher } = this;
-    try {
-      valid = voucher === null || voucher === undefined || (typeof voucher === "object" && voucher.isValid());
-    } catch (e) {}
-    return valid;
-  }
-
-  /**
    * Is this Exchange instance's state field valid?
    * @returns {boolean}
    */
@@ -188,7 +169,6 @@ class Exchange {
       this.offerIdIsValid() &&
       this.buyerIdIsValid() &&
       this.finalizedDateIsValid() &&
-      this.voucherIsValid() &&
       this.stateIsValid()
     );
   }

@@ -1,5 +1,4 @@
 const { expect } = require("chai");
-const Voucher = require("../../scripts/domain/Voucher");
 const Exchange = require("../../scripts/domain/Exchange");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 
@@ -10,35 +9,25 @@ describe("Exchange", function () {
   // Suite-wide scope
   let object, promoted, clone, dehydrated, rehydrated, key, value, struct;
   let id, offerId, buyerId;
-  let voucher, voucherStruct, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
 
   beforeEach(async function () {
-    // Required voucher constructor params
-    committedDate = "1661441758";
-    validUntilDate = "166145000";
-    redeemedDate = "1661442001";
-    expired = false;
-    voucher = new Voucher(committedDate, validUntilDate, redeemedDate, expired);
-    voucherStruct = [committedDate, validUntilDate, redeemedDate, expired];
-
     // Required exchange constructor params
     id = "50";
     offerId = "2112";
     buyerId = "99";
     finalizedDate = "1661447000";
     state = ExchangeState.Completed;
-    exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
+    exchange = new Exchange(id, offerId, buyerId, finalizedDate, state);
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated Exchange instance", async function () {
-      exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
+      exchange = new Exchange(id, offerId, buyerId, finalizedDate, state);
       expect(exchange.idIsValid()).is.true;
       expect(exchange.offerIdIsValid()).is.true;
       expect(exchange.buyerIdIsValid()).is.true;
       expect(exchange.finalizedDateIsValid()).is.true;
-      expect(exchange.voucherIsValid()).is.true;
       expect(exchange.stateIsValid()).is.true;
       expect(exchange.isValid()).is.true;
     });
@@ -47,7 +36,7 @@ describe("Exchange", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid exchange, then set fields in tests directly
-      exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
+      exchange = new Exchange(id, offerId, buyerId, finalizedDate, state);
       expect(exchange.isValid()).is.true;
     });
 
@@ -132,33 +121,6 @@ describe("Exchange", function () {
       expect(exchange.isValid()).is.true;
     });
 
-    it("If present, voucher must be a valid Voucher instance", async function () {
-      // Invalid field value
-      exchange.voucher = 12;
-      expect(exchange.voucherIsValid()).is.false;
-      expect(exchange.isValid()).is.false;
-
-      // Invalid field value
-      exchange.voucher = "zedzdeadbaby";
-      expect(exchange.voucherIsValid()).is.false;
-      expect(exchange.isValid()).is.false;
-
-      // Valid field value
-      exchange.voucher = true;
-      expect(exchange.voucherIsValid()).is.false;
-      expect(exchange.isValid()).is.false;
-
-      // Valid field value
-      exchange.voucher = new Date();
-      expect(exchange.voucherIsValid()).is.false;
-      expect(exchange.isValid()).is.false;
-
-      // Valid field value
-      exchange.voucher = voucher;
-      expect(exchange.voucherIsValid()).is.true;
-      expect(exchange.isValid()).is.true;
-    });
-
     it("If present, finalizedDate must be the string representation of a non-zero BigNumber", async function () {
       // Invalid field value
       exchange.finalizedDate = "zedzdeadbaby";
@@ -200,7 +162,7 @@ describe("Exchange", function () {
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid exchange, then set fields in tests directly
-      exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
+      exchange = new Exchange(id, offerId, buyerId, finalizedDate, state);
       expect(exchange.isValid()).is.true;
 
       // Get plain object
@@ -209,12 +171,11 @@ describe("Exchange", function () {
         offerId,
         buyerId,
         finalizedDate,
-        voucher,
         state,
       };
 
       // Struct representation
-      struct = [id, offerId, buyerId, finalizedDate, voucherStruct, state];
+      struct = [id, offerId, buyerId, finalizedDate, state];
     });
 
     context("👉 Static", async function () {

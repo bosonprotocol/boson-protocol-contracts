@@ -133,7 +133,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         bosonVoucher.issueVoucher(exchangeId, buyer);
 
         // Notify watchers of state change
-        emit BuyerCommitted(_offerId, buyerId, exchangeId, exchange, msgSender());
+        emit BuyerCommitted(_offerId, buyerId, exchangeId, exchange, voucher, msgSender());
     }
 
     /**

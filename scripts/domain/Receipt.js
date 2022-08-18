@@ -22,15 +22,12 @@ class Receipt {
       uint256 exchangeId;
       uint256 offerId;
       uint256 buyerId;
-      address buyerAddress;
       uint256 sellerId;
-      address sellerOperatorAddress; 
       uint256 price;
       uint256 sellerDeposit;
       uint256 buyerCancelPenalty;
       OfferFees offerFees; // protocol and agent fee
       uint256 agentId;
-      address agentAddress;
       address exchangeToken;
       uint256 finalizedDate;
       Condition condition;
@@ -38,7 +35,6 @@ class Receipt {
       uint256 redeemedDate;
       bool voucherExpired;
       uint256 disputeResolverId;
-      address disputeResolverOperatorAddress;
       uint256 disputedDate; // DisputeDates.disputed
       uint256 escalatedDate; // DisputeDate.escalated
       DisputeState disputeState;
@@ -50,15 +46,12 @@ class Receipt {
     exchangeId,
     offerId,
     buyerId,
-    buyerAddress,
     sellerId,
-    sellerOperatorAddress,
     price,
     sellerDeposit,
     buyerCancelPenalty,
     offerFees,
     agentId,
-    agentAddress,
     exchangeToken,
     finalizedDate,
     condition,
@@ -66,7 +59,6 @@ class Receipt {
     redeemedDate,
     voucherExpired,
     disputeResolverId,
-    disputeResolverOperatorAddress,
     disputedDate,
     escalatedDate,
     disputeState,
@@ -75,15 +67,12 @@ class Receipt {
     this.exchangeId = exchangeId;
     this.offerId = offerId;
     this.buyerId = buyerId;
-    this.buyerAddress = buyerAddress;
     this.sellerId = sellerId;
-    this.sellerOperatorAddress = sellerOperatorAddress;
     this.price = price;
     this.sellerDeposit = sellerDeposit;
     this.buyerCancelPenalty = buyerCancelPenalty;
     this.offerFees = offerFees;
     this.agentId = agentId ?? "0";
-    this.agentAddress = agentAddress ?? ethers.constants.AddressZero;
     this.exchangeToken = exchangeToken;
     this.finalizedDate = finalizedDate;
     this.condition = condition ?? new Condition(0, 0, ethers.constants.AddressZero, "0", "0", "0");
@@ -91,7 +80,6 @@ class Receipt {
     this.redeemedDate = redeemedDate;
     this.voucherExpired = voucherExpired;
     this.disputeResolverId = disputeResolverId ?? "0";
-    this.disputeResolverOperatorAddress = disputeResolverOperatorAddress ?? ethers.constants.AddressZero;
     this.disputedDate = disputedDate ?? "0";
     this.escalatedDate = escalatedDate ?? "0";
     // solidity default value is 0 but it doesn't mean it is in resolving state, it's necessary to check disputedDate to know if a dispute was raised
@@ -119,15 +107,12 @@ class Receipt {
       exchangeId,
       offerId,
       buyerId,
-      buyerAddress,
       sellerId,
-      sellerOperatorAddress,
       price,
       sellerDeposit,
       buyerCancelPenalty,
       offerFees,
       agentId,
-      agentAddress,
       exchangeToken,
       finalizedDate,
       condition,
@@ -135,7 +120,6 @@ class Receipt {
       redeemedDate,
       voucherExpired,
       disputeResolverId,
-      disputeResolverOperatorAddress,
       disputedDate,
       escalatedDate,
       disputeState,
@@ -146,15 +130,12 @@ class Receipt {
       exchangeId: exchangeId.toString(),
       offerId: offerId.toString(),
       buyerId: buyerId.toString(),
-      buyerAddress,
       sellerId: sellerId.toString(),
-      sellerOperatorAddress,
       price: price.toString(),
       sellerDeposit: sellerDeposit.toString(),
       buyerCancelPenalty: buyerCancelPenalty.toString(),
       offerFees: OfferFees.fromStruct(offerFees),
       agentId: agentId.toString(),
-      agentAddress,
       exchangeToken,
       finalizedDate: finalizedDate.toString(),
       condition: Condition.fromStruct(condition),
@@ -162,7 +143,6 @@ class Receipt {
       redeemedDate: redeemedDate.toString(),
       voucherExpired,
       disputeResolverId: disputeResolverId.toString(),
-      disputeResolverOperatorAddress,
       disputedDate: disputedDate.toString(),
       escalatedDate: escalatedDate.toString(),
       disputeState,
@@ -195,15 +175,12 @@ class Receipt {
       this.exchangeId.toString(),
       this.offerId.toString(),
       this.buyerId.toString(),
-      this.buyerAddress,
       this.sellerId.toString(),
-      this.sellerOperatorAddress,
       this.price.toString(),
       this.sellerDeposit.toString(),
       this.buyerCancelPenalty.toString(),
       this.offerFees.toStruct(),
       this.agentId.toString(),
-      this.agentAddress,
       this.exchangeToken,
       this.finalizedDate.toString(),
       this.condition.toStruct(),
@@ -211,7 +188,6 @@ class Receipt {
       this.redeemedDate.toString(),
       this.voucherExpired,
       this.disputeResolverId.toString(),
-      this.disputeResolverOperatorAddress,
       this.disputedDate.toString(),
       this.escalatedDate.toString(),
       this.disputeState,
@@ -255,30 +231,12 @@ class Receipt {
   }
 
   /**
-   * Is this Receipt instance's buyerAddress field valid?
-   * Must be a eip55 compliant Ethereum address
-   * @returns {boolean}
-   */
-  buyerAddressIsValid() {
-    return addressIsValid(this.buyerAddress);
-  }
-
-  /**
    * Is this Receipt instance's sellerId field valid?
    * Must be a string representation of a big number
    * @returns {boolean}
    */
   sellerIdIsValid() {
     return bigNumberNonZeroIsValid(this.sellerId);
-  }
-
-  /**
-   * Is this Receipt instance's sellerOperatorAddress field valid?
-   * Must be a eip55 compliant Ethereum address
-   * @returns {boolean}
-   */
-  sellerOperatorAddressIsValid() {
-    return addressIsValid(this.sellerOperatorAddress);
   }
 
   /**
@@ -329,15 +287,6 @@ class Receipt {
    */
   agentIdIsValid() {
     return bigNumberIsValid(this.agentId);
-  }
-
-  /**
-   * Is this Receipt instance's agentAddress field valid?
-   * Must be a eip55 compliant Ethereum address
-   * @returns {boolean}
-   */
-  agentAddressIsValid() {
-    return addressIsValid(this.agentAddress);
   }
 
   /**
@@ -408,15 +357,6 @@ class Receipt {
   }
 
   /**
-   * Is this Receipt instance's disputeResolverOperator field valid?
-   * Must be a eip55 compliant Ethereum address
-   * @returns {boolean}
-   */
-  disputeResolverOperatorAddressIsValid() {
-    return addressIsValid(this.disputeResolverOperatorAddress);
-  }
-
-  /**
    * Is this Receipt instance's disputedDate field valid?
    * Must be a string representation of a big number
    * @returns {boolean}
@@ -475,15 +415,12 @@ class Receipt {
       this.exchangeIdIsValid() &&
       this.offerIdIsValid() &&
       this.buyerIdIsValid() &&
-      this.buyerAddressIsValid() &&
       this.sellerIdIsValid() &&
-      this.sellerOperatorAddressIsValid() &&
       this.priceIsValid() &&
       this.sellerDepositIsValid() &&
       this.buyerCancelPenaltyIsValid() &&
       this.offerFeesIsValid() &&
       this.agentIdIsValid() &&
-      this.agentAddressIsValid() &&
       this.exchangeTokenIsValid() &&
       this.finalizedDateIsValid() &&
       this.conditionIsValid() &&
@@ -491,7 +428,6 @@ class Receipt {
       this.redeemedDateIsValid() &&
       this.voucherExpiredIsValid() &&
       this.disputeResolverIdIsValid() &&
-      this.disputeResolverOperatorAddressIsValid() &&
       this.disputedDateIsValid() &&
       this.escalatedDateIsValid() &&
       this.disputeStateIsValid() &&

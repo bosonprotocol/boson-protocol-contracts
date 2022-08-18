@@ -8,6 +8,7 @@ const Dispute = require("../../scripts/domain/Dispute");
 const Receipt = require("../../scripts/domain/Receipt");
 const TwinReceipt = require("../../scripts/domain/TwinReceipt");
 const Exchange = require("../../scripts/domain/Exchange");
+const Voucher = require("../../scripts/domain/Voucher");
 const TokenType = require("../../scripts/domain/TokenType");
 const Bundle = require("../../scripts/domain/Bundle");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
@@ -89,8 +90,8 @@ describe("IBosonExchangeHandler", function () {
   let voucherRedeemableFrom;
   let fulfillmentPeriod, voucherValid;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
-  let voucher, voucherStruct, validUntilDate;
-  let exchange, finalizedDate, state, exchangeStruct, response, exists, buyerStruct;
+  let voucher, validUntilDate;
+  let exchange, response, exists, buyerStruct;
   let disputeResolver, disputeResolverFees;
   let foreign20, foreign721, foreign1155;
   let twin20, twin721, twin1155, twinIds, bundle, balance, owner;
@@ -328,14 +329,11 @@ describe("IBosonExchangeHandler", function () {
       // Required voucher constructor params
       voucher = mockVoucher();
       voucher.redeemedDate = "0";
-      voucherStruct = voucher.toStruct();
 
       // Mock exchange
       exchange = mockExchange();
-      exchange.voucher = voucher;
       exchange.buyerId = buyerId;
       exchange.finalizedDate = "0";
-      exchangeStruct = [id, offerId, buyerId, finalizedDate, voucherStruct, state];
 
       // Deposit seller funds so the commit will succeed
       await fundsHandler
@@ -355,21 +353,25 @@ describe("IBosonExchangeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
 
         // Update the committed date in the expected exchange struct with the block timestamp of the tx
-        exchange.voucher.committedDate = block.timestamp.toString();
+        voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
-        // Get the struct
-        exchangeStruct = exchange.toStruct();
+        // Examine event
         assert.equal(event.exchangeId.toString(), id, "Exchange id is incorrect");
         assert.equal(event.offerId.toString(), offerId, "Offer id is incorrect");
         assert.equal(event.buyerId.toString(), buyerId, "Buyer id is incorrect");
+
+        // Examine the exchange struct
         assert.equal(
           Exchange.fromStruct(event.exchange).toString(),
-          Exchange.fromStruct(exchangeStruct).toString(),
+          exchange.toString(),
           "Exchange struct is incorrect"
         );
+
+        // Examine the voucher struct
+        assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
       });
 
       it("should increment the next exchange id counter", async function () {
@@ -440,7 +442,7 @@ describe("IBosonExchangeHandler", function () {
           "Reference proxy: buyer 2 balance should be 0"
         );
 
-        // referecne boson voucher should not have vouchers with id 1 and 2
+        // reference boson voucher should not have vouchers with id 1 and 2
         await expect(bosonVoucher.ownerOf("1")).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
         await expect(bosonVoucher.ownerOf("2")).to.revertedWith(RevertReasons.ERC721_NON_EXISTENT);
 
@@ -565,21 +567,25 @@ describe("IBosonExchangeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
 
         // Update the committed date in the expected exchange struct with the block timestamp of the tx
-        exchange.voucher.committedDate = block.timestamp.toString();
+        voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = offerDates.validUntil;
+        voucher.validUntilDate = offerDates.validUntil;
 
-        // Get the struct
-        exchangeStruct = exchange.toStruct();
+        // Examine the event
         assert.equal(event.exchangeId.toString(), id, "Exchange id is incorrect");
         assert.equal(event.offerId.toString(), offerId, "Offer id is incorrect");
         assert.equal(event.buyerId.toString(), buyerId, "Buyer id is incorrect");
+
+        // Examine the exchange struct
         assert.equal(
           Exchange.fromStruct(event.exchange).toString(),
-          Exchange.fromStruct(exchangeStruct).toString(),
+          exchange.toString(),
           "Exchange struct is incorrect"
         );
+
+        // Examine the voucher struct
+        assert.equal(Voucher.fromStruct(event.voucher).toString(), voucher.toString(), "Voucher struct is incorrect");
       });
 
       it("Should decrement quantityAvailable", async function () {
@@ -715,11 +721,6 @@ describe("IBosonExchangeHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
-          /*
-           * Reverts if:
-           * - buyer does not meet conditions for commit
-           */
-
           it("buyer does not meet condition for commit", async function () {
             // Attempt to commit, expecting revert
             await expect(
@@ -794,11 +795,6 @@ describe("IBosonExchangeHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
-          /*
-           * Reverts if:
-           * - buyer does not meet conditions for commit
-           */
-
           it("buyer does not meet condition for commit", async function () {
             // Attempt to commit, expecting revert
             await expect(
@@ -873,11 +869,6 @@ describe("IBosonExchangeHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
-          /*
-           * Reverts if:
-           * - buyer does not meet conditions for commit
-           */
-
           it("buyer does not meet condition for commit", async function () {
             // Attempt to commit, expecting revert
             await expect(
@@ -952,11 +943,6 @@ describe("IBosonExchangeHandler", function () {
         });
 
         context("💔 Revert Reasons", async function () {
-          /*
-           * Reverts if:
-           * - buyer does not meet conditions for commit
-           */
-
           it("token id does not exist", async function () {
             // Attempt to commit, expecting revert
             await expect(
@@ -995,20 +981,7 @@ describe("IBosonExchangeHandler", function () {
     context("👉 completeExchange()", async function () {
       beforeEach(async function () {
         // Commit to offer
-        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-        // Get the block timestamp of the confirmed tx
-        blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
-
-        // Update the committed date in the expected exchange struct with the block timestamp of the tx
-        exchange.voucher.committedDate = block.timestamp.toString();
-
-        // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
-
-        // Get the struct
-        exchangeStruct = exchange.toStruct();
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
       });
 
       it("should emit an ExchangeCompleted event when buyer calls", async function () {
@@ -1361,20 +1334,7 @@ describe("IBosonExchangeHandler", function () {
     context("👉 revokeVoucher()", async function () {
       beforeEach(async function () {
         // Commit to offer
-        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-        // Get the block timestamp of the confirmed tx
-        blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
-
-        // Update the committed date in the expected exchange struct with the block timestamp of the tx
-        exchange.voucher.committedDate = block.timestamp.toString();
-
-        // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
-
-        // Get the struct
-        exchangeStruct = exchange.toStruct();
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
       });
 
       it("should emit an VoucherRevoked event when seller's operator calls", async function () {
@@ -1438,20 +1398,7 @@ describe("IBosonExchangeHandler", function () {
     context("👉 cancelVoucher()", async function () {
       beforeEach(async function () {
         // Commit to offer, retrieving the event
-        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-        // Get the block timestamp of the confirmed tx
-        blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
-
-        // Update the committed date in the expected exchange struct with the block timestamp of the tx
-        exchange.voucher.committedDate = block.timestamp.toString();
-
-        // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
-
-        // Get the struct
-        exchangeStruct = exchange.toStruct();
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
       });
 
       it("should emit an VoucherCanceled event when original buyer calls", async function () {
@@ -1546,20 +1493,7 @@ describe("IBosonExchangeHandler", function () {
     context("👉 expireVoucher()", async function () {
       beforeEach(async function () {
         // Commit to offer, retrieving the event
-        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-        // Get the block timestamp of the confirmed tx
-        blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
-
-        // Update the committed date in the expected exchange struct with the block timestamp of the tx
-        exchange.voucher.committedDate = block.timestamp.toString();
-
-        // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
-
-        // Get the struct
-        exchangeStruct = exchange.toStruct();
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
       });
 
       it("should emit an VoucherExpired event when anyone calls and voucher has expired", async function () {
@@ -1593,15 +1527,15 @@ describe("IBosonExchangeHandler", function () {
         // Expire the voucher
         await exchangeHandler.connect(rando).expireVoucher(exchange.id);
 
-        // Get the exchange
-        [, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+        // Get the voucher
+        [, , response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
 
         // Marshal response to entity
-        exchange = Exchange.fromStruct(response);
-        expect(exchange.isValid());
+        voucher = Voucher.fromStruct(response);
+        expect(voucher.isValid());
 
         // Exchange's voucher expired flag should be true
-        assert.isTrue(exchange.voucher.expired, "Voucher expired flag not set");
+        assert.isTrue(voucher.expired, "Voucher expired flag not set");
       });
 
       context("💔 Revert Reasons", async function () {
@@ -1670,19 +1604,7 @@ describe("IBosonExchangeHandler", function () {
     context("👉 redeemVoucher()", async function () {
       beforeEach(async function () {
         // Commit to offer
-        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-        // Get the block timestamp of the confirmed tx
-        blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
-
-        // Update the committed date in the expected exchange struct with the block timestamp of the tx
-        exchange.voucher.committedDate = block.timestamp.toString();
-
-        // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
-        // Get the struct
-        exchangeStruct = exchange.toStruct();
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
       });
 
       it("should emit a VoucherRedeemed event when buyer calls", async function () {
@@ -2581,16 +2503,13 @@ describe("IBosonExchangeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
 
         // Update the committed date in the expected exchange struct with the block timestamp of the tx
-        exchange.voucher.committedDate = block.timestamp.toString();
+        voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // New expiry date for extensions
-        validUntilDate = ethers.BigNumber.from(exchange.voucher.validUntilDate).add(oneMonth).toString();
-
-        // Get the struct
-        exchangeStruct = exchange.toStruct();
+        validUntilDate = ethers.BigNumber.from(voucher.validUntilDate).add(oneMonth).toString();
       });
 
       it("should emit an VoucherExtended event when seller's operator calls", async function () {
@@ -2604,12 +2523,12 @@ describe("IBosonExchangeHandler", function () {
         // Extend the voucher
         await exchangeHandler.connect(operator).extendVoucher(exchange.id, validUntilDate);
 
-        // Get the exchange
-        [, response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
-        exchange = Exchange.fromStruct(response);
+        // Get the voucher
+        [, , response] = await exchangeHandler.connect(rando).getExchange(exchange.id);
+        voucher = Voucher.fromStruct(response);
 
         // It should match the new validUntilDate
-        assert.equal(exchange.voucher.validUntilDate, validUntilDate, "Voucher validUntilDate not updated");
+        assert.equal(voucher.validUntilDate, validUntilDate, "Voucher validUntilDate not updated");
       });
 
       context("💔 Revert Reasons", async function () {
@@ -2652,7 +2571,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("new date is not later than the current one", async function () {
           // New expiry date is older than current
-          validUntilDate = ethers.BigNumber.from(exchange.voucher.validUntilDate).sub(oneMonth).toString();
+          validUntilDate = ethers.BigNumber.from(voucher.validUntilDate).sub(oneMonth).toString();
 
           // Attempt to extend voucher, expecting revert
           await expect(exchangeHandler.connect(operator).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
@@ -2665,20 +2584,7 @@ describe("IBosonExchangeHandler", function () {
     context("👉 onVoucherTransferred()", async function () {
       beforeEach(async function () {
         // Commit to offer, retrieving the event
-        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-        // Get the block timestamp of the confirmed tx
-        blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
-
-        // Update the committed date in the expected exchange struct with the block timestamp of the tx
-        exchange.voucher.committedDate = block.timestamp.toString();
-
-        // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
-
-        // Get the struct
-        exchangeStruct = exchange.toStruct();
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
         // Client used for tests
         bosonVoucherCloneAddress = calculateContractAddress(exchangeHandler.address, "1");
@@ -3071,20 +2977,7 @@ describe("IBosonExchangeHandler", function () {
     context("👉 getExchange()", async function () {
       beforeEach(async function () {
         // Commit to offer
-        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-        // Get the block timestamp of the confirmed tx
-        blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
-
-        // Update the committed date in the expected exchange struct with the block timestamp of the tx
-        exchange.voucher.committedDate = block.timestamp.toString();
-
-        // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
-
-        // Get the struct
-        exchangeStruct = exchange.toStruct();
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
       });
 
       it("should return true for exists if exchange id is valid", async function () {
@@ -3115,20 +3008,7 @@ describe("IBosonExchangeHandler", function () {
     context("👉 getExchangeState()", async function () {
       beforeEach(async function () {
         // Commit to offer
-        tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
-
-        // Get the block timestamp of the confirmed tx
-        blockNumber = tx.blockNumber;
-        block = await ethers.provider.getBlock(blockNumber);
-
-        // Update the committed date in the expected exchange struct with the block timestamp of the tx
-        exchange.voucher.committedDate = block.timestamp.toString();
-
-        // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
-
-        // Get the struct
-        exchangeStruct = exchange.toStruct();
+        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
       });
 
       it("should return true for exists if exchange id is valid", async function () {
@@ -3169,10 +3049,10 @@ describe("IBosonExchangeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
 
         // Update the committed date in the expected exchange struct with the block timestamp of the tx
-        exchange.voucher.committedDate = block.timestamp.toString();
+        voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // Set time forward to the offer's voucherRedeemableFrom
         await setNextBlockTimestamp(Number(voucherRedeemableFrom));
@@ -3185,7 +3065,7 @@ describe("IBosonExchangeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
 
         // Update the redeemedDate date in the expected exchange struct
-        exchange.voucher.redeemedDate = block.timestamp.toString();
+        voucher.redeemedDate = block.timestamp.toString();
       });
 
       it("Should return the correct receipt", async function () {
@@ -3216,28 +3096,25 @@ describe("IBosonExchangeHandler", function () {
           exchange.id,
           offer.id,
           buyerId,
-          buyer.address,
           sellerId,
-          seller.operator,
           price,
           offer.sellerDeposit,
           offer.buyerCancelPenalty,
           offerFees,
           agentId,
-          ethers.constants.AddressZero,
           offer.exchangeToken,
           exchange.finalizedDate,
           undefined,
-          exchange.voucher.committedDate,
-          exchange.voucher.redeemedDate,
-          exchange.voucher.expired
+          voucher.committedDate,
+          voucher.redeemedDate,
+          voucher.expired
         );
         expect(expectedReceipt.isValid()).is.true;
 
         expect(receiptObject).to.eql(expectedReceipt);
       });
 
-      it("price, sellerDeposit and disputeResolverId must be 0 if is an absolute zero offer", async function () {
+      it("price, sellerDeposit, and disputeResolverId must be 0 if is an absolute zero offer", async function () {
         // Set protocolFee to zero so we don't get the error AGENT_FEE_AMOUNT_TOO_HIGH
         protocolFeePercentage = "0";
         await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
@@ -3279,10 +3156,10 @@ describe("IBosonExchangeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
 
         // Update the committed date in the expected exchange struct with the block timestamp of the tx
-        exchange.voucher.committedDate = block.timestamp.toString();
+        voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // Set time forward to the offer's voucherRedeemableFrom
         await setNextBlockTimestamp(Number(voucherRedeemableFrom));
@@ -3295,14 +3172,14 @@ describe("IBosonExchangeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
 
         // Update the redeemedDate date in the expected exchange struct
-        exchange.voucher.redeemedDate = block.timestamp.toString();
+        voucher.redeemedDate = block.timestamp.toString();
 
         // Get the block timestamp of the confirmed tx
         blockNumber = tx.blockNumber;
         block = await ethers.provider.getBlock(blockNumber);
 
         // Update the redeemedDate date in the expected exchange struct
-        exchange.voucher.redeemedDate = block.timestamp.toString();
+        voucher.redeemedDate = block.timestamp.toString();
 
         // Complete the exchange
         tx = await exchangeHandler.connect(buyer).completeExchange(exchange.id);
@@ -3343,9 +3220,9 @@ describe("IBosonExchangeHandler", function () {
           offer.exchangeToken,
           exchange.finalizedDate,
           undefined,
-          exchange.voucher.committedDate,
-          exchange.voucher.redeemedDate,
-          exchange.voucher.expired
+          voucher.committedDate,
+          voucher.redeemedDate,
+          voucher.expired
         );
         expect(expectedReceipt.isValid()).is.true;
 
@@ -3407,9 +3284,9 @@ describe("IBosonExchangeHandler", function () {
             offer.exchangeToken,
             exchange.finalizedDate,
             undefined,
-            exchange.voucher.committedDate,
-            exchange.voucher.redeemedDate,
-            exchange.voucher.expired,
+            voucher.committedDate,
+            voucher.redeemedDate,
+            voucher.expired,
             disputeResolverId,
             disputeResolver.operator,
             disputedDate,
@@ -3472,9 +3349,9 @@ describe("IBosonExchangeHandler", function () {
             offer.exchangeToken,
             exchange.finalizedDate,
             undefined,
-            exchange.voucher.committedDate,
-            exchange.voucher.redeemedDate,
-            exchange.voucher.expired,
+            voucher.committedDate,
+            voucher.redeemedDate,
+            voucher.expired,
             disputeResolverId,
             disputeResolver.operator,
             disputedDate,
@@ -3486,6 +3363,7 @@ describe("IBosonExchangeHandler", function () {
           expect(receiptObject).to.eql(expectedReceipt);
         });
       });
+
       context("TwinReceipt tests", async function () {
         beforeEach(async function () {
           // Mint some tokens to be bundled
@@ -3551,10 +3429,10 @@ describe("IBosonExchangeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
 
           // Update the committed date in the expected exchange struct with the block timestamp of the tx
-          exchange.voucher.committedDate = block.timestamp.toString();
+          voucher.committedDate = block.timestamp.toString();
 
           // Update the validUntilDate date in the expected exchange struct
-          exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+          voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
           // Decrease expected offer quantityAvailable after commit
           offer.quantityAvailable = "9";
@@ -3571,7 +3449,7 @@ describe("IBosonExchangeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
 
           // Update the redeemedDate date in the expected exchange struct
-          exchange.voucher.redeemedDate = block.timestamp.toString();
+          voucher.redeemedDate = block.timestamp.toString();
 
           // Complete the exchange
           tx = await exchangeHandler.connect(buyer).completeExchange(exchange.id);
@@ -3621,9 +3499,9 @@ describe("IBosonExchangeHandler", function () {
             offer.exchangeToken,
             exchange.finalizedDate,
             undefined,
-            exchange.voucher.committedDate,
-            exchange.voucher.redeemedDate,
-            exchange.voucher.expired,
+            voucher.committedDate,
+            voucher.redeemedDate,
+            voucher.expired,
             undefined,
             undefined,
             undefined,
@@ -3653,10 +3531,10 @@ describe("IBosonExchangeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
 
           // Update the committed date in the expected exchange struct with the block timestamp of the tx
-          exchange.voucher.committedDate = block.timestamp.toString();
+          voucher.committedDate = block.timestamp.toString();
 
           // Update the validUntilDate date in the expected exchange struct
-          exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+          voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
           // Decrease expected offer quantityAvailable after commit
           offer.quantityAvailable = "9";
@@ -3673,7 +3551,7 @@ describe("IBosonExchangeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
 
           // Update the redeemedDate date in the expected exchange struct
-          exchange.voucher.redeemedDate = block.timestamp.toString();
+          voucher.redeemedDate = block.timestamp.toString();
 
           // Complete the exchange
           tx = await exchangeHandler.connect(buyer).completeExchange(exchange.id);
@@ -3732,9 +3610,9 @@ describe("IBosonExchangeHandler", function () {
             offer.exchangeToken,
             exchange.finalizedDate,
             undefined,
-            exchange.voucher.committedDate,
-            exchange.voucher.redeemedDate,
-            exchange.voucher.expired,
+            voucher.committedDate,
+            voucher.redeemedDate,
+            voucher.expired,
             undefined,
             undefined,
             undefined,
@@ -3779,10 +3657,10 @@ describe("IBosonExchangeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
 
         // Update the committed date in the expected exchange struct with the block timestamp of the tx
-        exchange.voucher.committedDate = block.timestamp.toString();
+        voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // Set time forward to the offer's voucherRedeemableFrom
         // await setNextBlockTimestamp(Number(voucherRedeemableFrom));
@@ -3795,7 +3673,7 @@ describe("IBosonExchangeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
 
         // Update the redeemedDate date in the expected exchange struct
-        exchange.voucher.redeemedDate = block.timestamp.toString();
+        voucher.redeemedDate = block.timestamp.toString();
 
         // Complete the exchange
         tx = await exchangeHandler.connect(buyer).completeExchange(exchange.id);
@@ -3836,9 +3714,9 @@ describe("IBosonExchangeHandler", function () {
           offer.exchangeToken,
           exchange.finalizedDate,
           condition,
-          exchange.voucher.committedDate,
-          exchange.voucher.redeemedDate,
-          exchange.voucher.expired
+          voucher.committedDate,
+          voucher.redeemedDate,
+          voucher.expired
         );
         expect(expectedReceipt.isValid()).is.true;
 
@@ -3892,10 +3770,10 @@ describe("IBosonExchangeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
 
         // Update the committed date in the expected exchange struct with the block timestamp of the tx
-        exchange.voucher.committedDate = block.timestamp.toString();
+        voucher.committedDate = block.timestamp.toString();
 
         // Update the validUntilDate date in the expected exchange struct
-        exchange.voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
+        voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // Set time forward to the offer's voucherRedeemableFrom
         await setNextBlockTimestamp(Number(voucherRedeemableFrom));
@@ -3908,7 +3786,7 @@ describe("IBosonExchangeHandler", function () {
         block = await ethers.provider.getBlock(blockNumber);
 
         // Update the redeemedDate date in the expected exchange struct
-        exchange.voucher.redeemedDate = block.timestamp.toString();
+        voucher.redeemedDate = block.timestamp.toString();
 
         // Complete the exchange
         tx = await exchangeHandler.connect(buyer).completeExchange(exchange.id);
@@ -3949,9 +3827,9 @@ describe("IBosonExchangeHandler", function () {
           offer.exchangeToken,
           exchange.finalizedDate,
           undefined,
-          exchange.voucher.committedDate,
-          exchange.voucher.redeemedDate,
-          exchange.voucher.expired
+          voucher.committedDate,
+          voucher.redeemedDate,
+          voucher.expired
         );
         expect(expectedReceipt.isValid()).is.true;
 
