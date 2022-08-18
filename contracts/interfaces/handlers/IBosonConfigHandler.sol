@@ -300,7 +300,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     /**
      * @notice Sets the maximal royalty percentage that can be set by the seller
      *
-     * Emits a MaxRoyaltyPecentageChanged event.
+     * Emits a MaxRoyaltyPercentageChanged event.
      *
      * Reverts if the _maxRoyaltyPecentage is greater than 10000.
      *

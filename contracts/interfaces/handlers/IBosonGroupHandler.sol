@@ -9,7 +9,7 @@ import { IBosonGroupEvents } from "../events/IBosonGroupEvents.sol";
  *
  * @notice Handles creation, voiding, and querying of groups within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x4d0d87ad
+ * The ERC-165 identifier for this interface is: 0xe2bf2256
  */
 interface IBosonGroupHandler is IBosonGroupEvents {
     /**

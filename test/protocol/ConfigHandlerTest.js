@@ -184,7 +184,7 @@ describe("IBosonConfigHandler", function () {
           .withArgs(buyerEscalationDepositPercentage, deployer.address);
 
         await expect(cutTransaction)
-          .to.emit(configHandler, "MaxRoyaltyPecentageChanged")
+          .to.emit(configHandler, "MaxRoyaltyPercentageChanged")
           .withArgs(maxRoyaltyPecentage, deployer.address);
       });
     });
@@ -806,10 +806,10 @@ describe("IBosonConfigHandler", function () {
           maxRoyaltyPecentage = 250;
         });
 
-        it("should emit a MaxRoyaltyPecentageChanged event", async function () {
+        it("should emit a MaxRoyaltyPercentageChanged event", async function () {
           // set new value for Max Royalty Percentage, testing for the event
           await expect(configHandler.connect(deployer).setMaxRoyaltyPecentage(maxRoyaltyPecentage))
-            .to.emit(configHandler, "MaxRoyaltyPecentageChanged")
+            .to.emit(configHandler, "MaxRoyaltyPercentageChanged")
             .withArgs(maxRoyaltyPecentage, deployer.address);
         });
 

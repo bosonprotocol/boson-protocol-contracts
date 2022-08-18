@@ -394,7 +394,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the maximal royalty percentage that can be set by the seller
      *
-     * Emits a MaxRoyaltyPecentageChanged event.
+     * Emits a MaxRoyaltyPercentageChanged event.
      *
      * Reverts if the _maxRoyaltyPecentage is greater than 10000.
      *
@@ -411,7 +411,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         protocolLimits().maxRoyaltyPecentage = _maxRoyaltyPecentage;
 
         // Notify watchers of state change
-        emit MaxRoyaltyPecentageChanged(_maxRoyaltyPecentage, msgSender());
+        emit MaxRoyaltyPercentageChanged(_maxRoyaltyPecentage, msgSender());
     }
 
     /**
