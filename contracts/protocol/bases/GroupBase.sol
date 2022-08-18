@@ -27,7 +27,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      *
      * @param _group - the fully populated struct with group id set to 0x0
      */
-    function createGroupInternal(Group memory _group) internal {
+    function createGroupInternal(Group memory _group, Condition calldata _condition) internal {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
         require(exists, NOT_OPERATOR);
@@ -36,7 +36,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         require(_group.offerIds.length <= protocolLimits().maxOffersPerGroup, TOO_MANY_OFFERS);
 
         // condition must be valid
-        require(validateCondition(_group.condition), INVALID_CONDITION_PARAMETERS);
+        require(validateCondition(_condition), INVALID_CONDITION_PARAMETERS);
 
         // Get the next group and increment the counter
         uint256 groupId = protocolCounters().nextGroupId++;
@@ -63,10 +63,31 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         group.id = _group.id = groupId;
         group.sellerId = _group.sellerId = sellerId;
         group.offerIds = _group.offerIds;
-        group.condition = _group.condition;
+
+        // Store the condition
+        storeCondition(groupId, _condition);
 
         // Notify watchers of state change
-        emit GroupCreated(groupId, sellerId, _group, msgSender());
+        emit GroupCreated(groupId, sellerId, _group, _condition, msgSender());
+    }
+
+    /**
+     * @dev Store a condition struct, associated with a given group id
+     *
+     * @param _groupId - the group id
+     * @param _condition - the condition
+     */
+    function storeCondition(uint256 _groupId, Condition calldata _condition) internal {
+        // Get storage locations for condition
+        Condition storage condition = fetchCondition(_groupId);
+
+        // Set condition props individually since calldata structs can't be copied to storage
+        condition.method = _condition.method;
+        condition.tokenType = _condition.tokenType;
+        condition.tokenAddress = _condition.tokenAddress;
+        condition.tokenId = _condition.tokenId;
+        condition.threshold = _condition.threshold;
+        condition.maxCommits = _condition.maxCommits;
     }
 
     /**
@@ -137,8 +158,11 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
             protocolLookups().offerIdIndexByGroup[_groupId][offerId] = group.offerIds.length;
         }
 
+        // Get the condition
+        Condition storage condition = fetchCondition(_groupId);
+
         // Notify watchers of state change
-        emit GroupUpdated(_groupId, sellerId, group, msgSender());
+        emit GroupUpdated(_groupId, sellerId, group, condition, msgSender());
     }
 
     /**

@@ -684,9 +684,9 @@ describe("IBosonExchangeHandler", function () {
           expect(condition.isValid()).to.be.true;
 
           // Create Group
-          group = new Group(groupId, sellerId, offerIds, condition);
+          group = new Group(groupId, sellerId, offerIds);
           expect(group.isValid()).is.true;
-          await groupHandler.connect(operator).createGroup(group);
+          await groupHandler.connect(operator).createGroup(group, condition);
         });
 
         it("should emit a BuyerCommitted event if user meets condition", async function () {
@@ -763,9 +763,9 @@ describe("IBosonExchangeHandler", function () {
           expect(condition.isValid()).to.be.true;
 
           // Create Group
-          group = new Group(groupId, sellerId, offerIds, condition);
+          group = new Group(groupId, sellerId, offerIds);
           expect(group.isValid()).is.true;
-          await groupHandler.connect(operator).createGroup(group);
+          await groupHandler.connect(operator).createGroup(group, condition);
         });
 
         it("should emit a BuyerCommitted event if user meets condition", async function () {
@@ -842,9 +842,9 @@ describe("IBosonExchangeHandler", function () {
           expect(condition.isValid()).to.be.true;
 
           // Create Group
-          group = new Group(groupId, sellerId, offerIds, condition);
+          group = new Group(groupId, sellerId, offerIds);
           expect(group.isValid()).is.true;
-          await groupHandler.connect(operator).createGroup(group);
+          await groupHandler.connect(operator).createGroup(group, condition);
         });
 
         it("should emit a BuyerCommitted event if user meets condition", async function () {
@@ -921,9 +921,9 @@ describe("IBosonExchangeHandler", function () {
           expect(condition.isValid()).to.be.true;
 
           // Create Group
-          group = new Group(groupId, sellerId, offerIds, condition);
+          group = new Group(groupId, sellerId, offerIds);
           expect(group.isValid()).is.true;
-          await groupHandler.connect(operator).createGroup(group);
+          await groupHandler.connect(operator).createGroup(group, condition);
         });
 
         it("should emit a BuyerCommitted event if user meets condition", async function () {
@@ -2847,26 +2847,6 @@ describe("IBosonExchangeHandler", function () {
             RevertReasons.VOUCHER_HAS_EXPIRED
           );
         });
-
-        //Unskip after deactivateBuyer function has been implemented
-        it.skip("New buyer's existing account is deactivated", async function () {
-          // Get the next buyer id
-          nextAccountId = await accountHandler.connect(rando).getNextAccountId();
-
-          // Create a buyer account for the new owner
-          buyer = mockBuyer(newOwner.address);
-          await accountHandler.connect(newOwner).createBuyer(buyer);
-
-          buyer.active = false;
-          buyer.id = nextAccountId;
-          // Update buyer account, deactivating it
-          await accountHandler.connect(newOwner).updateBuyer(buyer);
-
-          // Attempt to call onVoucherTransferred, expecting revert
-          await expect(
-            bosonVoucherClone.connect(buyer).transferFrom(buyer.address, newOwner.address, id)
-          ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
-        });
       });
     });
 
@@ -3777,9 +3757,9 @@ describe("IBosonExchangeHandler", function () {
         expect(condition.isValid()).to.be.true;
 
         // Create a new group
-        group = new Group(groupId, sellerId, offerIds, condition);
+        group = new Group(groupId, sellerId, offerIds);
         expect(group.isValid()).is.true;
-        await groupHandler.connect(operator).createGroup(group);
+        await groupHandler.connect(operator).createGroup(group, condition);
 
         // Mint enough tokens for the buyer
         await foreign20.connect(buyer).mint(buyer.address, condition.threshold);

@@ -34,9 +34,15 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * - number of offers exceeds maximum allowed number per group
      *
      * @param _group - the fully populated struct with group id set to 0x0
+     * @param _condition - the fully populated condition struct
      */
-    function createGroup(Group memory _group) external override groupsNotPaused nonReentrant {
-        createGroupInternal(_group);
+    function createGroup(Group memory _group, Condition calldata _condition)
+        external
+        override
+        groupsNotPaused
+        nonReentrant
+    {
+        createGroupInternal(_group, _condition);
     }
 
     /**
@@ -124,8 +130,11 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
             delete protocolLookups().offerIdIndexByGroup[groupId][offerId];
         }
 
+        // Get the condition
+        Condition storage condition = fetchCondition(_groupId);
+
         // Notify watchers of state change
-        emit GroupUpdated(_groupId, sellerId, group, msgSender());
+        emit GroupUpdated(_groupId, sellerId, group, condition, msgSender());
     }
 
     /**
@@ -162,10 +171,11 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         // Caller's seller id must match group seller id
         require(sellerId == group.sellerId, NOT_OPERATOR);
 
-        group.condition = _condition;
+        // Store new condition
+        storeCondition(_groupId, _condition);
 
         // Notify watchers of state change
-        emit GroupUpdated(group.id, sellerId, group, msgSender());
+        emit GroupUpdated(group.id, sellerId, group, _condition, msgSender());
     }
 
     /**
@@ -174,9 +184,22 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * @param _groupId - the id of the group to check
      * @return exists - the group was found
      * @return group - the group details. See {BosonTypes.Group}
+     * @return condition - the group's condition details. See {BosonTypes.Condition}
      */
-    function getGroup(uint256 _groupId) external view override returns (bool exists, Group memory group) {
-        return fetchGroup(_groupId);
+    function getGroup(uint256 _groupId)
+        external
+        view
+        override
+        returns (
+            bool exists,
+            Group memory group,
+            Condition memory condition
+        )
+    {
+        (exists, group) = fetchGroup(_groupId);
+        if (exists) {
+            condition = fetchCondition(_groupId);
+        }
     }
 
     /**

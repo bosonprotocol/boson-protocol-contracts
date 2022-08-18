@@ -39,7 +39,7 @@ describe("IBosonGroupHandler", function () {
   let offerIds, condition;
   let groupHandlerFacet_Factory;
   let method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
-  let groupStruct;
+  let groupStruct, conditionStruct;
   let offerIdsToAdd, offerIdsToRemove;
   let disputeResolver, disputeResolverFees, disputeResolverId;
   let voucherInitValues;
@@ -226,7 +226,7 @@ describe("IBosonGroupHandler", function () {
       condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
       expect(condition.isValid()).to.be.true;
 
-      group = new Group(nextGroupId, sellerId, offerIds, condition);
+      group = new Group(nextGroupId, sellerId, offerIds);
 
       expect(group.isValid()).is.true;
 
@@ -240,7 +240,7 @@ describe("IBosonGroupHandler", function () {
     context("👉 createGroup()", async function () {
       it("should emit a GroupCreated event", async function () {
         // Create a group, testing for the event
-        const tx = await groupHandler.connect(operator).createGroup(group);
+        const tx = await groupHandler.connect(operator).createGroup(group, condition);
         const txReceipt = await tx.wait();
 
         const event = getEvent(txReceipt, groupHandlerFacet_Factory, "GroupCreated");
@@ -257,7 +257,7 @@ describe("IBosonGroupHandler", function () {
 
       it("should update state", async function () {
         // Create a group
-        await groupHandler.connect(operator).createGroup(group);
+        await groupHandler.connect(operator).createGroup(group, condition);
 
         // Get the group as a struct
         [, groupStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
@@ -275,7 +275,7 @@ describe("IBosonGroupHandler", function () {
         group.id = "444";
 
         // Create a group, testing for the event
-        const tx = await groupHandler.connect(operator).createGroup(group);
+        const tx = await groupHandler.connect(operator).createGroup(group, condition);
         const txReceipt = await tx.wait();
 
         const event = getEvent(txReceipt, groupHandlerFacet_Factory, "GroupCreated");
@@ -302,7 +302,7 @@ describe("IBosonGroupHandler", function () {
         group.offerIds = [];
 
         // Create a group, testing for the event
-        await groupHandler.connect(operator).createGroup(group);
+        await groupHandler.connect(operator).createGroup(group, condition);
 
         // group should have no offers
         let returnedGroup;
@@ -315,7 +315,7 @@ describe("IBosonGroupHandler", function () {
         offer.sellerId = "123";
 
         // Create a group, testing for the event
-        const tx = await groupHandler.connect(operator).createGroup(group);
+        const tx = await groupHandler.connect(operator).createGroup(group, condition);
         const txReceipt = await tx.wait();
 
         const event = getEvent(txReceipt, groupHandlerFacet_Factory, "GroupCreated");
@@ -336,12 +336,16 @@ describe("IBosonGroupHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Groups]);
 
           // Attempt to create a group expecting revert
-          await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(RevertReasons.REGION_PAUSED);
+          await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
         });
 
         it("Caller not operator of any seller", async function () {
           // Attempt to Create a group, expecting revert
-          await expect(groupHandler.connect(rando).createGroup(group)).to.revertedWith(RevertReasons.NOT_OPERATOR);
+          await expect(groupHandler.connect(rando).createGroup(group, condition)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
         });
 
         it("Caller is not the seller of all offers", async function () {
@@ -355,7 +359,9 @@ describe("IBosonGroupHandler", function () {
           group.offerIds = ["2", "6"];
 
           // Attempt to create a group, expecting revert
-          await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(RevertReasons.NOT_OPERATOR);
+          await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
+            RevertReasons.NOT_OPERATOR
+          );
         });
 
         it("Offer does not exist", async function () {
@@ -363,24 +369,28 @@ describe("IBosonGroupHandler", function () {
           group.offerIds = ["1", "999"];
 
           // Attempt to create a group, expecting revert
-          await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+          await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
+            RevertReasons.NO_SUCH_OFFER
+          );
 
           // Invalid offer id
           group.offerIds = ["0", "4"];
 
           // Attempt to create a group, expecting revert
-          await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
+          await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
+            RevertReasons.NO_SUCH_OFFER
+          );
         });
 
         it("Offer is already part of another group", async function () {
           // create first group
-          await groupHandler.connect(operator).createGroup(group);
+          await groupHandler.connect(operator).createGroup(group, condition);
 
           // Add offer that is already part of another group
           group.offerIds = ["1", "2", "4"];
 
           // Attempt to create a group, expecting revert
-          await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(
+          await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
             RevertReasons.OFFER_MUST_BE_UNIQUE
           );
         });
@@ -390,7 +400,7 @@ describe("IBosonGroupHandler", function () {
           group.offerIds = ["1", "1", "4"];
 
           // Attempt to create a group, expecting revert
-          await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(
+          await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
             RevertReasons.OFFER_MUST_BE_UNIQUE
           );
         });
@@ -400,7 +410,7 @@ describe("IBosonGroupHandler", function () {
           group.offerIds = [...Array(101).keys()];
 
           // Attempt to create a group, expecting revert
-          await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(
+          await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
             RevertReasons.TOO_MANY_OFFERS
           );
         });
@@ -408,10 +418,9 @@ describe("IBosonGroupHandler", function () {
         it("Condition 'None' has some values in other fields", async function () {
           method = EvaluationMethod.None;
           condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
-          group.condition = condition;
 
           // Attempt to create the group, expecting revert
-          await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(
+          await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
             RevertReasons.INVALID_CONDITION_PARAMETERS
           );
         });
@@ -420,10 +429,9 @@ describe("IBosonGroupHandler", function () {
           method = EvaluationMethod.Threshold;
           tokenAddress = ethers.constants.AddressZero;
           condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
-          group.condition = condition;
 
           // Attempt to create the group, expecting revert
-          await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(
+          await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
             RevertReasons.INVALID_CONDITION_PARAMETERS
           );
         });
@@ -432,10 +440,9 @@ describe("IBosonGroupHandler", function () {
           method = EvaluationMethod.SpecificToken;
           tokenAddress = ethers.constants.AddressZero;
           condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
-          group.condition = condition;
 
           // Attempt to create the group, expecting revert
-          await expect(groupHandler.connect(operator).createGroup(group)).to.revertedWith(
+          await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
             RevertReasons.INVALID_CONDITION_PARAMETERS
           );
         });
@@ -445,7 +452,7 @@ describe("IBosonGroupHandler", function () {
     context("👉 addOffersToGroup()", async function () {
       beforeEach(async function () {
         // Create a group
-        await groupHandler.connect(operator).createGroup(group);
+        await groupHandler.connect(operator).createGroup(group, condition);
 
         // set the new fields
         offerIdsToAdd = ["1", "4"];
@@ -542,7 +549,7 @@ describe("IBosonGroupHandler", function () {
         it("Offer is already part of another group", async function () {
           // create another group
           group.offerIds = ["1"];
-          await groupHandler.connect(operator).createGroup(group);
+          await groupHandler.connect(operator).createGroup(group, condition);
 
           // Attempt to add offers to a group, expecting revert
           await expect(groupHandler.connect(operator).addOffersToGroup(group.id, offerIdsToAdd)).to.revertedWith(
@@ -604,7 +611,7 @@ describe("IBosonGroupHandler", function () {
       beforeEach(async function () {
         group.offerIds = ["1", "2", "3", "4", "5"];
         // Create a group
-        await groupHandler.connect(operator).createGroup(group);
+        await groupHandler.connect(operator).createGroup(group, condition);
 
         // set the new fields
         offerIdsToRemove = ["1", "4"];
@@ -736,7 +743,7 @@ describe("IBosonGroupHandler", function () {
             .connect(operator)
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
           group.offerIds = ["6"];
-          await groupHandler.connect(operator).createGroup(group);
+          await groupHandler.connect(operator).createGroup(group, condition);
 
           // Attempt to remove offers from a group, expecting revert
           await expect(
@@ -768,12 +775,6 @@ describe("IBosonGroupHandler", function () {
 
     context("👉 setGroupCondition()", async function () {
       beforeEach(async function () {
-        // Create a group
-        await groupHandler.connect(operator).createGroup(group);
-
-        // id of the current group and increment nextGroupId
-        id = nextGroupId++;
-
         // Required constructor params for Condition
         method = EvaluationMethod.SpecificToken;
         tokenType = TokenType.MultiToken;
@@ -784,6 +785,12 @@ describe("IBosonGroupHandler", function () {
 
         condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
         expect(condition.isValid()).to.be.true;
+
+        // Create a group
+        await groupHandler.connect(operator).createGroup(group, condition);
+
+        // id of the current group and increment nextGroupId
+        id = nextGroupId++;
 
         groupStruct = group.toStruct();
       });
@@ -799,8 +806,6 @@ describe("IBosonGroupHandler", function () {
         // Validate the instance
         expect(groupInstance.isValid()).to.be.true;
 
-        group.condition = condition;
-
         assert.equal(event.groupId.toString(), group.id, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
         assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
@@ -812,13 +817,10 @@ describe("IBosonGroupHandler", function () {
         await groupHandler.connect(operator).setGroupCondition(group.id, condition);
 
         // Get the group as a struct
-        [, groupStruct] = await groupHandler.connect(rando).getGroup(group.id);
-
-        // Parse into entity
-        const returnedGroup = Group.fromStruct(groupStruct);
+        [, groupStruct, conditionStruct] = await groupHandler.connect(rando).getGroup(group.id);
 
         // Returned values should match the input in setGroupCondition
-        expect(returnedGroup.condition.toString() === condition.toString()).is.true;
+        expect(Condition.fromStruct(conditionStruct).toString() === condition.toString()).is.true;
       });
 
       context("💔 Revert Reasons", async function () {
@@ -914,7 +916,7 @@ describe("IBosonGroupHandler", function () {
     context("👉 getGroup()", async function () {
       beforeEach(async function () {
         // Create a group
-        await groupHandler.connect(operator).createGroup(group);
+        await groupHandler.connect(operator).createGroup(group, condition);
 
         // id of the current group and increment nextGroupId
         id = nextGroupId++;
@@ -941,17 +943,38 @@ describe("IBosonGroupHandler", function () {
         [, groupStruct] = await groupHandler.connect(rando).getGroup(id);
 
         // Parse into entity
-        group = Group.fromStruct(groupStruct);
+        const returnedGroup = Group.fromStruct(groupStruct);
 
         // Validate
-        expect(group.isValid()).to.be.true;
+        expect(returnedGroup.isValid()).to.be.true;
+
+        // Returned values should match what is expected for the silently created group
+        for ([key, value] of Object.entries(group)) {
+          expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should return the details of the condition as a struct if found", async function () {
+        // Get the group as a struct
+        [, , conditionStruct] = await groupHandler.connect(rando).getGroup(id);
+
+        // Parse into entity
+        const returnedCondition = Condition.fromStruct(conditionStruct);
+
+        // Validate
+        expect(returnedCondition.isValid()).to.be.true;
+
+        // Returned values should match the condition
+        for ([key, value] of Object.entries(condition)) {
+          expect(JSON.stringify(returnedCondition[key]) === JSON.stringify(value)).is.true;
+        }
       });
     });
 
     context("👉 getNextGroupId()", async function () {
       beforeEach(async function () {
         // Create a group
-        await groupHandler.connect(operator).createGroup(group);
+        await groupHandler.connect(operator).createGroup(group, condition);
 
         // id of the current group and increment nextGroupId
         id = nextGroupId++;
@@ -971,7 +994,7 @@ describe("IBosonGroupHandler", function () {
       it("should be incremented after a group is created", async function () {
         // Create another group
         group.offerIds = ["1", "4"];
-        await groupHandler.connect(operator).createGroup(group);
+        await groupHandler.connect(operator).createGroup(group, condition);
 
         // What we expect the next group id to be
         expected = ++nextGroupId;

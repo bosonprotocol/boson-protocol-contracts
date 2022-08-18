@@ -318,7 +318,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         // Make sure the caller is buyer associated with the exchange
         checkBuyer(exchange.buyerId);
 
-        // Fetch teh dispute and dispute dates
+        // Fetch the dispute and dispute dates
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
 
         // make sure the dispute not expired already

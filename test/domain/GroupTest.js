@@ -1,7 +1,4 @@
-const hre = require("hardhat");
-const ethers = hre.ethers;
 const { expect } = require("chai");
-const { mockCondition } = require("./../utils/mock");
 const Group = require("../../scripts/domain/Group");
 
 /**
@@ -10,28 +7,24 @@ const Group = require("../../scripts/domain/Group");
 describe("Group", function () {
   // Suite-wide scope
   let group, object, promoted, clone, dehydrated, rehydrated, key, value, struct;
-  let id, sellerId, offerIds, condition;
+  let id, sellerId, offerIds;
 
   beforeEach(async function () {
     // Required constructor params for Group
     id = "2112";
     sellerId = "12";
     offerIds = ["1", "2", "4", "8"];
-
-    condition = mockCondition(ethers.constants.AddressZero);
-    expect(condition.isValid()).to.be.true;
   });
 
   context("📋 Constructor", async function () {
     it("Should allow creation of valid, fully populated Group instance", async function () {
       // Create a valid group
-      group = new Group(id, sellerId, offerIds, condition);
+      group = new Group(id, sellerId, offerIds);
 
       // Test each member
       expect(group.idIsValid()).is.true;
       expect(group.sellerIdIsValid()).is.true;
       expect(group.offerIdsIsValid()).is.true;
-      expect(group.conditionIsValid()).is.true;
 
       // Test entity
       expect(group.isValid()).is.true;
@@ -41,7 +34,7 @@ describe("Group", function () {
   context("📋 Field validations", async function () {
     beforeEach(async function () {
       // Create a valid group, then set fields in tests directly
-      group = new Group(id, sellerId, offerIds, condition);
+      group = new Group(id, sellerId, offerIds);
       expect(group.isValid()).is.true;
     });
 
@@ -124,39 +117,12 @@ describe("Group", function () {
       expect(group.offerIdsIsValid()).is.true;
       expect(group.isValid()).is.true;
     });
-
-    it("Always present, condition must be a valid Condition instance", async function () {
-      // Invalid field value
-      group.condition = "zedzdeadbaby";
-      expect(group.conditionIsValid()).is.false;
-      expect(group.isValid()).is.false;
-
-      // Invalid field value
-      group.condition = new Date();
-      expect(group.conditionIsValid()).is.false;
-      expect(group.isValid()).is.false;
-
-      // Invalid field value
-      group.condition = 12;
-      expect(group.conditionIsValid()).is.false;
-      expect(group.isValid()).is.false;
-
-      // Valid field value
-      group.condition = "126";
-      expect(group.conditionIsValid()).is.false;
-      expect(group.isValid()).is.false;
-
-      // Valid field value
-      group.condition = condition;
-      expect(group.conditionIsValid()).is.true;
-      expect(group.isValid()).is.true;
-    });
   });
 
   context("📋 Utility functions", async function () {
     beforeEach(async function () {
       // Create a valid group, then set fields in tests directly
-      group = new Group(id, sellerId, offerIds, condition);
+      group = new Group(id, sellerId, offerIds);
       expect(group.isValid()).is.true;
 
       // Get plain object
@@ -164,11 +130,10 @@ describe("Group", function () {
         id,
         sellerId,
         offerIds,
-        condition: condition.toObject(),
       };
 
       // Struct representation
-      struct = [id, sellerId, offerIds, condition.toStruct()];
+      struct = [id, sellerId, offerIds];
     });
 
     context("👉 Static", async function () {
