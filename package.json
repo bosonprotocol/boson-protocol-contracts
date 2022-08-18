@@ -40,7 +40,7 @@
     "manage-roles:test": "npx hardhat --network test run scripts/manage-roles.js >> logs/test.manage.roles.txt"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.7.1",
+    "@openzeppelin/contracts": "^4.7.3",
     "@openzeppelin/contracts-upgradeable": "^4.7.1"
   },
   "devDependencies": {
