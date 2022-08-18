@@ -20,6 +20,7 @@ string constant REGION_PAUSED = "This region of the protocol is currently paused
 string constant INVALID_ADDRESS = "Invalid address";
 string constant INVALID_STATE = "Invalid state";
 string constant ARRAY_LENGTH_MISMATCH = "Array length mismatch";
+string constant REENTRANCY_GUARD = "ReentrancyGuard: reentrant call";
 
 // Revert Reasons: Facet initializer related
 string constant ALREADY_INITIALIZED = "Already initialized";

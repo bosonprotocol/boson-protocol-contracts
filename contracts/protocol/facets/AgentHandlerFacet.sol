@@ -30,7 +30,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
      *
      * @param _agent - the fully populated struct with agent id set to 0x0
      */
-    function createAgent(Agent memory _agent) external agentsNotPaused {
+    function createAgent(Agent memory _agent) external agentsNotPaused nonReentrant {
         //Check for zero address
         require(_agent.wallet != address(0), INVALID_ADDRESS);
 
@@ -67,7 +67,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
      *
      * @param _agent - the fully populated agent struct
      */
-    function updateAgent(Agent memory _agent) external agentsNotPaused {
+    function updateAgent(Agent memory _agent) external agentsNotPaused nonReentrant {
         //Check for zero address
         require(_agent.wallet != address(0), INVALID_ADDRESS);
 

@@ -18,6 +18,7 @@ exports.RevertReasons = {
   INVALID_ADDRESS: "Invalid address",
   INVALID_STATE: "Invalid state",
   ARRAY_LENGTH_MISMATCH: "Array length mismatch",
+  REENTRANCY_GUARD: "ReentrancyGuard: reentrant call",
 
   // Facet initializer related
   ALREADY_INITIALIZED: "Already initialized",

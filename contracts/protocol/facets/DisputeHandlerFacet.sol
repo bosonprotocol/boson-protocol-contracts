@@ -39,7 +39,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function raiseDispute(uint256 _exchangeId) external override disputesNotPaused {
+    function raiseDispute(uint256 _exchangeId) external override disputesNotPaused nonReentrant {
         // Get the exchange, should be in redeemed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
         // Get the offer, which will exist if the exchange does
@@ -63,7 +63,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function retractDispute(uint256 _exchangeId) external override disputesNotPaused {
+    function retractDispute(uint256 _exchangeId) external override disputesNotPaused nonReentrant {
         // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
@@ -107,7 +107,12 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * @param _exchangeId - the id of the associated exchange
      * @param _newDisputeTimeout - new date when resolution period ends
      */
-    function extendDisputeTimeout(uint256 _exchangeId, uint256 _newDisputeTimeout) external override disputesNotPaused {
+    function extendDisputeTimeout(uint256 _exchangeId, uint256 _newDisputeTimeout)
+        external
+        override
+        disputesNotPaused
+        nonReentrant
+    {
         // Verify that the caller is the seller. Get exchange -> get offer id -> get seller id -> get operator address and compare to msg.sender
         // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
@@ -154,7 +159,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function expireDispute(uint256 _exchangeId) public override disputesNotPaused {
+    function expireDispute(uint256 _exchangeId) public override disputesNotPaused nonReentrant {
         // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
@@ -228,7 +233,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         bytes32 _sigR,
         bytes32 _sigS,
         uint8 _sigV
-    ) external override disputesNotPaused {
+    ) external override disputesNotPaused nonReentrant {
         // buyer should get at most 100%
         require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
 
@@ -307,7 +312,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function escalateDispute(uint256 _exchangeId) external payable override disputesNotPaused {
+    function escalateDispute(uint256 _exchangeId) external payable override disputesNotPaused nonReentrant {
         // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
@@ -366,7 +371,12 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * @param _exchangeId  - exchange id to resolve dispute
      * @param _buyerPercent - percentage of the pot that goes to the buyer
      */
-    function decideDispute(uint256 _exchangeId, uint256 _buyerPercent) external override disputesNotPaused {
+    function decideDispute(uint256 _exchangeId, uint256 _buyerPercent)
+        external
+        override
+        disputesNotPaused
+        nonReentrant
+    {
         // buyer should get at most 100%
         require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
 
@@ -397,7 +407,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function refuseEscalatedDispute(uint256 _exchangeId) external override disputesNotPaused {
+    function refuseEscalatedDispute(uint256 _exchangeId) external override disputesNotPaused nonReentrant {
         // Make sure the dispute is valid and the caller is the dispute resolver
         (Exchange storage exchange, Dispute storage dispute, DisputeDates storage disputeDates) = disputeResolverChecks(
             _exchangeId
@@ -424,7 +434,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      *
      * @param _exchangeId - the id of the associated exchange
      */
-    function expireEscalatedDispute(uint256 _exchangeId) external override disputesNotPaused {
+    function expireEscalatedDispute(uint256 _exchangeId) external override disputesNotPaused nonReentrant {
         // Get the exchange, should be in disputed state
         Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
