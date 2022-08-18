@@ -49,6 +49,7 @@ library FundsLib {
      * - if contract at token address does not support erc20 function transferFrom
      * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
      * - if seller has less funds available than sellerDeposit
+     * - received ERC20 token amount differs from the expected value
      *
      * @param _offerId - id of the offer with the details
      * @param _buyerId - id of the buyer
@@ -85,6 +86,7 @@ library FundsLib {
      * - offer price is in some ERC20 token and caller also send native currency
      * - if contract at token address does not support erc20 function transferFrom
      * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - received ERC20 token amount differs from the expected value
      *
      * @param _exchangeToken - address of the token (0x for native currency)
      * @param _value - value expected to receive
@@ -92,7 +94,7 @@ library FundsLib {
     function validateIncomingPayment(address _exchangeToken, uint256 _value) internal {
         if (_exchangeToken == address(0)) {
             // if transfer is in the native currency, msg.value must match offer price
-            require(msg.value == _value, INSUFFICIENT_VALUE_SENT);
+            require(msg.value == _value, INSUFFICIENT_VALUE_RECEIVED);
         } else {
             // when price is in an erc20 token, transferring the native currency is not allowed
             require(msg.value == 0, NATIVE_NOT_ALLOWED);
@@ -212,11 +214,15 @@ library FundsLib {
      * Reverts if:
      * - contract at token address does not support erc20 function transferFrom
      * - calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - received ERC20 token amount differs from the expected value
      *
      * @param _tokenAddress - address of the token to be transferred
      * @param _amount - amount to be transferred
      */
     function transferFundsToProtocol(address _tokenAddress, uint256 _amount) internal {
+        // protocol balance before the transfer
+        uint256 protocolTokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
+
         // transfer ERC20 tokens from the caller
         try IERC20(_tokenAddress).transferFrom(EIP712Lib.msgSender(), address(this), _amount) {} catch (
             bytes memory error
@@ -224,6 +230,12 @@ library FundsLib {
             string memory reason = error.length == 0 ? TOKEN_TRANSFER_FAILED : string(error);
             revert(reason);
         }
+
+        // protocol balance after the transfer
+        uint256 protocolTokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
+
+        // make sure that expected amount of tokens was transferred
+        require(protocolTokenBalanceAfter - protocolTokenBalanceBefore == _amount, INSUFFICIENT_VALUE_RECEIVED);
     }
 
     /**

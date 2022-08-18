@@ -88,3 +88,35 @@ contract Foreign20Malicious is Foreign20 {
         }
     }
 }
+
+/**
+ * @title Foreign20 that takes a fee during the transfer
+ *
+ *
+ * @notice Mock ERC-(20) for Unit Testing
+ */
+contract Foreign20WithFee is Foreign20 {
+    uint256 private fee = 3;
+
+    /**
+     * @dev See {ERC20-_beforeTokenTransfer}.
+     *
+     * Burn part of the transferred value
+     *
+     */
+    function _afterTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override {
+        if (to != address(0) && from != address(0)) {
+            uint256 _fee = (amount * fee) / 100;
+            _burn(to, _fee);
+        }
+        super._afterTokenTransfer(from, to, amount);
+    }
+
+    function setFee(uint256 _newFee) external {
+        fee = _newFee;
+    }
+}

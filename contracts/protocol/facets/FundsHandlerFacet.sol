@@ -34,6 +34,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      * - it receives some native currency (e.g. ETH), and the amount does not match msg.value
      * - if contract at token address does not support erc20 function transferFrom
      * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - received ERC20 token amount differs from the expected value
      *
      * @param _sellerId - id of the seller that will be credited
      * @param _tokenAddress - contract address of token that is being deposited (0 for native currency)
@@ -150,7 +151,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      */
     function getAvailableFunds(uint256 _entityId) external view override returns (Funds[] memory availableFunds) {
         // get list of token addresses for the entity
-        address[] memory tokenList = protocolLookups().tokenList[_entityId];
+        address[] storage tokenList = protocolLookups().tokenList[_entityId];
         availableFunds = new Funds[](tokenList.length);
 
         for (uint256 i = 0; i < tokenList.length; i++) {
