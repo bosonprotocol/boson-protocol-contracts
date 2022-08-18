@@ -97,26 +97,30 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
 
             // Offer should belong to the group
             (, uint256 groupId) = getGroupIdByOffer(offerId);
-            require(_groupId == groupId, OFFER_NOT_IN_GROUP);
+            require(
+                _groupId == groupId && protocolLookups().offerIdIndexByGroup[groupId][offerId] != 0,
+                OFFER_NOT_IN_GROUP
+            );
 
             // remove groupIdByOffer mapping
             delete protocolLookups().groupIdByOffer[offerId];
 
             uint256 len = group.offerIds.length;
-            // find offerId index in group.offerIds
-            uint256 index = protocolLookups().offerIdIndexByGroup[groupId][offerId];
+            //Get the index in the offerIds array, which is 1 less than the offerIdIndexByGroup index
+            uint256 index = protocolLookups().offerIdIndexByGroup[groupId][offerId] - 1;
 
-            if(index != len - 1) { // if index == len - 1 then only pop and delete are needed
-              // temporary variable to store the last offerId in the group
-              uint256 offerIdLocationMoved = group.offerIds[len - 1];
-              // replace offerId to be removed with the last offerId
-              group.offerIds[index] = offerIdLocationMoved;
-              // update the offer id index of the last offer id
-              protocolLookups().offerIdIndexByGroup[groupId][offerIdLocationMoved] = index;
+            if (index != len - 1) {
+                // if index == len - 1 then only pop and delete are needed
+                // Need to fill gap caused by delete if more than one element in storage array
+                uint256 offerIdToMove = group.offerIds[len - 1];
+                // Copy the last token in the array to this index to fill the gap
+                group.offerIds[index] = offerIdToMove;
+                //Reset index mapping. Should be index in offerIds array + 1
+                protocolLookups().offerIdIndexByGroup[groupId][offerIdToMove] = index;
             }
-            // remove last offerId from the list as it is now located in the index of the removed token
+            // Delete last offer id in the array, which was just moved to fill the gap
             group.offerIds.pop();
-            // delete index pointer for removed offerId
+            // Delete from index mapping
             delete protocolLookups().offerIdIndexByGroup[groupId][offerId];
         }
 

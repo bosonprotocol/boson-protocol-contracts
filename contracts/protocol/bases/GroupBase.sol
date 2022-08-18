@@ -130,11 +130,11 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
             // add to groupIdByOffer mapping
             protocolLookups().groupIdByOffer[offerId] = _groupId;
 
-            // store index of offerId in group.offerIds
-            protocolLookups().offerIdIndexByGroup[_groupId][offerId] = group.offerIds.length;
-
             // add to group struct
             group.offerIds.push(offerId);
+
+            // Set index mapping. Should be index in offerIds + 1
+            protocolLookups().offerIdIndexByGroup[_groupId][offerId] = group.offerIds.length;
         }
 
         // Notify watchers of state change

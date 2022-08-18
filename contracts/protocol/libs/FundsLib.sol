@@ -280,8 +280,9 @@ library FundsLib {
 
         // if the current amount of token is 0, the token address must be added to the token list
         if (pl.availableFunds[_entityId][_tokenAddress] == 0) {
-            pl.tokenIndexByAccount[_entityId][_tokenAddress] = pl.tokenList[_entityId].length;
             pl.tokenList[_entityId].push(_tokenAddress);
+            //Set index mapping. Should be index in tokenList array + 1
+            pl.tokenIndexByAccount[_entityId][_tokenAddress] = pl.tokenList[_entityId].length;
         }
 
         // update the available funds
@@ -317,19 +318,20 @@ library FundsLib {
             require(pl.tokenIndexByAccount[_entityId][_tokenAddress] != 0, TOKEN_NOT_FOUND);
 
             uint256 lastTokenIndex = pl.tokenList[_entityId].length - 1;
-          //Get the index in the tokenList array, which is 1 less than the tokenIndexByAccount index
+            //Get the index in the tokenList array, which is 1 less than the tokenIndexByAccount index
             uint256 index = pl.tokenIndexByAccount[_entityId][_tokenAddress] - 1;
-            if(index != lastTokenIndex) { // if index == len - 1 then only pop and delete are needed
-              // Need to fill gap caused by delete if more than one element in storage array
-              address tokenToMove = pl.tokenList[_entityId][lastTokenIndex];
-              // Copy the last token in the array to this index to fill the gap
-              pl.tokenList[_entityId][index] = tokenToMove;
-              //Reset index mapping. Should be index in tokenList array + 1
-              pl.tokenIndexByAccount[_entityId][tokenToMove] = index + 1;
+            if (index != lastTokenIndex) {
+                // if index == len - 1 then only pop and delete are needed
+                // Need to fill gap caused by delete if more than one element in storage array
+                address tokenToMove = pl.tokenList[_entityId][lastTokenIndex];
+                // Copy the last token in the array to this index to fill the gap
+                pl.tokenList[_entityId][index] = tokenToMove;
+                // Reset index mapping. Should be index in tokenList array + 1
+                pl.tokenIndexByAccount[_entityId][tokenToMove] = index + 1;
             }
-            // remove last token address from the list as it is now located in the index of the removed token
+            // Delete last token address in the array, which was just moved to fill the gap
             pl.tokenList[_entityId].pop();
-            // delete index pointer for removed token
+            //Delete from index mapping
             delete pl.tokenIndexByAccount[_entityId][_tokenAddress];
         }
     }

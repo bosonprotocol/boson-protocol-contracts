@@ -313,7 +313,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             ] - 1; //Get the index in the DisputeResolverFees array, which is 1 less than the disputeResolverFeeTokenIndex index
             uint256 lastTokenIndex = disputeResolverFees.length - 1;
 
-            if (disputeResolverFeeArrayIndex != lastTokenIndex) { // if index == len - 1 then only pop and delete are needed
+            if (disputeResolverFeeArrayIndex != lastTokenIndex) {
+                // if index == len - 1 then only pop and delete are needed
                 //Need to fill gap caused by delete if more than one element in storage array
                 DisputeResolverFee memory disputeResolverFeeToMove = disputeResolverFees[lastTokenIndex];
                 disputeResolverFees[disputeResolverFeeArrayIndex] = disputeResolverFeeToMove; //Copy the last DisputeResolverFee struct in the array to this index to fill the gap
