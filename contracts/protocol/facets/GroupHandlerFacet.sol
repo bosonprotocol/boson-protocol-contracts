@@ -103,10 +103,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
 
             // Offer should belong to the group
             (, uint256 groupId) = getGroupIdByOffer(offerId);
-            require(
-                _groupId == groupId && protocolLookups().offerIdIndexByGroup[groupId][offerId] != 0,
-                OFFER_NOT_IN_GROUP
-            );
+            require(_groupId == groupId, OFFER_NOT_IN_GROUP);
 
             // remove groupIdByOffer mapping
             delete protocolLookups().groupIdByOffer[offerId];

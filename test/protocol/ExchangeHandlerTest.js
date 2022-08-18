@@ -3275,7 +3275,6 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("price, sellerDeposit and disputeResolverId must be 0 if is an absolute zero offer", async function () {
-        // aq
         // Set protocolFee to zero so we don't get the error AGENT_FEE_AMOUNT_TOO_HIGH
         protocolFeePercentage = "0";
         await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);

@@ -136,11 +136,11 @@ library ProtocolLib {
         mapping(uint256 => mapping(address => uint256)) disputeResolverFeeTokenIndex;
         // agent wallet address => agentId
         mapping(address => uint256) agentIdByWallet;
-        // seller/buyer id => token address => amount
+        // account id => token address => amount
         mapping(uint256 => mapping(address => uint256)) availableFunds;
-        // seller/buyer id => all tokens with balance > 0
+        // account id => all tokens with balance > 0
         mapping(uint256 => address[]) tokenList;
-        // seller/buyer id => token address => index on token addresses list
+        // account id => token address => index on token addresses list
         mapping(uint256 => mapping(address => uint256)) tokenIndexByAccount;
         // seller id => cloneAddress
         mapping(uint256 => address) cloneAddress;

@@ -294,7 +294,6 @@ library FundsLib {
      *
      * Reverts if:
      * - available funds is less than amount to be decreased
-     * - availableFunds are totally emptied but token index is not found
      *
      * @param _entityId - seller or buyer id, or 0 for protocol
      * @param _tokenAddress - funds contract address or zero address for native currency
@@ -317,8 +316,6 @@ library FundsLib {
 
             // if availableFunds are totally emptied, the token address is removed from the seller's tokenList
             if (availableFunds == _amount) {
-                require(pl.tokenIndexByAccount[_entityId][_tokenAddress] != 0, TOKEN_NOT_FOUND);
-
                 uint256 lastTokenIndex = pl.tokenList[_entityId].length - 1;
                 //Get the index in the tokenList array, which is 1 less than the tokenIndexByAccount index
                 uint256 index = pl.tokenIndexByAccount[_entityId][_tokenAddress] - 1;

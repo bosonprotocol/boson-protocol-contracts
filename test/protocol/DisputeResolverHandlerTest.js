@@ -1356,6 +1356,7 @@ describe("DisputeResolverHandler", function () {
           .connect(rando)
           .getDisputeResolver(disputeResolver.id);
 
+        // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
         let returnedDisputeResolverFeeList = DisputeResolverFeeList.fromStruct(disputeResolverFeeListStruct);
         expect(returnedDisputeResolver.isValid()).is.true;
