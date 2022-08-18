@@ -150,7 +150,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
      */
     function getAvailableFunds(uint256 _entityId) external view override returns (Funds[] memory availableFunds) {
         // get list of token addresses for the entity
-        address[] memory tokenList = protocolLookups().tokenList[_entityId];
+        address[] storage tokenList = protocolLookups().tokenList[_entityId];
         availableFunds = new Funds[](tokenList.length);
 
         for (uint256 i = 0; i < tokenList.length; i++) {

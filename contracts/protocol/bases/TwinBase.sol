@@ -67,7 +67,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             }
 
             // Get all ranges of twins that belong to the seller and to the same token address of the new twin to validate if range is available
-            TokenRange[] memory twinRanges = protocolLookups().twinRangesBySeller[sellerId][_twin.tokenAddress];
+            TokenRange[] storage twinRanges = protocolLookups().twinRangesBySeller[sellerId][_twin.tokenAddress];
 
             // Checks if token range isn't being used in any other twin of seller
             for (uint256 i = 0; i < twinRanges.length; i++) {

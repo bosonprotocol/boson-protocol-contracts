@@ -290,7 +290,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * @return offerVoided - true if voided, false otherwise
      */
     function isOfferVoided(uint256 _offerId) public view override returns (bool exists, bool offerVoided) {
-        Offer memory offer;
+        Offer storage offer;
         (exists, offer) = fetchOffer(_offerId);
         offerVoided = offer.voided;
     }

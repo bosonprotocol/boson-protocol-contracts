@@ -489,7 +489,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @return state - the exchange state. See {BosonTypes.ExchangeStates}
      */
     function getExchangeState(uint256 _exchangeId) external view override returns (bool exists, ExchangeState state) {
-        Exchange memory exchange;
+        Exchange storage exchange;
         (exists, exchange) = fetchExchange(_exchangeId);
         if (exists) state = exchange.state;
     }
