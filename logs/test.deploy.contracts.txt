@@ -7092,3 +7092,98 @@ Boson Protocol V2 Contract Suite Deployer
 📋 Verifying on test env BosonVoucher Beacon
 
 📋 Verifying on test env BosonVoucher Proxy
+Downloading compiler 0.8.9
+Compiled 116 Solidity files successfully
+Nothing to compile
+--------------------------------------------------------------------------------
+Boson Protocol V2 Contract Suite Deployer
+--------------------------------------------------------------------------------
+⛓  Network: test
+📅 Fri Aug 19 2022 12:13:26 GMT+0000 (Coordinated Universal Time)
+🔱 Deployer account:  0xd3aE0500e21008c89CA4746be7522340C67F5730
+--------------------------------------------------------------------------------
+💎 Deploying AccessController, ProtocolDiamond, and Diamond utility facets...
+✅ AccessController deployed to: 0x5841FBe71292e79CF2965bB4153C06dc0C672821
+✅ DiamondLoupeFacet deployed to: 0x76B152c18815b2C7519209278040227D3BF2636a
+✅ DiamondCutFacet deployed to: 0xAcba06E9BE32A8028Dd2ce99a534AFA104c4cd78
+✅ ERC165Facet deployed to: 0xf7F4E75A6Dc964883a8661Fb8A57cA21FfECd20f
+✅ ProtocolDiamond deployed to: 0x1698f11245E316318E0d54DC157E980166c9245C
+
+💎 Granting UPGRADER role...
+
+💎 Deploying and initializing config facet...
+✅ ConfigHandlerFacet deployed to: 0x0f54b4aeC1b64Be879F664603D81c66f4d12BA66
+
+💎 Deploying and initializing protocol handler facets...
+✅ AccountHandlerFacet deployed to: 0x545D7E6e47D583CDc09dE4D3F45D7c3a523F848B
+✅ SellerHandlerFacet deployed to: 0x52aebb0cBA704146AEf57392fC7527aF147acBe0
+✅ BuyerHandlerFacet deployed to: 0x6eC25D43Ad69bA036edce23E15e1c43945E46e1c
+✅ DisputeResolverHandlerFacet deployed to: 0x630Ae237AD2917d6705F390B6f39e85Db89FD1DB
+✅ AgentHandlerFacet deployed to: 0x8a997a152B4C313Ad6724Bf2a9A8648b65390390
+✅ BundleHandlerFacet deployed to: 0xD02a44af9e6B1642A393A7b0B89D8A2a896F24c9
+✅ DisputeHandlerFacet deployed to: 0x18773550ECDa21Bbb1B83c5DE3C49A80f1814dC8
+✅ ExchangeHandlerFacet deployed to: 0xBD7d863330F2349656Ca2C3f4017e2b34d0b52EC
+✅ FundsHandlerFacet deployed to: 0x71f444F06C0FcC3b15068bDA89562859BC5Ca8e0
+✅ GroupHandlerFacet deployed to: 0xBD810BD302B8C1F91F672Dc844E60Be0f3e84b9C
+✅ MetaTransactionsHandlerFacet deployed to: 0xf30143C06322fD3b9BD211C7Be260Cb759c8F1AE
+✅ OfferHandlerFacet deployed to: 0x1426512cD6f2AC9eCF3Bf001F1E87dA6A7574CA5
+✅ OrchestrationHandlerFacet deployed to: 0xE0108bB56A4367e75ba55093172138f4FC0E79a6
+✅ TwinHandlerFacet deployed to: 0x98633a3911A80D5f7341E60c11817dFB8dA98eb9
+✅ PauseHandlerFacet deployed to: 0xCFc9A475cCb4c20C186e6Fb2D0bd96774ddf63E9
+
+⧉ Deploying Protocol Client implementation/proxy pairs...
+✅ BosonVoucher Logic deployed to: 0x3533BbE08D2580e6fd1DfEC98C4CbeB8B0e5E5a7
+✅ BosonVoucher Beacon deployed to: 0x3FfD70bE3E58442dEa30b09B705Ae4B630124345
+✅ BosonVoucher Proxy deployed to: 0x4749207840CB0C18F0263E7f072f3d96CF64A739
+
+🌐️Configuring and granting roles...
+✅ ConfigHandlerFacet updated with remaining post-initialization config.
+✅ Granted roles to appropriate contract and addresses.
+
+📋 Verifying on test env AccessController
+
+📋 Verifying on test env DiamondLoupeFacet
+
+📋 Verifying on test env DiamondCutFacet
+
+📋 Verifying on test env ERC165Facet
+
+📋 Verifying on test env ProtocolDiamond
+
+📋 Verifying on test env ConfigHandlerFacet
+
+📋 Verifying on test env AccountHandlerFacet
+
+📋 Verifying on test env SellerHandlerFacet
+
+📋 Verifying on test env BuyerHandlerFacet
+
+📋 Verifying on test env DisputeResolverHandlerFacet
+
+📋 Verifying on test env AgentHandlerFacet
+
+📋 Verifying on test env BundleHandlerFacet
+
+📋 Verifying on test env DisputeHandlerFacet
+
+📋 Verifying on test env ExchangeHandlerFacet
+
+📋 Verifying on test env FundsHandlerFacet
+
+📋 Verifying on test env GroupHandlerFacet
+
+📋 Verifying on test env MetaTransactionsHandlerFacet
+
+📋 Verifying on test env OfferHandlerFacet
+
+📋 Verifying on test env OrchestrationHandlerFacet
+
+📋 Verifying on test env TwinHandlerFacet
+
+📋 Verifying on test env PauseHandlerFacet
+
+📋 Verifying on test env BosonVoucher Logic
+
+📋 Verifying on test env BosonVoucher Beacon
+
+📋 Verifying on test env BosonVoucher Proxy
