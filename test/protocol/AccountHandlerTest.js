@@ -101,6 +101,7 @@ describe("IBosonAccountHandler", function () {
         maxAllowedSellers: 100,
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
+        maxResolutionPeriod: oneMonth,
       },
       // Protocol fees
       {

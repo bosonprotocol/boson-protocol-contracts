@@ -56,6 +56,8 @@ library ProtocolLib {
         uint16 maxTotalOfferFeePercentage;
         // limit the max royalty percentage that can be set by the seller
         uint16 maxRoyaltyPecentage;
+        // limit on the resolution period that a seller can specify
+        uint256 maxResolutionPeriod;
     }
 
     // Protocol fees storage
