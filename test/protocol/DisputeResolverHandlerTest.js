@@ -1474,6 +1474,80 @@ describe("DisputeResolverHandler", function () {
           .withArgs(disputeResolver.id, feeTokenAddressesToRemove, admin.address);
       });
 
+      it("should update the DisputeResolverFee state only if the first DisputeResolverFee is removed", async function () {
+        feeTokenAddressesToRemove = [other1.address];
+
+        // Remove fees from dispute resolver
+        await accountHandler
+          .connect(admin)
+          .removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove);
+
+        // Get the dispute resolver data as structs
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
+          .connect(rando)
+          .getDisputeResolver(disputeResolver.id);
+
+        // Parse into entity
+        let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
+        let returnedDisputeResolverFeeList = DisputeResolverFeeList.fromStruct(disputeResolverFeeListStruct);
+        expect(returnedDisputeResolver.isValid()).is.true;
+        expect(returnedDisputeResolverFeeList.isValid()).is.true;
+
+        // Returned values should match expectedDisputeResolver
+        for ([key, value] of Object.entries(expectedDisputeResolver)) {
+          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
+        }
+
+        const expectedDisputeResolverFees = [
+          new DisputeResolverFee(other3.address, "MockToken3", "300"),
+          new DisputeResolverFee(other2.address, "MockToken2", "200"),
+        ];
+
+        const expectedDisputeResolverFeeList = new DisputeResolverFeeList(expectedDisputeResolverFees);
+        assert.equal(
+          returnedDisputeResolverFeeList.toString(),
+          expectedDisputeResolverFeeList.toString(),
+          "Dispute Resolver Fee List is incorrect"
+        );
+      });
+
+      it("should update state only if the last DisputeResolverFee is removed", async function () {
+        feeTokenAddressesToRemove = [other3.address];
+
+        // Remove fees from dispute resolver
+        await accountHandler
+          .connect(admin)
+          .removeFeesFromDisputeResolver(disputeResolver.id, feeTokenAddressesToRemove);
+
+        // Get the dispute resolver data as structs
+        [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
+          .connect(rando)
+          .getDisputeResolver(disputeResolver.id);
+
+        // Parse into entity
+        let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
+        let returnedDisputeResolverFeeList = DisputeResolverFeeList.fromStruct(disputeResolverFeeListStruct);
+        expect(returnedDisputeResolver.isValid()).is.true;
+        expect(returnedDisputeResolverFeeList.isValid()).is.true;
+
+        // Returned values should match expectedDisputeResolver
+        for ([key, value] of Object.entries(expectedDisputeResolver)) {
+          expect(JSON.stringify(returnedDisputeResolver[key]) === JSON.stringify(value)).is.true;
+        }
+
+        const expectedDisputeResolverFees = [
+          new DisputeResolverFee(other1.address, "MockToken1", "100"),
+          new DisputeResolverFee(other2.address, "MockToken2", "200"),
+        ];
+
+        const expectedDisputeResolverFeeList = new DisputeResolverFeeList(expectedDisputeResolverFees);
+        assert.equal(
+          returnedDisputeResolverFeeList.toString(),
+          expectedDisputeResolverFeeList.toString(),
+          "Dispute Resolver Fee List is incorrect"
+        );
+      });
+
       it("should update DisputeResolverFee state only if some DisputeResolverFees are removed", async function () {
         feeTokenAddressesToRemove = [other1.address, other3.address];
 
@@ -1500,10 +1574,10 @@ describe("DisputeResolverHandler", function () {
 
         const expectedisputeResolverFees = [new DisputeResolverFee(other2.address, "MockToken2", "200")];
 
-        const expecteDdisputeResolverFeeList = new DisputeResolverFeeList(expectedisputeResolverFees);
+        const expectedDisputeResolverFeeList = new DisputeResolverFeeList(expectedisputeResolverFees);
         assert.equal(
           returnedDisputeResolverFeeList.toString(),
-          expecteDdisputeResolverFeeList.toString(),
+          expectedDisputeResolverFeeList.toString(),
           "Dispute Resolver Fee List is incorrect"
         );
 
@@ -1536,10 +1610,10 @@ describe("DisputeResolverHandler", function () {
 
         const expectedisputeResolverFees = [];
 
-        const expecteDdisputeResolverFeeList = new DisputeResolverFeeList(expectedisputeResolverFees);
+        const expectedDisputeResolverFeeList = new DisputeResolverFeeList(expectedisputeResolverFees);
         assert.equal(
           returnedDisputeResolverFeeList.toString(),
-          expecteDdisputeResolverFeeList.toString(),
+          expectedDisputeResolverFeeList.toString(),
           "Dispute Resolver Fee List is incorrect"
         );
 

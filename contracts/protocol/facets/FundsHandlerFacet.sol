@@ -221,7 +221,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             uint256 len = maxTokensPerWithdrawal <= tokenList.length ? maxTokensPerWithdrawal : tokenList.length;
 
             for (uint256 i = 0; i < len; i++) {
-                // get available fnds from storage
+                // get available funds from storage
                 uint256 availableFunds = protocolLookups().availableFunds[_entityId][tokenList[i]];
                 FundsLib.transferFundsFromProtocol(_entityId, tokenList[i], _destinationAddress, availableFunds);
             }
