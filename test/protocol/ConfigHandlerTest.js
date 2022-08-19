@@ -871,6 +871,20 @@ describe("IBosonConfigHandler", function () {
               configHandler.connect(rando).setAuthTokenContract(AuthTokenType.ENS, authTokenContract.address)
             ).to.revertedWith(RevertReasons.ACCESS_DENIED);
           });
+
+          it("_authTokenType is None", async function () {
+            // Attempt to set new auth token contract, expecting revert
+            await expect(
+              configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.None, authTokenContract.address)
+            ).to.revertedWith(RevertReasons.INVALID_AUTH_TOKEN_TYPE);
+          });
+
+          it("_authTokenContract is the zero address", async function () {
+            // Attempt to set new auth token contract, expecting revert
+            await expect(
+              configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.ENS, ethers.constants.AddressZero)
+            ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+          });
         });
       });
 
