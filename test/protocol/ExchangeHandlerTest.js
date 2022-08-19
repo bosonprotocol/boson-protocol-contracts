@@ -91,8 +91,8 @@ describe("IBosonExchangeHandler", function () {
   let voucherRedeemableFrom;
   let fulfillmentPeriod, voucherValid;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
-  let voucher, voucherStruct, validUntilDate;
-  let exchange, finalizedDate, state, exchangeStruct, response, exists;
+  let voucher, validUntilDate;
+  let exchange, response, exists;
   let disputeResolver, disputeResolverFees;
   let foreign20, foreign721, foreign1155;
   let twin20, twin721, twin1155, twinIds, bundle, balance, owner;

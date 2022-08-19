@@ -92,7 +92,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         require(authorizeCommit(_buyer, offer, exchangeId), CANNOT_COMMIT);
 
         // Fetch or create buyer
-        (uint256 buyerId, address buyerWallet) = getValidBuyer(_buyer);
+        uint256 buyerId = getValidBuyer(_buyer);
 
         // Encumber funds before creating the exchange
         FundsLib.encumberFunds(_offerId, buyerId);
@@ -130,7 +130,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Issue voucher
         protocolLookups().voucherCount[buyerId]++;
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
-        bosonVoucher.issueVoucher(exchangeId, buyerWallet);
+        bosonVoucher.issueVoucher(exchangeId, _buyer);
 
         // Notify watchers of state change
         emit BuyerCommitted(_offerId, buyerId, exchangeId, exchange, voucher, msgSender());
@@ -424,7 +424,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         protocolLookups().voucherCount[exchange.buyerId]--;
 
         // Fetch or create buyer
-        (uint256 buyerId, ) = getValidBuyer(_newBuyer);
+        uint256 buyerId = getValidBuyer(_newBuyer);
 
         // Update buyer id for the exchange
         exchange.buyerId = buyerId;
@@ -716,9 +716,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _buyer - the buyer address
      * @return buyerId - the buyer id
-     * @return buyerWallet - the buyer wallet account
      */
-    function getValidBuyer(address payable _buyer) internal returns (uint256 buyerId, address buyerWallet) {
+    function getValidBuyer(address payable _buyer) internal returns (uint256 buyerId) {
         // Find or create the account associated with the specified buyer address
         bool exists;
         (exists, buyerId) = getBuyerIdByWallet(_buyer);
@@ -728,15 +727,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             Buyer memory newBuyer = Buyer(0, _buyer, true);
             createBuyerInternal(newBuyer);
             buyerId = newBuyer.id;
-            buyerWallet = newBuyer.wallet;
         } else {
             // Fetch the existing buyer account
             (, Buyer storage buyer) = fetchBuyer(buyerId);
 
             // Make sure buyer account is active
             require(buyer.active, MUST_BE_ACTIVE);
-
-            buyerWallet = buyer.wallet;
         }
     }
 
