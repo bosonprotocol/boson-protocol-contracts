@@ -10,7 +10,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
  *
  * @notice This is the interface for the Boson Protocol ERC-721 Voucher NFT contract.
  *
- * The ERC-165 identifier for this interface is: 0x2b2ac434
+ * The ERC-165 identifier for this interface is: 0x68795ef2
  */
 interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     event ContractURIChanged(string contractURI);
