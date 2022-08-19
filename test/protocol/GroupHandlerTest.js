@@ -136,7 +136,7 @@ describe("IBosonGroupHandler", function () {
         support = await erc165.supportsInterface(InterfaceIds.IBosonGroupHandler);
 
         // Test
-        await expect(support, "IBosonGroupHandler interface not supported").is.true;
+        expect(support, "IBosonGroupHandler interface not supported").is.true;
       });
     });
   });
@@ -738,6 +738,47 @@ describe("IBosonGroupHandler", function () {
 
       it("should update state", async function () {
         // Remove offer from a group,
+        await groupHandler.connect(operator).removeOffersFromGroup(group.id, offerIdsToRemove);
+
+        // Get the group as a struct
+        [, groupStruct] = await groupHandler.connect(rando).getGroup(group.id);
+
+        // Parse into entity
+        const returnedGroup = Group.fromStruct(groupStruct);
+
+        // Returned values should  reflect the changes done with removeOffersFromGroup
+        for ([key, value] of Object.entries(group)) {
+          expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should delete even when offerIds length is 1", async function () {
+        // Put 4 back in the group
+        group.offerIds.push("4");
+
+        // Remove offer from a group,
+        await groupHandler.connect(operator).removeOffersFromGroup(group.id, ["1"]);
+
+        // Get the group as a struct
+        [, groupStruct] = await groupHandler.connect(rando).getGroup(group.id);
+
+        // Parse into entity
+        const returnedGroup = Group.fromStruct(groupStruct);
+
+        // Returned values should  reflect the changes done with removeOffersFromGroup
+        for ([key, value] of Object.entries(group)) {
+          expect(JSON.stringify(returnedGroup[key]) === JSON.stringify(value)).is.true;
+        }
+      });
+
+      it("should delete even when offerIds length - 1 is different from index", async function () {
+        // length - 1 is different from index when index isn't the first or last element in the list
+        // Also remove token 5 for offerIdsToRemove to have length = 3
+        offerIdsToRemove.push("5");
+        // Remove 5 from expected offerIds and change order because of how removing is implemented
+        group.offerIds = ["3", "2"];
+
+        // Remove offer from a group
         await groupHandler.connect(operator).removeOffersFromGroup(group.id, offerIdsToRemove);
 
         // Get the group as a struct
