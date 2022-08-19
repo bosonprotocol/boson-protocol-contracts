@@ -39,7 +39,7 @@ abstract contract ClientBase is BosonTypes {
      * @return offer - the offer associated with the _offerId
      */
     function getBosonOffer(uint256 _exchangeId) internal view returns (bool exists, Offer memory offer) {
-        ClientLib.ProxyStorage memory ps = ClientLib.proxyStorage();
+        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
         (, Exchange memory exchange, ) = IBosonExchangeHandler(ps.protocolDiamond).getExchange(_exchangeId);
         (exists, offer, , , , ) = IBosonOfferHandler(ps.protocolDiamond).getOffer(exchange.offerId);
     }
