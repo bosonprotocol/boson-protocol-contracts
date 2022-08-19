@@ -293,6 +293,8 @@ library FundsLib {
         // if the current amount of token is 0, the token address must be added to the token list
         if (pl.availableFunds[_entityId][_tokenAddress] == 0) {
             pl.tokenList[_entityId].push(_tokenAddress);
+            //Set index mapping. Should be index in tokenList array + 1
+            pl.tokenIndexByAccount[_entityId][_tokenAddress] = pl.tokenList[_entityId].length;
         }
 
         // update the available funds
@@ -314,24 +316,34 @@ library FundsLib {
         address _tokenAddress,
         uint256 _amount
     ) internal {
-        ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
+        if (_amount > 0) {
+            ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
 
-        // get available fnds from storage
-        uint256 availableFunds = pl.availableFunds[_entityId][_tokenAddress];
+            // get available funds from storage
+            uint256 availableFunds = pl.availableFunds[_entityId][_tokenAddress];
 
-        // make sure that seller has enough funds in the pool and reduce the available funds
-        require(availableFunds >= _amount, INSUFFICIENT_AVAILABLE_FUNDS);
-        pl.availableFunds[_entityId][_tokenAddress] = availableFunds - _amount;
+            // make sure that seller has enough funds in the pool and reduce the available funds
+            require(availableFunds >= _amount, INSUFFICIENT_AVAILABLE_FUNDS);
+            pl.availableFunds[_entityId][_tokenAddress] = availableFunds - _amount;
 
-        // if availableFunds are totally emptied, the token address is removed from the seller's tokenList
-        if (availableFunds == _amount) {
-            uint256 len = pl.tokenList[_entityId].length;
-            for (uint256 i = 0; i < len; i++) {
-                if (pl.tokenList[_entityId][i] == _tokenAddress) {
-                    pl.tokenList[_entityId][i] = pl.tokenList[_entityId][len - 1];
-                    pl.tokenList[_entityId].pop();
-                    break;
+            // if availableFunds are totally emptied, the token address is removed from the seller's tokenList
+            if (availableFunds == _amount) {
+                uint256 lastTokenIndex = pl.tokenList[_entityId].length - 1;
+                //Get the index in the tokenList array, which is 1 less than the tokenIndexByAccount index
+                uint256 index = pl.tokenIndexByAccount[_entityId][_tokenAddress] - 1;
+                if (index != lastTokenIndex) {
+                    // if index == len - 1 then only pop and delete are needed
+                    // Need to fill gap caused by delete if more than one element in storage array
+                    address tokenToMove = pl.tokenList[_entityId][lastTokenIndex];
+                    // Copy the last token in the array to this index to fill the gap
+                    pl.tokenList[_entityId][index] = tokenToMove;
+                    // Reset index mapping. Should be index in tokenList array + 1
+                    pl.tokenIndexByAccount[_entityId][tokenToMove] = index + 1;
                 }
+                // Delete last token address in the array, which was just moved to fill the gap
+                pl.tokenList[_entityId].pop();
+                //Delete from index mapping
+                delete pl.tokenIndexByAccount[_entityId][_tokenAddress];
             }
         }
     }

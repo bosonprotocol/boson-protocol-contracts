@@ -1667,38 +1667,96 @@ describe("IBosonFundsHandler", function () {
         ).to.eql(sellerDeposit, "Native currency seller available funds mismatch");
       });
 
-      it("if seller's available funds drop to 0, token should be removed from the tokenList", async function () {
-        // seller's available funds
-        let sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-        expect(sellersAvailableFunds.funds.length).to.eql(2, "Funds length mismatch");
-        expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
-          mockToken.address,
-          "Token contract address mismatch"
-        );
-        expect(sellersAvailableFunds.funds[1].tokenAddress).to.eql(
-          ethers.constants.AddressZero,
-          "Native currency address mismatch"
-        );
+      context("seller's available funds drop to 0", async function () {
+        it("token should be removed from the tokenList", async function () {
+          // seller's available funds
+          let sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+          expect(sellersAvailableFunds.funds.length).to.eql(2, "Funds length mismatch");
+          expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
+            mockToken.address,
+            "Token contract address mismatch"
+          );
+          expect(sellersAvailableFunds.funds[1].tokenAddress).to.eql(
+            ethers.constants.AddressZero,
+            "Native currency address mismatch"
+          );
 
-        // Commit to offer with token twice to empty the seller's pool
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+          // Commit to offer with token twice to empty the seller's pool
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
 
-        // Token address should be removed and have only native currency in the list
-        sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-        expect(sellersAvailableFunds.funds.length).to.eql(1, "Funds length mismatch");
-        expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
-          ethers.constants.AddressZero,
-          "Native currency address mismatch"
-        );
+          // Token address should be removed and have only native currency in the list
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+          expect(sellersAvailableFunds.funds.length).to.eql(1, "Funds length mismatch");
+          expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
+            ethers.constants.AddressZero,
+            "Native currency address mismatch"
+          );
 
-        // Commit to offer with token twice to empty the seller's pool
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
-        await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
+          // Commit to offer with token twice to empty the seller's pool
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
 
-        // Seller available funds must be empty
-        sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
-        expect(sellersAvailableFunds.funds.length).to.eql(0, "Funds length mismatch");
+          // Seller available funds must be empty
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+          expect(sellersAvailableFunds.funds.length).to.eql(0, "Funds length mismatch");
+        });
+
+        it("token should be removed from the token list even when list length - 1 is different from index", async function () {
+          // length - 1 is different from index when index isn't the first or last element in the list
+          // Deploy a new mock token
+          let TokenContractFactory = await ethers.getContractFactory("Foreign20");
+          const otherToken = await TokenContractFactory.deploy({ gasLimit });
+          await otherToken.deployed();
+
+          // Add otherToken to DR fees
+          await accountHandler
+            .connect(adminDR)
+            .addFeesToDisputeResolver(disputeResolver.id, [
+              new DisputeResolverFee(otherToken.address, "Other Token", "0"),
+            ]);
+
+          // top up seller's and buyer's account
+          await otherToken.mint(operator.address, sellerDeposit);
+
+          // approve protocol to transfer the tokens
+          await otherToken.connect(operator).approve(protocolDiamond.address, sellerDeposit);
+
+          // deposit to seller's pool
+          await fundsHandler.connect(operator).depositFunds(seller.id, otherToken.address, sellerDeposit);
+
+          // seller's available funds
+          let sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+          expect(sellersAvailableFunds.funds.length).to.eql(3, "Funds length mismatch");
+          expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
+            mockToken.address,
+            "Token contract address mismatch"
+          );
+          expect(sellersAvailableFunds.funds[1].tokenAddress).to.eql(
+            ethers.constants.AddressZero,
+            "Native currency address mismatch"
+          );
+          expect(sellersAvailableFunds.funds[2].tokenAddress).to.eql(
+            otherToken.address,
+            "Boson token address mismatch"
+          );
+
+          // Commit to offer with token twice to empty the seller's pool
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
+
+          // Native currency address should be removed and have only mock token and other token in the list
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
+          expect(sellersAvailableFunds.funds.length).to.eql(2, "Funds length mismatch");
+          expect(sellersAvailableFunds.funds[0].tokenAddress).to.eql(
+            mockToken.address,
+            "Token contract address mismatch"
+          );
+          expect(sellersAvailableFunds.funds[1].tokenAddress).to.eql(
+            otherToken.address,
+            "Other token address mismatch"
+          );
+        });
       });
 
       it("when someone else deposits on buyer's behalf, callers funds are transferred", async function () {

@@ -289,7 +289,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         //Check Dispute Resolver and Dispute Resolver Fees from  disputeResolvers and disputeResolverFees mappings
         (exists, disputeResolver, disputeResolverFees) = fetchDisputeResolver(_disputeResolverId);
 
-        //Dispute Resolver  must already exist
+        //Dispute Resolver must already exist
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
 
         //Check that msg.sender is the admin address for this dispute resolver
@@ -310,12 +310,12 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             uint256 disputeResolverFeeArrayIndex = protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][
                 _feeTokenAddresses[i]
             ] - 1; //Get the index in the DisputeResolverFees array, which is 1 less than the disputeResolverFeeTokenIndex index
-            delete disputeResolverFees[disputeResolverFeeArrayIndex]; //Delete DisputeResolverFee struct at this index
-            if (disputeResolverFees.length > 1) {
+
+            uint256 lastTokenIndex = disputeResolverFees.length - 1;
+            if (disputeResolverFeeArrayIndex != lastTokenIndex) {
+                // if index == len - 1 then only pop and delete are needed
                 //Need to fill gap caused by delete if more than one element in storage array
-                DisputeResolverFee memory disputeResolverFeeToMove = disputeResolverFees[
-                    disputeResolverFees.length - 1
-                ];
+                DisputeResolverFee memory disputeResolverFeeToMove = disputeResolverFees[lastTokenIndex];
                 disputeResolverFees[disputeResolverFeeArrayIndex] = disputeResolverFeeToMove; //Copy the last DisputeResolverFee struct in the array to this index to fill the gap
                 protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][
                     disputeResolverFeeToMove.tokenAddress

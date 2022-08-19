@@ -108,16 +108,23 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
             // remove groupIdByOffer mapping
             delete protocolLookups().groupIdByOffer[offerId];
 
-            // remove from the group struct
-            uint256 offerIdsLength = group.offerIds.length;
+            uint256 len = group.offerIds.length;
+            //Get the index in the offerIds array, which is 1 less than the offerIdIndexByGroup index
+            uint256 index = protocolLookups().offerIdIndexByGroup[groupId][offerId] - 1;
 
-            for (uint256 j = 0; j < offerIdsLength; j++) {
-                if (group.offerIds[j] == offerId) {
-                    group.offerIds[j] = group.offerIds[offerIdsLength - 1];
-                    group.offerIds.pop();
-                    break;
-                }
+            if (index != len - 1) {
+                // if index == len - 1 then only pop and delete are needed
+                // Need to fill gap caused by delete if more than one element in storage array
+                uint256 offerIdToMove = group.offerIds[len - 1];
+                // Copy the last token in the array to this index to fill the gap
+                group.offerIds[index] = offerIdToMove;
+                //Reset index mapping. Should be index in offerIds array + 1
+                protocolLookups().offerIdIndexByGroup[groupId][offerIdToMove] = index + 1;
             }
+            // Delete last offer id in the array, which was just moved to fill the gap
+            group.offerIds.pop();
+            // Delete from index mapping
+            delete protocolLookups().offerIdIndexByGroup[groupId][offerId];
         }
 
         // Get the condition
