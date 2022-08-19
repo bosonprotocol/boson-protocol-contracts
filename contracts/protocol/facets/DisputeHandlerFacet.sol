@@ -308,6 +308,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      * - offer price is in some ERC20 token and caller also send native currency
      * - if contract at token address does not support erc20 function transferFrom
      * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - received ERC20 token amount differs from the expected value
      *
      * @param _exchangeId - the id of the associated exchange
      */
@@ -318,7 +319,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         // Make sure the caller is buyer associated with the exchange
         checkBuyer(exchange.buyerId);
 
-        // Fetch teh dispute and dispute dates
+        // Fetch the dispute and dispute dates
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
 
         // make sure the dispute not expired already

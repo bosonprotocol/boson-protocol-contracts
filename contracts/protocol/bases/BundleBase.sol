@@ -130,7 +130,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
      */
     function bundleSupplyChecks(uint256 offersTotalQuantity, uint256 _twinId) internal view {
         // make sure twin exist and belong to the seller
-        Twin memory twin = getValidTwin(_twinId);
+        Twin storage twin = getValidTwin(_twinId);
 
         // twin is NonFungibleToken or bundle has an unlimited offer
         if (twin.tokenType == TokenType.NonFungibleToken || offersTotalQuantity == type(uint256).max) {

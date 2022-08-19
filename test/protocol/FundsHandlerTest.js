@@ -16,6 +16,7 @@ const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const {
   setNextBlockTimestamp,
   getEvent,
+  eventEmittedWithArgs,
   prepareDataSignatureParameters,
   applyPercentage,
 } = require("../../scripts/util/test-utils.js");
@@ -390,6 +391,20 @@ describe("IBosonFundsHandler", function () {
           await expect(
             fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount)
           ).to.revertedWith(RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE);
+        });
+
+        it("Received ERC20 token amount differs from the expected value", async function () {
+          // Deploy ERC20 with fees
+          const [Foreign20WithFee] = await deployMockTokens(gasLimit, ["Foreign20WithFee"]);
+
+          // mint tokens and approve
+          await Foreign20WithFee.mint(operator.address, depositAmount);
+          await Foreign20WithFee.connect(operator).approve(protocolDiamond.address, depositAmount);
+
+          // Attempt to deposit funds, expecting revert
+          await expect(
+            fundsHandler.connect(operator).depositFunds(seller.id, Foreign20WithFee.address, depositAmount)
+          ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
         });
       });
     });
@@ -1751,7 +1766,7 @@ describe("IBosonFundsHandler", function () {
             exchangeHandler
               .connect(buyer)
               .commitToOffer(buyer.address, offerNative.id, { value: ethers.BigNumber.from(price).sub("1").toString() })
-          ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_SENT);
+          ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
         });
 
         it("Native currency sent together with ERC20 token transfer", async function () {
@@ -1850,6 +1865,39 @@ describe("IBosonFundsHandler", function () {
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price })
           ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
+        });
+
+        it("Received ERC20 token amount differs from the expected value", async function () {
+          // Deploy ERC20 with fees
+          const [Foreign20WithFee] = await deployMockTokens(gasLimit, ["Foreign20WithFee"]);
+
+          // add to DR fees
+          DRFee = ethers.utils.parseUnits("2", "ether").toString();
+          await accountHandler
+            .connect(adminDR)
+            .addFeesToDisputeResolver(disputeResolverId, [
+              new DisputeResolverFee(Foreign20WithFee.address, "Foreign20WithFee", DRFee),
+            ]);
+
+          // Create an offer with ERC20 with fees
+          // Prepare an absolute zero offer
+          offerToken.exchangeToken = Foreign20WithFee.address;
+          offerToken.sellerDeposit = "0";
+          offerToken.id++;
+
+          // Create a new offer
+          await offerHandler
+            .connect(operator)
+            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
+
+          // mint tokens and approve
+          await Foreign20WithFee.mint(buyer.address, offerToken.price);
+          await Foreign20WithFee.connect(buyer).approve(protocolDiamond.address, offerToken.price);
+
+          // Attempt to commit to offer, expecting revert
+          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
+            RevertReasons.INSUFFICIENT_VALUE_RECEIVED
+          );
         });
       });
     });
@@ -2463,8 +2511,18 @@ describe("IBosonFundsHandler", function () {
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address);
-            // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
-            // .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address);
+
+            //check that FundsReleased event was NOT emitted with buyer Id
+            const txReceipt = await tx.wait();
+            const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
+              exchangeId,
+              buyerId,
+              offerToken.exchangeToken,
+              buyerPayoff,
+              buyer.address,
+            ]);
+            expect(match).to.be.false;
+            console.log("match in test case when false is expected ", match);
           });
 
           it("should update state", async function () {
@@ -2634,8 +2692,17 @@ describe("IBosonFundsHandler", function () {
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
-            // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
-            // .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, rando.address);
+
+            //check that FundsReleased event was NOT emitted with buyer Id
+            const txReceipt = await tx.wait();
+            const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
+              exchangeId,
+              buyerId,
+              offerToken.exchangeToken,
+              buyerPayoff,
+              rando.address,
+            ]);
+            expect(match).to.be.false;
           });
 
           it("should update state", async function () {
@@ -3034,8 +3101,17 @@ describe("IBosonFundsHandler", function () {
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address);
-            // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
-            // .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, buyer.address);
+
+            //check that FundsReleased event was NOT emitted with buyer Id
+            const txReceipt = await tx.wait();
+            const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
+              exchangeId,
+              buyerId,
+              offerToken.exchangeToken,
+              buyerPayoff,
+              buyer.address,
+            ]);
+            expect(match).to.be.false;
           });
 
           it("should update state", async function () {
@@ -3615,8 +3691,6 @@ describe("IBosonFundsHandler", function () {
                 .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
 
               await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
-              // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
-              // .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
             });
 
             it("should update state", async function () {
@@ -3783,8 +3857,17 @@ describe("IBosonFundsHandler", function () {
                 .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, operatorDR.address);
 
               await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
-              // .to.not.emit(disputeHandler, "FundsReleased") // TODO: is possible to make sure event with exact args was not emitted?
-              // .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
+
+              //check that FundsReleased event was NOT emitted with  rando address
+              const txReceipt = await tx.wait();
+              const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
+                exchangeId,
+                sellerId,
+                offerToken.exchangeToken,
+                sellerPayoff,
+                rando.address,
+              ]);
+              expect(match).to.be.false;
             });
 
             it("should update state", async function () {

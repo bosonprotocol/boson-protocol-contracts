@@ -2847,26 +2847,6 @@ describe("IBosonExchangeHandler", function () {
             RevertReasons.VOUCHER_HAS_EXPIRED
           );
         });
-
-        //Unskip after deactivateBuyer function has been implemented
-        it.skip("New buyer's existing account is deactivated", async function () {
-          // Get the next buyer id
-          nextAccountId = await accountHandler.connect(rando).getNextAccountId();
-
-          // Create a buyer account for the new owner
-          buyer = mockBuyer(newOwner.address);
-          await accountHandler.connect(newOwner).createBuyer(buyer);
-
-          buyer.active = false;
-          buyer.id = nextAccountId;
-          // Update buyer account, deactivating it
-          await accountHandler.connect(newOwner).updateBuyer(buyer);
-
-          // Attempt to call onVoucherTransferred, expecting revert
-          await expect(
-            bosonVoucherClone.connect(buyer).transferFrom(buyer.address, newOwner.address, id)
-          ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
-        });
       });
     });
 

@@ -129,7 +129,7 @@ string constant TOKEN_AMOUNT_MISMATCH = "Number of amounts should match number o
 string constant NOTHING_TO_WITHDRAW = "Nothing to withdraw";
 string constant NOT_AUTHORIZED = "Not authorized to withdraw";
 string constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
-string constant INSUFFICIENT_VALUE_SENT = "Insufficient value sent";
+string constant INSUFFICIENT_VALUE_RECEIVED = "Insufficient value received";
 string constant INSUFFICIENT_AVAILABLE_FUNDS = "Insufficient available funds";
 string constant NATIVE_NOT_ALLOWED = "Transfer of native currency not allowed";
 
