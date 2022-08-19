@@ -166,8 +166,8 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @param _nonce - the nonce value of the transaction.
      */
     function validateTx(
-        string memory _functionName,
-        bytes memory _functionSignature,
+        string calldata _functionName,
+        bytes calldata _functionSignature,
         uint256 _nonce
     ) internal view {
         require(!protocolMetaTxInfo().usedNonce[_nonce], NONCE_USED_ALREADY);
@@ -184,7 +184,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      *
      * @param _functionName - the function name that we want to execute.
      */
-    function isSpecialFunction(string memory _functionName) internal view returns (bool) {
+    function isSpecialFunction(string calldata _functionName) internal view returns (bool) {
         return protocolMetaTxInfo().inputType[_functionName] != MetaTxInputType.Generic;
     }
 
@@ -210,8 +210,8 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      */
     function executeTx(
         address _userAddress,
-        string memory _functionName,
-        bytes memory _functionSignature,
+        string calldata _functionName,
+        bytes calldata _functionSignature,
         uint256 _nonce
     ) internal returns (bytes memory) {
         // Store the nonce provided to avoid playback of the same tx
@@ -257,7 +257,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      */
     function executeMetaTransaction(
         address _userAddress,
-        string memory _functionName,
+        string calldata _functionName,
         bytes calldata _functionSignature,
         uint256 _nonce,
         bytes32 _sigR,
