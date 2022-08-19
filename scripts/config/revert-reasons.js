@@ -131,6 +131,7 @@ exports.RevertReasons = {
   EOA_FUNCTION_CALL: "Transaction reverted: function call to a non-contract account",
   ERC721_NON_EXISTENT: "ERC721: invalid token ID",
   OWNABLE_NOT_OWNER: "Ownable: caller is not the owner",
+  OWNABLE_ZERO_ADDRESS: "Ownable: new owner is the zero address",
 
   // Meta-Transactions related
   NONCE_USED_ALREADY: "Nonce used already",
