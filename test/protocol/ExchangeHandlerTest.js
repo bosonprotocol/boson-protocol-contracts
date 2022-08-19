@@ -101,6 +101,7 @@ describe("IBosonExchangeHandler", function () {
   let agentId, agent;
   let exchangesToComplete, exchangeId;
   let offer, offerFees;
+  let offerDates, offerDurations;
 
   before(async function () {
     // get interface Ids
@@ -303,7 +304,7 @@ describe("IBosonExchangeHandler", function () {
 
       // Create the offer
       const mo = await mockOffer();
-      const { offerDates, offerDurations } = mo;
+      ({ offerDates, offerDurations } = mo);
       offer = mo.offer;
       offerFees = mo.offerFees;
       offerFees.protocolFee = protocolFeeFlatBoson;
@@ -661,6 +662,53 @@ describe("IBosonExchangeHandler", function () {
             exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
           ).to.revertedWith(RevertReasons.OFFER_HAS_BEEN_VOIDED);
         });
+
+        it("offer is not yet available for commits", async function () {
+          // Create an offer with staring date in the future
+          // get current block timestamp
+          const block = await ethers.provider.getBlock("latest");
+          const now = block.timestamp.toString();
+
+          // set validFrom date in the past
+          offerDates.validFrom = ethers.BigNumber.from(now)
+            .add((oneMonth / 1000) * 6)
+            .toString(); // 6 months in the future
+          offerDates.validUntil = ethers.BigNumber.from(offerDates.validFrom).add(10).toString(); // just after the valid from so it succeeds.
+
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+          // Attempt to commit to the not availabe offer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, ++offerId, { value: price })
+          ).to.revertedWith(RevertReasons.OFFER_NOT_AVAILABLE);
+        });
+
+        it("offer has expired", async function () {
+          // Go past offer expiration date
+          await setNextBlockTimestamp(Number(offerDates.validUntil));
+
+          // Attempt to commit to the expired offer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.OFFER_HAS_EXPIRED);
+        });
+
+        it("offer sold", async function () {
+          // Create an offer with only 1 item
+          offer.quantityAvailable = "1";
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+          // Commit to offer, so it's not availble anymore
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, ++offerId, { value: price });
+
+          // Attempt to commit to the sold out offer, expecting revert
+          await expect(
+            exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
+          ).to.revertedWith(RevertReasons.OFFER_SOLD_OUT);
+        });
       });
     });
 
@@ -988,6 +1036,40 @@ describe("IBosonExchangeHandler", function () {
               exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
             ).to.revertedWith(RevertReasons.CANNOT_COMMIT);
           });
+        });
+      });
+
+      context("✋ Group without condition", async function () {
+        beforeEach(async function () {
+          // Required constructor params for Condition
+          method = EvaluationMethod.None;
+          tokenType = TokenType.FungibleToken;
+          tokenAddress = ethers.constants.AddressZero;
+          tokenId = "0";
+          threshold = "0";
+          maxCommits = "0";
+
+          // Required constructor params for Group
+          groupId = "1";
+          offerIds = [offerId];
+
+          // Create Condition
+          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+          expect(condition.isValid()).to.be.true;
+
+          // Create Group
+          group = new Group(groupId, sellerId, offerIds);
+          expect(group.isValid()).is.true;
+          await groupHandler.connect(operator).createGroup(group, condition);
+        });
+
+        it("should emit a BuyerCommitted event", async function () {
+          // Commit to offer.
+          // We're only concerned that the event is emitted, indicating the condition was met
+          await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })).to.emit(
+            exchangeHandler,
+            "BuyerCommitted"
+          );
         });
       });
     });
@@ -1774,7 +1856,7 @@ describe("IBosonExchangeHandler", function () {
         await foreign1155.connect(operator).mint("1", "500");
 
         // Approve the protocol diamond to transfer seller's tokens
-        await foreign20.connect(operator).approve(protocolDiamond.address, "3");
+        await foreign20.connect(operator).approve(protocolDiamond.address, "30");
         await foreign721.connect(operator).setApprovalForAll(protocolDiamond.address, true);
         await foreign1155.connect(operator).setApprovalForAll(protocolDiamond.address, true);
 
@@ -2857,6 +2939,16 @@ describe("IBosonExchangeHandler", function () {
       });
 
       context("👍 undisputed exchange", async function () {
+        it("should return false if exchange does not exists", async function () {
+          let exchangeId = "100";
+          // Invalied exchange id, ask if exchange is finalized
+          [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchangeId);
+
+          // It should not be exist
+          assert.equal(exists, false, "Incorrectly reports existence");
+          assert.equal(response, false, "Incorrectly reports finalized state");
+        });
+
         it("should return false if exchange is in Committed state", async function () {
           // In Committed state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);

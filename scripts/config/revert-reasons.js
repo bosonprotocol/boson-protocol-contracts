@@ -42,6 +42,9 @@ exports.RevertReasons = {
   INVALID_QUANTITY_AVAILABLE: "Invalid quantity available",
   DR_UNSUPPORTED_FEE: "Dispute resolver does not accept this token",
   AGENT_FEE_AMOUNT_TOO_HIGH: "Sum of Agent fee amount and protocol fee amount should be <= offer fee limit",
+  OFFER_NOT_AVAILABLE: "Offer is not yet available",
+  OFFER_HAS_EXPIRED: "Offer has expired",
+  OFFER_SOLD_OUT: "Offer has sold out",
 
   // Group related
   NO_SUCH_GROUP: "No such group",
