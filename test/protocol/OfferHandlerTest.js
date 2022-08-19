@@ -1401,6 +1401,9 @@ describe("IBosonOfferHandler", function () {
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
 
+      // Necessary to cover all offers resolution periods
+      await configHandler.setMaxResolutionPeriod(oneWeek * 5);
+
       // create 5 offers
       offers = [];
       offerStructs = [];

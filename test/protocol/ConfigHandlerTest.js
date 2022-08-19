@@ -927,7 +927,7 @@ describe("IBosonConfigHandler", function () {
         });
 
         it("should update state", async function () {
-          // Set new escalation response period
+          // Set new resolution period
           await configHandler.connect(deployer).setMaxResolutionPeriod(maxResolutionPeriod);
 
           // Verify that new value is stored
