@@ -23,6 +23,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
      * - Not approved to transfer the seller's token
      * - supplyAvailable is zero
      * - Twin is NonFungibleToken and amount was set
+     * - Twin is NonFungibleToken and end of range would overflow
      * - Twin is NonFungibleToken and range is already being used in another twin of the seller
      * - Twin is FungibleToken or MultiToken and amount was not set
      *
@@ -48,8 +49,8 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
 
             // Calculate new twin range [tokenId...lastTokenId]
             uint256 tokenId = _twin.tokenId;
+            require(type(uint256).max - _twin.supplyAvailable >= tokenId, INVALID_TWIN_TOKEN_RANGE);
             uint256 lastTokenId = tokenId + _twin.supplyAvailable - 1;
-            require(lastTokenId >= tokenId, INVALID_TWIN_TOKEN_RANGE);
 
             // Get all seller twin ids that belong to the same token address of the new twin to validate if they have not unlimited supply since ranges can overlaps each other
             uint256[] storage twinIds = protocolLookups().twinIdsByTokenAddressAndBySeller[sellerId][
@@ -79,14 +80,14 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
 
             // Add range to twinRangesBySeller mapping
             protocolLookups().twinRangesBySeller[sellerId][_twin.tokenAddress].push(TokenRange(tokenId, lastTokenId));
+            // Add twin id to twinIdsByTokenAddressAndBySeller mapping
+            protocolLookups().twinIdsByTokenAddressAndBySeller[sellerId][_twin.tokenAddress].push(_twin.id);
         } else if (_twin.tokenType == TokenType.MultiToken) {
             // If token is Fungible or MultiToken amount should not be zero
             require(_twin.amount > 0, INVALID_AMOUNT);
             // Not every ERC20 has supportsInterface method so we can't check interface support if token type is NonFungible
             // Check if the token supports IERC1155 interface
             require(contractSupportsInterface(_twin.tokenAddress, 0xd9b67a26), INVALID_TOKEN_ADDRESS);
-            // Add twin id to twinIdsByTokenAddressAndBySeller mapping
-            protocolLookups().twinIdsByTokenAddressAndBySeller[sellerId][_twin.tokenAddress].push(_twin.id);
         } else {
             // If token is Fungible or MultiToken amount should not be zero
             require(_twin.amount > 0, INVALID_AMOUNT);
