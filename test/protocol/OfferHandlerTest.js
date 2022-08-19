@@ -1391,12 +1391,12 @@ describe("IBosonOfferHandler", function () {
     let offers = [];
     let offerStructs = [];
     let agentIds;
-    let agentId = "0";
 
     // Make empty seller list, so every seller is allowed
     sellerAllowList = [];
 
     beforeEach(async function () {
+      agentId = "0";
       agentIds = [];
 
       // create a seller
