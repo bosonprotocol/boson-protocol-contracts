@@ -715,6 +715,16 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
         });
 
+        it("Resolution period is greater than protocol max resolution period", async function () {
+          // Set max resolution period to 1 day
+          await configHandler.setMaxResolutionPeriod(86400 * 1000); // 24 hours
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
+        });
+
         it("Available quantity is set to zero", async function () {
           // Set available quantity to 0
           offer.quantityAvailable = "0";
