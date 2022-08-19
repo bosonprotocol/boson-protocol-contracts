@@ -31,15 +31,12 @@ describe("Receipt", function () {
       expect(receipt.exchangeIdIsValid()).is.true;
       expect(receipt.offerIdIsValid()).is.true;
       expect(receipt.buyerIdIsValid()).is.true;
-      expect(receipt.buyerAddressIsValid()).is.true;
       expect(receipt.sellerIdIsValid()).is.true;
-      expect(receipt.sellerOperatorAddressIsValid()).is.true;
       expect(receipt.priceIsValid()).is.true;
       expect(receipt.sellerDepositIsValid()).is.true;
       expect(receipt.buyerCancelPenaltyIsValid()).is.true;
       expect(receipt.offerFeesIsValid()).is.true;
       expect(receipt.agentIdIsValid()).is.true;
-      expect(receipt.agentAddressIsValid()).is.true;
       expect(receipt.exchangeTokenIsValid()).is.true;
       expect(receipt.finalizedDateIsValid()).is.true;
       expect(receipt.conditionIsValid()).is.true;
@@ -47,7 +44,6 @@ describe("Receipt", function () {
       expect(receipt.redeemedDateIsValid()).is.true;
       expect(receipt.voucherExpiredIsValid()).is.true;
       expect(receipt.disputeResolverIdIsValid()).is.true;
-      expect(receipt.disputeResolverOperatorAddressIsValid()).is.true;
       expect(receipt.disputedDateIsValid()).is.true;
       expect(receipt.escalatedDateIsValid()).is.true;
       expect(receipt.disputeStateIsValid()).is.true;
@@ -133,28 +129,6 @@ describe("Receipt", function () {
       // Valid field value
       receipt.buyerId = "126";
       expect(receipt.buyerIdIsValid()).is.true;
-      expect(receipt.isValid()).is.true;
-    });
-
-    it("Always present, buyerAddress must be a string representation of an EIP-55 compliant address", async function () {
-      // Invalid field value
-      receipt.buyerAddress = "0xASFADF";
-      expect(receipt.buyerAddressIsValid()).is.false;
-      expect(receipt.isValid()).is.false;
-
-      // Invalid field value
-      receipt.buyerAddress = "zedzdeadbaby";
-      expect(receipt.buyerAddressIsValid()).is.false;
-      expect(receipt.isValid()).is.false;
-
-      // Valid field value
-      receipt.buyerAddress = accounts[0].address;
-      expect(receipt.buyerAddressIsValid()).is.true;
-      expect(receipt.isValid()).is.true;
-
-      // Valid field value
-      receipt.buyerAddress = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
-      expect(receipt.buyerAddressIsValid()).is.true;
       expect(receipt.isValid()).is.true;
     });
 
@@ -291,33 +265,6 @@ describe("Receipt", function () {
       // Valid field value
       receipt.agentId = "126";
       expect(receipt.agentIdIsValid()).is.true;
-      expect(receipt.isValid()).is.true;
-    });
-
-    it("If present, agentAddress must be a string representation of an EIP-55 compliant address", async function () {
-      // Invalid field value
-      receipt.agentAddress = "0xASFADF";
-      expect(receipt.agentAddressIsValid()).is.false;
-      expect(receipt.isValid()).is.false;
-
-      // Invalid field value
-      receipt.agentAddress = "zedzdeadbaby";
-      expect(receipt.agentAddressIsValid()).is.false;
-      expect(receipt.isValid()).is.false;
-
-      // Valid field value
-      receipt.agentAddress = accounts[0].address;
-      expect(receipt.agentAddressIsValid()).is.true;
-      expect(receipt.isValid()).is.true;
-
-      // Valid field value
-      receipt.agentAddress = ethers.constants.AddressZero;
-      expect(receipt.agentAddressIsValid()).is.true;
-      expect(receipt.isValid()).is.true;
-
-      // Valid field value
-      receipt.agentAddress = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
-      expect(receipt.agentAddressIsValid()).is.true;
       expect(receipt.isValid()).is.true;
     });
 
@@ -495,33 +442,6 @@ describe("Receipt", function () {
       expect(receipt.isValid()).is.true;
     });
 
-    it("If present, disputeResolverOperatorAddress must be a string representation of an EIP-55 compliant address", async function () {
-      // Invalid field value
-      receipt.disputeResolverOperatorAddress = "0xASFADF";
-      expect(receipt.disputeResolverOperatorAddressIsValid()).is.false;
-      expect(receipt.isValid()).is.false;
-
-      // Invalid field value
-      receipt.disputeResolverOperatorAddress = "zedzdeadbaby";
-      expect(receipt.disputeResolverOperatorAddressIsValid()).is.false;
-      expect(receipt.isValid()).is.false;
-
-      // Valid field value
-      receipt.disputeResolverOperatorAddress = accounts[0].address;
-      expect(receipt.disputeResolverOperatorAddressIsValid()).is.true;
-      expect(receipt.isValid()).is.true;
-
-      // Valid field value
-      receipt.disputeResolverOperatorAddress = ethers.constants.AddressZero;
-      expect(receipt.disputeResolverOperatorAddressIsValid()).is.true;
-      expect(receipt.isValid()).is.true;
-
-      // Valid field value
-      receipt.disputeResolverOperatorAddress = "0xec2fd5bd6fc7b576dae82c0b9640969d8de501a2";
-      expect(receipt.disputeResolverOperatorAddressIsValid()).is.true;
-      expect(receipt.isValid()).is.true;
-    });
-
     it("If present, disputedDate must be the string representation of BigNumber", async function () {
       // Invalid field value
       receipt.disputedDate = "zedzdeadbaby";
@@ -640,15 +560,12 @@ describe("Receipt", function () {
           exchangeId,
           offerId,
           buyerId,
-          buyerAddress,
           sellerId,
-          sellerOperatorAddress,
           price,
           sellerDeposit,
           buyerCancelPenalty,
           offerFees,
           agentId,
-          agentAddress,
           exchangeToken,
           finalizedDate,
           condition,
@@ -656,7 +573,6 @@ describe("Receipt", function () {
           redeemedDate,
           voucherExpired,
           disputeResolverId,
-          disputeResolverOperatorAddress,
           disputedDate,
           escalatedDate,
           disputeState,
@@ -668,15 +584,12 @@ describe("Receipt", function () {
           exchangeId,
           offerId,
           buyerId,
-          buyerAddress,
           sellerId,
-          sellerOperatorAddress,
           price,
           sellerDeposit,
           buyerCancelPenalty,
           offerFees.toStruct(),
           agentId,
-          agentAddress,
           exchangeToken,
           finalizedDate,
           condition.toStruct(),
@@ -684,7 +597,6 @@ describe("Receipt", function () {
           redeemedDate,
           voucherExpired,
           disputeResolverId,
-          disputeResolverOperatorAddress,
           disputedDate,
           escalatedDate,
           disputeState,

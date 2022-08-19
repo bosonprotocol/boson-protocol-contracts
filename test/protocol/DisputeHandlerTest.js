@@ -67,7 +67,7 @@ describe("IBosonDisputeHandler", function () {
   let price, quantityAvailable, resolutionPeriod, fulfillmentPeriod, sellerDeposit;
   let voucherRedeemableFrom, offerDates, offerDurations;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
-  let exchangeStruct, finalizedDate, exchangeId;
+  let exchangeStruct, voucherStruct, finalizedDate, exchangeId;
   let dispute,
     disputedDate,
     escalatedDate,
@@ -399,8 +399,8 @@ describe("IBosonDisputeHandler", function () {
 
           it("The fulfilment period has already elapsed", async function () {
             // Get the redemption date
-            [, exchangeStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
-            const voucherRedeemedDate = exchangeStruct.voucher.redeemedDate;
+            [, , voucherStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
+            const voucherRedeemedDate = voucherStruct.redeemedDate;
 
             // Set time forward past the dispute resolution period
             await setNextBlockTimestamp(voucherRedeemedDate.add(fulfillmentPeriod).add(1).toNumber());
