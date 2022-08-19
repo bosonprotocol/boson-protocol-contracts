@@ -47,33 +47,6 @@
               "type": "uint256"
             },
             {
-              "components": [
-                {
-                  "internalType": "uint256",
-                  "name": "committedDate",
-                  "type": "uint256"
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "validUntilDate",
-                  "type": "uint256"
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "redeemedDate",
-                  "type": "uint256"
-                },
-                {
-                  "internalType": "bool",
-                  "name": "expired",
-                  "type": "bool"
-                }
-              ],
-              "internalType": "struct BosonTypes.Voucher",
-              "name": "voucher",
-              "type": "tuple"
-            },
-            {
               "internalType": "enum BosonTypes.ExchangeState",
               "name": "state",
               "type": "uint8"
@@ -82,6 +55,34 @@
           "indexed": false,
           "internalType": "struct BosonTypes.Exchange",
           "name": "exchange",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "committedDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntilDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "redeemedDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "expired",
+              "type": "bool"
+            }
+          ],
+          "indexed": false,
+          "internalType": "struct BosonTypes.Voucher",
+          "name": "voucher",
           "type": "tuple"
         },
         {
@@ -728,33 +729,6 @@
               "type": "uint256"
             },
             {
-              "components": [
-                {
-                  "internalType": "uint256",
-                  "name": "committedDate",
-                  "type": "uint256"
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "validUntilDate",
-                  "type": "uint256"
-                },
-                {
-                  "internalType": "uint256",
-                  "name": "redeemedDate",
-                  "type": "uint256"
-                },
-                {
-                  "internalType": "bool",
-                  "name": "expired",
-                  "type": "bool"
-                }
-              ],
-              "internalType": "struct BosonTypes.Voucher",
-              "name": "voucher",
-              "type": "tuple"
-            },
-            {
               "internalType": "enum BosonTypes.ExchangeState",
               "name": "state",
               "type": "uint8"
@@ -762,6 +736,33 @@
           ],
           "internalType": "struct BosonTypes.Exchange",
           "name": "exchange",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "committedDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "validUntilDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "redeemedDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "expired",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct BosonTypes.Voucher",
+          "name": "voucher",
           "type": "tuple"
         }
       ],
@@ -833,19 +834,9 @@
               "type": "uint256"
             },
             {
-              "internalType": "address",
-              "name": "buyerAddress",
-              "type": "address"
-            },
-            {
               "internalType": "uint256",
               "name": "sellerId",
               "type": "uint256"
-            },
-            {
-              "internalType": "address",
-              "name": "sellerOperatorAddress",
-              "type": "address"
             },
             {
               "internalType": "uint256",
@@ -883,11 +874,6 @@
               "internalType": "uint256",
               "name": "agentId",
               "type": "uint256"
-            },
-            {
-              "internalType": "address",
-              "name": "agentAddress",
-              "type": "address"
             },
             {
               "internalType": "address",
@@ -955,11 +941,6 @@
               "internalType": "uint256",
               "name": "disputeResolverId",
               "type": "uint256"
-            },
-            {
-              "internalType": "address",
-              "name": "disputeResolverOperatorAddress",
-              "type": "address"
             },
             {
               "internalType": "uint256",
