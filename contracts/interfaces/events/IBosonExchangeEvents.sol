@@ -14,6 +14,7 @@ interface IBosonExchangeEvents {
         uint256 indexed buyerId,
         uint256 indexed exchangeId,
         BosonTypes.Exchange exchange,
+        BosonTypes.Voucher voucher,
         address executedBy
     );
     event ExchangeCompleted(

@@ -161,9 +161,8 @@ function mockExchange() {
   const offerId = "1";
   const buyerId = "1";
   const finalizedDate = "1661447000";
-  const voucher = mockVoucher();
   const state = ExchangeState.Committed;
-  return new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
+  return new Exchange(id, offerId, buyerId, finalizedDate, state);
 }
 
 function mockDispute() {
@@ -176,6 +175,7 @@ function mockDispute() {
 
 async function mockReceipt() {
   const exchange = mockExchange();
+  const voucher = mockVoucher();
   const mo = await mockOffer();
   const offer = mo.offer;
   const offerFees = mo.offerFees;
@@ -188,22 +188,18 @@ async function mockReceipt() {
     exchange.id,
     offer.id,
     buyerId,
-    ethers.constants.AddressZero,
     sellerId,
-    ethers.constants.AddressZero,
     offer.price,
     offer.sellerDeposit,
     offer.buyerCancelPenalty,
     offerFees,
     agentId,
-    ethers.constants.AddressZero,
     offer.exchangeToken,
     exchange.finalizedDate,
     undefined,
-    exchange.voucher.committedDate,
-    exchange.voucher.redeemedDate,
-    exchange.voucher.expired,
-    undefined,
+    voucher.committedDate,
+    voucher.redeemedDate,
+    voucher.expired,
     undefined,
     undefined,
     undefined,
