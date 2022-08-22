@@ -831,7 +831,7 @@ describe("IBosonExchangeHandler", function () {
           // Create Condition
           condition = mockCondition({
             tokenAddress: foreign721.address,
-            threshold: "1",
+            threshold: "5",
             maxCommits: "3",
             tokenType: TokenType.NonFungibleToken,
           });

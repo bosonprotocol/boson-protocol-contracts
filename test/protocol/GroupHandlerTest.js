@@ -418,35 +418,6 @@ describe("IBosonGroupHandler", function () {
           );
         });
 
-        it("Condition 'None' has some values in other fields", async function () {
-          condition.method = EvaluationMethod.None;
-
-          // Attempt to create the group, expecting revert
-          await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
-            RevertReasons.INVALID_CONDITION_PARAMETERS
-          );
-        });
-
-        it("Condition 'Threshold' has zero token contract address", async function () {
-          condition.method = EvaluationMethod.Threshold;
-          condition.tokenAddress = ethers.constants.AddressZero;
-
-          // Attempt to create the group, expecting revert
-          await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
-            RevertReasons.INVALID_CONDITION_PARAMETERS
-          );
-        });
-
-        it("Condition 'SpecificToken' has has zero token contract address", async function () {
-          condition.method = EvaluationMethod.SpecificToken;
-          condition.tokenAddress = ethers.constants.AddressZero;
-
-          // Attempt to create the group, expecting revert
-          await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
-            RevertReasons.INVALID_CONDITION_PARAMETERS
-          );
-        });
-
         context("Condition 'None' has some values in other fields", async function () {
           beforeEach(async function () {
             condition = mockCondition({ method: EvaluationMethod.None, threshold: "0", maxCommits: "0" });
