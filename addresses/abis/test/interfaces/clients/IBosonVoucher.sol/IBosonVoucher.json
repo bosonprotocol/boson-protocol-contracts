@@ -218,26 +218,9 @@
           "type": "uint256"
         },
         {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "id",
-              "type": "uint256"
-            },
-            {
-              "internalType": "address payable",
-              "name": "wallet",
-              "type": "address"
-            },
-            {
-              "internalType": "bool",
-              "name": "active",
-              "type": "bool"
-            }
-          ],
-          "internalType": "struct BosonTypes.Buyer",
+          "internalType": "address",
           "name": "_buyer",
-          "type": "tuple"
+          "type": "address"
         }
       ],
       "name": "issueVoucher",
