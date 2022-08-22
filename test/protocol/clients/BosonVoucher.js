@@ -288,20 +288,29 @@ describe("IBosonVoucher", function () {
       expect(owner).eq(operator.address, "Wrong owner");
     });
 
-    it("should revert if caller does not have PROTOCOL role", async function () {
-      await expect(bosonVoucher.connect(rando).transferOwnership(operator.address)).to.be.revertedWith(
-        RevertReasons.ACCESS_DENIED
-      );
-    });
+    context("💔 Revert Reasons", async function () {
+      it("should revert if caller does not have PROTOCOL role", async function () {
+        await expect(bosonVoucher.connect(rando).transferOwnership(operator.address)).to.be.revertedWith(
+          RevertReasons.ACCESS_DENIED
+        );
+      });
 
-    it("Even the current owner cannot transfer the ownership", async function () {
-      // succesfully transfer to operator
-      await bosonVoucher.connect(protocol).transferOwnership(operator.address);
+      it("Even the current owner cannot transfer the ownership", async function () {
+        // succesfully transfer to operator
+        await bosonVoucher.connect(protocol).transferOwnership(operator.address);
 
-      // owner tries to transfer, it should fail
-      await expect(bosonVoucher.connect(operator).transferOwnership(rando.address)).to.be.revertedWith(
-        RevertReasons.ACCESS_DENIED
-      );
+        // owner tries to transfer, it should fail
+        await expect(bosonVoucher.connect(operator).transferOwnership(rando.address)).to.be.revertedWith(
+          RevertReasons.ACCESS_DENIED
+        );
+      });
+
+      it("Transfering ownership to 0 is not allowed", async function () {
+        // try to transfer ownership to address 0, should fail
+        await expect(bosonVoucher.connect(protocol).transferOwnership(ethers.constants.AddressZero)).to.be.revertedWith(
+          RevertReasons.OWNABLE_ZERO_ADDRESS
+        );
+      });
     });
   });
 
