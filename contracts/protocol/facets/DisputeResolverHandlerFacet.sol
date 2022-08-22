@@ -158,8 +158,11 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         //Dispute Resolver  must already exist
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
 
+        // get message sender
+        address sender = msgSender();
+
         //Check that msg.sender is the admin address for this dispute resolver
-        require(disputeResolver.admin == msgSender(), NOT_ADMIN);
+        require(disputeResolver.admin == sender, NOT_ADMIN);
 
         //check that the addresses are unique to one dispute resolverId if new, across all roles
         require(
@@ -194,7 +197,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         storeDisputeResolver(_disputeResolver);
 
         // Notify watchers of state change
-        emit DisputeResolverUpdated(_disputeResolver.id, _disputeResolver, msgSender());
+        emit DisputeResolverUpdated(_disputeResolver.id, _disputeResolver, sender);
     }
 
     /**
@@ -228,8 +231,11 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         //Dispute Resolver  must already exist
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
 
+        // get message sender
+        address sender = msgSender();
+
         //Check that msg.sender is the admin address for this dispute resolver
-        require(disputeResolver.admin == msgSender(), NOT_ADMIN);
+        require(disputeResolver.admin == sender, NOT_ADMIN);
 
         // At least one fee must be specified and the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
         require(
@@ -258,7 +264,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             ] = disputeResolverFees.length; //Set index mapping. Should be index in disputeResolverFees array + 1
         }
 
-        emit DisputeResolverFeesAdded(_disputeResolverId, _disputeResolverFees, msgSender());
+        emit DisputeResolverFeesAdded(_disputeResolverId, _disputeResolverFees, sender);
     }
 
     /**
@@ -292,8 +298,11 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         //Dispute Resolver must already exist
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
 
+        // get message sender
+        address sender = msgSender();
+
         //Check that msg.sender is the admin address for this dispute resolver
-        require(disputeResolver.admin == msgSender(), NOT_ADMIN);
+        require(disputeResolver.admin == sender, NOT_ADMIN);
 
         // At least one fee must be specified and the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
         require(
@@ -325,7 +334,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             delete protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_feeTokenAddresses[i]]; //Delete from index mapping
         }
 
-        emit DisputeResolverFeesRemoved(_disputeResolverId, _feeTokenAddresses, msgSender());
+        emit DisputeResolverFeesRemoved(_disputeResolverId, _feeTokenAddresses, sender);
     }
 
     /**
@@ -365,12 +374,15 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         //Dispute Resolver  must already exist
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
 
+        // get message sender
+        address sender = msgSender();
+
         //Check that msg.sender is the admin address for this dispute resolver
-        require(disputeResolver.admin == msgSender(), NOT_ADMIN);
+        require(disputeResolver.admin == sender, NOT_ADMIN);
 
         storeSellerAllowList(_disputeResolverId, _sellerAllowList);
 
-        emit AllowedSellersAdded(_disputeResolverId, _sellerAllowList, msgSender());
+        emit AllowedSellersAdded(_disputeResolverId, _sellerAllowList, sender);
     }
 
     /**
@@ -409,8 +421,11 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         //Dispute Resolver  must already exist
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
 
+        // get message sender
+        address sender = msgSender();
+
         //Check that msg.sender is the admin address for this dispute resolver
-        require(disputeResolver.admin == msgSender(), NOT_ADMIN);
+        require(disputeResolver.admin == sender, NOT_ADMIN);
 
         ProtocolLib.ProtocolLookups storage pl = protocolLookups();
 
@@ -437,7 +452,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             pl.allowedSellers[_disputeResolverId].pop();
         }
 
-        emit AllowedSellersRemoved(_disputeResolverId, _sellerAllowList, msgSender());
+        emit AllowedSellersRemoved(_disputeResolverId, _sellerAllowList, sender);
     }
 
     /**

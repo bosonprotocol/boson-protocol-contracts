@@ -125,8 +125,11 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         // Get seller, we assume seller exists if offer exists
         (, Seller storage seller, ) = fetchSeller(offer.sellerId);
 
+        // get message sender
+        address sender = msgSender();
+
         // Caller must be seller's operator address
-        require(seller.operator == msgSender(), NOT_OPERATOR);
+        require(seller.operator == sender, NOT_OPERATOR);
 
         // Fetch the dispute, it exists if exchange is in Disputed state
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
@@ -144,7 +147,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         disputeDates.timeout = _newDisputeTimeout;
 
         // Notify watchers of state change
-        emit DisputeTimeoutExtended(_exchangeId, _newDisputeTimeout, msgSender());
+        emit DisputeTimeoutExtended(_exchangeId, _newDisputeTimeout, sender);
     }
 
     /**

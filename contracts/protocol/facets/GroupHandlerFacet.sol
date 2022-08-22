@@ -162,8 +162,11 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         (bool exists, Group storage group) = fetchGroup(_groupId);
         require(exists, NO_SUCH_GROUP);
 
+        // get message sender
+        address sender = msgSender();
+
         // Get seller id, we assume seller id exists if offer exists
-        (, uint256 sellerId) = getSellerIdByOperator(msgSender());
+        (, uint256 sellerId) = getSellerIdByOperator(sender);
 
         // Caller's seller id must match group seller id
         require(sellerId == group.sellerId, NOT_OPERATOR);
@@ -172,7 +175,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         storeCondition(_groupId, _condition);
 
         // Notify watchers of state change
-        emit GroupUpdated(group.id, sellerId, group, _condition, msgSender());
+        emit GroupUpdated(group.id, sellerId, group, _condition, sender);
     }
 
     /**
