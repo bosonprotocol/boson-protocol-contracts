@@ -132,7 +132,11 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         require(_offerDurations.fulfillmentPeriod > 0, INVALID_FULFILLMENT_PERIOD);
 
         // dispute duration must be greater than zero
-        require(_offerDurations.resolutionPeriod > 0, INVALID_DISPUTE_DURATION);
+        require(
+            _offerDurations.resolutionPeriod > 0 &&
+                _offerDurations.resolutionPeriod <= protocolLimits().maxResolutionPeriod,
+            INVALID_DISPUTE_DURATION
+        );
 
         // when creating offer, it cannot be set to voided
         require(!_offer.voided, OFFER_MUST_BE_ACTIVE);
