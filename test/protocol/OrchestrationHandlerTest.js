@@ -36,6 +36,7 @@ const {
   mockVoucherInitValues,
   mockAuthToken,
   mockAgent,
+  mockCondition,
 } = require("../utils/mock");
 
 /**
@@ -84,7 +85,6 @@ describe("IBosonOrchestrationHandler", function () {
   let offerDurations, offerDurationsStruct;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let group, groupStruct, nextGroupId, conditionStruct;
-  let method, tokenType, tokenAddress, tokenId, threshold, maxCommits;
   let offerIds, condition;
   let twin, twinStruct, twinIds, nextTwinId;
   let bundle, bundleStruct, bundleId, nextBundleId;
@@ -1694,20 +1694,12 @@ describe("IBosonOrchestrationHandler", function () {
         // The first group id
         nextGroupId = "1";
 
-        // Required constructor params for Condition
-        method = EvaluationMethod.Threshold;
-        tokenAddress = other3.address; // just need an address
-        tokenType = TokenType.MultiToken;
-        tokenId = "5150";
-        threshold = "1";
-        maxCommits = "1";
-
         // Required constructor params for Group
         id = nextGroupId;
         sellerId = "2"; // "1" is dispute resolver
         offerIds = ["1"];
 
-        condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+        condition = mockCondition({ tokenAddress: other3.address, tokenType: TokenType.MultiToken, tokenId: "5150" });
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, sellerId, offerIds);
@@ -2327,8 +2319,7 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Condition 'None' has some values in other fields", async function () {
-          method = EvaluationMethod.None;
-          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+          condition.method = EvaluationMethod.None;
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
@@ -2339,9 +2330,8 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Condition 'Threshold' has zero token contract address", async function () {
-          method = EvaluationMethod.Threshold;
-          tokenAddress = ethers.constants.AddressZero;
-          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+          condition.method = EvaluationMethod.Threshold;
+          condition.tokenAddress = ethers.constants.AddressZero;
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
@@ -2352,9 +2342,8 @@ describe("IBosonOrchestrationHandler", function () {
         });
 
         it("Condition 'SpecificToken' has has zero token contract address", async function () {
-          method = EvaluationMethod.SpecificToken;
-          tokenAddress = ethers.constants.AddressZero;
-          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+          condition.method = EvaluationMethod.SpecificToken;
+          condition.tokenAddress = ethers.constants.AddressZero;
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
@@ -2499,19 +2488,16 @@ describe("IBosonOrchestrationHandler", function () {
         offerDatesStruct = offerDates.toStruct();
         offerDurationsStruct = offerDurations.toStruct();
 
-        // Required constructor params for Condition
-        method = EvaluationMethod.Threshold;
-        tokenType = TokenType.MultiToken;
-        tokenAddress = other3.address; // just need an address
-        tokenId = "5150";
-        threshold = "1";
-        maxCommits = "3";
-
         // Required constructor params for Group
         id = nextGroupId;
         offerIds = ["1", "3"];
 
-        condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+        condition = mockCondition({
+          tokenType: TokenType.MultiToken,
+          tokenAddress: other3.address,
+          tokenId: "5150",
+          maxCommits: "3",
+        });
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, sellerId, offerIds);
@@ -4105,19 +4091,11 @@ describe("IBosonOrchestrationHandler", function () {
         // The first group id
         nextGroupId = "1";
 
-        // Required constructor params for Condition
-        method = EvaluationMethod.Threshold;
-        tokenType = TokenType.MultiToken;
-        tokenAddress = other3.address; // just need an address
-        tokenId = "5150";
-        threshold = "1";
-        maxCommits = "1";
-
         // Required constructor params for Group
         id = nextGroupId;
         offerIds = ["1"];
 
-        condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+        condition = mockCondition({ tokenType: TokenType.MultiToken, tokenAddress: other3.address, tokenId: "5150" });
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, sellerId, offerIds);
@@ -4887,19 +4865,11 @@ describe("IBosonOrchestrationHandler", function () {
         // The first group id
         nextGroupId = "1";
 
-        // Required constructor params for Condition
-        method = EvaluationMethod.Threshold;
-        tokenType = TokenType.MultiToken;
-        tokenAddress = other3.address; // just need an address
-        tokenId = "5150";
-        threshold = "1";
-        maxCommits = "1";
-
         // Required constructor params for Group
         id = nextGroupId;
         offerIds = ["1"];
 
-        condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+        condition = mockCondition({ tokenType: TokenType.MultiToken, tokenAddress: other3.address, tokenId: "5150" });
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, sellerId, offerIds);
@@ -6103,19 +6073,10 @@ describe("IBosonOrchestrationHandler", function () {
         // The first group id
         nextGroupId = "1";
 
-        // Required constructor params for Condition
-        method = EvaluationMethod.Threshold;
-        tokenType = TokenType.MultiToken;
-        tokenAddress = other3.address; // just need an address
-        tokenId = "5150";
-        threshold = "1";
-        maxCommits = "1";
-
-        // Required constructor params for Group
         id = nextGroupId;
         offerIds = ["1"];
 
-        condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+        condition = mockCondition({ tokenType: TokenType.MultiToken, tokenAddress: other3.address, tokenId: "5150" });
         expect(condition.isValid()).to.be.true;
 
         group = new Group(nextGroupId, sellerId, offerIds);
