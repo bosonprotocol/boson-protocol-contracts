@@ -55,11 +55,11 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * Caller must have PROTOCOL role.
      *
      * @param _exchangeId - the id of the exchange (corresponds to the ERC-721 token id)
-     * @param _buyer - the buyer of the vouchers
+     * @param _buyer - the buyer address
      */
-    function issueVoucher(uint256 _exchangeId, Buyer calldata _buyer) external override onlyRole(PROTOCOL) {
-        // Mint the voucher, sending it to the buyer
-        _mint(_buyer.wallet, _exchangeId);
+    function issueVoucher(uint256 _exchangeId, address _buyer) external override onlyRole(PROTOCOL) {
+        // Mint the voucher, sending it to the buyer address
+        _mint(_buyer, _exchangeId);
     }
 
     /**
