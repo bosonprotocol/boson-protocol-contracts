@@ -92,7 +92,7 @@ describe("IBosonExchangeHandler", function () {
   let fulfillmentPeriod, voucherValid;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let voucher, validUntilDate;
-  let exchange, response, exists, buyerStruct;
+  let exchange, response, exists;
   let disputeResolver, disputeResolverFees;
   let foreign20, foreign721, foreign1155;
   let twin20, twin721, twin1155, twinIds, bundle, balance, owner;
@@ -2776,7 +2776,6 @@ describe("IBosonExchangeHandler", function () {
         // Get a buyer struct
         buyer = mockBuyer(newOwner.address);
         buyer.id = nextAccountId;
-        buyerStruct = buyer.toStruct();
 
         // Create a buyer account
         await accountHandler.connect(newOwner).createBuyer(mockBuyer(newOwner.address));
@@ -2785,7 +2784,7 @@ describe("IBosonExchangeHandler", function () {
         await accessController.grantRole(Role.PROTOCOL, rando.address);
 
         // Issue voucher, expecting no event
-        await expect(bosonVoucherClone.connect(rando).issueVoucher(nextExchangeId, buyerStruct)).to.not.emit(
+        await expect(bosonVoucherClone.connect(rando).issueVoucher(nextExchangeId, buyer.wallet)).to.not.emit(
           exchangeHandler,
           "VoucherTransferred"
         );
@@ -2835,7 +2834,7 @@ describe("IBosonExchangeHandler", function () {
 
           const newBuyer = mockBuyer(buyer.address);
           newBuyer.id = buyerId;
-          await bosonVoucherClone2.issueVoucher(exchange.id, newBuyer);
+          await bosonVoucherClone2.issueVoucher(exchange.id, newBuyer.wallet);
 
           // Attempt to call onVoucherTransferred, expecting revert
           await expect(
