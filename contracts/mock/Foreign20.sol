@@ -94,7 +94,7 @@ contract Foreign20Malicious is Foreign20 {
  * @title Foreign20 that reenters into protocol
  *
  *
- * @notice Mock ERC-(20) NFT for Unit Testing
+ * @notice Mock ERC-(20) for Unit Testing
  */
 contract Foreign20Malicious2 is Foreign20 {
     address private protocolAddress;
