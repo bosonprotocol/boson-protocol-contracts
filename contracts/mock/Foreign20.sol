@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { IBosonAccountHandler } from "../interfaces/handlers/IBosonAccountHandler.sol";
+import { IBosonMetaTransactionsHandler } from "../interfaces/handlers/IBosonMetaTransactionsHandler.sol";
 import { BosonTypes } from "../domain/BosonTypes.sol";
 
 /**
@@ -85,6 +86,66 @@ contract Foreign20Malicious is Foreign20 {
         if (from == protocolAddress) {
             // this is for demonstration purposes only, therefore id "3" is hardcoded
             IBosonAccountHandler(msg.sender).updateBuyer(BosonTypes.Buyer(3, payable(owner), true));
+        }
+    }
+}
+
+/**
+ * @title Foreign20 that reenters into protocol
+ *
+ *
+ * @notice Mock ERC-(20) NFT for Unit Testing
+ */
+contract Foreign20Malicious2 is Foreign20 {
+    address private protocolAddress;
+    address private owner;
+    bytes private metaTxBytes;
+    bytes32 private sigR;
+    bytes32 private sigS;
+    uint8 private sigV;
+    address private attacker;
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    function setProtocolAddress(address _newProtocolAddress) external {
+        protocolAddress = _newProtocolAddress;
+    }
+
+    function setMetaTxBytes(
+        address _attacker,
+        bytes calldata _metaTxBytes,
+        bytes32 _sigR,
+        bytes32 _sigS,
+        uint8 _sigV
+    ) external {
+        metaTxBytes = _metaTxBytes;
+        sigR = _sigR;
+        sigS = _sigS;
+        sigV = _sigV;
+        attacker = _attacker;
+    }
+
+    function _afterTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override {
+        super._beforeTokenTransfer(from, to, amount);
+
+        // When funds are transferred from protocol, reenter
+        if (to == protocolAddress) {
+            // this is for demonstration purposes only,
+            IBosonMetaTransactionsHandler(msg.sender).executeMetaTransaction(
+                attacker,
+                "getNextExchangeId()",
+                metaTxBytes,
+                0,
+                sigR,
+                sigS,
+                sigV
+            );
         }
     }
 }
