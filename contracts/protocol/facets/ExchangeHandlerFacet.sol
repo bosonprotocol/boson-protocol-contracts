@@ -159,10 +159,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         Offer storage offer;
         (, offer) = fetchOffer(offerId);
 
+        // get message sender
+        address sender = msgSender();
+
         // Is this the buyer?
         bool buyerExists;
         uint256 buyerId;
-        (buyerExists, buyerId) = getBuyerIdByWallet(msgSender());
+        (buyerExists, buyerId) = getBuyerIdByWallet(sender);
 
         // Buyer may call any time. Seller or anyone else may call after fulfillment period elapses
         // N.B. An existing buyer or seller may be the "anyone else" on an exchange they are not a part of
@@ -175,7 +178,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         finalizeExchange(exchange, ExchangeState.Completed);
 
         // Notify watchers of state change
-        emit ExchangeCompleted(offerId, exchange.buyerId, exchange.id, msgSender());
+        emit ExchangeCompleted(offerId, exchange.buyerId, exchange.id, sender);
     }
 
     /**
@@ -321,10 +324,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 offerId = exchange.offerId;
         (, offer) = fetchOffer(offerId);
 
+        // get message sender
+        address sender = msgSender();
+
         // Get seller id associated with caller
         bool sellerExists;
         uint256 sellerId;
-        (sellerExists, sellerId) = getSellerIdByOperator(msgSender());
+        (sellerExists, sellerId) = getSellerIdByOperator(sender);
 
         // Only seller's operator may call
         require(sellerExists && offer.sellerId == sellerId, NOT_OPERATOR);
@@ -336,7 +342,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         voucher.validUntilDate = _validUntilDate;
 
         // Notify watchers of state exchange
-        emit VoucherExtended(offerId, _exchangeId, _validUntilDate, msgSender());
+        emit VoucherExtended(offerId, _exchangeId, _validUntilDate, sender);
     }
 
     /**
@@ -644,7 +650,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         abi.encodeWithSignature(
                             "transferFrom(address,address,uint256)",
                             seller.operator,
-                            msgSender(),
+                            sender,
                             twin.amount
                         )
                     );
@@ -661,7 +667,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,bytes)",
                             seller.operator,
-                            msgSender(),
+                            sender,
                             tokenId,
                             ""
                         )
@@ -672,7 +678,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
                             seller.operator,
-                            msgSender(),
+                            sender,
                             tokenId,
                             twin.amount,
                             ""

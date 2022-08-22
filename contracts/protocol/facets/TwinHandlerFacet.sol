@@ -60,8 +60,11 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         (bool exists, Twin memory twin) = fetchTwin(_twinId);
         require(exists, NO_SUCH_TWIN);
 
+        // get message sender
+        address sender = msgSender();
+
         // Get seller id
-        (, uint256 sellerId) = getSellerIdByOperator(msgSender());
+        (, uint256 sellerId) = getSellerIdByOperator(sender);
         // Caller's seller id must match twin seller id
         require(sellerId == twin.sellerId, NOT_OPERATOR);
 
@@ -98,7 +101,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         }
 
         // Notify watchers of state change
-        emit TwinDeleted(_twinId, twin.sellerId, msgSender());
+        emit TwinDeleted(_twinId, twin.sellerId, sender);
     }
 
     /**
