@@ -232,7 +232,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         setCurrentSenderAddress(address(0));
         protocolMetaTxInfo().isMetaTransaction = false;
 
-        emit MetaTransactionExecuted(_userAddress, msgSender(), _functionName, _nonce);
+        emit MetaTransactionExecuted(_userAddress, msg.sender, _functionName, _nonce);
         return returnData;
     }
 
@@ -264,6 +264,11 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         bytes32 _sigS,
         uint8 _sigV
     ) external payable override metaTransactionsNotPaused returns (bytes memory) {
+        // make sure that protocol is not reentered throught meta transactions
+        // cannot use modifier `nonReentrant` since it also changes reentrancyStatus to `ENTERED`
+        // but that then breaks meta transaction functionality
+        require(protocolStatus().reentrancyStatus != ENTERED, REENTRANCY_GUARD);
+
         validateTx(_functionName, _functionSignature, _nonce);
 
         MetaTransaction memory metaTx = MetaTransaction({

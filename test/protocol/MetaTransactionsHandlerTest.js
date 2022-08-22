@@ -855,7 +855,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           assert.equal(buyerAfter.toString(), buyerBefore.toString(), "Buyer should not change");
         });
 
-        it.only("Should emit MetaTransactionExecuted event and update state", async () => {
+        it("Should emit MetaTransactionExecuted event and update state", async () => {
           // create seller
           await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
 
@@ -910,17 +910,12 @@ describe("IBosonMetaTransactionsHandler", function () {
             metaTransactionsHandler.address
           ));
 
-          // send a meta transaction, check for event
-          const tx = metaTransactionsHandler
-            .connect(deployer)
-            .executeMetaTransaction(rando.address, message.functionName, functionSignature, nonce, r, s, v);
-          await expect(tx)
-            .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-            .withArgs(rando.address, deployer.address, message.functionName, nonce);
-
-          await expect(tx)
-            .to.emit(fundsHandler, "FundsDeposited")
-            .withArgs(seller.id, protocolDiamond.address, maliciousToken.address, "1"); //notice that currently executedBy is `protocolDiamond.address`
+          // send a meta transaction, expect revert
+          await expect(
+            metaTransactionsHandler
+              .connect(deployer)
+              .executeMetaTransaction(rando.address, message.functionName, functionSignature, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.REENTRANCY_GUARD);
         });
       });
     });
