@@ -285,7 +285,7 @@ describe("IBosonTwinHandler", function () {
         assert.equal(Twin.fromStruct(event.twin).toString(), twin.toString(), "Twin struct is incorrect");
       });
 
-      it("It is possible to add the same ERC721 if ranges fo not overlap", async function () {
+      it("It is possible to add the same ERC721 if ranges do not overlap", async function () {
         twin.supplyAvailable = "10";
         twin.amount = "0";
         twin.tokenId = "5";
@@ -305,7 +305,7 @@ describe("IBosonTwinHandler", function () {
         await expect(twinHandler.connect(operator).createTwin(twin)).not.to.be.reverted;
       });
 
-      it("It is possible to add the a ERC721 with unlimited supply if token is not used yet", async function () {
+      it("It is possible to add an ERC721 with unlimited supply if token is not used yet", async function () {
         twin.supplyAvailable = ethers.constants.MaxUint256.toString();
         twin.amount = "0";
         twin.tokenId = "0";
@@ -511,11 +511,26 @@ describe("IBosonTwinHandler", function () {
         });
 
         it("Supply range overflow", async function () {
-          twin.supplyAvailable = ethers.constants.MaxUint256;
+          twin.supplyAvailable = ethers.constants.MaxUint256.div(10).mul(8).toString();
           twin.tokenType = TokenType.NonFungibleToken;
           twin.tokenAddress = foreign721.address;
           twin.amount = "0";
-          twin.tokenId = "1";
+          twin.tokenId = ethers.constants.MaxUint256.sub(twin.supplyAvailable).add(1).toString();
+
+          await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+          // Create new twin with same token address
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
+            RevertReasons.INVALID_TWIN_TOKEN_RANGE
+          );
+        });
+
+        it("Token with unlimited supply with starting tokenId to high", async function () {
+          twin.supplyAvailable = ethers.constants.MaxUint256.toString();
+          twin.tokenType = TokenType.NonFungibleToken;
+          twin.tokenAddress = foreign721.address;
+          twin.amount = "0";
+          twin.tokenId = ethers.constants.MaxUint256.add(1).div(2).add(1).toString();
 
           await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
 
@@ -651,7 +666,7 @@ describe("IBosonTwinHandler", function () {
         await expect(twinHandler.connect(operator).createTwin(twin3)).to.be.revertedWith(
           RevertReasons.INVALID_TWIN_TOKEN_RANGE
         );
-        // Twin1 was removed, therefore it should be possible to be added again
+        // Twin2 was removed, therefore it should be possible to be added again
         await expect(twinHandler.connect(operator).createTwin(twin2)).to.not.reverted;
       });
 

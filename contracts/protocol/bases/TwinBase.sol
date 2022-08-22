@@ -24,6 +24,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
      * - supplyAvailable is zero
      * - Twin is NonFungibleToken and amount was set
      * - Twin is NonFungibleToken and end of range would overflow
+     * - Twin is NonFungibleToken with unlimited supply and starting token id is too high
      * - Twin is NonFungibleToken and range is already being used in another twin of the seller
      * - Twin is FungibleToken or MultiToken and amount was not set
      *
@@ -48,9 +49,15 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             require(_twin.amount == 0, INVALID_TWIN_PROPERTY);
 
             // Calculate new twin range [tokenId...lastTokenId]
+            uint256 lastTokenId;
             uint256 tokenId = _twin.tokenId;
-            require(type(uint256).max - _twin.supplyAvailable >= tokenId, INVALID_TWIN_TOKEN_RANGE);
-            uint256 lastTokenId = tokenId + _twin.supplyAvailable - 1;
+            if (_twin.supplyAvailable == type(uint256).max) {
+                require(tokenId <= (1 << 255), INVALID_TWIN_TOKEN_RANGE); // if supply is "unlimited", starting index can be at most 2*255
+                lastTokenId = type(uint256).max;
+            } else {
+                require(type(uint256).max - _twin.supplyAvailable >= tokenId, INVALID_TWIN_TOKEN_RANGE);
+                lastTokenId = tokenId + _twin.supplyAvailable - 1;
+            }
 
             // Get all seller twin ids that belong to the same token address of the new twin to validate if they have not unlimited supply since ranges can overlaps each other
             uint256[] storage twinIds = protocolLookups().twinIdsByTokenAddressAndBySeller[sellerId][
