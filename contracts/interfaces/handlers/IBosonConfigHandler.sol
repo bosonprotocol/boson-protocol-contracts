@@ -315,4 +315,18 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Get the maximum total of offer fees allowed in an offer fee
      */
     function getMaxRoyaltyPecentage() external view returns (uint16);
+
+    /**
+     * @notice Sets the maximum resolution period a seller can specify
+     *
+     * Emits a MaxResolutionPeriodChanged event.
+     *
+     * @param _maxResolutionPeriod - the maximum resolution period that a {BosonTypes.Seller} can specify
+     */
+    function setMaxResolutionPeriod(uint256 _maxResolutionPeriod) external;
+
+    /**
+     * @notice Get the maximum resolution period a seller can specify
+     */
+    function getMaxResolutionPeriod() external view returns (uint256);
 }

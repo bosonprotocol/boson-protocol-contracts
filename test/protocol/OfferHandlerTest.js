@@ -181,6 +181,7 @@ describe("IBosonOfferHandler", function () {
         maxAllowedSellers: 100,
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
+        maxResolutionPeriod: oneMonth,
       },
       // Protocol fees
       {
@@ -713,6 +714,16 @@ describe("IBosonOfferHandler", function () {
         it("Resolution period is set to zero", async function () {
           // Set dispute duration period to 0
           offerDurations.resolutionPeriod = "0";
+
+          // Attempt to Create an offer, expecting revert
+          await expect(
+            offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId)
+          ).to.revertedWith(RevertReasons.INVALID_DISPUTE_DURATION);
+        });
+
+        it("Resolution period is greater than protocol max resolution period", async function () {
+          // Set max resolution period to 1 day
+          await configHandler.setMaxResolutionPeriod(86400 * 1000); // 24 hours
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -1440,6 +1451,9 @@ describe("IBosonOfferHandler", function () {
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+
+      // Necessary to cover all offers resolution periods
+      await configHandler.setMaxResolutionPeriod(oneWeek * 5);
 
       // create 5 offers
       offers = [];
