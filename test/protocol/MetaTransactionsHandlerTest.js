@@ -209,7 +209,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
   context("📋 Interfaces", async function () {
     context("👉 supportsInterface()", async function () {
-      it.only("should indicate support for IBosonMetaTransactionsHandler interface", async function () {
+      it("should indicate support for IBosonMetaTransactionsHandler interface", async function () {
         // Current interfaceId for IBosonMetaTransactionsHandler
         support = await erc165.supportsInterface(InterfaceIds.IBosonMetaTransactionsHandler);
 
