@@ -29,12 +29,15 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
      * @param _twin - the fully populated struct with twin id set to 0x0
      */
     function createTwinInternal(Twin memory _twin) internal {
+        // get message sender
+        address sender = msgSender();
+
         // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
+        (bool exists, uint256 sellerId) = getSellerIdByOperator(sender);
         require(exists, NOT_OPERATOR);
 
         // Protocol must be approved to transfer seller’s tokens
-        require(isProtocolApproved(_twin.tokenAddress, msgSender(), address(this)), NO_TRANSFER_APPROVED);
+        require(isProtocolApproved(_twin.tokenAddress, sender, address(this)), NO_TRANSFER_APPROVED);
 
         // Twin supply must exist and can't be zero
         require(_twin.supplyAvailable > 0, INVALID_SUPPLY_AVAILABLE);
@@ -108,7 +111,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
         twin.tokenType = _twin.tokenType;
 
         // Notify watchers of state change
-        emit TwinCreated(twinId, sellerId, _twin, msgSender());
+        emit TwinCreated(twinId, sellerId, _twin, sender);
     }
 
     /**

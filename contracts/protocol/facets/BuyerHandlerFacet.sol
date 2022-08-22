@@ -62,8 +62,11 @@ contract BuyerHandlerFacet is BuyerBase {
         //Buyer must already exist
         require(exists, NO_SUCH_BUYER);
 
+        // get message sender
+        address sender = msgSender();
+
         //Check that msg.sender is the wallet address for this buyer
-        require(buyer.wallet == msgSender(), NOT_BUYER_WALLET);
+        require(buyer.wallet == sender, NOT_BUYER_WALLET);
 
         //Check that current wallet address does not own any vouchers, if changing wallet address
         if (buyer.wallet != _buyer.wallet) {
@@ -78,14 +81,14 @@ contract BuyerHandlerFacet is BuyerBase {
         );
 
         //Delete current mappings
-        delete protocolLookups().buyerIdByWallet[msgSender()];
+        delete protocolLookups().buyerIdByWallet[sender];
 
         //Ignore active flag passed in by caller and set to value in storage.
         _buyer.active = buyer.active;
         storeBuyer(_buyer);
 
         // Notify watchers of state change
-        emit BuyerUpdated(_buyer.id, _buyer, msgSender());
+        emit BuyerUpdated(_buyer.id, _buyer, sender);
     }
 
     /**

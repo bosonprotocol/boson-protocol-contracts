@@ -34,8 +34,11 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
     function createBundleInternal(Bundle memory _bundle) internal {
+        // get message sender
+        address sender = msgSender();
+
         // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
+        (bool exists, uint256 sellerId) = getSellerIdByOperator(sender);
         require(exists, NOT_OPERATOR);
 
         // limit maximum number of offers to avoid running into block gas limit in a loop
@@ -91,7 +94,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         bundle.twinIds = _bundle.twinIds;
 
         // Notify watchers of state change
-        emit BundleCreated(bundleId, sellerId, _bundle, msgSender());
+        emit BundleCreated(bundleId, sellerId, _bundle, sender);
     }
 
     /**

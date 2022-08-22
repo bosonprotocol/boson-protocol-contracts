@@ -80,8 +80,11 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
         //Agent must already exist
         require(exists, NO_SUCH_AGENT);
 
+        // get message sender
+        address sender = msgSender();
+
         //Check that msg.sender is the wallet address for this agent
-        require(agent.wallet == msgSender(), NOT_AGENT_WALLET);
+        require(agent.wallet == sender, NOT_AGENT_WALLET);
 
         //check that the wallet address is unique to one agent Id if new
         require(
@@ -91,14 +94,14 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
         );
 
         //Delete current mappings
-        delete protocolLookups().agentIdByWallet[msgSender()];
+        delete protocolLookups().agentIdByWallet[sender];
 
         //Ignore active flag passed in by caller and set to value in storage.
         _agent.active = agent.active;
         storeAgent(_agent);
 
         // Notify watchers of state change
-        emit AgentUpdated(_agent.id, _agent, msgSender());
+        emit AgentUpdated(_agent.id, _agent, sender);
     }
 
     /**
