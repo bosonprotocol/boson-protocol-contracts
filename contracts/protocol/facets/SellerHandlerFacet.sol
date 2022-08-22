@@ -77,13 +77,16 @@ contract SellerHandlerFacet is SellerBase {
         //Seller must already exist
         require(exists, NO_SUCH_SELLER);
 
+        // get message sender
+        address sender = msgSender();
+
         //Check that caller is authorized to call this function
         if (seller.admin == address(0)) {
             address authTokenContract = protocolLookups().authTokenContracts[authToken.tokenType];
             address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
-            require(tokenIdOwner == msgSender(), NOT_ADMIN);
+            require(tokenIdOwner == sender, NOT_ADMIN);
         } else {
-            require(seller.admin == msgSender(), NOT_ADMIN);
+            require(seller.admin == sender, NOT_ADMIN);
         }
 
         //Check that the passed in addresses are unique to one seller Id across all roles -- not used or are used by this seller id.
@@ -146,7 +149,7 @@ contract SellerHandlerFacet is SellerBase {
         }
 
         // Notify watchers of state change
-        emit SellerUpdated(_seller.id, _seller, _authToken, msgSender());
+        emit SellerUpdated(_seller.id, _seller, _authToken, sender);
     }
 
     /**

@@ -72,9 +72,12 @@ library FundsLib {
         uint256 sellerDeposit = offer.sellerDeposit;
         decreaseAvailableFunds(sellerId, exchangeToken, sellerDeposit);
 
+        // get message sender
+        address sender = EIP712Lib.msgSender();
+
         // notify external observers
-        emit FundsEncumbered(_buyerId, exchangeToken, price, EIP712Lib.msgSender());
-        emit FundsEncumbered(sellerId, exchangeToken, sellerDeposit, EIP712Lib.msgSender());
+        emit FundsEncumbered(_buyerId, exchangeToken, price, sender);
+        emit FundsEncumbered(sellerId, exchangeToken, sellerDeposit, sender);
     }
 
     /**
@@ -185,26 +188,24 @@ library FundsLib {
         address exchangeToken = offer.exchangeToken;
         uint256 sellerId = offer.sellerId;
         uint256 buyerId = exchange.buyerId;
+        address sender = EIP712Lib.msgSender();
         if (sellerPayoff > 0) {
             increaseAvailableFunds(sellerId, exchangeToken, sellerPayoff);
-            emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff, EIP712Lib.msgSender());
+            emit FundsReleased(_exchangeId, sellerId, exchangeToken, sellerPayoff, sender);
         }
         if (buyerPayoff > 0) {
             increaseAvailableFunds(buyerId, exchangeToken, buyerPayoff);
-            emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff, EIP712Lib.msgSender());
+            emit FundsReleased(_exchangeId, buyerId, exchangeToken, buyerPayoff, sender);
         }
         if (protocolFee > 0) {
             increaseAvailableFunds(0, exchangeToken, protocolFee);
-            emit ProtocolFeeCollected(_exchangeId, exchangeToken, protocolFee, EIP712Lib.msgSender());
+            emit ProtocolFeeCollected(_exchangeId, exchangeToken, protocolFee, sender);
         }
         if (agentFee > 0) {
-            // Load protocol lookups storage
-            ProtocolLib.ProtocolLookups storage pl = ProtocolLib.protocolLookups();
-
             // Get the agent for offer
-            uint256 agentId = pl.agentIdByOffer[exchange.offerId];
+            uint256 agentId = ProtocolLib.protocolLookups().agentIdByOffer[exchange.offerId];
             increaseAvailableFunds(agentId, exchangeToken, agentFee);
-            emit FundsReleased(_exchangeId, agentId, exchangeToken, agentFee, EIP712Lib.msgSender());
+            emit FundsReleased(_exchangeId, agentId, exchangeToken, agentFee, sender);
         }
     }
 
