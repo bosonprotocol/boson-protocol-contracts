@@ -14,7 +14,6 @@ const Bundle = require("../../scripts/domain/Bundle");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const Group = require("../../scripts/domain/Group");
-const Condition = require("../../scripts/domain/Condition");
 const EvaluationMethod = require("../../scripts/domain/EvaluationMethod");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
@@ -97,7 +96,7 @@ describe("IBosonExchangeHandler", function () {
   let foreign20, foreign721, foreign1155;
   let twin20, twin721, twin1155, twinIds, bundle, balance, owner;
   let expectedCloneAddress;
-  let method, tokenType, tokenAddress, tokenId, threshold, maxCommits, groupId, offerIds, condition, group;
+  let groupId, offerIds, condition, group;
   let voucherInitValues, royaltyPercentage1, royaltyPercentage2, seller1Treasury, seller2Treasury;
   let emptyAuthToken;
   let agentId, agent;
@@ -759,20 +758,12 @@ describe("IBosonExchangeHandler", function () {
     context("👉 commitToOffer() with condition", async function () {
       context("✋ Threshold ERC20", async function () {
         beforeEach(async function () {
-          // Required constructor params for Condition
-          method = EvaluationMethod.Threshold;
-          tokenType = TokenType.FungibleToken;
-          tokenAddress = foreign20.address;
-          tokenId = "0";
-          threshold = "50";
-          maxCommits = "3";
-
           // Required constructor params for Group
           groupId = "1";
           offerIds = [offerId];
 
           // Create Condition
-          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+          condition = mockCondition({ tokenAddress: foreign20.address, threshold: "50", maxCommits: "3" });
           expect(condition.isValid()).to.be.true;
 
           // Create Group
@@ -783,7 +774,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("should emit a BuyerCommitted event if user meets condition", async function () {
           // mint enough tokens for the buyer
-          await foreign20.connect(buyer).mint(buyer.address, threshold);
+          await foreign20.connect(buyer).mint(buyer.address, condition.threshold);
 
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
@@ -795,10 +786,10 @@ describe("IBosonExchangeHandler", function () {
 
         it("should allow buyer to commit up to the max times for the group", async function () {
           // mint enough tokens for the buyer
-          await foreign20.connect(buyer).mint(buyer.address, threshold);
+          await foreign20.connect(buyer).mint(buyer.address, condition.threshold);
 
           // Commit to offer the maximum number of times
-          for (let i = 0; i < Number(maxCommits); i++) {
+          for (let i = 0; i < Number(condition.maxCommits); i++) {
             // We're only concerned that the event is emitted, indicating the commit was allowed
             await expect(
               exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
@@ -816,10 +807,10 @@ describe("IBosonExchangeHandler", function () {
 
           it("buyer has exhausted allowable commits", async function () {
             // mint a token for the buyer
-            await foreign20.connect(buyer).mint(buyer.address, threshold);
+            await foreign20.connect(buyer).mint(buyer.address, condition.threshold);
 
             // Commit to offer the maximum number of times
-            for (let i = 0; i < Number(maxCommits); i++) {
+            for (let i = 0; i < Number(condition.maxCommits); i++) {
               await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
             }
 
@@ -833,20 +824,17 @@ describe("IBosonExchangeHandler", function () {
 
       context("✋ Threshold ERC721", async function () {
         beforeEach(async function () {
-          // Required constructor params for Condition
-          method = EvaluationMethod.Threshold;
-          tokenType = TokenType.NonFungibleToken;
-          tokenAddress = foreign721.address;
-          tokenId = "0";
-          threshold = "5";
-          maxCommits = "3";
-
           // Required constructor params for Group
           groupId = "1";
           offerIds = [offerId];
 
           // Create Condition
-          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+          condition = mockCondition({
+            tokenAddress: foreign721.address,
+            threshold: "5",
+            maxCommits: "3",
+            tokenType: TokenType.NonFungibleToken,
+          });
           expect(condition.isValid()).to.be.true;
 
           // Create Group
@@ -857,7 +845,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("should emit a BuyerCommitted event if user meets condition", async function () {
           // mint enough tokens for the buyer
-          await foreign721.connect(buyer).mint(tokenId, threshold);
+          await foreign721.connect(buyer).mint(condition.tokenId, condition.threshold);
 
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
@@ -869,10 +857,10 @@ describe("IBosonExchangeHandler", function () {
 
         it("should allow buyer to commit up to the max times for the group", async function () {
           // mint enough tokens for the buyer
-          await foreign721.connect(buyer).mint(tokenId, threshold);
+          await foreign721.connect(buyer).mint(condition.tokenId, condition.threshold);
 
           // Commit to offer the maximum number of times
-          for (let i = 0; i < Number(maxCommits); i++) {
+          for (let i = 0; i < Number(condition.maxCommits); i++) {
             // We're only concerned that the event is emitted, indicating the commit was allowed
             await expect(
               exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
@@ -890,10 +878,10 @@ describe("IBosonExchangeHandler", function () {
 
           it("buyer has exhausted allowable commits", async function () {
             // mint enough tokens for the buyer
-            await foreign721.connect(buyer).mint(tokenId, threshold);
+            await foreign721.connect(buyer).mint(condition.tokenId, condition.threshold);
 
             // Commit to offer the maximum number of times
-            for (let i = 0; i < Number(maxCommits); i++) {
+            for (let i = 0; i < Number(condition.maxCommits); i++) {
               await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
             }
 
@@ -907,20 +895,18 @@ describe("IBosonExchangeHandler", function () {
 
       context("✋ Threshold ERC1155", async function () {
         beforeEach(async function () {
-          // Required constructor params for Condition
-          method = EvaluationMethod.Threshold;
-          tokenType = TokenType.MultiToken;
-          tokenAddress = foreign1155.address;
-          tokenId = "1";
-          threshold = "20";
-          maxCommits = "3";
-
           // Required constructor params for Group
           groupId = "1";
           offerIds = [offerId];
 
           // Create Condition
-          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+          condition = mockCondition({
+            tokenAddress: foreign1155.address,
+            threshold: "20",
+            maxCommits: "3",
+            tokenType: TokenType.MultiToken,
+            tokenId: "1",
+          });
           expect(condition.isValid()).to.be.true;
 
           // Create Group
@@ -931,7 +917,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("should emit a BuyerCommitted event if user meets condition", async function () {
           // mint enough tokens for the buyer
-          await foreign1155.connect(buyer).mint(tokenId, threshold);
+          await foreign1155.connect(buyer).mint(condition.tokenId, condition.threshold);
 
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
@@ -943,10 +929,10 @@ describe("IBosonExchangeHandler", function () {
 
         it("should allow buyer to commit up to the max times for the group", async function () {
           // mint enough tokens for the buyer
-          await foreign1155.connect(buyer).mint(tokenId, threshold);
+          await foreign1155.connect(buyer).mint(condition.tokenId, condition.threshold);
 
           // Commit to offer the maximum number of times
-          for (let i = 0; i < Number(maxCommits); i++) {
+          for (let i = 0; i < Number(condition.maxCommits); i++) {
             // We're only concerned that the event is emitted, indicating the commit was allowed
             await expect(
               exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
@@ -964,10 +950,10 @@ describe("IBosonExchangeHandler", function () {
 
           it("buyer has exhausted allowable commits", async function () {
             // mint enough tokens for the buyer
-            await foreign1155.connect(buyer).mint(tokenId, threshold);
+            await foreign1155.connect(buyer).mint(condition.tokenId, condition.threshold);
 
             // Commit to offer the maximum number of times
-            for (let i = 0; i < Number(maxCommits); i++) {
+            for (let i = 0; i < Number(condition.maxCommits); i++) {
               await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
             }
 
@@ -981,20 +967,19 @@ describe("IBosonExchangeHandler", function () {
 
       context("✋ SpecificToken ERC721", async function () {
         beforeEach(async function () {
-          // Required constructor params for Condition
-          method = EvaluationMethod.SpecificToken;
-          tokenType = TokenType.NonFungibleToken;
-          tokenAddress = foreign721.address;
-          tokenId = "12";
-          threshold = "0";
-          maxCommits = "3";
-
           // Required constructor params for Group
           groupId = "1";
           offerIds = [offerId];
 
           // Create Condition
-          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+          condition = mockCondition({
+            tokenAddress: foreign721.address,
+            threshold: "0",
+            maxCommits: "3",
+            tokenType: TokenType.NonFungibleToken,
+            tokenId: "12",
+            method: EvaluationMethod.SpecificToken,
+          });
           expect(condition.isValid()).to.be.true;
 
           // Create Group
@@ -1005,7 +990,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("should emit a BuyerCommitted event if user meets condition", async function () {
           // mint correct token for the buyer
-          await foreign721.connect(buyer).mint(tokenId, "1");
+          await foreign721.connect(buyer).mint(condition.tokenId, "1");
 
           // Commit to offer.
           // We're only concerned that the event is emitted, indicating the condition was met
@@ -1017,10 +1002,10 @@ describe("IBosonExchangeHandler", function () {
 
         it("should allow buyer to commit up to the max times for the group", async function () {
           // mint correct token for the buyer
-          await foreign721.connect(buyer).mint(tokenId, "1");
+          await foreign721.connect(buyer).mint(condition.tokenId, "1");
 
           // Commit to offer the maximum number of times
-          for (let i = 0; i < Number(maxCommits); i++) {
+          for (let i = 0; i < Number(condition.maxCommits); i++) {
             // We're only concerned that the event is emitted, indicating the commit was allowed
             await expect(
               exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price })
@@ -1038,7 +1023,7 @@ describe("IBosonExchangeHandler", function () {
 
           it("buyer does not meet condition for commit", async function () {
             // mint correct token but to another user
-            await foreign721.connect(rando).mint(tokenId, "1");
+            await foreign721.connect(rando).mint(condition.tokenId, "1");
 
             // Attempt to commit, expecting revert
             await expect(
@@ -1048,10 +1033,10 @@ describe("IBosonExchangeHandler", function () {
 
           it("buyer has exhausted allowable commits", async function () {
             // mint correct token for the buyer
-            await foreign721.connect(buyer).mint(tokenId, "1");
+            await foreign721.connect(buyer).mint(condition.tokenId, "1");
 
             // Commit to offer the maximum number of times
-            for (let i = 0; i < Number(maxCommits); i++) {
+            for (let i = 0; i < Number(condition.maxCommits); i++) {
               await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
             }
 
@@ -1065,20 +1050,12 @@ describe("IBosonExchangeHandler", function () {
 
       context("✋ Group without condition", async function () {
         beforeEach(async function () {
-          // Required constructor params for Condition
-          method = EvaluationMethod.None;
-          tokenType = TokenType.FungibleToken;
-          tokenAddress = ethers.constants.AddressZero;
-          tokenId = "0";
-          threshold = "0";
-          maxCommits = "0";
-
           // Required constructor params for Group
           groupId = "1";
           offerIds = [offerId];
 
           // Create Condition
-          condition = new Condition(method, tokenType, tokenAddress, tokenId, threshold, maxCommits);
+          condition = mockCondition({ method: EvaluationMethod.None, threshold: "0", maxCommits: "0" });
           expect(condition.isValid()).to.be.true;
 
           // Create Group
@@ -3739,7 +3716,7 @@ describe("IBosonExchangeHandler", function () {
         offerIds = [offerId];
 
         // Create condition
-        condition = mockCondition(foreign20.address);
+        condition = mockCondition({ tokenAddress: foreign20.address });
         expect(condition.isValid()).to.be.true;
 
         // Create a new group
