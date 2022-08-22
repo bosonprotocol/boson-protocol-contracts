@@ -244,6 +244,12 @@ contract OrchestrationHandlerFacet is
      *   - Buyer cancel penalty is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
+     *   - SupplyAvailable is zero
+     *   - Twin is NonFungibleToken and amount was set
+     *   - Twin is NonFungibleToken and end of range would overflow
+     *   - Twin is NonFungibleToken with unlimited supply and starting token id is too high
+     *   - Twin is NonFungibleToken and range is already being used in another twin of the seller
+     *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -301,6 +307,12 @@ contract OrchestrationHandlerFacet is
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token
+     *   - SupplyAvailable is zero
+     *   - Twin is NonFungibleToken and amount was set
+     *   - Twin is NonFungibleToken and end of range would overflow
+     *   - Twin is NonFungibleToken with unlimited supply and starting token id is too high
+     *   - Twin is NonFungibleToken and range is already being used in another twin of the seller
+     *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -449,6 +461,12 @@ contract OrchestrationHandlerFacet is
      *   - Buyer cancel penalty is greater than price
      * - when creating twin if
      *   - Not approved to transfer the seller's token
+     *   - SupplyAvailable is zero
+     *   - Twin is NonFungibleToken and amount was set
+     *   - Twin is NonFungibleToken and end of range would overflow
+     *   - Twin is NonFungibleToken with unlimited supply and starting token id is too high
+     *   - Twin is NonFungibleToken and range is already being used in another twin of the seller
+     *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -527,6 +545,12 @@ contract OrchestrationHandlerFacet is
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token
+     *   - SupplyAvailable is zero
+     *   - Twin is NonFungibleToken and amount was set
+     *   - Twin is NonFungibleToken and end of range would overflow
+     *   - Twin is NonFungibleToken with unlimited supply and starting token id is too high
+     *   - Twin is NonFungibleToken and range is already being used in another twin of the seller
+     *   - Twin is FungibleToken or MultiToken and amount was not set
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
@@ -616,6 +640,12 @@ contract OrchestrationHandlerFacet is
      * - Condition includes invalid combination of parameters
      * - when creating twin if
      *   - Not approved to transfer the seller's token
+     *   - SupplyAvailable is zero
+     *   - Twin is NonFungibleToken and amount was set
+     *   - Twin is NonFungibleToken and end of range would overflow
+     *   - Twin is NonFungibleToken with unlimited supply and starting token id is too high
+     *   - Twin is NonFungibleToken and range is already being used in another twin of the seller
+     *   - Twin is FungibleToken or MultiToken and amount was not set
      *
      * @param _twin - the fully populated twin struct
      * @param _offerId - offerid, obtained in previous steps

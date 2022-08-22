@@ -187,7 +187,7 @@ describe("IBosonConfigHandler", function () {
           .withArgs(buyerEscalationDepositPercentage, deployer.address);
 
         await expect(cutTransaction)
-          .to.emit(configHandler, "MaxRoyaltyPecentageChanged")
+          .to.emit(configHandler, "MaxRoyaltyPercentageChanged")
           .withArgs(maxRoyaltyPecentage, deployer.address);
 
         await expect(cutTransaction)
@@ -814,10 +814,10 @@ describe("IBosonConfigHandler", function () {
           maxRoyaltyPecentage = 250;
         });
 
-        it("should emit a MaxRoyaltyPecentageChanged event", async function () {
+        it("should emit a MaxRoyaltyPercentageChanged event", async function () {
           // set new value for Max Royalty Percentage, testing for the event
           await expect(configHandler.connect(deployer).setMaxRoyaltyPecentage(maxRoyaltyPecentage))
-            .to.emit(configHandler, "MaxRoyaltyPecentageChanged")
+            .to.emit(configHandler, "MaxRoyaltyPercentageChanged")
             .withArgs(maxRoyaltyPecentage, deployer.address);
         });
 
@@ -878,6 +878,20 @@ describe("IBosonConfigHandler", function () {
             await expect(
               configHandler.connect(rando).setAuthTokenContract(AuthTokenType.ENS, authTokenContract.address)
             ).to.revertedWith(RevertReasons.ACCESS_DENIED);
+          });
+
+          it("_authTokenType is None", async function () {
+            // Attempt to set new auth token contract, expecting revert
+            await expect(
+              configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.None, authTokenContract.address)
+            ).to.revertedWith(RevertReasons.INVALID_AUTH_TOKEN_TYPE);
+          });
+
+          it("_authTokenContract is the zero address", async function () {
+            // Attempt to set new auth token contract, expecting revert
+            await expect(
+              configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.ENS, ethers.constants.AddressZero)
+            ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
           });
         });
       });

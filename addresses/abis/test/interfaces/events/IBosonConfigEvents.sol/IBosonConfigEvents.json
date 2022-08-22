@@ -234,7 +234,7 @@
           "type": "address"
         }
       ],
-      "name": "MaxRoyaltyPecentageChanged",
+      "name": "MaxRoyaltyPercentageChanged",
       "type": "event"
     },
     {

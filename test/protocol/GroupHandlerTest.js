@@ -446,6 +446,124 @@ describe("IBosonGroupHandler", function () {
             RevertReasons.INVALID_CONDITION_PARAMETERS
           );
         });
+
+        context("Condition 'None' has some values in other fields", async function () {
+          beforeEach(async function () {
+            condition = mockCondition({ method: EvaluationMethod.None, threshold: "0", maxCommits: "0" });
+          });
+
+          it("Token address is not zero", async function () {
+            condition.tokenAddress = rando.address;
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Token id is not zero", async function () {
+            condition.tokenId = "20";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Threshold is not zero", async function () {
+            condition.threshold = "100";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Max commits is not zero", async function () {
+            condition.maxCommits = "5";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+        });
+
+        context("Condition 'Threshold' has invalid fields", async function () {
+          beforeEach(async function () {
+            condition = mockCondition({
+              method: EvaluationMethod.Threshold,
+              tokenAddress: rando.address,
+              maxCommits: "10",
+              threshold: "200",
+            });
+          });
+
+          it("Condition 'Threshold' has zero token contract address", async function () {
+            condition.tokenAddress = ethers.constants.AddressZero;
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Condition 'Threshold' has zero maxCommits", async function () {
+            condition.maxCommits = "0";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Condition 'Threshold' has zero threshold", async function () {
+            condition.threshold = "0";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+        });
+
+        context("Condition 'SpecificToken' has invalid fields", async function () {
+          beforeEach(async function () {
+            condition = mockCondition({
+              method: EvaluationMethod.SpecificToken,
+              tokenAddress: rando.address,
+              threshold: "0",
+              maxCommits: "5",
+            });
+          });
+
+          it("Condition 'SpecificToken' has zero token contract address", async function () {
+            condition.tokenAddress = ethers.constants.AddressZero;
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Condition 'SpecificToken' has non zero threshold", async function () {
+            condition.threshold = "10";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+
+          it("Condition 'SpecificToken' has zero maxCommits", async function () {
+            condition.maxCommits = "0";
+
+            // Attempt to create the group, expecting revert
+            await expect(groupHandler.connect(operator).createGroup(group, condition)).to.revertedWith(
+              RevertReasons.INVALID_CONDITION_PARAMETERS
+            );
+          });
+        });
       });
     });
 
