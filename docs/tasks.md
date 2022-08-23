@@ -1,4 +1,7 @@
-# Boson Protocol V2
+[![banner](images/banner.png)](https://bosonprotocol.io)
+
+<h1 align="center">Boson Protocol V2</h1>
+
 ## [Intro](../README.md) | [Setup](setup.md) | Tasks |  [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md)
 ## Development Tasks
 Everything required to build, test, analyse, and deploy is available as an NPM script.

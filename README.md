@@ -1,4 +1,7 @@
-# Boson Protocol V2
+[![banner](docs/images/banner.png)](https://bosonprotocol.io)
+
+<h1 align="center">Boson Protocol V2</h1>
+
 ## Intro | [Setup](docs/setup.md) | [Tasks](docs/tasks.md) |  [Architecture](docs/architecture.md) | [Domain Model](docs/domain.md) | [State Machines](docs/state-machines.md)
 
 ## Status
