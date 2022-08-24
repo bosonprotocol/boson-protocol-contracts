@@ -125,6 +125,34 @@ describe("ProtocolDiamond", async function () {
           });
         });
       });
+
+      it("should revert if more than 255 functions are added", async () => {
+        // add more than 256 facets
+        // Deploy TestFacet256
+        const TestFacet256 = await ethers.getContractFactory("TestFacet256");
+        const testFacet256 = await TestFacet256.deploy();
+        await testFacet256.deployed();
+
+        // Get the TestFacet256 function selectors from the abi
+        selectors = getSelectors(testFacet256);
+
+        // Define the facet cut
+        facetCuts = [
+          {
+            facetAddress: testFacet256.address,
+            action: FacetCutAction.Add,
+            functionSelectors: selectors,
+          },
+        ];
+
+        // Send the DiamondCut transaction
+        tx = await cutFacetViaDiamond
+          .connect(upgrader)
+          .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit: "10000000" });
+
+        // this should revert
+        await expect(loupeFacetViaDiamond.facets()).to.be.revertedWith("Too many functions on facet.");
+      });
     });
 
     context("👉 facetAddresses()", async () => {
