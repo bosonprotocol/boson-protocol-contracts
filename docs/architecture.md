@@ -37,7 +37,7 @@ As a client developer, the protocol is reduced to a black box. You can invoke fu
 This pattern gives us some distinct advantages, a few of which are:
 - **Modular architecture**: Functionality is directly mapped to the broad areas of concern identified in the requirements. Also, it is easy to both illustrate and comprehend in a high level diagram.
 - **Reduced the attack surface**: There is only one publicly accessible entry point to the protocol.
-- **Simple to monitor**: Only one addresse to watch for protocol events.
+- **Simple to monitor**: Only one address to watch for protocol events.
 - **Upgradeable**: Logic and storage are separated, such that any vulnerabilities can be properly remediated, not worked around. Fixing or improving the deployed code doesn't necessitate a messy migration of data (which sometimes is impossible if a strategy is not in place before the initial launch of a protocol).
 - **Virtually unlimited contract size**: No need to worry about the diamond reaching the contract size limit, as all its functionality is delegated. Individual facets must fit within than the maximum contract size limit, of course. But when a facet must be split for size, implementing a strategy for privileged communication between its resultant pieces is not necessary as they merely contribute functions to the diamond.
 - **Maintainability**: Developers can focus on business logic rather than managing contract collaboration patterns and the potential threats that naturally arise.
