@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "../domain/BosonConstants.sol";
 import { TestFacetLib } from "./TestFacetLib.sol";
 import "../diamond/ProtocolDiamond.sol";
 
