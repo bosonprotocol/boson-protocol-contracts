@@ -10,8 +10,6 @@ import "../diamond/ProtocolDiamond.sol";
  *
  * @notice Contract for testing initializeable diamond contract
  *
- * @author Nick Mudge <nick@perfectabstractions.com> (https://twitter.com/mudgen)
- * @author Cliff Hall <cliff@futurescale.com> (https://twitter.com/seaofarrows)
  */
 contract TestInitializableDiamond is ProtocolDiamond {
     /**

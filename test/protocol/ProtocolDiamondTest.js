@@ -12,6 +12,7 @@ const {
   removeSelectors,
 } = require("../../scripts/util/diamond-utils.js");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces");
+const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 
 /**
  * Test the Protocol Diamond contract and its core facets
@@ -156,7 +157,7 @@ describe("ProtocolDiamond", async function () {
           .diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit: "10000000" });
 
         // this should revert
-        await expect(loupeFacetViaDiamond.facets()).to.be.revertedWith("Too many functions on facet.");
+        await expect(loupeFacetViaDiamond.facets()).to.be.revertedWith(RevertReasons.TOO_MANY_FUNCTIONS);
       });
     });
 
@@ -261,7 +262,7 @@ describe("ProtocolDiamond", async function () {
         // non-UPGRADER attempt
         await expect(
           cutFacetViaDiamond.connect(admin).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
-        ).to.be.revertedWith("Caller must have UPGRADER role");
+        ).to.be.revertedWith(RevertReasons.ONLY_UPGRADER);
 
         // UPGRADER attempt
         tx = await cutFacetViaDiamond
@@ -385,7 +386,7 @@ describe("ProtocolDiamond", async function () {
         // attempt to add zero selectors
         await expect(
           cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
-        ).to.be.revertedWith("LibDiamondCut: No selectors in facet to cut");
+        ).to.be.revertedWith(RevertReasons.NO_SELECTORS_TO_CUT);
       });
 
       it("can't add function that already exists", async function () {
@@ -409,7 +410,7 @@ describe("ProtocolDiamond", async function () {
         // attempt to add the same selectors again
         await expect(
           cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
-        ).to.be.revertedWith("LibDiamondCut: Can't add function that already exists");
+        ).to.be.revertedWith(RevertReasons.FUNCTION_ALREADY_EXISTS);
       });
     });
 
@@ -564,7 +565,7 @@ describe("ProtocolDiamond", async function () {
         // attempt to remove zero selectors
         await expect(
           cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
-        ).to.be.revertedWith("LibDiamondCut: No selectors in facet to cut");
+        ).to.be.revertedWith(RevertReasons.NO_SELECTORS_TO_CUT);
       });
 
       it("remove facet address must be address(0)", async function () {
@@ -584,7 +585,7 @@ describe("ProtocolDiamond", async function () {
         // attempt to make remove cut with non zero facet address
         await expect(
           cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
-        ).to.be.revertedWith("LibDiamondCut: Remove facet address must be address(0)");
+        ).to.be.revertedWith(RevertReasons.REMOVING_NON_ZERO_ADDRESS_FACET);
       });
 
       it("can't remove function that doesn't exist", async function () {
@@ -600,7 +601,7 @@ describe("ProtocolDiamond", async function () {
         // attempt to remove function that doesn't exist
         await expect(
           cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
-        ).to.be.revertedWith("LibDiamondCut: Can't remove function that doesn't exist");
+        ).to.be.revertedWith(RevertReasons.REMOVING_FUNCTION_DOES_NOT_EXIST);
       });
 
       it("Can't remove immutable function", async function () {
@@ -631,7 +632,7 @@ describe("ProtocolDiamond", async function () {
         // attempt to make remove immutable function
         await expect(
           cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
-        ).to.be.revertedWith("LibDiamondCut: Can't remove immutable function");
+        ).to.be.revertedWith(RevertReasons.REMOVING_IMMUTABLE_FUNCTION);
       });
     });
 
@@ -709,7 +710,7 @@ describe("ProtocolDiamond", async function () {
         // attempt to replace zero selectors
         await expect(
           cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
-        ).to.be.revertedWith("LibDiamondCut: No selectors in facet to cut");
+        ).to.be.revertedWith(RevertReasons.NO_SELECTORS_TO_CUT);
       });
 
       it("can't replace immutable function", async function () {
@@ -741,7 +742,7 @@ describe("ProtocolDiamond", async function () {
         // attempt to replace immutable functions
         await expect(
           cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
-        ).to.be.revertedWith("LibDiamondCut: Can't replace immutable function");
+        ).to.be.revertedWith(RevertReasons.REPLACING_IMMUTABLE_FUNCTION);
       });
 
       it("can't replace function with same function", async function () {
@@ -757,7 +758,7 @@ describe("ProtocolDiamond", async function () {
         // attempt to replace function with same function
         await expect(
           cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
-        ).to.be.revertedWith("LibDiamondCut: Can't replace function with same function");
+        ).to.be.revertedWith(RevertReasons.REPLACING_WITH_SAME_FUNCTION);
       });
 
       it("can't replace function that doesn't exist", async function () {
@@ -773,7 +774,7 @@ describe("ProtocolDiamond", async function () {
         // attempt to replace function that doesn't exist
         await expect(
           cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, ethers.constants.AddressZero, "0x", { gasLimit })
-        ).to.be.revertedWith("LibDiamondCut: Can't replace function that doesn't exist");
+        ).to.be.revertedWith(RevertReasons.REPLACING_FUNCTION_DOES_NOT_EXIST);
       });
     });
   });
@@ -906,7 +907,7 @@ describe("ProtocolDiamond", async function () {
         // If contract address is supplied Test3Facet's initializer will revert with the specific reason
         await expect(
           cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, test3Facet.address, initCallData, { gasLimit })
-        ).to.revertedWith("Address cannot be a contract");
+        ).to.revertedWith(RevertReasons.CONTRACT_NOT_ALLOWED);
       });
 
       it("should revert with library reason if not supplied by implementation", async () => {
@@ -931,10 +932,10 @@ describe("ProtocolDiamond", async function () {
         // and so the diamondCut function will supply it's own reason
         await expect(
           cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, test3Facet.address, initCallData, { gasLimit })
-        ).to.revertedWith("'LibDiamondCut: _init function reverted");
+        ).to.revertedWith(RevertReasons.INIT_REVERTED);
       });
 
-      it("should revert if _init is address(0) but_calldata is not empty", async () => {
+      it("should revert if _init is address(0) but _calldata is not empty", async () => {
         // Encode the initialization call
         initFunction = "initialize(address _testAddress)";
         initInterface = new ethers.utils.Interface([`function ${initFunction}`]);
@@ -957,7 +958,7 @@ describe("ProtocolDiamond", async function () {
           cutFacetViaDiamond
             .connect(upgrader)
             .diamondCut(facetCuts, ethers.constants.AddressZero, initCallData, { gasLimit })
-        ).to.revertedWith("LibDiamondCut: _init is address(0) but_calldata is not empty");
+        ).to.revertedWith(RevertReasons.INIT_ZERO_ADDRESS_NON_EMPTY_CALLDATA);
       });
 
       it("should revert if _calldata is empty but _init is not address(0)", async () => {
@@ -977,7 +978,7 @@ describe("ProtocolDiamond", async function () {
         // If _calldata is empty, but contract address is not supplied, diamondCut will revert with it's own reason
         await expect(
           cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, test3Facet.address, "0x", { gasLimit })
-        ).to.revertedWith("LibDiamondCut: _calldata is empty but _init is not address(0)");
+        ).to.revertedWith(RevertReasons.INIT_EMPTY_CALLDATA_NON_ZERO_ADDRESS);
       });
 
       it("should revert if _init address has no code", async () => {
@@ -1001,7 +1002,7 @@ describe("ProtocolDiamond", async function () {
         // If contract address has no code, diamondCut will revert with it's own reason
         await expect(
           cutFacetViaDiamond.connect(upgrader).diamondCut(facetCuts, deployer.address, initCallData, { gasLimit })
-        ).to.revertedWith("LibDiamondCut: _init address has no code");
+        ).to.revertedWith(RevertReasons.INIT_ADDRESS_WITH_NO_CODE);
       });
     });
   });
