@@ -162,6 +162,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         maxAllowedSellers: 100,
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
+        maxResolutionPeriod: oneMonth,
       },
       // Protocol fees
       {
@@ -853,6 +854,69 @@ describe("IBosonMetaTransactionsHandler", function () {
           [, buyerStruct] = await accountHandler.getBuyer(buyerId);
           const buyerAfter = Buyer.fromStruct(buyerStruct);
           assert.equal(buyerAfter.toString(), buyerBefore.toString(), "Buyer should not change");
+        });
+
+        it("Should emit MetaTransactionExecuted event and update state", async () => {
+          // create seller
+          await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
+
+          // deploy malicious contracts
+          const [maliciousToken] = await deployMockTokens(gasLimit, ["Foreign20Malicious2"]);
+          await maliciousToken.setProtocolAddress(protocolDiamond.address);
+          await maliciousToken.mint(rando.address, "1");
+          await maliciousToken.connect(rando).approve(protocolDiamond.address, "1");
+
+          // Just make a random metaTx signature to some view function that will delete "currentSender"
+          // Prepare the function signature for the facet function.
+          functionSignature = exchangeHandler.interface.encodeFunctionData("getNextExchangeId");
+
+          // Prepare the message
+          message.nonce = "0";
+          message.from = rando.address;
+          message.contractAddress = accountHandler.address;
+          message.functionName = "getNextExchangeId()";
+          message.functionSignature = functionSignature;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            rando,
+            customTransactionType,
+            "MetaTransaction",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          await maliciousToken.setMetaTxBytes(rando.address, functionSignature, r, s, v);
+
+          // Prepare the function signature for the facet function.
+          functionSignature = fundsHandler.interface.encodeFunctionData("depositFunds", [
+            seller.id,
+            maliciousToken.address,
+            "1",
+          ]);
+
+          // Prepare the message
+          message.nonce = nonce;
+          message.from = rando.address;
+          message.contractAddress = accountHandler.address;
+          message.functionName = "depositFunds(uint256,address,uint256)";
+          message.functionSignature = functionSignature;
+
+          // Collect the signature components
+          ({ r, s, v } = await prepareDataSignatureParameters(
+            rando,
+            customTransactionType,
+            "MetaTransaction",
+            message,
+            metaTransactionsHandler.address
+          ));
+
+          // send a meta transaction, expect revert
+          await expect(
+            metaTransactionsHandler
+              .connect(deployer)
+              .executeMetaTransaction(rando.address, message.functionName, functionSignature, nonce, r, s, v)
+          ).to.revertedWith(RevertReasons.REENTRANCY_GUARD);
         });
       });
     });

@@ -15,8 +15,8 @@ Done or in progress are:
   - ✅ Shared script modules for use in deployment and testing
   - ✅ Github Actions for CI
   - ✅ Support for EIP-712 meta-transactions
+  - ✅ Protocol facet contracts and interfaces
   - 👉 Generated contract documentation 
-  - 👉 Protocol facet contracts and interfaces
   
 ## Developers
   - [Setup](docs/setup.md) - Get going quickly on your local system

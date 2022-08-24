@@ -9,7 +9,7 @@ import { IBosonTwinEvents } from "../events/IBosonTwinEvents.sol";
  *
  * @notice Handles creation, removal, and querying of twins within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x44f98e5d
+ * The ERC-165 identifier for this interface is: 0x60b30e70
  */
 interface IBosonTwinHandler is IBosonTwinEvents {
     /**

@@ -29,7 +29,8 @@ describe("IBosonConfigHandler", function () {
     maxAllowedSellers,
     buyerEscalationDepositPercentage,
     maxTotalOfferFeePercentage,
-    maxRoyaltyPecentage;
+    maxRoyaltyPecentage,
+    maxResolutionPeriod;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
   let authTokenContract;
@@ -71,6 +72,7 @@ describe("IBosonConfigHandler", function () {
     buyerEscalationDepositPercentage = 100;
     maxTotalOfferFeePercentage = 4000; // 40%
     maxRoyaltyPecentage = 1000; // 10%
+    maxResolutionPeriod = oneMonth;
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
@@ -104,6 +106,7 @@ describe("IBosonConfigHandler", function () {
             maxAllowedSellers,
             maxTotalOfferFeePercentage,
             maxRoyaltyPecentage,
+            maxResolutionPeriod,
           },
           //Protocol fees
           {
@@ -184,8 +187,12 @@ describe("IBosonConfigHandler", function () {
           .withArgs(buyerEscalationDepositPercentage, deployer.address);
 
         await expect(cutTransaction)
-          .to.emit(configHandler, "MaxRoyaltyPecentageChanged")
+          .to.emit(configHandler, "MaxRoyaltyPercentageChanged")
           .withArgs(maxRoyaltyPecentage, deployer.address);
+
+        await expect(cutTransaction)
+          .to.emit(configHandler, "MaxResolutionPeriodChanged")
+          .withArgs(maxResolutionPeriod, deployer.address);
       });
     });
   });
@@ -215,6 +222,7 @@ describe("IBosonConfigHandler", function () {
           maxAllowedSellers,
           maxTotalOfferFeePercentage,
           maxRoyaltyPecentage,
+          maxResolutionPeriod,
         },
         // Protocol fees
         {
@@ -806,10 +814,10 @@ describe("IBosonConfigHandler", function () {
           maxRoyaltyPecentage = 250;
         });
 
-        it("should emit a MaxRoyaltyPecentageChanged event", async function () {
+        it("should emit a MaxRoyaltyPercentageChanged event", async function () {
           // set new value for Max Royalty Percentage, testing for the event
           await expect(configHandler.connect(deployer).setMaxRoyaltyPecentage(maxRoyaltyPecentage))
-            .to.emit(configHandler, "MaxRoyaltyPecentageChanged")
+            .to.emit(configHandler, "MaxRoyaltyPercentageChanged")
             .withArgs(maxRoyaltyPecentage, deployer.address);
         });
 
@@ -871,6 +879,20 @@ describe("IBosonConfigHandler", function () {
               configHandler.connect(rando).setAuthTokenContract(AuthTokenType.ENS, authTokenContract.address)
             ).to.revertedWith(RevertReasons.ACCESS_DENIED);
           });
+
+          it("_authTokenType is None", async function () {
+            // Attempt to set new auth token contract, expecting revert
+            await expect(
+              configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.None, authTokenContract.address)
+            ).to.revertedWith(RevertReasons.INVALID_AUTH_TOKEN_TYPE);
+          });
+
+          it("_authTokenContract is the zero address", async function () {
+            // Attempt to set new auth token contract, expecting revert
+            await expect(
+              configHandler.connect(deployer).setAuthTokenContract(AuthTokenType.ENS, ethers.constants.AddressZero)
+            ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+          });
         });
       });
 
@@ -899,6 +921,37 @@ describe("IBosonConfigHandler", function () {
           it("caller is not the admin", async function () {
             // Attempt to set new max exchange per batch, expecting revert
             await expect(configHandler.connect(rando).setMaxExchangesPerBatch(maxExchangesPerBatch)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
+          });
+        });
+      });
+
+      context("👉 setMaxResolutionPeriod()", async function () {
+        beforeEach(async function () {
+          // set new value
+          maxResolutionPeriod = ethers.BigNumber.from(oneMonth).add(oneWeek);
+        });
+
+        it("should emit a MaxResolutionPeriodChanged event", async function () {
+          // Set new resolution period
+          await expect(configHandler.connect(deployer).setMaxResolutionPeriod(maxResolutionPeriod))
+            .to.emit(configHandler, "MaxResolutionPeriodChanged")
+            .withArgs(maxResolutionPeriod, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new resolution period
+          await configHandler.connect(deployer).setMaxResolutionPeriod(maxResolutionPeriod);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMaxResolutionPeriod()).to.equal(maxResolutionPeriod);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new value, expecting revert
+            await expect(configHandler.connect(rando).setMaxResolutionPeriod(maxResolutionPeriod)).to.revertedWith(
               RevertReasons.ACCESS_DENIED
             );
           });
@@ -986,10 +1039,13 @@ describe("IBosonConfigHandler", function () {
           ethers.constants.AddressZero,
           "Invalid auth token contract address"
         );
-
         expect(await configHandler.connect(rando).getMaxExchangesPerBatch()).to.equal(
           maxExchangesPerBatch,
           "Invalid max exchanges per batch"
+        );
+        expect(await configHandler.connect(rando).getMaxResolutionPeriod()).to.equal(
+          maxResolutionPeriod,
+          "Invalid max resolution period"
         );
       });
     });

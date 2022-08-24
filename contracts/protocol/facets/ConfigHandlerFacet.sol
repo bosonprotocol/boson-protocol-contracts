@@ -50,6 +50,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setBuyerEscalationDepositPercentage(_buyerEscalationDepositPercentage);
         setMaxTotalOfferFeePercentage(_limits.maxTotalOfferFeePercentage);
         setMaxRoyaltyPecentage(_limits.maxRoyaltyPecentage);
+        setMaxResolutionPeriod(_limits.maxResolutionPeriod);
 
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -394,7 +395,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Sets the maximal royalty percentage that can be set by the seller
      *
-     * Emits a MaxRoyaltyPecentageChanged event.
+     * Emits a MaxRoyaltyPercentageChanged event.
      *
      * Reverts if the _maxRoyaltyPecentage is greater than 10000.
      *
@@ -411,7 +412,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         protocolLimits().maxRoyaltyPecentage = _maxRoyaltyPecentage;
 
         // Notify watchers of state change
-        emit MaxRoyaltyPecentageChanged(_maxRoyaltyPecentage, msgSender());
+        emit MaxRoyaltyPercentageChanged(_maxRoyaltyPecentage, msgSender());
     }
 
     /**
@@ -523,5 +524,24 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getMaxExchangesPerBatch() external view override returns (uint16) {
         return protocolLimits().maxExchangesPerBatch;
+    }
+
+    /**
+     * @notice Sets the maximum resolution period a seller can specify
+     *
+     * Emits a MaxResolutionPeriodChanged event.
+     *
+     * @param _maxResolutionPeriod - the maximum resolution period that a {BosonTypes.Seller} can specify
+     */
+    function setMaxResolutionPeriod(uint256 _maxResolutionPeriod) public override onlyRole(ADMIN) nonReentrant {
+        protocolLimits().maxResolutionPeriod = _maxResolutionPeriod;
+        emit MaxResolutionPeriodChanged(_maxResolutionPeriod, msgSender());
+    }
+
+    /**
+     * @notice Get the maximum resolution period a seller can specify
+     */
+    function getMaxResolutionPeriod() external view override returns (uint256) {
+        return protocolLimits().maxResolutionPeriod;
     }
 }

@@ -51,6 +51,7 @@ function getConfig() {
   const buyerEscalationDepositPercentage = "100"; // 1%
   const maxTotalOfferFeePercentage = 4000; // 40%
   const maxRoyaltyPecentage = 1000; //10%
+  const maxResolutionPeriod = oneMonth;
 
   // Boson Token (ERC-20) contract address
   const TOKEN = {
@@ -104,6 +105,7 @@ function getConfig() {
       maxAllowedSellers,
       maxTotalOfferFeePercentage,
       maxRoyaltyPecentage,
+      maxResolutionPeriod,
     },
     {
       percentage: feePercentage,

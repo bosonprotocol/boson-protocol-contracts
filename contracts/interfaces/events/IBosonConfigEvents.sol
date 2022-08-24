@@ -32,5 +32,6 @@ interface IBosonConfigEvents {
         address indexed executedBy
     );
     event MaxTotalOfferFeePercentageChanged(uint16 maxTotalOfferFeePercentage, address indexed executedBy);
-    event MaxRoyaltyPecentageChanged(uint16 maxRoyaltyPecentage, address indexed executedBy);
+    event MaxRoyaltyPercentageChanged(uint16 maxRoyaltyPecentage, address indexed executedBy);
+    event MaxResolutionPeriodChanged(uint256 maxResolutionPeriod, address indexed executedBy);
 }

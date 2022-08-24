@@ -111,6 +111,7 @@ describe("IBosonVoucher", function () {
         maxAllowedSellers: 100,
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
+        maxResolutionPeriod: oneMonth,
       },
       //Protocol fees
       {
@@ -144,15 +145,16 @@ describe("IBosonVoucher", function () {
 
   context("issueVoucher()", function () {
     let buyerStruct;
+    let buyerWallet;
 
     before(function () {
       buyerStruct = mockBuyer(buyer.address).toStruct();
+      buyerWallet = buyerStruct[1];
     });
 
     it("should issue a voucher with success", async function () {
       const balanceBefore = await bosonVoucher.balanceOf(buyer.address);
-
-      await bosonVoucher.connect(protocol).issueVoucher(0, buyerStruct);
+      await bosonVoucher.connect(protocol).issueVoucher(0, buyerWallet);
 
       const balanceAfter = await bosonVoucher.balanceOf(buyer.address);
 
@@ -161,7 +163,7 @@ describe("IBosonVoucher", function () {
 
     it("should revert if caller does not have PROTOCOL role", async function () {
       // Expect revert if random user attempts to issue voucher
-      await expect(bosonVoucher.connect(rando).issueVoucher(0, buyerStruct)).to.be.revertedWith(
+      await expect(bosonVoucher.connect(rando).issueVoucher(0, buyerWallet)).to.be.revertedWith(
         RevertReasons.ACCESS_DENIED
       );
 
@@ -170,7 +172,7 @@ describe("IBosonVoucher", function () {
 
       //Attempt to issue voucher again as a random user
       const balanceBefore = await bosonVoucher.balanceOf(buyer.address);
-      await bosonVoucher.connect(rando).issueVoucher(0, buyerStruct);
+      await bosonVoucher.connect(rando).issueVoucher(0, buyerWallet);
       const balanceAfter = await bosonVoucher.balanceOf(buyer.address);
 
       expect(balanceAfter.sub(balanceBefore)).eq(1);
@@ -179,7 +181,9 @@ describe("IBosonVoucher", function () {
 
   context("burnVoucher()", function () {
     it("should burn a voucher with success", async function () {
-      await bosonVoucher.connect(protocol).issueVoucher(0, mockBuyer(buyer.address).toStruct());
+      const buyerStruct = mockBuyer(buyer.address).toStruct();
+      const buyerWallet = buyerStruct[1];
+      await bosonVoucher.connect(protocol).issueVoucher(0, buyerWallet);
 
       const balanceBefore = await bosonVoucher.balanceOf(buyer.address);
 
@@ -198,7 +202,9 @@ describe("IBosonVoucher", function () {
       await accessController.grantRole(Role.PROTOCOL, rando.address);
 
       // Prepare to burn voucher as a random user
-      await bosonVoucher.connect(protocol).issueVoucher(0, mockBuyer(buyer.address).toStruct());
+      const buyerStruct = mockBuyer(buyer.address).toStruct();
+      const buyerWallet = buyerStruct[1];
+      await bosonVoucher.connect(protocol).issueVoucher(0, buyerWallet);
       const balanceBefore = await bosonVoucher.balanceOf(buyer.address);
 
       //Attempt to burn voucher as a random user
@@ -282,20 +288,29 @@ describe("IBosonVoucher", function () {
       expect(owner).eq(operator.address, "Wrong owner");
     });
 
-    it("should revert if caller does not have PROTOCOL role", async function () {
-      await expect(bosonVoucher.connect(rando).transferOwnership(operator.address)).to.be.revertedWith(
-        RevertReasons.ACCESS_DENIED
-      );
-    });
+    context("💔 Revert Reasons", async function () {
+      it("should revert if caller does not have PROTOCOL role", async function () {
+        await expect(bosonVoucher.connect(rando).transferOwnership(operator.address)).to.be.revertedWith(
+          RevertReasons.ACCESS_DENIED
+        );
+      });
 
-    it("Even the current owner cannot transfer the ownership", async function () {
-      // succesfully transfer to operator
-      await bosonVoucher.connect(protocol).transferOwnership(operator.address);
+      it("Even the current owner cannot transfer the ownership", async function () {
+        // succesfully transfer to operator
+        await bosonVoucher.connect(protocol).transferOwnership(operator.address);
 
-      // owner tries to transfer, it should fail
-      await expect(bosonVoucher.connect(operator).transferOwnership(rando.address)).to.be.revertedWith(
-        RevertReasons.ACCESS_DENIED
-      );
+        // owner tries to transfer, it should fail
+        await expect(bosonVoucher.connect(operator).transferOwnership(rando.address)).to.be.revertedWith(
+          RevertReasons.ACCESS_DENIED
+        );
+      });
+
+      it("Transfering ownership to 0 is not allowed", async function () {
+        // try to transfer ownership to address 0, should fail
+        await expect(bosonVoucher.connect(protocol).transferOwnership(ethers.constants.AddressZero)).to.be.revertedWith(
+          RevertReasons.OWNABLE_ZERO_ADDRESS
+        );
+      });
     });
   });
 

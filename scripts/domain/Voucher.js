@@ -8,9 +8,10 @@ const ethers = require("ethers");
 class Voucher {
   /*
         struct Voucher {
-            uint256 committedDate;
-            uint256 validUntilDate;
-            uint256 redeemedDate;
+          uint256 committedDate;
+          uint256 validUntilDate;
+          uint256 redeemedDate;
+          bool expired;
         }
    */
 

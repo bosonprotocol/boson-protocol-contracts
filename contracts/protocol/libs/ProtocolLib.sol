@@ -32,6 +32,10 @@ library ProtocolLib {
 
     // Protocol limits storage
     struct ProtocolLimits {
+        // limit on the resolution period that a seller can specify
+        uint256 maxResolutionPeriod;
+        // limit on the escalation response period that a dispute resolver can specify
+        uint256 maxEscalationResponsePeriod;
         // limit how many exchanges can be processed in single batch transaction
         uint16 maxExchangesPerBatch;
         // limit how many offers can be added to the group
@@ -46,8 +50,6 @@ library ProtocolLib {
         uint16 maxTokensPerWithdrawal;
         // limit how many dispute resolver fee structs can be processed in a single transaction
         uint16 maxFeesPerDisputeResolver;
-        // limit on the escalation response period that a dispute resolver can specify
-        uint256 maxEscalationResponsePeriod;
         // limit how many disputes can be processed in single batch transaction
         uint16 maxDisputesPerBatch;
         // limit how many sellers can be added to or removed from an allow list in a single transaction
@@ -80,6 +82,8 @@ library ProtocolLib {
         mapping(uint256 => BosonTypes.DisputeResolutionTerms) disputeResolutionTerms;
         // exchange id => exchange
         mapping(uint256 => BosonTypes.Exchange) exchanges;
+        // exchange id => voucher
+        mapping(uint256 => BosonTypes.Voucher) vouchers;
         // exchange id => dispute
         mapping(uint256 => BosonTypes.Dispute) disputes;
         // exchange id => dispute dates

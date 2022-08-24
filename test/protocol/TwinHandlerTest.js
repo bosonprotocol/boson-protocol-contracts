@@ -109,6 +109,7 @@ describe("IBosonTwinHandler", function () {
         maxAllowedSellers: 100,
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
+        maxResolutionPeriod: oneMonth,
       },
       // Protocol fees
       {
@@ -285,6 +286,76 @@ describe("IBosonTwinHandler", function () {
         assert.equal(Twin.fromStruct(event.twin).toString(), twin.toString(), "Twin struct is incorrect");
       });
 
+      it("It is possible to add the same ERC721 if ranges do not overlap", async function () {
+        twin.supplyAvailable = "10";
+        twin.amount = "0";
+        twin.tokenId = "5";
+        twin.tokenAddress = foreign721.address;
+        twin.tokenType = TokenType.NonFungibleToken;
+
+        // Mint a token and approve twinHandler contract to transfer it
+        await foreign721.connect(operator).mint(twin.tokenId, twin.supplyAvailable);
+        await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+        // Create first twin with ids range: ["5"..."14"]
+        await twinHandler.connect(operator).createTwin(twin);
+
+        // Create an twin with ids range: ["18" ... "23"]
+        twin.tokenId = "18";
+        twin.supplyAvailable = "6";
+        await expect(twinHandler.connect(operator).createTwin(twin)).not.to.be.reverted;
+      });
+
+      it("It is possible to add an ERC721 with unlimited supply if token is not used yet", async function () {
+        twin.supplyAvailable = ethers.constants.MaxUint256.toString();
+        twin.amount = "0";
+        twin.tokenId = "0";
+        twin.tokenAddress = foreign721.address;
+        twin.tokenType = TokenType.NonFungibleToken;
+
+        // another erc721 token
+        const [foreign721_2] = await deployMockTokens(gasLimit, ["Foreign721"]);
+
+        let twin2 = twin.clone();
+        twin2.supplyAvailable = "1500";
+        twin2.tokenAddress = foreign721_2.address;
+
+        // Approve twinHandler contract to transfer it
+        await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
+        await foreign721_2.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+        // Create a twin with limited supply
+        await twinHandler.connect(operator).createTwin(twin);
+
+        // Create another twin with unlimited supply
+        await expect(twinHandler.connect(operator).createTwin(twin2)).not.to.be.reverted;
+      });
+
+      it("It is possible to add ERC721 even if another ERC721 with unlimited supply exists", async function () {
+        twin.supplyAvailable = ethers.constants.MaxUint256.toString();
+        twin.amount = "0";
+        twin.tokenId = "0";
+        twin.tokenAddress = foreign721.address;
+        twin.tokenType = TokenType.NonFungibleToken;
+
+        // another erc721 token
+        const [foreign721_2] = await deployMockTokens(gasLimit, ["Foreign721"]);
+
+        let twin2 = twin.clone();
+        twin2.supplyAvailable = "1500";
+        twin2.tokenAddress = foreign721_2.address;
+
+        // Approve twinHandler contract to transfer it
+        await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
+        await foreign721_2.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+        // Create a twin with unlimited supply
+        await twinHandler.connect(operator).createTwin(twin);
+
+        // Create another twin with limited supply
+        await expect(twinHandler.connect(operator).createTwin(twin2)).not.to.be.reverted;
+      });
+
       context("💔 Revert Reasons", async function () {
         it("The twins region of protocol is paused", async function () {
           // Pause the twins region of the protocol
@@ -440,6 +511,36 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
+        it("Supply range overflow", async function () {
+          twin.supplyAvailable = ethers.constants.MaxUint256.div(10).mul(8).toString();
+          twin.tokenType = TokenType.NonFungibleToken;
+          twin.tokenAddress = foreign721.address;
+          twin.amount = "0";
+          twin.tokenId = ethers.constants.MaxUint256.sub(twin.supplyAvailable).add(1).toString();
+
+          await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+          // Create new twin with same token address
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
+            RevertReasons.INVALID_TWIN_TOKEN_RANGE
+          );
+        });
+
+        it("Token with unlimited supply with starting tokenId to high", async function () {
+          twin.supplyAvailable = ethers.constants.MaxUint256.toString();
+          twin.tokenType = TokenType.NonFungibleToken;
+          twin.tokenAddress = foreign721.address;
+          twin.amount = "0";
+          twin.tokenId = ethers.constants.MaxUint256.add(1).div(2).add(1).toString();
+
+          await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+          // Create new twin with same token address
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
+            RevertReasons.INVALID_TWIN_TOKEN_RANGE
+          );
+        });
+
         context("Token address is unsupported", async function () {
           it("Token address is a zero address", async function () {
             twin.tokenAddress = ethers.constants.AddressZero;
@@ -528,6 +629,46 @@ describe("IBosonTwinHandler", function () {
 
         // Twin range must be available and createTwin transaction with same range should succeed
         await expect(twinHandler.connect(operator).createTwin(twin)).to.not.reverted;
+      });
+
+      it("If there is NonFungible twin with multiple ranges, the correct one is removed", async function () {
+        // create three clones
+        // Create a twin with range: [0,1499]
+        let twin1 = twin.clone();
+        twin1.tokenType = TokenType.NonFungibleToken;
+        twin1.tokenAddress = foreign721.address;
+        twin1.amount = "0";
+        twin1.id = "2";
+
+        // Create a twin with range: [2000,3499]
+        let twin2 = twin1.clone();
+        twin2.tokenId = "2000";
+        twin2.id = "3";
+
+        // Create a twin with range: [5000,6499]
+        let twin3 = twin1.clone();
+        twin3.tokenId = "5000";
+        twin3.id = "3";
+
+        await foreign721.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+        await twinHandler.connect(operator).createTwin(twin1);
+        await twinHandler.connect(operator).createTwin(twin2);
+        await twinHandler.connect(operator).createTwin(twin3);
+
+        // Remove twin
+        await twinHandler.connect(operator).removeTwin(twin2.id);
+
+        // We don't have getters, so we implicitly test that correct change was done
+        // Twin2 should still exists, therefore it should not be possible to create it again
+        await expect(twinHandler.connect(operator).createTwin(twin1)).to.be.revertedWith(
+          RevertReasons.INVALID_TWIN_TOKEN_RANGE
+        );
+        await expect(twinHandler.connect(operator).createTwin(twin3)).to.be.revertedWith(
+          RevertReasons.INVALID_TWIN_TOKEN_RANGE
+        );
+        // Twin2 was removed, therefore it should be possible to be added again
+        await expect(twinHandler.connect(operator).createTwin(twin2)).to.not.reverted;
       });
 
       context("💔 Revert Reasons", async function () {

@@ -92,7 +92,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         require(authorizeCommit(_buyer, offer, exchangeId), CANNOT_COMMIT);
 
         // Fetch or create buyer
-        (uint256 buyerId, Buyer storage buyer) = getValidBuyer(_buyer);
+        uint256 buyerId = getValidBuyer(_buyer);
 
         // Encumber funds before creating the exchange
         FundsLib.encumberFunds(_offerId, buyerId);
@@ -103,7 +103,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         exchange.offerId = _offerId;
         exchange.buyerId = buyerId;
         exchange.state = ExchangeState.Committed;
-        exchange.voucher.committedDate = block.timestamp;
+
+        // Create and store a new voucher
+        Voucher storage voucher = protocolEntities().vouchers[exchangeId];
+        voucher.committedDate = block.timestamp;
 
         // Determine the time after which the voucher can be redeemed
         uint256 startDate = (block.timestamp >= offerDates.voucherRedeemableFrom)
@@ -111,7 +114,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             : offerDates.voucherRedeemableFrom;
 
         // Determine the time after which the voucher can no longer be redeemed
-        exchange.voucher.validUntilDate = (offerDates.voucherRedeemableUntil > 0)
+        voucher.validUntilDate = (offerDates.voucherRedeemableUntil > 0)
             ? offerDates.voucherRedeemableUntil
             : startDate + fetchOfferDurations(_offerId).voucherValid;
 
@@ -127,10 +130,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Issue voucher
         protocolLookups().voucherCount[buyerId]++;
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
-        bosonVoucher.issueVoucher(exchangeId, buyer);
+        bosonVoucher.issueVoucher(exchangeId, _buyer);
 
         // Notify watchers of state change
-        emit BuyerCommitted(_offerId, buyerId, exchangeId, exchange, msgSender());
+        emit BuyerCommitted(_offerId, buyerId, exchangeId, exchange, voucher, msgSender());
     }
 
     /**
@@ -149,22 +152,25 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      */
     function completeExchange(uint256 _exchangeId) public override exchangesNotPaused nonReentrant {
         // Get the exchange, should be in redeemed state
-        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
+        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Redeemed);
         uint256 offerId = exchange.offerId;
 
         // Get the offer, which will definitely exist
         Offer storage offer;
         (, offer) = fetchOffer(offerId);
 
+        // get message sender
+        address sender = msgSender();
+
         // Is this the buyer?
         bool buyerExists;
         uint256 buyerId;
-        (buyerExists, buyerId) = getBuyerIdByWallet(msgSender());
+        (buyerExists, buyerId) = getBuyerIdByWallet(sender);
 
         // Buyer may call any time. Seller or anyone else may call after fulfillment period elapses
         // N.B. An existing buyer or seller may be the "anyone else" on an exchange they are not a part of
         if (!buyerExists || buyerId != exchange.buyerId) {
-            uint256 elapsed = block.timestamp - exchange.voucher.redeemedDate;
+            uint256 elapsed = block.timestamp - voucher.redeemedDate;
             require(elapsed >= fetchOfferDurations(offerId).fulfillmentPeriod, FULFILLMENT_PERIOD_NOT_ELAPSED);
         }
 
@@ -172,7 +178,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         finalizeExchange(exchange, ExchangeState.Completed);
 
         // Notify watchers of state change
-        emit ExchangeCompleted(offerId, exchange.buyerId, exchange.id, msgSender());
+        emit ExchangeCompleted(offerId, exchange.buyerId, exchange.id, sender);
     }
 
     /**
@@ -216,7 +222,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      */
     function revokeVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
         // Get the exchange, should be in committed state
-        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
+        (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Get seller id associated with caller
         bool sellerExists;
@@ -230,6 +236,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Only seller's operator may call
         require(sellerExists && offer.sellerId == sellerId, NOT_OPERATOR);
 
+        // Revoke the voucher
         revokeVoucherInternal(exchange);
     }
 
@@ -249,7 +256,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      */
     function cancelVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
         // Get the exchange, should be in committed state
-        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
+        (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Make sure the caller is buyer associated with the exchange
         checkBuyer(exchange.buyerId);
@@ -277,16 +284,16 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      */
     function expireVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
         // Get the exchange, should be in committed state
-        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
+        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Make sure that the voucher has expired
-        require(block.timestamp >= exchange.voucher.validUntilDate, VOUCHER_STILL_VALID);
+        require(block.timestamp >= voucher.validUntilDate, VOUCHER_STILL_VALID);
 
         // Finalize the exchange, burning the voucher
         finalizeExchange(exchange, ExchangeState.Canceled);
 
         // Make it possible to determine how this exchange reached the Canceled state
-        exchange.voucher.expired = true;
+        voucher.expired = true;
 
         // Notify watchers of state change
         emit VoucherExpired(exchange.offerId, _exchangeId, msgSender());
@@ -310,29 +317,32 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      */
     function extendVoucher(uint256 _exchangeId, uint256 _validUntilDate) external exchangesNotPaused nonReentrant {
         // Get the exchange, should be in committed state
-        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
+        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Get the offer, which will definitely exist
         Offer storage offer;
         uint256 offerId = exchange.offerId;
         (, offer) = fetchOffer(offerId);
 
+        // get message sender
+        address sender = msgSender();
+
         // Get seller id associated with caller
         bool sellerExists;
         uint256 sellerId;
-        (sellerExists, sellerId) = getSellerIdByOperator(msgSender());
+        (sellerExists, sellerId) = getSellerIdByOperator(sender);
 
         // Only seller's operator may call
         require(sellerExists && offer.sellerId == sellerId, NOT_OPERATOR);
 
         // Make sure the proposed date is later than the current one
-        require(_validUntilDate > exchange.voucher.validUntilDate, VOUCHER_EXTENSION_NOT_VALID);
+        require(_validUntilDate > voucher.validUntilDate, VOUCHER_EXTENSION_NOT_VALID);
 
         // Extend voucher
-        exchange.voucher.validUntilDate = _validUntilDate;
+        voucher.validUntilDate = _validUntilDate;
 
         // Notify watchers of state exchange
-        emit VoucherExtended(offerId, _exchangeId, _validUntilDate, msgSender());
+        emit VoucherExtended(offerId, _exchangeId, _validUntilDate, sender);
     }
 
     /**
@@ -344,7 +354,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * - Exchange is not in committed state
      * - Caller does not own voucher
      * - Current time is prior to offer.voucherRedeemableFromDate
-     * - Current time is after exchange.voucher.validUntilDate
+     * - Current time is after voucher.validUntilDate
      *
      * Emits
      * - VoucherRedeemed
@@ -353,7 +363,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      */
     function redeemVoucher(uint256 _exchangeId) external override exchangesNotPaused nonReentrant {
         // Get the exchange, should be in committed state
-        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
+        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
         uint256 offerId = exchange.offerId;
 
         // Make sure the caller is buyer associated with the exchange
@@ -362,19 +372,19 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         // Make sure the voucher is redeemable
         require(
             block.timestamp >= fetchOfferDates(offerId).voucherRedeemableFrom &&
-                block.timestamp <= exchange.voucher.validUntilDate,
+                block.timestamp <= voucher.validUntilDate,
             VOUCHER_NOT_REDEEMABLE
         );
 
         // Store the time the exchange was redeemed
-        exchange.voucher.redeemedDate = block.timestamp;
+        voucher.redeemedDate = block.timestamp;
 
         // Set the exchange state to the Redeemed
         exchange.state = ExchangeState.Redeemed;
 
         // Transfer any bundled twins to buyer
         // N.B.: If voucher was revoked because transfer twin failed, then voucher was already burned
-        bool shouldBurnVoucher = transferTwins(exchange);
+        bool shouldBurnVoucher = transferTwins(exchange, voucher);
 
         if (shouldBurnVoucher) {
             // Burn the voucher
@@ -406,10 +416,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         nonReentrant
     {
         // Get the exchange, should be in committed state
-        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Committed);
+        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Committed);
 
         // Make sure that the voucher is still valid
-        require(block.timestamp <= exchange.voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
+        require(block.timestamp <= voucher.validUntilDate, VOUCHER_HAS_EXPIRED);
 
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
@@ -420,7 +430,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         protocolLookups().voucherCount[exchange.buyerId]--;
 
         // Fetch or create buyer
-        (uint256 buyerId, ) = getValidBuyer(_newBuyer);
+        uint256 buyerId = getValidBuyer(_newBuyer);
 
         // Update buyer id for the exchange
         exchange.buyerId = buyerId;
@@ -477,9 +487,20 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchangeId - the id of the exchange to check
      * @return exists - true if the exchange exists
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
+     * @return voucher - the voucher details. See {BosonTypes.Voucher}
      */
-    function getExchange(uint256 _exchangeId) external view override returns (bool exists, Exchange memory exchange) {
-        return fetchExchange(_exchangeId);
+    function getExchange(uint256 _exchangeId)
+        external
+        view
+        override
+        returns (
+            bool exists,
+            Exchange memory exchange,
+            Voucher memory voucher
+        )
+    {
+        (exists, exchange) = fetchExchange(_exchangeId);
+        voucher = fetchVoucher(_exchangeId);
     }
 
     /**
@@ -576,7 +597,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchange - the exchange
      * @return shouldBurnVoucher - whether or not the voucher should be burned
      */
-    function transferTwins(Exchange storage _exchange) internal returns (bool shouldBurnVoucher) {
+    function transferTwins(Exchange storage _exchange, Voucher storage _voucher)
+        internal
+        returns (bool shouldBurnVoucher)
+    {
         // See if there is an associated bundle
         (bool exists, uint256 bundleId) = fetchBundleIdByOffer(_exchange.offerId);
 
@@ -626,7 +650,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         abi.encodeWithSignature(
                             "transferFrom(address,address,uint256)",
                             seller.operator,
-                            msgSender(),
+                            sender,
                             twin.amount
                         )
                     );
@@ -643,7 +667,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,bytes)",
                             seller.operator,
-                            msgSender(),
+                            sender,
                             tokenId,
                             ""
                         )
@@ -654,7 +678,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         abi.encodeWithSignature(
                             "safeTransferFrom(address,address,uint256,uint256,bytes)",
                             seller.operator,
-                            msgSender(),
+                            sender,
                             tokenId,
                             twin.amount,
                             ""
@@ -680,7 +704,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             if (transferFailed) {
                 // Raise a dispute if caller is a contract
                 if (isContract(sender)) {
-                    raiseDisputeInternal(_exchange, seller.id);
+                    raiseDisputeInternal(_exchange, _voucher, seller.id);
                 } else {
                     // Revoke voucher if caller is an EOA
                     revokeVoucherInternal(_exchange);
@@ -698,9 +722,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      *
      * @param _buyer - the buyer address
      * @return buyerId - the buyer id
-     * @return buyer - the buyer account
      */
-    function getValidBuyer(address payable _buyer) internal returns (uint256 buyerId, Buyer storage buyer) {
+    function getValidBuyer(address payable _buyer) internal returns (uint256 buyerId) {
         // Find or create the account associated with the specified buyer address
         bool exists;
         (exists, buyerId) = getBuyerIdByWallet(_buyer);
@@ -710,13 +733,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
             Buyer memory newBuyer = Buyer(0, _buyer, true);
             createBuyerInternal(newBuyer);
             buyerId = newBuyer.id;
+        } else {
+            // Fetch the existing buyer account
+            (, Buyer storage buyer) = fetchBuyer(buyerId);
+
+            // Make sure buyer account is active
+            require(buyer.active, MUST_BE_ACTIVE);
         }
-
-        // Fetch the existing buyer account
-        (, buyer) = fetchBuyer(buyerId);
-
-        // Make sure buyer account is active
-        require(buyer.active, MUST_BE_ACTIVE);
     }
 
     /**
@@ -847,9 +870,12 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         receipt.exchangeId = exchange.id;
         receipt.buyerId = exchange.buyerId;
         receipt.finalizedDate = exchange.finalizedDate;
-        receipt.committedDate = exchange.voucher.committedDate;
-        receipt.redeemedDate = exchange.voucher.redeemedDate;
-        receipt.voucherExpired = exchange.voucher.expired;
+
+        // Get the voucher
+        Voucher storage voucher = fetchVoucher(_exchangeId);
+        receipt.committedDate = voucher.committedDate;
+        receipt.redeemedDate = voucher.redeemedDate;
+        receipt.voucherExpired = voucher.expired;
 
         // Fetch offer, we assume offer exist if exchange exist
         (, Offer storage offer) = fetchOffer(exchange.offerId);
@@ -860,27 +886,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         receipt.buyerCancelPenalty = offer.buyerCancelPenalty;
         receipt.exchangeToken = offer.exchangeToken;
 
-        // Fetch buyer
-        (, Buyer storage buyer) = fetchBuyer(exchange.buyerId);
-        receipt.buyerAddress = buyer.wallet;
-
-        // Fetch seller
-        (, Seller storage seller, ) = fetchSeller(offer.sellerId);
-        receipt.sellerOperatorAddress = seller.operator;
-
         // Fetch offer fees
         OfferFees storage offerFees = fetchOfferFees(offer.id);
         receipt.offerFees = offerFees;
 
-        // Fetch agent
-        (bool agentExists, uint256 agentId) = fetchAgentIdByOffer(offer.id);
-
-        // Add agent data to receipt if exists
-        if (agentExists) {
-            (, Agent storage agent) = fetchAgent(agentId);
-            receipt.agentAddress = agent.wallet;
-            receipt.agentId = agentId;
-        }
+        // Fetch agent id
+        (, uint256 agentId) = fetchAgentIdByOffer(offer.id);
+        receipt.agentId = agentId;
 
         // We assume dispute exist if exchange is in disputed state
         if (exchange.state == ExchangeState.Disputed) {
@@ -889,14 +901,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
             // Add disputeResolverId to receipt
             receipt.disputeResolverId = disputeResolutionTerms.disputeResolverId;
-
-            // Fetch disputeResolver account
-            (, DisputeResolver storage disputeResolver, ) = fetchDisputeResolver(
-                disputeResolutionTerms.disputeResolverId
-            );
-
-            // Add disputeResolverOperatorAddress to receipt
-            receipt.disputeResolverOperatorAddress = disputeResolver.operator;
 
             // Fetch dispute and dispute dates
             (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);

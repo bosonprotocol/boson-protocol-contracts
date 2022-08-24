@@ -41,11 +41,13 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      */
     function raiseDispute(uint256 _exchangeId) external override disputesNotPaused nonReentrant {
         // Get the exchange, should be in redeemed state
-        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Redeemed);
+        (Exchange storage exchange, Voucher storage voucher) = getValidExchange(_exchangeId, ExchangeState.Redeemed);
+
         // Get the offer, which will exist if the exchange does
         (, Offer storage offer) = fetchOffer(exchange.offerId);
 
-        raiseDisputeInternal(exchange, offer.sellerId);
+        // Raise the dispute
+        raiseDisputeInternal(exchange, voucher, offer.sellerId);
     }
 
     /**
@@ -65,7 +67,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      */
     function retractDispute(uint256 _exchangeId) external override disputesNotPaused nonReentrant {
         // Get the exchange, should be in disputed state
-        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+        (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Make sure the caller is buyer associated with the exchange  // {MR: only by game}
         checkBuyer(exchange.buyerId);
@@ -115,7 +117,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     {
         // Verify that the caller is the seller. Get exchange -> get offer id -> get seller id -> get operator address and compare to msg.sender
         // Get the exchange, should be in disputed state
-        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+        (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Get the offer, assume it exist if exchange exist
         (, Offer storage offer) = fetchOffer(exchange.offerId);
@@ -123,8 +125,11 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         // Get seller, we assume seller exists if offer exists
         (, Seller storage seller, ) = fetchSeller(offer.sellerId);
 
+        // get message sender
+        address sender = msgSender();
+
         // Caller must be seller's operator address
-        require(seller.operator == msgSender(), NOT_OPERATOR);
+        require(seller.operator == sender, NOT_OPERATOR);
 
         // Fetch the dispute, it exists if exchange is in Disputed state
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
@@ -142,7 +147,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         disputeDates.timeout = _newDisputeTimeout;
 
         // Notify watchers of state change
-        emit DisputeTimeoutExtended(_exchangeId, _newDisputeTimeout, msgSender());
+        emit DisputeTimeoutExtended(_exchangeId, _newDisputeTimeout, sender);
     }
 
     /**
@@ -161,7 +166,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      */
     function expireDispute(uint256 _exchangeId) public override disputesNotPaused nonReentrant {
         // Get the exchange, should be in disputed state
-        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+        (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Fetch the dispute and dispute dates
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
@@ -238,9 +243,9 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
 
         // Get the exchange, should be in disputed state
-        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
-        // Fetch teh dispute and dispute dates
+        (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
+        // Fetch the dispute and dispute dates
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
 
         // Make sure the dispute is in the resolving or escalated state
@@ -314,7 +319,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      */
     function escalateDispute(uint256 _exchangeId) external payable override disputesNotPaused nonReentrant {
         // Get the exchange, should be in disputed state
-        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+        (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Make sure the caller is buyer associated with the exchange
         checkBuyer(exchange.buyerId);
@@ -436,7 +441,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
      */
     function expireEscalatedDispute(uint256 _exchangeId) external override disputesNotPaused nonReentrant {
         // Get the exchange, should be in disputed state
-        Exchange storage exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+        (Exchange storage exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Fetch the dispute and dispute dates
         (, Dispute storage dispute, DisputeDates storage disputeDates) = fetchDispute(_exchangeId);
@@ -586,7 +591,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         )
     {
         // Get the exchange, should be in disputed state
-        exchange = getValidExchange(_exchangeId, ExchangeState.Disputed);
+        (exchange, ) = getValidExchange(_exchangeId, ExchangeState.Disputed);
 
         // Fetch the dispute and dispute dates
         (, dispute, disputeDates) = fetchDispute(_exchangeId);

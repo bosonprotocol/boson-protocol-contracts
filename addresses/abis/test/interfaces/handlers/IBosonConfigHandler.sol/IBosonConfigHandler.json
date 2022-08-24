@@ -223,6 +223,25 @@
       "inputs": [
         {
           "indexed": false,
+          "internalType": "uint256",
+          "name": "maxResolutionPeriod",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MaxResolutionPeriodChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
           "internalType": "uint16",
           "name": "maxRoyaltyPecentage",
           "type": "uint16"
@@ -234,7 +253,7 @@
           "type": "address"
         }
       ],
-      "name": "MaxRoyaltyPecentageChanged",
+      "name": "MaxRoyaltyPercentageChanged",
       "type": "event"
     },
     {
@@ -540,6 +559,19 @@
     },
     {
       "inputs": [],
+      "name": "getMaxResolutionPeriod",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "getMaxRoyaltyPecentage",
       "outputs": [
         {
@@ -799,6 +831,19 @@
         }
       ],
       "name": "setMaxOffersPerGroup",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_maxResolutionPeriod",
+          "type": "uint256"
+        }
+      ],
+      "name": "setMaxResolutionPeriod",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

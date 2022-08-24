@@ -11,7 +11,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  *
  * @notice Handles exchanges associated with offers within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x28b04001
+ * The ERC-165 identifier for this interface is: 0xbc114381
  */
 interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**
@@ -150,7 +150,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * - Exchange is not in committed state
      * - Caller does not own voucher
      * - Current time is prior to offer.voucherRedeemableFromDate
-     * - Current time is after exchange.voucher.validUntilDate
+     * - Current time is after voucher.validUntilDate
      *
      * Emits
      * - VoucherRedeemed
@@ -194,8 +194,16 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      * @param _exchangeId - the id of the exchange to check
      * @return exists - the exchange was found
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
+     * @return voucher - the voucher details. See {BosonTypes.Voucher}
      */
-    function getExchange(uint256 _exchangeId) external view returns (bool exists, BosonTypes.Exchange memory exchange);
+    function getExchange(uint256 _exchangeId)
+        external
+        view
+        returns (
+            bool exists,
+            BosonTypes.Exchange memory exchange,
+            BosonTypes.Voucher memory voucher
+        );
 
     /**
      * @notice Gets the state of a given exchange.

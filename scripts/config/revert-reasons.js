@@ -42,6 +42,9 @@ exports.RevertReasons = {
   INVALID_QUANTITY_AVAILABLE: "Invalid quantity available",
   DR_UNSUPPORTED_FEE: "Dispute resolver does not accept this token",
   AGENT_FEE_AMOUNT_TOO_HIGH: "Sum of Agent fee amount and protocol fee amount should be <= offer fee limit",
+  OFFER_NOT_AVAILABLE: "Offer is not yet available",
+  OFFER_HAS_EXPIRED: "Offer has expired",
+  OFFER_SOLD_OUT: "Offer has sold out",
 
   // Group related
   NO_SUCH_GROUP: "No such group",
@@ -70,7 +73,7 @@ exports.RevertReasons = {
     "Dispute resolver fees are not present or exceeds maximum dispute resolver fees in a single transaction",
   DUPLICATE_DISPUTE_RESOLVER_FEES: "Duplicate dispute resolver fee",
   DISPUTE_RESOLVER_FEE_NOT_FOUND: "Dispute resolver fee not found",
-  INVALID_AUTH_TOKEN_TYPE: "Invalid AuthTokenType ",
+  INVALID_AUTH_TOKEN_TYPE: "Invalid AuthTokenType",
   ADMIN_OR_AUTH_TOKEN: "An admin address or an auth token is required",
   AUTH_TOKEN_MUST_BE_UNIQUE: "Auth token cannot be assigned to another entity of the same type",
   SELLER_ALREADY_APPROVED: "Seller id is approved already",
@@ -131,6 +134,7 @@ exports.RevertReasons = {
   EOA_FUNCTION_CALL: "Transaction reverted: function call to a non-contract account",
   ERC721_NON_EXISTENT: "ERC721: invalid token ID",
   OWNABLE_NOT_OWNER: "Ownable: caller is not the owner",
+  OWNABLE_ZERO_ADDRESS: "Ownable: new owner is the zero address",
 
   // Meta-Transactions related
   NONCE_USED_ALREADY: "Nonce used already",

@@ -142,6 +142,7 @@ describe("IBosonBundleHandler", function () {
         maxAllowedSellers: 100,
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
+        maxResolutionPeriod: oneMonth,
       },
       // Protocol fees
       {
@@ -374,6 +375,54 @@ describe("IBosonBundleHandler", function () {
         assert.equal(event.sellerId.toString(), expectedSellerId.toString(), "Seller Id is incorrect");
         assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(bundleInstance.toStruct().toString(), bundleStruct.toString(), "Bundle struct is incorrect");
+      });
+
+      it("If sum of offers' quantities is more than maxUint256, total quantity is maxUint256", async function () {
+        // create two offers with close to unlimited supply
+        const newOffer = offer.clone();
+        newOffer.quantityAvailable = ethers.constants.MaxUint256.div(10).mul(9).toString();
+        const newOffer2 = newOffer.clone();
+        const newOfferId = "6";
+        const newOfferId2 = "7";
+
+        await offerHandler
+          .connect(operator)
+          .createOffer(newOffer, offerDates, offerDurations, disputeResolverId, agentId);
+
+        await offerHandler
+          .connect(operator)
+          .createOffer(newOffer2, offerDates, offerDurations, disputeResolverId, agentId);
+
+        // create a twin with almost unlimited supply
+        twin = mockTwin(bosonToken.address);
+        twin.supplyAvailable = ethers.constants.MaxUint256.sub(1).toString();
+        expect(twin.isValid()).is.true;
+
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, twin.supplyAvailable); // approving the twin handler
+
+        // Create a twin with id 6
+        await twinHandler.connect(operator).createTwin(twin);
+
+        bundle.offerIds = [...bundle.offerIds, newOfferId, newOfferId2];
+        bundle.twinIds = ["6"];
+        await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
+          RevertReasons.INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS
+        );
+
+        // create a twin with unlimited supply
+        twin = mockTwin(bosonToken.address);
+        twin.supplyAvailable = ethers.constants.MaxUint256.toString();
+        expect(twin.isValid()).is.true;
+
+        // Approving the twinHandler contract to transfer seller's tokens
+        await bosonToken.connect(operator).approve(twinHandler.address, twin.supplyAvailable); // approving the twin handler
+
+        // Create a twin with id 7
+        await twinHandler.connect(operator).createTwin(twin);
+
+        bundle.twinIds = ["7"];
+        await expect(bundleHandler.connect(operator).createBundle(bundle)).to.not.reverted;
       });
 
       context("💔 Revert Reasons", async function () {

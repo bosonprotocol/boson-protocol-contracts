@@ -28,8 +28,11 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * @param _group - the fully populated struct with group id set to 0x0
      */
     function createGroupInternal(Group memory _group, Condition calldata _condition) internal {
+        // get message sender
+        address sender = msgSender();
+
         // get seller id, make sure it exists and store it to incoming struct
-        (bool exists, uint256 sellerId) = getSellerIdByOperator(msgSender());
+        (bool exists, uint256 sellerId) = getSellerIdByOperator(sender);
         require(exists, NOT_OPERATOR);
 
         // limit maximum number of offers to avoid running into block gas limit in a loop
@@ -68,7 +71,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
         storeCondition(groupId, _condition);
 
         // Notify watchers of state change
-        emit GroupCreated(groupId, sellerId, _group, _condition, msgSender());
+        emit GroupCreated(groupId, sellerId, _group, _condition, sender);
     }
 
     /**

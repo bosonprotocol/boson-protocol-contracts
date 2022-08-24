@@ -31,6 +31,8 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      * - Not approved to transfer the seller's token
      * - supplyAvailable is zero
      * - Twin is NonFungibleToken and amount was set
+     * - Twin is NonFungibleToken and end of range would overflow
+     * - Twin is NonFungibleToken with unlimited supply and starting token id is too high
      * - Twin is NonFungibleToken and range is already being used in another twin of the seller
      * - Twin is FungibleToken or MultiToken and amount was not set
      *
@@ -58,8 +60,11 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         (bool exists, Twin memory twin) = fetchTwin(_twinId);
         require(exists, NO_SUCH_TWIN);
 
+        // get message sender
+        address sender = msgSender();
+
         // Get seller id
-        (, uint256 sellerId) = getSellerIdByOperator(msgSender());
+        (, uint256 sellerId) = getSellerIdByOperator(sender);
         // Caller's seller id must match twin seller id
         require(sellerId == twin.sellerId, NOT_OPERATOR);
 
@@ -73,17 +78,30 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         // Also remove from twinRangesBySeller mapping
         if (twin.tokenType == TokenType.NonFungibleToken) {
             TokenRange[] storage twinRanges = protocolLookups().twinRangesBySeller[sellerId][twin.tokenAddress];
-            for (uint256 index = 0; index < twinRanges.length; index++) {
+            uint256[] storage twinIdsByTokenAddressAndBySeller = protocolLookups().twinIdsByTokenAddressAndBySeller[
+                sellerId
+            ][twin.tokenAddress];
+            uint256 lastIndex = twinRanges.length - 1;
+            for (uint256 index = 0; index <= lastIndex; index++) {
                 if (twinRanges[index].start == twin.tokenId) {
-                    twinRanges[index] = twinRanges[twinRanges.length - 1];
+                    // update twin ranges and twinIdsByTokenAddressAndBySeller
+
+                    // if not removing last element, move the last to the removed index
+                    if (index != lastIndex) {
+                        twinRanges[index] = twinRanges[lastIndex];
+                        twinIdsByTokenAddressAndBySeller[index] = twinIdsByTokenAddressAndBySeller[lastIndex];
+                    }
+
+                    // remove last element
                     twinRanges.pop();
+                    twinIdsByTokenAddressAndBySeller.pop();
                     break;
                 }
             }
         }
 
         // Notify watchers of state change
-        emit TwinDeleted(_twinId, twin.sellerId, msgSender());
+        emit TwinDeleted(_twinId, twin.sellerId, sender);
     }
 
     /**
