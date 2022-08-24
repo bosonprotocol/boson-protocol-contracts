@@ -1,4 +1,7 @@
-# Boson Protocol V2
+[![banner](images/banner.png)](https://bosonprotocol.io)
+
+<h1 align="center">Boson Protocol V2</h1>
+
 ## [Intro](../README.md) | [Setup](setup.md) | [Tasks](tasks.md) | [Architecture](architecture.md) | Domain Model | [State Machines](state-machines.md)
 
 ## Entity Relationship Diagram
