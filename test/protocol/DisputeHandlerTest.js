@@ -29,13 +29,13 @@ const {
   mockAuthToken,
   mockVoucherInitValues,
   mockBuyer,
-  accountId
+  accountId,
 } = require("../utils/mock");
 
 /**
  *  Test the Boson Dispute Handler interface
  */
-describe("IBosonDisputeHandler", function() {
+describe("IBosonDisputeHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer,
@@ -88,12 +88,12 @@ describe("IBosonDisputeHandler", function() {
   let emptyAuthToken;
   let agentId;
 
-  before(async function() {
+  before(async function () {
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
   });
 
-  beforeEach(async function() {
+  beforeEach(async function () {
     // Make accounts available
     [
       deployer,
@@ -209,9 +209,9 @@ describe("IBosonDisputeHandler", function() {
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
-  context("📋 Interfaces", async function() {
-    context("👉 supportsInterface()", async function() {
-      it("should indicate support for IBosonDisputeHandler interface", async function() {
+  context("📋 Interfaces", async function () {
+    context("👉 supportsInterface()", async function () {
+      it("should indicate support for IBosonDisputeHandler interface", async function () {
         // Current interfaceId for IBosonDisputeHandler
         support = await erc165.supportsInterface(InterfaceIds.IBosonDisputeHandler);
 
@@ -222,8 +222,8 @@ describe("IBosonDisputeHandler", function() {
   });
 
   // All supported Dispute methods - single
-  context("📋 Dispute Handler Methods", async function() {
-    beforeEach(async function() {
+  context("📋 Dispute Handler Methods", async function () {
+    beforeEach(async function () {
       // Initial ids for all the things
       offerId = "1";
       buyerId = "3"; // created after seller and dispute resolver
@@ -289,13 +289,13 @@ describe("IBosonDisputeHandler", function() {
         .depositFunds(seller.id, ethers.constants.AddressZero, fundsToDeposit, { value: fundsToDeposit });
     });
 
-    afterEach(async function() {
+    afterEach(async function () {
       // Reset the accountId iterator
       accountId.next(true);
     });
 
-    context("Single", async function() {
-      beforeEach(async function() {
+    context("Single", async function () {
+      beforeEach(async function () {
         exchangeId = "1";
 
         // Commit to offer, creating a new exchange
@@ -311,15 +311,15 @@ describe("IBosonDisputeHandler", function() {
         buyerPercent = "0";
       });
 
-      context("👉 raiseDispute()", async function() {
-        it("should emit a DisputeRaised event", async function() {
+      context("👉 raiseDispute()", async function () {
+        it("should emit a DisputeRaised event", async function () {
           // Raise a dispute, testing for the event
           await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId))
             .to.emit(disputeHandler, "DisputeRaised")
             .withArgs(exchangeId, buyerId, seller.id, buyer.address);
         });
 
-        it("should update state", async function() {
+        it("should update state", async function () {
           // Raise a dispute
           tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -349,8 +349,8 @@ describe("IBosonDisputeHandler", function() {
           }
         });
 
-        context("💔 Revert Reasons", async function() {
-          it("The disputes region of protocol is paused", async function() {
+        context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
             // Pause the disputes region of the protocol
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
@@ -360,14 +360,14 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Caller does not hold a voucher for the given exchange id", async function() {
+          it("Caller does not hold a voucher for the given exchange id", async function () {
             // Attempt to raise a dispute, expecting revert
             await expect(disputeHandler.connect(rando).raiseDispute(exchangeId)).to.revertedWith(
               RevertReasons.NOT_VOUCHER_HOLDER
             );
           });
 
-          it("Exchange id is invalid", async function() {
+          it("Exchange id is invalid", async function () {
             // An invalid exchange id
             const exchangeId = "666";
 
@@ -377,7 +377,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("exchange is not in a redeemed state - completed", async function() {
+          it("exchange is not in a redeemed state - completed", async function () {
             // Set time forward to run out the fulfillment period
             newTime = Number((voucherRedeemableFrom + Number(fulfillmentPeriod) + 1).toString().substring(0, 11));
             await setNextBlockTimestamp(newTime);
@@ -391,7 +391,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("exchange is not in a redeemed state - disputed already", async function() {
+          it("exchange is not in a redeemed state - disputed already", async function () {
             // Raise a dispute, put it into DISPUTED state
             await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -401,7 +401,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("The fulfilment period has already elapsed", async function() {
+          it("The fulfilment period has already elapsed", async function () {
             // Get the redemption date
             [, , voucherStruct] = await exchangeHandler.connect(rando).getExchange(exchangeId);
             const voucherRedeemedDate = voucherStruct.redeemedDate;
@@ -417,8 +417,8 @@ describe("IBosonDisputeHandler", function() {
         });
       });
 
-      context("👉 retractDispute()", async function() {
-        beforeEach(async function() {
+      context("👉 retractDispute()", async function () {
+        beforeEach(async function () {
           // Raise a dispute
           tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -429,14 +429,14 @@ describe("IBosonDisputeHandler", function() {
           timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
         });
 
-        it("should emit a DisputeRetracted event", async function() {
+        it("should emit a DisputeRetracted event", async function () {
           // Retract the dispute, testing for the event
           await expect(disputeHandler.connect(buyer).retractDispute(exchangeId))
             .to.emit(disputeHandler, "DisputeRetracted")
             .withArgs(exchangeId, buyer.address);
         });
 
-        it("should update state", async function() {
+        it("should update state", async function () {
           // Retract the dispute
           tx = await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
@@ -480,7 +480,7 @@ describe("IBosonDisputeHandler", function() {
           assert.equal(returnedExchange.finalizedDate, finalizedDate, "Exchange finalizeDate is incorect");
         });
 
-        it("dispute can be retracted if it's in escalated state", async function() {
+        it("dispute can be retracted if it's in escalated state", async function () {
           // Escalate a dispute
           await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
@@ -490,8 +490,8 @@ describe("IBosonDisputeHandler", function() {
             .withArgs(exchangeId, buyer.address);
         });
 
-        context("💔 Revert Reasons", async function() {
-          it("The disputes region of protocol is paused", async function() {
+        context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
             // Pause the disputes region of the protocol
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
@@ -501,7 +501,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Exchange does not exist", async function() {
+          it("Exchange does not exist", async function () {
             // An invalid exchange id
             const exchangeId = "666";
 
@@ -511,7 +511,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Exchange is not in a disputed state", async function() {
+          it("Exchange is not in a disputed state", async function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
@@ -523,14 +523,14 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Caller is not the buyer for the given exchange id", async function() {
+          it("Caller is not the buyer for the given exchange id", async function () {
             // Attempt to retract the dispute, expecting revert
             await expect(disputeHandler.connect(rando).retractDispute(exchangeId)).to.revertedWith(
               RevertReasons.NOT_VOUCHER_HOLDER
             );
           });
 
-          it("Dispute is in some state other than resolving or escalated", async function() {
+          it("Dispute is in some state other than resolving or escalated", async function () {
             // Retract the dispute, put it into RETRACTED state
             await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
@@ -541,7 +541,7 @@ describe("IBosonDisputeHandler", function() {
           });
         });
 
-        it("Dispute was escalated and escalation period has elapsed", async function() {
+        it("Dispute was escalated and escalation period has elapsed", async function () {
           // Escalate the dispute
           tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
@@ -559,8 +559,8 @@ describe("IBosonDisputeHandler", function() {
         });
       });
 
-      context("👉 extendDisputeTimeout()", async function() {
-        beforeEach(async function() {
+      context("👉 extendDisputeTimeout()", async function () {
+        beforeEach(async function () {
           // Raise a dispute
           tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -574,14 +574,14 @@ describe("IBosonDisputeHandler", function() {
           newDisputeTimeout = ethers.BigNumber.from(timeout).add(oneMonth).toString();
         });
 
-        it("should emit a DisputeTimeoutExtended event", async function() {
+        it("should emit a DisputeTimeoutExtended event", async function () {
           // Extend the dispute timeout, testing for the event
           await expect(disputeHandler.connect(operator).extendDisputeTimeout(exchangeId, newDisputeTimeout))
             .to.emit(disputeHandler, "DisputeTimeoutExtended")
             .withArgs(exchangeId, newDisputeTimeout, operator.address);
         });
 
-        it("should update state", async function() {
+        it("should update state", async function () {
           // Extend the dispute timeout
           await disputeHandler.connect(operator).extendDisputeTimeout(exchangeId, newDisputeTimeout);
 
@@ -610,7 +610,7 @@ describe("IBosonDisputeHandler", function() {
           assert.equal(response, newDisputeTimeout, "Dispute timeout is incorrect");
         });
 
-        it("dispute timeout can be extended multiple times", async function() {
+        it("dispute timeout can be extended multiple times", async function () {
           // Extend the dispute timeout
           await disputeHandler.connect(operator).extendDisputeTimeout(exchangeId, newDisputeTimeout);
 
@@ -626,8 +626,8 @@ describe("IBosonDisputeHandler", function() {
             .withArgs(exchangeId, newDisputeTimeout, operator.address);
         });
 
-        context("💔 Revert Reasons", async function() {
-          it("The disputes region of protocol is paused", async function() {
+        context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
             // Pause the disputes region of the protocol
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
@@ -637,7 +637,7 @@ describe("IBosonDisputeHandler", function() {
             ).to.revertedWith(RevertReasons.REGION_PAUSED);
           });
 
-          it("Exchange does not exist", async function() {
+          it("Exchange does not exist", async function () {
             // An invalid exchange id
             const exchangeId = "666";
 
@@ -647,7 +647,7 @@ describe("IBosonDisputeHandler", function() {
             ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
           });
 
-          it("Exchange is not in a disputed state", async function() {
+          it("Exchange is not in a disputed state", async function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
@@ -659,14 +659,14 @@ describe("IBosonDisputeHandler", function() {
             ).to.revertedWith(RevertReasons.INVALID_STATE);
           });
 
-          it("Caller is not the seller", async function() {
+          it("Caller is not the seller", async function () {
             // Attempt to extend the dispute timeout, expecting revert
             await expect(
               disputeHandler.connect(rando).extendDisputeTimeout(exchangeId, newDisputeTimeout)
             ).to.revertedWith(RevertReasons.NOT_OPERATOR);
           });
 
-          it("Dispute has expired already", async function() {
+          it("Dispute has expired already", async function () {
             // Set time forward past the dispute resolution period
             await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
@@ -676,7 +676,7 @@ describe("IBosonDisputeHandler", function() {
             ).to.revertedWith(RevertReasons.DISPUTE_HAS_EXPIRED);
           });
 
-          it("new dispute timeout is before the current dispute timeout", async function() {
+          it("new dispute timeout is before the current dispute timeout", async function () {
             newDisputeTimeout = ethers.BigNumber.from(timeout).sub(oneWeek).toString();
 
             // Attempt to extend the dispute timeout, expecting revert
@@ -685,7 +685,7 @@ describe("IBosonDisputeHandler", function() {
             ).to.revertedWith(RevertReasons.INVALID_DISPUTE_TIMEOUT);
           });
 
-          it("Dispute is in some state other than resolving", async function() {
+          it("Dispute is in some state other than resolving", async function () {
             // Retract the dispute, put it into RETRACTED state
             await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
@@ -697,8 +697,8 @@ describe("IBosonDisputeHandler", function() {
         });
       });
 
-      context("👉 expireDispute()", async function() {
-        beforeEach(async function() {
+      context("👉 expireDispute()", async function () {
+        beforeEach(async function () {
           // Raise a dispute
           tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -709,7 +709,7 @@ describe("IBosonDisputeHandler", function() {
           timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
         });
 
-        it("should emit a DisputeExpired event", async function() {
+        it("should emit a DisputeExpired event", async function () {
           // Set time forward past the dispute resolution period
           await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
@@ -719,7 +719,7 @@ describe("IBosonDisputeHandler", function() {
             .withArgs(exchangeId, rando.address);
         });
 
-        it("should update state", async function() {
+        it("should update state", async function () {
           // Set time forward past the dispute resolution period
           await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
@@ -766,8 +766,8 @@ describe("IBosonDisputeHandler", function() {
           assert.equal(returnedExchange.finalizedDate, finalizedDate, "Exchange finalizeDate is incorect");
         });
 
-        context("💔 Revert Reasons", async function() {
-          it("The disputes region of protocol is paused", async function() {
+        context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
             // Set time forward past the dispute resolution period
             await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
@@ -780,7 +780,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Exchange does not exist", async function() {
+          it("Exchange does not exist", async function () {
             // An invalid exchange id
             const exchangeId = "666";
 
@@ -790,7 +790,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Exchange is not in a disputed state", async function() {
+          it("Exchange is not in a disputed state", async function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
@@ -802,14 +802,14 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Dispute has not expired yet", async function() {
+          it("Dispute has not expired yet", async function () {
             // Attempt to expire the dispute, expecting revert
             await expect(disputeHandler.connect(rando).expireDispute(exchangeId)).to.revertedWith(
               RevertReasons.DISPUTE_STILL_VALID
             );
           });
 
-          it("Dispute timeout has been extended", async function() {
+          it("Dispute timeout has been extended", async function () {
             // Extend the dispute timeout
             await disputeHandler
               .connect(operator)
@@ -824,7 +824,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Dispute is in some state other than resolving", async function() {
+          it("Dispute is in some state other than resolving", async function () {
             // Retract the dispute, put it into RETRACTED state
             await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
@@ -836,8 +836,8 @@ describe("IBosonDisputeHandler", function() {
         });
       });
 
-      context("👉 resolveDispute()", async function() {
-        beforeEach(async function() {
+      context("👉 resolveDispute()", async function () {
+        beforeEach(async function () {
           // Raise a dispute
           tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -865,8 +865,8 @@ describe("IBosonDisputeHandler", function() {
           };
         });
 
-        context("👉 buyer is the caller", async function() {
-          beforeEach(async function() {
+        context("👉 buyer is the caller", async function () {
+          beforeEach(async function () {
             // Collect the signature components
             ({ r, s, v } = await prepareDataSignatureParameters(
               operator, // When buyer is the caller, seller should be the signer.
@@ -877,14 +877,14 @@ describe("IBosonDisputeHandler", function() {
             ));
           });
 
-          it("should emit a DisputeResolved event", async function() {
+          it("should emit a DisputeResolved event", async function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
               .withArgs(exchangeId, buyerPercent, buyer.address);
           });
 
-          it("should update state", async function() {
+          it("should update state", async function () {
             // Resolve the dispute
             tx = await disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v);
 
@@ -928,7 +928,7 @@ describe("IBosonDisputeHandler", function() {
             assert.equal(returnedExchange.finalizedDate, finalizedDate, "Exchange finalizeDate is incorect");
           });
 
-          it("Buyer can also have a seller account and this will work", async function() {
+          it("Buyer can also have a seller account and this will work", async function () {
             // Create a valid seller with buyer's wallet
             seller = mockSeller(buyer.address, buyer.address, buyer.address, buyer.address);
             expect(seller.isValid()).is.true;
@@ -941,7 +941,7 @@ describe("IBosonDisputeHandler", function() {
               .withArgs(exchangeId, buyerPercent, buyer.address);
           });
 
-          it("Dispute can be mutually resolved even if it's in escalated state", async function() {
+          it("Dispute can be mutually resolved even if it's in escalated state", async function () {
             // escalate dispute
             await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
@@ -951,7 +951,7 @@ describe("IBosonDisputeHandler", function() {
               .withArgs(exchangeId, buyerPercent, buyer.address);
           });
 
-          it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function() {
+          it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
             // Set time forward before the dispute original expiration date
             await setNextBlockTimestamp(
               ethers.BigNumber.from(disputedDate)
@@ -971,7 +971,7 @@ describe("IBosonDisputeHandler", function() {
               .withArgs(exchangeId, buyerPercent, buyer.address);
           });
 
-          it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function() {
+          it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function () {
             // Extend the dispute timeout
             await disputeHandler
               .connect(operator)
@@ -987,8 +987,8 @@ describe("IBosonDisputeHandler", function() {
           });
         });
 
-        context("👉 seller is the caller", async function() {
-          beforeEach(async function() {
+        context("👉 seller is the caller", async function () {
+          beforeEach(async function () {
             // Collect the signature components
             ({ r, s, v } = await prepareDataSignatureParameters(
               buyer, // When seller is the caller, buyer should be the signer.
@@ -999,14 +999,14 @@ describe("IBosonDisputeHandler", function() {
             ));
           });
 
-          it("should emit a DisputeResolved event", async function() {
+          it("should emit a DisputeResolved event", async function () {
             // Resolve the dispute, testing for the event
             await expect(disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
               .withArgs(exchangeId, buyerPercent, operator.address);
           });
 
-          it("should update state", async function() {
+          it("should update state", async function () {
             // Resolve the dispute
             tx = await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v);
 
@@ -1050,7 +1050,7 @@ describe("IBosonDisputeHandler", function() {
             assert.equal(returnedExchange.finalizedDate, finalizedDate, "Exchange finalizeDate is incorect");
           });
 
-          it("Operator can also have a buyer account and this will work", async function() {
+          it("Operator can also have a buyer account and this will work", async function () {
             // Create a valid buyer with operator's wallet
             buyer = mockBuyer(operator.address);
             expect(buyer.isValid()).is.true;
@@ -1062,7 +1062,7 @@ describe("IBosonDisputeHandler", function() {
               .withArgs(exchangeId, buyerPercent, operator.address);
           });
 
-          it("Dispute can be mutually resolved even if it's in escalated state", async function() {
+          it("Dispute can be mutually resolved even if it's in escalated state", async function () {
             // escalate dispute
             await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
@@ -1072,7 +1072,7 @@ describe("IBosonDisputeHandler", function() {
               .withArgs(exchangeId, buyerPercent, operator.address);
           });
 
-          it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function() {
+          it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
             // Set time forward before the dispute original expiration date
             await setNextBlockTimestamp(
               ethers.BigNumber.from(disputedDate)
@@ -1092,7 +1092,7 @@ describe("IBosonDisputeHandler", function() {
               .withArgs(exchangeId, buyerPercent, operator.address);
           });
 
-          it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function() {
+          it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function () {
             // Extend the dispute timeout
             await disputeHandler
               .connect(operator)
@@ -1108,8 +1108,8 @@ describe("IBosonDisputeHandler", function() {
           });
         });
 
-        context("💔 Revert Reasons", async function() {
-          beforeEach(async function() {
+        context("💔 Revert Reasons", async function () {
+          beforeEach(async function () {
             // Collect the signature components
             ({ r, s, v } = await prepareDataSignatureParameters(
               buyer, // When seller is the caller, buyer should be the signer.
@@ -1120,7 +1120,7 @@ describe("IBosonDisputeHandler", function() {
             ));
           });
 
-          it("The disputes region of protocol is paused", async function() {
+          it("The disputes region of protocol is paused", async function () {
             // Pause the disputes region of the protocol
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
@@ -1130,7 +1130,7 @@ describe("IBosonDisputeHandler", function() {
             ).to.revertedWith(RevertReasons.REGION_PAUSED);
           });
 
-          it("Specified buyer percent exceeds 100%", async function() {
+          it("Specified buyer percent exceeds 100%", async function () {
             // Set buyer percent above 100%
             buyerPercent = "12000"; // 120%
 
@@ -1140,7 +1140,7 @@ describe("IBosonDisputeHandler", function() {
             ).to.revertedWith(RevertReasons.INVALID_BUYER_PERCENT);
           });
 
-          it("Dispute has expired", async function() {
+          it("Dispute has expired", async function () {
             // Set time forward to the dispute expiration date
             await setNextBlockTimestamp(Number(timeout));
 
@@ -1150,7 +1150,7 @@ describe("IBosonDisputeHandler", function() {
             ).to.revertedWith(RevertReasons.DISPUTE_HAS_EXPIRED);
           });
 
-          it("Exchange does not exist", async function() {
+          it("Exchange does not exist", async function () {
             // An invalid exchange id
             const exchangeId = "666";
 
@@ -1160,7 +1160,7 @@ describe("IBosonDisputeHandler", function() {
             ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
           });
 
-          it("Exchange is not in a disputed state", async function() {
+          it("Exchange is not in a disputed state", async function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
@@ -1172,7 +1172,7 @@ describe("IBosonDisputeHandler", function() {
             ).to.revertedWith(RevertReasons.INVALID_STATE);
           });
 
-          it("Caller is neither the seller nor the buyer for the given exchange id", async function() {
+          it("Caller is neither the seller nor the buyer for the given exchange id", async function () {
             // Wallet without any account
             // Attempt to resolve the dispute, expecting revert
             await expect(
@@ -1202,7 +1202,7 @@ describe("IBosonDisputeHandler", function() {
             ).to.revertedWith(RevertReasons.NOT_BUYER_OR_SELLER);
           });
 
-          it("signature does not belong to the address of the other party", async function() {
+          it("signature does not belong to the address of the other party", async function () {
             // Collect the signature components
             ({ r, s, v } = await prepareDataSignatureParameters(
               rando,
@@ -1223,7 +1223,7 @@ describe("IBosonDisputeHandler", function() {
             ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
           });
 
-          it("signature resolution does not match input buyerPercent ", async function() {
+          it("signature resolution does not match input buyerPercent ", async function () {
             // Set different buyer percentage
             buyerPercent = (Number(buyerPercent) + 1000).toString(); // add 10%
 
@@ -1233,7 +1233,7 @@ describe("IBosonDisputeHandler", function() {
             ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
           });
 
-          it("signature has invalid field", async function() {
+          it("signature has invalid field", async function () {
             // Attempt to resolve the dispute, expecting revert
             await expect(
               disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, "0")
@@ -1250,7 +1250,7 @@ describe("IBosonDisputeHandler", function() {
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
           });
 
-          it("dispute state is neither resolving or escalated", async function() {
+          it("dispute state is neither resolving or escalated", async function () {
             // Retract the dispute, put it into RETRACTED state
             await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
@@ -1262,7 +1262,7 @@ describe("IBosonDisputeHandler", function() {
         });
       });
 
-      context("👉 escalateDispute()", async function() {
+      context("👉 escalateDispute()", async function () {
         async function createDisputeExchangeWithToken() {
           // utility function that deploys a mock token, creates a offer with it, creates an exchange and push it into escalated state
           // deploy a mock token
@@ -1299,7 +1299,7 @@ describe("IBosonDisputeHandler", function() {
           return mockToken;
         }
 
-        beforeEach(async function() {
+        beforeEach(async function () {
           // Raise a dispute
           tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -1310,7 +1310,7 @@ describe("IBosonDisputeHandler", function() {
           timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
         });
 
-        it("should emit a DisputeEscalated event", async function() {
+        it("should emit a DisputeEscalated event", async function () {
           // Escalate the dispute, testing for the event
           await expect(
             disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative })
@@ -1319,7 +1319,7 @@ describe("IBosonDisputeHandler", function() {
             .withArgs(exchangeId, disputeResolverId, buyer.address);
         });
 
-        it("should update state", async function() {
+        it("should update state", async function () {
           // Protocol balance before
           const escrowBalanceBefore = await ethers.provider.getBalance(protocolDiamond.address);
 
@@ -1364,7 +1364,7 @@ describe("IBosonDisputeHandler", function() {
           );
         });
 
-        it("should be possible to pay escalation deposit in ERC20 token", async function() {
+        it("should be possible to pay escalation deposit in ERC20 token", async function () {
           const mockToken = await createDisputeExchangeWithToken();
 
           // Protocol balance before
@@ -1383,8 +1383,8 @@ describe("IBosonDisputeHandler", function() {
           );
         });
 
-        context("💔 Revert Reasons", async function() {
-          it("The disputes region of protocol is paused", async function() {
+        context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
             // Pause the disputes region of the protocol
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
@@ -1394,7 +1394,7 @@ describe("IBosonDisputeHandler", function() {
             ).to.revertedWith(RevertReasons.REGION_PAUSED);
           });
 
-          it("Exchange does not exist", async function() {
+          it("Exchange does not exist", async function () {
             // An invalid exchange id
             const exchangeId = "666";
 
@@ -1404,7 +1404,7 @@ describe("IBosonDisputeHandler", function() {
             }).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
           });
 
-          it("Exchange is not in a disputed state", async function() {
+          it("Exchange is not in a disputed state", async function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
@@ -1416,14 +1416,14 @@ describe("IBosonDisputeHandler", function() {
             }).to.revertedWith(RevertReasons.INVALID_STATE);
           });
 
-          it("Caller is not the buyer for the given exchange id", async function() {
+          it("Caller is not the buyer for the given exchange id", async function () {
             // Attempt to retract the dispute, expecting revert
             await expect(disputeHandler.connect(rando).escalateDispute(exchangeId), {
               value: buyerEscalationDepositNative,
             }).to.revertedWith(RevertReasons.NOT_VOUCHER_HOLDER);
           });
 
-          it("Dispute has expired", async function() {
+          it("Dispute has expired", async function () {
             // Set time forward past the dispute resolution period
             await setNextBlockTimestamp(Number(timeout) + oneWeek);
 
@@ -1433,7 +1433,7 @@ describe("IBosonDisputeHandler", function() {
             }).to.revertedWith(RevertReasons.DISPUTE_HAS_EXPIRED);
           });
 
-          it("Dispute is in some state other than resolving", async function() {
+          it("Dispute is in some state other than resolving", async function () {
             // Retract the dispute, put it into RETRACTED state
             await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
@@ -1443,7 +1443,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Dispute resolver is not specified (absolute zero offer)", async function() {
+          it("Dispute resolver is not specified (absolute zero offer)", async function () {
             // Create and absolute zero offer without DR
             // Prepare an absolute zero offer
             offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = "0";
@@ -1466,7 +1466,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Insufficient native currency sent", async function() {
+          it("Insufficient native currency sent", async function () {
             // Attempt to escalate the dispute, expecting revert
             await expect(
               disputeHandler.connect(buyer).escalateDispute(exchangeId, {
@@ -1475,7 +1475,7 @@ describe("IBosonDisputeHandler", function() {
             ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
           });
 
-          it("Native currency sent together with ERC20 token transfer", async function() {
+          it("Native currency sent together with ERC20 token transfer", async function () {
             await createDisputeExchangeWithToken();
 
             // Attempt to escalate the dispute, expecting revert
@@ -1486,7 +1486,7 @@ describe("IBosonDisputeHandler", function() {
             ).to.revertedWith(RevertReasons.NATIVE_NOT_ALLOWED);
           });
 
-          it("Token address is not a contract", async function() {
+          it("Token address is not a contract", async function () {
             // prepare a disputed exchange
             const mockToken = await createDisputeExchangeWithToken();
 
@@ -1499,7 +1499,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Token contract reverts for another reason", async function() {
+          it("Token contract reverts for another reason", async function () {
             // prepare a disputed exchange
             const mockToken = await createDisputeExchangeWithToken();
 
@@ -1521,7 +1521,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Received ERC20 token amount differs from the expected value", async function() {
+          it("Received ERC20 token amount differs from the expected value", async function () {
             // Deploy ERC20 with fees
             const [Foreign20WithFee] = await deployMockTokens(gasLimit, ["Foreign20WithFee"]);
 
@@ -1562,8 +1562,8 @@ describe("IBosonDisputeHandler", function() {
         });
       });
 
-      context("👉 decideDispute()", async function() {
-        beforeEach(async function() {
+      context("👉 decideDispute()", async function () {
+        beforeEach(async function () {
           // Raise a dispute
           tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -1585,14 +1585,14 @@ describe("IBosonDisputeHandler", function() {
           buyerPercent = "4321";
         });
 
-        it("should emit a DisputeDecided event", async function() {
+        it("should emit a DisputeDecided event", async function () {
           // Escalate the dispute, testing for the event
           await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent))
             .to.emit(disputeHandler, "DisputeDecided")
             .withArgs(exchangeId, buyerPercent, operatorDR.address);
         });
 
-        it("should update state", async function() {
+        it("should update state", async function () {
           // Decide the dispute
           tx = await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent);
 
@@ -1626,8 +1626,8 @@ describe("IBosonDisputeHandler", function() {
           assert.equal(response, DisputeState.Decided, "Dispute state is incorrect");
         });
 
-        context("💔 Revert Reasons", async function() {
-          it("The disputes region of protocol is paused", async function() {
+        context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
             // Pause the disputes region of the protocol
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
@@ -1637,7 +1637,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Specified buyer percent exceeds 100%", async function() {
+          it("Specified buyer percent exceeds 100%", async function () {
             // Set buyer percent above 100%
             buyerPercent = "12000"; // 120%
 
@@ -1647,7 +1647,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Exchange does not exist", async function() {
+          it("Exchange does not exist", async function () {
             // An invalid exchange id
             const exchangeId = "666";
 
@@ -1657,7 +1657,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Exchange is not in a disputed state", async function() {
+          it("Exchange is not in a disputed state", async function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
@@ -1669,14 +1669,14 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Caller is not the dispute resolver for this dispute", async function() {
+          it("Caller is not the dispute resolver for this dispute", async function () {
             // Attempt to decide the dispute, expecting revert
             await expect(disputeHandler.connect(rando).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
               RevertReasons.NOT_DISPUTE_RESOLVER_OPERATOR
             );
           });
 
-          it("Dispute state is not escalated", async function() {
+          it("Dispute state is not escalated", async function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
@@ -1694,7 +1694,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Dispute escalation response period has elapsed", async function() {
+          it("Dispute escalation response period has elapsed", async function () {
             // Set time past escalation period
             await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
@@ -1706,8 +1706,8 @@ describe("IBosonDisputeHandler", function() {
         });
       });
 
-      context("👉 expireEscalatedDispute()", async function() {
-        beforeEach(async function() {
+      context("👉 expireEscalatedDispute()", async function () {
+        beforeEach(async function () {
           // Raise a dispute
           tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -1726,7 +1726,7 @@ describe("IBosonDisputeHandler", function() {
           timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
         });
 
-        it("should emit a EscalatedDisputeExpired event", async function() {
+        it("should emit a EscalatedDisputeExpired event", async function () {
           // Set time forward past the dispute escalation period
           await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
@@ -1736,7 +1736,7 @@ describe("IBosonDisputeHandler", function() {
             .withArgs(exchangeId, rando.address);
         });
 
-        it("should update state", async function() {
+        it("should update state", async function () {
           // Set time forward past the dispute escalation period
           await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
@@ -1783,8 +1783,8 @@ describe("IBosonDisputeHandler", function() {
           assert.equal(returnedExchange.finalizedDate, finalizedDate, "Exchange finalizeDate is incorect");
         });
 
-        context("💔 Revert Reasons", async function() {
-          it("The disputes region of protocol is paused", async function() {
+        context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
             // Set time forward past the dispute escalation period
             await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
@@ -1797,7 +1797,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Exchange does not exist", async function() {
+          it("Exchange does not exist", async function () {
             // An invalid exchange id
             const exchangeId = "666";
 
@@ -1807,7 +1807,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Exchange is not in a disputed state", async function() {
+          it("Exchange is not in a disputed state", async function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
@@ -1819,14 +1819,14 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Dispute escalation period has not passed yet", async function() {
+          it("Dispute escalation period has not passed yet", async function () {
             // Attempt to expire the escalated dispute, expecting revert
             await expect(disputeHandler.connect(rando).expireEscalatedDispute(exchangeId)).to.revertedWith(
               RevertReasons.DISPUTE_STILL_VALID
             );
           });
 
-          it("Dispute is in some state other than escalated", async function() {
+          it("Dispute is in some state other than escalated", async function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
@@ -1855,8 +1855,8 @@ describe("IBosonDisputeHandler", function() {
         });
       });
 
-      context("👉 refuseEscalatedDispute()", async function() {
-        beforeEach(async function() {
+      context("👉 refuseEscalatedDispute()", async function () {
+        beforeEach(async function () {
           // Raise a dispute
           tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -1875,14 +1875,14 @@ describe("IBosonDisputeHandler", function() {
           timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
         });
 
-        it("should emit a EscalatedDisputeRefused event", async function() {
+        it("should emit a EscalatedDisputeRefused event", async function () {
           // Refuse the escalated dispute, testing for the event
           await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId))
             .to.emit(disputeHandler, "EscalatedDisputeRefused")
             .withArgs(exchangeId, operatorDR.address);
         });
 
-        it("should update state", async function() {
+        it("should update state", async function () {
           // Refuse the dispute
           tx = await disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId);
 
@@ -1926,8 +1926,8 @@ describe("IBosonDisputeHandler", function() {
           assert.equal(returnedExchange.finalizedDate, finalizedDate, "Exchange finalizeDate is incorect");
         });
 
-        context("💔 Revert Reasons", async function() {
-          it("The disputes region of protocol is paused", async function() {
+        context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
             // Pause the disputes region of the protocol
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
@@ -1937,7 +1937,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Exchange does not exist", async function() {
+          it("Exchange does not exist", async function () {
             // An invalid exchange id
             const exchangeId = "666";
 
@@ -1947,7 +1947,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Exchange is not in a disputed state", async function() {
+          it("Exchange is not in a disputed state", async function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
@@ -1959,7 +1959,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Dispute is in some state other than escalated", async function() {
+          it("Dispute is in some state other than escalated", async function () {
             exchangeId++;
 
             // Commit to offer, creating a new exchange
@@ -1986,7 +1986,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Dispute escalation response period has elapsed", async function() {
+          it("Dispute escalation response period has elapsed", async function () {
             // Set time forward past the dispute escalation period
             await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
@@ -1996,7 +1996,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Caller is not the dispute resolver for this dispute", async function() {
+          it("Caller is not the dispute resolver for this dispute", async function () {
             // Attempt to refuse the escalated dispute, expecting revert
             await expect(disputeHandler.connect(rando).refuseEscalatedDispute(exchangeId)).to.revertedWith(
               RevertReasons.NOT_DISPUTE_RESOLVER_OPERATOR
@@ -2005,8 +2005,8 @@ describe("IBosonDisputeHandler", function() {
         });
       });
 
-      context("👉 getDispute()", async function() {
-        beforeEach(async function() {
+      context("👉 getDispute()", async function () {
+        beforeEach(async function () {
           // Raise a dispute
           tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -2021,7 +2021,7 @@ describe("IBosonDisputeHandler", function() {
           disputeDates = new DisputeDates(disputedDate, "0", "0", timeout);
         });
 
-        it("should return true for exists if exchange id is valid", async function() {
+        it("should return true for exists if exchange id is valid", async function () {
           // Get the dispute
           [exists, response] = await disputeHandler.connect(rando).getDispute(exchangeId);
 
@@ -2029,7 +2029,7 @@ describe("IBosonDisputeHandler", function() {
           expect(exists).to.be.true;
         });
 
-        it("should return false for exists if exchange id is not valid", async function() {
+        it("should return false for exists if exchange id is not valid", async function () {
           // Get the dispute
           [exists, response] = await disputeHandler.connect(rando).getDispute(exchangeId + 10);
 
@@ -2037,7 +2037,7 @@ describe("IBosonDisputeHandler", function() {
           expect(exists).to.be.false;
         });
 
-        it("should return the expected dispute if exchange id is valid", async function() {
+        it("should return the expected dispute if exchange id is valid", async function () {
           // Get the exchange
           [exists, disputeStruct, disputeDatesStruct] = await disputeHandler.connect(rando).getDispute(exchangeId);
 
@@ -2052,7 +2052,7 @@ describe("IBosonDisputeHandler", function() {
           );
         });
 
-        it("should return false for exists if exchange id is valid, but dispute was not raised", async function() {
+        it("should return false for exists if exchange id is valid, but dispute was not raised", async function () {
           exchangeId++;
 
           // Commit to offer, creating a new exchange
@@ -2091,8 +2091,8 @@ describe("IBosonDisputeHandler", function() {
         });
       });
 
-      context("👉 getDisputeState()", async function() {
-        beforeEach(async function() {
+      context("👉 getDisputeState()", async function () {
+        beforeEach(async function () {
           // Raise a dispute
           tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -2103,7 +2103,7 @@ describe("IBosonDisputeHandler", function() {
           timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
         });
 
-        it("should return true for exists if exchange id is valid", async function() {
+        it("should return true for exists if exchange id is valid", async function () {
           // Get the dispute state
           [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
 
@@ -2111,7 +2111,7 @@ describe("IBosonDisputeHandler", function() {
           expect(exists).to.be.true;
         });
 
-        it("should return false for exists if exchange id is not valid", async function() {
+        it("should return false for exists if exchange id is not valid", async function () {
           // Attempt to get the dispute state for invalid dispute
           [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId + 10);
 
@@ -2119,7 +2119,7 @@ describe("IBosonDisputeHandler", function() {
           expect(exists).to.be.false;
         });
 
-        it("should return the expected dispute state if exchange id is valid and disupte has been raised", async function() {
+        it("should return the expected dispute state if exchange id is valid and disupte has been raised", async function () {
           // Get the dispute state
           [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
 
@@ -2127,7 +2127,7 @@ describe("IBosonDisputeHandler", function() {
           assert.equal(response, DisputeState.Resolving, "Dispute state is incorrect");
         });
 
-        it("should return the expected dispute state if exchange id is valid and dispute has been retracted", async function() {
+        it("should return the expected dispute state if exchange id is valid and dispute has been retracted", async function () {
           // Buyer retracts dispute
           await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
@@ -2138,7 +2138,7 @@ describe("IBosonDisputeHandler", function() {
           assert.equal(response, DisputeState.Retracted, "Dispute state is incorrect");
         });
 
-        it("should return the expected dispute state if exchange id is valid and dispute has expired", async function() {
+        it("should return the expected dispute state if exchange id is valid and dispute has expired", async function () {
           // Set time forward to the dispute's timeout
           await setNextBlockTimestamp(Number(timeout));
 
@@ -2152,7 +2152,7 @@ describe("IBosonDisputeHandler", function() {
           assert.equal(response, DisputeState.Retracted, "Dispute state is incorrect");
         });
 
-        it("should return the expected dispute state if exchange id is valid and dispute has been resolved", async function() {
+        it("should return the expected dispute state if exchange id is valid and dispute has been resolved", async function () {
           // Get the block timestamp of the confirmed tx and set disputedDate
           blockNumber = tx.blockNumber;
           block = await ethers.provider.getBlock(blockNumber);
@@ -2195,7 +2195,7 @@ describe("IBosonDisputeHandler", function() {
           assert.equal(response, DisputeState.Resolved, "Dispute state is incorrect");
         });
 
-        it("should return the expected dispute state if exchange id is valid and dispute been escalated", async function() {
+        it("should return the expected dispute state if exchange id is valid and dispute been escalated", async function () {
           // Buyer escalates dispute
           await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
@@ -2206,7 +2206,7 @@ describe("IBosonDisputeHandler", function() {
           assert.equal(response, DisputeState.Escalated, "Dispute state is incorrect");
         });
 
-        it("should return the expected dispute state if exchange id is valid and dispute been decided", async function() {
+        it("should return the expected dispute state if exchange id is valid and dispute been decided", async function () {
           // Buyer escalates dispute
           tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
@@ -2229,7 +2229,7 @@ describe("IBosonDisputeHandler", function() {
           assert.equal(response, DisputeState.Decided, "Dispute state is incorrect");
         });
 
-        it("should return the expected dispute state if exchange id is valid and dispute been refused", async function() {
+        it("should return the expected dispute state if exchange id is valid and dispute been refused", async function () {
           // Buyer escalates dispute
           tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
@@ -2244,8 +2244,8 @@ describe("IBosonDisputeHandler", function() {
         });
       });
 
-      context("👉 getDisputeTimeout()", async function() {
-        beforeEach(async function() {
+      context("👉 getDisputeTimeout()", async function () {
+        beforeEach(async function () {
           // Raise a dispute
           tx = await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
@@ -2256,7 +2256,7 @@ describe("IBosonDisputeHandler", function() {
           timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
         });
 
-        it("should return true for exists if exchange id is valid", async function() {
+        it("should return true for exists if exchange id is valid", async function () {
           // Get the dispute state
           [exists, response] = await disputeHandler.connect(rando).getDisputeTimeout(exchangeId);
 
@@ -2264,7 +2264,7 @@ describe("IBosonDisputeHandler", function() {
           expect(exists).to.be.true;
         });
 
-        it("should return false for exists if exchange id is not valid", async function() {
+        it("should return false for exists if exchange id is not valid", async function () {
           // Attempt to get the dispute state for invalid dispute
           [exists, response] = await disputeHandler.connect(rando).getDisputeTimeout(exchangeId + 10);
 
@@ -2272,7 +2272,7 @@ describe("IBosonDisputeHandler", function() {
           expect(exists).to.be.false;
         });
 
-        it("should return the expected dispute timeout if exchange id is valid", async function() {
+        it("should return the expected dispute timeout if exchange id is valid", async function () {
           // Get the dispute timeout
           [exists, response] = await disputeHandler.connect(rando).getDisputeTimeout(exchangeId);
 
@@ -2281,8 +2281,8 @@ describe("IBosonDisputeHandler", function() {
         });
       });
 
-      context("👉 isDisputeFinalized()", async function() {
-        it("should return false if exchange is not disputed", async function() {
+      context("👉 isDisputeFinalized()", async function () {
+        it("should return false if exchange is not disputed", async function () {
           // Dispute not raised, ask if dispute is finalized
           [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchangeId);
 
@@ -2291,7 +2291,7 @@ describe("IBosonDisputeHandler", function() {
           assert.equal(response, false, "Incorrectly reports finalized state");
         });
 
-        it("should return false if exchange does not exist", async function() {
+        it("should return false if exchange does not exist", async function () {
           // Exchange does not exist, ask if dispute is finalized
           [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchangeId + 10);
 
@@ -2300,13 +2300,13 @@ describe("IBosonDisputeHandler", function() {
           assert.equal(response, false, "Incorrectly reports finalized state");
         });
 
-        context("disputed exchange", async function() {
-          beforeEach(async function() {
+        context("disputed exchange", async function () {
+          beforeEach(async function () {
             // Raise a dispute
             await disputeHandler.connect(buyer).raiseDispute(exchangeId);
           });
 
-          it("should return false if dispute is in Resolving state", async function() {
+          it("should return false if dispute is in Resolving state", async function () {
             // Dispute in resolving state, ask if exchange is finalized
             [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchangeId);
 
@@ -2315,7 +2315,7 @@ describe("IBosonDisputeHandler", function() {
             assert.equal(response, false, "Incorrectly reports finalized state");
           });
 
-          it("should return true if dispute is in Retracted state", async function() {
+          it("should return true if dispute is in Retracted state", async function () {
             // Retract dispute
             await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
@@ -2327,7 +2327,7 @@ describe("IBosonDisputeHandler", function() {
             assert.equal(response, true, "Incorrectly reports unfinalized state");
           });
 
-          it("should return true if dispute is in Resolved state", async function() {
+          it("should return true if dispute is in Resolved state", async function () {
             buyerPercent = "1234";
 
             // Set the message Type, needed for signature
@@ -2365,7 +2365,7 @@ describe("IBosonDisputeHandler", function() {
             assert.equal(response, true, "Incorrectly reports unfinalized state");
           });
 
-          it("should return true if dispute is in Decided state", async function() {
+          it("should return true if dispute is in Decided state", async function () {
             buyerPercent = "1234";
 
             // Escalate dispute
@@ -2382,7 +2382,7 @@ describe("IBosonDisputeHandler", function() {
             assert.equal(response, true, "Incorrectly reports unfinalized state");
           });
 
-          it("should return true if dispute is in Refused state", async function() {
+          it("should return true if dispute is in Refused state", async function () {
             // Escalate the dispute
             tx = await disputeHandler
               .connect(buyer)
@@ -2409,8 +2409,8 @@ describe("IBosonDisputeHandler", function() {
       });
     });
 
-    context("Batch", async function() {
-      beforeEach(async function() {
+    context("Batch", async function () {
+      beforeEach(async function () {
         // Set time forward to the offer's voucherRedeemableFrom
         await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
@@ -2423,8 +2423,8 @@ describe("IBosonDisputeHandler", function() {
         }
       });
 
-      context("👉 expireDisputeBatch()", async function() {
-        beforeEach(async function() {
+      context("👉 expireDisputeBatch()", async function () {
+        beforeEach(async function () {
           // Set the buyer percent
           buyerPercent = "0";
 
@@ -2447,7 +2447,7 @@ describe("IBosonDisputeHandler", function() {
           }
         });
 
-        it("should emit a DisputeExpired event for all events", async function() {
+        it("should emit a DisputeExpired event for all events", async function () {
           // Set time forward past the dispute resolution period
           await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
@@ -2460,7 +2460,7 @@ describe("IBosonDisputeHandler", function() {
           await expect(tx).to.emit(disputeHandler, "DisputeExpired").withArgs("4", rando.address);
         });
 
-        it("should update state", async function() {
+        it("should update state", async function () {
           // Set time forward past the dispute resolution period
           await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
@@ -2509,8 +2509,8 @@ describe("IBosonDisputeHandler", function() {
           }
         });
 
-        context("💔 Revert Reasons", async function() {
-          it("The disputes region of protocol is paused", async function() {
+        context("💔 Revert Reasons", async function () {
+          it("The disputes region of protocol is paused", async function () {
             // Set time forward past the dispute resolution period
             await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
@@ -2523,7 +2523,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Exchange does not exist", async function() {
+          it("Exchange does not exist", async function () {
             await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
             // Add an invalid exchange id
@@ -2535,7 +2535,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Exchange is not in a disputed state", async function() {
+          it("Exchange is not in a disputed state", async function () {
             await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
             // add exchange that is not disputed
@@ -2547,14 +2547,14 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Dispute has not expired yet", async function() {
+          it("Dispute has not expired yet", async function () {
             // Attempt to expire the disputes, expecting revert
             await expect(disputeHandler.connect(rando).expireDisputeBatch(disputesToExpire)).to.revertedWith(
               RevertReasons.DISPUTE_STILL_VALID
             );
           });
 
-          it("Dispute is in some state other than resolving", async function() {
+          it("Dispute is in some state other than resolving", async function () {
             await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
             // Retract the dispute, put it into RETRACTED state
@@ -2566,7 +2566,7 @@ describe("IBosonDisputeHandler", function() {
             );
           });
 
-          it("Expiring too many disputes", async function() {
+          it("Expiring too many disputes", async function () {
             // Try to expire the more than 100 disputes
             disputesToExpire = [...Array(101).keys()];
 

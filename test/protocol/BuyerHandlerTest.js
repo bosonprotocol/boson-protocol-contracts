@@ -20,13 +20,13 @@ const {
   mockDisputeResolver,
   mockVoucherInitValues,
   mockAuthToken,
-  accountId
+  accountId,
 } = require("../utils/mock.js");
 
 /**
  *  Test the Boson Buyer Handler
  */
-describe("BuyerHandler", function() {
+describe("BuyerHandler", function () {
   // Common vars
   let deployer, pauser, rando, operator, admin, clerk, treasury, other1, other2, other3, other4;
   let protocolDiamond,
@@ -49,7 +49,7 @@ describe("BuyerHandler", function() {
   let bosonVoucher;
   let voucherInitValues;
 
-  beforeEach(async function() {
+  beforeEach(async function () {
     // Make accounts available
     [deployer, pauser, operator, admin, clerk, treasury, rando, other1, other2, other3, other4] =
       await ethers.getSigners();
@@ -141,10 +141,9 @@ describe("BuyerHandler", function() {
   });
 
   // All supported Buyer methods
-  context("📋 Buyer Methods", async function() {
-    beforeEach(async function() {
+  context("📋 Buyer Methods", async function () {
+    beforeEach(async function () {
       // The first buyer id
-      nextAccountId = "1";
       invalidAccountId = "666";
 
       // Create a valid buyer, then set fields in tests directly
@@ -155,20 +154,20 @@ describe("BuyerHandler", function() {
       buyerStruct = buyer.toStruct();
     });
 
-    afterEach(async function() {
+    afterEach(async function () {
       // Reset the accountId iterator
       accountId.next(true);
     });
 
-    context("👉 createBuyer()", async function() {
-      it("should emit a BuyerCreated event", async function() {
+    context("👉 createBuyer()", async function () {
+      it("should emit a BuyerCreated event", async function () {
         // Create a buyer, testing for the event
         await expect(accountHandler.connect(rando).createBuyer(buyer))
           .to.emit(accountHandler, "BuyerCreated")
           .withArgs(buyer.id, buyerStruct, rando.address);
       });
 
-      it("should update state", async function() {
+      it("should update state", async function () {
         // Create a buyer
         await accountHandler.connect(rando).createBuyer(buyer);
 
@@ -184,7 +183,7 @@ describe("BuyerHandler", function() {
         }
       });
 
-      it("should ignore any provided id and assign the next available", async function() {
+      it("should ignore any provided id and assign the next available", async function () {
         // Create a buyer, testing for the event
         await expect(accountHandler.connect(rando).createBuyer({ ...buyer, id: invalidAccountId }))
           .to.emit(accountHandler, "BuyerCreated")
@@ -199,8 +198,8 @@ describe("BuyerHandler", function() {
         expect(exists).to.be.true;
       });
 
-      context("💔 Revert Reasons", async function() {
-        it("The buyers region of protocol is paused", async function() {
+      context("💔 Revert Reasons", async function () {
+        it("The buyers region of protocol is paused", async function () {
           // Pause the buyers region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
 
@@ -208,21 +207,21 @@ describe("BuyerHandler", function() {
           await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
-        it("active is false", async function() {
+        it("active is false", async function () {
           buyer.active = false;
 
           // Attempt to Create a Buyer, expecting revert
           await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
 
-        it("addresses are the zero address", async function() {
+        it("addresses are the zero address", async function () {
           buyer.wallet = ethers.constants.AddressZero;
 
           // Attempt to Create a Buyer, expecting revert
           await expect(accountHandler.connect(rando).createBuyer(buyer)).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
-        it("wallet address is not unique to this buyerId", async function() {
+        it("wallet address is not unique to this buyerId", async function () {
           // Create a buyer
           await accountHandler.connect(rando).createBuyer(buyer);
 
@@ -234,13 +233,13 @@ describe("BuyerHandler", function() {
       });
     });
 
-    context("👉 updateBuyer()", async function() {
-      beforeEach(async function() {
+    context("👉 updateBuyer()", async function () {
+      beforeEach(async function () {
         // Create a buyer
         await accountHandler.connect(rando).createBuyer(buyer);
       });
 
-      it("should emit a BuyerUpdated event with correct values if values change", async function() {
+      it("should emit a BuyerUpdated event with correct values if values change", async function () {
         buyer.wallet = other2.address;
         buyer.active = false;
         expect(buyer.isValid()).is.true;
@@ -257,14 +256,14 @@ describe("BuyerHandler", function() {
           .withArgs(buyer.id, expectedBuyerStruct, other1.address);
       });
 
-      it("should emit a BuyerUpdated event with correct values if values stay the same", async function() {
+      it("should emit a BuyerUpdated event with correct values if values stay the same", async function () {
         //Update a buyer, testing for the event
         await expect(accountHandler.connect(other1).updateBuyer(buyer))
           .to.emit(accountHandler, "BuyerUpdated")
           .withArgs(buyer.id, buyerStruct, other1.address);
       });
 
-      it("should update state of all fields except Id and active flag", async function() {
+      it("should update state of all fields except Id and active flag", async function () {
         buyer.wallet = other2.address;
         buyer.active = false;
         expect(buyer.isValid()).is.true;
@@ -289,7 +288,7 @@ describe("BuyerHandler", function() {
         }
       });
 
-      it("should update state correctly if values are the same", async function() {
+      it("should update state correctly if values are the same", async function () {
         // Update buyer
         await accountHandler.connect(other1).updateBuyer(buyer);
 
@@ -305,7 +304,7 @@ describe("BuyerHandler", function() {
         }
       });
 
-      it("should update only wallet address", async function() {
+      it("should update only wallet address", async function () {
         buyer.wallet = other2.address;
         expect(buyer.isValid()).is.true;
 
@@ -326,7 +325,7 @@ describe("BuyerHandler", function() {
         }
       });
 
-      it("should update the correct buyer", async function() {
+      it("should update the correct buyer", async function () {
         // Confgiure another buyer
         buyer2 = mockBuyer(other3.address);
         expect(buyer2.isValid()).is.true;
@@ -370,7 +369,7 @@ describe("BuyerHandler", function() {
         }
       });
 
-      it("should be able to only update second time with new wallet address", async function() {
+      it("should be able to only update second time with new wallet address", async function () {
         buyer.wallet = other2.address;
         buyerStruct = buyer.toStruct();
 
@@ -391,8 +390,8 @@ describe("BuyerHandler", function() {
         await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NOT_BUYER_WALLET);
       });
 
-      context("💔 Revert Reasons", async function() {
-        beforeEach(async function() {
+      context("💔 Revert Reasons", async function () {
+        beforeEach(async function () {
           // Initial ids for all the things
           id = await accountHandler.connect(rando).getNextAccountId();
           offerId = await offerHandler.connect(rando).getNextOfferId();
@@ -470,13 +469,12 @@ describe("BuyerHandler", function() {
           expect(balance).equal(1);
         });
 
-        afterEach(async function() {
+        afterEach(async function () {
           // Reset the accountId iterator
           accountId.next(true);
         });
 
-
-        it("The buyers region of protocol is paused", async function() {
+        it("The buyers region of protocol is paused", async function () {
           // Pause the buyers region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
 
@@ -484,7 +482,7 @@ describe("BuyerHandler", function() {
           await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
-        it("Buyer does not exist", async function() {
+        it("Buyer does not exist", async function () {
           // Set invalid id
           buyer.id = "444";
 
@@ -498,14 +496,14 @@ describe("BuyerHandler", function() {
           await expect(accountHandler.connect(other1).updateBuyer(buyer)).to.revertedWith(RevertReasons.NO_SUCH_BUYER);
         });
 
-        it("Caller is not buyer wallet address", async function() {
+        it("Caller is not buyer wallet address", async function () {
           // Attempt to update the buyer, expecting revert
           await expect(accountHandler.connect(other2).updateBuyer(buyer)).to.revertedWith(
             RevertReasons.NOT_BUYER_WALLET
           );
         });
 
-        it("wallet address is the zero address", async function() {
+        it("wallet address is the zero address", async function () {
           buyer.wallet = ethers.constants.AddressZero;
 
           // Attempt to update the buyer, expecting revert
@@ -514,7 +512,7 @@ describe("BuyerHandler", function() {
           );
         });
 
-        it("wallet address is unique to this seller Id", async function() {
+        it("wallet address is unique to this seller Id", async function () {
           id = await accountHandler.connect(rando).getNextAccountId();
 
           buyer2 = mockBuyer(other2.address);
@@ -535,7 +533,7 @@ describe("BuyerHandler", function() {
           );
         });
 
-        it("current buyer wallet address has outstanding vouchers", async function() {
+        it("current buyer wallet address has outstanding vouchers", async function () {
           buyer.wallet = other4.address;
 
           // Attempt to update the buyer, expecting revert
@@ -546,13 +544,13 @@ describe("BuyerHandler", function() {
       });
     });
 
-    context("👉 getBuyer()", async function() {
-      beforeEach(async function() {
+    context("👉 getBuyer()", async function () {
+      beforeEach(async function () {
         // Create a buyer
         await accountHandler.connect(rando).createBuyer(buyer);
       });
 
-      it("should return true for exists if buyer is found", async function() {
+      it("should return true for exists if buyer is found", async function () {
         // Get the exists flag
         [exists] = await accountHandler.connect(rando).getBuyer(buyer.id);
 
@@ -560,7 +558,7 @@ describe("BuyerHandler", function() {
         expect(exists).to.be.true;
       });
 
-      it("should return false for exists if buyer is not found", async function() {
+      it("should return false for exists if buyer is not found", async function () {
         // Get the exists flag
         [exists] = await accountHandler.connect(rando).getBuyer(invalidAccountId);
 
@@ -568,7 +566,7 @@ describe("BuyerHandler", function() {
         expect(exists).to.be.false;
       });
 
-      it("should return the details of the buyer as a struct if found", async function() {
+      it("should return the details of the buyer as a struct if found", async function () {
         // Get the buyer as a struct
         [, buyerStruct] = await accountHandler.connect(rando).getBuyer(id);
 

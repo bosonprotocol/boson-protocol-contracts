@@ -16,7 +16,7 @@ const { mockAgent, accountId } = require("../utils/mock");
 /**
  *  Test the Boson Agent Handler
  */
-describe("AgentHandler", function() {
+describe("AgentHandler", function () {
   // Common vars
   let deployer, pauser, rando, other1, other2, other3;
   let protocolDiamond, accessController, accountHandler, pauseHandler, gasLimit;
@@ -25,7 +25,7 @@ describe("AgentHandler", function() {
   let invalidAccountId, id, id2, key, value, exists;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
 
-  beforeEach(async function() {
+  beforeEach(async function () {
     // Make accounts available
     [deployer, pauser, rando, other1, other2, other3] = await ethers.getSigners();
 
@@ -102,8 +102,8 @@ describe("AgentHandler", function() {
   });
 
   // All supported Agent methods
-  context("📋 Agent Methods", async function() {
-    beforeEach(async function() {
+  context("📋 Agent Methods", async function () {
+    beforeEach(async function () {
       // The first agent id
       nextAccountId = "1";
       invalidAccountId = "666";
@@ -116,20 +116,20 @@ describe("AgentHandler", function() {
       agentStruct = agent.toStruct();
     });
 
-    afterEach(async function() {
+    afterEach(async function () {
       // Reset the accountId iterator
       accountId.next(true);
     });
 
-    context("👉 createAgent()", async function() {
-      it("should emit a AgentCreated event", async function() {
+    context("👉 createAgent()", async function () {
+      it("should emit a AgentCreated event", async function () {
         // Create an agent, testing for the event
         await expect(accountHandler.connect(rando).createAgent(agent))
           .to.emit(accountHandler, "AgentCreated")
           .withArgs(agent.id, agentStruct, rando.address);
       });
 
-      it("should update state", async function() {
+      it("should update state", async function () {
         // Create an agent
         await accountHandler.connect(rando).createAgent(agent);
 
@@ -145,7 +145,7 @@ describe("AgentHandler", function() {
         }
       });
 
-      it("should ignore any provided id and assign the next available", async function() {
+      it("should ignore any provided id and assign the next available", async function () {
         agent.id = "444";
 
         // Create an agent, testing for the event
@@ -162,7 +162,7 @@ describe("AgentHandler", function() {
         expect(exists).to.be.true;
       });
 
-      it("should allow feePercentage of 0", async function() {
+      it("should allow feePercentage of 0", async function () {
         // Create a valid agent with feePercentage = 0, as it is optional
         agent.feePercentage = "0";
         expect(agent.isValid()).is.true;
@@ -187,7 +187,7 @@ describe("AgentHandler", function() {
         }
       });
 
-      it("should allow feePercentage plus protocol fee percentage == max", async function() {
+      it("should allow feePercentage plus protocol fee percentage == max", async function () {
         //Agent with feePercentage that, when added to the protocol fee percentage = maxTotalOfferFeePercentage
         //protocol fee percentage = 200 (2%), max = 4000 (40%)
         agent.feePercentage = "3800";
@@ -213,8 +213,8 @@ describe("AgentHandler", function() {
         }
       });
 
-      context("💔 Revert Reasons", async function() {
-        it("The agents region of protocol is paused", async function() {
+      context("💔 Revert Reasons", async function () {
+        it("The agents region of protocol is paused", async function () {
           // Pause the agents region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Agents]);
 
@@ -222,21 +222,21 @@ describe("AgentHandler", function() {
           await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
-        it("active is false", async function() {
+        it("active is false", async function () {
           agent.active = false;
 
           // Attempt to Create an Agent, expecting revert
           await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
         });
 
-        it("addresses are the zero address", async function() {
+        it("addresses are the zero address", async function () {
           agent.wallet = ethers.constants.AddressZero;
 
           // Attempt to Create an Agent, expecting revert
           await expect(accountHandler.connect(rando).createAgent(agent)).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
-        it("wallet address is not unique to this agentId", async function() {
+        it("wallet address is not unique to this agentId", async function () {
           // Create an agent
           await accountHandler.connect(rando).createAgent(agent);
 
@@ -246,7 +246,7 @@ describe("AgentHandler", function() {
           );
         });
 
-        it("feePercentage plus protocol fee percentage is above max", async function() {
+        it("feePercentage plus protocol fee percentage is above max", async function () {
           //Agent with feePercentage that, when added to the protocol fee percentage is above the maxTotalOfferFeePercentage
           //protocol fee percentage = 200 (2%), max = 4000 (40%)
           agent.feePercentage = "3900";
@@ -260,8 +260,8 @@ describe("AgentHandler", function() {
       });
     });
 
-    context("👉 updateAgent()", async function() {
-      beforeEach(async function() {
+    context("👉 updateAgent()", async function () {
+      beforeEach(async function () {
         // Create an agent
         await accountHandler.connect(rando).createAgent(agent);
 
@@ -269,7 +269,7 @@ describe("AgentHandler", function() {
         id = nextAccountId++;
       });
 
-      it("should emit an AgentUpdated event with correct values if values change", async function() {
+      it("should emit an AgentUpdated event with correct values if values change", async function () {
         agent.wallet = other2.address;
         agent.active = false;
         agent.feePercentage = "3000"; //30%
@@ -287,14 +287,14 @@ describe("AgentHandler", function() {
           .withArgs(agent.id, expectedAgentStruct, other1.address);
       });
 
-      it("should emit an AgentUpdated event with correct values if values stay the same", async function() {
+      it("should emit an AgentUpdated event with correct values if values stay the same", async function () {
         //Update a agent, testing for the event
         await expect(accountHandler.connect(other1).updateAgent(agent))
           .to.emit(accountHandler, "AgentUpdated")
           .withArgs(agent.id, agentStruct, other1.address);
       });
 
-      it("should update state of all fields except Id and active flag", async function() {
+      it("should update state of all fields except Id and active flag", async function () {
         agent.wallet = other2.address;
         agent.active = false;
         agent.feePercentage = "3000"; //30%
@@ -320,7 +320,7 @@ describe("AgentHandler", function() {
         }
       });
 
-      it("should update state correctly if values are the same", async function() {
+      it("should update state correctly if values are the same", async function () {
         // Update agent
         await accountHandler.connect(other1).updateAgent(agent);
 
@@ -336,7 +336,7 @@ describe("AgentHandler", function() {
         }
       });
 
-      it("should update only feePercentage", async function() {
+      it("should update only feePercentage", async function () {
         agent.feePercentage = "3000"; //30%
         expect(agent.isValid()).is.true;
 
@@ -357,7 +357,7 @@ describe("AgentHandler", function() {
         }
       });
 
-      it("should update only wallet address", async function() {
+      it("should update only wallet address", async function () {
         agent.wallet = other2.address;
         expect(agent.isValid()).is.true;
 
@@ -378,7 +378,7 @@ describe("AgentHandler", function() {
         }
       });
 
-      it("should update the correct agent", async function() {
+      it("should update the correct agent", async function () {
         // Confgiure another agent
         id2 = nextAccountId++;
         agent2 = mockAgent(other3.address);
@@ -423,7 +423,7 @@ describe("AgentHandler", function() {
         }
       });
 
-      it("should be able to only update second time with new wallet address", async function() {
+      it("should be able to only update second time with new wallet address", async function () {
         agent.wallet = other2.address;
         agentStruct = agent.toStruct();
 
@@ -444,7 +444,7 @@ describe("AgentHandler", function() {
         await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(RevertReasons.NOT_AGENT_WALLET);
       });
 
-      it("should allow feePercentage of 0", async function() {
+      it("should allow feePercentage of 0", async function () {
         agent.feePercentage = "0";
         expect(agent.isValid()).is.true;
         agentStruct = agent.toStruct();
@@ -466,7 +466,7 @@ describe("AgentHandler", function() {
         }
       });
 
-      it("should allow feePercentage plus protocol fee percentage == max", async function() {
+      it("should allow feePercentage plus protocol fee percentage == max", async function () {
         //Agent with feePercentage that, when added to the protocol fee percentage = maxTotalOfferFeePercentage
         //protocol fee percentage = 200 (2%), max = 4000 (40%)
         agent.feePercentage = "3800";
@@ -490,8 +490,8 @@ describe("AgentHandler", function() {
         }
       });
 
-      context("💔 Revert Reasons", async function() {
-        it("The agents region of protocol is paused", async function() {
+      context("💔 Revert Reasons", async function () {
+        it("The agents region of protocol is paused", async function () {
           // Pause the agents region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Agents]);
 
@@ -499,7 +499,7 @@ describe("AgentHandler", function() {
           await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
-        it("Agent does not exist", async function() {
+        it("Agent does not exist", async function () {
           // Set invalid id
           agent.id = "444";
 
@@ -513,14 +513,14 @@ describe("AgentHandler", function() {
           await expect(accountHandler.connect(other1).updateAgent(agent)).to.revertedWith(RevertReasons.NO_SUCH_AGENT);
         });
 
-        it("Caller is not agent wallet address", async function() {
+        it("Caller is not agent wallet address", async function () {
           // Attempt to update the agent, expecting revert
           await expect(accountHandler.connect(other2).updateAgent(agent)).to.revertedWith(
             RevertReasons.NOT_AGENT_WALLET
           );
         });
 
-        it("wallet address is the zero address", async function() {
+        it("wallet address is the zero address", async function () {
           agent.wallet = ethers.constants.AddressZero;
 
           // Attempt to update the agent, expecting revert
@@ -529,7 +529,7 @@ describe("AgentHandler", function() {
           );
         });
 
-        it("feePercentage plus protocol fee percentage is above max", async function() {
+        it("feePercentage plus protocol fee percentage is above max", async function () {
           //Agent with feePercentage that, when added to the protocol fee percentage is above the maxTotalOfferFeePercentage
           //protocol fee percentage = 200 (2%), max = 4000 (40%)
           agent.feePercentage = "3900"; //39%
@@ -541,7 +541,7 @@ describe("AgentHandler", function() {
           );
         });
 
-        it("wallet address is not unique to this agent Id", async function() {
+        it("wallet address is not unique to this agent Id", async function () {
           id = await accountHandler.connect(rando).getNextAccountId();
 
           agent2 = mockAgent(other2.address);
@@ -565,8 +565,8 @@ describe("AgentHandler", function() {
       });
     });
 
-    context("👉 getAgent()", async function() {
-      beforeEach(async function() {
+    context("👉 getAgent()", async function () {
+      beforeEach(async function () {
         // Create a agent
         await accountHandler.connect(rando).createAgent(agent);
 
@@ -574,7 +574,7 @@ describe("AgentHandler", function() {
         id = nextAccountId++;
       });
 
-      it("should return true for exists if agent is found", async function() {
+      it("should return true for exists if agent is found", async function () {
         // Get the exists flag
         [exists] = await accountHandler.connect(rando).getAgent(id);
 
@@ -582,7 +582,7 @@ describe("AgentHandler", function() {
         expect(exists).to.be.true;
       });
 
-      it("should return false for exists if agent is not found", async function() {
+      it("should return false for exists if agent is not found", async function () {
         // Get the exists flag
         [exists] = await accountHandler.connect(rando).getAgent(invalidAccountId);
 
@@ -590,7 +590,7 @@ describe("AgentHandler", function() {
         expect(exists).to.be.false;
       });
 
-      it("should return the details of the agent as a struct if found", async function() {
+      it("should return the details of the agent as a struct if found", async function () {
         // Get the agent as a struct
         [, agentStruct] = await accountHandler.connect(rando).getAgent(id);
 

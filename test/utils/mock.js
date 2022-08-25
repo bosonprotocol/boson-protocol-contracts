@@ -25,7 +25,6 @@ const Dispute = require("../../scripts/domain/Dispute");
 const { applyPercentage } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("./constants.js");
 
-
 function* incrementer() {
   let i = 1;
   while (true) {
@@ -34,7 +33,7 @@ function* incrementer() {
       // reset to 0 instead of 1 to not count the reset call
       i = 0;
     }
-  };
+  }
 }
 const accountId = incrementer();
 

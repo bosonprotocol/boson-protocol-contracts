@@ -17,13 +17,13 @@ const {
   mockSeller,
   mockAuthToken,
   mockAgent,
-  accountId
+  accountId,
 } = require("../utils/mock");
 
 /**
  *  Test the Boson Account Handler interface
  */
-describe("IBosonAccountHandler", function() {
+describe("IBosonAccountHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer, rando, operator, admin, clerk, treasury, other1, other2, other3;
@@ -40,13 +40,13 @@ describe("IBosonAccountHandler", function() {
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let voucherInitValues;
 
-  before(async function() {
+  before(async function () {
     // get interface Ids
 
     InterfaceIds = await getInterfaceIds();
   });
 
-  beforeEach(async function() {
+  beforeEach(async function () {
     // Make accounts available
     [deployer, operator, admin, clerk, treasury, rando, other1, other2, other3] = await ethers.getSigners();
 
@@ -122,9 +122,9 @@ describe("IBosonAccountHandler", function() {
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
-  context("📋 Interfaces", async function() {
-    context("👉 supportsInterface()", async function() {
-      it("should indicate support for IBosonAccountHandler interface", async function() {
+  context("📋 Interfaces", async function () {
+    context("👉 supportsInterface()", async function () {
+      it("should indicate support for IBosonAccountHandler interface", async function () {
         // Current interfaceId for IBosonAccountHandler
         support = await erc165.supportsInterface(InterfaceIds.IBosonAccountHandler);
 
@@ -135,8 +135,8 @@ describe("IBosonAccountHandler", function() {
   });
 
   // All supported Account Handler methods
-  context("📋 Account Handler Methods", async function() {
-    beforeEach(async function() {
+  context("📋 Account Handler Methods", async function () {
+    beforeEach(async function () {
       // The first seller id
       nextAccountId = "1";
 
@@ -176,13 +176,13 @@ describe("IBosonAccountHandler", function() {
       expect(agent.isValid()).is.true;
     });
 
-    afterEach(async function() {
+    afterEach(async function () {
       // Reset the accountId iterator
       accountId.next(true);
     });
 
-    context("👉 getNextAccountId()", async function() {
-      beforeEach(async function() {
+    context("👉 getNextAccountId()", async function () {
+      beforeEach(async function () {
         // AuthToken
         emptyAuthToken = mockAuthToken();
         expect(emptyAuthToken.isValid()).is.true;
@@ -194,7 +194,7 @@ describe("IBosonAccountHandler", function() {
         nextAccountId++;
       });
 
-      it("should return the next account id", async function() {
+      it("should return the next account id", async function () {
         // What we expect the next seller id to be
         expected = nextAccountId;
 
@@ -205,7 +205,7 @@ describe("IBosonAccountHandler", function() {
         expect(nextAccountId.toString() == expected).to.be.true;
       });
 
-      it("should be incremented after a seller is created", async function() {
+      it("should be incremented after a seller is created", async function () {
         //addresses need to be unique to seller Id, so setting them to random addresses here
         seller.operator = rando.address;
         seller.admin = other1.address;
@@ -224,7 +224,7 @@ describe("IBosonAccountHandler", function() {
         expect(nextAccountId.toString() == expected).to.be.true;
       });
 
-      it("should be incremented after a buyer is created", async function() {
+      it("should be incremented after a buyer is created", async function () {
         // Create buyer
         await accountHandler.connect(admin).createBuyer(buyer);
 
@@ -238,7 +238,7 @@ describe("IBosonAccountHandler", function() {
         expect(nextAccountId.toString() == expected).to.be.true;
       });
 
-      it("should be incremented after a dispute resolver is created", async function() {
+      it("should be incremented after a dispute resolver is created", async function () {
         // Create a dispute resolver
         await accountHandler
           .connect(rando)
@@ -254,7 +254,7 @@ describe("IBosonAccountHandler", function() {
         expect(nextAccountId.toString() == expected).to.be.true;
       });
 
-      it("should be incremented after an agent is created", async function() {
+      it("should be incremented after an agent is created", async function () {
         // Create an agent
         await accountHandler.connect(rando).createAgent(agent);
 
@@ -268,7 +268,7 @@ describe("IBosonAccountHandler", function() {
         expect(nextAccountId.toString() == expected).to.be.true;
       });
 
-      it("should not be incremented when only getNextAccountId is called", async function() {
+      it("should not be incremented when only getNextAccountId is called", async function () {
         // What we expect the next seller id to be
         expected = nextAccountId;
 

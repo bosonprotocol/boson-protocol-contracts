@@ -29,7 +29,7 @@ const { oneMonth } = require("../utils/constants");
 /**
  *  Test the Boson Bundle Handler interface
  */
-describe("IBosonBundleHandler", function() {
+describe("IBosonBundleHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer, pauser, rando, operator, admin, clerk, treasury, buyer, operatorDR, adminDR, clerkDR, treasuryDR;
@@ -62,7 +62,7 @@ describe("IBosonBundleHandler", function() {
   let emptyAuthToken;
   let agentId;
 
-  before(async function() {
+  before(async function () {
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
 
@@ -77,7 +77,7 @@ describe("IBosonBundleHandler", function() {
     expect(offerDurations.isValid()).is.true;
   });
 
-  beforeEach(async function() {
+  beforeEach(async function () {
     // Make accounts available
     [deployer, pauser, operator, admin, clerk, treasury, rando, buyer, operatorDR, adminDR, clerkDR, treasuryDR] =
       await ethers.getSigners();
@@ -177,9 +177,9 @@ describe("IBosonBundleHandler", function() {
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
-  context("📋 Interfaces", async function() {
-    context("👉 supportsInterface()", async function() {
-      it("should indicate support for IBosonBundleHandler interface", async function() {
+  context("📋 Interfaces", async function () {
+    context("👉 supportsInterface()", async function () {
+      it("should indicate support for IBosonBundleHandler interface", async function () {
         // Current interfaceId for IBosonBundleHandler
         support = await erc165.supportsInterface(InterfaceIds.IBosonBundleHandler);
 
@@ -190,8 +190,8 @@ describe("IBosonBundleHandler", function() {
   });
 
   // All supported methods
-  context("📋 Bundler Handler Methods", async function() {
-    beforeEach(async function() {
+  context("📋 Bundler Handler Methods", async function () {
+    beforeEach(async function () {
       // create a seller
       // Required constructor params
       agentId = "0"; // agent id is optional while creating an offer
@@ -209,7 +209,6 @@ describe("IBosonBundleHandler", function() {
       expect(emptyAuthToken.isValid()).is.true;
 
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
-
 
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(
@@ -269,13 +268,13 @@ describe("IBosonBundleHandler", function() {
       bundleHandlerFacet_Factory = await ethers.getContractFactory("BundleHandlerFacet");
     });
 
-    afterEach(async function() {
+    afterEach(async function () {
       // Reset the accountId iterator
       accountId.next(true);
     });
 
-    context("👉 createBundle()", async function() {
-      it("should emit a BundleCreated event", async function() {
+    context("👉 createBundle()", async function () {
+      it("should emit a BundleCreated event", async function () {
         const tx = await bundleHandler.connect(operator).createBundle(bundle);
         const txReceipt = await tx.wait();
 
@@ -290,7 +289,7 @@ describe("IBosonBundleHandler", function() {
         assert.equal(bundleInstance.toString(), bundle.toString(), "Bundle struct is incorrect");
       });
 
-      it("should update state", async function() {
+      it("should update state", async function () {
         // Create a a bundle
         await bundleHandler.connect(operator).createBundle(bundle);
 
@@ -306,7 +305,7 @@ describe("IBosonBundleHandler", function() {
         }
       });
 
-      it("should ignore any provided id and assign the next available", async function() {
+      it("should ignore any provided id and assign the next available", async function () {
         bundle.id = "444";
 
         // Create a bundle, testing for the event
@@ -332,7 +331,7 @@ describe("IBosonBundleHandler", function() {
         expect(exists).to.be.true;
       });
 
-      it("should create bundle without any offer", async function() {
+      it("should create bundle without any offer", async function () {
         bundle.offerIds = [];
 
         // Create a bundle, testing for the event
@@ -344,7 +343,7 @@ describe("IBosonBundleHandler", function() {
         assert.equal(returnedBundle.offerIds, bundle.offerIds.toString(), "Offer ids should be empty");
       });
 
-      it("should create bundle without any twin", async function() {
+      it("should create bundle without any twin", async function () {
         bundle.twinIds = [];
 
         // Create a bundle, testing for the event
@@ -356,7 +355,7 @@ describe("IBosonBundleHandler", function() {
         assert.equal(returnedBundle.twinIds, bundle.twinIds.toString(), "Twin ids should be empty");
       });
 
-      it("should ignore any provided seller and assign seller id of msg.sender", async function() {
+      it("should ignore any provided seller and assign seller id of msg.sender", async function () {
         // set some other sellerId
         bundle.sellerId = "123";
 
@@ -380,7 +379,7 @@ describe("IBosonBundleHandler", function() {
         assert.equal(bundleInstance.toStruct().toString(), bundleStruct.toString(), "Bundle struct is incorrect");
       });
 
-      it("If sum of offers' quantities is more than maxUint256, total quantity is maxUint256", async function() {
+      it("If sum of offers' quantities is more than maxUint256, total quantity is maxUint256", async function () {
         // create two offers with close to unlimited supply
         const newOffer = offer.clone();
         newOffer.quantityAvailable = ethers.constants.MaxUint256.div(10).mul(9).toString();
@@ -428,8 +427,8 @@ describe("IBosonBundleHandler", function() {
         await expect(bundleHandler.connect(operator).createBundle(bundle)).to.not.reverted;
       });
 
-      context("💔 Revert Reasons", async function() {
-        it("The bundles region of protocol is paused", async function() {
+      context("💔 Revert Reasons", async function () {
+        it("The bundles region of protocol is paused", async function () {
           // Pause the bundles region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Bundles]);
 
@@ -439,12 +438,12 @@ describe("IBosonBundleHandler", function() {
           );
         });
 
-        it("Caller not operator of any seller", async function() {
+        it("Caller not operator of any seller", async function () {
           // Attempt to Create a bundle, expecting revert
           await expect(bundleHandler.connect(rando).createBundle(bundle)).to.revertedWith(RevertReasons.NOT_OPERATOR);
         });
 
-        it("Caller is not the seller of all offers", async function() {
+        it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
           let expectedNewOfferId = "6";
           seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
@@ -466,7 +465,7 @@ describe("IBosonBundleHandler", function() {
           );
         });
 
-        it("Offer does not exist", async function() {
+        it("Offer does not exist", async function () {
           // Invalid offer id
           bundle.offerIds = ["1", "999"];
 
@@ -484,7 +483,7 @@ describe("IBosonBundleHandler", function() {
           );
         });
 
-        it("Caller is not the seller of all twins", async function() {
+        it("Caller is not the seller of all twins", async function () {
           // create another seller and a twin
           let expectedNewTwinId = "6";
           seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
@@ -505,7 +504,7 @@ describe("IBosonBundleHandler", function() {
           );
         });
 
-        it("Twin does not exist", async function() {
+        it("Twin does not exist", async function () {
           // Invalid twin id
           bundle.twinIds = ["1", "999"];
 
@@ -523,7 +522,7 @@ describe("IBosonBundleHandler", function() {
           );
         });
 
-        it("Offer is already part of another bundle", async function() {
+        it("Offer is already part of another bundle", async function () {
           // create first bundle
           await bundleHandler.connect(operator).createBundle(bundle);
 
@@ -536,7 +535,7 @@ describe("IBosonBundleHandler", function() {
           );
         });
 
-        it("Offer is duplicated", async function() {
+        it("Offer is duplicated", async function () {
           // Try to add the same offer twice
           bundle.offerIds = ["1", "1", "4"];
 
@@ -546,7 +545,7 @@ describe("IBosonBundleHandler", function() {
           );
         });
 
-        it("Adding too many offers", async function() {
+        it("Adding too many offers", async function () {
           // Try to add the more than 100 offers
           bundle.offerIds = [...Array(101).keys()];
 
@@ -556,7 +555,7 @@ describe("IBosonBundleHandler", function() {
           );
         });
 
-        it("Twin is duplicated", async function() {
+        it("Twin is duplicated", async function () {
           // Try to add the same twin twice
           bundle.twinIds = ["1", "1", "4"];
 
@@ -566,7 +565,7 @@ describe("IBosonBundleHandler", function() {
           );
         });
 
-        it("Adding too many twins", async function() {
+        it("Adding too many twins", async function () {
           // Try to add the more than 100 twins
           bundle.twinIds = [...Array(101).keys()];
 
@@ -576,7 +575,7 @@ describe("IBosonBundleHandler", function() {
           );
         });
 
-        it("Exchange already exists for the offerId in bundle", async function() {
+        it("Exchange already exists for the offerId in bundle", async function () {
           // Deposit seller funds so the commit will succeed
           await fundsHandler
             .connect(operator)
@@ -592,7 +591,7 @@ describe("IBosonBundleHandler", function() {
           );
         });
 
-        it("Twin is already part of another bundle", async function() {
+        it("Twin is already part of another bundle", async function () {
           // create first bundle
           await bundleHandler.connect(operator).createBundle(bundle);
 
@@ -611,7 +610,7 @@ describe("IBosonBundleHandler", function() {
           );
         });
 
-        it("Insufficient Twin supply to cover bundle offers", async function() {
+        it("Insufficient Twin supply to cover bundle offers", async function () {
           let expectedNewTwinId = "6";
           const newTwin = twin.clone();
           newTwin.supplyAvailable = "1";
@@ -623,7 +622,7 @@ describe("IBosonBundleHandler", function() {
           );
         });
 
-        it("Offers quantity is unlimited but twin supply is not", async function() {
+        it("Offers quantity is unlimited but twin supply is not", async function () {
           const newOffer = offer.clone();
           newOffer.quantityAvailable = ethers.constants.MaxUint256.toString();
           let expectedNewOfferId = "6";
@@ -640,8 +639,8 @@ describe("IBosonBundleHandler", function() {
       });
     });
 
-    context("👉 getBundle()", async function() {
-      beforeEach(async function() {
+    context("👉 getBundle()", async function () {
+      beforeEach(async function () {
         // Create a bundle
         await bundleHandler.connect(operator).createBundle(bundle);
 
@@ -649,7 +648,7 @@ describe("IBosonBundleHandler", function() {
         nextBundleId++;
       });
 
-      it("should return true for exists if bundle is found", async function() {
+      it("should return true for exists if bundle is found", async function () {
         // Get the exists flag
         [exists] = await bundleHandler.connect(rando).getBundle(bundleId);
 
@@ -657,7 +656,7 @@ describe("IBosonBundleHandler", function() {
         expect(exists).to.be.true;
       });
 
-      it("should return false for exists if bundle is not found", async function() {
+      it("should return false for exists if bundle is not found", async function () {
         // Get the exists flag
         [exists] = await bundleHandler.connect(rando).getBundle(invalidBundleId);
 
@@ -665,7 +664,7 @@ describe("IBosonBundleHandler", function() {
         expect(exists).to.be.false;
       });
 
-      it("should return the details of the bundle as a struct if found", async function() {
+      it("should return the details of the bundle as a struct if found", async function () {
         // Get the bundle as a struct
         [, bundleStruct] = await bundleHandler.connect(rando).getBundle(bundleId);
 
@@ -677,8 +676,8 @@ describe("IBosonBundleHandler", function() {
       });
     });
 
-    context("👉 getNextBundleId()", async function() {
-      beforeEach(async function() {
+    context("👉 getNextBundleId()", async function () {
+      beforeEach(async function () {
         // Create a bundle
         await bundleHandler.connect(operator).createBundle(bundle);
 
@@ -686,7 +685,7 @@ describe("IBosonBundleHandler", function() {
         nextBundleId++;
       });
 
-      it("should return the next bundle id", async function() {
+      it("should return the next bundle id", async function () {
         // What we expect the next bundle id to be
         expected = nextBundleId;
 
@@ -697,7 +696,7 @@ describe("IBosonBundleHandler", function() {
         expect(nextBundleId.toString() == expected).to.be.true;
       });
 
-      it("should be incremented after a bundle is created", async function() {
+      it("should be incremented after a bundle is created", async function () {
         // Create another bundle
         bundle.offerIds = ["1", "4"];
         bundle.twinIds = ["1"];
@@ -713,7 +712,7 @@ describe("IBosonBundleHandler", function() {
         expect(nextBundleId.toString() == expected).to.be.true;
       });
 
-      it("should not be incremented when only getNextBundleId is called", async function() {
+      it("should not be incremented when only getNextBundleId is called", async function () {
         // What we expect the next bundle id to be
         expected = nextBundleId;
 
@@ -731,8 +730,8 @@ describe("IBosonBundleHandler", function() {
       });
     });
 
-    context("👉 getBundleIdByOffer()", async function() {
-      beforeEach(async function() {
+    context("👉 getBundleIdByOffer()", async function () {
+      beforeEach(async function () {
         // Create a bundle
         await bundleHandler.connect(operator).createBundle(bundle);
 
@@ -740,7 +739,7 @@ describe("IBosonBundleHandler", function() {
         offerId = bundle.offerIds[0];
       });
 
-      it("should return true for exists if bundle id is found", async function() {
+      it("should return true for exists if bundle id is found", async function () {
         // Get the exists flag
         [exists] = await bundleHandler.connect(rando).getBundleIdByOffer(offerId);
 
@@ -748,7 +747,7 @@ describe("IBosonBundleHandler", function() {
         expect(exists).to.be.true;
       });
 
-      it("should return false for exists if bundle id is not found", async function() {
+      it("should return false for exists if bundle id is not found", async function () {
         invalidOfferId = "666";
 
         // Get the exists flag
@@ -758,7 +757,7 @@ describe("IBosonBundleHandler", function() {
         expect(exists).to.be.false;
       });
 
-      it("should return the bundle id if found", async function() {
+      it("should return the bundle id if found", async function () {
         // Get the bundle id
         [, bundleId] = await bundleHandler.connect(rando).getBundleIdByOffer(offerId);
 
@@ -767,8 +766,8 @@ describe("IBosonBundleHandler", function() {
       });
     });
 
-    context("👉 getBundleIdByTwin()", async function() {
-      beforeEach(async function() {
+    context("👉 getBundleIdByTwin()", async function () {
+      beforeEach(async function () {
         // Create a twin with id 6
         await bosonToken.connect(operator).approve(twinHandler.address, 1); // approving the twin handler
         await twinHandler.connect(operator).createTwin(twin);
@@ -780,7 +779,7 @@ describe("IBosonBundleHandler", function() {
         twinId = "3";
       });
 
-      it("should return true for exists if bundle id is found", async function() {
+      it("should return true for exists if bundle id is found", async function () {
         // Get the exists flag
         [exists] = await bundleHandler.connect(rando).getBundleIdByTwin(bundle.twinIds[0]);
 
@@ -788,7 +787,7 @@ describe("IBosonBundleHandler", function() {
         expect(exists).to.be.true;
       });
 
-      it("should return false for exists if bundle id is not found", async function() {
+      it("should return false for exists if bundle id is not found", async function () {
         invalidTwinId = "666";
 
         // Get the exists flag
@@ -798,7 +797,7 @@ describe("IBosonBundleHandler", function() {
         expect(exists).to.be.false;
       });
 
-      it("should return the bundle id if found", async function() {
+      it("should return the bundle id if found", async function () {
         const expectedBundleId = bundle.id;
 
         // Get the bundle id
