@@ -32,7 +32,7 @@ const {
 /**
  *  Test the Boson Offer Handler interface
  */
-describe.only("IBosonOfferHandler", function () {
+describe("IBosonOfferHandler", function () {
   // Common vars
   let InterfaceIds;
   let deployer,
@@ -1570,7 +1570,12 @@ describe.only("IBosonOfferHandler", function () {
       offerFeesStructs[4] = offerFeesList[4].toStruct();
     });
 
-    context.skip("👉 createOfferBatch()", async function () {
+    afterEach(async () => {
+      // Reset the accountId iterator
+      accountId.next(true);
+    });
+
+    context("👉 createOfferBatch()", async function () {
       it("should emit an OfferCreated events for all offers", async function () {
         // Create an offer, testing for the event
         const tx = await offerHandler
@@ -1650,7 +1655,6 @@ describe.only("IBosonOfferHandler", function () {
 
       it("should update state", async function () {
         // Create an offer
-        console.log(disputeResolverIds);
         await offerHandler
           .connect(operator)
           .createOfferBatch(offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds);
