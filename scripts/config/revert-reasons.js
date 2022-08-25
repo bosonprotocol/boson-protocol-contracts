@@ -158,4 +158,21 @@ exports.RevertReasons = {
 
   // ERC2981 related
   ROYALTY_FEE_INVALID: "ERC2981: royalty fee exceeds protocol limit",
+
+  // Diamond related
+  TOO_MANY_FUNCTIONS: "Too many functions on facet.",
+  ONLY_UPGRADER: "Caller must have UPGRADER role",
+  NO_SELECTORS_TO_CUT: "LibDiamondCut: No selectors in facet to cut",
+  FUNCTION_ALREADY_EXISTS: "LibDiamondCut: Can't add function that already exists",
+  REMOVING_FUNCTION_DOES_NOT_EXIST: "LibDiamondCut: Can't remove function that doesn't exist",
+  REMOVING_NON_ZERO_ADDRESS_FACET: "LibDiamondCut: Remove facet address must be address(0)",
+  REMOVING_IMMUTABLE_FUNCTION: "LibDiamondCut: Can't remove immutable function",
+  REPLACING_IMMUTABLE_FUNCTION: "LibDiamondCut: Can't replace immutable function",
+  REPLACING_WITH_SAME_FUNCTION: "LibDiamondCut: Can't replace function with same function",
+  REPLACING_FUNCTION_DOES_NOT_EXIST: "LibDiamondCut: Can't replace function that doesn't exist",
+  CONTRACT_NOT_ALLOWED: "Address cannot be a contract",
+  INIT_REVERTED: "LibDiamondCut: _init function reverted",
+  INIT_ZERO_ADDRESS_NON_EMPTY_CALLDATA: "LibDiamondCut: _init is address(0) but _calldata is not empty",
+  INIT_EMPTY_CALLDATA_NON_ZERO_ADDRESS: "LibDiamondCut: _calldata is empty but _init is not address(0)",
+  INIT_ADDRESS_WITH_NO_CODE: "LibDiamondCut: _init address has no code",
 };
