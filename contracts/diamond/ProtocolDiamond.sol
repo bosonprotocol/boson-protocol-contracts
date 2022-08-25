@@ -47,10 +47,8 @@ contract ProtocolDiamond {
         JewelerLib.diamondCut(_facetCuts, address(0), new bytes(0));
 
         // Add supported interfaces
-        if (_interfaceIds.length > 0) {
-            for (uint8 x = 0; x < _interfaceIds.length; x++) {
-                DiamondLib.addSupportedInterface(_interfaceIds[x]);
-            }
+        for (uint8 x = 0; x < _interfaceIds.length; x++) {
+            DiamondLib.addSupportedInterface(_interfaceIds[x]);
         }
     }
 
