@@ -1662,7 +1662,7 @@ describe("DisputeResolverHandler", function () {
 
     context("👉 addSellersToAllowList()", async function () {
       beforeEach(async function () {
-        // make another seller with id = "5" because id = "4" is already used by dispute resolver
+        // make another seller with id = "4"
         let seller4 = mockSeller(other3.address, other3.address, other3.address, other3.address);
         seller4.id = "4"; // invert id with dispute resolver id as seller is created first
 
@@ -1819,7 +1819,7 @@ describe("DisputeResolverHandler", function () {
 
     context("👉 removeSellersFromAllowList()", async function () {
       beforeEach(async function () {
-        // make another seller with id = "5" because id = "4" is already used by dispute resolver
+        // make another seller with id = "4"
         const seller4 = mockSeller(other3.address, other3.address, other3.address, other3.address);
         seller4.id = "4"; // invert id with dispute resolver id as seller is created first
 

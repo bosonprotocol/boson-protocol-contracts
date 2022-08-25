@@ -2682,7 +2682,6 @@ describe("IBosonExchangeHandler", function () {
 
     context("👉 onVoucherTransferred()", async function () {
       beforeEach(async function () {
-        console.log(buyer);
         // Commit to offer, retrieving the event
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
