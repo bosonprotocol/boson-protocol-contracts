@@ -9,7 +9,7 @@ import { BundleBase } from "../bases/BundleBase.sol";
 /**
  * @title BundleHandlerFacet
  *
- * @notice Manages bundling associated with offers and twins within the protocol
+ * @notice Handles bundling of offers with twins within the protocol
  */
 contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
     enum BundleUpdateAttribute {

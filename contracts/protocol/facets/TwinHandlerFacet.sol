@@ -10,7 +10,7 @@ import "../../domain/BosonConstants.sol";
 /**
  * @title TwinHandlerFacet
  *
- * @notice Manages digital twinning associated with exchanges within the protocol
+ * @notice Manages twin managment requests and queries
  */
 contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
     /**

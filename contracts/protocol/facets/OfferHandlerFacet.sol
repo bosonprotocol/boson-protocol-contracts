@@ -9,7 +9,7 @@ import "../../domain/BosonConstants.sol";
 /**
  * @title OfferHandlerFacet
  *
- * @notice Handles offers within the protocol
+ * @notice Handles offer management requests and queries
  */
 contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     /**

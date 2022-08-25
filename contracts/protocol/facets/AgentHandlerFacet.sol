@@ -6,6 +6,11 @@ import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
+/**
+ * @title AgentHandlerFacet
+ *
+ * @notice Handles Agent account management requests and queries
+ */
 contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**
      * @notice Facet Initializer

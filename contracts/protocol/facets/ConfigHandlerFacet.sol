@@ -11,7 +11,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
 /**
  * @title ConfigHandlerFacet
  *
- * @notice Handles management of various protocol-related settings.
+ * @notice Handles management and queries of various protocol-related settings
  */
 contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**

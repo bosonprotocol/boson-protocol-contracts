@@ -7,8 +7,11 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
-//import { IERC721 } from "../../interfaces/IERC721.sol";
-
+/**
+ * @title AccountHandlerFacet
+ *
+ * @notice Registers the IBosonAccountHandler interface and exposes the next account id
+ */
 contract AccountHandlerFacet is ProtocolBase {
     /**
      * @notice Facet Initializer

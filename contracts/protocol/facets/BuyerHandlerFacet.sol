@@ -5,6 +5,11 @@ import "../../domain/BosonConstants.sol";
 import { BuyerBase } from "../bases/BuyerBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
+/**
+ * @title BuyerHandlerFacet
+ *
+ * @notice Handles Buyer account management requests and queries
+ */
 contract BuyerHandlerFacet is BuyerBase {
     /**
      * @notice Facet Initializer

@@ -7,6 +7,11 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
+/**
+ * @title DisputeResolverHandlerFacet
+ *
+ * @notice Handles Dispute Resolver account management requests and queries
+ */
 contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**
      * @notice Facet Initializer

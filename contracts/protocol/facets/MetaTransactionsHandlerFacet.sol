@@ -14,7 +14,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
 /**
  * @title MetaTransactionsHandlerFacet
  *
- * @notice Manages incoming meta-transactions in the protocol.
+ * @notice Handles meta-transaction requests
  */
 contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, ProtocolBase {
     /**
