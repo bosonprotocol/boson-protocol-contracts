@@ -271,7 +271,7 @@ library JewelerLib {
     function initializeDiamondCut(address _init, bytes memory _calldata) internal {
         // If _init is not populated, then _calldata must also be unpopulated
         if (_init == address(0)) {
-            require(_calldata.length == 0, "LibDiamondCut: _init is address(0) but_calldata is not empty");
+            require(_calldata.length == 0, "LibDiamondCut: _init is address(0) but _calldata is not empty");
         } else {
             // Revert if _calldata is not populated
             require(_calldata.length > 0, "LibDiamondCut: _calldata is empty but _init is not address(0)");
