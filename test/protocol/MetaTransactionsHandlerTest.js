@@ -27,12 +27,13 @@ const {
   mockVoucherInitValues,
   mockSeller,
   mockAuthToken,
+  accountId
 } = require("../utils/mock");
 const { oneMonth } = require("../utils/constants");
 /**
  *  Test the Boson Meta transactions Handler interface
  */
-describe("IBosonMetaTransactionsHandler", function () {
+describe("IBosonMetaTransactionsHandler", function() {
   // Common vars
   let InterfaceIds;
   let deployer, pauser, rando, operator, buyer, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
@@ -50,7 +51,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     support,
     result;
   let metaTransactionsHandler, nonce, functionSignature;
-  let seller, offerId, id, buyerId, nextAccountId;
+  let seller, offerId, id, buyerId;
   let validOfferDetails,
     offerType,
     metaTransactionType,
@@ -65,7 +66,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let voucher, committedDate, validUntilDate, redeemedDate, expired;
   let exchange, finalizedDate, state;
-  let disputeResolver, disputeResolverFees, disputeResolverId;
+  let disputeResolver, disputeResolverFees;
   let twin, success;
   let exchangeId,
     mockToken,
@@ -87,12 +88,12 @@ describe("IBosonMetaTransactionsHandler", function () {
   let emptyAuthToken;
   let agentId;
 
-  before(async function () {
+  before(async function() {
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
   });
 
-  beforeEach(async function () {
+  beforeEach(async function() {
     // Make accounts available
     [deployer, pauser, operator, buyer, rando, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR] =
       await ethers.getSigners();
@@ -207,9 +208,9 @@ describe("IBosonMetaTransactionsHandler", function () {
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
-  context("📋 Interfaces", async function () {
-    context("👉 supportsInterface()", async function () {
-      it("should indicate support for IBosonMetaTransactionsHandler interface", async function () {
+  context("📋 Interfaces", async function() {
+    context("👉 supportsInterface()", async function() {
+      it("should indicate support for IBosonMetaTransactionsHandler interface", async function() {
         // Current interfaceId for IBosonMetaTransactionsHandler
         support = await erc165.supportsInterface(InterfaceIds.IBosonMetaTransactionsHandler);
 
@@ -220,9 +221,9 @@ describe("IBosonMetaTransactionsHandler", function () {
   });
 
   // All supported methods
-  context("📋 Meta Transactions Handler Methods", async function () {
-    context("👉 isUsedNonce()", async function () {
-      it("should return false if nonce is not used", async function () {
+  context("📋 Meta Transactions Handler Methods", async function() {
+    context("👉 isUsedNonce()", async function() {
+      it("should return false if nonce is not used", async function() {
         // We expect that the nonce is Not used before.
         let expectedResult = false;
 
@@ -236,7 +237,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         assert.equal(result, expectedResult, "Nonce is used");
       });
 
-      it("should be true after executing a meta transaction with nonce", async function () {
+      it("should be true after executing a meta transaction with nonce", async function() {
         // We expect that the nonce is Not used before.
         let expectedResult = false;
         // Set a random nonce
@@ -321,8 +322,8 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
     });
 
-    context("👉 executeMetaTransaction()", async function () {
-      beforeEach(async function () {
+    context("👉 executeMetaTransaction()", async function() {
+      beforeEach(async function() {
         // Set a random nonce
         nonce = parseInt(ethers.utils.randomBytes(8));
 
@@ -355,6 +356,11 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Prepare the message
         message = {};
         message.nonce = parseInt(nonce);
+      });
+
+      afterEach(async function() {
+        // Reset the accountId iterator
+        accountId.next(true);
       });
 
       it("Should emit MetaTransactionExecuted event and update state", async () => {
@@ -396,7 +402,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         assert.equal(result, expectedResult, "Nonce is unused");
       });
 
-      it("does not modify revert reasons", async function () {
+      it("does not modify revert reasons", async function() {
         // Set seller as inactive
         seller.active = false;
 
@@ -437,9 +443,9 @@ describe("IBosonMetaTransactionsHandler", function () {
         ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
       });
 
-      context("👉 msg.sender is replaced with msgSender()", async function () {
-        context("TwinHandler", async function () {
-          beforeEach(async function () {
+      context("👉 msg.sender is replaced with msgSender()", async function() {
+        context("TwinHandler", async function() {
+          beforeEach(async function() {
             // VoucherInitValues
             voucherInitValues = mockVoucherInitValues();
             expect(voucherInitValues.isValid()).is.true;
@@ -466,7 +472,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             message.contractAddress = twinHandler.address;
           });
 
-          it("removeTwin() can remove a twin", async function () {
+          it("removeTwin() can remove a twin", async function() {
             // Expect twin to be found.
             [success] = await twinHandler.connect(rando).getTwin(twin.id);
             expect(success).to.be.true;
@@ -505,8 +511,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
       });
 
-      context("💔 Revert Reasons", async function () {
-        it("The meta transactions region of protocol is paused", async function () {
+      context("💔 Revert Reasons", async function() {
+        it("The meta transactions region of protocol is paused", async function() {
           // Prepare the function signature for the facet function.
           functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
             seller,
@@ -541,7 +547,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
-        it("Should fail when try to call executeMetaTransaction method itself", async function () {
+        it("Should fail when try to call executeMetaTransaction method itself", async function() {
           // Function signature for executeMetaTransaction function.
           functionSignature = metaTransactionsHandler.interface.encodeFunctionData("executeMetaTransaction", [
             operator.address,
@@ -582,7 +588,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_FUNCTION_SIGNATURE);
         });
 
-        it("Should fail when function name is incorrect", async function () {
+        it("Should fail when function name is incorrect", async function() {
           let incorrectFunctionName = "createSeller"; // there are no function argument types here.
 
           // Prepare the function signature for the facet function.
@@ -621,7 +627,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_FUNCTION_NAME);
         });
 
-        it("Should fail when replay transaction", async function () {
+        it("Should fail when replay transaction", async function() {
           // Prepare the function signature for the facet function.
           functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
             seller,
@@ -670,7 +676,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
         });
 
-        it("Should fail when Signer and Signature do not match", async function () {
+        it("Should fail when Signer and Signature do not match", async function() {
           // Prepare the function signature for the facet function.
           functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
             seller,
@@ -708,13 +714,13 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
         });
 
-        it("Should fail on reenter", async function () {
+        it("Should fail on reenter", async function() {
           // Deploy the boson token
           const [maliciousToken] = await deployMockTokens(gasLimit, ["Foreign20Malicious"]);
           await maliciousToken.setProtocolAddress(protocolDiamond.address);
 
           // Initial ids for all the things
-          id = exchangeId = nextAccountId = "1";
+          id = exchangeId = "1";
           buyerId = "3"; // created after a seller and a dispute resolver
 
           // Create a valid seller
@@ -740,10 +746,10 @@ describe("IBosonMetaTransactionsHandler", function () {
           await accountHandler
             .connect(rando)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-          await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+          await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
           const { offer, ...mo } = await mockOffer();
-          ({ offerDates, offerDurations, disputeResolverId } = mo);
+          ({ offerDates, offerDurations } = mo);
           offerToken = offer;
           offerToken.exchangeToken = maliciousToken.address;
 
@@ -758,7 +764,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Create the offer
           await offerHandler
             .connect(operator)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offerToken, offerDates, offerDurations, disputeResolver.id, agentId);
 
           // top up seller's and buyer's account
           await maliciousToken.mint(operator.address, sellerDeposit);
@@ -921,13 +927,13 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
     });
 
-    context("👉 ExchangeHandlerFacet 👉 commitToOffer()", async function () {
-      beforeEach(async function () {
+    context("👉 ExchangeHandlerFacet 👉 commitToOffer()", async function() {
+      beforeEach(async function() {
         // Set a random nonce
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = offerId = nextAccountId = "1";
+        id = offerId = "1";
 
         // Create a valid seller
         seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
@@ -963,10 +969,10 @@ describe("IBosonMetaTransactionsHandler", function () {
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-        await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
         // Valid offer domains
-        ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+        ({ offer, offerDates, offerDurations } = await mockOffer());
         offer.exchangeToken = mockToken.address;
 
         // Check if domains are valid
@@ -991,7 +997,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, sellerDeposit);
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
 
         // Set the offer Type
         offerType = [
@@ -1031,6 +1037,11 @@ describe("IBosonMetaTransactionsHandler", function () {
         await fundsHandler
           .connect(rando)
           .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+      });
+
+      afterEach(async function() {
+        // Reset the accountId iterator
+        accountId.next(true);
       });
 
       it("Should emit MetaTransactionExecuted event and update state", async () => {
@@ -1078,7 +1089,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         assert.equal(result, expectedResult, "Nonce is unused");
       });
 
-      it("does not modify revert reasons", async function () {
+      it("does not modify revert reasons", async function() {
         // An invalid offer id
         offerId = "666";
 
@@ -1120,8 +1131,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         ).to.revertedWith(RevertReasons.NO_SUCH_OFFER);
       });
 
-      context("💔 Revert Reasons", async function () {
-        beforeEach(async function () {
+      context("💔 Revert Reasons", async function() {
+        beforeEach(async function() {
           // Prepare the function signature
           functionSignature = exchangeHandler.interface.encodeFunctionData("commitToOffer", [
             validOfferDetails.buyer,
@@ -1129,7 +1140,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           ]);
         });
 
-        it("Should fail when replay transaction", async function () {
+        it("Should fail when replay transaction", async function() {
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             buyer,
@@ -1164,7 +1175,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
         });
 
-        it("Should fail when Signer and Signature do not match", async function () {
+        it("Should fail when Signer and Signature do not match", async function() {
           // Prepare the message
           message.from = rando.address;
 
@@ -1193,13 +1204,13 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
     });
 
-    context("👉 Exchange related ", async function () {
-      beforeEach(async function () {
+    context("👉 Exchange related ", async function() {
+      beforeEach(async function() {
         // Set a random nonce
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = offerId = nextAccountId = "1";
+        id = offerId = "1";
         buyerId = "3"; // created after seller and dispute resolver
 
         // Create a valid seller
@@ -1235,14 +1246,14 @@ describe("IBosonMetaTransactionsHandler", function () {
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-        await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
         // Create the offer
-        ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+        ({ offer, offerDates, offerDurations } = await mockOffer());
         expect(offer.isValid()).is.true;
         expect(offerDates.isValid()).is.true;
         expect(offerDurations.isValid()).is.true;
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
 
         sellerDeposit = offer.sellerDeposit;
         price = offer.price;
@@ -1296,8 +1307,13 @@ describe("IBosonMetaTransactionsHandler", function () {
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
       });
 
-      context("👉 ExchangeHandlerFacet 👉 cancelVoucher()", async function () {
-        beforeEach(async function () {
+      afterEach(async function() {
+        // Reset the accountId iterator
+        accountId.next(true);
+      });
+
+      context("👉 ExchangeHandlerFacet 👉 cancelVoucher()", async function() {
+        beforeEach(async function() {
           // Prepare the message
           message.functionName = "cancelVoucher(uint256)";
           message.exchangeDetails = validExchangeDetails;
@@ -1340,7 +1356,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
-        it("does not modify revert reasons", async function () {
+        it("does not modify revert reasons", async function() {
           // An invalid exchange id
           id = "666";
 
@@ -1380,15 +1396,15 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
         });
 
-        context("💔 Revert Reasons", async function () {
-          beforeEach(async function () {
+        context("💔 Revert Reasons", async function() {
+          beforeEach(async function() {
             // Prepare the function signature
             functionSignature = exchangeHandler.interface.encodeFunctionData("cancelVoucher", [
               validExchangeDetails.exchangeId,
             ]);
           });
 
-          it("Should fail when replay transaction", async function () {
+          it("Should fail when replay transaction", async function() {
             // Collect the signature components
             let { r, s, v } = await prepareDataSignatureParameters(
               buyer,
@@ -1423,7 +1439,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
           });
 
-          it("Should fail when Signer and Signature do not match", async function () {
+          it("Should fail when Signer and Signature do not match", async function() {
             // Prepare the message
             message.from = rando.address;
 
@@ -1452,8 +1468,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
       });
 
-      context("👉 ExchangeHandlerFacet 👉 redeemVoucher()", async function () {
-        beforeEach(async function () {
+      context("👉 ExchangeHandlerFacet 👉 redeemVoucher()", async function() {
+        beforeEach(async function() {
           // Prepare the message
           message.functionName = "redeemVoucher(uint256)";
           message.exchangeDetails = validExchangeDetails;
@@ -1499,7 +1515,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
-        it("does not modify revert reasons", async function () {
+        it("does not modify revert reasons", async function() {
           // An invalid exchange id
           id = "666";
 
@@ -1539,15 +1555,15 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
         });
 
-        context("💔 Revert Reasons", async function () {
-          beforeEach(async function () {
+        context("💔 Revert Reasons", async function() {
+          beforeEach(async function() {
             // Prepare the function signature
             functionSignature = exchangeHandler.interface.encodeFunctionData("redeemVoucher", [
               validExchangeDetails.exchangeId,
             ]);
           });
 
-          it("Should fail when replay transaction", async function () {
+          it("Should fail when replay transaction", async function() {
             // Collect the signature components
             let { r, s, v } = await prepareDataSignatureParameters(
               buyer,
@@ -1582,7 +1598,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
           });
 
-          it("Should fail when Signer and Signature do not match", async function () {
+          it("Should fail when Signer and Signature do not match", async function() {
             // Prepare the message
             message.from = rando.address;
 
@@ -1611,8 +1627,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
       });
 
-      context("👉 ExchangeHandlerFacet 👉 completeExchange()", async function () {
-        beforeEach(async function () {
+      context("👉 ExchangeHandlerFacet 👉 completeExchange()", async function() {
+        beforeEach(async function() {
           // Prepare the message
           message.functionName = "completeExchange(uint256)";
           message.exchangeDetails = validExchangeDetails;
@@ -1667,7 +1683,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
-        it("does not modify revert reasons", async function () {
+        it("does not modify revert reasons", async function() {
           // An invalid exchange id
           id = "666";
 
@@ -1707,15 +1723,15 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
         });
 
-        context("💔 Revert Reasons", async function () {
-          beforeEach(async function () {
+        context("💔 Revert Reasons", async function() {
+          beforeEach(async function() {
             // Prepare the function signature
             functionSignature = exchangeHandler.interface.encodeFunctionData("completeExchange", [
               validExchangeDetails.exchangeId,
             ]);
           });
 
-          it("Should fail when replay transaction", async function () {
+          it("Should fail when replay transaction", async function() {
             // Collect the signature components
             let { r, s, v } = await prepareDataSignatureParameters(
               buyer,
@@ -1750,7 +1766,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
           });
 
-          it("Should fail when Signer and Signature do not match", async function () {
+          it("Should fail when Signer and Signature do not match", async function() {
             // Prepare the message
             message.from = rando.address;
 
@@ -1779,8 +1795,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
       });
 
-      context("👉 DisputeHandlerFacet 👉 retractDispute()", async function () {
-        beforeEach(async function () {
+      context("👉 DisputeHandlerFacet 👉 retractDispute()", async function() {
+        beforeEach(async function() {
           // Prepare the message
           message.functionName = "retractDispute(uint256)";
           message.exchangeDetails = validExchangeDetails;
@@ -1837,7 +1853,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
-        it("does not modify revert reasons", async function () {
+        it("does not modify revert reasons", async function() {
           // An invalid exchange id
           id = "666";
 
@@ -1877,15 +1893,15 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
         });
 
-        context("💔 Revert Reasons", async function () {
-          beforeEach(async function () {
+        context("💔 Revert Reasons", async function() {
+          beforeEach(async function() {
             // Prepare the function signature
             functionSignature = disputeHandler.interface.encodeFunctionData("retractDispute", [
               validExchangeDetails.exchangeId,
             ]);
           });
 
-          it("Should fail when replay transaction", async function () {
+          it("Should fail when replay transaction", async function() {
             // Collect the signature components
             let { r, s, v } = await prepareDataSignatureParameters(
               buyer,
@@ -1920,7 +1936,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
           });
 
-          it("Should fail when Signer and Signature do not match", async function () {
+          it("Should fail when Signer and Signature do not match", async function() {
             // Prepare the message
             message.from = rando.address;
 
@@ -1949,8 +1965,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
       });
 
-      context("👉 DisputeHandlerFacet 👉 raiseDispute()", async function () {
-        beforeEach(async function () {
+      context("👉 DisputeHandlerFacet 👉 raiseDispute()", async function() {
+        beforeEach(async function() {
           // prepare validExchangeDetails
           validExchangeDetails = {
             exchangeId: exchange.id,
@@ -2027,7 +2043,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
-        it("does not modify revert reasons", async function () {
+        it("does not modify revert reasons", async function() {
           // An invalid exchange id
           id = "666";
 
@@ -2067,15 +2083,15 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
         });
 
-        context("💔 Revert Reasons", async function () {
-          beforeEach(async function () {
+        context("💔 Revert Reasons", async function() {
+          beforeEach(async function() {
             // Prepare the function signature
             functionSignature = disputeHandler.interface.encodeFunctionData("raiseDispute", [
               validExchangeDetails.exchangeId,
             ]);
           });
 
-          it("Should fail when replay transaction", async function () {
+          it("Should fail when replay transaction", async function() {
             // Collect the signature components
             let { r, s, v } = await prepareDataSignatureParameters(
               buyer,
@@ -2110,7 +2126,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
           });
 
-          it("Should fail when Signer and Signature do not match", async function () {
+          it("Should fail when Signer and Signature do not match", async function() {
             // Prepare the message
             message.from = rando.address;
 
@@ -2139,8 +2155,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
       });
 
-      context("👉 DisputeHandlerFacet 👉 escalateDispute()", async function () {
-        beforeEach(async function () {
+      context("👉 DisputeHandlerFacet 👉 escalateDispute()", async function() {
+        beforeEach(async function() {
           // Prepare the message
           message.functionName = "escalateDispute(uint256)";
           message.exchangeDetails = validExchangeDetails;
@@ -2197,7 +2213,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
-        it("does not modify revert reasons", async function () {
+        it("does not modify revert reasons", async function() {
           // An invalid exchange id
           id = "666";
 
@@ -2237,15 +2253,15 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
         });
 
-        context("💔 Revert Reasons", async function () {
-          beforeEach(async function () {
+        context("💔 Revert Reasons", async function() {
+          beforeEach(async function() {
             // Prepare the function signature
             functionSignature = disputeHandler.interface.encodeFunctionData("escalateDispute", [
               validExchangeDetails.exchangeId,
             ]);
           });
 
-          it("Should fail when replay transaction", async function () {
+          it("Should fail when replay transaction", async function() {
             // Collect the signature components
             let { r, s, v } = await prepareDataSignatureParameters(
               buyer,
@@ -2280,7 +2296,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
           });
 
-          it("Should fail when Signer and Signature do not match", async function () {
+          it("Should fail when Signer and Signature do not match", async function() {
             // Prepare the message
             message.from = rando.address;
 
@@ -2309,8 +2325,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
       });
 
-      context("👉 DisputeHandlerFacet 👉 resolveDispute()", async function () {
-        beforeEach(async function () {
+      context("👉 DisputeHandlerFacet 👉 resolveDispute()", async function() {
+        beforeEach(async function() {
           // Set time forward to the offer's voucherRedeemableFrom
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
@@ -2429,7 +2445,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
-        it("does not modify revert reasons", async function () {
+        it("does not modify revert reasons", async function() {
           // Set buyer percent above 100%
           buyerPercent = "12000"; // 120%
 
@@ -2477,8 +2493,8 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_BUYER_PERCENT);
         });
 
-        context("💔 Revert Reasons", async function () {
-          beforeEach(async function () {
+        context("💔 Revert Reasons", async function() {
+          beforeEach(async function() {
             // Prepare the function signature
             functionSignature = disputeHandler.interface.encodeFunctionData("resolveDispute", [
               validDisputeResolutionDetails.exchangeId,
@@ -2489,7 +2505,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             ]);
           });
 
-          it("Should fail when replay transaction", async function () {
+          it("Should fail when replay transaction", async function() {
             // Collect the signature components
             let { r, s, v } = await prepareDataSignatureParameters(
               buyer,
@@ -2524,7 +2540,7 @@ describe("IBosonMetaTransactionsHandler", function () {
             ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
           });
 
-          it("Should fail when Signer and Signature do not match", async function () {
+          it("Should fail when Signer and Signature do not match", async function() {
             // Prepare the message
             message.from = rando.address;
 
@@ -2554,13 +2570,13 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
     });
 
-    context("👉 OfferHandlerFacet 👉 createOffer() ", async function () {
-      beforeEach(async function () {
+    context("👉 OfferHandlerFacet 👉 createOffer() ", async function() {
+      beforeEach(async function() {
         // Set a random nonce
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = offerId = nextAccountId = "1";
+        id = offerId = "1";
 
         // Create a valid seller
         seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
@@ -2596,10 +2612,10 @@ describe("IBosonMetaTransactionsHandler", function () {
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-        await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
         // Valid offer domains
-        ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+        ({ offer, offerDates, offerDurations } = await mockOffer());
         offer.exchangeToken = mockToken.address;
 
         // Check if domains are valid
@@ -2628,7 +2644,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           offer,
           offerDates,
           offerDurations,
-          disputeResolverId,
+          disputeResolver.id,
           agentId,
         ]);
 
@@ -2654,6 +2670,12 @@ describe("IBosonMetaTransactionsHandler", function () {
           "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256)";
         message.functionSignature = functionSignature;
       });
+
+      afterEach(async function() {
+        // Reset the accountId iterator
+        accountId.next(true);
+      });
+
 
       it("Should emit MetaTransactionExecuted event and update state", async () => {
         // Collect the signature components
@@ -2686,7 +2708,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         assert.equal(result, expectedResult, "Nonce is unused");
       });
 
-      it("does not modify revert reasons", async function () {
+      it("does not modify revert reasons", async function() {
         // Reverse the from and until dates
         offerDates.validFrom = ethers.BigNumber.from(Date.now() + oneMonth * 6).toString(); // 6 months from now
         offerDates.validUntil = ethers.BigNumber.from(Date.now()).toString(); // now
@@ -2696,7 +2718,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           offer,
           offerDates,
           offerDurations,
-          disputeResolverId,
+          disputeResolver.id,
           agentId,
         ]);
 
@@ -2726,8 +2748,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         ).to.revertedWith(RevertReasons.OFFER_PERIOD_INVALID);
       });
 
-      context("💔 Revert Reasons", async function () {
-        it("Should fail when replay transaction", async function () {
+      context("💔 Revert Reasons", async function() {
+        it("Should fail when replay transaction", async function() {
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             operator,
@@ -2762,7 +2784,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
         });
 
-        it("Should fail when Signer and Signature do not match", async function () {
+        it("Should fail when Signer and Signature do not match", async function() {
           // Prepare the message
           message.from = rando.address;
 
@@ -2791,13 +2813,13 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
     });
 
-    context("👉 FundsHandlerFacet 👉 withdrawFunds()", async function () {
-      beforeEach(async function () {
+    context("👉 FundsHandlerFacet 👉 withdrawFunds()", async function() {
+      beforeEach(async function() {
         // Set a random nonce
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = exchangeId = nextAccountId = "1";
+        id = exchangeId = "1";
         buyerId = "3"; // created after a seller and a dispute resolver
 
         // Create a valid seller
@@ -2836,10 +2858,10 @@ describe("IBosonMetaTransactionsHandler", function () {
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-        await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
         const { offer, ...mo } = await mockOffer();
-        ({ offerDates, offerDurations, disputeResolverId } = mo);
+        ({ offerDates, offerDurations } = mo);
         offerNative = offer;
         offerToken = offerNative.clone();
         offerToken.id = "2";
@@ -2857,10 +2879,10 @@ describe("IBosonMetaTransactionsHandler", function () {
         await Promise.all([
           offerHandler
             .connect(operator)
-            .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId),
+            .createOffer(offerNative, offerDates, offerDurations, disputeResolver.id, agentId),
           offerHandler
             .connect(operator)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId),
+            .createOffer(offerToken, offerDates, offerDurations, disputeResolver.id, agentId),
         ]);
 
         // top up seller's and buyer's account
@@ -2928,8 +2950,13 @@ describe("IBosonMetaTransactionsHandler", function () {
         };
       });
 
+      afterEach(async function() {
+        // Reset the accountId iterator
+        accountId.next(true);
+      });
+
       context("Should emit MetaTransactionExecuted event and update state", async () => {
-        beforeEach(async function () {
+        beforeEach(async function() {
           // Read on chain state
           buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
           buyerBalanceBefore = await mockToken.balanceOf(buyer.address);
@@ -3066,7 +3093,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           assert.equal(result, expectedResult, "Nonce is unused");
         });
 
-        it("does not modify revert reasons", async function () {
+        it("does not modify revert reasons", async function() {
           // Set token address to boson token
           validFundDetails = {
             entityId: buyerId,
@@ -3108,8 +3135,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
       });
 
-      context("💔 Revert Reasons", async function () {
-        beforeEach(async function () {
+      context("💔 Revert Reasons", async function() {
+        beforeEach(async function() {
           // Prepare the function signature
           functionSignature = fundsHandler.interface.encodeFunctionData("withdrawFunds", [
             validFundDetails.entityId,
@@ -3118,7 +3145,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           ]);
         });
 
-        it("Should fail when replay transaction", async function () {
+        it("Should fail when replay transaction", async function() {
           // Collect the signature components
           let { r, s, v } = await prepareDataSignatureParameters(
             buyer,
@@ -3153,7 +3180,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
         });
 
-        it("Should fail when Signer and Signature do not match", async function () {
+        it("Should fail when Signer and Signature do not match", async function() {
           // Prepare the message
           message.from = rando.address;
 

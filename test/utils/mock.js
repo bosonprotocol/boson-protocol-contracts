@@ -25,6 +25,19 @@ const Dispute = require("../../scripts/domain/Dispute");
 const { applyPercentage } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("./constants.js");
 
+
+function* incrementer() {
+  let i = 1;
+  while (true) {
+    const reset = yield (i++).toString();
+    if (reset) {
+      // reset to 0 instead of 1 to not count the reset call
+      i = 0;
+    }
+  };
+}
+const accountId = incrementer();
+
 function mockOfferDurations() {
   // Required constructor params
   const fulfillmentPeriod = oneMonth.toString(); // fulfillment period is one month
@@ -53,7 +66,7 @@ async function mockOfferDates() {
 
 // Returns a mock offer with price in native token
 async function mockOffer() {
-  const id = "1"; // argument sent to contract for createOffer will be ignored
+  const id = "1";
   const sellerId = "1"; // argument sent to contract for createOffer will be ignored
   const price = ethers.utils.parseUnits("1.5", "ether").toString();
   const sellerDeposit = ethers.utils.parseUnits("0.25", "ether").toString();
@@ -85,7 +98,7 @@ async function mockOffer() {
   const agentFee = "0";
   const offerFees = mockOfferFees(protocolFee, agentFee);
 
-  return { offer, offerDates, offerDurations, disputeResolverId, offerFees };
+  return { offer, offerDates, offerDurations, offerFees, disputeResolverId };
 }
 
 function mockTwin(tokenAddress, tokenType) {
@@ -101,7 +114,7 @@ function mockTwin(tokenAddress, tokenType) {
 function mockDisputeResolver(operatorAddress, adminAddress, clerkAddress, treasuryAddress, active) {
   const metadataUriDR = `https://ipfs.io/ipfs/disputeResolver1`;
   return new DisputeResolver(
-    "1",
+    accountId.next().value,
     oneMonth.toString(),
     operatorAddress,
     adminAddress,
@@ -113,16 +126,16 @@ function mockDisputeResolver(operatorAddress, adminAddress, clerkAddress, treasu
 }
 
 function mockSeller(operatorAddress, adminAddress, clerkAddress, treasuryAddress) {
-  return new Seller("1", operatorAddress, adminAddress, clerkAddress, treasuryAddress, true);
+  return new Seller(accountId.next().value, operatorAddress, adminAddress, clerkAddress, treasuryAddress, true);
 }
 
 function mockBuyer(wallet) {
-  return new Buyer("1", wallet, true);
+  return new Buyer(accountId.next().value, wallet, true);
 }
 
 function mockAgent(wallet) {
   const feePercentage = "500"; //5%
-  return new Agent("1", feePercentage, wallet, true);
+  return new Agent(accountId.next().value, feePercentage, wallet, true);
 }
 
 function mockOfferFees(protocolFee, agentFee) {
@@ -233,3 +246,4 @@ exports.mockReceipt = mockReceipt;
 exports.mockDispute = mockDispute;
 exports.mockCondition = mockCondition;
 exports.mockAgent = mockAgent;
+exports.accountId = accountId;

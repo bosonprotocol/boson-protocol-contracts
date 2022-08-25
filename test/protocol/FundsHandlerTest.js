@@ -28,12 +28,13 @@ const {
   mockSeller,
   mockAuthToken,
   mockAgent,
+  accountId
 } = require("../utils/mock");
 
 /**
  *  Test the Boson Funds Handler interface
  */
-describe("IBosonFundsHandler", function () {
+describe("IBosonFundsHandler", function() {
   // Common vars
   let InterfaceIds;
   let deployer,
@@ -61,7 +62,7 @@ describe("IBosonFundsHandler", function () {
     pauseHandler;
   let support;
   let seller;
-  let buyer, offerToken, offerNative, sellerId, nextAccountId;
+  let buyer, offerToken, offerNative;
   let mockToken, bosonToken;
   let depositAmount;
   let offerTokenProtocolFee, offerNativeProtocolFee, price, sellerDeposit;
@@ -95,7 +96,7 @@ describe("IBosonFundsHandler", function () {
     agentAvailableFunds;
   let DRFee, buyerEscalationDeposit;
 
-  before(async function () {
+  before(async function() {
     // get interface Ids
     InterfaceIds = await getInterfaceIds();
 
@@ -103,7 +104,7 @@ describe("IBosonFundsHandler", function () {
     [mockToken] = await deployMockTokens(gasLimit, ["Foreign20"]);
   });
 
-  beforeEach(async function () {
+  beforeEach(async function() {
     // Make accounts available
     [
       deployer,
@@ -144,6 +145,7 @@ describe("IBosonFundsHandler", function () {
       "ExchangeHandlerFacet",
       "OfferHandlerFacet",
       "PauseHandlerFacet",
+      "AccountHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -218,9 +220,9 @@ describe("IBosonFundsHandler", function () {
   });
 
   // Interface support (ERC-156 provided by ProtocolDiamond, others by deployed facets)
-  context("📋 Interfaces", async function () {
-    context("👉 supportsInterface()", async function () {
-      it("should indicate support for IBosonFundsHandler interface", async function () {
+  context("📋 Interfaces", async function() {
+    context("👉 supportsInterface()", async function() {
+      it("should indicate support for IBosonFundsHandler interface", async function() {
         // Current interfaceId for IBosonFundsHandler
         support = await erc165.supportsInterface(InterfaceIds.IBosonFundsHandler);
 
@@ -231,8 +233,8 @@ describe("IBosonFundsHandler", function () {
   });
 
   // All supported methods - single offer
-  context("📋 Funds Handler Methods", async function () {
-    beforeEach(async function () {
+  context("📋 Funds Handler Methods", async function() {
+    beforeEach(async function() {
       // Create a valid seller, then set fields in tests directly
       seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
@@ -260,8 +262,13 @@ describe("IBosonFundsHandler", function () {
       agentId = "0";
     });
 
-    context("👉 depositFunds()", async function () {
-      it("should emit a FundsDeposited event", async function () {
+    afterEach(async function() {
+      // Reset the accountId iterator
+      accountId.next(true);
+    });
+
+    context("👉 depositFunds()", async function() {
+      it("should emit a FundsDeposited event", async function() {
         // Deposit funds, testing for the event
         // Deposit token
         await expect(fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount))
@@ -278,7 +285,7 @@ describe("IBosonFundsHandler", function () {
           .withArgs(seller.id, rando.address, ethers.constants.AddressZero, depositAmount);
       });
 
-      it("should update state", async function () {
+      it("should update state", async function() {
         // Deposit token
         await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount);
 
@@ -302,7 +309,7 @@ describe("IBosonFundsHandler", function () {
         expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
       });
 
-      it("should be possible to top up the account", async function () {
+      it("should be possible to top up the account", async function() {
         // Deposit token
         await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, depositAmount);
 
@@ -324,8 +331,8 @@ describe("IBosonFundsHandler", function () {
         expect(returnedAvailableFunds).to.eql(expectedAvailableFunds);
       });
 
-      context("💔 Revert Reasons", async function () {
-        it("The funds region of protocol is paused", async function () {
+      context("💔 Revert Reasons", async function() {
+        it("The funds region of protocol is paused", async function() {
           // Pause the funds region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Funds]);
 
@@ -335,7 +342,7 @@ describe("IBosonFundsHandler", function () {
           ).to.revertedWith(RevertReasons.REGION_PAUSED);
         });
 
-        it("Seller id does not exist", async function () {
+        it("Seller id does not exist", async function() {
           // Attempt to deposit the funds, expecting revert
           seller.id = "555";
           await expect(
@@ -343,7 +350,7 @@ describe("IBosonFundsHandler", function () {
           ).to.revertedWith(RevertReasons.NO_SUCH_SELLER);
         });
 
-        it("Native currency deposited, but the token address is not zero", async function () {
+        it("Native currency deposited, but the token address is not zero", async function() {
           // Attempt to deposit the funds, expecting revert
           await expect(
             fundsHandler
@@ -352,7 +359,7 @@ describe("IBosonFundsHandler", function () {
           ).to.revertedWith(RevertReasons.NATIVE_WRONG_ADDRESS);
         });
 
-        it("Native currency deposited, but the amount does not match msg.value", async function () {
+        it("Native currency deposited, but the amount does not match msg.value", async function() {
           // Attempt to deposit the funds, expecting revert
           await expect(
             fundsHandler
@@ -361,7 +368,7 @@ describe("IBosonFundsHandler", function () {
           ).to.revertedWith(RevertReasons.NATIVE_WRONG_AMOUNT);
         });
 
-        it("Token address contract does not support transferFrom", async function () {
+        it("Token address contract does not support transferFrom", async function() {
           // Deploy a contract without the transferFrom
           [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
 
@@ -371,14 +378,14 @@ describe("IBosonFundsHandler", function () {
           ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
         });
 
-        it("Token address is not a contract", async function () {
+        it("Token address is not a contract", async function() {
           // Attempt to deposit the funds, expecting revert
           await expect(
             fundsHandler.connect(rando).depositFunds(seller.id, admin.address, depositAmount)
           ).to.revertedWith("");
         });
 
-        it("Token contract revert for another reason", async function () {
+        it("Token contract revert for another reason", async function() {
           // insufficient funds
           // approve more than account actually have
           await mockToken.connect(rando).approve(protocolDiamond.address, depositAmount);
@@ -394,7 +401,7 @@ describe("IBosonFundsHandler", function () {
           ).to.revertedWith(RevertReasons.ERC20_INSUFFICIENT_ALLOWANCE);
         });
 
-        it("Received ERC20 token amount differs from the expected value", async function () {
+        it("Received ERC20 token amount differs from the expected value", async function() {
           // Deploy ERC20 with fees
           const [Foreign20WithFee] = await deployMockTokens(gasLimit, ["Foreign20WithFee"]);
 
@@ -410,10 +417,10 @@ describe("IBosonFundsHandler", function () {
       });
     });
 
-    context("💸 withdraw", async function () {
-      beforeEach(async function () {
+    context("💸 withdraw", async function() {
+      beforeEach(async function() {
         // Initial ids for all the things
-        sellerId = exchangeId = nextAccountId = "1";
+        exchangeId = "1";
         buyerId = "3"; // created after a seller and a dispute resolver
 
         // Create a valid dispute resolver
@@ -439,7 +446,7 @@ describe("IBosonFundsHandler", function () {
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-        await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
         // Mock offer
         const { offer, offerDates, offerDurations, disputeResolverId, offerFees } = await mockOffer();
@@ -497,8 +504,13 @@ describe("IBosonFundsHandler", function () {
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: offerNative.price });
       });
 
-      context("👉 withdrawFunds()", async function () {
-        beforeEach(async function () {
+      afterEach(async function() {
+        // Reset the accountId iterator
+        accountId.next(true);
+      });
+
+      context("👉 withdrawFunds()", async function() {
+        beforeEach(async function() {
           // cancel the voucher, so both seller and buyer have something to withdraw
           await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
           await exchangeHandler.connect(buyer).cancelVoucher(++exchangeId); // canceling the voucher in the native currency
@@ -511,7 +523,7 @@ describe("IBosonFundsHandler", function () {
           sellerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit).add(offerToken.buyerCancelPenalty).toString();
         });
 
-        it("should emit a FundsWithdrawn event", async function () {
+        it("should emit a FundsWithdrawn event", async function() {
           // Withdraw funds, testing for the event
           // Withdraw tokens
           tokenListSeller = [mockToken.address, ethers.constants.AddressZero];
@@ -522,15 +534,15 @@ describe("IBosonFundsHandler", function () {
           tokenAmountsBuyer = [buyerPayoff, ethers.BigNumber.from(buyerPayoff).div("5").toString()];
 
           // seller withdrawal
-          const tx = await fundsHandler.connect(clerk).withdrawFunds(sellerId, tokenListSeller, tokenAmountsSeller);
+          const tx = await fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
           await expect(tx)
             .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(sellerId, treasury.address, mockToken.address, sellerPayoff, clerk.address);
+            .withArgs(seller.id, treasury.address, mockToken.address, sellerPayoff, clerk.address);
 
           await expect(tx)
             .to.emit(fundsHandler, "FundsWithdrawn")
             .withArgs(
-              sellerId,
+              seller.id,
               treasury.address,
               ethers.constants.Zero,
               ethers.BigNumber.from(sellerPayoff).div("2"),
@@ -554,11 +566,11 @@ describe("IBosonFundsHandler", function () {
             .withArgs(buyerId, buyer.address, ethers.constants.Zero, buyerPayoff, buyer.address);
         });
 
-        it("should update state", async function () {
+        it("should update state", async function() {
           // WITHDRAW ONE TOKEN PARTIALLY
 
           // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
           const treasuryBalanceBefore = await ethers.provider.getBalance(treasury.address);
 
           // Chain state should match the expected available funds before the withdrawal
@@ -575,10 +587,10 @@ describe("IBosonFundsHandler", function () {
           const withdrawAmount = ethers.BigNumber.from(sellerPayoff)
             .sub(ethers.utils.parseUnits("0.1", "ether"))
             .toString();
-          await fundsHandler.connect(clerk).withdrawFunds(sellerId, [ethers.constants.AddressZero], [withdrawAmount]);
+          await fundsHandler.connect(clerk).withdrawFunds(seller.id, [ethers.constants.AddressZero], [withdrawAmount]);
 
           // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
           const treasuryBalanceAfter = await ethers.provider.getBalance(treasury.address);
 
           // Chain state should match the expected available funds after the withdrawal
@@ -634,9 +646,9 @@ describe("IBosonFundsHandler", function () {
           expect(buyerBalanceAfter).to.eql(buyerBalanceBefore.add(buyerPayoff), "Buyer token balance mismatch");
         });
 
-        it("should allow to withdraw all funds at once", async function () {
+        it("should allow to withdraw all funds at once", async function() {
           // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
           const treasuryNativeBalanceBefore = await ethers.provider.getBalance(treasury.address);
           const treasuryTokenBalanceBefore = await mockToken.balanceOf(treasury.address);
 
@@ -651,10 +663,10 @@ describe("IBosonFundsHandler", function () {
           );
 
           // withdraw all funds
-          await fundsHandler.connect(clerk).withdrawFunds(sellerId, [], []);
+          await fundsHandler.connect(clerk).withdrawFunds(seller.id, [], []);
 
           // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
           const treasuryNativeBalanceAfter = await ethers.provider.getBalance(treasury.address);
           const treasuryTokenBalanceAfter = await mockToken.balanceOf(treasury.address);
 
@@ -676,13 +688,13 @@ describe("IBosonFundsHandler", function () {
           );
         });
 
-        it("if user has more different tokens than maximum number allowed to withdraw, only part of it is withdrawn", async function () {
+        it("if user has more different tokens than maximum number allowed to withdraw, only part of it is withdrawn", async function() {
           // set maximum tokens per withdraw to 1
           configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
           await configHandler.connect(deployer).setMaxTokensPerWithdrawal("1");
 
           // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
           const treasuryNativeBalanceBefore = await ethers.provider.getBalance(treasury.address);
           const treasuryTokenBalanceBefore = await mockToken.balanceOf(treasury.address);
 
@@ -697,10 +709,10 @@ describe("IBosonFundsHandler", function () {
           );
 
           // withdraw all funds
-          await fundsHandler.connect(clerk).withdrawFunds(sellerId, [], []);
+          await fundsHandler.connect(clerk).withdrawFunds(seller.id, [], []);
 
           // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
           let treasuryNativeBalanceAfter = await ethers.provider.getBalance(treasury.address);
           const treasuryTokenBalanceAfter = await mockToken.balanceOf(treasury.address);
 
@@ -724,10 +736,10 @@ describe("IBosonFundsHandler", function () {
           );
 
           // withdraw all funds again
-          await fundsHandler.connect(clerk).withdrawFunds(sellerId, [], []);
+          await fundsHandler.connect(clerk).withdrawFunds(seller.id, [], []);
 
           // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
           treasuryNativeBalanceAfter = await ethers.provider.getBalance(treasury.address);
 
           // Chain state should match the expected available funds after the withdrawal
@@ -744,18 +756,18 @@ describe("IBosonFundsHandler", function () {
           );
         });
 
-        it("It's possible to withdraw same toke twice if in total enough available funds", async function () {
+        it("It's possible to withdraw same toke twice if in total enough available funds", async function() {
           let reduction = ethers.utils.parseUnits("0.1", "ether").toString();
           // Withdraw token
           tokenListSeller = [mockToken.address, mockToken.address];
           tokenAmountsSeller = [ethers.BigNumber.from(sellerPayoff).sub(reduction).toString(), reduction];
 
           // seller withdrawal
-          const tx = await fundsHandler.connect(clerk).withdrawFunds(sellerId, tokenListSeller, tokenAmountsSeller);
+          const tx = await fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenListSeller, tokenAmountsSeller);
           await expect(tx)
             .to.emit(fundsHandler, "FundsWithdrawn")
             .withArgs(
-              sellerId,
+              seller.id,
               treasury.address,
               mockToken.address,
               ethers.BigNumber.from(sellerPayoff).sub(reduction).toString(),
@@ -764,11 +776,11 @@ describe("IBosonFundsHandler", function () {
 
           await expect(tx)
             .to.emit(fundsHandler, "FundsWithdrawn")
-            .withArgs(sellerId, treasury.address, mockToken.address, reduction, clerk.address);
+            .withArgs(seller.id, treasury.address, mockToken.address, reduction, clerk.address);
         });
 
-        context("Agent Withdraws funds", async function () {
-          beforeEach(async function () {
+        context("Agent Withdraws funds", async function() {
+          beforeEach(async function() {
             // Create a valid agent,
             agentId = "4";
             agent = mockAgent(other.address);
@@ -816,7 +828,7 @@ describe("IBosonFundsHandler", function () {
             await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
           });
 
-          it("Withdraw when exchange is completed, it emits a FundsWithdrawn event", async function () {
+          it("Withdraw when exchange is completed, it emits a FundsWithdrawn event", async function() {
             // Complete the exchange
             await exchangeHandler.connect(buyer).completeExchange(exchangeId);
 
@@ -844,7 +856,7 @@ describe("IBosonFundsHandler", function () {
             );
           });
 
-          it("Withdraw when dispute is retracted, it emits a FundsWithdrawn event", async function () {
+          it("Withdraw when dispute is retracted, it emits a FundsWithdrawn event", async function() {
             await deployProtocolHandlerFacets(protocolDiamond, ["DisputeHandlerFacet"]);
 
             // Cast Diamond to IBosonDisputeHandler
@@ -881,8 +893,8 @@ describe("IBosonFundsHandler", function () {
           });
         });
 
-        context("💔 Revert Reasons", async function () {
-          it("The funds region of protocol is paused", async function () {
+        context("💔 Revert Reasons", async function() {
+          it("The funds region of protocol is paused", async function() {
             // Withdraw tokens
             tokenListBuyer = [ethers.constants.AddressZero, mockToken.address];
 
@@ -898,96 +910,96 @@ describe("IBosonFundsHandler", function () {
             ).to.revertedWith(RevertReasons.REGION_PAUSED);
           });
 
-          it("Caller is not authorized to withdraw", async function () {
+          it("Caller is not authorized to withdraw", async function() {
             // Attempt to withdraw the buyer funds, expecting revert
             await expect(fundsHandler.connect(rando).withdrawFunds(buyerId, [], [])).to.revertedWith(
               RevertReasons.NOT_AUTHORIZED
             );
 
             // Attempt to withdraw the seller funds, expecting revert
-            await expect(fundsHandler.connect(rando).withdrawFunds(sellerId, [], [])).to.revertedWith(
+            await expect(fundsHandler.connect(rando).withdrawFunds(seller.id, [], [])).to.revertedWith(
               RevertReasons.NOT_AUTHORIZED
             );
 
             // not even the admin, operator or trasuary are allowed to withdraw
             // Attempt to withdraw the seller funds as admin, expecting revert
-            await expect(fundsHandler.connect(admin).withdrawFunds(sellerId, [], [])).to.revertedWith(
+            await expect(fundsHandler.connect(admin).withdrawFunds(seller.id, [], [])).to.revertedWith(
               RevertReasons.NOT_AUTHORIZED
             );
 
             // Attempt to withdraw the seller funds as operator, expecting revert
-            await expect(fundsHandler.connect(operator).withdrawFunds(sellerId, [], [])).to.revertedWith(
+            await expect(fundsHandler.connect(operator).withdrawFunds(seller.id, [], [])).to.revertedWith(
               RevertReasons.NOT_AUTHORIZED
             );
 
             // Attempt to withdraw the seller funds as treasury, expecting revert
-            await expect(fundsHandler.connect(treasury).withdrawFunds(sellerId, [], [])).to.revertedWith(
+            await expect(fundsHandler.connect(treasury).withdrawFunds(seller.id, [], [])).to.revertedWith(
               RevertReasons.NOT_AUTHORIZED
             );
           });
 
-          it("Token list address does not match token amount address", async function () {
+          it("Token list address does not match token amount address", async function() {
             // Withdraw token
             tokenList = [mockToken.address, ethers.constants.AddressZero];
             tokenAmounts = [sellerPayoff];
 
             // Attempt to withdraw the funds, expecting revert
-            await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, tokenList, tokenAmounts)).to.revertedWith(
+            await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenList, tokenAmounts)).to.revertedWith(
               RevertReasons.TOKEN_AMOUNT_MISMATCH
             );
           });
 
-          it("Caller wants to withdraw more different tokens than allowed", async function () {
+          it("Caller wants to withdraw more different tokens than allowed", async function() {
             tokenList = new Array(101).fill(ethers.constants.AddressZero);
             tokenAmounts = new Array(101).fill("1");
 
             // Attempt to withdraw the funds, expecting revert
-            await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, tokenList, tokenAmounts)).to.revertedWith(
+            await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenList, tokenAmounts)).to.revertedWith(
               RevertReasons.TOO_MANY_TOKENS
             );
           });
 
-          it("Caller tries to withdraw more than they have in the available funds", async function () {
+          it("Caller tries to withdraw more than they have in the available funds", async function() {
             // Withdraw token
             tokenList = [mockToken.address];
             tokenAmounts = [ethers.BigNumber.from(sellerPayoff).mul("2")];
 
             // Attempt to withdraw the funds, expecting revert
-            await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, tokenList, tokenAmounts)).to.revertedWith(
+            await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenList, tokenAmounts)).to.revertedWith(
               RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS
             );
           });
 
-          it("Caller tries to withdraw the same token twice", async function () {
+          it("Caller tries to withdraw the same token twice", async function() {
             // Withdraw token
             tokenList = [mockToken.address, mockToken.address];
             tokenAmounts = [sellerPayoff, sellerPayoff];
 
             // Attempt to withdraw the funds, expecting revert
-            await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, tokenList, tokenAmounts)).to.revertedWith(
+            await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenList, tokenAmounts)).to.revertedWith(
               RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS
             );
           });
 
-          it("Nothing to withdraw", async function () {
+          it("Nothing to withdraw", async function() {
             // Withdraw token
             tokenList = [mockToken.address];
             tokenAmounts = ["0"];
 
-            await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, tokenList, tokenAmounts)).to.revertedWith(
+            await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, tokenList, tokenAmounts)).to.revertedWith(
               RevertReasons.NOTHING_TO_WITHDRAW
             );
 
             // first withdraw everything
-            await fundsHandler.connect(clerk).withdrawFunds(sellerId, [], []);
+            await fundsHandler.connect(clerk).withdrawFunds(seller.id, [], []);
 
             // Attempt to withdraw the funds, expecting revert
-            await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, [], [])).to.revertedWith(
+            await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, [], [])).to.revertedWith(
               RevertReasons.NOTHING_TO_WITHDRAW
             );
           });
 
-          it("Transfer of funds failed - revert in fallback", async function () {
+          it("Transfer of funds failed - revert in fallback", async function() {
             // deploy a contract that cannot receive funds
             const [fallbackErrorContract] = await deployMockTokens(gasLimit, ["FallbackError"]);
 
@@ -1014,7 +1026,7 @@ describe("IBosonFundsHandler", function () {
             ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
           });
 
-          it("Transfer of funds failed - no payable fallback or receive", async function () {
+          it("Transfer of funds failed - no payable fallback or receive", async function() {
             // deploy a contract that cannot receive funds
             const [fallbackErrorContract] = await deployMockTokens(gasLimit, ["WithoutFallbackError"]);
 
@@ -1041,28 +1053,28 @@ describe("IBosonFundsHandler", function () {
             ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
           });
 
-          it("Transfer of funds failed - ERC20 token does not exist anymore", async function () {
+          it("Transfer of funds failed - ERC20 token does not exist anymore", async function() {
             // destruct mockToken
             await mockToken.destruct();
 
-            await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, [], [])).to.revertedWith(
+            await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, [], [])).to.revertedWith(
               RevertReasons.EOA_FUNCTION_CALL
             );
           });
 
-          it("Transfer of funds failed - revert durin ERC20 transfer", async function () {
+          it("Transfer of funds failed - revert durin ERC20 transfer", async function() {
             // pause mockToken
             await mockToken.pause();
 
-            await expect(fundsHandler.connect(clerk).withdrawFunds(sellerId, [], [])).to.revertedWith(
+            await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, [], [])).to.revertedWith(
               RevertReasons.ERC20_PAUSED
             );
           });
         });
       });
 
-      context("👉 withdrawProtocolFees()", async function () {
-        beforeEach(async function () {
+      context("👉 withdrawProtocolFees()", async function() {
+        beforeEach(async function() {
           const tokenExchangeId = exchangeId;
           const nativeExchangeId = ++exchangeId;
 
@@ -1090,7 +1102,7 @@ describe("IBosonFundsHandler", function () {
           protocolId = "0";
         });
 
-        it("should emit a FundsWithdrawn event", async function () {
+        it("should emit a FundsWithdrawn event", async function() {
           // Withdraw funds, testing for the event
           tokenList = [mockToken.address, ethers.constants.AddressZero];
           tokenAmounts = [protocolPayoff, protocolPayoff];
@@ -1106,7 +1118,7 @@ describe("IBosonFundsHandler", function () {
             .withArgs(protocolId, feeCollector.address, ethers.constants.Zero, protocolPayoff, feeCollector.address);
         });
 
-        it("should update state", async function () {
+        it("should update state", async function() {
           // Read on chain state
           protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
           const feeCollectorNativeBalanceBefore = await ethers.provider.getBalance(feeCollector.address);
@@ -1169,7 +1181,7 @@ describe("IBosonFundsHandler", function () {
           );
         });
 
-        it("should allow to withdraw all funds at once", async function () {
+        it("should allow to withdraw all funds at once", async function() {
           // Read on chain state
           protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
           const feeCollectorNativeBalanceBefore = await ethers.provider.getBalance(feeCollector.address);
@@ -1216,7 +1228,7 @@ describe("IBosonFundsHandler", function () {
           );
         });
 
-        it("if protocol has more different tokens than maximum number allowed to withdraw, only part of it is withdrawn", async function () {
+        it("if protocol has more different tokens than maximum number allowed to withdraw, only part of it is withdrawn", async function() {
           // set maximum tokens per withdraw to 1
           configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
           await configHandler.connect(deployer).setMaxTokensPerWithdrawal("1");
@@ -1295,7 +1307,7 @@ describe("IBosonFundsHandler", function () {
           );
         });
 
-        it("It's possible to withdraw same token twice if in total enough available funds", async function () {
+        it("It's possible to withdraw same token twice if in total enough available funds", async function() {
           let reduction = ethers.utils.parseUnits("0.01", "ether").toString();
           // Withdraw token
           tokenList = [mockToken.address, mockToken.address];
@@ -1318,8 +1330,8 @@ describe("IBosonFundsHandler", function () {
             .withArgs(protocolId, feeCollector.address, mockToken.address, reduction, feeCollector.address);
         });
 
-        context("💔 Revert Reasons", async function () {
-          it("The funds region of protocol is paused", async function () {
+        context("💔 Revert Reasons", async function() {
+          it("The funds region of protocol is paused", async function() {
             // Withdraw funds, testing for the event
             tokenList = [mockToken.address, ethers.constants.AddressZero];
             tokenAmounts = [protocolPayoff, protocolPayoff];
@@ -1333,14 +1345,14 @@ describe("IBosonFundsHandler", function () {
             ).to.revertedWith(RevertReasons.REGION_PAUSED);
           });
 
-          it("Caller is not authorized to withdraw", async function () {
+          it("Caller is not authorized to withdraw", async function() {
             // Attempt to withdraw the protocol fees, expecting revert
             await expect(fundsHandler.connect(rando).withdrawProtocolFees([], [])).to.revertedWith(
               RevertReasons.ACCESS_DENIED
             );
           });
 
-          it("Token list address does not match token amount address", async function () {
+          it("Token list address does not match token amount address", async function() {
             // Withdraw token
             tokenList = [mockToken.address, ethers.constants.AddressZero];
             tokenAmounts = [sellerPayoff];
@@ -1351,7 +1363,7 @@ describe("IBosonFundsHandler", function () {
             ).to.revertedWith(RevertReasons.TOKEN_AMOUNT_MISMATCH);
           });
 
-          it("Caller wants to withdraw more different tokens than allowed", async function () {
+          it("Caller wants to withdraw more different tokens than allowed", async function() {
             tokenList = new Array(101).fill(ethers.constants.AddressZero);
             tokenAmounts = new Array(101).fill("1");
 
@@ -1361,7 +1373,7 @@ describe("IBosonFundsHandler", function () {
             ).to.revertedWith(RevertReasons.TOO_MANY_TOKENS);
           });
 
-          it("Caller tries to withdraw more than they have in the available funds", async function () {
+          it("Caller tries to withdraw more than they have in the available funds", async function() {
             // Withdraw token
             tokenList = [mockToken.address];
             tokenAmounts = [ethers.BigNumber.from(offerTokenProtocolFee).mul("2")];
@@ -1372,7 +1384,7 @@ describe("IBosonFundsHandler", function () {
             ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
           });
 
-          it("Caller tries to withdraw the same token twice", async function () {
+          it("Caller tries to withdraw the same token twice", async function() {
             // Withdraw token
             tokenList = [mockToken.address, mockToken.address];
             tokenAmounts = [offerTokenProtocolFee, offerTokenProtocolFee];
@@ -1383,7 +1395,7 @@ describe("IBosonFundsHandler", function () {
             ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
           });
 
-          it("Nothing to withdraw", async function () {
+          it("Nothing to withdraw", async function() {
             // Withdraw token
             tokenList = [mockToken.address];
             tokenAmounts = ["0"];
@@ -1401,7 +1413,7 @@ describe("IBosonFundsHandler", function () {
             );
           });
 
-          it("Transfer of funds failed - revert in fallback", async function () {
+          it("Transfer of funds failed - revert in fallback", async function() {
             // deploy a contract that cannot receive funds
             const [fallbackErrorContract] = await deployMockTokens(gasLimit, ["FallbackError"]);
 
@@ -1418,7 +1430,7 @@ describe("IBosonFundsHandler", function () {
             ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
           });
 
-          it("Transfer of funds failed - no payable fallback or receive", async function () {
+          it("Transfer of funds failed - no payable fallback or receive", async function() {
             // deploy a contract that cannot receive funds
             const [fallbackErrorContract] = await deployMockTokens(gasLimit, ["WithoutFallbackError"]);
 
@@ -1435,7 +1447,7 @@ describe("IBosonFundsHandler", function () {
             ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
           });
 
-          it("Transfer of funds failed - ERC20 token does not exist anymore", async function () {
+          it("Transfer of funds failed - ERC20 token does not exist anymore", async function() {
             // destruct mockToken
             await mockToken.destruct();
 
@@ -1444,7 +1456,7 @@ describe("IBosonFundsHandler", function () {
             );
           });
 
-          it("Transfer of funds failed - revert during ERC20 transfer", async function () {
+          it("Transfer of funds failed - revert during ERC20 transfer", async function() {
             // pause mockToken
             await mockToken.pause();
 
@@ -1456,8 +1468,8 @@ describe("IBosonFundsHandler", function () {
       });
     });
 
-    context("👉 getAvailableFunds()", async function () {
-      it("Returns info also for ERC20 tokens without the name", async function () {
+    context("👉 getAvailableFunds()", async function() {
+      it("Returns info also for ERC20 tokens without the name", async function() {
         // Deploy the mock token with no name
         [mockToken] = await deployMockTokens(gasLimit, ["Foreign20NoName"]);
         // top up operators account
@@ -1482,11 +1494,8 @@ describe("IBosonFundsHandler", function () {
 
   // Funds library methods.
   // Cannot be invoked directly, so tests calls the methods that use them
-  context("📋 FundsLib  Methods", async function () {
-    beforeEach(async function () {
-      // Initial ids for all the things
-      sellerId = nextAccountId = "1";
-
+  context("📋 FundsLib  Methods", async function() {
+    beforeEach(async function() {
       // Create a valid seller
       seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
@@ -1509,7 +1518,6 @@ describe("IBosonFundsHandler", function () {
         treasuryDR.address,
         false
       );
-      disputeResolver.id = "2";
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
@@ -1525,7 +1533,7 @@ describe("IBosonFundsHandler", function () {
 
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+      await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       const { offer, ...mo } = await mockOffer();
       offer.quantityAvailable = "2";
@@ -1579,7 +1587,7 @@ describe("IBosonFundsHandler", function () {
       agentId = "3";
       agentFeePercentage = "500"; //5%
       agent = mockAgent(other.address);
-      agent.id = agentId;
+
       expect(agent.isValid()).is.true;
 
       // Create an agent
@@ -1592,8 +1600,14 @@ describe("IBosonFundsHandler", function () {
       randoBuyerId = "4"; // 1: seller, 2: disputeResolver, 3: agent, 4: rando
     });
 
-    context("👉 encumberFunds()", async function () {
-      it("should emit a FundsEncumbered event", async function () {
+    afterEach(async function() {
+      // Reset the accountId iterator
+      accountId.next(true);
+    });
+
+
+    context("👉 encumberFunds()", async function() {
+      it("should emit a FundsEncumbered event", async function() {
         let buyerId = "4"; // 1: seller, 2: disputeResolver, 3: agent, 4: buyer
 
         // Commit to an offer with erc20 token, test for FundsEncumbered event
@@ -1604,7 +1618,7 @@ describe("IBosonFundsHandler", function () {
 
         await expect(tx)
           .to.emit(exchangeHandler, "FundsEncumbered")
-          .withArgs(sellerId, mockToken.address, sellerDeposit, buyer.address);
+          .withArgs(seller.id, mockToken.address, sellerDeposit, buyer.address);
 
         // Commit to an offer with native currency, test for FundsEncumbered event
         const tx2 = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: price });
@@ -1614,10 +1628,10 @@ describe("IBosonFundsHandler", function () {
 
         await expect(tx2)
           .to.emit(exchangeHandler, "FundsEncumbered")
-          .withArgs(sellerId, ethers.constants.AddressZero, sellerDeposit, buyer.address);
+          .withArgs(seller.id, ethers.constants.AddressZero, sellerDeposit, buyer.address);
       });
 
-      it("should update state", async function () {
+      it("should update state", async function() {
         // contract token value
         const contractTokenBalanceBefore = await mockToken.balanceOf(protocolDiamond.address);
         // contract native token balance
@@ -1668,8 +1682,8 @@ describe("IBosonFundsHandler", function () {
         ).to.eql(sellerDeposit, "Native currency seller available funds mismatch");
       });
 
-      context("seller's available funds drop to 0", async function () {
-        it("token should be removed from the tokenList", async function () {
+      context("seller's available funds drop to 0", async function() {
+        it("token should be removed from the tokenList", async function() {
           // seller's available funds
           let sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
           expect(sellersAvailableFunds.funds.length).to.eql(2, "Funds length mismatch");
@@ -1703,7 +1717,7 @@ describe("IBosonFundsHandler", function () {
           expect(sellersAvailableFunds.funds.length).to.eql(0, "Funds length mismatch");
         });
 
-        it("token should be removed from the token list even when list length - 1 is different from index", async function () {
+        it("token should be removed from the token list even when list length - 1 is different from index", async function() {
           // length - 1 is different from index when index isn't the first or last element in the list
           // Deploy a new mock token
           let TokenContractFactory = await ethers.getContractFactory("Foreign20");
@@ -1760,7 +1774,7 @@ describe("IBosonFundsHandler", function () {
         });
       });
 
-      it("when someone else deposits on buyer's behalf, callers funds are transferred", async function () {
+      it("when someone else deposits on buyer's behalf, callers funds are transferred", async function() {
         // buyer will commit to an offer on rando's behalf
         // get token balance before the commit
         const buyerTokenBalanceBefore = await mockToken.balanceOf(buyer.address);
@@ -1818,8 +1832,8 @@ describe("IBosonFundsHandler", function () {
         expect(buyer.wallet).to.eql(rando.address, "Wrong buyer address");
       });
 
-      context("💔 Revert Reasons", async function () {
-        it("Insufficient native currency sent", async function () {
+      context("💔 Revert Reasons", async function() {
+        it("Insufficient native currency sent", async function() {
           // Attempt to commit to an offer, expecting revert
           await expect(
             exchangeHandler
@@ -1828,14 +1842,14 @@ describe("IBosonFundsHandler", function () {
           ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
         });
 
-        it("Native currency sent together with ERC20 token transfer", async function () {
+        it("Native currency sent together with ERC20 token transfer", async function() {
           // Attempt to commit to an offer, expecting revert
           await expect(
             exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id, { value: price })
           ).to.revertedWith(RevertReasons.NATIVE_NOT_ALLOWED);
         });
 
-        it("Token address contract does not support transferFrom", async function () {
+        it("Token address contract does not support transferFrom", async function() {
           // Deploy a contract without the transferFrom
           [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
 
@@ -1859,7 +1873,7 @@ describe("IBosonFundsHandler", function () {
           );
         });
 
-        it("Token address is not a contract", async function () {
+        it("Token address is not a contract", async function() {
           // create an offer with a bad token contrat
           offerToken.exchangeToken = admin.address;
           offerToken.id = "3";
@@ -1881,7 +1895,7 @@ describe("IBosonFundsHandler", function () {
           );
         });
 
-        it("Token contract revert for another reason", async function () {
+        it("Token contract revert for another reason", async function() {
           // insufficient funds
           // approve more than account actually have
           await mockToken.connect(rando).approve(protocolDiamond.address, price);
@@ -1900,7 +1914,7 @@ describe("IBosonFundsHandler", function () {
           );
         });
 
-        it("Seller'a availableFunds is less than the required sellerDeposit", async function () {
+        it("Seller'a availableFunds is less than the required sellerDeposit", async function() {
           // create an offer with token with higher seller deposit
           offerToken.sellerDeposit = ethers.BigNumber.from(offerToken.sellerDeposit).mul("4");
           offerToken.id = "3";
@@ -1926,7 +1940,7 @@ describe("IBosonFundsHandler", function () {
           ).to.revertedWith(RevertReasons.INSUFFICIENT_AVAILABLE_FUNDS);
         });
 
-        it("Received ERC20 token amount differs from the expected value", async function () {
+        it("Received ERC20 token amount differs from the expected value", async function() {
           // Deploy ERC20 with fees
           const [Foreign20WithFee] = await deployMockTokens(gasLimit, ["Foreign20WithFee"]);
 
@@ -1961,13 +1975,10 @@ describe("IBosonFundsHandler", function () {
       });
     });
 
-    context("👉 releaseFunds()", async function () {
-      beforeEach(async function () {
+    context("👉 releaseFunds()", async function() {
+      beforeEach(async function() {
         // ids
         protocolId = "0";
-        sellerId = "1";
-        // disputeResolverId = "2";
-        agentId = "3";
         buyerId = "4";
         exchangeId = "1";
 
@@ -1975,8 +1986,8 @@ describe("IBosonFundsHandler", function () {
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
       });
 
-      context("Final state COMPLETED", async function () {
-        beforeEach(async function () {
+      context("Final state COMPLETED", async function() {
+        beforeEach(async function() {
           // Set time forward to the offer's voucherRedeemableFrom
           await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
@@ -1997,25 +2008,25 @@ describe("IBosonFundsHandler", function () {
           protocolPayoff = offerTokenProtocolFee;
         });
 
-        it("should emit a FundsReleased event", async function () {
+        it("should emit a FundsReleased event", async function() {
           // Complete the exchange, expecting event
           const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
 
           await expect(tx)
             .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address);
+            .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
 
           await expect(tx)
             .to.emit(exchangeHandler, "ProtocolFeeCollected")
             .withArgs(exchangeId, offerToken.exchangeToken, protocolPayoff, buyer.address);
         });
 
-        it("should update state", async function () {
+        it("should update state", async function() {
           // commit again, so seller has nothing in available funds
           await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
 
           // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
           buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
           protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
           agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2042,7 +2053,7 @@ describe("IBosonFundsHandler", function () {
           // agent: 0
           expectedSellerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", sellerPayoff));
           expectedProtocolAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", offerTokenProtocolFee));
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
           buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
           protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
           agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2075,8 +2086,8 @@ describe("IBosonFundsHandler", function () {
           expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
         });
 
-        context("Offer has an agent", async function () {
-          beforeEach(async function () {
+        context("Offer has an agent", async function() {
+          beforeEach(async function() {
             // Create Agent offer
             await offerHandler
               .connect(operator)
@@ -2108,14 +2119,14 @@ describe("IBosonFundsHandler", function () {
             protocolPayoff = agentOfferProtocolFee;
           });
 
-          it("should emit a FundsReleased event", async function () {
+          it("should emit a FundsReleased event", async function() {
             // Complete the exchange, expecting event
             const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
 
             // Complete the exchange, expecting event
             await expect(tx)
               .to.emit(exchangeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, agentOffer.exchangeToken, sellerPayoff, buyer.address);
+              .withArgs(exchangeId, seller.id, agentOffer.exchangeToken, sellerPayoff, buyer.address);
 
             await expect(tx)
               .to.emit(exchangeHandler, "ProtocolFeeCollected")
@@ -2126,9 +2137,9 @@ describe("IBosonFundsHandler", function () {
               .withArgs(exchangeId, agentId, agentOffer.exchangeToken, agentPayoff, buyer.address);
           });
 
-          it("should update state", async function () {
+          it("should update state", async function() {
             // Read on chain state
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2156,7 +2167,7 @@ describe("IBosonFundsHandler", function () {
             expectedSellerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", sellerPayoff));
             expectedProtocolAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", agentOfferProtocolFee));
             expectedAgentAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", agentPayoff));
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2168,8 +2179,8 @@ describe("IBosonFundsHandler", function () {
         });
       });
 
-      context("Final state REVOKED", async function () {
-        beforeEach(async function () {
+      context("Final state REVOKED", async function() {
+        beforeEach(async function() {
           // expected payoffs
           // buyer: sellerDeposit + price
           buyerPayoff = ethers.BigNumber.from(offerToken.sellerDeposit).add(offerToken.price).toString();
@@ -2181,16 +2192,16 @@ describe("IBosonFundsHandler", function () {
           protocolPayoff = 0;
         });
 
-        it("should emit a FundsReleased event", async function () {
+        it("should emit a FundsReleased event", async function() {
           // Revoke the voucher, expecting event
           await expect(exchangeHandler.connect(operator).revokeVoucher(exchangeId))
             .to.emit(exchangeHandler, "FundsReleased")
             .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, operator.address);
         });
 
-        it("should update state", async function () {
+        it("should update state", async function() {
           // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
           buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
           protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
           agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2217,7 +2228,7 @@ describe("IBosonFundsHandler", function () {
           // protocol: 0
           // agent: 0
           expectedBuyerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", buyerPayoff));
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
           buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
           protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
           agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2246,7 +2257,7 @@ describe("IBosonFundsHandler", function () {
           expectedSellerAvailableFunds = new FundsList([
             new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
           ]);
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
           buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
           protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
           agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2256,8 +2267,8 @@ describe("IBosonFundsHandler", function () {
           expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
         });
 
-        context("Offer has an agent", async function () {
-          beforeEach(async function () {
+        context("Offer has an agent", async function() {
+          beforeEach(async function() {
             // Create Agent offer
             await offerHandler
               .connect(operator)
@@ -2293,9 +2304,9 @@ describe("IBosonFundsHandler", function () {
             exchangeId = "2";
           });
 
-          it("should update state", async function () {
+          it("should update state", async function() {
             // Read on chain state
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2322,7 +2333,7 @@ describe("IBosonFundsHandler", function () {
             // protocol: 0
             // agent: 0
             expectedBuyerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", buyerPayoff));
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2352,7 +2363,7 @@ describe("IBosonFundsHandler", function () {
               new Funds(mockToken.address, "Foreign20", `${sellerDeposit}`),
               new Funds(ethers.constants.AddressZero, "Native currency", `${2 * sellerDeposit}`),
             ]);
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2364,8 +2375,8 @@ describe("IBosonFundsHandler", function () {
         });
       });
 
-      context("Final state CANCELED", async function () {
-        beforeEach(async function () {
+      context("Final state CANCELED", async function() {
+        beforeEach(async function() {
           // expected payoffs
           // buyer: price - buyerCancelPenalty
           buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
@@ -2377,12 +2388,12 @@ describe("IBosonFundsHandler", function () {
           protocolPayoff = 0;
         });
 
-        it("should emit a FundsReleased event", async function () {
+        it("should emit a FundsReleased event", async function() {
           // Cancel the voucher, expecting event
           const tx = await exchangeHandler.connect(buyer).cancelVoucher(exchangeId);
           await expect(tx)
             .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address);
+            .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
 
           await expect(tx)
             .to.emit(exchangeHandler, "FundsReleased")
@@ -2391,9 +2402,9 @@ describe("IBosonFundsHandler", function () {
           await expect(tx).to.not.emit(exchangeHandler, "ProtocolFeeCollected");
         });
 
-        it("should update state", async function () {
+        it("should update state", async function() {
           // Read on chain state
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
           buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
           protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
           agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2425,7 +2436,7 @@ describe("IBosonFundsHandler", function () {
             ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
           );
           expectedBuyerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", buyerPayoff));
-          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+          sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
           buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
           protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
           agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2435,8 +2446,8 @@ describe("IBosonFundsHandler", function () {
           expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
         });
 
-        context("Offer has an agent", async function () {
-          beforeEach(async function () {
+        context("Offer has an agent", async function() {
+          beforeEach(async function() {
             // Create Agent offer
             await offerHandler
               .connect(operator)
@@ -2474,9 +2485,9 @@ describe("IBosonFundsHandler", function () {
             exchangeId = "2";
           });
 
-          it("should update state", async function () {
+          it("should update state", async function() {
             // Read on chain state
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2508,7 +2519,7 @@ describe("IBosonFundsHandler", function () {
               ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
             );
             expectedBuyerAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", buyerPayoff));
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2520,8 +2531,8 @@ describe("IBosonFundsHandler", function () {
         });
       });
 
-      context("Final state DISPUTED", async function () {
-        beforeEach(async function () {
+      context("Final state DISPUTED", async function() {
+        beforeEach(async function() {
           await deployProtocolHandlerFacets(protocolDiamond, ["DisputeHandlerFacet"]);
 
           // Cast Diamond to IBosonDisputeHandler
@@ -2543,8 +2554,8 @@ describe("IBosonFundsHandler", function () {
           timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
         });
 
-        context("Final state DISPUTED - RETRACTED", async function () {
-          beforeEach(async function () {
+        context("Final state DISPUTED - RETRACTED", async function() {
+          beforeEach(async function() {
             // expected payoffs
             // buyer: 0
             buyerPayoff = 0;
@@ -2559,7 +2570,7 @@ describe("IBosonFundsHandler", function () {
             protocolPayoff = offerTokenProtocolFee;
           });
 
-          it("should emit a FundsReleased event", async function () {
+          it("should emit a FundsReleased event", async function() {
             // Retract from the dispute, expecting event
             const tx = await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
@@ -2569,7 +2580,7 @@ describe("IBosonFundsHandler", function () {
 
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address);
+              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
 
             //check that FundsReleased event was NOT emitted with buyer Id
             const txReceipt = await tx.wait();
@@ -2584,9 +2595,9 @@ describe("IBosonFundsHandler", function () {
             console.log("match in test case when false is expected ", match);
           });
 
-          it("should update state", async function () {
+          it("should update state", async function() {
             // Read on chain state
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2618,7 +2629,7 @@ describe("IBosonFundsHandler", function () {
               ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
             );
             expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2628,8 +2639,8 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
           });
 
-          context("Offer has an agent", async function () {
-            beforeEach(async function () {
+          context("Offer has an agent", async function() {
+            beforeEach(async function() {
               // expected payoffs
               // buyer: 0
               buyerPayoff = 0;
@@ -2662,7 +2673,7 @@ describe("IBosonFundsHandler", function () {
               await disputeHandler.connect(buyer).raiseDispute(exchangeId);
             });
 
-            it("should emit a FundsReleased event", async function () {
+            it("should emit a FundsReleased event", async function() {
               // Retract from the dispute, expecting event
               const tx = await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
@@ -2672,16 +2683,16 @@ describe("IBosonFundsHandler", function () {
 
               await expect(tx)
                 .to.emit(disputeHandler, "FundsReleased")
-                .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address);
+                .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
 
               await expect(tx)
                 .to.emit(exchangeHandler, "FundsReleased")
                 .withArgs(exchangeId, agentId, agentOffer.exchangeToken, agentPayoff, buyer.address);
             });
 
-            it("should update state", async function () {
+            it("should update state", async function() {
               // Read on chain state
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2711,7 +2722,7 @@ describe("IBosonFundsHandler", function () {
               );
               expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
               expectedAgentAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", agentPayoff));
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2723,8 +2734,8 @@ describe("IBosonFundsHandler", function () {
           });
         });
 
-        context("Final state DISPUTED - RETRACTED via expireDispute", async function () {
-          beforeEach(async function () {
+        context("Final state DISPUTED - RETRACTED via expireDispute", async function() {
+          beforeEach(async function() {
             // expected payoffs
             // buyer: 0
             buyerPayoff = 0;
@@ -2741,7 +2752,7 @@ describe("IBosonFundsHandler", function () {
             await setNextBlockTimestamp(Number(timeout));
           });
 
-          it("should emit a FundsReleased event", async function () {
+          it("should emit a FundsReleased event", async function() {
             // Expire the dispute, expecting event
             const tx = await disputeHandler.connect(rando).expireDispute(exchangeId);
             await expect(tx)
@@ -2750,7 +2761,7 @@ describe("IBosonFundsHandler", function () {
 
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
+              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, rando.address);
 
             //check that FundsReleased event was NOT emitted with buyer Id
             const txReceipt = await tx.wait();
@@ -2764,9 +2775,9 @@ describe("IBosonFundsHandler", function () {
             expect(match).to.be.false;
           });
 
-          it("should update state", async function () {
+          it("should update state", async function() {
             // Read on chain state
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2798,7 +2809,7 @@ describe("IBosonFundsHandler", function () {
               ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
             );
             expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2808,8 +2819,8 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
           });
 
-          context("Offer has an agent", async function () {
-            beforeEach(async function () {
+          context("Offer has an agent", async function() {
+            beforeEach(async function() {
               // Create Agent offer
               await offerHandler
                 .connect(operator)
@@ -2854,7 +2865,7 @@ describe("IBosonFundsHandler", function () {
               await setNextBlockTimestamp(Number(timeout));
             });
 
-            it("should emit a FundsReleased event", async function () {
+            it("should emit a FundsReleased event", async function() {
               // Expire the dispute, expecting event
               const tx = await disputeHandler.connect(rando).expireDispute(exchangeId);
 
@@ -2865,16 +2876,16 @@ describe("IBosonFundsHandler", function () {
 
               await expect(tx)
                 .to.emit(exchangeHandler, "FundsReleased")
-                .withArgs(exchangeId, sellerId, agentOffer.exchangeToken, sellerPayoff, rando.address);
+                .withArgs(exchangeId, seller.id, agentOffer.exchangeToken, sellerPayoff, rando.address);
 
               await expect(tx)
                 .to.emit(exchangeHandler, "ProtocolFeeCollected")
                 .withArgs(exchangeId, agentOffer.exchangeToken, protocolPayoff, rando.address);
             });
 
-            it("should update state", async function () {
+            it("should update state", async function() {
               // Read on chain state
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2906,7 +2917,7 @@ describe("IBosonFundsHandler", function () {
 
               expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
               expectedAgentAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", agentPayoff);
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -2918,8 +2929,8 @@ describe("IBosonFundsHandler", function () {
           });
         });
 
-        context("Final state DISPUTED - RESOLVED", async function () {
-          beforeEach(async function () {
+        context("Final state DISPUTED - RESOLVED", async function() {
+          beforeEach(async function() {
             buyerPercent = "5566"; // 55.66%
 
             // expected payoffs
@@ -2964,12 +2975,12 @@ describe("IBosonFundsHandler", function () {
             ));
           });
 
-          it("should emit a FundsReleased event", async function () {
+          it("should emit a FundsReleased event", async function() {
             // Resolve the dispute, expecting event
             const tx = await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v);
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, operator.address);
+              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, operator.address);
 
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
@@ -2978,9 +2989,9 @@ describe("IBosonFundsHandler", function () {
             await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
           });
 
-          it("should update state", async function () {
+          it("should update state", async function() {
             // Read on chain state
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3012,7 +3023,7 @@ describe("IBosonFundsHandler", function () {
               ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
             );
             expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff)]);
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3023,8 +3034,8 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
           });
 
-          context("Offer has an agent", async function () {
-            beforeEach(async function () {
+          context("Offer has an agent", async function() {
+            beforeEach(async function() {
               // Create Agent offer
               await offerHandler
                 .connect(operator)
@@ -3085,9 +3096,9 @@ describe("IBosonFundsHandler", function () {
               ));
             });
 
-            it("should update state", async function () {
+            it("should update state", async function() {
               // Read on chain state
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3116,7 +3127,7 @@ describe("IBosonFundsHandler", function () {
                 new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
               );
               expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff)]);
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3129,8 +3140,8 @@ describe("IBosonFundsHandler", function () {
           });
         });
 
-        context("Final state DISPUTED - ESCALATED - RETRACTED", async function () {
-          beforeEach(async function () {
+        context("Final state DISPUTED - ESCALATED - RETRACTED", async function() {
+          beforeEach(async function() {
             // expected payoffs
             // buyer: 0
             buyerPayoff = 0;
@@ -3149,7 +3160,7 @@ describe("IBosonFundsHandler", function () {
             await disputeHandler.connect(buyer).escalateDispute(exchangeId);
           });
 
-          it("should emit a FundsReleased event", async function () {
+          it("should emit a FundsReleased event", async function() {
             // Retract from the dispute, expecting event
             const tx = await disputeHandler.connect(buyer).retractDispute(exchangeId);
 
@@ -3159,7 +3170,7 @@ describe("IBosonFundsHandler", function () {
 
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address);
+              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
 
             //check that FundsReleased event was NOT emitted with buyer Id
             const txReceipt = await tx.wait();
@@ -3173,9 +3184,9 @@ describe("IBosonFundsHandler", function () {
             expect(match).to.be.false;
           });
 
-          it("should update state", async function () {
+          it("should update state", async function() {
             // Read on chain state
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3207,7 +3218,7 @@ describe("IBosonFundsHandler", function () {
               ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
             );
             expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3217,8 +3228,8 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
           });
 
-          context("Offer has an agent", async function () {
-            beforeEach(async function () {
+          context("Offer has an agent", async function() {
+            beforeEach(async function() {
               // expected payoffs
               // buyer: 0
               buyerPayoff = 0;
@@ -3261,9 +3272,9 @@ describe("IBosonFundsHandler", function () {
               await disputeHandler.connect(buyer).escalateDispute(exchangeId);
             });
 
-            it("should update state", async function () {
+            it("should update state", async function() {
               // Read on chain state
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3293,7 +3304,7 @@ describe("IBosonFundsHandler", function () {
               );
               expectedProtocolAvailableFunds.funds[0] = new Funds(mockToken.address, "Foreign20", protocolPayoff);
               expectedAgentAvailableFunds.funds.push(new Funds(mockToken.address, "Foreign20", agentPayoff));
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3305,8 +3316,8 @@ describe("IBosonFundsHandler", function () {
           });
         });
 
-        context("Final state DISPUTED - ESCALATED - RESOLVED", async function () {
-          beforeEach(async function () {
+        context("Final state DISPUTED - ESCALATED - RESOLVED", async function() {
+          beforeEach(async function() {
             buyerPercent = "5566"; // 55.66%
 
             // expected payoffs
@@ -3356,12 +3367,12 @@ describe("IBosonFundsHandler", function () {
             await disputeHandler.connect(buyer).escalateDispute(exchangeId);
           });
 
-          it("should emit a FundsReleased event", async function () {
+          it("should emit a FundsReleased event", async function() {
             // Resolve the dispute, expecting event
             const tx = await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v);
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, operator.address);
+              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, operator.address);
 
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
@@ -3370,9 +3381,9 @@ describe("IBosonFundsHandler", function () {
             await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
           });
 
-          it("should update state", async function () {
+          it("should update state", async function() {
             // Read on chain state
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3404,7 +3415,7 @@ describe("IBosonFundsHandler", function () {
               "Foreign20",
               ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
             );
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3414,8 +3425,8 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
           });
 
-          context("Offer has an agent", async function () {
-            beforeEach(async function () {
+          context("Offer has an agent", async function() {
+            beforeEach(async function() {
               // Create Agent offer
               await offerHandler
                 .connect(operator)
@@ -3487,9 +3498,9 @@ describe("IBosonFundsHandler", function () {
               await disputeHandler.connect(buyer).escalateDispute(exchangeId);
             });
 
-            it("should update state", async function () {
+            it("should update state", async function() {
               // Read on chain state
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3518,7 +3529,7 @@ describe("IBosonFundsHandler", function () {
                 new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
               );
               expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff)]);
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3531,8 +3542,8 @@ describe("IBosonFundsHandler", function () {
           });
         });
 
-        context("Final state DISPUTED - ESCALATED - DECIDED", async function () {
-          beforeEach(async function () {
+        context("Final state DISPUTED - ESCALATED - DECIDED", async function() {
+          beforeEach(async function() {
             buyerPercent = "5566"; // 55.66%
 
             // expected payoffs
@@ -3558,12 +3569,12 @@ describe("IBosonFundsHandler", function () {
             await disputeHandler.connect(buyer).escalateDispute(exchangeId);
           });
 
-          it("should emit a FundsReleased event", async function () {
+          it("should emit a FundsReleased event", async function() {
             // Decide the dispute, expecting event
             const tx = await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent);
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, operatorDR.address);
+              .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, operatorDR.address);
 
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
@@ -3572,9 +3583,9 @@ describe("IBosonFundsHandler", function () {
             await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
           });
 
-          it("should update state", async function () {
+          it("should update state", async function() {
             // Read on chain state
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3606,7 +3617,7 @@ describe("IBosonFundsHandler", function () {
               "Foreign20",
               ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
             );
-            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+            sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
             buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
             protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
             agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3616,8 +3627,8 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
           });
 
-          context("Offer has an agent", async function () {
-            beforeEach(async function () {
+          context("Offer has an agent", async function() {
+            beforeEach(async function() {
               // Create Agent offer
               await offerHandler
                 .connect(operator)
@@ -3671,9 +3682,9 @@ describe("IBosonFundsHandler", function () {
               await disputeHandler.connect(buyer).escalateDispute(exchangeId);
             });
 
-            it("should update state", async function () {
+            it("should update state", async function() {
               // Read on chain state
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3702,7 +3713,7 @@ describe("IBosonFundsHandler", function () {
                 new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
               );
               expectedBuyerAvailableFunds = new FundsList([new Funds(mockToken.address, "Foreign20", buyerPayoff)]);
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3716,8 +3727,8 @@ describe("IBosonFundsHandler", function () {
 
         context(
           "Final state DISPUTED - ESCALATED - REFUSED via expireEscalatedDispute (fail to resolve)",
-          async function () {
-            beforeEach(async function () {
+          async function() {
+            beforeEach(async function() {
               // expected payoffs
               // buyer: price + buyerEscalationDeposit
               buyerPayoff = ethers.BigNumber.from(offerToken.price).add(buyerEscalationDeposit).toString();
@@ -3739,7 +3750,7 @@ describe("IBosonFundsHandler", function () {
               await setNextBlockTimestamp(Number(escalatedDate) + Number(disputeResolver.escalationResponsePeriod));
             });
 
-            it("should emit a FundsReleased event", async function () {
+            it("should emit a FundsReleased event", async function() {
               // Expire the dispute, expecting event
               const tx = await disputeHandler.connect(rando).expireEscalatedDispute(exchangeId);
               await expect(tx)
@@ -3747,14 +3758,14 @@ describe("IBosonFundsHandler", function () {
                 .withArgs(exchangeId, buyerId, offerToken.exchangeToken, buyerPayoff, rando.address);
               await expect(tx)
                 .to.emit(disputeHandler, "FundsReleased")
-                .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, rando.address);
+                .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, rando.address);
 
               await expect(tx).to.not.emit(disputeHandler, "ProtocolFeeCollected");
             });
 
-            it("should update state", async function () {
+            it("should update state", async function() {
               // Read on chain state
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3786,7 +3797,7 @@ describe("IBosonFundsHandler", function () {
                 "Foreign20",
                 ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
               );
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3796,8 +3807,8 @@ describe("IBosonFundsHandler", function () {
               expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
             });
 
-            context("Offer has an agent", async function () {
-              beforeEach(async function () {
+            context("Offer has an agent", async function() {
+              beforeEach(async function() {
                 // Create Agent offer
                 await offerHandler
                   .connect(operator)
@@ -3841,9 +3852,9 @@ describe("IBosonFundsHandler", function () {
                 await setNextBlockTimestamp(Number(escalatedDate) + Number(disputeResolver.escalationResponsePeriod));
               });
 
-              it("should update state", async function () {
+              it("should update state", async function() {
                 // Read on chain state
-                sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+                sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
                 buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
                 protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
                 agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3872,7 +3883,7 @@ describe("IBosonFundsHandler", function () {
                 expectedSellerAvailableFunds.funds.push(
                   new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
                 );
-                sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+                sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
                 buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
                 protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
                 agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3887,8 +3898,8 @@ describe("IBosonFundsHandler", function () {
 
         context(
           "Final state DISPUTED - ESCALATED - REFUSED via refuseEscalatedDispute (explicit refusal)",
-          async function () {
-            beforeEach(async function () {
+          async function() {
+            beforeEach(async function() {
               // expected payoffs
               // buyer: price + buyerEscalationDeposit
               buyerPayoff = ethers.BigNumber.from(offerToken.price).add(buyerEscalationDeposit).toString();
@@ -3903,13 +3914,13 @@ describe("IBosonFundsHandler", function () {
               tx = await disputeHandler.connect(buyer).escalateDispute(exchangeId);
             });
 
-            it("should emit a FundsReleased event", async function () {
+            it("should emit a FundsReleased event", async function() {
               // Expire the dispute, expecting event
               const tx = await disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId);
 
               await expect(tx)
                 .to.emit(disputeHandler, "FundsReleased")
-                .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, operatorDR.address);
+                .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, operatorDR.address);
 
               await expect(tx)
                 .to.emit(disputeHandler, "FundsReleased")
@@ -3921,7 +3932,7 @@ describe("IBosonFundsHandler", function () {
               const txReceipt = await tx.wait();
               const match = eventEmittedWithArgs(txReceipt, disputeHandler, "FundsReleased", [
                 exchangeId,
-                sellerId,
+                seller.id,
                 offerToken.exchangeToken,
                 sellerPayoff,
                 rando.address,
@@ -3929,9 +3940,9 @@ describe("IBosonFundsHandler", function () {
               expect(match).to.be.false;
             });
 
-            it("should update state", async function () {
+            it("should update state", async function() {
               // Read on chain state
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3963,7 +3974,7 @@ describe("IBosonFundsHandler", function () {
                 "Foreign20",
                 ethers.BigNumber.from(sellerDeposit).add(sellerPayoff).toString()
               );
-              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+              sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
               buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
               protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
               agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -3973,8 +3984,8 @@ describe("IBosonFundsHandler", function () {
               expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
             });
 
-            context("Offer has an agent", async function () {
-              beforeEach(async function () {
+            context("Offer has an agent", async function() {
+              beforeEach(async function() {
                 // Create Agent offer
                 await offerHandler
                   .connect(operator)
@@ -4011,9 +4022,9 @@ describe("IBosonFundsHandler", function () {
                 await disputeHandler.connect(buyer).escalateDispute(exchangeId);
               });
 
-              it("should update state", async function () {
+              it("should update state", async function() {
                 // Read on chain state
-                sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+                sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
                 buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
                 protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
                 agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -4042,7 +4053,7 @@ describe("IBosonFundsHandler", function () {
                 expectedSellerAvailableFunds.funds.push(
                   new Funds(mockToken.address, "Foreign20", ethers.BigNumber.from(sellerPayoff).toString())
                 );
-                sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+                sellersAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
                 buyerAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(buyerId));
                 protocolAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(protocolId));
                 agentAvailableFunds = FundsList.fromStruct(await fundsHandler.getAvailableFunds(agentId));
@@ -4056,8 +4067,8 @@ describe("IBosonFundsHandler", function () {
         );
       });
 
-      context("Changing the protocol fee", async function () {
-        beforeEach(async function () {
+      context("Changing the protocol fee", async function() {
+        beforeEach(async function() {
           // Cast Diamond to IBosonConfigHandler
           configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
@@ -4072,7 +4083,7 @@ describe("IBosonFundsHandler", function () {
             .toString();
         });
 
-        it("Protocol fee for existing exchanges should be the same as at the offer creation", async function () {
+        it("Protocol fee for existing exchanges should be the same as at the offer creation", async function() {
           // set the new procol fee
           protocolFeePercentage = "300"; // 3%
           await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
@@ -4087,14 +4098,14 @@ describe("IBosonFundsHandler", function () {
           const tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
           await expect(tx)
             .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address);
+            .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
 
           await expect(tx)
             .to.emit(exchangeHandler, "ProtocolFeeCollected")
             .withArgs(exchangeId, offerToken.exchangeToken, offerTokenProtocolFee, buyer.address);
         });
 
-        it("Protocol fee for new exchanges should be the same as at the offer creation", async function () {
+        it("Protocol fee for new exchanges should be the same as at the offer creation", async function() {
           // set the new procol fee
           protocolFeePercentage = "300"; // 3%
           await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
@@ -4117,15 +4128,15 @@ describe("IBosonFundsHandler", function () {
           tx = await exchangeHandler.connect(buyer).completeExchange(exchangeId);
           await expect(tx)
             .to.emit(exchangeHandler, "FundsReleased")
-            .withArgs(exchangeId, sellerId, offerToken.exchangeToken, sellerPayoff, buyer.address);
+            .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, buyer.address);
 
           await expect(tx)
             .to.emit(exchangeHandler, "ProtocolFeeCollected")
             .withArgs(exchangeId, offerToken.exchangeToken, offerTokenProtocolFee, buyer.address);
         });
 
-        context("Offer has an agent", async function () {
-          beforeEach(async function () {
+        context("Offer has an agent", async function() {
+          beforeEach(async function() {
             exchangeId = "2";
 
             // Cast Diamond to IBosonConfigHandler
@@ -4162,7 +4173,7 @@ describe("IBosonFundsHandler", function () {
             await configHandler.connect(deployer).setProtocolFeePercentage(protocolFeePercentage);
           });
 
-          it("Protocol fee for existing exchanges should be the same as at the agent offer creation", async function () {
+          it("Protocol fee for existing exchanges should be the same as at the agent offer creation", async function() {
             // Set time forward to the offer's voucherRedeemableFrom
             await setNextBlockTimestamp(Number(voucherRedeemableFrom));
 
@@ -4174,7 +4185,7 @@ describe("IBosonFundsHandler", function () {
 
             await expect(tx)
               .to.emit(exchangeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, agentOffer.exchangeToken, sellerPayoff, buyer.address);
+              .withArgs(exchangeId, seller.id, agentOffer.exchangeToken, sellerPayoff, buyer.address);
 
             await expect(tx)
               .to.emit(exchangeHandler, "ProtocolFeeCollected")
@@ -4185,7 +4196,7 @@ describe("IBosonFundsHandler", function () {
               .withArgs(exchangeId, agentId, agentOffer.exchangeToken, agentPayoff, buyer.address);
           });
 
-          it("Protocol fee for new exchanges should be the same as at the agent offer creation", async function () {
+          it("Protocol fee for new exchanges should be the same as at the agent offer creation", async function() {
             // similar as tests before, excpet the commit to offer is done after the protocol fee change
 
             // top up seller's and buyer's account
@@ -4217,7 +4228,7 @@ describe("IBosonFundsHandler", function () {
             // Complete the exchange, expecting event
             await expect(tx)
               .to.emit(exchangeHandler, "FundsReleased")
-              .withArgs(exchangeId, sellerId, agentOffer.exchangeToken, sellerPayoff, buyer.address);
+              .withArgs(exchangeId, seller.id, agentOffer.exchangeToken, sellerPayoff, buyer.address);
 
             await expect(tx)
               .to.emit(exchangeHandler, "ProtocolFeeCollected")
