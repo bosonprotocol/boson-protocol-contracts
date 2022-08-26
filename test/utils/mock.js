@@ -159,7 +159,7 @@ function mockTwinReceipt(tokenAddress, tokenType) {
   return new TwinReceipt(twinId, tokenId, amount, tokenAddress, tokenType);
 }
 
-function mockVoucher({ committedDate, validUntilDate, redeemedDate, expired }) {
+function mockVoucher({ committedDate, validUntilDate, redeemedDate, expired } = {}) {
   return new Voucher(
     committedDate ?? "1661441758",
     validUntilDate ?? "166145000",
@@ -168,7 +168,7 @@ function mockVoucher({ committedDate, validUntilDate, redeemedDate, expired }) {
   );
 }
 
-function mockExchange({ id, offerId, buyerId, finalizedDate, state }) {
+function mockExchange({ id, offerId, buyerId, finalizedDate, state } = {}) {
   return new Exchange(
     id ?? "1",
     offerId ?? "1",
