@@ -226,7 +226,6 @@ describe("IBosonDisputeHandler", function () {
     beforeEach(async function () {
       // Initial ids for all the things
       offerId = "1";
-      buyerId = "3"; // created after seller and dispute resolver
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller
@@ -287,6 +286,8 @@ describe("IBosonDisputeHandler", function () {
       await fundsHandler
         .connect(operator)
         .depositFunds(seller.id, ethers.constants.AddressZero, fundsToDeposit, { value: fundsToDeposit });
+
+      buyerId = accountId.next().value;
     });
 
     afterEach(async function () {

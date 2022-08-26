@@ -264,8 +264,7 @@ describe("IBosonExchangeHandler", function () {
   context("📋 Exchange Handler Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
-      id = offerId = "1";
-      buyerId = "3"; // created after seller and dispute resolver
+      exchangeId = offerId = "1";
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller
@@ -335,6 +334,8 @@ describe("IBosonExchangeHandler", function () {
 
       // Mock exchange
       exchange = mockExchange();
+
+      buyerId = accountId.next().value;
       exchange.buyerId = buyerId;
       exchange.finalizedDate = "0";
 
@@ -367,7 +368,7 @@ describe("IBosonExchangeHandler", function () {
         voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // Examine event
-        assert.equal(event.exchangeId.toString(), id, "Exchange id is incorrect");
+        assert.equal(event.exchangeId.toString(), exchangeId, "Exchange id is incorrect");
         assert.equal(event.offerId.toString(), offerId, "Offer id is incorrect");
         assert.equal(event.buyerId.toString(), buyerId, "Buyer id is incorrect");
 
@@ -388,7 +389,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the next exchange id and ensure it was incremented by the creation of the offer
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
-        expect(nextExchangeId).to.equal(++id);
+        expect(nextExchangeId).to.equal(++exchangeId);
       });
 
       it("should issue the voucher on the correct clone", async function () {
@@ -397,9 +398,11 @@ describe("IBosonExchangeHandler", function () {
 
         // Create a new seller to get new clone
         seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+        seller.id = "3"; // buyer is created after seller in this test
         expect(seller.isValid()).is.true;
 
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
         expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
         const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
@@ -473,6 +476,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Create a new seller to get new clone
         seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
+        seller.id = "3"; // buyer is created after seller in this test
         expect(seller.isValid()).is.true;
 
         // VoucherInitValues
@@ -577,7 +581,7 @@ describe("IBosonExchangeHandler", function () {
         voucher.validUntilDate = offerDates.validUntil;
 
         // Examine the event
-        assert.equal(event.exchangeId.toString(), id, "Exchange id is incorrect");
+        assert.equal(event.exchangeId.toString(), exchangeId, "Exchange id is incorrect");
         assert.equal(event.offerId.toString(), offerId, "Offer id is incorrect");
         assert.equal(event.buyerId.toString(), buyerId, "Buyer id is incorrect");
 
@@ -664,6 +668,7 @@ describe("IBosonExchangeHandler", function () {
         it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
+          console.log("offerId", offerId);
 
           // Attempt to create an exchange, expecting revert
           await expect(
@@ -1104,7 +1109,7 @@ describe("IBosonExchangeHandler", function () {
         await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
         // Complete the exchange
-        expect(exchangeHandler.connect(buyer).completeExchange(exchange.id));
+        await exchangeHandler.connect(buyer).completeExchange(exchange.id);
 
         // Get the exchange state
         [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -1161,17 +1166,17 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).completeExchange(id)).to.revertedWith(
+          await expect(exchangeHandler.connect(operator).completeExchange(exchangeId)).to.revertedWith(
             RevertReasons.REGION_PAUSED
           );
         });
 
         it("exchange id is invalid", async function () {
           // An invalid exchange id
-          id = "666";
+          exchangeId = "666";
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).completeExchange(id)).to.revertedWith(
+          await expect(exchangeHandler.connect(operator).completeExchange(exchangeId)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -1269,7 +1274,7 @@ describe("IBosonExchangeHandler", function () {
 
       it("should update state", async function () {
         // Complete the exchange
-        expect(exchangeHandler.connect(buyer).completeExchangeBatch(exchangesToComplete));
+        await exchangeHandler.connect(buyer).completeExchangeBatch(exchangesToComplete);
 
         for (exchangeId = 1; exchangeId <= 5; exchangeId++) {
           // Get the exchange state
@@ -1467,10 +1472,10 @@ describe("IBosonExchangeHandler", function () {
 
         it("exchange id is invalid", async function () {
           // An invalid exchange id
-          id = "666";
+          exchangeId = "666";
 
           // Attempt to revoke the voucher, expecting revert
-          await expect(exchangeHandler.connect(operator).revokeVoucher(id)).to.revertedWith(
+          await expect(exchangeHandler.connect(operator).revokeVoucher(exchangeId)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -1543,10 +1548,10 @@ describe("IBosonExchangeHandler", function () {
 
         it("exchange id is invalid", async function () {
           // An invalid exchange id
-          id = "666";
+          exchangeId = "666";
 
           // Attempt to cancel the voucher, expecting revert
-          await expect(exchangeHandler.connect(buyer).cancelVoucher(id)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchangeId)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -1643,7 +1648,9 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(buyer).expireVoucher(id)).to.revertedWith(RevertReasons.REGION_PAUSED);
+          await expect(exchangeHandler.connect(buyer).expireVoucher(exchangeId)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
         });
 
         it("exchange id is invalid", async function () {
@@ -1651,10 +1658,10 @@ describe("IBosonExchangeHandler", function () {
           await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
           // An invalid exchange id
-          id = "666";
+          exchangeId = "666";
 
           // Attempt to cancel the voucher, expecting revert
-          await expect(exchangeHandler.connect(buyer).expireVoucher(id)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).expireVoucher(exchangeId)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -1736,15 +1743,17 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(id)).to.revertedWith(RevertReasons.REGION_PAUSED);
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
         });
 
         it("exchange id is invalid", async function () {
           // An invalid exchange id
-          id = "666";
+          exchangeId = "666";
 
           // Attempt to redeem the voucher, expecting revert
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(id)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -2643,10 +2652,10 @@ describe("IBosonExchangeHandler", function () {
 
         it("exchange id is invalid", async function () {
           // An invalid exchange id
-          id = "666";
+          exchangeId = "666";
 
           // Attempt to extend voucher, expecting revert
-          await expect(exchangeHandler.connect(operator).extendVoucher(id, validUntilDate)).to.revertedWith(
+          await expect(exchangeHandler.connect(operator).extendVoucher(exchangeId, validUntilDate)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -2817,12 +2826,12 @@ describe("IBosonExchangeHandler", function () {
 
         it("exchange id is invalid", async function () {
           // An invalid exchange id
-          id = "666";
+          exchangeId = "666";
 
           // Attempt to call onVoucherTransferred, expecting revert
-          await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(id, newOwner.address)).to.revertedWith(
-            RevertReasons.NO_SUCH_EXCHANGE
-          );
+          await expect(
+            exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, newOwner.address)
+          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
         });
 
         it("exchange is not in committed state", async function () {
@@ -2830,9 +2839,9 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
 
           // Attempt to call onVoucherTransferred, expecting revert
-          await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(id, newOwner.address)).to.revertedWith(
-            RevertReasons.INVALID_STATE
-          );
+          await expect(
+            exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, newOwner.address)
+          ).to.revertedWith(RevertReasons.INVALID_STATE);
         });
 
         it("Voucher has expired", async function () {
@@ -2840,9 +2849,9 @@ describe("IBosonExchangeHandler", function () {
           await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
           // Attempt to call onVoucherTransferred, expecting revert
-          await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(id, newOwner.address)).to.revertedWith(
-            RevertReasons.VOUCHER_HAS_EXPIRED
-          );
+          await expect(
+            exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, newOwner.address)
+          ).to.revertedWith(RevertReasons.VOUCHER_HAS_EXPIRED);
         });
       });
     });
@@ -3054,24 +3063,24 @@ describe("IBosonExchangeHandler", function () {
       it("should return the next exchange id", async function () {
         // Get the next exchange id and compare it to the initial expected id
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
-        expect(nextExchangeId).to.equal(id);
+        expect(nextExchangeId).to.equal(exchangeId);
 
         // Commit to offer, creating a new exchange
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
         // Get the next exchange id and ensure it was incremented by the creation of the offer
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
-        expect(nextExchangeId).to.equal(++id);
+        expect(nextExchangeId).to.equal(++exchangeId);
       });
 
       it("should not increment the counter", async function () {
         // Get the next exchange id
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
-        expect(nextExchangeId).to.equal(id);
+        expect(nextExchangeId).to.equal(exchangeId);
 
         // Get the next exchange id and ensure it was not incremented by the previous call
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
-        expect(nextExchangeId).to.equal(id);
+        expect(nextExchangeId).to.equal(exchangeId);
       });
     });
 

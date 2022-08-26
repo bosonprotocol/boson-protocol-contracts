@@ -421,7 +421,6 @@ describe("IBosonFundsHandler", function () {
       beforeEach(async function () {
         // Initial ids for all the things
         exchangeId = "1";
-        buyerId = "3"; // created after a seller and a dispute resolver
 
         // Create a valid dispute resolver
         disputeResolver = mockDisputeResolver(
@@ -502,6 +501,8 @@ describe("IBosonFundsHandler", function () {
         // commit to both offers
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerNative.id, { value: offerNative.price });
+
+        buyerId = accountId.next().value;
       });
 
       afterEach(async function () {

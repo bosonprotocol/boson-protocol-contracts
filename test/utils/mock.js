@@ -159,22 +159,23 @@ function mockTwinReceipt(tokenAddress, tokenType) {
   return new TwinReceipt(twinId, tokenId, amount, tokenAddress, tokenType);
 }
 
-function mockVoucher() {
-  // Required voucher constructor params
-  const committedDate = "1661441758";
-  const validUntilDate = "166145000";
-  const redeemedDate = "1661442001";
-  const expired = false;
-  return new Voucher(committedDate, validUntilDate, redeemedDate, expired);
+function mockVoucher({ committedDate, validUntilDate, redeemedDate, expired }) {
+  return new Voucher(
+    committedDate ?? "1661441758",
+    validUntilDate ?? "166145000",
+    redeemedDate ?? "1661442001",
+    expired ?? false
+  );
 }
 
-function mockExchange() {
-  const id = "1";
-  const offerId = "1";
-  const buyerId = "1";
-  const finalizedDate = "1661447000";
-  const state = ExchangeState.Committed;
-  return new Exchange(id, offerId, buyerId, finalizedDate, state);
+function mockExchange({ id, offerId, buyerId, finalizedDate, state }) {
+  return new Exchange(
+    id ?? "1",
+    offerId ?? "1",
+    buyerId ?? "1",
+    finalizedDate ?? "1661447000",
+    state ?? ExchangeState.Committed
+  );
 }
 
 function mockDispute() {

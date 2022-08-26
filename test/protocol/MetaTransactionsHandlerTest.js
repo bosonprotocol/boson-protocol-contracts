@@ -4,12 +4,10 @@ const { expect, assert } = require("chai");
 const { gasLimit } = require("../../environments");
 
 const Buyer = require("../../scripts/domain/Buyer");
-const Exchange = require("../../scripts/domain/Exchange");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const Role = require("../../scripts/domain/Role");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
-const Voucher = require("../../scripts/domain/Voucher");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -28,6 +26,7 @@ const {
   mockSeller,
   mockAuthToken,
   accountId,
+  mockExchange,
 } = require("../utils/mock");
 const { oneMonth } = require("../utils/constants");
 /**
@@ -51,7 +50,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     support,
     result;
   let metaTransactionsHandler, nonce, functionSignature;
-  let seller, offerId, id, buyerId;
+  let seller, offerId, buyerId;
   let validOfferDetails,
     offerType,
     metaTransactionType,
@@ -64,8 +63,7 @@ describe("IBosonMetaTransactionsHandler", function () {
   let sellerDeposit, price;
   let voucherRedeemableFrom;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
-  let voucher, committedDate, validUntilDate, redeemedDate, expired;
-  let exchange, finalizedDate, state;
+  let exchange;
   let disputeResolver, disputeResolverFees;
   let twin, success;
   let exchangeId,
@@ -248,7 +246,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         assert.equal(result, expectedResult, "Nonce is used");
 
         // Create a valid seller for meta transaction
-        id = "1";
+        ("1");
         seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
         expect(seller.isValid()).is.true;
 
@@ -337,7 +335,6 @@ describe("IBosonMetaTransactionsHandler", function () {
         ];
 
         // Create a valid seller for meta transaction
-        id = "1";
         seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
         expect(seller.isValid()).is.true;
 
@@ -720,7 +717,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           await maliciousToken.setProtocolAddress(protocolDiamond.address);
 
           // Initial ids for all the things
-          id = exchangeId = "1";
+          exchangeId = "1";
           buyerId = "3"; // created after a seller and a dispute resolver
 
           // Create a valid seller
@@ -933,7 +930,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = offerId = "1";
+        offerId = "1";
 
         // Create a valid seller
         seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
@@ -1212,7 +1209,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = offerId = "1";
+        offerId = "1";
         buyerId = "3"; // created after seller and dispute resolver
 
         // Create a valid seller
@@ -1263,17 +1260,8 @@ describe("IBosonMetaTransactionsHandler", function () {
         price = offer.price;
         voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
 
-        // Required voucher constructor params
-        committedDate = "0";
-        validUntilDate = "0";
-        redeemedDate = "0";
-        expired = false;
-        voucher = new Voucher(committedDate, validUntilDate, redeemedDate, expired);
-
         // Required exchange constructor params
-        finalizedDate = "0";
-        state = ExchangeState.Committed;
-        exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
+        exchange = mockExchange({ buyerId, finalizedDate: "0" });
 
         // Set the exchange Type
         exchangeType = [{ name: "exchangeId", type: "uint256" }];
@@ -1361,12 +1349,9 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
 
         it("does not modify revert reasons", async function () {
-          // An invalid exchange id
-          id = "666";
-
           // prepare validExchangeDetails
           validExchangeDetails = {
-            exchangeId: id,
+            exchangeId: "666",
           };
 
           // Prepare the message
@@ -1520,12 +1505,9 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
 
         it("does not modify revert reasons", async function () {
-          // An invalid exchange id
-          id = "666";
-
           // prepare validExchangeDetails
           validExchangeDetails = {
-            exchangeId: id,
+            exchangeId: "666",
           };
 
           // Prepare the message
@@ -1688,12 +1670,9 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
 
         it("does not modify revert reasons", async function () {
-          // An invalid exchange id
-          id = "666";
-
           // prepare validExchangeDetails
           validExchangeDetails = {
-            exchangeId: id,
+            exchangeId: "666",
           };
 
           // Prepare the message
@@ -1858,12 +1837,9 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
 
         it("does not modify revert reasons", async function () {
-          // An invalid exchange id
-          id = "666";
-
           // prepare validExchangeDetails
           validExchangeDetails = {
-            exchangeId: id,
+            exchangeId: "666",
           };
 
           // Prepare the message
@@ -2048,12 +2024,9 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
 
         it("does not modify revert reasons", async function () {
-          // An invalid exchange id
-          id = "666";
-
           // prepare validExchangeDetails
           validExchangeDetails = {
-            exchangeId: id,
+            exchangeId: "666",
           };
 
           // Prepare the message
@@ -2218,12 +2191,9 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
 
         it("does not modify revert reasons", async function () {
-          // An invalid exchange id
-          id = "666";
-
           // prepare validExchangeDetails
           validExchangeDetails = {
-            exchangeId: id,
+            exchangeId: "666",
           };
 
           // Prepare the message
@@ -2580,7 +2550,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = offerId = "1";
+        offerId = "1";
 
         // Create a valid seller
         seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
@@ -2822,7 +2792,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = exchangeId = "1";
+        exchangeId = "1";
         buyerId = "3"; // created after a seller and a dispute resolver
 
         // Create a valid seller

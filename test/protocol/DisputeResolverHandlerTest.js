@@ -218,15 +218,9 @@ describe("DisputeResolverHandler", function () {
       disputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFees);
     });
 
-    afterEach(async function () {
-      // Reset the accountId iterator
-      accountId.next(true);
-    });
-
     context("👉 createDisputeResolver()", async function () {
       beforeEach(async function () {
         expectedDisputeResolver = disputeResolver.clone();
-        expectedDisputeResolver.id = "4"; // create after three sellers
         expectedDisputeResolver.active = false;
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
       });
@@ -1662,9 +1656,12 @@ describe("DisputeResolverHandler", function () {
 
     context("👉 addSellersToAllowList()", async function () {
       beforeEach(async function () {
-        // make another seller with id = "4"
+        await accountHandler
+          .connect(rando)
+          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+        // make another seller with id = "5"
         let seller4 = mockSeller(other3.address, other3.address, other3.address, other3.address);
-        seller4.id = "4"; // invert id with dispute resolver id as seller is created first
 
         await accountHandler.connect(admin).createSeller(seller4, emptyAuthToken, voucherInitValues);
 
@@ -1672,13 +1669,8 @@ describe("DisputeResolverHandler", function () {
         emptyAuthToken = mockAuthToken();
         expect(emptyAuthToken.isValid()).is.true;
 
-        sellerAllowList = ["1", "3"];
-        allowedSellersToAdd = ["2", "4"];
-
-        disputeResolver.id = "5";
-        await accountHandler
-          .connect(rando)
-          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+        sellerAllowList = ["3", "1"];
+        allowedSellersToAdd = ["2", "5"];
 
         // How that dispute resolver looks as a returned struct
         disputeResolverStruct = disputeResolver.toStruct();
@@ -1726,7 +1718,7 @@ describe("DisputeResolverHandler", function () {
         expect(returnedSellerAllowList.toString()).to.eql(expectedSellerAllowList.toString(), "Allowed list wrong");
 
         // check that mappings of allowed selleres were updated
-        idsToCheck = ["1", "2", "3", "4"];
+        idsToCheck = ["1", "2", "3", "5"];
         expectedStatus = [true, true, true, true]; // 1 and 3 are allowed
         const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(disputeResolver.id, idsToCheck);
 
@@ -1799,7 +1791,7 @@ describe("DisputeResolverHandler", function () {
 
         it("Seller id is already approved", async function () {
           // New, but duplicated
-          allowedSellersToAdd = ["2", "4", "2"];
+          allowedSellersToAdd = ["2", "5", "2"];
 
           // Attempt to add sellers to the allow listr, expecting revert
           await expect(
@@ -1819,23 +1811,8 @@ describe("DisputeResolverHandler", function () {
 
     context("👉 removeSellersFromAllowList()", async function () {
       beforeEach(async function () {
-        // make another seller with id = "4"
-        const seller4 = mockSeller(other3.address, other3.address, other3.address, other3.address);
-        seller4.id = "4"; // invert id with dispute resolver id as seller is created first
-
-        // AuthToken
-        emptyAuthToken = mockAuthToken();
-        expect(emptyAuthToken.isValid()).is.true;
-
-        await accountHandler.connect(admin).createSeller(seller4, emptyAuthToken, voucherInitValues);
-
-        sellerAllowList = ["1", "3", "2", "4"];
+        sellerAllowList = ["1", "3", "2"];
         allowedSellersToRemove = ["1", "2"];
-
-        disputeResolver.id = "5";
-        await accountHandler
-          .connect(rando)
-          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // How that dispute resolver looks as a returned struct
         disputeResolverStruct = disputeResolver.toStruct();
@@ -1843,6 +1820,27 @@ describe("DisputeResolverHandler", function () {
         expectedDisputeResolver = disputeResolver.clone();
         expectedDisputeResolver.active = false;
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
+
+        await accountHandler
+          .connect(rando)
+          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+        // make another seller with id = "5"
+        const seller4 = mockSeller(other3.address, other3.address, other3.address, other3.address);
+
+        // AuthToken
+        emptyAuthToken = mockAuthToken();
+        expect(emptyAuthToken.isValid()).is.true;
+
+        await accountHandler.connect(admin).createSeller(seller4, emptyAuthToken, voucherInitValues);
+
+        sellerAllowList.push("5");
+        await accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, ["5"]);
+      });
+
+      afterEach(async function () {
+        // Reset
+        accountId.next(true);
       });
 
       it("should emit a AllowedSellersRemoved event", async function () {
@@ -1879,12 +1877,12 @@ describe("DisputeResolverHandler", function () {
           "Dispute Resolver Fee List is incorrect"
         );
 
-        const expectedSellerAllowList = ["4", "3"];
+        const expectedSellerAllowList = ["5", "3"];
         expect(returnedSellerAllowList.toString()).to.eql(expectedSellerAllowList.toString(), "Allowed list wrong");
 
         // check that mappings of allowed selleres were updated
-        idsToCheck = ["1", "2", "3", "4"];
-        expectedStatus = [false, false, true, true]; // 3 and 4 are allowed
+        idsToCheck = ["1", "2", "3", "5"];
+        expectedStatus = [false, false, true, true]; // 3 and 5 are allowed
         const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(disputeResolver.id, idsToCheck);
 
         expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
@@ -1927,9 +1925,8 @@ describe("DisputeResolverHandler", function () {
 
         // check that mappings of allowed selleres were updated
         idsToCheck = ["1", "2", "3", "4", "5", "6"];
-        expectedStatus = [true, true, true, true, false, true]; // everything was removed, so every seller is allowed. 5 is not a seller
+        expectedStatus = [true, true, true, false, true, true]; // everything was removed, so every seller is allowed. 5 is not a seller
         const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(disputeResolver.id, idsToCheck);
-
         expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
 
