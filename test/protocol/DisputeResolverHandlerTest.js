@@ -218,6 +218,11 @@ describe("DisputeResolverHandler", function () {
       disputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFees);
     });
 
+    afterEach(async function () {
+      // Reset
+      accountId.next(true);
+    });
+
     context("👉 createDisputeResolver()", async function () {
       beforeEach(async function () {
         expectedDisputeResolver = disputeResolver.clone();
