@@ -668,7 +668,6 @@ describe("IBosonExchangeHandler", function () {
         it("The exchanges region of protocol is paused", async function () {
           // Pause the exchanges region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
-          console.log("offerId", offerId);
 
           // Attempt to create an exchange, expecting revert
           await expect(
@@ -2644,8 +2643,9 @@ describe("IBosonExchangeHandler", function () {
           // Pause the exchanges region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
+          console.log(id);
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).extendVoucher(id, validUntilDate)).to.revertedWith(
+          await expect(exchangeHandler.connect(operator).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
             RevertReasons.REGION_PAUSED
           );
         });
