@@ -6,15 +6,32 @@ function bigNumberIsValid(bigNumber) {
   let valid = false;
   try {
     valid = typeof bigNumber === "string" && typeof ethers.BigNumber.from(bigNumber) === "object";
-  } catch (e) {}
+  } catch (e) { }
   return valid;
+}
+
+function bigNumberArrayIsValid(bigNumberArray) {
+  let valid = false;
+  try {
+    const isArray = Array.isArray(bigNumberArray);
+    if (isArray) {
+      bigNumberArray.forEach((bigNumber) => {
+        valid = bigNumberIsValid(bigNumber);
+      });
+    }
+  } catch (e) { }
+  return valid;
+}
+
+function bigNumberOptionalIsValid(bigNumber) {
+  return bigNumber == undefined || bigNumber == null || bigNumberIsValid(bigNumber)
 }
 
 function bigNumberNonZeroIsValid(bigNumber) {
   let valid = false;
   try {
     valid = typeof bigNumber === "string" && ethers.BigNumber.from(bigNumber).gt(0);
-  } catch (e) {}
+  } catch (e) { }
   return valid;
 }
 
@@ -22,7 +39,7 @@ function enumIsValid(enumValue) {
   let valid = false;
   try {
     valid = typeof enumValue === "number" && typeof ethers.BigNumber.from(enumValue) === "object";
-  } catch (e) {}
+  } catch (e) { }
   return valid;
 }
 
@@ -30,7 +47,7 @@ function addressIsValid(address) {
   let valid = false;
   try {
     valid = eip55.verify(eip55.encode(address));
-  } catch (e) {}
+  } catch (e) { }
   return valid;
 }
 
@@ -38,7 +55,7 @@ function booleanIsValid(boolean) {
   let valid = false;
   try {
     valid = typeof boolean === "boolean";
-  } catch (e) {}
+  } catch (e) { }
   return valid;
 }
 
@@ -47,3 +64,5 @@ exports.enumIsValid = enumIsValid;
 exports.addressIsValid = addressIsValid;
 exports.booleanIsValid = booleanIsValid;
 exports.bigNumberNonZeroIsValid = bigNumberNonZeroIsValid;
+exports.bigNumberArrayIsValid = bigNumberArrayIsValid;
+exports.bigNumberOptionalIsValid = bigNumberOptionalIsValid;

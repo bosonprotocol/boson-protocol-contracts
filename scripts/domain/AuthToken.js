@@ -1,5 +1,6 @@
 const ethers = require("ethers");
 const AuthTokenType = require("./AuthTokenType");
+const { bigNumberIsValid, } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: AuthToken
@@ -83,12 +84,7 @@ class AuthToken {
    * @returns {boolean}
    */
   tokenIdIsValid() {
-    let valid = false;
-    let { tokenId } = this;
-    try {
-      valid = typeof tokenId === "string" && typeof ethers.BigNumber.from(tokenId) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.tokenId);
   }
 
   /**
@@ -100,7 +96,7 @@ class AuthToken {
     let { tokenType } = this;
     try {
       valid = AuthTokenType.Types.includes(tokenType);
-    } catch (e) {}
+    } catch (e) { }
     return valid;
   }
 

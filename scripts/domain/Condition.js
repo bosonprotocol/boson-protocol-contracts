@@ -2,6 +2,10 @@ const ethers = require("ethers");
 const eip55 = require("eip55");
 const EvaluationMethod = require("./EvaluationMethod");
 const TokenType = require("./TokenType");
+const {
+  bigNumberIsValid,
+  addressIsValid,
+} = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Condition
@@ -106,7 +110,7 @@ class Condition {
     let { method } = this;
     try {
       valid = EvaluationMethod.Types.includes(method);
-    } catch (e) {}
+    } catch (e) { }
     return valid;
   }
 
@@ -120,7 +124,7 @@ class Condition {
     let { tokenType } = this;
     try {
       valid = TokenType.Types.includes(tokenType);
-    } catch (e) {}
+    } catch (e) { }
     return valid;
   }
 
@@ -130,12 +134,7 @@ class Condition {
    * @returns {boolean}
    */
   tokenAddressIsValid() {
-    let valid = false;
-    let { tokenAddress } = this;
-    try {
-      valid = eip55.verify(eip55.encode(tokenAddress));
-    } catch (e) {}
-    return valid;
+    return addressIsValid(this.tokenAddress);
   }
 
   /**
@@ -143,12 +142,7 @@ class Condition {
    * @returns {boolean}
    */
   tokenIdIsValid() {
-    let valid = false;
-    let { tokenId } = this;
-    try {
-      valid = typeof tokenId === "string" && typeof ethers.BigNumber.from(tokenId) === "object";
-    } catch (e) {}
-    return valid;
+    bigNumberIsValid(this.tokenId);
   }
 
   /**
@@ -156,12 +150,7 @@ class Condition {
    * @returns {boolean}
    */
   thresholdIsValid() {
-    let valid = false;
-    let { threshold } = this;
-    try {
-      valid = typeof threshold === "string" && typeof ethers.BigNumber.from(threshold) === "object";
-    } catch (e) {}
-    return valid;
+    bigNumberIsValid(this.threshold);
   }
 
   /**
@@ -169,12 +158,7 @@ class Condition {
    * @returns {boolean}
    */
   maxCommitsIsValid() {
-    let valid = false;
-    let { maxCommits } = this;
-    try {
-      valid = typeof maxCommits === "string" && typeof ethers.BigNumber.from(maxCommits) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.maxCommits);
   }
 
   /**
@@ -182,6 +166,12 @@ class Condition {
    * @returns {boolean}
    */
   isValid() {
+    console.log(this.methodIsValid());
+    console.log(this.tokenTypeIsValid());
+    console.log(this.tokenAddressIsValid());
+    console.log(this.tokenIdIsValid());
+    console.log(this.thresholdIsValid());
+    console.log(this.maxCommitsIsValid());
     return (
       this.methodIsValid() &&
       this.tokenTypeIsValid() &&

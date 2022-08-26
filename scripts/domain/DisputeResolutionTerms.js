@@ -1,4 +1,5 @@
 const ethers = require("ethers");
+const { bigNumberIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: DisputeResolutionTerms
@@ -89,12 +90,7 @@ class DisputeResolutionTerms {
    * @returns {boolean}
    */
   disputeResolverIdIsValid() {
-    let valid = false;
-    let { disputeResolverId } = this;
-    try {
-      valid = typeof disputeResolverId === "string" && typeof ethers.BigNumber.from(disputeResolverId) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.disputeResolverId);
   }
 
   /**
@@ -103,14 +99,7 @@ class DisputeResolutionTerms {
    * @returns {boolean}
    */
   escalationResponsePeriodIsValid() {
-    let valid = false;
-    let { escalationResponsePeriod } = this;
-    try {
-      valid =
-        typeof escalationResponsePeriod === "string" &&
-        typeof ethers.BigNumber.from(escalationResponsePeriod) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.escalationResponsePeriod);
   }
 
   /**
@@ -119,15 +108,7 @@ class DisputeResolutionTerms {
    * @returns {boolean}
    */
   feeAmountIsValid() {
-    let valid = false;
-    let { feeAmount } = this;
-    try {
-      valid =
-        typeof feeAmount === "string" &&
-        typeof ethers.BigNumber.from(feeAmount) === "object" &&
-        ethers.BigNumber.from(feeAmount).lte("10000");
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.feeAmount) && ethers.BigNumber.from(feeAmount).lte("10000");
   }
 
   /**
@@ -136,13 +117,7 @@ class DisputeResolutionTerms {
    * @returns {boolean}
    */
   buyerEscalationDepositIsValid() {
-    let valid = false;
-    let { buyerEscalationDeposit } = this;
-    try {
-      valid =
-        typeof buyerEscalationDeposit === "string" && typeof ethers.BigNumber.from(buyerEscalationDeposit) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.buyerEscalationDeposit);
   }
 
   /**

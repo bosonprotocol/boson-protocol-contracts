@@ -1,4 +1,10 @@
 const ethers = require("ethers");
+const {
+  bigNumberIsValid,
+  booleanIsValid,
+  addressIsValid,
+  bigNumberArrayIsValid
+} = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Bundle
@@ -89,12 +95,7 @@ class Bundle {
    * @returns {boolean}
    */
   idIsValid() {
-    let valid = false;
-    let { id } = this;
-    try {
-      valid = typeof id === "string" && typeof ethers.BigNumber.from(id) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.id);
   }
 
   /**
@@ -103,12 +104,7 @@ class Bundle {
    * @returns {boolean}
    */
   sellerIdIsValid() {
-    let valid = false;
-    let { sellerId } = this;
-    try {
-      valid = typeof sellerId === "string" && typeof ethers.BigNumber.from(sellerId) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.sellerId);
   }
 
   /**
@@ -117,17 +113,7 @@ class Bundle {
    * @returns {boolean}
    */
   offerIdsIsValid() {
-    let valid = false;
-    let { offerIds } = this;
-    try {
-      const offerIdsIsArray = Array.isArray(offerIds);
-      if (offerIdsIsArray) {
-        offerIds.forEach((offerId) => {
-          valid = typeof offerId === "string" && typeof ethers.BigNumber.from(offerId) === "object";
-        });
-      }
-    } catch (e) {}
-    return valid;
+    return bigNumberArrayIsValid(this.offerIds);
   }
 
   /**
@@ -136,17 +122,7 @@ class Bundle {
    * @returns {boolean}
    */
   twinIdsIsValid() {
-    let valid = false;
-    let { twinIds } = this;
-    try {
-      const twinIdsIsArray = Array.isArray(twinIds);
-      if (twinIdsIsArray) {
-        twinIds.forEach((twinId) => {
-          valid = typeof twinId === "string" && typeof ethers.BigNumber.from(twinId) === "object";
-        });
-      }
-    } catch (e) {}
-    return valid;
+    return bigNumberArrayIsValid(this.twinIds);
   }
 
   /**

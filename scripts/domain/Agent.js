@@ -1,5 +1,9 @@
 const ethers = require("ethers");
-const eip55 = require("eip55");
+const {
+  bigNumberIsValid,
+  booleanIsValid,
+  addressIsValid,
+} = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Agent
@@ -90,12 +94,7 @@ class Agent {
    * @returns {boolean}
    */
   idIsValid() {
-    let valid = false;
-    let { id } = this;
-    try {
-      valid = typeof id === "string" && typeof ethers.BigNumber.from(id) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.id);
   }
 
   /**
@@ -104,15 +103,7 @@ class Agent {
    * @returns {boolean}
    */
   feePercentageIsValid() {
-    let valid = false;
-    let { feePercentage } = this;
-    try {
-      valid =
-        typeof feePercentage === "string" &&
-        typeof ethers.BigNumber.from(feePercentage) === "object" &&
-        ethers.BigNumber.from(feePercentage).lte(ethers.BigNumber.from("10000"));
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.feePercentage) && ethers.BigNumber.from(feePercentage).lte(ethers.BigNumber.from("10000"));
   }
 
   /**
@@ -121,12 +112,7 @@ class Agent {
    * @returns {boolean}
    */
   walletIsValid() {
-    let valid = false;
-    let { wallet } = this;
-    try {
-      valid = eip55.verify(eip55.encode(wallet));
-    } catch (e) {}
-    return valid;
+    return addressIsValid(this.wallet);
   }
 
   /**
@@ -134,12 +120,7 @@ class Agent {
    * @returns {boolean}
    */
   activeIsValid() {
-    let valid = false;
-    let { active } = this;
-    try {
-      valid = typeof active === "boolean";
-    } catch (e) {}
-    return valid;
+    return booleanIsValid(this.active);
   }
 
   /**

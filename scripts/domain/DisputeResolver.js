@@ -1,6 +1,6 @@
 const ethers = require("ethers");
 const eip55 = require("eip55");
-
+const { bigNumberIsValid } = require("../util/validations.js");
 /**
  * Boson Protocol Domain Entity: DisputeResolver
  *
@@ -111,12 +111,7 @@ class DisputeResolver {
    * @returns {boolean}
    */
   idIsValid() {
-    let valid = false;
-    let { id } = this;
-    try {
-      valid = typeof id === "string" && typeof ethers.BigNumber.from(id) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.id);
   }
 
   /**
@@ -131,7 +126,7 @@ class DisputeResolver {
       valid =
         typeof escalationResponsePeriod === "string" &&
         typeof ethers.BigNumber.from(escalationResponsePeriod) === "object";
-    } catch (e) {}
+    } catch (e) { }
     return valid;
   }
 
@@ -145,7 +140,7 @@ class DisputeResolver {
     let { operator } = this;
     try {
       valid = eip55.verify(eip55.encode(operator));
-    } catch (e) {}
+    } catch (e) { }
     return valid;
   }
 
@@ -159,7 +154,7 @@ class DisputeResolver {
     let { admin } = this;
     try {
       valid = eip55.verify(eip55.encode(admin));
-    } catch (e) {}
+    } catch (e) { }
     return valid;
   }
 
@@ -173,7 +168,7 @@ class DisputeResolver {
     let { clerk } = this;
     try {
       valid = eip55.verify(eip55.encode(clerk));
-    } catch (e) {}
+    } catch (e) { }
     return valid;
   }
 
@@ -187,7 +182,7 @@ class DisputeResolver {
     let { treasury } = this;
     try {
       valid = eip55.verify(eip55.encode(treasury));
-    } catch (e) {}
+    } catch (e) { }
     return valid;
   }
 
@@ -202,7 +197,7 @@ class DisputeResolver {
     let { metadataUri } = this;
     try {
       valid = typeof metadataUri === "string";
-    } catch (e) {}
+    } catch (e) { }
     return valid;
   }
 
@@ -215,7 +210,7 @@ class DisputeResolver {
     let { active } = this;
     try {
       valid = typeof active === "boolean";
-    } catch (e) {}
+    } catch (e) { }
     return valid;
   }
 
