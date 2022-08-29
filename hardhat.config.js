@@ -27,6 +27,11 @@ module.exports = {
       accounts: {mnemonic: environments.hardhat.mnemonic},
       gas:  environments.hardhat.gasLimit
     },
+    localhost: {
+      url: environments.localhost.txNode || "http://127.0.0.1:8545",
+      accounts: environments.hardhat.mnemonic ? {mnemonic: environments.hardhat.mnemonic} : environments.localhost.keys,
+      gas:  environments.localhost.gasLimit
+    },
     test: {
       url: environments.test.txNode,
       accounts: environments.test.keys,

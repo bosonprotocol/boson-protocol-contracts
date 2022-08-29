@@ -54,4 +54,17 @@ exports.RoleAssignments = {
       roles: [Role.PROTOCOL],
     },
   },
+
+  localhost: {
+    "Deployer / role admin address": {
+      address: environments.localhost.adminAddress,
+      roles: [Role.ADMIN, Role.UPGRADER],
+    },
+
+    // For minting vouchers
+    "ProtocolDiamond contract": {
+      address: ContractAddresses.localhost.ProtocolDiamond,
+      roles: [Role.PROTOCOL],
+    },
+  },
 };
