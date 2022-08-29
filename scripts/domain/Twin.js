@@ -1,6 +1,5 @@
-const ethers = require("ethers");
-const eip55 = require("eip55");
 const TokenType = require("./TokenType");
+const { bigNumberIsValid, addressIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Twin
@@ -136,7 +135,7 @@ class Twin {
    * @returns {boolean}
    */
   tokenIdIsValid() {
-    return bigNumberIsValid(this.tokenId);
+    return bigNumberIsValid(this.tokenId, { empty: true });
   }
 
   /**
@@ -157,7 +156,7 @@ class Twin {
     let { tokenType } = this;
     try {
       valid = TokenType.Types.includes(tokenType);
-    } catch (e) { }
+    } catch (e) {}
     return valid;
   }
 

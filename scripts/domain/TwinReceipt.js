@@ -1,5 +1,4 @@
-const ethers = require("ethers");
-const eip55 = require("eip55");
+const { bigNumberIsValid, addressIsValid } = require("../util/validations.js");
 const TokenType = require("./TokenType");
 
 /**
@@ -130,7 +129,7 @@ class TwinReceipt {
     let { tokenType } = this;
     try {
       valid = TokenType.Types.includes(tokenType);
-    } catch (e) { }
+    } catch (e) {}
     return valid;
   }
 

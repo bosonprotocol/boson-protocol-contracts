@@ -1,5 +1,4 @@
-const ethers = require("ethers");
-const eip55 = require("eip55");
+const { bigNumberIsValid, addressIsValid, booleanIsValid, stringIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Offer

@@ -1,4 +1,4 @@
-const ethers = require("ethers");
+const { bigNumberIsValid, booleanIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Voucher
@@ -89,7 +89,7 @@ class Voucher {
    * @returns {boolean}
    */
   committedDateIsValid() {
-    return bigNumberIsValid(this.committedDate, { gt: 0, optional: true })
+    return bigNumberIsValid(this.committedDate, { gt: 0, optional: true });
   }
 
   /**
@@ -98,7 +98,7 @@ class Voucher {
    * @returns {boolean}
    */
   validUntilDateIsValid() {
-    return bigNumberIsValid(this.validUntilDate, { gt: 0, optional: true })
+    return bigNumberIsValid(this.validUntilDate, { gt: 0, optional: true });
   }
 
   /**
@@ -107,7 +107,7 @@ class Voucher {
    * @returns {boolean}
    */
   redeemedDateIsValid() {
-    return bigNumberIsValid(this.redeemedDate, { gt: 0, optional: true })
+    return bigNumberIsValid(this.redeemedDate, { gt: 0, optional: true });
   }
 
   /**

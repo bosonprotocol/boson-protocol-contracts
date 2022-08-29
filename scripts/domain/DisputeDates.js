@@ -1,7 +1,4 @@
-const ethers = require("ethers");
-const {
-  bigNumberIsValid,
-} = require("../util/validations.js");
+const { bigNumberIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: DisputeDates
@@ -97,7 +94,7 @@ class DisputeDates {
 
   /**
    * Is this DisputeDates instance's escalated field valid?
-   * If present, must be a string representation of a big number or null
+   * If present, must be a string representation of a big number
    * @returns {boolean}
    */
   escalatedIsValid() {
@@ -119,7 +116,7 @@ class DisputeDates {
    * @returns {boolean}
    */
   timeoutIsValid() {
-    return bigNumberIsValid(tihs.timeout);
+    return bigNumberIsValid(this.timeout);
   }
 
   /**

@@ -1,9 +1,4 @@
-const ethers = require("ethers");
-const {
-  bigNumberIsValid,
-  booleanIsValid,
-  addressIsValid,
-} = require("../util/validations.js");
+const { bigNumberIsValid, booleanIsValid, addressIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Agent
@@ -103,7 +98,8 @@ class Agent {
    * @returns {boolean}
    */
   feePercentageIsValid() {
-    return bigNumberIsValid(this.feePercentage) && ethers.BigNumber.from(feePercentage).lte(ethers.BigNumber.from("10000"));
+    const { feePercentage } = this;
+    return bigNumberIsValid(feePercentage, { lte: "10000" });
   }
 
   /**

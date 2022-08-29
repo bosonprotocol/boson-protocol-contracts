@@ -1,5 +1,3 @@
-const ethers = require("ethers");
-const eip55 = require("eip55");
 const { bigNumberIsValid, stringIsValid, addressIsValid } = require("../util/validations.js");
 
 /**
@@ -197,7 +195,7 @@ class DisputeResolverFeeList {
             previousDisputeResolverFees && currentDisputeResolverFees.isValid(),
           true
         );
-    } catch (e) { }
+    } catch (e) {}
     return valid;
   }
 

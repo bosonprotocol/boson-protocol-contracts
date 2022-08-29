@@ -1,4 +1,3 @@
-const ethers = require("ethers");
 const { bigNumberIsValid } = require("../util/validations.js");
 
 /**
@@ -108,7 +107,8 @@ class DisputeResolutionTerms {
    * @returns {boolean}
    */
   feeAmountIsValid() {
-    return bigNumberIsValid(this.feeAmount) && ethers.BigNumber.from(feeAmount).lte("10000");
+    const { feeAmount } = this;
+    return bigNumberIsValid(feeAmount, { lte: "10000" });
   }
 
   /**

@@ -1,6 +1,4 @@
-const ethers = require("ethers");
-const eip55 = require("eip55");
-const { addressIsValid, stringIsValid } = require("../util/validations.js");
+const { addressIsValid, stringIsValid, bigNumberIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Funds
@@ -193,7 +191,7 @@ class FundsList {
       valid =
         Array.isArray(funds) &&
         funds.reduce((previousFunds, currentFunds) => previousFunds && currentFunds.isValid(), true);
-    } catch (e) { }
+    } catch (e) {}
     return valid;
   }
 

@@ -3,12 +3,7 @@ const ethers = hre.ethers;
 const OfferFees = require("./OfferFees.js");
 const TwinReceipt = require("./TwinReceipt.js");
 const Condition = require("./Condition.js");
-const {
-  bigNumberIsValid,
-  enumIsValid,
-  booleanIsValid,
-  addressIsValid,
-} = require("../util/validations.js");
+const { bigNumberIsValid, enumIsValid, booleanIsValid, addressIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Receipt
@@ -275,7 +270,7 @@ class Receipt {
     let { offerFees } = this;
     try {
       valid = typeof offerFees == "object" && offerFees.isValid();
-    } catch (e) { }
+    } catch (e) {}
     return valid;
   }
 
@@ -316,7 +311,7 @@ class Receipt {
     let { condition } = this;
     try {
       valid = typeof condition == "object" && condition.isValid();
-    } catch (e) { }
+    } catch (e) {}
     return valid;
   }
 
@@ -401,7 +396,7 @@ class Receipt {
           });
         }
       }
-    } catch (e) { }
+    } catch (e) {}
     return valid;
   }
 

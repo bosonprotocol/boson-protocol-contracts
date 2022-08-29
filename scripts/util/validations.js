@@ -8,14 +8,18 @@ function bigNumberIsValid(bigNumber, { optional, gt, lte, empty } = {}) {
     return true;
   }
   try {
-    valid = typeof bigNumber === "string" && (empty ? "" && typeof ethers.BigNumber.from(bigNumber) === "object" : typeof ethers.BigNumber.from(bigNumber) === "object");
-    if (gt) {
+    valid =
+      typeof bigNumber === "string" &&
+      (empty
+        ? bigNumber === "" || typeof ethers.BigNumber.from(bigNumber) === "object"
+        : typeof ethers.BigNumber.from(bigNumber) === "object");
+    if (gt != undefined) {
       valid = valid && ethers.BigNumber.from(bigNumber).gt(gt);
     }
-    if (lt) {
-      valid = valid && ethers.BigNumber.from(bigNumber).lte(lt);
+    if (lte != undefined) {
+      valid = valid && ethers.BigNumber.from(bigNumber).lte(lte);
     }
-  } catch (e) { }
+  } catch (e) {}
   return valid;
 }
 
@@ -24,12 +28,8 @@ function bigNumberArrayIsValid(bigNumberArray) {
   try {
     valid =
       Array.isArray(bigNumberArray) &&
-      bigNumberArray.reduce(
-        (previousValue, currentValue) =>
-          previousValue && bigNumberIsValid(currentValue),
-        true
-      );
-  } catch (e) { }
+      bigNumberArray.reduce((previousValue, currentValue) => previousValue && bigNumberIsValid(currentValue), true);
+  } catch (e) {}
   return valid;
 }
 
@@ -37,7 +37,7 @@ function enumIsValid(enumValue) {
   let valid = false;
   try {
     valid = typeof enumValue === "number" && typeof ethers.BigNumber.from(enumValue) === "object";
-  } catch (e) { }
+  } catch (e) {}
   return valid;
 }
 
@@ -45,7 +45,7 @@ function addressIsValid(address) {
   let valid = false;
   try {
     valid = eip55.verify(eip55.encode(address));
-  } catch (e) { }
+  } catch (e) {}
   return valid;
 }
 
@@ -53,7 +53,7 @@ function booleanIsValid(boolean) {
   let valid = false;
   try {
     valid = typeof boolean === "boolean";
-  } catch (e) { }
+  } catch (e) {}
   return valid;
 }
 
@@ -61,7 +61,7 @@ function stringIsValid(string) {
   let valid = false;
   try {
     valid = typeof string === "string";
-  } catch (e) { }
+  } catch (e) {}
   return valid;
 }
 

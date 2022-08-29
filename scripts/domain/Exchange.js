@@ -1,4 +1,3 @@
-const ethers = require("ethers");
 const ExchangeState = require("./ExchangeState");
 const { bigNumberIsValid } = require("../util/validations.js");
 
@@ -133,7 +132,7 @@ class Exchange {
     let { state } = this;
     try {
       valid = ExchangeState.Types.includes(state);
-    } catch (e) { }
+    } catch (e) {}
     return valid;
   }
 

@@ -1,6 +1,5 @@
-const ethers = require("ethers");
 const AuthTokenType = require("./AuthTokenType");
-const { bigNumberIsValid, } = require("../util/validations.js");
+const { bigNumberIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: AuthToken
@@ -96,7 +95,7 @@ class AuthToken {
     let { tokenType } = this;
     try {
       valid = AuthTokenType.Types.includes(tokenType);
-    } catch (e) { }
+    } catch (e) {}
     return valid;
   }
 

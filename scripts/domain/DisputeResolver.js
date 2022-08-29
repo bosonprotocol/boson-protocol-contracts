@@ -1,5 +1,5 @@
-const ethers = require("ethers");
-const { bigNumberIsValid, stringIsValid, booleanIsValid } = require("../util/validations.js");
+const { bigNumberIsValid, stringIsValid, booleanIsValid, addressIsValid } = require("../util/validations.js");
+
 /**
  * Boson Protocol Domain Entity: DisputeResolver
  *
@@ -128,7 +128,7 @@ class DisputeResolver {
    * @returns {boolean}
    */
   operatorIsValid() {
-    addressIsValid(this.operator);
+    return addressIsValid(this.operator);
   }
 
   /**
@@ -137,7 +137,7 @@ class DisputeResolver {
    * @returns {boolean}
    */
   adminIsValid() {
-    addressIsValid(this.admin);
+    return addressIsValid(this.admin);
   }
 
   /**
@@ -146,7 +146,7 @@ class DisputeResolver {
    * @returns {boolean}
    */
   clerkIsValid() {
-    addressIsValid(this.clerk);
+    return addressIsValid(this.clerk);
   }
 
   /**
@@ -155,7 +155,7 @@ class DisputeResolver {
    * @returns {boolean}
    */
   treasuryIsValid() {
-    addressIsValid(this.treasury);
+    return addressIsValid(this.treasury);
   }
 
   /**
@@ -165,7 +165,7 @@ class DisputeResolver {
    * @returns {boolean}
    */
   metadataUriIsValid() {
-    stringIsValid(this.metadataUri);
+    return stringIsValid(this.metadataUri);
   }
 
   /**
@@ -173,7 +173,7 @@ class DisputeResolver {
    * @returns {boolean}
    */
   activeIsValid() {
-    booleanIsValid(this.active);
+    return booleanIsValid(this.active);
   }
 
   /**

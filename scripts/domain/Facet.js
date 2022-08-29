@@ -70,7 +70,7 @@ class Facet {
         functionSelectors.filter(
           (selector) => ethers.BigNumber.from(selector).gte("0") && ethers.BigNumber.from(selector).lte("4294967295") // max bytes4 value
         ).length === functionSelectors.length;
-    } catch (e) { }
+    } catch (e) {}
     return valid;
   }
 

@@ -1,4 +1,4 @@
-const ethers = require("ethers");
+const { bigNumberIsValid, bigNumberArrayIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Group
@@ -104,7 +104,7 @@ class Group {
    * @returns {boolean}
    */
   offerIdsIsValid() {
-    return bigNumberArrayIsValid(offerIds);
+    return bigNumberArrayIsValid(this.offerIds);
   }
 
   /**

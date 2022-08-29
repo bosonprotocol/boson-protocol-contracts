@@ -1,9 +1,4 @@
-const ethers = require("ethers");
-const {
-  bigNumberIsValid,
-  booleanIsValid,
-  addressIsValid,
-} = require("../util/validations.js");
+const { bigNumberIsValid, booleanIsValid, addressIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Buyer

@@ -1,5 +1,4 @@
-const ethers = require("ethers");
-const eip55 = require("eip55");
+const { bigNumberIsValid, booleanIsValid, addressIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Seller
@@ -132,12 +131,7 @@ class Seller {
    * @returns {boolean}
    */
   treasuryIsValid() {
-    let valid = false;
-    let { treasury } = this;
-    try {
-      valid = eip55.verify(eip55.encode(treasury));
-    } catch (e) { }
-    return valid;
+    return addressIsValid(this.treasury);
   }
 
   /**

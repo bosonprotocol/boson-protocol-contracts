@@ -1,8 +1,4 @@
-const ethers = require("ethers");
-const {
-  bigNumberIsValid,
-  enumIsValid,
-} = require("../util/validations.js");
+const { bigNumberIsValid, enumIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Dispute
