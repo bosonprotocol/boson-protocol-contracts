@@ -17,6 +17,7 @@ const {
   mockSeller,
   mockAuthToken,
   mockAgent,
+  accountId,
 } = require("../utils/mock");
 
 /**
@@ -153,6 +154,7 @@ describe("IBosonAccountHandler", function () {
 
       // Create a valid buyer
       buyer = mockBuyer(other1.address);
+
       expect(buyer.isValid()).is.true;
 
       // Create a valid dispute resolver
@@ -172,6 +174,11 @@ describe("IBosonAccountHandler", function () {
       // Create a valid agent, then set fields in tests directly
       agent = mockAgent(other1.address);
       expect(agent.isValid()).is.true;
+    });
+
+    afterEach(async function () {
+      // Reset the accountId iterator
+      accountId.next(true);
     });
 
     context("👉 getNextAccountId()", async function () {

@@ -13,7 +13,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
-const { mockSeller, mockDisputeResolver, mockVoucherInitValues, mockAuthToken } = require("../utils/mock");
+const { mockSeller, mockDisputeResolver, mockVoucherInitValues, mockAuthToken, accountId } = require("../utils/mock");
 
 /**
  *  Test the Boson Dispute Resolver Handler
@@ -22,7 +22,7 @@ describe("DisputeResolverHandler", function () {
   // Common vars
   let deployer, pauser, rando, operator, admin, clerk, treasury, other1, other2, other3, other4, other5, protocolAdmin;
   let protocolDiamond, accessController, accountHandler, configHandler, pauseHandler, gasLimit;
-  let seller, seller2, id2;
+  let seller, seller2;
   let emptyAuthToken;
   let disputeResolver,
     disputeResolverStruct,
@@ -37,7 +37,7 @@ describe("DisputeResolverHandler", function () {
     disputeResolverFees2,
     feeTokenAddressesToRemove;
   let sellerAllowList, returnedSellerAllowList, idsToCheck, expectedStatus, allowedSellersToAdd, allowedSellersToRemove;
-  let invalidAccountId, id, key, value, exists;
+  let invalidAccountId, key, value, exists;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let voucherInitValues;
 
@@ -181,10 +181,27 @@ describe("DisputeResolverHandler", function () {
       // The first dispute resolver id
       invalidAccountId = "666";
 
-      // Required constructor params
-      id = "1"; // argument sent to contract for createDisputeResolver will be ignored
-      // Create a valid dispute resolver, then set fields in tests directly
+      // AuthToken
+      emptyAuthToken = mockAuthToken();
+      expect(emptyAuthToken.isValid()).is.true;
 
+      // Create two additional sellers and create seller allow list
+      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+      seller2 = mockSeller(other1.address, other1.address, other1.address, other1.address);
+      let seller3 = mockSeller(other2.address, other2.address, other2.address, other2.address);
+
+      // VoucherInitValues
+      voucherInitValues = mockVoucherInitValues();
+      expect(voucherInitValues.isValid()).is.true;
+
+      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
+      await accountHandler.connect(admin).createSeller(seller2, emptyAuthToken, voucherInitValues);
+      await accountHandler.connect(admin).createSeller(seller3, emptyAuthToken, voucherInitValues);
+
+      // Make a sellerAllowList
+      sellerAllowList = ["3", "1"];
+
+      // Create a valid dispute resolver, then set fields in tests directly
       disputeResolver = mockDisputeResolver(operator.address, admin.address, clerk.address, treasury.address);
       expect(disputeResolver.isValid()).is.true;
 
@@ -199,40 +216,17 @@ describe("DisputeResolverHandler", function () {
       ];
 
       disputeResolverFeeList = new DisputeResolverFeeList(disputeResolverFees);
+    });
 
-      // AuthToken
-      emptyAuthToken = mockAuthToken();
-      expect(emptyAuthToken.isValid()).is.true;
-
-      // Create two additional sellers and create seller allow list
-      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
-      seller2 = mockSeller(other1.address, other1.address, other1.address, other1.address);
-      seller2.id = (++id).toString();
-      let seller3 = mockSeller(other2.address, other2.address, other2.address, other2.address);
-      seller3.id = (++id).toString();
-
-      // VoucherInitValues
-      voucherInitValues = mockVoucherInitValues();
-      expect(voucherInitValues.isValid()).is.true;
-
-      await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
-      await accountHandler.connect(admin).createSeller(seller2, emptyAuthToken, voucherInitValues);
-      await accountHandler.connect(admin).createSeller(seller3, emptyAuthToken, voucherInitValues);
-
-      // Make a sellerAllowList
-      sellerAllowList = ["3", "1"];
+    afterEach(async function () {
+      // Reset
+      accountId.next(true);
     });
 
     context("👉 createDisputeResolver()", async function () {
       beforeEach(async function () {
-        expectedDisputeResolver = mockDisputeResolver(
-          operator.address,
-          admin.address,
-          clerk.address,
-          treasury.address,
-          false
-        );
-        expectedDisputeResolver.id = (++id).toString();
+        expectedDisputeResolver = disputeResolver.clone();
+        expectedDisputeResolver.active = false;
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
       });
 
@@ -281,7 +275,7 @@ describe("DisputeResolverHandler", function () {
         // Get the dispute resolver data as structs
         [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
-          .getDisputeResolver(id);
+          .getDisputeResolver(disputeResolver.id);
 
         // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
@@ -305,7 +299,7 @@ describe("DisputeResolverHandler", function () {
         // check that mappings of allowed selleres were updated
         idsToCheck = ["1", "2", "3", "4"];
         expectedStatus = [true, false, true, false]; // 1 and 3 are allowed
-        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(disputeResolver.id, idsToCheck);
 
         expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
@@ -323,7 +317,7 @@ describe("DisputeResolverHandler", function () {
         // Get the dispute resolver data as structs
         [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
-          .getDisputeResolver(id);
+          .getDisputeResolver(disputeResolver.id);
 
         // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
@@ -347,7 +341,7 @@ describe("DisputeResolverHandler", function () {
         // check that mappings of allowed selleres were updated
         idsToCheck = ["1", "2", "3", "4"];
         expectedStatus = [true, true, true, false]; // ids 1,2 and 3 are sellers so the should be allowed
-        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(disputeResolver.id, idsToCheck);
 
         expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
@@ -381,9 +375,7 @@ describe("DisputeResolverHandler", function () {
         );
 
         // Create a dispute resolver 2
-        id2 = ++id;
         disputeResolver2 = mockDisputeResolver(other1.address, other2.address, other3.address, other4.address, false);
-        disputeResolver2.id = id2.toString();
         expect(disputeResolver2.isValid()).is.true;
 
         await accountHandler
@@ -395,7 +387,7 @@ describe("DisputeResolverHandler", function () {
         // Get the dispute resolver data as structs
         [, disputeResolverStruct2, disputeResolverFeeListStruct2] = await accountHandler
           .connect(rando)
-          .getDisputeResolver(id2);
+          .getDisputeResolver(disputeResolver2.id);
 
         // Parse into entity
         let returnedDisputeResolver2 = DisputeResolver.fromStruct(disputeResolverStruct2);
@@ -416,6 +408,7 @@ describe("DisputeResolverHandler", function () {
       });
 
       it("should ignore any provided id and assign the next available", async function () {
+        const id = disputeResolver.id;
         disputeResolver.id = "444";
 
         // Create a dispute resolver, testing for the event
@@ -461,7 +454,6 @@ describe("DisputeResolverHandler", function () {
 
         // Create a valid dispute resolver, then set fields in tests directly
         disputeResolver2 = mockDisputeResolver(other1.address, other2.address, other3.address, treasury.address, false);
-        disputeResolver2.id = (++id).toString();
         expect(disputeResolver2.isValid()).is.true;
         expectedDisputeResolverStruct = disputeResolver2.toStruct();
 
@@ -525,11 +517,8 @@ describe("DisputeResolverHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
 
-        it("Any address is not unique to this dispute resolver Id for the the same role", async function () {
-          id = await accountHandler.connect(rando).getNextAccountId();
-
+        it("Any address is not unique to this dispute resolver Id for the same role", async function () {
           disputeResolver2 = mockDisputeResolver(operator.address, other2.address, other3.address, other4.address);
-          disputeResolver2.id = id.toString();
           expect(disputeResolver2.isValid()).is.true;
           disputeResolver2Struct = disputeResolver2.toStruct();
 
@@ -560,11 +549,8 @@ describe("DisputeResolverHandler", function () {
         });
 
         it("Any address is not unique to this dispute resolver Id for a different role", async function () {
-          id = await accountHandler.connect(rando).getNextAccountId();
-
           //Set dispute resolver 2's admin address to dispute resolver 1's operator address
           disputeResolver2 = mockDisputeResolver(other1.address, operator.address, other3.address, other4.address);
-          disputeResolver2.id = id.toString();
           expect(disputeResolver2.isValid()).is.true;
           disputeResolver2Struct = disputeResolver2.toStruct();
 
@@ -681,9 +667,6 @@ describe("DisputeResolverHandler", function () {
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-
-        // id of the current dispute resolver and increment nextAccountId
-        disputeResolver.id = ++id;
       });
 
       it("should return true for exists if dispute resolver is found", async function () {
@@ -731,9 +714,6 @@ describe("DisputeResolverHandler", function () {
       beforeEach(async function () {
         //Create DisputeResolverFee array
         disputeResolverFees = [new DisputeResolverFee(other1.address, "MockToken1", "100")];
-
-        // id of the current dispute resolver
-        ++id;
       });
 
       it("Dispute resolver allows all sellers", async function () {
@@ -749,7 +729,7 @@ describe("DisputeResolverHandler", function () {
         expectedStatus = [true, true, true, false]; // 1,2 and 3 are sellers, 4 is not a seller
 
         // Get the statuese flag
-        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(disputeResolver.id, idsToCheck);
 
         expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
@@ -767,14 +747,14 @@ describe("DisputeResolverHandler", function () {
         expectedStatus = [true, false, true, false]; // 1 and 3 are allowed, 2 is not, 4 is not a seller
 
         // Get the statuese flag
-        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(disputeResolver.id, idsToCheck);
 
         expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
 
       it("Dispute resolved does not exist", async function () {
         // not DR id
-        id = "16";
+        const id = "16";
 
         idsToCheck = ["1", "2", "3", "4"];
         expectedStatus = [false, false, false, false]; // since DR does not exist everything is false
@@ -789,7 +769,6 @@ describe("DisputeResolverHandler", function () {
     context("👉 updateDisputeResolver()", async function () {
       beforeEach(async function () {
         // Create a dispute resolver from objects in Dispute Resolver Methods beforeEach
-        disputeResolver.id = (++id).toString();
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -980,9 +959,7 @@ describe("DisputeResolverHandler", function () {
 
       it("should update the correct dispute resolver", async function () {
         // Configure another dispute resolver
-        id2 = ++id;
         disputeResolver2 = mockDisputeResolver(other1.address, other2.address, other3.address, other4.address);
-        disputeResolver2.id = id2.toString();
         expect(disputeResolver2.isValid()).is.true;
 
         const expectedDisputeResolver2 = disputeResolver2.clone();
@@ -1201,10 +1178,7 @@ describe("DisputeResolverHandler", function () {
         });
 
         it("Any address is not unique to this dispute resolver Id for the same role", async function () {
-          id = await accountHandler.connect(rando).getNextAccountId();
-
           disputeResolver2 = mockDisputeResolver(other1.address, other2.address, other3.address, other4.address);
-          disputeResolver2.id = id.toString();
           expect(disputeResolver2.isValid()).is.true;
           disputeResolver2Struct = disputeResolver2.toStruct();
           await accountHandler
@@ -1237,12 +1211,9 @@ describe("DisputeResolverHandler", function () {
         });
 
         it("Any address is not unique to this dispute resolver Id for a different role", async function () {
-          id = await accountHandler.connect(rando).getNextAccountId();
-
           disputeResolver2 = mockDisputeResolver(other1.address, other2.address, other3.address, other4.address);
-          disputeResolver2.id = id.toString();
-
           expect(disputeResolver2.isValid()).is.true;
+
           //disputeResolver2Struct = disputeResolver2.toStruct();
           await accountHandler
             .connect(admin)
@@ -1295,7 +1266,6 @@ describe("DisputeResolverHandler", function () {
 
     context("👉 addFeesToDisputeResolver()", async function () {
       beforeEach(async function () {
-        disputeResolver.id = (++id).toString();
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -1452,7 +1422,6 @@ describe("DisputeResolverHandler", function () {
 
     context("👉 removeFeesFromDisputeResolver()", async function () {
       beforeEach(async function () {
-        disputeResolver.id = (++id).toString();
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -1692,24 +1661,21 @@ describe("DisputeResolverHandler", function () {
 
     context("👉 addSellersToAllowList()", async function () {
       beforeEach(async function () {
-        // make another seller with id = "4"
+        await accountHandler
+          .connect(rando)
+          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+        // make another seller with id = "5"
         let seller4 = mockSeller(other3.address, other3.address, other3.address, other3.address);
-        seller4.id = (++id).toString();
+
+        await accountHandler.connect(admin).createSeller(seller4, emptyAuthToken, voucherInitValues);
 
         // AuthToken
         emptyAuthToken = mockAuthToken();
         expect(emptyAuthToken.isValid()).is.true;
 
-        await accountHandler.connect(admin).createSeller(seller4, emptyAuthToken, voucherInitValues);
-
-        sellerAllowList = ["1", "3"];
-        allowedSellersToAdd = ["2", "4"];
-
-        disputeResolver.id = (++id).toString();
-
-        await accountHandler
-          .connect(rando)
-          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+        sellerAllowList = ["3", "1"];
+        allowedSellersToAdd = ["2", "5"];
 
         // How that dispute resolver looks as a returned struct
         disputeResolverStruct = disputeResolver.toStruct();
@@ -1735,7 +1701,7 @@ describe("DisputeResolverHandler", function () {
         // Get the dispute resolver data as structs
         [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
-          .getDisputeResolver(id);
+          .getDisputeResolver(disputeResolver.id);
 
         // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
@@ -1757,9 +1723,9 @@ describe("DisputeResolverHandler", function () {
         expect(returnedSellerAllowList.toString()).to.eql(expectedSellerAllowList.toString(), "Allowed list wrong");
 
         // check that mappings of allowed selleres were updated
-        idsToCheck = ["1", "2", "3", "4"];
+        idsToCheck = ["1", "2", "3", "5"];
         expectedStatus = [true, true, true, true]; // 1 and 3 are allowed
-        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(disputeResolver.id, idsToCheck);
 
         expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
@@ -1830,7 +1796,7 @@ describe("DisputeResolverHandler", function () {
 
         it("Seller id is already approved", async function () {
           // New, but duplicated
-          allowedSellersToAdd = ["2", "4", "2"];
+          allowedSellersToAdd = ["2", "5", "2"];
 
           // Attempt to add sellers to the allow listr, expecting revert
           await expect(
@@ -1850,23 +1816,8 @@ describe("DisputeResolverHandler", function () {
 
     context("👉 removeSellersFromAllowList()", async function () {
       beforeEach(async function () {
-        // make another seller with id = "4"
-        const seller4 = mockSeller(other3.address, other3.address, other3.address, other3.address);
-        (seller4.id = (++id).toString()),
-          // AuthToken
-          (emptyAuthToken = mockAuthToken());
-        expect(emptyAuthToken.isValid()).is.true;
-
-        await accountHandler.connect(admin).createSeller(seller4, emptyAuthToken, voucherInitValues);
-
-        sellerAllowList = ["1", "3", "2", "4"];
+        sellerAllowList = ["1", "3", "2"];
         allowedSellersToRemove = ["1", "2"];
-
-        disputeResolver.id = (++id).toString();
-
-        await accountHandler
-          .connect(rando)
-          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
 
         // How that dispute resolver looks as a returned struct
         disputeResolverStruct = disputeResolver.toStruct();
@@ -1874,6 +1825,27 @@ describe("DisputeResolverHandler", function () {
         expectedDisputeResolver = disputeResolver.clone();
         expectedDisputeResolver.active = false;
         expectedDisputeResolverStruct = expectedDisputeResolver.toStruct();
+
+        await accountHandler
+          .connect(rando)
+          .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+
+        // make another seller with id = "5"
+        const seller4 = mockSeller(other3.address, other3.address, other3.address, other3.address);
+
+        // AuthToken
+        emptyAuthToken = mockAuthToken();
+        expect(emptyAuthToken.isValid()).is.true;
+
+        await accountHandler.connect(admin).createSeller(seller4, emptyAuthToken, voucherInitValues);
+
+        sellerAllowList.push("5");
+        await accountHandler.connect(admin).addSellersToAllowList(disputeResolver.id, ["5"]);
+      });
+
+      afterEach(async function () {
+        // Reset
+        accountId.next(true);
       });
 
       it("should emit a AllowedSellersRemoved event", async function () {
@@ -1891,7 +1863,7 @@ describe("DisputeResolverHandler", function () {
         // Get the dispute resolver data as structs
         [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
-          .getDisputeResolver(id);
+          .getDisputeResolver(disputeResolver.id);
 
         // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
@@ -1910,13 +1882,13 @@ describe("DisputeResolverHandler", function () {
           "Dispute Resolver Fee List is incorrect"
         );
 
-        const expectedSellerAllowList = ["4", "3"];
+        const expectedSellerAllowList = ["5", "3"];
         expect(returnedSellerAllowList.toString()).to.eql(expectedSellerAllowList.toString(), "Allowed list wrong");
 
         // check that mappings of allowed selleres were updated
-        idsToCheck = ["1", "2", "3", "4"];
-        expectedStatus = [false, false, true, true]; // 3 and 4 are allowed
-        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(id, idsToCheck);
+        idsToCheck = ["1", "2", "3", "5"];
+        expectedStatus = [false, false, true, true]; // 3 and 5 are allowed
+        const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(disputeResolver.id, idsToCheck);
 
         expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
@@ -1930,7 +1902,7 @@ describe("DisputeResolverHandler", function () {
         // Get the dispute resolver data as structs
         [, disputeResolverStruct, disputeResolverFeeListStruct, returnedSellerAllowList] = await accountHandler
           .connect(rando)
-          .getDisputeResolver(id);
+          .getDisputeResolver(disputeResolver.id);
 
         // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
@@ -1954,14 +1926,12 @@ describe("DisputeResolverHandler", function () {
 
         // make another seller with id = "6"
         const seller6 = mockSeller(other4.address, other4.address, other4.address, other4.address);
-        (seller6.id = (++id).toString()),
-          await accountHandler.connect(admin).createSeller(seller6, emptyAuthToken, voucherInitValues);
+        await accountHandler.connect(admin).createSeller(seller6, emptyAuthToken, voucherInitValues);
 
         // check that mappings of allowed selleres were updated
         idsToCheck = ["1", "2", "3", "4", "5", "6"];
-        expectedStatus = [true, true, true, true, false, true]; // everything was removed, so every seller is allowed. 5 is not a seller
+        expectedStatus = [true, true, true, false, true, true]; // everything was removed, so every seller is allowed. 5 is not a seller
         const areSellersAllowed = await accountHandler.connect(rando).areSellersAllowed(disputeResolver.id, idsToCheck);
-
         expect(areSellersAllowed).to.eql(expectedStatus, "Wrong statuses reported");
       });
 
@@ -2022,8 +1992,7 @@ describe("DisputeResolverHandler", function () {
         it("Seller id is not approved", async function () {
           // make another seller with id = "6"
           const seller6 = mockSeller(other4.address, other4.address, other4.address, other4.address);
-          (seller6.id = (++id).toString()),
-            await accountHandler.connect(admin).createSeller(seller6, emptyAuthToken, voucherInitValues);
+          await accountHandler.connect(admin).createSeller(seller6, emptyAuthToken, voucherInitValues);
 
           // seller exists, it's not approved
           allowedSellersToRemove = ["2", "4", "6"];
@@ -2046,7 +2015,6 @@ describe("DisputeResolverHandler", function () {
 
     context("👉 activateDisputeResolver()", async function () {
       beforeEach(async function () {
-        disputeResolver.id = (++id).toString();
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -2067,7 +2035,7 @@ describe("DisputeResolverHandler", function () {
 
         [, disputeResolverStruct, disputeResolverFeeListStruct] = await accountHandler
           .connect(rando)
-          .getDisputeResolver(id);
+          .getDisputeResolver(disputeResolver.id);
 
         // Parse into entity
         let returnedDisputeResolver = DisputeResolver.fromStruct(disputeResolverStruct);
