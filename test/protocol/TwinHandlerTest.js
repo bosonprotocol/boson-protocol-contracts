@@ -15,7 +15,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { mockSeller, mockTwin, mockAuthToken, mockVoucherInitValues } = require("../utils/mock");
+const { mockSeller, mockTwin, mockAuthToken, mockVoucherInitValues, accountId } = require("../utils/mock");
 const { oneMonth } = require("../utils/constants");
 
 /**
@@ -45,8 +45,7 @@ describe("IBosonTwinHandler", function () {
     invalidTwinId,
     support,
     twinInstance,
-    id,
-    sellerId;
+    id;
   let bundleId, offerIds, twinIds, bundle;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let voucherInitValues;
@@ -171,7 +170,7 @@ describe("IBosonTwinHandler", function () {
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
       // The first twin id
-      nextTwinId = sellerId = "1";
+      nextTwinId = "1";
       invalidTwinId = "222";
 
       // Create a valid twin, then set fields in tests directly
@@ -180,6 +179,11 @@ describe("IBosonTwinHandler", function () {
 
       // How that twin looks as a returned struct
       twinStruct = twin.toStruct();
+    });
+
+    afterEach(async function () {
+      // Reset the accountId iterator
+      accountId.next(true);
     });
 
     context("👉 createTwin()", async function () {
@@ -703,7 +707,7 @@ describe("IBosonTwinHandler", function () {
           twinIds = [twin.id];
 
           // Create a new bundle
-          bundle = new Bundle(bundleId, sellerId, offerIds, twinIds);
+          bundle = new Bundle(bundleId, seller.id, offerIds, twinIds);
           await bundleHandler.connect(operator).createBundle(bundle);
 
           // Attempt to Remove a twin, expecting revert
@@ -773,6 +777,11 @@ describe("IBosonTwinHandler", function () {
 
         // id of the current twin and increment nextTwinId
         id = nextTwinId++;
+      });
+
+      afterEach(async function () {
+        // Reset the accountId iterator
+        accountId.next(true);
       });
 
       it("should return the next twin id", async function () {
