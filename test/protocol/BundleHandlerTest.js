@@ -22,6 +22,7 @@ const {
   mockSeller,
   mockVoucherInitValues,
   mockAuthToken,
+  accountId,
 } = require("../utils/mock");
 const { oneMonth } = require("../utils/constants");
 
@@ -49,7 +50,7 @@ describe("IBosonBundleHandler", function () {
     value,
     invalidTwinId;
   let offerHandler, bundleHandlerFacet_Factory;
-  let seller, nextAccountId;
+  let seller;
   let bundleStruct;
   let bundle, bundleId, offerIds, twinId, twinIds, nextBundleId, invalidBundleId, bundleInstance;
   let offer, exists, expected;
@@ -193,7 +194,6 @@ describe("IBosonBundleHandler", function () {
     beforeEach(async function () {
       // create a seller
       // Required constructor params
-      nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller, then set fields in tests directly
@@ -210,8 +210,6 @@ describe("IBosonBundleHandler", function () {
 
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-      ++nextAccountId;
-
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(
         operatorDR.address,
@@ -220,7 +218,6 @@ describe("IBosonBundleHandler", function () {
         treasuryDR.address,
         false
       );
-      disputeResolver.id = nextAccountId.toString();
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
@@ -269,6 +266,11 @@ describe("IBosonBundleHandler", function () {
 
       // initialize bundleHandler
       bundleHandlerFacet_Factory = await ethers.getContractFactory("BundleHandlerFacet");
+    });
+
+    afterEach(async function () {
+      // Reset the accountId iterator
+      accountId.next(true);
     });
 
     context("👉 createBundle()", async function () {

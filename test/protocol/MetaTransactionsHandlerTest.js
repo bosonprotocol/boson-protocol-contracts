@@ -4,12 +4,10 @@ const { expect, assert } = require("chai");
 const { gasLimit } = require("../../environments");
 
 const Buyer = require("../../scripts/domain/Buyer");
-const Exchange = require("../../scripts/domain/Exchange");
 const ExchangeState = require("../../scripts/domain/ExchangeState");
 const Role = require("../../scripts/domain/Role");
 const DisputeState = require("../../scripts/domain/DisputeState");
 const { Funds, FundsList } = require("../../scripts/domain/Funds");
-const Voucher = require("../../scripts/domain/Voucher");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
@@ -27,6 +25,8 @@ const {
   mockVoucherInitValues,
   mockSeller,
   mockAuthToken,
+  accountId,
+  mockExchange,
 } = require("../utils/mock");
 const { oneMonth } = require("../utils/constants");
 /**
@@ -50,7 +50,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     support,
     result;
   let metaTransactionsHandler, nonce, functionSignature;
-  let seller, offerId, id, buyerId, nextAccountId;
+  let seller, offerId, buyerId;
   let validOfferDetails,
     offerType,
     metaTransactionType,
@@ -63,9 +63,8 @@ describe("IBosonMetaTransactionsHandler", function () {
   let sellerDeposit, price;
   let voucherRedeemableFrom;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
-  let voucher, committedDate, validUntilDate, redeemedDate, expired;
-  let exchange, finalizedDate, state;
-  let disputeResolver, disputeResolverFees, disputeResolverId;
+  let exchange;
+  let disputeResolver, disputeResolverFees;
   let twin, success;
   let exchangeId,
     mockToken,
@@ -247,7 +246,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         assert.equal(result, expectedResult, "Nonce is used");
 
         // Create a valid seller for meta transaction
-        id = "1";
+        ("1");
         seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
         expect(seller.isValid()).is.true;
 
@@ -336,7 +335,6 @@ describe("IBosonMetaTransactionsHandler", function () {
         ];
 
         // Create a valid seller for meta transaction
-        id = "1";
         seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
         expect(seller.isValid()).is.true;
 
@@ -355,6 +353,11 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Prepare the message
         message = {};
         message.nonce = parseInt(nonce);
+      });
+
+      afterEach(async function () {
+        // Reset the accountId iterator
+        accountId.next(true);
       });
 
       it("Should emit MetaTransactionExecuted event and update state", async () => {
@@ -714,7 +717,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           await maliciousToken.setProtocolAddress(protocolDiamond.address);
 
           // Initial ids for all the things
-          id = exchangeId = nextAccountId = "1";
+          exchangeId = "1";
           buyerId = "3"; // created after a seller and a dispute resolver
 
           // Create a valid seller
@@ -740,10 +743,10 @@ describe("IBosonMetaTransactionsHandler", function () {
           await accountHandler
             .connect(rando)
             .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-          await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+          await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
           const { offer, ...mo } = await mockOffer();
-          ({ offerDates, offerDurations, disputeResolverId } = mo);
+          ({ offerDates, offerDurations } = mo);
           offerToken = offer;
           offerToken.exchangeToken = maliciousToken.address;
 
@@ -758,7 +761,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           // Create the offer
           await offerHandler
             .connect(operator)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId);
+            .createOffer(offerToken, offerDates, offerDurations, disputeResolver.id, agentId);
 
           // top up seller's and buyer's account
           await maliciousToken.mint(operator.address, sellerDeposit);
@@ -927,7 +930,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = offerId = nextAccountId = "1";
+        offerId = "1";
 
         // Create a valid seller
         seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
@@ -963,10 +966,10 @@ describe("IBosonMetaTransactionsHandler", function () {
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-        await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
         // Valid offer domains
-        ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+        ({ offer, offerDates, offerDurations } = await mockOffer());
         offer.exchangeToken = mockToken.address;
 
         // Check if domains are valid
@@ -991,7 +994,9 @@ describe("IBosonMetaTransactionsHandler", function () {
         await fundsHandler.connect(operator).depositFunds(seller.id, mockToken.address, sellerDeposit);
 
         // Create the offer
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+        await offerHandler
+          .connect(operator)
+          .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
 
         // Set the offer Type
         offerType = [
@@ -1031,6 +1036,11 @@ describe("IBosonMetaTransactionsHandler", function () {
         await fundsHandler
           .connect(rando)
           .depositFunds(seller.id, ethers.constants.AddressZero, sellerDeposit, { value: sellerDeposit });
+      });
+
+      afterEach(async function () {
+        // Reset the accountId iterator
+        accountId.next(true);
       });
 
       it("Should emit MetaTransactionExecuted event and update state", async () => {
@@ -1199,7 +1209,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = offerId = nextAccountId = "1";
+        offerId = "1";
         buyerId = "3"; // created after seller and dispute resolver
 
         // Create a valid seller
@@ -1235,30 +1245,23 @@ describe("IBosonMetaTransactionsHandler", function () {
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-        await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
         // Create the offer
-        ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+        ({ offer, offerDates, offerDurations } = await mockOffer());
         expect(offer.isValid()).is.true;
         expect(offerDates.isValid()).is.true;
         expect(offerDurations.isValid()).is.true;
-        await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+        await offerHandler
+          .connect(operator)
+          .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
 
         sellerDeposit = offer.sellerDeposit;
         price = offer.price;
         voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
 
-        // Required voucher constructor params
-        committedDate = "0";
-        validUntilDate = "0";
-        redeemedDate = "0";
-        expired = false;
-        voucher = new Voucher(committedDate, validUntilDate, redeemedDate, expired);
-
         // Required exchange constructor params
-        finalizedDate = "0";
-        state = ExchangeState.Committed;
-        exchange = new Exchange(id, offerId, buyerId, finalizedDate, voucher, state);
+        exchange = mockExchange({ buyerId, finalizedDate: "0" });
 
         // Set the exchange Type
         exchangeType = [{ name: "exchangeId", type: "uint256" }];
@@ -1294,6 +1297,11 @@ describe("IBosonMetaTransactionsHandler", function () {
 
         // Commit to offer
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+      });
+
+      afterEach(async function () {
+        // Reset the accountId iterator
+        accountId.next(true);
       });
 
       context("👉 ExchangeHandlerFacet 👉 cancelVoucher()", async function () {
@@ -1341,12 +1349,9 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
 
         it("does not modify revert reasons", async function () {
-          // An invalid exchange id
-          id = "666";
-
           // prepare validExchangeDetails
           validExchangeDetails = {
-            exchangeId: id,
+            exchangeId: "666",
           };
 
           // Prepare the message
@@ -1500,12 +1505,9 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
 
         it("does not modify revert reasons", async function () {
-          // An invalid exchange id
-          id = "666";
-
           // prepare validExchangeDetails
           validExchangeDetails = {
-            exchangeId: id,
+            exchangeId: "666",
           };
 
           // Prepare the message
@@ -1668,12 +1670,9 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
 
         it("does not modify revert reasons", async function () {
-          // An invalid exchange id
-          id = "666";
-
           // prepare validExchangeDetails
           validExchangeDetails = {
-            exchangeId: id,
+            exchangeId: "666",
           };
 
           // Prepare the message
@@ -1838,12 +1837,9 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
 
         it("does not modify revert reasons", async function () {
-          // An invalid exchange id
-          id = "666";
-
           // prepare validExchangeDetails
           validExchangeDetails = {
-            exchangeId: id,
+            exchangeId: "666",
           };
 
           // Prepare the message
@@ -2028,12 +2024,9 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
 
         it("does not modify revert reasons", async function () {
-          // An invalid exchange id
-          id = "666";
-
           // prepare validExchangeDetails
           validExchangeDetails = {
-            exchangeId: id,
+            exchangeId: "666",
           };
 
           // Prepare the message
@@ -2198,12 +2191,9 @@ describe("IBosonMetaTransactionsHandler", function () {
         });
 
         it("does not modify revert reasons", async function () {
-          // An invalid exchange id
-          id = "666";
-
           // prepare validExchangeDetails
           validExchangeDetails = {
-            exchangeId: id,
+            exchangeId: "666",
           };
 
           // Prepare the message
@@ -2560,7 +2550,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = offerId = nextAccountId = "1";
+        offerId = "1";
 
         // Create a valid seller
         seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
@@ -2596,10 +2586,10 @@ describe("IBosonMetaTransactionsHandler", function () {
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-        await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
         // Valid offer domains
-        ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+        ({ offer, offerDates, offerDurations } = await mockOffer());
         offer.exchangeToken = mockToken.address;
 
         // Check if domains are valid
@@ -2628,7 +2618,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           offer,
           offerDates,
           offerDurations,
-          disputeResolverId,
+          disputeResolver.id,
           agentId,
         ]);
 
@@ -2653,6 +2643,11 @@ describe("IBosonMetaTransactionsHandler", function () {
         message.functionName =
           "createOffer((uint256,uint256,uint256,uint256,uint256,uint256,address,string,string,bool),(uint256,uint256,uint256,uint256),(uint256,uint256,uint256),uint256,uint256)";
         message.functionSignature = functionSignature;
+      });
+
+      afterEach(async function () {
+        // Reset the accountId iterator
+        accountId.next(true);
       });
 
       it("Should emit MetaTransactionExecuted event and update state", async () => {
@@ -2696,7 +2691,7 @@ describe("IBosonMetaTransactionsHandler", function () {
           offer,
           offerDates,
           offerDurations,
-          disputeResolverId,
+          disputeResolver.id,
           agentId,
         ]);
 
@@ -2797,7 +2792,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         nonce = parseInt(ethers.utils.randomBytes(8));
 
         // Initial ids for all the things
-        id = exchangeId = nextAccountId = "1";
+        exchangeId = "1";
         buyerId = "3"; // created after a seller and a dispute resolver
 
         // Create a valid seller
@@ -2836,10 +2831,10 @@ describe("IBosonMetaTransactionsHandler", function () {
         await accountHandler
           .connect(rando)
           .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-        await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+        await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
         const { offer, ...mo } = await mockOffer();
-        ({ offerDates, offerDurations, disputeResolverId } = mo);
+        ({ offerDates, offerDurations } = mo);
         offerNative = offer;
         offerToken = offerNative.clone();
         offerToken.id = "2";
@@ -2857,10 +2852,10 @@ describe("IBosonMetaTransactionsHandler", function () {
         await Promise.all([
           offerHandler
             .connect(operator)
-            .createOffer(offerNative, offerDates, offerDurations, disputeResolverId, agentId),
+            .createOffer(offerNative, offerDates, offerDurations, disputeResolver.id, agentId),
           offerHandler
             .connect(operator)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolverId, agentId),
+            .createOffer(offerToken, offerDates, offerDurations, disputeResolver.id, agentId),
         ]);
 
         // top up seller's and buyer's account
@@ -2926,6 +2921,11 @@ describe("IBosonMetaTransactionsHandler", function () {
           MetaTxFund: metaTxFundType,
           MetaTxFundDetails: fundType,
         };
+      });
+
+      afterEach(async function () {
+        // Reset the accountId iterator
+        accountId.next(true);
       });
 
       context("Should emit MetaTransactionExecuted event and update state", async () => {
