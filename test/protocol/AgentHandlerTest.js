@@ -11,7 +11,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { oneMonth } = require("../utils/constants");
-const { mockAgent } = require("../utils/mock");
+const { mockAgent, accountId } = require("../utils/mock");
 
 /**
  *  Test the Boson Agent Handler
@@ -114,6 +114,11 @@ describe("AgentHandler", function () {
 
       // How that agent looks as a returned struct
       agentStruct = agent.toStruct();
+    });
+
+    afterEach(async function () {
+      // Reset the accountId iterator
+      accountId.next(true);
     });
 
     context("👉 createAgent()", async function () {

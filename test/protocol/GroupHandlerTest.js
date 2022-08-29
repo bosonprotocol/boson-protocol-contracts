@@ -25,6 +25,7 @@ const {
   mockAuthToken,
   mockVoucherInitValues,
   mockCondition,
+  accountId,
 } = require("../utils/mock");
 
 /**
@@ -38,11 +39,10 @@ describe("IBosonGroupHandler", function () {
   let bosonToken, key, value;
   let offer, support, expected, exists;
   let seller;
-  let id, sellerId, nextAccountId;
   let offerDates;
   let offerDurations;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
-  let group, nextGroupId, invalidGroupId;
+  let group, groupId;
   let offerIds, condition;
   let groupHandlerFacet_Factory;
   let groupStruct, conditionStruct;
@@ -153,7 +153,7 @@ describe("IBosonGroupHandler", function () {
     beforeEach(async function () {
       // create a seller
       // Required constructor params
-      id = nextAccountId = "1"; // argument sent to contract for createSeller will be ignored
+      groupId = "1"; // argument sent to contract for createSeller will be ignored
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller, then set fields in tests directly
@@ -188,11 +188,10 @@ describe("IBosonGroupHandler", function () {
 
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+      await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // The first group id
-      nextGroupId = "1";
-      invalidGroupId = "666";
+      groupId = "1";
 
       // create 5 offers
       for (let i = 0; i < 5; i++) {
@@ -218,8 +217,6 @@ describe("IBosonGroupHandler", function () {
       }
 
       // Required constructor params for Group
-      id = nextGroupId;
-      sellerId = "1";
       offerIds = ["2", "3", "5"];
 
       condition = mockCondition({
@@ -229,7 +226,7 @@ describe("IBosonGroupHandler", function () {
       });
       expect(condition.isValid()).to.be.true;
 
-      group = new Group(nextGroupId, sellerId, offerIds);
+      group = new Group(groupId, seller.id, offerIds);
 
       expect(group.isValid()).is.true;
 
@@ -238,6 +235,11 @@ describe("IBosonGroupHandler", function () {
 
       // initialize groupHandler
       groupHandlerFacet_Factory = await ethers.getContractFactory("GroupHandlerFacet");
+    });
+
+    afterEach(async function () {
+      // Reset the accountId iterator
+      accountId.next(true);
     });
 
     context("👉 createGroup()", async function () {
@@ -263,7 +265,7 @@ describe("IBosonGroupHandler", function () {
         await groupHandler.connect(operator).createGroup(group, condition);
 
         // Get the group as a struct
-        [, groupStruct] = await groupHandler.connect(rando).getGroup(nextGroupId);
+        [, groupStruct] = await groupHandler.connect(rando).getGroup(groupId);
 
         // Parse into entity
         const returnedGroup = Group.fromStruct(groupStruct);
@@ -287,7 +289,7 @@ describe("IBosonGroupHandler", function () {
         // Validate the instance
         expect(groupInstance.isValid()).to.be.true;
 
-        assert.equal(event.groupId.toString(), nextGroupId, "Group Id is incorrect");
+        assert.equal(event.groupId.toString(), groupId, "Group Id is incorrect");
         assert.equal(event.sellerId.toString(), group.sellerId, "Seller Id is incorrect");
         assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(groupInstance.toStruct().toString(), groupStruct.toString(), "Group struct is incorrect");
@@ -297,7 +299,7 @@ describe("IBosonGroupHandler", function () {
         expect(exists).to.be.false;
 
         // next group id should exist
-        [exists] = await groupHandler.connect(rando).getGroup(nextGroupId);
+        [exists] = await groupHandler.connect(rando).getGroup(groupId);
         expect(exists).to.be.true;
       });
 
@@ -309,7 +311,7 @@ describe("IBosonGroupHandler", function () {
 
         // group should have no offers
         let returnedGroup;
-        [, returnedGroup] = await groupHandler.connect(rando).getGroup(nextGroupId);
+        [, returnedGroup] = await groupHandler.connect(rando).getGroup(groupId);
         assert.equal(returnedGroup.offerIds, group.offerIds.toString(), "Offer ids should be empty");
       });
 
@@ -327,8 +329,8 @@ describe("IBosonGroupHandler", function () {
         // Validate the instance
         expect(groupInstance.isValid()).to.be.true;
 
-        assert.equal(event.groupId.toString(), nextGroupId, "Group Id is incorrect");
-        assert.equal(event.sellerId.toString(), sellerId, "Seller Id is incorrect");
+        assert.equal(event.groupId.toString(), groupId, "Group Id is incorrect");
+        assert.equal(event.sellerId.toString(), seller.id, "Seller Id is incorrect");
         assert.equal(event.executedBy.toString(), operator.address, "Executed by is incorrect");
         assert.equal(groupInstance.toStruct().toString(), groupStruct.toString(), "Group struct is incorrect");
       });
@@ -876,8 +878,8 @@ describe("IBosonGroupHandler", function () {
         // Create a group
         await groupHandler.connect(operator).createGroup(group, condition);
 
-        // id of the current group and increment nextGroupId
-        id = nextGroupId++;
+        // id of the current group and increment groupId
+        groupId++;
 
         groupStruct = group.toStruct();
       });
@@ -1001,14 +1003,11 @@ describe("IBosonGroupHandler", function () {
       beforeEach(async function () {
         // Create a group
         await groupHandler.connect(operator).createGroup(group, condition);
-
-        // id of the current group and increment nextGroupId
-        id = nextGroupId++;
       });
 
       it("should return true for exists if group is found", async function () {
         // Get the exists flag
-        [exists] = await groupHandler.connect(rando).getGroup(id);
+        [exists] = await groupHandler.connect(rando).getGroup(groupId);
 
         // Validate
         expect(exists).to.be.true;
@@ -1016,7 +1015,7 @@ describe("IBosonGroupHandler", function () {
 
       it("should return false for exists if group is not found", async function () {
         // Get the exists flag
-        [exists] = await groupHandler.connect(rando).getGroup(invalidGroupId);
+        [exists] = await groupHandler.connect(rando).getGroup("666");
 
         // Validate
         expect(exists).to.be.false;
@@ -1024,7 +1023,7 @@ describe("IBosonGroupHandler", function () {
 
       it("should return the details of the group as a struct if found", async function () {
         // Get the group as a struct
-        [, groupStruct] = await groupHandler.connect(rando).getGroup(id);
+        [, groupStruct] = await groupHandler.connect(rando).getGroup(groupId);
 
         // Parse into entity
         const returnedGroup = Group.fromStruct(groupStruct);
@@ -1040,7 +1039,7 @@ describe("IBosonGroupHandler", function () {
 
       it("should return the details of the condition as a struct if found", async function () {
         // Get the group as a struct
-        [, , conditionStruct] = await groupHandler.connect(rando).getGroup(id);
+        [, , conditionStruct] = await groupHandler.connect(rando).getGroup(groupId);
 
         // Parse into entity
         const returnedCondition = Condition.fromStruct(conditionStruct);
@@ -1060,19 +1059,19 @@ describe("IBosonGroupHandler", function () {
         // Create a group
         await groupHandler.connect(operator).createGroup(group, condition);
 
-        // id of the current group and increment nextGroupId
-        id = nextGroupId++;
+        // id of the current group and increment groupId
+        groupId++;
       });
 
       it("should return the next group id", async function () {
         // What we expect the next group id to be
-        expected = nextGroupId;
+        expected = groupId;
 
         // Get the next group id
-        nextGroupId = await groupHandler.connect(rando).getNextGroupId();
+        groupId = await groupHandler.connect(rando).getNextGroupId();
 
         // Verify expectation
-        expect(nextGroupId.toString() == expected).to.be.true;
+        expect(groupId.toString() == expected).to.be.true;
       });
 
       it("should be incremented after a group is created", async function () {
@@ -1081,30 +1080,30 @@ describe("IBosonGroupHandler", function () {
         await groupHandler.connect(operator).createGroup(group, condition);
 
         // What we expect the next group id to be
-        expected = ++nextGroupId;
+        expected = ++groupId;
 
         // Get the next group id
-        nextGroupId = await groupHandler.connect(rando).getNextGroupId();
+        groupId = await groupHandler.connect(rando).getNextGroupId();
 
         // Verify expectation
-        expect(nextGroupId.toString() == expected).to.be.true;
+        expect(groupId.toString() == expected).to.be.true;
       });
 
       it("should not be incremented when only getNextGroupId is called", async function () {
         // What we expect the next group id to be
-        expected = nextGroupId;
+        expected = groupId;
 
         // Get the next group id
-        nextGroupId = await groupHandler.connect(rando).getNextGroupId();
+        groupId = await groupHandler.connect(rando).getNextGroupId();
 
         // Verify expectation
-        expect(nextGroupId.toString() == expected).to.be.true;
+        expect(groupId.toString() == expected).to.be.true;
 
         // Call again
-        nextGroupId = await groupHandler.connect(rando).getNextGroupId();
+        groupId = await groupHandler.connect(rando).getNextGroupId();
 
         // Verify expectation
-        expect(nextGroupId.toString() == expected).to.be.true;
+        expect(groupId.toString() == expected).to.be.true;
       });
     });
   });
