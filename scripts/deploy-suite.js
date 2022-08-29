@@ -57,6 +57,7 @@ function getConfig() {
   const TOKEN = {
     mainnet: "0xC477D038d5420C6A9e0b031712f61c5120090de9",
     hardhat: ethers.constants.AddressZero,
+    localhost: ethers.constants.AddressZero,
     test: "0x520ce45DF6d14334257BFdD360a5C22B06E309c7",
     mumbai: ethers.constants.AddressZero,
   };
@@ -65,6 +66,7 @@ function getConfig() {
   const TREASURY = {
     mainnet: "0x4a25E18076DDcFd646ED14ABC07286c2A4c1256A",
     hardhat: ethers.constants.AddressZero,
+    localhost: ethers.constants.AddressZero,
     test: ethers.constants.AddressZero,
     mumbai: ethers.constants.AddressZero,
   };
@@ -73,6 +75,7 @@ function getConfig() {
   const BEACON = {
     mainnet: ethers.constants.AddressZero,
     hardhat: ethers.constants.AddressZero,
+    localhost: ethers.constants.AddressZero,
     test: ethers.constants.AddressZero,
     mumbai: ethers.constants.AddressZero,
   };
@@ -81,6 +84,7 @@ function getConfig() {
   const BEACON_PROXY = {
     mainnet: ethers.constants.AddressZero,
     hardhat: ethers.constants.AddressZero,
+    localhost: ethers.constants.AddressZero,
     test: ethers.constants.AddressZero,
     mumbai: ethers.constants.AddressZero,
   };
@@ -124,6 +128,7 @@ function getAuthTokenContracts() {
   const LENS = {
     mainnet: "0xDb46d1Dc155634FbC732f92E853b10B288AD5a1d",
     hardhat: "0x60Ae865ee4C725cd04353b5AAb364553f56ceF82",
+    localhost: "0x478c6B18c1694AF49D5814238183EfBc62211834",
     test: "0x478c6B18c1694AF49D5814238183EfBc62211834", //actual deployed value
     mumbai: "0x60Ae865ee4C725cd04353b5AAb364553f56ceF82",
   };
@@ -132,6 +137,7 @@ function getAuthTokenContracts() {
   const ENS = {
     mainnet: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
     hardhat: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
+    localhost: "0x13E03B861B96d2fC9553D4c52ba1a914f73f50a4",
     test: "0x13E03B861B96d2fC9553D4c52ba1a914f73f50a4", //actual deployed value
     mumbai: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
   };
@@ -276,12 +282,12 @@ async function main() {
   await writeContracts(contracts);
 
   //Verify on test node if test env
-  if (hre.network.name === "test") {
+  if (hre.network.name === "test" || hre.network.name === "localhost") {
     await verifyOnTestEnv(contracts);
   }
 
   // Bail now if deploying locally
-  if (hre.network.name === "hardhat" || hre.network.name === "test") process.exit();
+  if (hre.network.name === "hardhat" || hre.network.name === "test" || hre.network.name === "localhost") process.exit();
 
   // Wait a minute after deployment completes and then verify contracts on block exporer
   console.log("⏲ Pause one minute, allowing deployments to propagate before verifying..");
