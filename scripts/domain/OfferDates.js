@@ -91,12 +91,7 @@ class OfferDates {
    * @returns {boolean}
    */
   validFromIsValid() {
-    let valid = false;
-    let { validFrom } = this;
-    try {
-      valid = typeof validFrom === "string" && typeof ethers.BigNumber.from(validFrom) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.validFrom);
   }
 
   /**
@@ -106,12 +101,7 @@ class OfferDates {
    * @returns {boolean}
    */
   validUntilIsValid() {
-    let valid = false;
-    let { validUntil } = this;
-    try {
-      valid = typeof validUntil === "string" && typeof ethers.BigNumber.from(validUntil) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.validUntil);
   }
 
   /**
@@ -121,13 +111,7 @@ class OfferDates {
    * @returns {boolean}
    */
   voucherRedeemableFromIsValid() {
-    let valid = false;
-    let { voucherRedeemableFrom } = this;
-    try {
-      valid =
-        typeof voucherRedeemableFrom === "string" && typeof ethers.BigNumber.from(voucherRedeemableFrom) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.voucherRedeemableFrom);
   }
 
   /**
@@ -137,13 +121,7 @@ class OfferDates {
    * @returns {boolean}
    */
   voucherRedeemableUntilIsValid() {
-    let valid = false;
-    let { voucherRedeemableUntil } = this;
-    try {
-      valid =
-        typeof voucherRedeemableUntil === "string" && typeof ethers.BigNumber.from(voucherRedeemableUntil) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.voucherRedeemableUntil);
   }
 
   /**

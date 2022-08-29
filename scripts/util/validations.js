@@ -2,10 +2,19 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const eip55 = require("eip55");
 
-function bigNumberIsValid(bigNumber) {
+function bigNumberIsValid(bigNumber, { optional, gt, lte, empty } = {}) {
   let valid = false;
+  if (optional && (bigNumber == undefined || bigNumber == null)) {
+    return true;
+  }
   try {
-    valid = typeof bigNumber === "string" && typeof ethers.BigNumber.from(bigNumber) === "object";
+    valid = typeof bigNumber === "string" && (empty ? "" && typeof ethers.BigNumber.from(bigNumber) === "object" : typeof ethers.BigNumber.from(bigNumber) === "object");
+    if (gt) {
+      valid = valid && ethers.BigNumber.from(bigNumber).gt(gt);
+    }
+    if (lt) {
+      valid = valid && ethers.BigNumber.from(bigNumber).lte(lt);
+    }
   } catch (e) { }
   return valid;
 }
@@ -13,24 +22,13 @@ function bigNumberIsValid(bigNumber) {
 function bigNumberArrayIsValid(bigNumberArray) {
   let valid = false;
   try {
-    const isArray = Array.isArray(bigNumberArray);
-    if (isArray) {
-      bigNumberArray.forEach((bigNumber) => {
-        valid = bigNumberIsValid(bigNumber);
-      });
-    }
-  } catch (e) { }
-  return valid;
-}
-
-function bigNumberOptionalIsValid(bigNumber) {
-  return bigNumber == undefined || bigNumber == null || bigNumberIsValid(bigNumber)
-}
-
-function bigNumberNonZeroIsValid(bigNumber) {
-  let valid = false;
-  try {
-    valid = typeof bigNumber === "string" && ethers.BigNumber.from(bigNumber).gt(0);
+    valid =
+      Array.isArray(bigNumberArray) &&
+      bigNumberArray.reduce(
+        (previousValue, currentValue) =>
+          previousValue && bigNumberIsValid(currentValue),
+        true
+      );
   } catch (e) { }
   return valid;
 }
@@ -59,10 +57,17 @@ function booleanIsValid(boolean) {
   return valid;
 }
 
+function stringIsValid(string) {
+  let valid = false;
+  try {
+    valid = typeof string === "string";
+  } catch (e) { }
+  return valid;
+}
+
 exports.bigNumberIsValid = bigNumberIsValid;
 exports.enumIsValid = enumIsValid;
 exports.addressIsValid = addressIsValid;
 exports.booleanIsValid = booleanIsValid;
-exports.bigNumberNonZeroIsValid = bigNumberNonZeroIsValid;
 exports.bigNumberArrayIsValid = bigNumberArrayIsValid;
-exports.bigNumberOptionalIsValid = bigNumberOptionalIsValid;
+exports.stringIsValid = stringIsValid;

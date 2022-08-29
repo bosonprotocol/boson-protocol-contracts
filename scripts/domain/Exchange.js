@@ -1,5 +1,6 @@
 const ethers = require("ethers");
 const ExchangeState = require("./ExchangeState");
+const { bigNumberIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Exchange
@@ -93,12 +94,7 @@ class Exchange {
    * @returns {boolean}
    */
   idIsValid() {
-    let valid = false;
-    let { id } = this;
-    try {
-      valid = typeof id === "string" && ethers.BigNumber.from(id).gt(0);
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.id, { gt: 0 });
   }
 
   /**
@@ -107,12 +103,7 @@ class Exchange {
    * @returns {boolean}
    */
   offerIdIsValid() {
-    let valid = false;
-    let { offerId } = this;
-    try {
-      valid = typeof offerId === "string" && ethers.BigNumber.from(offerId).gt(0);
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.offerId, { gt: 0 });
   }
 
   /**
@@ -121,12 +112,7 @@ class Exchange {
    * @returns {boolean}
    */
   buyerIdIsValid() {
-    let valid = false;
-    let { buyerId } = this;
-    try {
-      valid = typeof buyerId === "string" && ethers.BigNumber.from(buyerId).gt(0);
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.buyerId, { gt: 0 });
   }
 
   /**
@@ -135,15 +121,7 @@ class Exchange {
    * @returns {boolean}
    */
   finalizedDateIsValid() {
-    let valid = false;
-    let { finalizedDate } = this;
-    try {
-      valid =
-        finalizedDate === null ||
-        finalizedDate === undefined ||
-        (typeof finalizedDate === "string" && ethers.BigNumber.from(finalizedDate).gt(0));
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.finalizedDate, { gt: 0 });
   }
 
   /**
@@ -155,7 +133,7 @@ class Exchange {
     let { state } = this;
     try {
       valid = ExchangeState.Types.includes(state);
-    } catch (e) {}
+    } catch (e) { }
     return valid;
   }
 

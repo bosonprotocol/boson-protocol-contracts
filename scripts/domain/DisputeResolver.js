@@ -1,6 +1,5 @@
 const ethers = require("ethers");
-const eip55 = require("eip55");
-const { bigNumberIsValid } = require("../util/validations.js");
+const { bigNumberIsValid, stringIsValid, booleanIsValid } = require("../util/validations.js");
 /**
  * Boson Protocol Domain Entity: DisputeResolver
  *
@@ -120,14 +119,7 @@ class DisputeResolver {
    * @returns {boolean}
    */
   escalationResponsePeriodIsValid() {
-    let valid = false;
-    let { escalationResponsePeriod } = this;
-    try {
-      valid =
-        typeof escalationResponsePeriod === "string" &&
-        typeof ethers.BigNumber.from(escalationResponsePeriod) === "object";
-    } catch (e) { }
-    return valid;
+    return bigNumberIsValid(this.escalationResponsePeriod);
   }
 
   /**
@@ -136,12 +128,7 @@ class DisputeResolver {
    * @returns {boolean}
    */
   operatorIsValid() {
-    let valid = false;
-    let { operator } = this;
-    try {
-      valid = eip55.verify(eip55.encode(operator));
-    } catch (e) { }
-    return valid;
+    addressIsValid(this.operator);
   }
 
   /**
@@ -150,12 +137,7 @@ class DisputeResolver {
    * @returns {boolean}
    */
   adminIsValid() {
-    let valid = false;
-    let { admin } = this;
-    try {
-      valid = eip55.verify(eip55.encode(admin));
-    } catch (e) { }
-    return valid;
+    addressIsValid(this.admin);
   }
 
   /**
@@ -164,12 +146,7 @@ class DisputeResolver {
    * @returns {boolean}
    */
   clerkIsValid() {
-    let valid = false;
-    let { clerk } = this;
-    try {
-      valid = eip55.verify(eip55.encode(clerk));
-    } catch (e) { }
-    return valid;
+    addressIsValid(this.clerk);
   }
 
   /**
@@ -178,12 +155,7 @@ class DisputeResolver {
    * @returns {boolean}
    */
   treasuryIsValid() {
-    let valid = false;
-    let { treasury } = this;
-    try {
-      valid = eip55.verify(eip55.encode(treasury));
-    } catch (e) { }
-    return valid;
+    addressIsValid(this.treasury);
   }
 
   /**
@@ -193,12 +165,7 @@ class DisputeResolver {
    * @returns {boolean}
    */
   metadataUriIsValid() {
-    let valid = false;
-    let { metadataUri } = this;
-    try {
-      valid = typeof metadataUri === "string";
-    } catch (e) { }
-    return valid;
+    stringIsValid(this.metadataUri);
   }
 
   /**
@@ -206,12 +173,7 @@ class DisputeResolver {
    * @returns {boolean}
    */
   activeIsValid() {
-    let valid = false;
-    let { active } = this;
-    try {
-      valid = typeof active === "boolean";
-    } catch (e) { }
-    return valid;
+    booleanIsValid(this.active);
   }
 
   /**

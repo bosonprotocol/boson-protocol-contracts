@@ -5,7 +5,6 @@ const TwinReceipt = require("./TwinReceipt.js");
 const Condition = require("./Condition.js");
 const {
   bigNumberIsValid,
-  bigNumberNonZeroIsValid,
   enumIsValid,
   booleanIsValid,
   addressIsValid,
@@ -209,7 +208,7 @@ class Receipt {
    * @returns {boolean}
    */
   exchangeIdIsValid() {
-    return bigNumberNonZeroIsValid(this.exchangeId);
+    return bigNumberIsValid(this.exchangeId, { gt: 0 });
   }
 
   /**
@@ -218,7 +217,7 @@ class Receipt {
    * @returns {boolean}
    */
   offerIdIsValid() {
-    return bigNumberNonZeroIsValid(this.offerId);
+    return bigNumberIsValid(this.offerId, { gt: 0 });
   }
 
   /**
@@ -227,7 +226,7 @@ class Receipt {
    * @returns {boolean}
    */
   buyerIdIsValid() {
-    return bigNumberNonZeroIsValid(this.buyerId);
+    return bigNumberIsValid(this.buyerId, { gt: 0 });
   }
 
   /**
@@ -236,7 +235,7 @@ class Receipt {
    * @returns {boolean}
    */
   sellerIdIsValid() {
-    return bigNumberNonZeroIsValid(this.sellerId);
+    return bigNumberIsValid(this.sellerId, { gt: 0 });
   }
 
   /**
@@ -276,7 +275,7 @@ class Receipt {
     let { offerFees } = this;
     try {
       valid = typeof offerFees == "object" && offerFees.isValid();
-    } catch (e) {}
+    } catch (e) { }
     return valid;
   }
 
@@ -304,7 +303,7 @@ class Receipt {
    * @returns {boolean}
    */
   finalizedDateIsValid() {
-    return bigNumberNonZeroIsValid(this.finalizedDate);
+    return bigNumberIsValid(this.finalizedDate, { gt: 0 });
   }
 
   /**
@@ -317,7 +316,7 @@ class Receipt {
     let { condition } = this;
     try {
       valid = typeof condition == "object" && condition.isValid();
-    } catch (e) {}
+    } catch (e) { }
     return valid;
   }
 
@@ -327,7 +326,7 @@ class Receipt {
    * @returns {boolean}
    */
   committedDateIsValid() {
-    return bigNumberNonZeroIsValid(this.committedDate);
+    return bigNumberIsValid(this.committedDate, { gt: 0 });
   }
 
   /**
@@ -402,7 +401,7 @@ class Receipt {
           });
         }
       }
-    } catch (e) {}
+    } catch (e) { }
     return valid;
   }
 

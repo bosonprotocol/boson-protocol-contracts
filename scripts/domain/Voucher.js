@@ -89,15 +89,7 @@ class Voucher {
    * @returns {boolean}
    */
   committedDateIsValid() {
-    let valid = false;
-    let { committedDate } = this;
-    try {
-      valid =
-        committedDate === null ||
-        committedDate === undefined ||
-        (typeof committedDate === "string" && ethers.BigNumber.from(committedDate).gt(0));
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.committedDate, { gt: 0, optional: true })
   }
 
   /**
@@ -106,15 +98,7 @@ class Voucher {
    * @returns {boolean}
    */
   validUntilDateIsValid() {
-    let valid = false;
-    let { validUntilDate } = this;
-    try {
-      valid =
-        validUntilDate === null ||
-        validUntilDate === undefined ||
-        (typeof validUntilDate === "string" && ethers.BigNumber.from(validUntilDate).gt(0));
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.validUntilDate, { gt: 0, optional: true })
   }
 
   /**
@@ -123,15 +107,7 @@ class Voucher {
    * @returns {boolean}
    */
   redeemedDateIsValid() {
-    let valid = false;
-    let { redeemedDate } = this;
-    try {
-      valid =
-        redeemedDate === null ||
-        redeemedDate === undefined ||
-        (typeof redeemedDate === "string" && ethers.BigNumber.from(redeemedDate).gt(0));
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.redeemedDate, { gt: 0, optional: true })
   }
 
   /**
@@ -139,12 +115,7 @@ class Voucher {
    * @returns {boolean}
    */
   expiredIsValid() {
-    let valid = false;
-    let { expired } = this;
-    try {
-      valid = typeof expired === "boolean";
-    } catch (e) {}
-    return valid;
+    return booleanIsValid(this.expired);
   }
 
   /**

@@ -91,12 +91,7 @@ class TwinReceipt {
    * @returns {boolean}
    */
   twinIdIsValid() {
-    let valid = false;
-    let { twinId } = this;
-    try {
-      valid = typeof twinId === "string" && typeof ethers.BigNumber.from(twinId) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.twinId);
   }
 
   /**
@@ -105,12 +100,7 @@ class TwinReceipt {
    * @returns {boolean}
    */
   tokenIdIsValid() {
-    let valid = false;
-    let { tokenId } = this;
-    try {
-      valid = typeof tokenId === "string" && (tokenId === "" || typeof ethers.BigNumber.from(tokenId) === "object");
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.tokenId, { empty: true });
   }
 
   /**
@@ -119,12 +109,7 @@ class TwinReceipt {
    * @returns {boolean}
    */
   amountIsValid() {
-    let valid = false;
-    let { amount } = this;
-    try {
-      valid = typeof amount === "string" && typeof ethers.BigNumber.from(amount) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.amount);
   }
 
   /**
@@ -133,12 +118,7 @@ class TwinReceipt {
    * @returns {boolean}
    */
   tokenAddressIsValid() {
-    let valid = false;
-    let { tokenAddress } = this;
-    try {
-      valid = eip55.verify(eip55.encode(tokenAddress));
-    } catch (e) {}
-    return valid;
+    return addressIsValid(this.tokenAddress);
   }
 
   /**
@@ -150,7 +130,7 @@ class TwinReceipt {
     let { tokenType } = this;
     try {
       valid = TokenType.Types.includes(tokenType);
-    } catch (e) {}
+    } catch (e) { }
     return valid;
   }
 

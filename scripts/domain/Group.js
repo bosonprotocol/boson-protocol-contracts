@@ -86,12 +86,7 @@ class Group {
    * @returns {boolean}
    */
   idIsValid() {
-    let valid = false;
-    let { id } = this;
-    try {
-      valid = typeof id === "string" && typeof ethers.BigNumber.from(id) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.id);
   }
 
   /**
@@ -100,12 +95,7 @@ class Group {
    * @returns {boolean}
    */
   sellerIdIsValid() {
-    let valid = false;
-    let { sellerId } = this;
-    try {
-      valid = typeof sellerId === "string" && typeof ethers.BigNumber.from(sellerId) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.sellerId);
   }
 
   /**
@@ -114,17 +104,7 @@ class Group {
    * @returns {boolean}
    */
   offerIdsIsValid() {
-    let valid = false;
-    let { offerIds } = this;
-    try {
-      const offerIdsIsArray = Array.isArray(offerIds);
-      if (offerIdsIsArray) {
-        valid = offerIds.reduce((flag, offerId) => {
-          return flag && typeof offerId === "string" && typeof ethers.BigNumber.from(offerId) === "object";
-        }, true);
-      }
-    } catch (e) {}
-    return valid;
+    return bigNumberArrayIsValid(offerIds);
   }
 
   /**

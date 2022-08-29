@@ -1,7 +1,6 @@
 const ethers = require("ethers");
 const {
   bigNumberIsValid,
-  bigNumberOptionalIsValid,
 } = require("../util/validations.js");
 
 /**
@@ -102,7 +101,7 @@ class DisputeDates {
    * @returns {boolean}
    */
   escalatedIsValid() {
-    return bigNumberOptionalIsValid(bigNumber);
+    return bigNumberIsValid(this.escalated, { optional: true });
   }
 
   /**
@@ -111,7 +110,7 @@ class DisputeDates {
    * @returns {boolean}
    */
   finalizedIsValid() {
-    return bigNumberOptionalIsValid(this.finalized);
+    return bigNumberIsValid(this.finalized, { optional: true });
   }
 
   /**

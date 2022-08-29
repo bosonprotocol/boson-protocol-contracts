@@ -82,12 +82,7 @@ class OfferFees {
    * @returns {boolean}
    */
   protocolFeeIsValid() {
-    let valid = false;
-    let { protocolFee } = this;
-    try {
-      valid = typeof protocolFee === "string" && typeof ethers.BigNumber.from(protocolFee) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.protocolFee);
   }
 
   /**
@@ -96,12 +91,7 @@ class OfferFees {
    * @returns {boolean}
    */
   agentFeeIsValid() {
-    let valid = false;
-    let { agentFee } = this;
-    try {
-      valid = typeof agentFee === "string" && typeof ethers.BigNumber.from(agentFee) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.agentFee);
   }
 
   /**

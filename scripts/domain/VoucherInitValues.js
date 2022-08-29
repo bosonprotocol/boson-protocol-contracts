@@ -83,12 +83,7 @@ class VoucherInitValues {
    * @returns {boolean}
    */
   contractURIIsValid() {
-    let valid = false;
-    let { contractURI } = this;
-    try {
-      valid = typeof contractURI === "string";
-    } catch (e) {}
-    return valid;
+    return stringIsValid(this.contractURI);
   }
 
   /**
@@ -97,15 +92,7 @@ class VoucherInitValues {
    * @returns {boolean}
    */
   royaltyPercentageIsValid() {
-    let valid = false;
-    let { royaltyPercentage } = this;
-    try {
-      valid =
-        typeof royaltyPercentage === "string" &&
-        typeof ethers.BigNumber.from(royaltyPercentage) === "object" &&
-        ethers.BigNumber.from(royaltyPercentage).lte(ethers.BigNumber.from("10000"));
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.royaltyPercentage, { lte: 10000 });
   }
 
   /**

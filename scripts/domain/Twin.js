@@ -100,12 +100,7 @@ class Twin {
    * @returns {boolean}
    */
   idIsValid() {
-    let valid = false;
-    let { id } = this;
-    try {
-      valid = typeof id === "string" && typeof ethers.BigNumber.from(id) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.id);
   }
 
   /**
@@ -114,12 +109,7 @@ class Twin {
    * @returns {boolean}
    */
   sellerIdIsValid() {
-    let valid = false;
-    let { sellerId } = this;
-    try {
-      valid = typeof sellerId === "string" && typeof ethers.BigNumber.from(sellerId) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.sellerId);
   }
 
   /**
@@ -128,12 +118,7 @@ class Twin {
    * @returns {boolean}
    */
   amountIsValid() {
-    let valid = false;
-    let { amount } = this;
-    try {
-      valid = typeof amount === "string" && typeof ethers.BigNumber.from(amount) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.amount);
   }
 
   /**
@@ -142,14 +127,7 @@ class Twin {
    * @returns {boolean}
    */
   supplyAvailableIsValid() {
-    let valid = false;
-    let { supplyAvailable } = this;
-    try {
-      valid =
-        typeof supplyAvailable === "string" &&
-        (supplyAvailable === "" || typeof ethers.BigNumber.from(supplyAvailable) === "object");
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.supplyAvailable, { empty: true });
   }
 
   /**
@@ -158,12 +136,7 @@ class Twin {
    * @returns {boolean}
    */
   tokenIdIsValid() {
-    let valid = false;
-    let { tokenId } = this;
-    try {
-      valid = typeof tokenId === "string" && (tokenId === "" || typeof ethers.BigNumber.from(tokenId) === "object");
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.tokenId);
   }
 
   /**
@@ -172,12 +145,7 @@ class Twin {
    * @returns {boolean}
    */
   tokenAddressIsValid() {
-    let valid = false;
-    let { tokenAddress } = this;
-    try {
-      valid = eip55.verify(eip55.encode(tokenAddress));
-    } catch (e) {}
-    return valid;
+    return addressIsValid(this.tokenAddress);
   }
 
   /**
@@ -189,7 +157,7 @@ class Twin {
     let { tokenType } = this;
     try {
       valid = TokenType.Types.includes(tokenType);
-    } catch (e) {}
+    } catch (e) { }
     return valid;
   }
 
