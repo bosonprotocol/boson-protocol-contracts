@@ -120,7 +120,7 @@ class Exchange {
    * @returns {boolean}
    */
   finalizedDateIsValid() {
-    return bigNumberIsValid(this.finalizedDate, { gt: 0 });
+    return bigNumberIsValid(this.finalizedDate, { gt: 0, optional: true });
   }
 
   /**

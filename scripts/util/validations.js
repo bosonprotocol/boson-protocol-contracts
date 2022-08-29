@@ -2,6 +2,16 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const eip55 = require("eip55");
 
+/**
+ * Must be a string representation of a big number
+ * @param bigNumber
+ * @param options
+ * - {boolean} optional
+ * - {number} gt - greater than
+ * - {number} lte - less than or equal to
+ * - {boolean} empty - empty string is valid
+ * @returns {boolean}
+ */
 function bigNumberIsValid(bigNumber, { optional, gt, lte, empty } = {}) {
   let valid = false;
   if (optional && (bigNumber == undefined || bigNumber == null)) {
@@ -23,6 +33,11 @@ function bigNumberIsValid(bigNumber, { optional, gt, lte, empty } = {}) {
   return valid;
 }
 
+/**
+ * Must be a array of big numbers
+ * @param bigNumberArray
+ * @returns {boolean}
+ */
 function bigNumberArrayIsValid(bigNumberArray) {
   let valid = false;
   try {
@@ -33,6 +48,10 @@ function bigNumberArrayIsValid(bigNumberArray) {
   return valid;
 }
 
+/**
+ * Must be a number representation of a big number
+ * @returns {boolean}
+ */
 function enumIsValid(enumValue) {
   let valid = false;
   try {
@@ -41,6 +60,10 @@ function enumIsValid(enumValue) {
   return valid;
 }
 
+/**
+ * Must be a eip55 compliant Ethereum address
+ * @returns {boolean}
+ */
 function addressIsValid(address) {
   let valid = false;
   try {
@@ -49,6 +72,10 @@ function addressIsValid(address) {
   return valid;
 }
 
+/**
+ * Must be a boolean
+ * @returns {boolean}
+ */
 function booleanIsValid(boolean) {
   let valid = false;
   try {
@@ -57,6 +84,10 @@ function booleanIsValid(boolean) {
   return valid;
 }
 
+/**
+ * Must be a string
+ * @returns {boolean}
+ */
 function stringIsValid(string) {
   let valid = false;
   try {
