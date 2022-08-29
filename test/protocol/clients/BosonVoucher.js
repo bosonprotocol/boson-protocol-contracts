@@ -20,6 +20,7 @@ const {
   mockVoucherInitValues,
   mockAuthToken,
   mockBuyer,
+  accountId,
 } = require("../../utils/mock");
 const { applyPercentage } = require("../../../scripts/util/test-utils.js");
 
@@ -152,6 +153,11 @@ describe("IBosonVoucher", function () {
       buyerWallet = buyerStruct[1];
     });
 
+    after(async function () {
+      // Reset the accountId iterator
+      accountId.next(true);
+    });
+
     it("should issue a voucher with success", async function () {
       const balanceBefore = await bosonVoucher.balanceOf(buyer.address);
       await bosonVoucher.connect(protocol).issueVoucher(0, buyerWallet);
@@ -180,6 +186,11 @@ describe("IBosonVoucher", function () {
   });
 
   context("burnVoucher()", function () {
+    after(async function () {
+      // Reset the accountId iterator
+      accountId.next(true);
+    });
+
     it("should burn a voucher with success", async function () {
       const buyerStruct = mockBuyer(buyer.address).toStruct();
       const buyerWallet = buyerStruct[1];
@@ -263,6 +274,11 @@ describe("IBosonVoucher", function () {
       await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
 
       metadataUri = offer.metadataUri;
+    });
+
+    afterEach(async function () {
+      // Reset the accountId iterator
+      accountId.next(true);
     });
 
     it("should return the correct tokenURI", async function () {
@@ -397,6 +413,11 @@ describe("IBosonVoucher", function () {
       exchangeId = "1";
 
       offerPrice = offer.price;
+    });
+
+    afterEach(async function () {
+      // Reset the accountId iterator
+      accountId.next(true);
     });
 
     context("setRoyaltyPercentage()", function () {

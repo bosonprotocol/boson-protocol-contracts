@@ -36,6 +36,7 @@ const {
   mockCondition,
   mockAgent,
   mockBuyer,
+  accountId,
 } = require("../utils/mock");
 const {
   getEvent,
@@ -83,7 +84,7 @@ describe("IBosonExchangeHandler", function () {
     configHandler;
   let bosonVoucher, voucherImplementation;
   let bosonVoucherClone, bosonVoucherCloneAddress;
-  let id, buyerId, offerId, seller, sellerId, nextExchangeId, nextAccountId, disputeResolverId;
+  let id, buyerId, offerId, seller, nextExchangeId, nextAccountId, disputeResolverId;
   let block, blockNumber, tx, txReceipt, event;
   let support, newTime;
   let price, sellerPool;
@@ -263,8 +264,7 @@ describe("IBosonExchangeHandler", function () {
   context("📋 Exchange Handler Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
-      id = offerId = sellerId = nextAccountId = "1";
-      buyerId = "3"; // created after seller and dispute resolver
+      exchangeId = offerId = "1";
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller
@@ -302,7 +302,7 @@ describe("IBosonExchangeHandler", function () {
 
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-      await accountHandler.connect(deployer).activateDisputeResolver(++nextAccountId);
+      await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
       // Create the offer
       const mo = await mockOffer();
@@ -334,6 +334,8 @@ describe("IBosonExchangeHandler", function () {
 
       // Mock exchange
       exchange = mockExchange();
+
+      buyerId = accountId.next().value;
       exchange.buyerId = buyerId;
       exchange.finalizedDate = "0";
 
@@ -341,6 +343,11 @@ describe("IBosonExchangeHandler", function () {
       await fundsHandler
         .connect(operator)
         .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
+    });
+
+    afterEach(async function () {
+      // Reset the accountId iterator
+      accountId.next(true);
     });
 
     context("👉 commitToOffer()", async function () {
@@ -361,7 +368,7 @@ describe("IBosonExchangeHandler", function () {
         voucher.validUntilDate = calculateVoucherExpiry(block, voucherRedeemableFrom, voucherValid);
 
         // Examine event
-        assert.equal(event.exchangeId.toString(), id, "Exchange id is incorrect");
+        assert.equal(event.exchangeId.toString(), exchangeId, "Exchange id is incorrect");
         assert.equal(event.offerId.toString(), offerId, "Offer id is incorrect");
         assert.equal(event.buyerId.toString(), buyerId, "Buyer id is incorrect");
 
@@ -382,7 +389,7 @@ describe("IBosonExchangeHandler", function () {
 
         // Get the next exchange id and ensure it was incremented by the creation of the offer
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
-        expect(nextExchangeId).to.equal(++id);
+        expect(nextExchangeId).to.equal(++exchangeId);
       });
 
       it("should issue the voucher on the correct clone", async function () {
@@ -390,12 +397,12 @@ describe("IBosonExchangeHandler", function () {
         bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
         // Create a new seller to get new clone
-        sellerId = "3"; // "1" is the first seller, "2" is DR
         seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
-        seller.id = sellerId;
+        seller.id = "3"; // buyer is created after seller in this test
         expect(seller.isValid()).is.true;
 
         await accountHandler.connect(rando).createSeller(seller, emptyAuthToken, voucherInitValues);
+
         expectedCloneAddress = calculateContractAddress(accountHandler.address, "2");
         const bosonVoucherClone2 = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
@@ -408,7 +415,7 @@ describe("IBosonExchangeHandler", function () {
         // Deposit seller funds so the commit will succeed
         await fundsHandler
           .connect(rando)
-          .depositFunds(sellerId, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
+          .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
 
         const buyer2 = newOwner;
 
@@ -468,9 +475,8 @@ describe("IBosonExchangeHandler", function () {
         bosonVoucherClone = await ethers.getContractAt("IBosonVoucher", expectedCloneAddress);
 
         // Create a new seller to get new clone
-        sellerId = "3"; // "1" is the first seller, "2" is DR
         seller = mockSeller(rando.address, rando.address, rando.address, rando.address);
-        seller.id = sellerId;
+        seller.id = "3"; // buyer is created after seller in this test
         expect(seller.isValid()).is.true;
 
         // VoucherInitValues
@@ -490,7 +496,7 @@ describe("IBosonExchangeHandler", function () {
         // Deposit seller funds so the commit will succeed
         await fundsHandler
           .connect(rando)
-          .depositFunds(sellerId, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
+          .depositFunds(seller.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
 
         const buyer2 = newOwner;
 
@@ -575,7 +581,7 @@ describe("IBosonExchangeHandler", function () {
         voucher.validUntilDate = offerDates.validUntil;
 
         // Examine the event
-        assert.equal(event.exchangeId.toString(), id, "Exchange id is incorrect");
+        assert.equal(event.exchangeId.toString(), exchangeId, "Exchange id is incorrect");
         assert.equal(event.offerId.toString(), offerId, "Offer id is incorrect");
         assert.equal(event.buyerId.toString(), buyerId, "Buyer id is incorrect");
 
@@ -624,7 +630,7 @@ describe("IBosonExchangeHandler", function () {
 
       it("Should not decrement seller funds if offer price and sellerDeposit is 0", async function () {
         // Seller funds before
-        const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        const sellersFundsBefore = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
 
         // Set protocolFee to zero so we don't get the error AGENT_FEE_AMOUNT_TOO_HIGH
         protocolFeePercentage = "0";
@@ -651,7 +657,7 @@ describe("IBosonExchangeHandler", function () {
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId);
 
         // Seller funds after
-        const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(sellerId));
+        const sellerFundsAfter = FundsList.fromStruct(await fundsHandler.getAvailableFunds(seller.id));
         expect(sellerFundsAfter.toString()).to.equal(
           sellersFundsBefore.toString(),
           "Seller funds should not be decremented"
@@ -767,7 +773,7 @@ describe("IBosonExchangeHandler", function () {
           expect(condition.isValid()).to.be.true;
 
           // Create Group
-          group = new Group(groupId, sellerId, offerIds);
+          group = new Group(groupId, seller.id, offerIds);
           expect(group.isValid()).is.true;
           await groupHandler.connect(operator).createGroup(group, condition);
         });
@@ -838,7 +844,7 @@ describe("IBosonExchangeHandler", function () {
           expect(condition.isValid()).to.be.true;
 
           // Create Group
-          group = new Group(groupId, sellerId, offerIds);
+          group = new Group(groupId, seller.id, offerIds);
           expect(group.isValid()).is.true;
           await groupHandler.connect(operator).createGroup(group, condition);
         });
@@ -910,7 +916,7 @@ describe("IBosonExchangeHandler", function () {
           expect(condition.isValid()).to.be.true;
 
           // Create Group
-          group = new Group(groupId, sellerId, offerIds);
+          group = new Group(groupId, seller.id, offerIds);
           expect(group.isValid()).is.true;
           await groupHandler.connect(operator).createGroup(group, condition);
         });
@@ -983,7 +989,7 @@ describe("IBosonExchangeHandler", function () {
           expect(condition.isValid()).to.be.true;
 
           // Create Group
-          group = new Group(groupId, sellerId, offerIds);
+          group = new Group(groupId, seller.id, offerIds);
           expect(group.isValid()).is.true;
           await groupHandler.connect(operator).createGroup(group, condition);
         });
@@ -1059,7 +1065,7 @@ describe("IBosonExchangeHandler", function () {
           expect(condition.isValid()).to.be.true;
 
           // Create Group
-          group = new Group(groupId, sellerId, offerIds);
+          group = new Group(groupId, seller.id, offerIds);
           expect(group.isValid()).is.true;
           await groupHandler.connect(operator).createGroup(group, condition);
         });
@@ -1102,7 +1108,7 @@ describe("IBosonExchangeHandler", function () {
         await exchangeHandler.connect(buyer).redeemVoucher(exchange.id);
 
         // Complete the exchange
-        await expect(exchangeHandler.connect(buyer).completeExchange(exchange.id));
+        await exchangeHandler.connect(buyer).completeExchange(exchange.id);
 
         // Get the exchange state
         [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
@@ -1159,17 +1165,17 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).completeExchange(id)).to.revertedWith(
+          await expect(exchangeHandler.connect(operator).completeExchange(exchangeId)).to.revertedWith(
             RevertReasons.REGION_PAUSED
           );
         });
 
         it("exchange id is invalid", async function () {
           // An invalid exchange id
-          id = "666";
+          exchangeId = "666";
 
           // Attempt to complete the exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).completeExchange(id)).to.revertedWith(
+          await expect(exchangeHandler.connect(operator).completeExchange(exchangeId)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -1267,7 +1273,7 @@ describe("IBosonExchangeHandler", function () {
 
       it("should update state", async function () {
         // Complete the exchange
-        await expect(exchangeHandler.connect(buyer).completeExchangeBatch(exchangesToComplete));
+        await exchangeHandler.connect(buyer).completeExchangeBatch(exchangesToComplete);
 
         for (exchangeId = 1; exchangeId <= 5; exchangeId++) {
           // Get the exchange state
@@ -1465,10 +1471,10 @@ describe("IBosonExchangeHandler", function () {
 
         it("exchange id is invalid", async function () {
           // An invalid exchange id
-          id = "666";
+          exchangeId = "666";
 
           // Attempt to revoke the voucher, expecting revert
-          await expect(exchangeHandler.connect(operator).revokeVoucher(id)).to.revertedWith(
+          await expect(exchangeHandler.connect(operator).revokeVoucher(exchangeId)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -1541,10 +1547,10 @@ describe("IBosonExchangeHandler", function () {
 
         it("exchange id is invalid", async function () {
           // An invalid exchange id
-          id = "666";
+          exchangeId = "666";
 
           // Attempt to cancel the voucher, expecting revert
-          await expect(exchangeHandler.connect(buyer).cancelVoucher(id)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).cancelVoucher(exchangeId)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -1641,7 +1647,9 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(buyer).expireVoucher(id)).to.revertedWith(RevertReasons.REGION_PAUSED);
+          await expect(exchangeHandler.connect(buyer).expireVoucher(exchangeId)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
         });
 
         it("exchange id is invalid", async function () {
@@ -1649,10 +1657,10 @@ describe("IBosonExchangeHandler", function () {
           await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
           // An invalid exchange id
-          id = "666";
+          exchangeId = "666";
 
           // Attempt to cancel the voucher, expecting revert
-          await expect(exchangeHandler.connect(buyer).expireVoucher(id)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).expireVoucher(exchangeId)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -1734,15 +1742,17 @@ describe("IBosonExchangeHandler", function () {
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(id)).to.revertedWith(RevertReasons.REGION_PAUSED);
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.revertedWith(
+            RevertReasons.REGION_PAUSED
+          );
         });
 
         it("exchange id is invalid", async function () {
           // An invalid exchange id
-          id = "666";
+          exchangeId = "666";
 
           // Attempt to redeem the voucher, expecting revert
-          await expect(exchangeHandler.connect(buyer).redeemVoucher(id)).to.revertedWith(
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(exchangeId)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -1831,7 +1841,7 @@ describe("IBosonExchangeHandler", function () {
       context("📦 Offer bundled with ERC20 twin", async function () {
         beforeEach(async function () {
           // Create a new bundle
-          bundle = new Bundle("1", sellerId, [offerId], [twin20.id]);
+          bundle = new Bundle("1", seller.id, [offerId], [twin20.id]);
           expect(bundle.isValid()).is.true;
           await bundleHandler.connect(operator).createBundle(bundle.toStruct());
 
@@ -1884,7 +1894,7 @@ describe("IBosonExchangeHandler", function () {
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
           // Create a new bundle
-          bundle = new Bundle("1", sellerId, [++offerId], [twin20.id]);
+          bundle = new Bundle("1", seller.id, [++offerId], [twin20.id]);
           await bundleHandler.connect(operator).createBundle(bundle.toStruct());
 
           // Commit to offer
@@ -1944,7 +1954,7 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchangeId, ++exchange.buyerId, sellerId, testProtocolFunctions.address);
+              .withArgs(exchangeId, ++exchange.buyerId, seller.id, testProtocolFunctions.address);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -1969,7 +1979,7 @@ describe("IBosonExchangeHandler", function () {
       context("📦 Offer bundled with ERC721 twin", async function () {
         beforeEach(async function () {
           // Create a new bundle
-          bundle = new Bundle("1", sellerId, [offerId], [twin721.id]);
+          bundle = new Bundle("1", seller.id, [offerId], [twin721.id]);
           expect(bundle.isValid()).is.true;
           await bundleHandler.connect(operator).createBundle(bundle.toStruct());
 
@@ -2055,7 +2065,7 @@ describe("IBosonExchangeHandler", function () {
             await twinHandler.connect(operator).createTwin(twin721.toStruct());
 
             // Create a new bundle
-            bundle = new Bundle("1", sellerId, [++offerId], [twin721.id]);
+            bundle = new Bundle("1", seller.id, [++offerId], [twin721.id]);
             await bundleHandler.connect(operator).createBundle(bundle.toStruct());
 
             // Commit to offer
@@ -2153,7 +2163,7 @@ describe("IBosonExchangeHandler", function () {
 
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchange.id, ++exchange.buyerId, sellerId, testProtocolFunctions.address);
+              .withArgs(exchange.id, ++exchange.buyerId, seller.id, testProtocolFunctions.address);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -2171,7 +2181,7 @@ describe("IBosonExchangeHandler", function () {
       context("📦 Offer bundled with ERC1155 twin", async function () {
         beforeEach(async function () {
           // Create a new bundle
-          bundle = new Bundle("1", sellerId, [offerId], [twin1155.id]);
+          bundle = new Bundle("1", seller.id, [offerId], [twin1155.id]);
           expect(bundle.isValid()).is.true;
           await bundleHandler.connect(operator).createBundle(bundle.toStruct());
 
@@ -2226,7 +2236,7 @@ describe("IBosonExchangeHandler", function () {
             .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
           // Create a new bundle
-          bundle = new Bundle("1", sellerId, [++offerId], [twin1155.id]);
+          bundle = new Bundle("1", seller.id, [++offerId], [twin1155.id]);
           await bundleHandler.connect(operator).createBundle(bundle.toStruct());
 
           // Commit to offer
@@ -2287,7 +2297,7 @@ describe("IBosonExchangeHandler", function () {
             const tx = await testProtocolFunctions.redeem(++exchange.id);
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchange.id, ++exchange.buyerId, sellerId, testProtocolFunctions.address);
+              .withArgs(exchange.id, ++exchange.buyerId, seller.id, testProtocolFunctions.address);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -2312,7 +2322,7 @@ describe("IBosonExchangeHandler", function () {
       context("📦 Offer bundled with mixed twins", async function () {
         beforeEach(async function () {
           // Create a new bundle
-          bundle = new Bundle("1", sellerId, [offerId], twinIds);
+          bundle = new Bundle("1", seller.id, [offerId], twinIds);
           expect(bundle.isValid()).is.true;
           await bundleHandler.connect(operator).createBundle(bundle.toStruct());
 
@@ -2416,7 +2426,7 @@ describe("IBosonExchangeHandler", function () {
             await twinHandler.connect(operator).createTwin(twin1155.toStruct());
 
             // Create a new bundle
-            bundle = new Bundle("1", sellerId, [++offerId], [twin721.id, twin20.id, twin1155.id]);
+            bundle = new Bundle("1", seller.id, [++offerId], [twin721.id, twin20.id, twin1155.id]);
             await bundleHandler.connect(operator).createBundle(bundle.toStruct());
 
             // Commit to offer
@@ -2559,7 +2569,7 @@ describe("IBosonExchangeHandler", function () {
             const tx = await testProtocolFunctions.redeem(exchangeId);
             await expect(tx)
               .to.emit(disputeHandler, "DisputeRaised")
-              .withArgs(exchangeId, ++exchange.buyerId, sellerId, testProtocolFunctions.address);
+              .withArgs(exchangeId, ++exchange.buyerId, seller.id, testProtocolFunctions.address);
 
             await expect(tx)
               .to.emit(exchangeHandler, "TwinTransferFailed")
@@ -2633,18 +2643,19 @@ describe("IBosonExchangeHandler", function () {
           // Pause the exchanges region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
+          console.log(id);
           // Attempt to complete an exchange, expecting revert
-          await expect(exchangeHandler.connect(operator).extendVoucher(id, validUntilDate)).to.revertedWith(
+          await expect(exchangeHandler.connect(operator).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
             RevertReasons.REGION_PAUSED
           );
         });
 
         it("exchange id is invalid", async function () {
           // An invalid exchange id
-          id = "666";
+          exchangeId = "666";
 
           // Attempt to extend voucher, expecting revert
-          await expect(exchangeHandler.connect(operator).extendVoucher(id, validUntilDate)).to.revertedWith(
+          await expect(exchangeHandler.connect(operator).extendVoucher(exchangeId, validUntilDate)).to.revertedWith(
             RevertReasons.NO_SUCH_EXCHANGE
           );
         });
@@ -2745,15 +2756,8 @@ describe("IBosonExchangeHandler", function () {
       });
 
       it("should not be triggered when a voucher is issued", async function () {
-        // Get the next buyer id
-        nextAccountId = await accountHandler.getNextAccountId();
-
         // Get the next exchange id
         nextExchangeId = await exchangeHandler.getNextExchangeId();
-
-        // Get a buyer struct
-        buyer = mockBuyer(newOwner.address);
-        buyer.id = nextAccountId;
 
         // Create a buyer account
         await accountHandler.connect(newOwner).createBuyer(mockBuyer(newOwner.address));
@@ -2762,7 +2766,7 @@ describe("IBosonExchangeHandler", function () {
         await accessController.grantRole(Role.PROTOCOL, rando.address);
 
         // Issue voucher, expecting no event
-        await expect(bosonVoucherClone.connect(rando).issueVoucher(nextExchangeId, buyer.wallet)).to.not.emit(
+        await expect(bosonVoucherClone.connect(rando).issueVoucher(nextExchangeId, buyer.address)).to.not.emit(
           exchangeHandler,
           "VoucherTransferred"
         );
@@ -2822,12 +2826,12 @@ describe("IBosonExchangeHandler", function () {
 
         it("exchange id is invalid", async function () {
           // An invalid exchange id
-          id = "666";
+          exchangeId = "666";
 
           // Attempt to call onVoucherTransferred, expecting revert
-          await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(id, newOwner.address)).to.revertedWith(
-            RevertReasons.NO_SUCH_EXCHANGE
-          );
+          await expect(
+            exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, newOwner.address)
+          ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
         });
 
         it("exchange is not in committed state", async function () {
@@ -2835,9 +2839,9 @@ describe("IBosonExchangeHandler", function () {
           await exchangeHandler.connect(operator).revokeVoucher(exchange.id);
 
           // Attempt to call onVoucherTransferred, expecting revert
-          await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(id, newOwner.address)).to.revertedWith(
-            RevertReasons.INVALID_STATE
-          );
+          await expect(
+            exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, newOwner.address)
+          ).to.revertedWith(RevertReasons.INVALID_STATE);
         });
 
         it("Voucher has expired", async function () {
@@ -2845,9 +2849,9 @@ describe("IBosonExchangeHandler", function () {
           await setNextBlockTimestamp(Number(voucherRedeemableFrom) + Number(voucherValid) + Number(oneWeek));
 
           // Attempt to call onVoucherTransferred, expecting revert
-          await expect(exchangeHandler.connect(fauxClient).onVoucherTransferred(id, newOwner.address)).to.revertedWith(
-            RevertReasons.VOUCHER_HAS_EXPIRED
-          );
+          await expect(
+            exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, newOwner.address)
+          ).to.revertedWith(RevertReasons.VOUCHER_HAS_EXPIRED);
         });
       });
     });
@@ -3059,24 +3063,24 @@ describe("IBosonExchangeHandler", function () {
       it("should return the next exchange id", async function () {
         // Get the next exchange id and compare it to the initial expected id
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
-        expect(nextExchangeId).to.equal(id);
+        expect(nextExchangeId).to.equal(exchangeId);
 
         // Commit to offer, creating a new exchange
         await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
         // Get the next exchange id and ensure it was incremented by the creation of the offer
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
-        expect(nextExchangeId).to.equal(++id);
+        expect(nextExchangeId).to.equal(++exchangeId);
       });
 
       it("should not increment the counter", async function () {
         // Get the next exchange id
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
-        expect(nextExchangeId).to.equal(id);
+        expect(nextExchangeId).to.equal(exchangeId);
 
         // Get the next exchange id and ensure it was not incremented by the previous call
         nextExchangeId = await exchangeHandler.connect(rando).getNextExchangeId();
-        expect(nextExchangeId).to.equal(id);
+        expect(nextExchangeId).to.equal(exchangeId);
       });
     });
 
@@ -3202,7 +3206,7 @@ describe("IBosonExchangeHandler", function () {
           exchange.id,
           offer.id,
           buyerId,
-          sellerId,
+          seller.id,
           price,
           offer.sellerDeposit,
           offer.buyerCancelPenalty,
@@ -3312,7 +3316,7 @@ describe("IBosonExchangeHandler", function () {
           exchange.id,
           offer.id,
           buyerId,
-          sellerId,
+          seller.id,
           offer.price,
           offer.sellerDeposit,
           offer.buyerCancelPenalty,
@@ -3373,7 +3377,7 @@ describe("IBosonExchangeHandler", function () {
             exchange.id,
             offer.id,
             buyerId,
-            sellerId,
+            seller.id,
             price,
             offer.sellerDeposit,
             offer.buyerCancelPenalty,
@@ -3434,7 +3438,7 @@ describe("IBosonExchangeHandler", function () {
             exchange.id,
             offer.id,
             buyerId,
-            sellerId,
+            seller.id,
             price,
             offer.sellerDeposit,
             offer.buyerCancelPenalty,
@@ -3507,7 +3511,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("Receipt should contain twin receipt data if offer was bundled with twin", async function () {
           // Create a new bundle
-          bundle = new Bundle("1", sellerId, [offerId], [twin20.id]);
+          bundle = new Bundle("1", seller.id, [offerId], [twin20.id]);
           expect(bundle.isValid()).is.true;
           await bundleHandler.connect(operator).createBundle(bundle.toStruct());
 
@@ -3580,7 +3584,7 @@ describe("IBosonExchangeHandler", function () {
             exchange.id,
             offer.id,
             buyerId,
-            sellerId,
+            seller.id,
             price,
             offer.sellerDeposit,
             offer.buyerCancelPenalty,
@@ -3605,7 +3609,7 @@ describe("IBosonExchangeHandler", function () {
 
         it("Receipt should contain multiple twin receipts data if offer was bundled with multiple twin", async function () {
           // Create a new bundle
-          bundle = new Bundle("1", sellerId, [offerId], [twin20.id, twin721.id]);
+          bundle = new Bundle("1", seller.id, [offerId], [twin20.id, twin721.id]);
           expect(bundle.isValid()).is.true;
           await bundleHandler.connect(operator).createBundle(bundle.toStruct());
 
@@ -3687,7 +3691,7 @@ describe("IBosonExchangeHandler", function () {
             exchange.id,
             offer.id,
             buyerId,
-            sellerId,
+            seller.id,
             price,
             offer.sellerDeposit,
             offer.buyerCancelPenalty,
@@ -3720,7 +3724,7 @@ describe("IBosonExchangeHandler", function () {
         expect(condition.isValid()).to.be.true;
 
         // Create a new group
-        group = new Group(groupId, sellerId, offerIds);
+        group = new Group(groupId, seller.id, offerIds);
         expect(group.isValid()).is.true;
         await groupHandler.connect(operator).createGroup(group, condition);
 
@@ -3787,7 +3791,7 @@ describe("IBosonExchangeHandler", function () {
           exchange.id,
           offer.id,
           buyerId,
-          sellerId,
+          seller.id,
           price,
           offer.sellerDeposit,
           offer.buyerCancelPenalty,
@@ -3897,7 +3901,7 @@ describe("IBosonExchangeHandler", function () {
           exchange.id,
           offer.id,
           buyerId,
-          sellerId,
+          seller.id,
           price,
           offer.sellerDeposit,
           offer.buyerCancelPenalty,
