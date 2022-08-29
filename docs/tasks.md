@@ -21,7 +21,12 @@ This builds the contracts and runs the unit tests.
 ```npm run test```
 
 ### Deploy to Hardhat network
-This deploys the built contracts to local network (mainly to test deployment script)
+This deploys the built contracts to local network (mainly to test deployment script). Deployed contracts are discarded afterwards.
+
+```npm run deploy-suite:hardhat```
+
+### Deploy to local network
+This deploys the built contracts to independent instance of local network (e.g. `npx hardhat node`), so the deployed contracts can be used with other contracts/dapps in development
 
 ```npm run deploy-suite:local```
 
@@ -39,6 +44,11 @@ This deploys the built contracts to Mumbai
 This deploys the built contracts to Mainnet
 
 ```npm run deploy-suite:mainnet```
+
+### Manage Roles on local network
+This runs the `scripts/manage-roles.js` script against independent instance of local network (e.g. `npx hardhat node`)
+
+```npm run manage-roles:local```
 
 ### Manage Roles on Mumbai
 This runs the `scripts/manage-roles.js` script against mumbai.
