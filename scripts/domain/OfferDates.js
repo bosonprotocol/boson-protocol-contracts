@@ -87,7 +87,6 @@ class OfferDates {
   /**
    * Is this OfferDates instance's validFrom field valid?
    * Must be a string representation of a big number
-   * TODO: make sure it's time within a reasonable range?
    * @returns {boolean}
    */
   validFromIsValid() {
@@ -97,7 +96,6 @@ class OfferDates {
   /**
    * Is this OfferDates instance's validUntil field valid?
    * Must be a string representation of a big number
-   * TODO: make sure it's time within a reasonable range?
    * @returns {boolean}
    */
   validUntilIsValid() {
@@ -107,7 +105,6 @@ class OfferDates {
   /**
    * Is this OfferDates instance's voucherRedeemableFrom field valid?
    * Must be a string representation of a big number
-   * TODO: make sure it's time within a reasonable range?
    * @returns {boolean}
    */
   voucherRedeemableFromIsValid() {
@@ -117,7 +114,6 @@ class OfferDates {
   /**
    * Is this OfferDates instance's voucherRedeemableUntil field valid?
    * Must be a string representation of a big number
-   * TODO: make sure it's time within a reasonable range?
    * @returns {boolean}
    */
   voucherRedeemableUntilIsValid() {
