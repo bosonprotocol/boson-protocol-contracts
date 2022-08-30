@@ -48,7 +48,7 @@ async function deployAndMintMockNFTAuthTokens() {
   await ensTokenContract.deployTransaction.wait(confirmations);
   console.log(`✅ Mock ENS NFT Token deployed to: ${ensTokenContract.address}`);
 
-  if (network == "test") {
+  if (network == "test" || network == "localhost") {
     //We want to mint auth tokens to specific addresses
     addresses = environments.test.nftAuthTokenHolders.split(", ");
     console.log("\n Tokens will be minted to addresses ", addresses);
