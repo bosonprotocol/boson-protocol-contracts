@@ -50,10 +50,10 @@ async function deployAndMintMockNFTAuthTokens() {
 
   if (network == "test" || network == "localhost") {
     //We want to mint auth tokens to specific addresses
-    if (environments[network].nftAuthTokenHolders!=''){
+    if (environments[network].nftAuthTokenHolders != "") {
       addresses = environments[network].nftAuthTokenHolders?.split(", ");
       console.log("\n Tokens will be minted to addresses ", addresses);
-    }    
+    }
   } else if (network == "hardhat") {
     [...addresses] = await ethers.provider.listAccounts();
 
