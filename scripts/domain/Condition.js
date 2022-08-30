@@ -1,7 +1,6 @@
-const ethers = require("ethers");
-const eip55 = require("eip55");
 const EvaluationMethod = require("./EvaluationMethod");
 const TokenType = require("./TokenType");
+const { bigNumberIsValid, addressIsValid, enumIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Condition
@@ -98,30 +97,20 @@ class Condition {
 
   /**
    * Is this Condition instance's method field valid?
-   * Must be a number representation of a big number
+   * Must be a number belonging to the EvaluationMethod enum
    * @returns {boolean}
    */
   methodIsValid() {
-    let valid = false;
-    let { method } = this;
-    try {
-      valid = EvaluationMethod.Types.includes(method);
-    } catch (e) {}
-    return valid;
+    return enumIsValid(this.method, EvaluationMethod.Types);
   }
 
   /**
    * Is this Condition instance's tokenType field valid?
-   * Must be a valid
+   * Must be a number belonging to the TokenType enum
    * @returns {boolean}
    */
   tokenTypeIsValid() {
-    let valid = false;
-    let { tokenType } = this;
-    try {
-      valid = TokenType.Types.includes(tokenType);
-    } catch (e) {}
-    return valid;
+    return enumIsValid(this.tokenType, TokenType.Types);
   }
 
   /**
@@ -130,12 +119,7 @@ class Condition {
    * @returns {boolean}
    */
   tokenAddressIsValid() {
-    let valid = false;
-    let { tokenAddress } = this;
-    try {
-      valid = eip55.verify(eip55.encode(tokenAddress));
-    } catch (e) {}
-    return valid;
+    return addressIsValid(this.tokenAddress);
   }
 
   /**
@@ -143,12 +127,7 @@ class Condition {
    * @returns {boolean}
    */
   tokenIdIsValid() {
-    let valid = false;
-    let { tokenId } = this;
-    try {
-      valid = typeof tokenId === "string" && typeof ethers.BigNumber.from(tokenId) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.tokenId);
   }
 
   /**
@@ -156,12 +135,7 @@ class Condition {
    * @returns {boolean}
    */
   thresholdIsValid() {
-    let valid = false;
-    let { threshold } = this;
-    try {
-      valid = typeof threshold === "string" && typeof ethers.BigNumber.from(threshold) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.threshold);
   }
 
   /**
@@ -169,12 +143,7 @@ class Condition {
    * @returns {boolean}
    */
   maxCommitsIsValid() {
-    let valid = false;
-    let { maxCommits } = this;
-    try {
-      valid = typeof maxCommits === "string" && typeof ethers.BigNumber.from(maxCommits) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.maxCommits);
   }
 
   /**

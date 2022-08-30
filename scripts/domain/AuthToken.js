@@ -1,5 +1,5 @@
-const ethers = require("ethers");
 const AuthTokenType = require("./AuthTokenType");
+const { bigNumberIsValid, enumIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: AuthToken
@@ -83,25 +83,16 @@ class AuthToken {
    * @returns {boolean}
    */
   tokenIdIsValid() {
-    let valid = false;
-    let { tokenId } = this;
-    try {
-      valid = typeof tokenId === "string" && typeof ethers.BigNumber.from(tokenId) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.tokenId);
   }
 
   /**
-   * Is this AuthToken instance's tokenType field valid?
+   * Is this AuthTokenType instance's state field valid?
+   * Must be a number belonging to the AuthTokenType enum
    * @returns {boolean}
    */
   tokenTypeIsValid() {
-    let valid = false;
-    let { tokenType } = this;
-    try {
-      valid = AuthTokenType.Types.includes(tokenType);
-    } catch (e) {}
-    return valid;
+    return enumIsValid(this.tokenType, AuthTokenType.Types);
   }
 
   /**
