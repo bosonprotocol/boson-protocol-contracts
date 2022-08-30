@@ -5,6 +5,9 @@ const network = hre.network.name;
 let gasLimit;
 const confirmations = environments.confirmations;
 
+const protocolConfig = require("./config/protocol-parameters");
+const authTokenAddresses = require("./config/auth-token-addresses");
+
 const Role = require("./domain/Role");
 const { deployProtocolDiamond } = require("./util/deploy-protocol-diamond.js");
 const { deployProtocolClients } = require("./util/deploy-protocol-clients.js");
@@ -17,7 +20,6 @@ const {
   verifyOnTestEnv,
   writeContracts,
 } = require("./util/report-verify-deployments");
-const { oneMonth } = require("../test/utils/constants");
 const AuthTokenType = require("../scripts/domain/AuthTokenType");
 
 /**
@@ -35,87 +37,16 @@ const AuthTokenType = require("../scripts/domain/AuthTokenType");
  * @returns {{tokenAddress: string, treasuryAddress: string, voucherAddress: string, feePercentage: string, maxOffersPerGroup: string, maxTwinsPerBundle: string, maxOffersPerBundle: string}}
  */
 function getConfig() {
-  // Protocol configuration params
-  const feePercentage = "150"; // 1.5%  = 150
-  const protocolFeeFlatBoson = "0";
-  const maxExchangesPerBatch = "100";
-  const maxOffersPerGroup = "100";
-  const maxTwinsPerBundle = "100";
-  const maxOffersPerBundle = "100";
-  const maxOffersPerBatch = "100";
-  const maxTokensPerWithdrawal = "100";
-  const maxFeesPerDisputeResolver = 100;
-  const maxEscalationResponsePeriod = oneMonth;
-  const maxDisputesPerBatch = "100";
-  const maxAllowedSellers = "100";
-  const buyerEscalationDepositPercentage = "100"; // 1%
-  const maxTotalOfferFeePercentage = 4000; // 40%
-  const maxRoyaltyPecentage = 1000; //10%
-  const maxResolutionPeriod = oneMonth;
-
-  // Boson Token (ERC-20) contract address
-  const TOKEN = {
-    mainnet: "0xC477D038d5420C6A9e0b031712f61c5120090de9",
-    hardhat: ethers.constants.AddressZero,
-    localhost: ethers.constants.AddressZero,
-    test: "0x520ce45DF6d14334257BFdD360a5C22B06E309c7",
-    mumbai: ethers.constants.AddressZero,
-  };
-
-  // Treasury contract address
-  const TREASURY = {
-    mainnet: "0x4a25E18076DDcFd646ED14ABC07286c2A4c1256A",
-    hardhat: ethers.constants.AddressZero,
-    localhost: ethers.constants.AddressZero,
-    test: ethers.constants.AddressZero,
-    mumbai: ethers.constants.AddressZero,
-  };
-
-  // Boson voucher beacon contract address
-  const BEACON = {
-    mainnet: ethers.constants.AddressZero,
-    hardhat: ethers.constants.AddressZero,
-    localhost: ethers.constants.AddressZero,
-    test: ethers.constants.AddressZero,
-    mumbai: ethers.constants.AddressZero,
-  };
-
-  // Beacon proxy contract address
-  const BEACON_PROXY = {
-    mainnet: ethers.constants.AddressZero,
-    hardhat: ethers.constants.AddressZero,
-    localhost: ethers.constants.AddressZero,
-    test: ethers.constants.AddressZero,
-    mumbai: ethers.constants.AddressZero,
-  };
-
   return [
     {
-      token: TOKEN[network],
-      treasury: TREASURY[network],
-      voucherBeacon: BEACON[network],
-      beaconProxy: BEACON_PROXY[network],
+      token: protocolConfig.TOKEN[network],
+      treasury: protocolConfig.TREASURY[network],
+      voucherBeacon: protocolConfig.BEACON[network],
+      beaconProxy: protocolConfig.BEACON_PROXY[network],
     },
-    {
-      maxExchangesPerBatch,
-      maxOffersPerGroup,
-      maxTwinsPerBundle,
-      maxOffersPerBundle,
-      maxOffersPerBatch,
-      maxTokensPerWithdrawal,
-      maxFeesPerDisputeResolver,
-      maxEscalationResponsePeriod,
-      maxDisputesPerBatch,
-      maxAllowedSellers,
-      maxTotalOfferFeePercentage,
-      maxRoyaltyPecentage,
-      maxResolutionPeriod,
-    },
-    {
-      percentage: feePercentage,
-      flatBoson: protocolFeeFlatBoson,
-    },
-    buyerEscalationDepositPercentage,
+    protocolConfig.limits,
+    protocolConfig.fees,
+    protocolConfig.buyerEscalationDepositPercentage,
   ];
 }
 
@@ -124,25 +55,7 @@ function getConfig() {
  * @returns {lensAddress: string, ensAddress: string}
  */
 function getAuthTokenContracts() {
-  // Lens protocol NFT contract address
-  const LENS = {
-    mainnet: "0xDb46d1Dc155634FbC732f92E853b10B288AD5a1d",
-    hardhat: "0x60Ae865ee4C725cd04353b5AAb364553f56ceF82",
-    localhost: "0x478c6B18c1694AF49D5814238183EfBc62211834",
-    test: "0x478c6B18c1694AF49D5814238183EfBc62211834", //actual deployed value
-    mumbai: "0x60Ae865ee4C725cd04353b5AAb364553f56ceF82",
-  };
-
-  // ENS contract address
-  const ENS = {
-    mainnet: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
-    hardhat: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
-    localhost: "0x13E03B861B96d2fC9553D4c52ba1a914f73f50a4",
-    test: "0x13E03B861B96d2fC9553D4c52ba1a914f73f50a4", //actual deployed value
-    mumbai: "0x57f1887a8BF19b14fC0dF6Fd9B2acc9Af147eA85",
-  };
-
-  return { lensAddress: LENS[network], ensAddress: ENS[network] };
+  return { lensAddress: authTokenAddresses.LENS[network], ensAddress: authTokenAddresses.ENS[network] };
 }
 
 /**
