@@ -24,8 +24,8 @@ exports.ContractAddresses = {
   },
 
   localhost: {
-    AccessController: "",
-    ProtocolDiamond: "",
+    AccessController: "0x8A4eBAEB1319623Aebda7c0F77b22263893f286B",
+    ProtocolDiamond: "0x76af425Df29542CE77a0b87Bc81D626F328D38Cd",
     VoucherProxy: "",
   },
 };
