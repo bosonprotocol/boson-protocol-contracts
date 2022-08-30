@@ -14,6 +14,7 @@ import "../../domain/BosonConstants.sol";
 contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     /**
      * @notice Facet Initializer
+     * This function is callable only once.
      */
     function initialize() public onlyUnInitialized(type(IBosonOfferHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonOfferHandler).interfaceId);

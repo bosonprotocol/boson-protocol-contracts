@@ -19,6 +19,7 @@ import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/I
 contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
     /**
      * @notice Facet Initializer
+     * This function is callable only once.
      */
     function initialize() public onlyUnInitialized(type(IBosonFundsHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonFundsHandler).interfaceId);

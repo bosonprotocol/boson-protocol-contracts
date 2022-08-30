@@ -22,13 +22,16 @@ import { Proxy } from "./Proxy.sol";
 contract BeaconClientProxy is Proxy {
     /**
      * @dev Initialize the contract after the deployment.
-     * This function is callable only once
+     * This function is callable only once.
      */
     function initialize(address _beaconAddress) external initializer {
         // set the beacon address
         BeaconClientLib.getBeaconSlot().value = _beaconAddress;
     }
 
+    /**
+     * @dev Modifier to protect initializer function from being invoked twice.
+     */
     modifier initializer() {
         require(!BeaconClientLib.getBeaconSlot().initialized, "Initializable: contract is already initialized");
         _;

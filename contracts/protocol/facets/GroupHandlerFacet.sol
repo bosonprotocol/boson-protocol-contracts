@@ -15,6 +15,7 @@ import "../../domain/BosonConstants.sol";
 contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
     /**
      * @notice Facet Initializer
+     * This function is callable only once.
      */
     function initialize() public onlyUnInitialized(type(IBosonGroupHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonGroupHandler).interfaceId);

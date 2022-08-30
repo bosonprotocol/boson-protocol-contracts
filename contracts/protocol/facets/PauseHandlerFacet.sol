@@ -14,6 +14,7 @@ import { IBosonPauseHandler } from "../../interfaces/handlers/IBosonPauseHandler
 contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
     /**
      * @notice Facet Initializer
+     * This function is callable only once.
      */
     function initialize() public onlyUnInitialized(type(IBosonPauseHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonPauseHandler).interfaceId);
