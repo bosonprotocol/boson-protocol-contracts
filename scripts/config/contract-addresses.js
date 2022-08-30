@@ -22,4 +22,10 @@ exports.ContractAddresses = {
     ProtocolDiamond: "",
     VoucherProxy: "",
   },
+
+  localhost: {
+    AccessController: "",
+    ProtocolDiamond: "",
+    VoucherProxy: "",
+  },
 };

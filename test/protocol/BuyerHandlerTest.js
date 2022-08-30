@@ -20,6 +20,7 @@ const {
   mockDisputeResolver,
   mockVoucherInitValues,
   mockAuthToken,
+  accountId,
 } = require("../utils/mock.js");
 
 /**
@@ -36,13 +37,12 @@ describe("BuyerHandler", function () {
     fundsHandler,
     pauseHandler,
     gasLimit;
-  let seller, id2;
+  let seller;
   let emptyAuthToken;
   let buyer, buyerStruct, buyer2, buyer2Struct, expectedBuyer, expectedBuyerStruct;
   let disputeResolver;
   let disputeResolverFees;
   let sellerAllowList;
-  let nextAccountId;
   let invalidAccountId, id, key, value, exists;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
   let offerId;
@@ -144,7 +144,6 @@ describe("BuyerHandler", function () {
   context("📋 Buyer Methods", async function () {
     beforeEach(async function () {
       // The first buyer id
-      nextAccountId = "1";
       invalidAccountId = "666";
 
       // Create a valid buyer, then set fields in tests directly
@@ -153,6 +152,11 @@ describe("BuyerHandler", function () {
 
       // How that buyer looks as a returned struct
       buyerStruct = buyer.toStruct();
+    });
+
+    afterEach(async function () {
+      // Reset the accountId iterator
+      accountId.next(true);
     });
 
     context("👉 createBuyer()", async function () {
@@ -180,19 +184,17 @@ describe("BuyerHandler", function () {
       });
 
       it("should ignore any provided id and assign the next available", async function () {
-        buyer.id = "444";
-
         // Create a buyer, testing for the event
-        await expect(accountHandler.connect(rando).createBuyer(buyer))
+        await expect(accountHandler.connect(rando).createBuyer({ ...buyer, id: invalidAccountId }))
           .to.emit(accountHandler, "BuyerCreated")
-          .withArgs(nextAccountId, buyerStruct, rando.address);
+          .withArgs(buyer.id, buyerStruct, rando.address);
 
         // wrong buyer id should not exist
-        [exists] = await accountHandler.connect(rando).getBuyer(buyer.id);
+        [exists] = await accountHandler.connect(rando).getBuyer(invalidAccountId);
         expect(exists).to.be.false;
 
         // next buyer id should exist
-        [exists] = await accountHandler.connect(rando).getBuyer(nextAccountId);
+        [exists] = await accountHandler.connect(rando).getBuyer(buyer.id);
         expect(exists).to.be.true;
       });
 
@@ -235,9 +237,6 @@ describe("BuyerHandler", function () {
       beforeEach(async function () {
         // Create a buyer
         await accountHandler.connect(rando).createBuyer(buyer);
-
-        // id of the current buyer and increment nextAccountId
-        id = nextAccountId++;
       });
 
       it("should emit a BuyerUpdated event with correct values if values change", async function () {
@@ -328,9 +327,7 @@ describe("BuyerHandler", function () {
 
       it("should update the correct buyer", async function () {
         // Confgiure another buyer
-        id2 = nextAccountId++;
         buyer2 = mockBuyer(other3.address);
-        buyer2.id = id2.toString();
         expect(buyer2.isValid()).is.true;
 
         buyer2Struct = buyer2.toStruct();
@@ -472,6 +469,11 @@ describe("BuyerHandler", function () {
           expect(balance).equal(1);
         });
 
+        afterEach(async function () {
+          // Reset the accountId iterator
+          accountId.next(true);
+        });
+
         it("The buyers region of protocol is paused", async function () {
           // Pause the buyers region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Buyers]);
@@ -546,14 +548,11 @@ describe("BuyerHandler", function () {
       beforeEach(async function () {
         // Create a buyer
         await accountHandler.connect(rando).createBuyer(buyer);
-
-        // id of the current buyer and increment nextAccountId
-        id = nextAccountId++;
       });
 
       it("should return true for exists if buyer is found", async function () {
         // Get the exists flag
-        [exists] = await accountHandler.connect(rando).getBuyer(id);
+        [exists] = await accountHandler.connect(rando).getBuyer(buyer.id);
 
         // Validate
         expect(exists).to.be.true;

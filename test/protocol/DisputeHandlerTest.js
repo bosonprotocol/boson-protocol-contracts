@@ -29,6 +29,7 @@ const {
   mockAuthToken,
   mockVoucherInitValues,
   mockBuyer,
+  accountId,
 } = require("../utils/mock");
 
 /**
@@ -61,7 +62,7 @@ describe("IBosonDisputeHandler", function () {
     disputeHandler,
     pauseHandler;
   let bosonToken, gasLimit;
-  let buyerId, offer, offerId, seller, nextAccountId;
+  let buyerId, offer, offerId, seller;
   let block, blockNumber, tx;
   let support, newTime;
   let price, quantityAvailable, resolutionPeriod, fulfillmentPeriod, sellerDeposit;
@@ -224,8 +225,7 @@ describe("IBosonDisputeHandler", function () {
   context("📋 Dispute Handler Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
-      offerId = nextAccountId = "1";
-      buyerId = "3"; // created after seller and dispute resolver
+      offerId = "1";
       agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller
@@ -242,11 +242,8 @@ describe("IBosonDisputeHandler", function () {
 
       await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
-      ++nextAccountId;
-
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address);
-      disputeResolver.id = nextAccountId.toString();
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
@@ -289,6 +286,13 @@ describe("IBosonDisputeHandler", function () {
       await fundsHandler
         .connect(operator)
         .depositFunds(seller.id, ethers.constants.AddressZero, fundsToDeposit, { value: fundsToDeposit });
+
+      buyerId = accountId.next().value;
+    });
+
+    afterEach(async function () {
+      // Reset the accountId iterator
+      accountId.next(true);
     });
 
     context("Single", async function () {

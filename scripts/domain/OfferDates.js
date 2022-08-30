@@ -1,4 +1,4 @@
-const ethers = require("ethers");
+const { bigNumberIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: OfferDates
@@ -87,63 +87,37 @@ class OfferDates {
   /**
    * Is this OfferDates instance's validFrom field valid?
    * Must be a string representation of a big number
-   * TODO: make sure it's time within a reasonable range?
    * @returns {boolean}
    */
   validFromIsValid() {
-    let valid = false;
-    let { validFrom } = this;
-    try {
-      valid = typeof validFrom === "string" && typeof ethers.BigNumber.from(validFrom) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.validFrom);
   }
 
   /**
    * Is this OfferDates instance's validUntil field valid?
    * Must be a string representation of a big number
-   * TODO: make sure it's time within a reasonable range?
    * @returns {boolean}
    */
   validUntilIsValid() {
-    let valid = false;
-    let { validUntil } = this;
-    try {
-      valid = typeof validUntil === "string" && typeof ethers.BigNumber.from(validUntil) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.validUntil);
   }
 
   /**
    * Is this OfferDates instance's voucherRedeemableFrom field valid?
    * Must be a string representation of a big number
-   * TODO: make sure it's time within a reasonable range?
    * @returns {boolean}
    */
   voucherRedeemableFromIsValid() {
-    let valid = false;
-    let { voucherRedeemableFrom } = this;
-    try {
-      valid =
-        typeof voucherRedeemableFrom === "string" && typeof ethers.BigNumber.from(voucherRedeemableFrom) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.voucherRedeemableFrom);
   }
 
   /**
    * Is this OfferDates instance's voucherRedeemableUntil field valid?
    * Must be a string representation of a big number
-   * TODO: make sure it's time within a reasonable range?
    * @returns {boolean}
    */
   voucherRedeemableUntilIsValid() {
-    let valid = false;
-    let { voucherRedeemableUntil } = this;
-    try {
-      valid =
-        typeof voucherRedeemableUntil === "string" && typeof ethers.BigNumber.from(voucherRedeemableUntil) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.voucherRedeemableUntil);
   }
 
   /**

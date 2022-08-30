@@ -1,15 +1,10 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const DisputeState = require("./DisputeState");
 const OfferFees = require("./OfferFees.js");
 const TwinReceipt = require("./TwinReceipt.js");
 const Condition = require("./Condition.js");
-const {
-  bigNumberIsValid,
-  bigNumberNonZeroIsValid,
-  enumIsValid,
-  booleanIsValid,
-  addressIsValid,
-} = require("../util/validations.js");
+const { bigNumberIsValid, enumIsValid, booleanIsValid, addressIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Receipt
@@ -209,7 +204,7 @@ class Receipt {
    * @returns {boolean}
    */
   exchangeIdIsValid() {
-    return bigNumberNonZeroIsValid(this.exchangeId);
+    return bigNumberIsValid(this.exchangeId, { gt: 0 });
   }
 
   /**
@@ -218,7 +213,7 @@ class Receipt {
    * @returns {boolean}
    */
   offerIdIsValid() {
-    return bigNumberNonZeroIsValid(this.offerId);
+    return bigNumberIsValid(this.offerId, { gt: 0 });
   }
 
   /**
@@ -227,7 +222,7 @@ class Receipt {
    * @returns {boolean}
    */
   buyerIdIsValid() {
-    return bigNumberNonZeroIsValid(this.buyerId);
+    return bigNumberIsValid(this.buyerId, { gt: 0 });
   }
 
   /**
@@ -236,7 +231,7 @@ class Receipt {
    * @returns {boolean}
    */
   sellerIdIsValid() {
-    return bigNumberNonZeroIsValid(this.sellerId);
+    return bigNumberIsValid(this.sellerId, { gt: 0 });
   }
 
   /**
@@ -304,7 +299,7 @@ class Receipt {
    * @returns {boolean}
    */
   finalizedDateIsValid() {
-    return bigNumberNonZeroIsValid(this.finalizedDate);
+    return bigNumberIsValid(this.finalizedDate, { gt: 0 });
   }
 
   /**
@@ -327,7 +322,7 @@ class Receipt {
    * @returns {boolean}
    */
   committedDateIsValid() {
-    return bigNumberNonZeroIsValid(this.committedDate);
+    return bigNumberIsValid(this.committedDate, { gt: 0 });
   }
 
   /**
@@ -375,12 +370,12 @@ class Receipt {
   }
 
   /**
-   * Is this Receipt instance's disputeState field valid?
-   * Must be a number representation of a big number
+   * Is this Receipt instance's state field valid?
+   * Must be a number belonging to the DisputeState enum
    * @returns {boolean}
    */
   disputeStateIsValid() {
-    return enumIsValid(this.disputeState);
+    return enumIsValid(this.disputeState, DisputeState.Types);
   }
 
   /**

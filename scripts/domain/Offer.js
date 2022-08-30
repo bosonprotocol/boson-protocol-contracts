@@ -1,5 +1,4 @@
-const ethers = require("ethers");
-const eip55 = require("eip55");
+const { bigNumberIsValid, addressIsValid, booleanIsValid, stringIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Offer
@@ -173,12 +172,7 @@ class Offer {
    * @returns {boolean}
    */
   idIsValid() {
-    let valid = false;
-    let { id } = this;
-    try {
-      valid = typeof id === "string" && typeof ethers.BigNumber.from(id) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.id);
   }
 
   /**
@@ -187,12 +181,7 @@ class Offer {
    * @returns {boolean}
    */
   sellerIdIsValid() {
-    let valid = false;
-    let { sellerId } = this;
-    try {
-      valid = typeof sellerId === "string" && typeof ethers.BigNumber.from(sellerId) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.sellerId);
   }
 
   /**
@@ -201,12 +190,7 @@ class Offer {
    * @returns {boolean}
    */
   priceIsValid() {
-    let valid = false;
-    let { price } = this;
-    try {
-      valid = typeof price === "string" && typeof ethers.BigNumber.from(price) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.price);
   }
 
   /**
@@ -215,12 +199,7 @@ class Offer {
    * @returns {boolean}
    */
   sellerDepositIsValid() {
-    let valid = false;
-    let { sellerDeposit } = this;
-    try {
-      valid = typeof sellerDeposit === "string" && typeof ethers.BigNumber.from(sellerDeposit) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.sellerDeposit);
   }
 
   /**
@@ -229,12 +208,7 @@ class Offer {
    * @returns {boolean}
    */
   buyerCancelPenaltyIsValid() {
-    let valid = false;
-    let { buyerCancelPenalty } = this;
-    try {
-      valid = typeof buyerCancelPenalty === "string" && typeof ethers.BigNumber.from(buyerCancelPenalty) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.buyerCancelPenalty);
   }
 
   /**
@@ -243,12 +217,7 @@ class Offer {
    * @returns {boolean}
    */
   quantityAvailableIsValid() {
-    let valid = false;
-    let { quantityAvailable } = this;
-    try {
-      valid = typeof quantityAvailable === "string" && typeof ethers.BigNumber.from(quantityAvailable) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.quantityAvailable);
   }
 
   /**
@@ -259,12 +228,7 @@ class Offer {
    * @returns {boolean}
    */
   exchangeTokenIsValid() {
-    let valid = false;
-    let { exchangeToken } = this;
-    try {
-      valid = eip55.verify(eip55.encode(exchangeToken));
-    } catch (e) {}
-    return valid;
+    return addressIsValid(this.exchangeToken);
   }
 
   /**
@@ -274,12 +238,7 @@ class Offer {
    * @returns {boolean}
    */
   metadataUriIsValid() {
-    let valid = false;
-    let { metadataUri } = this;
-    try {
-      valid = typeof metadataUri === "string";
-    } catch (e) {}
-    return valid;
+    return stringIsValid(this.metadataUri);
   }
 
   /**
@@ -289,12 +248,7 @@ class Offer {
    * @returns {boolean}
    */
   metadataHashIsValid() {
-    let valid = false;
-    let { metadataHash } = this;
-    try {
-      valid = typeof metadataHash === "string";
-    } catch (e) {}
-    return valid;
+    return stringIsValid(this.metadataHash);
   }
 
   /**
@@ -302,12 +256,7 @@ class Offer {
    * @returns {boolean}
    */
   voidedIsValid() {
-    let valid = false;
-    let { voided } = this;
-    try {
-      valid = typeof voided === "boolean";
-    } catch (e) {}
-    return valid;
+    return booleanIsValid(this.voided);
   }
 
   /**

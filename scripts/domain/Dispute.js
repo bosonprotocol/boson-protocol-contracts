@@ -1,4 +1,5 @@
-const ethers = require("ethers");
+const DisputeState = require("./DisputeState");
+const { bigNumberIsValid, enumIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Dispute
@@ -86,26 +87,16 @@ class Dispute {
    * @returns {boolean}
    */
   exchangeIdIsValid() {
-    let valid = false;
-    let { exchangeId } = this;
-    try {
-      valid = typeof exchangeId === "string" && typeof ethers.BigNumber.from(exchangeId) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.exchangeId);
   }
 
   /**
    * Is this Dispute instance's state field valid?
-   * Must be a number representation of a big number
+   * Must be a number belonging to the DisputeState enum
    * @returns {boolean}
    */
   stateIsValid() {
-    let valid = false;
-    let { state } = this;
-    try {
-      valid = typeof state === "number" && typeof ethers.BigNumber.from(state) === "object";
-    } catch (e) {}
-    return valid;
+    return enumIsValid(this.state, DisputeState.Types);
   }
 
   /**
@@ -114,12 +105,9 @@ class Dispute {
    * @returns {boolean}
    */
   buyerPercentIsValid() {
-    let valid = false;
-    let { buyerPercent } = this;
-    try {
-      valid = typeof buyerPercent === "string" && typeof ethers.BigNumber.from(buyerPercent) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.buyerPercent, {
+      lte: "10000",
+    });
   }
 
   /**

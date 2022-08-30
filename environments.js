@@ -32,6 +32,18 @@ module.exports = {
         "gasLimit": parseInt(process.env.DEPLOYER_GAS_LIMIT_TEST),
     },
 
+    // Local node
+    //  - if both mnemonic and keys are specified, mnemonic will be used
+    //  - if no DEPLOYER_LOCAL_TXNODE is specified, default "http://127.0.0.1:8545" will be used
+    "localhost": {
+        "mnemonic": process.env.DEPLOYER_LOCAL_MNEMONIC,
+        "txNode": process.env.DEPLOYER_LOCAL_TXNODE,
+        "keys": [process.env.DEPLOYER_LOCAL_KEY],
+        "gasLimit": parseInt(process.env.DEPLOYER_GAS_LIMIT_TEST),
+        "adminAddress": process.env.ADMIN_ADDRESS_LOCAL,
+        "nftAuthTokenHolders": process.env.AUTH_TOKEN_OWNERS_LOCAL
+    },
+
     // Internal test env
     //  - placeholder private key is first address of test HDWallet used in hardhat network config
     //  - Replace key with pk for deployment

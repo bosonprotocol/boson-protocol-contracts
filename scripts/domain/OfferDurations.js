@@ -1,4 +1,4 @@
-const ethers = require("ethers");
+const { bigNumberIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: OfferDurations
@@ -87,42 +87,25 @@ class OfferDurations {
    * @returns {boolean}
    */
   fulfillmentPeriodIsValid() {
-    let valid = false;
-    let { fulfillmentPeriod } = this;
-    try {
-      valid = typeof fulfillmentPeriod === "string" && typeof ethers.BigNumber.from(fulfillmentPeriod) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.fulfillmentPeriod);
   }
 
   /**
    * Is this OfferDurations instance's voucherValid field valid?
    * Must be a string representation of a big number
-   * TODO: make sure it's time within a reasonable range?
    * @returns {boolean}
    */
   voucherValidIsValid() {
-    let valid = false;
-    let { voucherValid } = this;
-    try {
-      valid = typeof voucherValid === "string" && typeof ethers.BigNumber.from(voucherValid) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.voucherValid);
   }
 
   /**
    * Is this OfferDurations instance's resolutionPeriod field valid?
    * Must be a string representation of a big number
-   * TODO: make sure it's time within a reasonable range?
    * @returns {boolean}
    */
   resolutionPeriodIsValid() {
-    let valid = false;
-    let { resolutionPeriod } = this;
-    try {
-      valid = typeof resolutionPeriod === "string" && typeof ethers.BigNumber.from(resolutionPeriod) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.resolutionPeriod);
   }
 
   /**

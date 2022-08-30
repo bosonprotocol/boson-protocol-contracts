@@ -1,5 +1,4 @@
-const ethers = require("ethers");
-const eip55 = require("eip55");
+const { bigNumberIsValid, booleanIsValid, addressIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Buyer
@@ -87,12 +86,7 @@ class Buyer {
    * @returns {boolean}
    */
   idIsValid() {
-    let valid = false;
-    let { id } = this;
-    try {
-      valid = typeof id === "string" && typeof ethers.BigNumber.from(id) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.id);
   }
 
   /**
@@ -101,12 +95,7 @@ class Buyer {
    * @returns {boolean}
    */
   walletIsValid() {
-    let valid = false;
-    let { wallet } = this;
-    try {
-      valid = eip55.verify(eip55.encode(wallet));
-    } catch (e) {}
-    return valid;
+    return addressIsValid(this.wallet);
   }
 
   /**
@@ -114,12 +103,7 @@ class Buyer {
    * @returns {boolean}
    */
   activeIsValid() {
-    let valid = false;
-    let { active } = this;
-    try {
-      valid = typeof active === "boolean";
-    } catch (e) {}
-    return valid;
+    return booleanIsValid(this.active);
   }
 
   /**

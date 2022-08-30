@@ -1,5 +1,4 @@
-const ethers = require("ethers");
-const eip55 = require("eip55");
+const { bigNumberIsValid, stringIsValid, addressIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: DisputeResolverFee
@@ -87,12 +86,7 @@ class DisputeResolverFee {
    * @returns {boolean}
    */
   tokenAddressIsValid() {
-    let valid = false;
-    let { tokenAddress } = this;
-    try {
-      valid = eip55.verify(eip55.encode(tokenAddress));
-    } catch (e) {}
-    return valid;
+    return addressIsValid(this.tokenAddress);
   }
 
   /**
@@ -101,12 +95,7 @@ class DisputeResolverFee {
    * @returns {boolean}
    */
   tokenNameIsValid() {
-    let valid = false;
-    let { tokenName } = this;
-    try {
-      valid = typeof tokenName === "string";
-    } catch (e) {}
-    return valid;
+    return stringIsValid(this.tokenName);
   }
 
   /**
@@ -115,12 +104,7 @@ class DisputeResolverFee {
    * @returns {boolean}
    */
   feeAmountIsValid() {
-    let valid = false;
-    let { feeAmount } = this;
-    try {
-      valid = typeof feeAmount === "string" && typeof ethers.BigNumber.from(feeAmount) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.feeAmount);
   }
 
   /**
@@ -203,7 +187,6 @@ class DisputeResolverFeeList {
   disputeResolverFeeIsValid() {
     let valid = false;
     let { disputeResolverFees } = this;
-
     try {
       valid =
         Array.isArray(disputeResolverFees) &&

@@ -56,3 +56,28 @@ jobs:
         run: npm run size
       - name: Unit tests
         run: npm run test
+
+  deploy-dry-run:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
+    name: "deploy: dry run" 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2.4.0
+      - name: Setup node
+        uses: actions/setup-node@v2.5.1
+        with:
+          node-version: '16.14.x'
+          cache: 'npm'
+      - name: Install Dependencies
+        run: npm install
+      - name: Prepare Environment
+        shell: bash
+        run: |
+          cp .env.example .env
+      - name: Deploy suite locally
+        run: npm run deploy-suite:hardhat
+      - name: Cancelling tests in case of failure
+        if: failure()
+        uses: andymckay/cancel-action@0.2
