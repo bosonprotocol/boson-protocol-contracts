@@ -93,7 +93,6 @@ class OfferDurations {
   /**
    * Is this OfferDurations instance's voucherValid field valid?
    * Must be a string representation of a big number
-   * TODO: make sure it's time within a reasonable range?
    * @returns {boolean}
    */
   voucherValidIsValid() {
@@ -103,7 +102,6 @@ class OfferDurations {
   /**
    * Is this OfferDurations instance's resolutionPeriod field valid?
    * Must be a string representation of a big number
-   * TODO: make sure it's time within a reasonable range?
    * @returns {boolean}
    */
   resolutionPeriodIsValid() {
