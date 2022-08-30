@@ -1,5 +1,5 @@
 const ExchangeState = require("./ExchangeState");
-const { bigNumberIsValid } = require("../util/validations.js");
+const { bigNumberIsValid, enumIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Exchange
@@ -125,15 +125,11 @@ class Exchange {
 
   /**
    * Is this Exchange instance's state field valid?
+   * Must be a number belonging to the ExchangeState enum
    * @returns {boolean}
    */
   stateIsValid() {
-    let valid = false;
-    let { state } = this;
-    try {
-      valid = ExchangeState.Types.includes(state);
-    } catch (e) {}
-    return valid;
+    return enumIsValid(this.state, ExchangeState.Types);
   }
 
   /**

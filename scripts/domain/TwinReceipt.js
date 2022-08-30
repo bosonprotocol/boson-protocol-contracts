@@ -1,4 +1,4 @@
-const { bigNumberIsValid, addressIsValid } = require("../util/validations.js");
+const { bigNumberIsValid, addressIsValid, enumIsValid } = require("../util/validations.js");
 const TokenType = require("./TokenType");
 
 /**
@@ -122,15 +122,11 @@ class TwinReceipt {
 
   /**
    * Is this TwinReceipt instance's tokenType field valid?
+   * Must be a number belonging to the TokenType enum
    * @returns {boolean}
    */
   tokenTypeIsValid() {
-    let valid = false;
-    let { tokenType } = this;
-    try {
-      valid = TokenType.Types.includes(tokenType);
-    } catch (e) {}
-    return valid;
+    return enumIsValid(this.tokenType, TokenType.Types);
   }
 
   /**

@@ -1,5 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
+const DisputeState = require("./DisputeState");
 const OfferFees = require("./OfferFees.js");
 const TwinReceipt = require("./TwinReceipt.js");
 const Condition = require("./Condition.js");
@@ -369,12 +370,12 @@ class Receipt {
   }
 
   /**
-   * Is this Receipt instance's disputeState field valid?
-   * Must be a number representation of a big number
+   * Is this Receipt instance's state field valid?
+   * Must be a number belonging to the DisputeState enum
    * @returns {boolean}
    */
   disputeStateIsValid() {
-    return enumIsValid(this.disputeState);
+    return enumIsValid(this.disputeState, DisputeState.Types);
   }
 
   /**

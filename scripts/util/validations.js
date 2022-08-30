@@ -49,13 +49,15 @@ function bigNumberArrayIsValid(bigNumberArray) {
 }
 
 /**
- * Must be a number representation of a big number
+ * Must be a number belonging to the enumTypes array
+ * @params {number} enumValue
+ * @params {Array<numbers>} enumTypes - array of numbers
  * @returns {boolean}
  */
-function enumIsValid(enumValue) {
+function enumIsValid(enumValue, enumTypes) {
   let valid = false;
   try {
-    valid = typeof enumValue === "number" && typeof ethers.BigNumber.from(enumValue) === "object";
+    valid = enumTypes.includes(enumValue);
   } catch (e) {}
   return valid;
 }

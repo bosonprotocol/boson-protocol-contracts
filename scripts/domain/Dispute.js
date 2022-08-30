@@ -1,3 +1,4 @@
+const DisputeState = require("./DisputeState");
 const { bigNumberIsValid, enumIsValid } = require("../util/validations.js");
 
 /**
@@ -91,11 +92,11 @@ class Dispute {
 
   /**
    * Is this Dispute instance's state field valid?
-   * Must be a number representation of a big number
+   * Must be a number belonging to the DisputeState enum
    * @returns {boolean}
    */
   stateIsValid() {
-    return enumIsValid(this.state);
+    return enumIsValid(this.state, DisputeState.Types);
   }
 
   /**
@@ -104,7 +105,9 @@ class Dispute {
    * @returns {boolean}
    */
   buyerPercentIsValid() {
-    return bigNumberIsValid(this.buyerPercent);
+    return bigNumberIsValid(this.buyerPercent, {
+      lte: "10000",
+    });
   }
 
   /**

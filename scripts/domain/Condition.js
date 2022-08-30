@@ -1,6 +1,6 @@
 const EvaluationMethod = require("./EvaluationMethod");
 const TokenType = require("./TokenType");
-const { bigNumberIsValid, addressIsValid } = require("../util/validations.js");
+const { bigNumberIsValid, addressIsValid, enumIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: Condition
@@ -97,30 +97,20 @@ class Condition {
 
   /**
    * Is this Condition instance's method field valid?
-   * Must be a number representation of a big number
+   * Must be a number belonging to the EvaluationMethod enum
    * @returns {boolean}
    */
   methodIsValid() {
-    let valid = false;
-    let { method } = this;
-    try {
-      valid = EvaluationMethod.Types.includes(method);
-    } catch (e) {}
-    return valid;
+    return enumIsValid(this.method, EvaluationMethod.Types);
   }
 
   /**
    * Is this Condition instance's tokenType field valid?
-   * Must be a valid
+   * Must be a number belonging to the TokenType enum
    * @returns {boolean}
    */
   tokenTypeIsValid() {
-    let valid = false;
-    let { tokenType } = this;
-    try {
-      valid = TokenType.Types.includes(tokenType);
-    } catch (e) {}
-    return valid;
+    return enumIsValid(this.tokenType, TokenType.Types);
   }
 
   /**
