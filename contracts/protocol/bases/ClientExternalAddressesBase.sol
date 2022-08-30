@@ -18,6 +18,8 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
      * Reverts if caller doesn't have role.
      *
      * See: {AccessController.hasRole}
+     *
+     * @param role - the role to check
      */
     modifier onlyRole(bytes32 role) {
         require(ClientLib.hasRole(role), "Access denied, caller doesn't have role");

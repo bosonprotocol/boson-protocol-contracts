@@ -46,6 +46,8 @@ library BeaconClientLib {
      * Reverts if caller doesn't have role.
      *
      * See: {AccessController.hasRole}
+     *
+     * @param role - the role to check
      */
     function hasRole(bytes32 role) internal view returns (bool) {
         // retrieve accessController from Beacon

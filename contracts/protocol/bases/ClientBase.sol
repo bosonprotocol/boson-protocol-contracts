@@ -25,6 +25,8 @@ abstract contract ClientBase is BosonTypes {
      * - caller doesn't have role
      *
      * See: {AccessController.hasRole}
+     *
+     * @param role - the role to check
      */
     modifier onlyRole(bytes32 role) {
         require(ClientLib.hasRole(role), ACCESS_DENIED);

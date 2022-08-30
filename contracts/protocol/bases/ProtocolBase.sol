@@ -31,6 +31,8 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * Reverts if caller doesn't have role.
      *
      * See: {AccessController.hasRole}
+     *
+     * @param role - the role to check
      */
     modifier onlyRole(bytes32 _role) {
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();

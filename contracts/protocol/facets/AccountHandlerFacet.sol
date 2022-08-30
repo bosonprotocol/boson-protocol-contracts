@@ -14,7 +14,7 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
  */
 contract AccountHandlerFacet is ProtocolBase {
     /**
-     * @notice Facet Initializer.
+     * @notice Facet Initializer
      * This function is callable only once.
      */
     function initialize() public onlyUnInitialized(type(IBosonAccountHandler).interfaceId) {

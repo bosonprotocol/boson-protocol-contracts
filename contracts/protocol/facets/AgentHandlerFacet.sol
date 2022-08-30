@@ -22,7 +22,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Creates a marketplace agent
+     * @notice Creates a marketplace agent.
      *
      * Emits an AgentCreated event if successful.
      *
