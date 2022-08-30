@@ -19,6 +19,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
 contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, ProtocolBase {
     /**
      * @notice Facet Initializer
+     * This function is callable only once.
      */
     function initialize() public onlyUnInitialized(type(IBosonMetaTransactionsHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonMetaTransactionsHandler).interfaceId);

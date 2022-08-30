@@ -16,6 +16,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
 contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     /**
      * @notice Facet Initializer
+     * This function is callable only once.
      *
      * @param _addresses - struct of Boson Protocol addresses (Boson Token (ERC-20) contract, treasury, and Voucher contract)
      * @param _limits - struct with Boson Protocol limits

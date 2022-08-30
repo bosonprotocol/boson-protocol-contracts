@@ -28,6 +28,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
     /**
      * @notice Initializer
+     * This function is callable only once.
      */
     function initializeVoucher(
         uint256 _sellerId,

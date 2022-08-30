@@ -15,6 +15,7 @@ import "../../domain/BosonConstants.sol";
 contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
     /**
      * @notice Facet Initializer
+     * This function is callable only once.
      */
     function initialize() public onlyUnInitialized(type(IBosonTwinHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonTwinHandler).interfaceId);

@@ -29,6 +29,7 @@ interface MultiToken {
 contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     /**
      * @notice Facet Initializer
+     * This function is callable only once.
      */
     function initialize() public onlyUnInitialized(type(IBosonExchangeHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonExchangeHandler).interfaceId);
