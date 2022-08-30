@@ -1,4 +1,4 @@
-const ethers = require("ethers");
+const { bigNumberIsValid } = require("../util/validations.js");
 
 /**
  * Boson Protocol Domain Entity: DisputeDates
@@ -89,12 +89,7 @@ class DisputeDates {
    * @returns {boolean}
    */
   disputedIsValid() {
-    let valid = false;
-    let { disputed } = this;
-    try {
-      valid = typeof disputed === "string" && typeof ethers.BigNumber.from(disputed) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.disputed);
   }
 
   /**
@@ -103,15 +98,7 @@ class DisputeDates {
    * @returns {boolean}
    */
   escalatedIsValid() {
-    let valid = false;
-    let { escalated } = this;
-    try {
-      valid =
-        escalated === null ||
-        escalated === undefined ||
-        (typeof escalated === "string" && typeof ethers.BigNumber.from(escalated) === "object");
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.escalated, { optional: true });
   }
 
   /**
@@ -120,15 +107,7 @@ class DisputeDates {
    * @returns {boolean}
    */
   finalizedIsValid() {
-    let valid = false;
-    let { finalized } = this;
-    try {
-      valid =
-        finalized === null ||
-        finalized === undefined ||
-        (typeof finalized === "string" && typeof ethers.BigNumber.from(finalized) === "object");
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.finalized, { optional: true });
   }
 
   /**
@@ -137,12 +116,7 @@ class DisputeDates {
    * @returns {boolean}
    */
   timeoutIsValid() {
-    let valid = false;
-    let { timeout } = this;
-    try {
-      valid = typeof timeout === "string" && typeof ethers.BigNumber.from(timeout) === "object";
-    } catch (e) {}
-    return valid;
+    return bigNumberIsValid(this.timeout);
   }
 
   /**
