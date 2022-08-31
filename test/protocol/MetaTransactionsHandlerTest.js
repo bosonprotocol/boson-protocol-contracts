@@ -221,13 +221,14 @@ describe("IBosonMetaTransactionsHandler", function () {
   // All supported methods
   context("📋 Meta Transactions Handler Methods", async function () {
     context("👉 isUsedNonce()", async function () {
-      it("should return false if nonce is not used", async function () {
-        // We expect that the nonce is Not used before.
-        let expectedResult = false;
+      let expectedResult = false;
+      beforeEach(async function () {
+        expectedResult = false;
 
-        // Set a random nonce
         nonce = parseInt(ethers.utils.randomBytes(8));
+      });
 
+      it("should return false if nonce is not used", async function () {
         // Check if nonce is used before
         result = await metaTransactionsHandler.connect(operator).isUsedNonce(nonce);
 
@@ -236,17 +237,12 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
 
       it("should be true after executing a meta transaction with nonce", async function () {
-        // We expect that the nonce is Not used before.
-        let expectedResult = false;
-        // Set a random nonce
-        nonce = parseInt(ethers.utils.randomBytes(8));
         result = await metaTransactionsHandler.connect(operator).isUsedNonce(nonce);
 
         // Verify the expectation
         assert.equal(result, expectedResult, "Nonce is used");
 
         // Create a valid seller for meta transaction
-        ("1");
         seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
         expect(seller.isValid()).is.true;
 
@@ -322,18 +318,6 @@ describe("IBosonMetaTransactionsHandler", function () {
 
     context("👉 executeMetaTransaction()", async function () {
       beforeEach(async function () {
-        // Set a random nonce
-        nonce = parseInt(ethers.utils.randomBytes(8));
-
-        // Set the message Type
-        metaTransactionType = [
-          { name: "nonce", type: "uint256" },
-          { name: "from", type: "address" },
-          { name: "contractAddress", type: "address" },
-          { name: "functionName", type: "string" },
-          { name: "functionSignature", type: "bytes" },
-        ];
-
         // Create a valid seller for meta transaction
         seller = mockSeller(operator.address, operator.address, operator.address, operator.address);
         expect(seller.isValid()).is.true;
@@ -346,6 +330,18 @@ describe("IBosonMetaTransactionsHandler", function () {
         emptyAuthToken = mockAuthToken();
         expect(emptyAuthToken.isValid()).is.true;
 
+        // Set a random nonce
+        nonce = parseInt(ethers.utils.randomBytes(8));
+
+        // Set the message Type
+        metaTransactionType = [
+          { name: "nonce", type: "uint256" },
+          { name: "from", type: "address" },
+          { name: "contractAddress", type: "address" },
+          { name: "functionName", type: "string" },
+          { name: "functionSignature", type: "bytes" },
+        ];
+
         customTransactionType = {
           MetaTransaction: metaTransactionType,
         };
@@ -353,6 +349,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         // Prepare the message
         message = {};
         message.nonce = parseInt(nonce);
+        message.from = operator.address;
       });
 
       afterEach(async function () {
@@ -360,96 +357,237 @@ describe("IBosonMetaTransactionsHandler", function () {
         accountId.next(true);
       });
 
-      it("Should emit MetaTransactionExecuted event and update state", async () => {
-        // Prepare the function signature for the facet function.
-        functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
-          seller,
-          emptyAuthToken,
-          voucherInitValues,
-        ]);
+      context("AccountHandler", async function () {
+        beforeEach(async function () {
+          message.contractAddress = accountHandler.address;
+          message.functionName =
+            "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
+        });
 
-        // Prepare the message
-        message.from = operator.address;
-        message.contractAddress = accountHandler.address;
-        message.functionName =
-          "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
-        message.functionSignature = functionSignature;
+        it("Should emit MetaTransactionExecuted event and update state", async () => {
+          // Prepare the function signature for the facet function.
+          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+            seller,
+            emptyAuthToken,
+            voucherInitValues,
+          ]);
 
-        // Collect the signature components
-        let { r, s, v } = await prepareDataSignatureParameters(
-          operator,
-          customTransactionType,
-          "MetaTransaction",
-          message,
-          metaTransactionsHandler.address
-        );
+          message.functionSignature = functionSignature;
 
-        // send a meta transaction, check for event
-        await expect(
-          metaTransactionsHandler
-            .connect(deployer)
-            .executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v)
-        )
-          .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
-          .withArgs(operator.address, deployer.address, message.functionName, nonce);
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            operator,
+            customTransactionType,
+            "MetaTransaction",
+            message,
+            metaTransactionsHandler.address
+          );
 
-        // Verify that nonce is used. Expect true.
-        let expectedResult = true;
-        result = await metaTransactionsHandler.connect(operator).isUsedNonce(nonce);
-        assert.equal(result, expectedResult, "Nonce is unused");
-      });
-
-      it("does not modify revert reasons", async function () {
-        // Set seller as inactive
-        seller.active = false;
-
-        // Prepare the function signature for the facet function.
-        functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
-          seller,
-          emptyAuthToken,
-          voucherInitValues,
-        ]);
-
-        // Prepare the message
-        message.from = operator.address;
-        message.contractAddress = accountHandler.address;
-        message.functionName =
-          "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
-        message.functionSignature = functionSignature;
-
-        // Collect the signature components
-        let { r, s, v } = await prepareDataSignatureParameters(
-          operator,
-          customTransactionType,
-          "MetaTransaction",
-          message,
-          metaTransactionsHandler.address
-        );
-
-        // send a meta transaction, expecting revert
-        await expect(
-          metaTransactionsHandler.executeMetaTransaction(
-            operator.address,
-            message.functionName,
-            functionSignature,
-            nonce,
-            r,
-            s,
-            v
+          // send a meta transaction, check for event
+          await expect(
+            metaTransactionsHandler
+              .connect(deployer)
+              .executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v)
           )
-        ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
+            .to.emit(metaTransactionsHandler, "MetaTransactionExecuted")
+            .withArgs(operator.address, deployer.address, message.functionName, nonce);
+
+          // Verify that nonce is used. Expect true.
+          let expectedResult = true;
+          result = await metaTransactionsHandler.connect(operator).isUsedNonce(nonce);
+          assert.equal(result, expectedResult, "Nonce is unused");
+        });
+
+        it("does not modify revert reasons", async function () {
+          // Set seller as inactive
+          seller.active = false;
+
+          // Prepare the function signature for the facet function.
+          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+            seller,
+            emptyAuthToken,
+            voucherInitValues,
+          ]);
+
+          message.functionSignature = functionSignature;
+
+          // Collect the signature components
+          let { r, s, v } = await prepareDataSignatureParameters(
+            operator,
+            customTransactionType,
+            "MetaTransaction",
+            message,
+            metaTransactionsHandler.address
+          );
+
+          // send a meta transaction, expecting revert
+          await expect(
+            metaTransactionsHandler.executeMetaTransaction(
+              operator.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            )
+          ).to.revertedWith(RevertReasons.MUST_BE_ACTIVE);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          beforeEach(async function () {
+            // Prepare the function signature for the facet function.
+            functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+              seller,
+              emptyAuthToken,
+              voucherInitValues,
+            ]);
+
+            message.functionSignature = functionSignature;
+          });
+
+          it("The meta transactions region of protocol is paused", async function () {
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              operator,
+              customTransactionType,
+              "MetaTransaction",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Pause the metatx region of the protocol
+            await pauseHandler.connect(pauser).pause([PausableRegion.MetaTransaction]);
+
+            // Attempt to execute a meta transaction, expecting revert
+            await expect(
+              metaTransactionsHandler
+                .connect(deployer)
+                .executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v)
+            ).to.revertedWith(RevertReasons.REGION_PAUSED);
+          });
+
+          it("Should fail when function name is incorrect", async function () {
+            let incorrectFunctionName = "createSeller"; // there are no function argument types here.
+
+            // Prepare the function signature for the facet function.
+            functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+              seller,
+              emptyAuthToken,
+              voucherInitValues,
+            ]);
+
+            // Prepare the message
+            message.functionName = incorrectFunctionName;
+            message.functionSignature = functionSignature;
+
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              operator,
+              customTransactionType,
+              "MetaTransaction",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTransaction(
+                operator.address,
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
+            ).to.revertedWith(RevertReasons.INVALID_FUNCTION_NAME);
+          });
+
+          it("Should fail when replay transaction", async function () {
+            // Prepare the function signature for the facet function.
+            functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+              seller,
+              emptyAuthToken,
+              voucherInitValues,
+            ]);
+
+            message.functionSignature = functionSignature;
+
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              operator,
+              customTransactionType,
+              "MetaTransaction",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute the meta transaction.
+            await metaTransactionsHandler.executeMetaTransaction(
+              operator.address,
+              message.functionName,
+              functionSignature,
+              nonce,
+              r,
+              s,
+              v
+            );
+
+            // Execute meta transaction again with the same nonce, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTransaction(
+                operator.address,
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
+            ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
+          });
+
+          it("Should fail when Signer and Signature do not match", async function () {
+            // Prepare the function signature for the facet function.
+            functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+              seller,
+              emptyAuthToken,
+              voucherInitValues,
+            ]);
+
+            // Prepare the message
+            message.from = rando.address;
+            message.functionSignature = functionSignature;
+
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              rando, // Different user, not operator.
+              customTransactionType,
+              "MetaTransaction",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTransaction(
+                operator.address,
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
+            ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+          });
+        });
       });
 
       context("👉 msg.sender is replaced with msgSender()", async function () {
         context("TwinHandler", async function () {
           beforeEach(async function () {
-            // VoucherInitValues
-            voucherInitValues = mockVoucherInitValues();
-            expect(voucherInitValues.isValid()).is.true;
-
-            // AuthToken
-            emptyAuthToken = mockAuthToken();
-            expect(emptyAuthToken.isValid()).is.true;
             await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues);
 
             // Create a valid twin, then set fields in tests directly
@@ -509,41 +647,6 @@ describe("IBosonMetaTransactionsHandler", function () {
       });
 
       context("💔 Revert Reasons", async function () {
-        it("The meta transactions region of protocol is paused", async function () {
-          // Prepare the function signature for the facet function.
-          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
-            seller,
-            emptyAuthToken,
-            voucherInitValues,
-          ]);
-
-          // Prepare the message
-          message.from = operator.address;
-          message.contractAddress = accountHandler.address;
-          message.functionName =
-            "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
-          message.functionSignature = functionSignature;
-
-          // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
-            operator,
-            customTransactionType,
-            "MetaTransaction",
-            message,
-            metaTransactionsHandler.address
-          );
-
-          // Pause the metatx region of the protocol
-          await pauseHandler.connect(pauser).pause([PausableRegion.MetaTransaction]);
-
-          // Attempt to execute a meta transaction, expecting revert
-          await expect(
-            metaTransactionsHandler
-              .connect(deployer)
-              .executeMetaTransaction(operator.address, message.functionName, functionSignature, nonce, r, s, v)
-          ).to.revertedWith(RevertReasons.REGION_PAUSED);
-        });
-
         it("Should fail when try to call executeMetaTransaction method itself", async function () {
           // Function signature for executeMetaTransaction function.
           functionSignature = metaTransactionsHandler.interface.encodeFunctionData("executeMetaTransaction", [
@@ -557,7 +660,6 @@ describe("IBosonMetaTransactionsHandler", function () {
           ]);
 
           // Prepare the message
-          message.from = operator.address;
           message.contractAddress = metaTransactionsHandler.address;
           message.functionName = "executeMetaTransaction(address,string,bytes,uint256,bytes32,bytes32,uint8)";
           message.functionSignature = functionSignature;
@@ -585,341 +687,219 @@ describe("IBosonMetaTransactionsHandler", function () {
           ).to.revertedWith(RevertReasons.INVALID_FUNCTION_SIGNATURE);
         });
 
-        it("Should fail when function name is incorrect", async function () {
-          let incorrectFunctionName = "createSeller"; // there are no function argument types here.
+        context("Reentrancy guard", async function () {
+          beforeEach(async function () {
+            // Create a valid seller
+            await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
+          });
 
-          // Prepare the function signature for the facet function.
-          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
-            seller,
-            emptyAuthToken,
-            voucherInitValues,
-          ]);
+          it("Should fail on reenter", async function () {
+            // Deploy malicious contracts
+            const [maliciousToken] = await deployMockTokens(gasLimit, ["Foreign20Malicious"]);
+            await maliciousToken.setProtocolAddress(protocolDiamond.address);
 
-          // Prepare the message
-          message.from = operator.address;
-          message.contractAddress = accountHandler.address;
-          message.functionName = incorrectFunctionName;
-          message.functionSignature = functionSignature;
+            // Initial ids for all the things
+            exchangeId = "1";
 
-          // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
-            operator,
-            customTransactionType,
-            "MetaTransaction",
-            message,
-            metaTransactionsHandler.address
-          );
+            // Create a valid dispute resolver
+            disputeResolver = mockDisputeResolver(
+              operatorDR.address,
+              adminDR.address,
+              clerkDR.address,
+              treasuryDR.address,
+              false
+            );
+            expect(disputeResolver.isValid()).is.true;
 
-          // Execute meta transaction, expecting revert.
-          await expect(
-            metaTransactionsHandler.executeMetaTransaction(
-              operator.address,
-              message.functionName,
-              functionSignature,
-              nonce,
-              r,
-              s,
-              v
-            )
-          ).to.revertedWith(RevertReasons.INVALID_FUNCTION_NAME);
-        });
+            buyerId = accountId.next().value;
 
-        it("Should fail when replay transaction", async function () {
-          // Prepare the function signature for the facet function.
-          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
-            seller,
-            emptyAuthToken,
-            voucherInitValues,
-          ]);
+            //Create DisputeResolverFee array so offer creation will succeed
+            disputeResolverFees = [new DisputeResolverFee(maliciousToken.address, "maliciousToken", "0")];
 
-          // Prepare the message
-          message.from = operator.address;
-          message.contractAddress = accountHandler.address;
-          message.functionName =
-            "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
-          message.functionSignature = functionSignature;
+            // Make empty seller list, so every seller is allowed
+            sellerAllowList = [];
 
-          // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
-            operator,
-            customTransactionType,
-            "MetaTransaction",
-            message,
-            metaTransactionsHandler.address
-          );
+            // Register and activate the dispute resolver
+            await accountHandler
+              .connect(rando)
+              .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+            await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
-          // Execute the meta transaction.
-          await metaTransactionsHandler.executeMetaTransaction(
-            operator.address,
-            message.functionName,
-            functionSignature,
-            nonce,
-            r,
-            s,
-            v
-          );
+            const { offer, ...mo } = await mockOffer();
+            ({ offerDates, offerDurations } = mo);
+            offerToken = offer;
+            offerToken.exchangeToken = maliciousToken.address;
 
-          // Execute meta transaction again with the same nonce, expecting revert.
-          await expect(
-            metaTransactionsHandler.executeMetaTransaction(
-              operator.address,
-              message.functionName,
-              functionSignature,
-              nonce,
-              r,
-              s,
-              v
-            )
-          ).to.revertedWith(RevertReasons.NONCE_USED_ALREADY);
-        });
+            price = offer.price;
+            sellerDeposit = offer.sellerDeposit;
 
-        it("Should fail when Signer and Signature do not match", async function () {
-          // Prepare the function signature for the facet function.
-          functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
-            seller,
-            emptyAuthToken,
-            voucherInitValues,
-          ]);
+            // Check if domains are valid
+            expect(offerToken.isValid()).is.true;
+            expect(offerDates.isValid()).is.true;
+            expect(offerDurations.isValid()).is.true;
 
-          // Prepare the message
-          message.from = rando.address;
-          message.contractAddress = accountHandler.address;
-          message.functionName =
-            "createSeller((uint256,address,address,address,address,bool),(uint256,uint8),(string,uint96))";
-          message.functionSignature = functionSignature;
+            // Create the offer
+            await offerHandler
+              .connect(operator)
+              .createOffer(offerToken, offerDates, offerDurations, disputeResolver.id, agentId);
 
-          // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
-            rando, // Different user, not operator.
-            customTransactionType,
-            "MetaTransaction",
-            message,
-            metaTransactionsHandler.address
-          );
+            // top up seller's and buyer's account
+            await maliciousToken.mint(operator.address, sellerDeposit);
+            await maliciousToken.mint(buyer.address, price);
 
-          // Execute meta transaction, expecting revert.
-          await expect(
-            metaTransactionsHandler.executeMetaTransaction(
-              operator.address,
-              message.functionName,
-              functionSignature,
-              nonce,
-              r,
-              s,
-              v
-            )
-          ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
-        });
+            // Approve protocol to transfer the tokens
+            await maliciousToken.connect(operator).approve(protocolDiamond.address, sellerDeposit);
+            await maliciousToken.connect(buyer).approve(protocolDiamond.address, price);
 
-        it("Should fail on reenter", async function () {
-          // Deploy the boson token
-          const [maliciousToken] = await deployMockTokens(gasLimit, ["Foreign20Malicious"]);
-          await maliciousToken.setProtocolAddress(protocolDiamond.address);
+            // Deposit to seller's pool
+            await fundsHandler.connect(operator).depositFunds(seller.id, maliciousToken.address, sellerDeposit);
 
-          // Initial ids for all the things
-          exchangeId = "1";
-          buyerId = "3"; // created after a seller and a dispute resolver
+            // Commit to the offer
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
 
-          // Create a valid seller
-          await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
+            // Cancel the voucher, so both seller and buyer have something to withdraw
+            await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
 
-          // Create a valid dispute resolver
-          disputeResolver = mockDisputeResolver(
-            operatorDR.address,
-            adminDR.address,
-            clerkDR.address,
-            treasuryDR.address,
-            false
-          );
-          expect(disputeResolver.isValid()).is.true;
+            // Expected payoffs - they are the same for token and native currency
+            // Buyer: price - buyerCancelPenalty
+            buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
 
-          //Create DisputeResolverFee array so offer creation will succeed
-          disputeResolverFees = [new DisputeResolverFee(maliciousToken.address, "maliciousToken", "0")];
+            // Prepare validFundDetails
+            tokenListBuyer = [maliciousToken.address];
+            tokenAmountsBuyer = [buyerPayoff];
+            validFundDetails = {
+              entityId: buyerId,
+              tokenList: tokenListBuyer,
+              tokenAmounts: tokenAmountsBuyer,
+            };
 
-          // Make empty seller list, so every seller is allowed
-          sellerAllowList = [];
+            // Prepare the message
+            message = {};
+            message.nonce = parseInt(nonce);
+            message.contractAddress = fundsHandler.address;
+            message.functionName = "withdrawFunds(uint256,address[],uint256[])";
+            message.fundDetails = validFundDetails;
+            message.from = buyer.address;
 
-          // Register and activate the dispute resolver
-          await accountHandler
-            .connect(rando)
-            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
-          await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+            // Set the fund Type
+            fundType = [
+              { name: "entityId", type: "uint256" },
+              { name: "tokenList", type: "address[]" },
+              { name: "tokenAmounts", type: "uint256[]" },
+            ];
 
-          const { offer, ...mo } = await mockOffer();
-          ({ offerDates, offerDurations } = mo);
-          offerToken = offer;
-          offerToken.exchangeToken = maliciousToken.address;
+            // Set the message Type
+            metaTxFundType = [
+              { name: "nonce", type: "uint256" },
+              { name: "from", type: "address" },
+              { name: "contractAddress", type: "address" },
+              { name: "functionName", type: "string" },
+              { name: "fundDetails", type: "MetaTxFundDetails" },
+            ];
 
-          price = offer.price;
-          sellerDeposit = offer.sellerDeposit;
+            customTransactionType = {
+              MetaTxFund: metaTxFundType,
+              MetaTxFundDetails: fundType,
+            };
 
-          // Check if domains are valid
-          expect(offerToken.isValid()).is.true;
-          expect(offerDates.isValid()).is.true;
-          expect(offerDurations.isValid()).is.true;
+            // Prepare the function signature
+            functionSignature = fundsHandler.interface.encodeFunctionData("withdrawFunds", [
+              validFundDetails.entityId,
+              validFundDetails.tokenList,
+              validFundDetails.tokenAmounts,
+            ]);
 
-          // Create the offer
-          await offerHandler
-            .connect(operator)
-            .createOffer(offerToken, offerDates, offerDurations, disputeResolver.id, agentId);
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              buyer,
+              customTransactionType,
+              "MetaTxFund",
+              message,
+              metaTransactionsHandler.address
+            );
 
-          // top up seller's and buyer's account
-          await maliciousToken.mint(operator.address, sellerDeposit);
-          await maliciousToken.mint(buyer.address, price);
+            let [, buyerStruct] = await accountHandler.getBuyer(buyerId);
+            const buyerBefore = Buyer.fromStruct(buyerStruct);
 
-          // approve protocol to transfer the tokens
-          await maliciousToken.connect(operator).approve(protocolDiamond.address, sellerDeposit);
-          await maliciousToken.connect(buyer).approve(protocolDiamond.address, price);
+            // Execute the meta transaction.
+            await expect(
+              metaTransactionsHandler.executeMetaTransaction(
+                buyer.address,
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                v
+              )
+            ).to.revertedWith(RevertReasons.REENTRANCY_GUARD);
 
-          // deposit to seller's pool
-          await fundsHandler.connect(operator).depositFunds(seller.id, maliciousToken.address, sellerDeposit);
+            [, buyerStruct] = await accountHandler.getBuyer(buyerId);
+            const buyerAfter = Buyer.fromStruct(buyerStruct);
+            assert.equal(buyerAfter.toString(), buyerBefore.toString(), "Buyer should not change");
+          });
 
-          // commit to the offer
-          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id);
+          it("Should emit MetaTransactionExecuted event and update state", async () => {
+            // Deploy malicious contracts
+            const [maliciousToken] = await deployMockTokens(gasLimit, ["Foreign20Malicious2"]);
+            await maliciousToken.setProtocolAddress(protocolDiamond.address);
 
-          // cancel the voucher, so both seller and buyer have something to withdraw
-          await exchangeHandler.connect(buyer).cancelVoucher(exchangeId); // canceling the voucher in tokens
+            // Mint and approve protocol to transfer the tokens
+            await maliciousToken.mint(rando.address, "1");
+            await maliciousToken.connect(rando).approve(protocolDiamond.address, "1");
 
-          // expected payoffs - they are the same for token and native currency
-          // buyer: price - buyerCancelPenalty
-          buyerPayoff = ethers.BigNumber.from(offerToken.price).sub(offerToken.buyerCancelPenalty).toString();
+            // Just make a random metaTx signature to some view function that will delete "currentSender"
+            // Prepare the function signature for the facet function.
+            functionSignature = exchangeHandler.interface.encodeFunctionData("getNextExchangeId");
 
-          // prepare validFundDetails
-          tokenListBuyer = [maliciousToken.address];
-          tokenAmountsBuyer = [buyerPayoff];
-          validFundDetails = {
-            entityId: buyerId,
-            tokenList: tokenListBuyer,
-            tokenAmounts: tokenAmountsBuyer,
-          };
+            // Prepare the message
+            message.nonce = "0";
+            message.from = rando.address;
+            message.contractAddress = accountHandler.address;
+            message.functionName = "getNextExchangeId()";
+            message.functionSignature = functionSignature;
 
-          // Prepare the message
-          message = {};
-          message.nonce = parseInt(nonce);
-          message.contractAddress = fundsHandler.address;
-          message.functionName = "withdrawFunds(uint256,address[],uint256[])";
-          message.fundDetails = validFundDetails;
-          message.from = buyer.address;
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              rando,
+              customTransactionType,
+              "MetaTransaction",
+              message,
+              metaTransactionsHandler.address
+            );
 
-          // Set the fund Type
-          fundType = [
-            { name: "entityId", type: "uint256" },
-            { name: "tokenList", type: "address[]" },
-            { name: "tokenAmounts", type: "uint256[]" },
-          ];
+            await maliciousToken.setMetaTxBytes(rando.address, functionSignature, r, s, v);
 
-          // Set the message Type
-          metaTxFundType = [
-            { name: "nonce", type: "uint256" },
-            { name: "from", type: "address" },
-            { name: "contractAddress", type: "address" },
-            { name: "functionName", type: "string" },
-            { name: "fundDetails", type: "MetaTxFundDetails" },
-          ];
+            // Prepare the function signature for the facet function.
+            functionSignature = fundsHandler.interface.encodeFunctionData("depositFunds", [
+              seller.id,
+              maliciousToken.address,
+              "1",
+            ]);
 
-          customTransactionType = {
-            MetaTxFund: metaTxFundType,
-            MetaTxFundDetails: fundType,
-          };
+            // Prepare the message
+            message.nonce = nonce;
+            message.from = rando.address;
+            message.contractAddress = accountHandler.address;
+            message.functionName = "depositFunds(uint256,address,uint256)";
+            message.functionSignature = functionSignature;
 
-          // Prepare the function signature
-          functionSignature = fundsHandler.interface.encodeFunctionData("withdrawFunds", [
-            validFundDetails.entityId,
-            validFundDetails.tokenList,
-            validFundDetails.tokenAmounts,
-          ]);
+            // Collect the signature components
+            ({ r, s, v } = await prepareDataSignatureParameters(
+              rando,
+              customTransactionType,
+              "MetaTransaction",
+              message,
+              metaTransactionsHandler.address
+            ));
 
-          // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
-            buyer,
-            customTransactionType,
-            "MetaTxFund",
-            message,
-            metaTransactionsHandler.address
-          );
-
-          let [, buyerStruct] = await accountHandler.getBuyer(buyerId);
-          const buyerBefore = Buyer.fromStruct(buyerStruct);
-
-          // Execute the meta transaction.
-          await expect(
-            metaTransactionsHandler.executeMetaTransaction(
-              buyer.address,
-              message.functionName,
-              functionSignature,
-              nonce,
-              r,
-              s,
-              v
-            )
-          ).to.revertedWith(RevertReasons.REENTRANCY_GUARD);
-
-          [, buyerStruct] = await accountHandler.getBuyer(buyerId);
-          const buyerAfter = Buyer.fromStruct(buyerStruct);
-          assert.equal(buyerAfter.toString(), buyerBefore.toString(), "Buyer should not change");
-        });
-
-        it("Should emit MetaTransactionExecuted event and update state", async () => {
-          // create seller
-          await accountHandler.connect(operator).createSeller(seller, emptyAuthToken, voucherInitValues);
-
-          // deploy malicious contracts
-          const [maliciousToken] = await deployMockTokens(gasLimit, ["Foreign20Malicious2"]);
-          await maliciousToken.setProtocolAddress(protocolDiamond.address);
-          await maliciousToken.mint(rando.address, "1");
-          await maliciousToken.connect(rando).approve(protocolDiamond.address, "1");
-
-          // Just make a random metaTx signature to some view function that will delete "currentSender"
-          // Prepare the function signature for the facet function.
-          functionSignature = exchangeHandler.interface.encodeFunctionData("getNextExchangeId");
-
-          // Prepare the message
-          message.nonce = "0";
-          message.from = rando.address;
-          message.contractAddress = accountHandler.address;
-          message.functionName = "getNextExchangeId()";
-          message.functionSignature = functionSignature;
-
-          // Collect the signature components
-          let { r, s, v } = await prepareDataSignatureParameters(
-            rando,
-            customTransactionType,
-            "MetaTransaction",
-            message,
-            metaTransactionsHandler.address
-          );
-
-          await maliciousToken.setMetaTxBytes(rando.address, functionSignature, r, s, v);
-
-          // Prepare the function signature for the facet function.
-          functionSignature = fundsHandler.interface.encodeFunctionData("depositFunds", [
-            seller.id,
-            maliciousToken.address,
-            "1",
-          ]);
-
-          // Prepare the message
-          message.nonce = nonce;
-          message.from = rando.address;
-          message.contractAddress = accountHandler.address;
-          message.functionName = "depositFunds(uint256,address,uint256)";
-          message.functionSignature = functionSignature;
-
-          // Collect the signature components
-          ({ r, s, v } = await prepareDataSignatureParameters(
-            rando,
-            customTransactionType,
-            "MetaTransaction",
-            message,
-            metaTransactionsHandler.address
-          ));
-
-          // send a meta transaction, expect revert
-          await expect(
-            metaTransactionsHandler
-              .connect(deployer)
-              .executeMetaTransaction(rando.address, message.functionName, functionSignature, nonce, r, s, v)
-          ).to.revertedWith(RevertReasons.REENTRANCY_GUARD);
+            // send a meta transaction, expect revert
+            await expect(
+              metaTransactionsHandler
+                .connect(deployer)
+                .executeMetaTransaction(rando.address, message.functionName, functionSignature, nonce, r, s, v)
+            ).to.revertedWith(RevertReasons.REENTRANCY_GUARD);
+          });
         });
       });
     });
