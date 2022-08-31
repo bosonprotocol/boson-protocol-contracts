@@ -14,7 +14,7 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
  */
 contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**
-     * @notice Facet Initializer
+     * @notice Initializes facet.
      */
     function initialize() public {
         // No-op initializer.
@@ -126,7 +126,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**
      * @notice Updates a dispute resolver, not including DisputeResolverFees, allowed seller list or active flag.
      *         All DisputeResolver fields should be filled, even those staying the same.
-     *         Use removeFeesFromDisputeResolver
+     *         Use removeFeesFromDisputeResolver and addFeesToDisputeResolver to add and remove fees.
+     *         Use addSellersToAllowList and removeSellersFromAllowList to add and remove allowed sellers.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a DisputeResolverUpdated event if successful.
@@ -206,7 +207,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Add DisputeResolverFees to an existing dispute resolver
+     * @notice Adds DisputeResolverFees to an existing dispute resolver.
      *
      * Emits a DisputeResolverFeesAdded event if successful.
      *
@@ -273,7 +274,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Remove DisputeResolverFees from  an existing dispute resolver
+     * @notice Removes DisputeResolverFees from  an existing dispute resolver.
      *
      * Emits a DisputeResolverFeesRemoved event if successful.
      *
@@ -343,9 +344,9 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Add seller ids to set of ids allowed to chose the given dispute resolver
+     * @notice Adds seller ids to set of ids allowed to choose the given dispute resolver for an offer.
      *
-     * Emits a AllowedSellersAdded event if successful.
+     * Emits an AllowedSellersAdded event if successful.
      *
      * Reverts if:
      * - The dispute resolvers region of protocol is paused
@@ -391,9 +392,9 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Remove seller ids from set of ids allowed to chose the given dispute resolver
+     * @notice Removes seller ids from set of ids allowed to choose the given dispute resolver for an offer.
      *
-     * Emits a AllowedSellersRemoved event if successful.
+     * Emits an AllowedSellersRemoved event if successful.
      *
      * Reverts if:
      * - The dispute resolvers region of protocol is paused
@@ -461,7 +462,9 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Set the active flag for this Dispute Resolver to true. Only callable by the protocol ADMIN role.
+     * @notice Sets the active flag for this Dispute Resolver to true. 
+     * 
+     * @dev Only callable by the protocol ADMIN role.
      *
      * Emits a DisputeResolverActivated event if successful.
      *
@@ -495,11 +498,11 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**
      * @notice Gets the details about a dispute resolver.
      *
-     * @param _disputeResolverId - the id of the rdispute esolver to check
+     * @param _disputeResolverId - the id of the dispute resolver to check
      * @return exists - the dispute resolver was found
      * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
-     * @return sellerAllowList - list of sellers that are allowed to chose this dispute resolver
+     * @return sellerAllowList - list of sellers that are allowed to choose this dispute resolver
      */
     function getDisputeResolver(uint256 _disputeResolverId)
         public
@@ -555,11 +558,11 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Returns the inforamtion if given sellers are allowed to chose the given dispute resolver
+     * @notice Checks whether given sellers are allowed to choose the given dispute resolver.
      *
      * @param _disputeResolverId - id of dispute resolver to check
-     * @param _sellerIds - list of sellers ids to check
-     * @return sellerAllowed - array with indicator (true/false) if seller is allowed to chose the dispute resolver. Index in this array corresponds to indices of the incoming _sellerIds
+     * @param _sellerIds - list of seller ids to check
+     * @return sellerAllowed - array with indicator (true/false) if seller is allowed to choose the dispute resolver. Index in this array corresponds to indices of the incoming _sellerIds
      */
     function areSellersAllowed(uint256 _disputeResolverId, uint256[] calldata _sellerIds)
         external
@@ -589,7 +592,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Stores DisputeResolver struct in storage
+     * @notice Stores DisputeResolver struct in storage.
+     *
+     * Reverts if:
+     * - Escalation period is greater than the max escalaction period
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set
      */
@@ -621,7 +627,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Stores seller id to allowed list mapping in storage
+     * @notice Stores seller id to allowed list mapping in storage.
      *
      * Reverts if:
      * - Some seller does not exist

@@ -9,7 +9,7 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 /**
  * @title BundleBase
  *
- * @dev Provides methods for bundle creation that can be shared accross facets
+ * @notice Provides methods for bundle creation that can be shared accross facets
  */
 contract BundleBase is ProtocolBase, IBosonBundleEvents {
     /**
