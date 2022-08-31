@@ -20,14 +20,15 @@ import { IBosonConfigHandler } from "../../../interfaces/handlers/IBosonConfigHa
  *
  * Key features:
  * - Only PROTOCOL-roled addresses can issue vouchers, i.e., the ProtocolDiamond or an EOA for testing
- * - Newly minted voucher NFTs are automatically transferred to the buyer
+ * - Minted to the buyer when the buyer commits to an offer
+ * - Burned when the buyer redeems the voucher NFT
  */
 contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ERC721Upgradeable {
     string private _contractURI;
     uint96 private _royaltyPercentage;
 
     /**
-     * @notice Initializer
+     * @notice Initializeze the voucher.
      * This function is callable only once.
      */
     function initializeVoucher(
@@ -50,7 +51,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     }
 
     /**
-     * @notice Issue a voucher to a buyer
+     * @notice Issues a voucher to a buyer.
      *
      * Minted voucher supply is sent to the buyer.
      * Caller must have PROTOCOL role.
@@ -64,7 +65,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     }
 
     /**
-     * @notice Burn a voucher
+     * @notice Burns a voucher.
      *
      * Caller must have PROTOCOL role.
      *
@@ -75,7 +76,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     }
 
     /**
-     * @notice Implementation of the {IERC165} interface.
+     * @notice Implements the {IERC165} interface.
      *
      * N.B. This method is inherited from several parents and
      * the compiler cannot decide which to use. Thus, they must
@@ -101,9 +102,9 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     }
 
     /**
-     * @notice Get the Voucher metadata URI
+     * @notice Gets the Voucher metadata URI.
      *
-     * This method is overrides the Open Zeppelin version, returning
+     * This method overrides the Open Zeppelin version, returning
      * a unique stored metadata URI for each token rather than a
      * replaceable baseURI template, since the latter is not compatible
      * with IPFS hashes.
@@ -122,7 +123,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     }
 
     /**
-     * @dev Update buyer on transfer
+     * @notice Updates buyer on transfer.
      *
      * When an issued voucher is subsequently transferred,
      * either on the secondary market or just between wallets,
@@ -134,6 +135,10 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * Boson Protocol buyer account, it will be used. Otherwise,
      * a new buyer account will be created and associated with
      * the exchange.
+     *
+     * @param from - the address from which the voucher is being transferred
+     * @param to - the address to which the voucher is being transferred
+     * @param tokenId - the tokenId of the voucher that is being transferred
      */
     function _beforeTokenTransfer(
         address from,
@@ -147,8 +152,10 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     }
 
     /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * @notice Transfers ownership of the contract to a new account (`newOwner`).
      * Can only be called by the protocol. Change is done by calling `updateSeller` on the protocol
+     *
+     * @param newOwner - the address to which ownsership of the voucher contract will be transferred
      */
     function transferOwnership(address newOwner) public override(IBosonVoucher, OwnableUpgradeable) onlyRole(PROTOCOL) {
         require(newOwner != address(0), "Ownable: new owner is the zero address");
@@ -156,7 +163,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     }
 
     /**
-     * @notice Returns storefront-level metadata used by OpenSea
+     * @notice Returns storefront-level metadata used by OpenSea.
      *
      * @return Contract metadata URI
      */
@@ -165,17 +172,17 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     }
 
     /**
-     * @notice Sets new contract URI
+     * @notice Sets new contract URI.
      * Can only be called by the owner or during the initialization
      *
-     * @param _newContractURI new contract metadata URI
+     * @param _newContractURI - new contract metadata URI
      */
     function setContractURI(string calldata _newContractURI) external override onlyOwner {
         _setContractURI(_newContractURI);
     }
 
     /**
-     * @notice Sets new contract URI
+     * @notice Sets new contract URI.
      * Can only be called by the owner or during the initialization
      *
      * @param _newContractURI new contract metadata URI
@@ -187,8 +194,8 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     }
 
     /**
-     * @notice Called with the sale price to determine how much royalty
-     *  is owed and to whom.
+     * @notice Provides royalty info. 
+     * Called with the sale price to determine how much royalty is owed and to whom.
      *
      * @param _tokenId - the NFT asset queried for royalty information
      * @param _salePrice - the sale price of the NFT asset specified by _tokenId
@@ -231,12 +238,12 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     }
 
     /**
-     * @notice Sets royalty percentage
+     * @notice Sets royalty percentage.
      * Can only be called by the owner or during the initialization
      *
      * Emits RoyaltyPercentageChanged if succesful
      *
-     * @param _newRoyaltyPercentage new royalty percentage
+     * @param _newRoyaltyPercentage - new royalty percentage
      */
     function _setRoyaltyPercentage(uint96 _newRoyaltyPercentage) internal {
         // get max royalty percentage from the protocol

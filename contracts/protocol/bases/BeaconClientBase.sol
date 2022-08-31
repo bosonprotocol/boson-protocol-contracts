@@ -12,8 +12,8 @@ import { IClientExternalAddresses } from "../../interfaces/clients/IClientExtern
 /**
  * @title BeaconClientBase
  *
- * @notice Extended by Boson Protocol contracts that need to communicate with the
- * ProtocolDiamond, but are NOT facets of the ProtocolDiamond. This is used where it's expected that multiple clients
+ * @notice Extended by Boson Protocol contracts that need to communicate with the ProtocolDiamond
+ * but are NOT facets of the ProtocolDiamond. This is used where it's expected that multiple clients
  * will use the same implementation. If it's expected that only one client will use it, it's recommended to use `ClientBase` instead
  *
  * Boson client contracts include BosonVoucher
@@ -35,11 +35,11 @@ abstract contract BeaconClientBase is BosonTypes {
     }
 
     /**
-     * @notice Get the info about the offer associated with a voucher's exchange
+     * @notice Gets the info about the offer associated with a voucher's exchange
      *
      * @param _exchangeId - the id of the exchange
      * @return exists - the offer was found
-     * @return offer - the offer associated with the _offerId
+     * @return offer - the offer associated with the _exchangeId
      */
     function getBosonOffer(uint256 _exchangeId) internal view returns (bool exists, Offer memory offer) {
         address protocolDiamond = IClientExternalAddresses(BeaconClientLib._beacon()).getProtocolAddress();
@@ -49,7 +49,7 @@ abstract contract BeaconClientBase is BosonTypes {
     }
 
     /**
-     * @notice Inform protocol of new buyer associated with an exchange
+     * @notice Informs protocol of new buyer associated with an exchange
      *
      * @param _exchangeId - the id of the exchange
      * @param _newBuyer - the address of the new buyer
@@ -60,7 +60,7 @@ abstract contract BeaconClientBase is BosonTypes {
     }
 
     /**
-     * @notice Get the info about the seller associated with the sellerId.
+     * @notice Gets the info about the seller associated with the sellerId.
      *
      * @param _sellerId - the id of the seller
      * @return exists - the seller was found

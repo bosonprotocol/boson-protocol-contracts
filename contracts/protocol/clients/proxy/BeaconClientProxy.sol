@@ -21,8 +21,10 @@ import { Proxy } from "./Proxy.sol";
  */
 contract BeaconClientProxy is Proxy {
     /**
-     * @dev Initialize the contract after the deployment.
-     * This function is callable only once.
+     * @notice Initializes the contract after the deployment.
+     * This function is callable only once
+     *
+     * @param _beaconAddress - address of the Beacon to initialize
      */
     function initialize(address _beaconAddress) external initializer {
         // set the beacon address
@@ -39,9 +41,11 @@ contract BeaconClientProxy is Proxy {
     }
 
     /**
-     * @dev Returns the address to which the fallback function
+     * @notice Returns the address to which the fallback function
      * and {_fallback} should delegate.
-     * Implementation address is supplied by the beacon
+     * Implementation address is supplied by the Beacon
+     *
+     * @return the address of the Beacon implementation
      */
     function _implementation() internal view override returns (address) {
         // Return the current implementation address

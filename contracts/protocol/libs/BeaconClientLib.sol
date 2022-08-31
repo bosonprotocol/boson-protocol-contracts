@@ -7,6 +7,7 @@ import { IClientExternalAddresses } from "../../interfaces/clients/IClientExtern
 /**
  * @title BeaconClientLib
  *
+ * @notice
  * - Defines BeaconSlot position
  * - Provides BeaconSlot accessor
  * - Defines hasRole function
@@ -24,7 +25,9 @@ library BeaconClientLib {
     }
 
     /**
-     * @dev Returns an `BeaconSlot` with member `value`.
+     * @notice Returns a `BeaconSlot` with member `value`.
+     * 
+     * @return r - the BeaconSlot storage slot
      */
     function getBeaconSlot() internal pure returns (BeaconSlot storage r) {
         /// @solidity memory-safe-assembly
@@ -34,20 +37,23 @@ library BeaconClientLib {
     }
 
     /**
-     * @dev Returns the address of the beacon
+     * @notice Returns the address of the Beacon
+     *
+     * @return the Beacon address
      */
     function _beacon() internal view returns (address) {
         return getBeaconSlot().value;
     }
 
     /**
-     * @dev Checks that the caller has a specific role.
+     * @notice Checks that the caller has a specific role.
      *
      * Reverts if caller doesn't have role.
      *
      * See: {AccessController.hasRole}
      *
      * @param role - the role to check
+     * @return  whether caller has role
      */
     function hasRole(bytes32 role) internal view returns (bool) {
         // retrieve accessController from Beacon

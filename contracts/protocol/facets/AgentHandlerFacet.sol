@@ -56,11 +56,11 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Updates an agent except, with the exception of the active flag.
+     * @notice Updates an agent, with the exception of the active flag.
      *         All other fields should be filled, even those staying the same.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
-     * Emits a AgentUpdated event if successful.
+     * Emits an AgentUpdated event if successful.
      *
      * Reverts if:
      * - The agents region of protocol is paused
@@ -85,13 +85,13 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
         //Agent must already exist
         require(exists, NO_SUCH_AGENT);
 
-        // get message sender
+        //Get message sender
         address sender = msgSender();
 
         //Check that msg.sender is the wallet address for this agent
         require(agent.wallet == sender, NOT_AGENT_WALLET);
 
-        //check that the wallet address is unique to one agent Id if new
+        //Check that the wallet address is not associated with another agent or is already associated with the agent passed in
         require(
             protocolLookups().agentIdByWallet[_agent.wallet] == 0 ||
                 protocolLookups().agentIdByWallet[_agent.wallet] == _agent.id,
@@ -105,7 +105,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
         _agent.active = agent.active;
         storeAgent(_agent);
 
-        // Notify watchers of state change
+        //Notify watchers of state change
         emit AgentUpdated(_agent.id, _agent, sender);
     }
 
