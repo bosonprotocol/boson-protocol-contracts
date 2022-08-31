@@ -153,7 +153,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
     /**
      * @notice Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the protocol. Change is done by calling `updateSeller` on the protocol
+     * Can only be called by the protocol. Change is done by calling `updateSeller` on the protocol.
      *
      * @param newOwner - the address to which ownsership of the voucher contract will be transferred
      */
@@ -173,7 +173,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
     /**
      * @notice Sets new contract URI.
-     * Can only be called by the owner or during the initialization
+     * Can only be called by the owner or during the initialization.
      *
      * @param _newContractURI - new contract metadata URI
      */
@@ -183,7 +183,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
     /**
      * @notice Sets new contract URI.
-     * Can only be called by the owner or during the initialization
+     * Can only be called by the owner or during the initialization.
      *
      * @param _newContractURI new contract metadata URI
      */
@@ -225,11 +225,11 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
      * @notice Sets the royalty percentage.
      * Can only be called by the owner or during the initialization
      *
-     * Emits RoyaltyPercentageChanged if succesful
+     * Emits RoyaltyPercentageChanged if succesful.
      *
      * Reverts if:
-     * - caller is not the owner.
-     * - `royaltyPercentage` is greater than max royalty percentage defined in the protocol
+     * - Caller is not the owner.
+     * - `_newRoyaltyPercentage` is greater than max royalty percentage defined in the protocol
      *
      * @param _newRoyaltyPercentage fee in percentage. e.g. 500 = 5%
      */
@@ -239,9 +239,9 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
 
     /**
      * @notice Sets royalty percentage.
-     * Can only be called by the owner or during the initialization
+     * Can only be called by the owner or during the initialization.
      *
-     * Emits RoyaltyPercentageChanged if succesful
+     * Emits RoyaltyPercentageChanged if succesful.
      *
      * @param _newRoyaltyPercentage - new royalty percentage
      */

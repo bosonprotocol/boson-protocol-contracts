@@ -13,7 +13,7 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
  */
 contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**
-     * @notice Facet Initializer
+     * @notice Initializes facet.
      */
     function initialize() public {
         // No-op initializer.
@@ -113,7 +113,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @notice Gets the details about an agent.
      *
      * @param _agentId - the id of the agent to check
-     * @return exists - the agent was found
+     * @return exists - wether the agent was found
      * @return agent - the agent details. See {BosonTypes.Agent}
      */
     function getAgent(uint256 _agentId) external view returns (bool exists, Agent memory agent) {

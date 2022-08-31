@@ -12,7 +12,7 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
  */
 contract BuyerHandlerFacet is BuyerBase {
     /**
-     * @notice Facet Initializer
+     * @notice Initializes facet.
      */
     function initialize() public {
         // No-op initializer.
@@ -21,7 +21,7 @@ contract BuyerHandlerFacet is BuyerBase {
     }
 
     /**
-     * @notice Creates a Buyer
+     * @notice Creates a Buyer.
      *
      * Emits an BuyerCreated event if successful.
      *
@@ -100,7 +100,7 @@ contract BuyerHandlerFacet is BuyerBase {
      * @notice Gets the details about a buyer.
      *
      * @param _buyerId - the id of the buyer to check
-     * @return exists - the buyer was found
+     * @return exists - wether the buyer was found
      * @return buyer - the buyer details. See {BosonTypes.Buyer}
      */
     function getBuyer(uint256 _buyerId) external view returns (bool exists, Buyer memory buyer) {

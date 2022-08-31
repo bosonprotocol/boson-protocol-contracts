@@ -18,7 +18,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
     }
 
     /**
-     * @notice Facet Initializer.
+     * @notice Initializes facet.
      * This function is callable only once.
      */
     function initialize() public onlyUnInitialized(type(IBosonBundleHandler).interfaceId) {
@@ -33,17 +33,17 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * Reverts if:
      * - The bundles region of protocol is paused
      * - Seller does not exist
-     * - any of offers belongs to different seller
-     * - any of offers does not exist
-     * - offer exists in a different bundle
-     * - number of offers exceeds maximum allowed number per bundle
-     * - any of twins belongs to different seller
-     * - any of twins does not exist
-     * - number of twins exceeds maximum allowed number per bundle
-     * - duplicate twins added in same bundle
-     * - exchange already exists for the offer id in bundle
-     * - offers total quantity is greater than twin supply when token is nonfungible
-     * - offers total quantity multiplied by twin amount is greater than twin supply when token is fungible or multitoken
+     * - Any of the offers belongs to different seller
+     * - Any of the offers does not exist
+     * - Offer exists in a different bundle
+     * - Number of offers exceeds maximum allowed number per bundle
+     * - Any of the twins belongs to different seller
+     * - Any of the twins does not exist
+     * - Number of twins exceeds maximum allowed number per bundle
+     * - Duplicate twins added in same bundle
+     * - Exchange already exists for the offer id in bundle
+     * - Offers' total quantity is greater than twin supply when token is nonfungible
+     * - Offers' total quantity multiplied by twin amount is greater than twin supply when token is fungible or multitoken
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */

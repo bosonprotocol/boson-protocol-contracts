@@ -45,7 +45,7 @@ contract BeaconClientProxy is Proxy {
      * and {_fallback} should delegate.
      * Implementation address is supplied by the Beacon
      *
-     * @return the address of the Beacon implementation
+     * @return address of the Beacon implementation
      */
     function _implementation() internal view override returns (address) {
         // Return the current implementation address

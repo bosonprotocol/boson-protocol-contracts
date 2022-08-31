@@ -23,7 +23,7 @@ abstract contract BeaconClientBase is BosonTypes {
      * @dev Modifier that checks that the caller has a specific role.
      *
      * Reverts if:
-     * - caller doesn't have role
+     * - Caller doesn't have role
      *
      * See: {AccessController.hasRole}
      *

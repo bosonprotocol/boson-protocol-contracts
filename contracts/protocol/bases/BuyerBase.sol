@@ -9,13 +9,13 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 /**
  * @title BuyerBase
  *
- * @dev Provides methods for buyer creation that can be shared accross facets
+ * @notice Provides methods for buyer creation that can be shared accross facets
  */
 contract BuyerBase is ProtocolBase, IBosonAccountEvents {
     /**
-     * @notice Creates a Buyer
+     * @notice Creates a Buyer.
      *
-     * Emits an BuyerCreated event if successful.
+     * Emits a BuyerCreated event if successful.
      *
      * Reverts if:
      * - Wallet address is zero address
@@ -45,7 +45,7 @@ contract BuyerBase is ProtocolBase, IBosonAccountEvents {
     }
 
     /**
-     * @notice Stores buyer struct in storage
+     * @notice Stores buyer struct in storage.
      *
      * @param _buyer - the fully populated struct with buyer id set
      */

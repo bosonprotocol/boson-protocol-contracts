@@ -18,18 +18,19 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
      * Emits a BundleCreated event if successful.
      *
      * Reverts if:
+     * - The bundles region of protocol is paused
      * - Seller does not exist
-     * - any of offers belongs to different seller
-     * - any of offers does not exist
-     * - offer exists in a different bundle
-     * - number of offers exceeds maximum allowed number per bundle
-     * - any of twins belongs to different seller
-     * - any of twins does not exist
-     * - number of twins exceeds maximum allowed number per bundle
-     * - duplicate twins added in same bundle
-     * - exchange already exists for the offer id in bundle
-     * - offers total quantity is greater than twin supply when token is NonFungible
-     * - offers total quantity multiplied by twin amount is greater than twin supply when token is Fungible or MultiToken
+     * - Any of the offers belongs to different seller
+     * - Any of the offers does not exist
+     * - Offer exists in a different bundle
+     * - Number of offers exceeds maximum allowed number per bundle
+     * - Any of the twins belongs to different seller
+     * - Any of the twins does not exist
+     * - Number of twins exceeds maximum allowed number per bundle
+     * - Duplicate twins added in same bundle
+     * - Exchange already exists for the offer id in bundle
+     * - Offers' total quantity is greater than twin supply when token is nonfungible
+     * - Offers' total quantity multiplied by twin amount is greater than twin supply when token is fungible or multitoken
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
@@ -122,13 +123,13 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
     }
 
     /**
-     * @notice Make sure twin has enough supply to cover all bundled offers
+     * @notice Checks that twin has enough supply to cover all bundled offers.
      *
      * Reverts if:
-     * - offers total quantity is greater than twin supply when token is NonFungible
-     * - offers total quantity multiplied by twin amount is greater than twin supply when token is Fungible or Multitoken
+     * - Offers' total quantity is greater than twin supply when token is nonfungible
+     * - Offers' total quantity multiplied by twin amount is greater than twin supply when token is fungible or multitoken
      *
-     * @param offersTotalQuantity - sum of offers total quantity available
+     * @param offersTotalQuantity - sum of offers' total quantity available
      * @param _twinId - twin id to compare
      */
     function bundleSupplyChecks(uint256 offersTotalQuantity, uint256 _twinId) internal view {
@@ -151,10 +152,10 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
 
     /**
      *
-     * @notice Calculate bundle offers total quantity available.
-     * @param previousTotal - previous sum of offers total quantity or initial value
+     * @notice Calculates bundled offers' total quantity available.
+     * @param previousTotal - previous offers' total quantity or initial value
      * @param _offerId - offer id to add to total quantity
-     * @return offersTotalQuantity - previous sum of offers total quantity plus the current offer quantityAvailable
+     * @return offersTotalQuantity - previous offers' total quantity plus the current offer quantityAvailable
      */
     function calculateOffersTotalQuantity(uint256 previousTotal, uint256 _offerId)
         internal
