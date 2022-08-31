@@ -72,6 +72,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a TokenAddressChanged event.
      *
+     * @dev Caller must have ADMIN role.
+     *
      * @param _tokenAddress - the Boson Token (ERC-20 contract) address
      */
     function setTokenAddress(address payable _tokenAddress) public override onlyRole(ADMIN) nonReentrant {
@@ -92,6 +94,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @notice Sets the Boson Protocol multi-sig wallet address.
      *
      * Emits a TreasuryAddressChanged event.
+     *
+     * @dev Caller must have ADMIN role.
      *
      * @param _treasuryAddress - the the multi-sig wallet address
      */
@@ -114,6 +118,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a VoucherBeaconAddressChanged event.
      *
+     * @dev Caller must have ADMIN role.
+     *
      * @param _voucherBeaconAddress - the Boson Voucher beacon contract address
      */
     function setVoucherBeaconAddress(address _voucherBeaconAddress) public override onlyRole(ADMIN) nonReentrant {
@@ -134,6 +140,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @notice Sets the Boson Voucher reference proxy implementation address.
      *
      * Emits a BeaconProxyAddressChanged event.
+     * 
+     * @dev Caller must have ADMIN role.
      *
      * @param _beaconProxyAddress - reference proxy implementation address
      */
@@ -157,6 +165,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * Emits a ProtocolFeePercentageChanged event.
      *
      * Reverts if the _protocolFeePercentage is greater than 10000.
+     *
+     * @dev Caller must have ADMIN role.
      *
      * @param _protocolFeePercentage - the percentage that will be taken as a fee from the net of a Boson Protocol sale or auction (after royalties)
      *
@@ -188,6 +198,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a ProtocolFeeFlatBosonChanged event.
      *
+     * @dev Caller must have ADMIN role.
+     *
      * @param _protocolFeeFlatBoson - the flat fee taken for exchanges in $BOSON
      *
      */
@@ -213,6 +225,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxOffersPerGroupChanged event.
      *
+     * @dev Caller must have ADMIN role.
+     *
      * @param _maxOffersPerGroup - the maximum length of {BosonTypes.Group.offerIds}
      */
     function setMaxOffersPerGroup(uint16 _maxOffersPerGroup) public override onlyRole(ADMIN) nonReentrant {
@@ -233,6 +247,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @notice Sets the maximum numbers of twins that can be added to a bundle in a single transaction.
      *
      * Emits a MaxTwinsPerBundleChanged event.
+     *
+     * @dev Caller must have ADMIN role.
      *
      * @param _maxTwinsPerBundle - the maximum length of {BosonTypes.Bundle.twinIds}
      */
@@ -255,6 +271,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxOffersPerBundleChanged event.
      *
+     * @dev Caller must have ADMIN role.
+     *
      * @param _maxOffersPerBundle - the maximum length of {BosonTypes.Bundle.offerIds}
      */
     function setMaxOffersPerBundle(uint16 _maxOffersPerBundle) public override onlyRole(ADMIN) nonReentrant {
@@ -275,6 +293,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @notice Sets the maximum numbers of offers that can be created in a single transaction.
      *
      * Emits a MaxOffersPerBatchChanged event.
+     *
+     * @dev Caller must have ADMIN role.
      *
      * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Offer[]}
      */
@@ -297,6 +317,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxTokensPerWithdrawalChanged event.
      *
+     * @dev Caller must have ADMIN role.
+     *
      * @param _maxTokensPerWithdrawal - the maximum length of token list when calling {FundsHandlerFacet.withdraw}
      */
     function setMaxTokensPerWithdrawal(uint16 _maxTokensPerWithdrawal) public override onlyRole(ADMIN) nonReentrant {
@@ -317,6 +339,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @notice Sets the maximum number of dispute resolver fee structs that can be processed in a single transaction.
      *
      * Emits a MaxFeesPerDisputeResolverChanged event.
+     *
+     * @dev Caller must have ADMIN role.
      *
      * @param _maxFeesPerDisputeResolver - the maximum length of dispute resolver fees list when calling {AccountHandlerFacet.createDisputeResolver} or {AccountHandlerFacet.updateDisputeResolver}
      */
@@ -344,6 +368,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxEscalationResponsePeriodChanged event.
      *
+     * @dev Caller must have ADMIN role.
+     *
      * @param _maxEscalationResponsePeriod - the maximum escalation response period that a {BosonTypes.DisputeResolver} can specify
      */
     function setMaxEscalationResponsePeriod(uint256 _maxEscalationResponsePeriod)
@@ -370,6 +396,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxDisputesPerBatchChanged event.
      *
+     * @dev Caller must have ADMIN role.
+     *
      * @param _maxDisputesPerBatch - the maximum number of disputes that can be expired
      */
     function setMaxDisputesPerBatch(uint16 _maxDisputesPerBatch) public override onlyRole(ADMIN) nonReentrant {
@@ -392,6 +420,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * Emits a MaxTotalOfferFeePercentageChanged event.
      *
      * Reverts if the _maxTotalOfferFeePercentage is greater than 10000.
+     *
+     * @dev Caller must have ADMIN role.
      *
      * @param _maxTotalOfferFeePercentage - the maximum total offer fee percentage
      *
@@ -430,6 +460,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Reverts if the _maxRoyaltyPecentage is greater than 10000.
      *
+     * @dev Caller must have ADMIN role.
+     *
      * @param _maxRoyaltyPecentage - the maximum royalty percentage
      *
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
@@ -460,6 +492,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxAllowedSellersChanged event.
      *
+     * @dev Caller must have ADMIN role.
+     *
      * @param _maxAllowedSellers - the maximum number of seller ids that can be added or removed
      */
     function setMaxAllowedSellers(uint16 _maxAllowedSellers) public override onlyRole(ADMIN) nonReentrant {
@@ -482,6 +516,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * Emits a BuyerEscalationFeePercentageChanged event.
      *
      * Reverts if the _buyerEscalationDepositPercentage is greater than 10000.
+     *
+     * @dev Caller must have ADMIN role.
      *
      * @param _buyerEscalationDepositPercentage - the percentage of the DR fee that will be charged to buyer if they want to escalate the dispute
      *
@@ -521,6 +557,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * Reverts if _authTokenType is None
      * Reverts if _authTokenContract is the zero address
      *
+     * @dev Caller must have ADMIN role.
+     *
      * @param _authTokenType - the auth token type, as an Enum value
      * @param _authTokenContract the address of the auth token contract (e.g. Lens or ENS contract address)
      */
@@ -551,6 +589,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      *
      * Emits a MaxExchangesPerBatchChanged event.
      *
+     * @dev Caller must have ADMIN role.
+     *
      * @param _maxExchangesPerBatch - the maximum length of {BosonTypes.Exchange[]}
      */
     function setMaxExchangesPerBatch(uint16 _maxExchangesPerBatch) public override onlyRole(ADMIN) nonReentrant {
@@ -571,6 +611,8 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @notice Sets the maximum resolution period a seller can specify.
      *
      * Emits a MaxResolutionPeriodChanged event.
+     *
+     * @dev Caller must have ADMIN role.
      *
      * @param _maxResolutionPeriod - the maximum resolution period that a {BosonTypes.Seller} can specify
      */
