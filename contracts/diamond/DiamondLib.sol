@@ -7,7 +7,7 @@ import { IDiamondCut } from "../interfaces/diamond/IDiamondCut.sol";
 /**
  * @title DiamondLib
  *
- * @notice Diamond storage slot and supported interfaces
+ * @notice Provides Diamond storage slot and supported interface checks
  *
  * @notice Based on Nick Mudge's gas-optimized diamond-2 reference,
  * with modifications to support role-based access and management of
@@ -44,7 +44,7 @@ library DiamondLib {
     }
 
     /**
-     * @notice Get the Diamond storage slot
+     * @notice Gets the Diamond storage slot.
      *
      * @return ds - Diamond storage slot cast to DiamondStorage
      */
@@ -56,7 +56,7 @@ library DiamondLib {
     }
 
     /**
-     * @notice Add a supported interface to the Diamond
+     * @notice Adds a supported interface to the Diamond.
      *
      * @param _interfaceId - the interface to add
      */
@@ -69,9 +69,11 @@ library DiamondLib {
     }
 
     /**
-     * @notice Implementation of ERC-165 interface detection standard.
+     * @notice Checks if a specific interface is supported. 
+     * Implementation of ERC-165 interface detection standard.
      *
      * @param _interfaceId - the sighash of the given interface
+     * @return - whether or not the interface is supported
      */
     function supportsInterface(bytes4 _interfaceId) internal view returns (bool) {
         // Get the DiamondStorage struct

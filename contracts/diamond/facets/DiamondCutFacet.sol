@@ -22,9 +22,9 @@ import { EIP712Lib } from "../../protocol/libs/EIP712Lib.sol";
  */
 contract DiamondCutFacet is IDiamondCut {
     /**
-     * @notice Cut facets of the Diamond
+     * @notice Cuts facets of the Diamond
      *
-     * Add/replace/remove any number of function selectors
+     * Adds/replacse/removes any number of function selectors
      *
      * If populated, _calldata is executed with delegatecall on _init
      *

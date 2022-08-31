@@ -100,7 +100,7 @@ contract BuyerHandlerFacet is BuyerBase {
      * @notice Gets the details about a buyer.
      *
      * @param _buyerId - the id of the buyer to check
-     * @return exists - wether the buyer was found
+     * @return exists - whether the buyer was found
      * @return buyer - the buyer details. See {BosonTypes.Buyer}
      */
     function getBuyer(uint256 _buyerId) external view returns (bool exists, Buyer memory buyer) {
