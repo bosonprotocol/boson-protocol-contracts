@@ -248,18 +248,18 @@ library FundsLib {
     }
 
     /**
-     * @notice Tries to transfer native currency or tokens from the protocol to the recepient.
+     * @notice Tries to transfer native currency or tokens from the protocol to the recipient.
      *
      * Emits FundsWithdrawn event if successful.
      * Emits ERC20 Transfer event in call stack if ERC20 token is withdrawn and transfer is successful.
      *
      * Reverts if:
-     * - Transfer of native currency is not successulf (i.e. recepient is a contract which reverted)
+     * - Transfer of native currency is not successful (i.e. recipient is a contract which reverted)
      * - Contract at token address does not support ERC20 function transfer
      * - Available funds is less than amount to be decreased
      *
      * @param _tokenAddress - address of the token to be transferred
-     * @param _to - address of the recepient
+     * @param _to - address of the recipient
      * @param _amount - amount to be transferred
      */
     function transferFundsFromProtocol(
