@@ -26,16 +26,18 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
     }
 
     /**
-     * @notice Receives funds from the caller and stores it to the seller id, so they can be used during the commitToOffer
+     * @notice Receives funds from the caller, maps funds to the seller id and stores them so they can be used during the commitToOffer.
+     * 
+     * Emits FundsDeposited event if successful.
      *
      * Reverts if:
      * - The funds region of protocol is paused
-     * - seller id does not exist
-     * - it receives some native currency (e.g. ETH), but token address is not zero
-     * - it receives some native currency (e.g. ETH), and the amount does not match msg.value
-     * - if contract at token address does not support erc20 function transferFrom
-     * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - received ERC20 token amount differs from the expected value
+     * - Seller id does not exist
+     * - It receives some native currency (e.g. ETH), but token address is not zero
+     * - It receives some native currency (e.g. ETH), and the amount does not match msg.value
+     * - Contract at token address does not support ERC20 function transferFrom
+     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - Received ERC20 token amount differs from the expected value
      *
      * @param _sellerId - id of the seller that will be credited
      * @param _tokenAddress - contract address of token that is being deposited (0 for native currency)
@@ -68,18 +70,20 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
     }
 
     /**
-     * @notice Withdraw the specified funds
+     * @notice Withdraws the specified funds. Can be called for seller, buyer or agent.
+     *
+     * Emits FundsWithdrawn event if successful.
      *
      * Reverts if:
      * - The funds region of protocol is paused
-     * - caller is not associated with the entity id
-     * - token list length does not match amount list length
-     * - token list length exceeds the maximum allowed number of tokens
-     * - caller tries to withdraw more that they have in available funds
-     * - there is nothing to withdraw
-     * - transfer of funds is not succesful
+     * - Caller is not associated with the entity id
+     * - Token list length does not match amount list length
+     * - Token list length exceeds the maximum allowed number of tokens
+     * - Caller tries to withdraw more that they have in available funds
+     * - There is nothing to withdraw
+     * - Transfer of funds is not succesful
      *
-     * @param _entityId - seller or buyer or agent id
+     * @param _entityId - id of entity for which funds should be withdrawn
      * @param _tokenList - list of contract addresses of tokens that are being withdrawn
      * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
      */
@@ -119,16 +123,20 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
     }
 
     /**
-     * @notice Withdraw the protocol fees
+     * @notice Withdraws the protocol fees.
+     *
+     * @dev Can only be called by the FEE_COLLECTOR role.
+     *
+     * Emits FundsWithdrawn event if successful.
      *
      * Reverts if:
      * - The funds region of protocol is paused
-     * - caller does not have the FEE_COLLECTOR role
-     * - token list length does not match amount list length
-     * - token list length exceeds the maximum allowed number of tokens
-     * - caller tries to withdraw more that they have in available funds
-     * - there is nothing to withdraw
-     * - transfer of funds is not succesful
+     * - Caller does not have the FEE_COLLECTOR role
+     * - Token list length does not match amount list length
+     * - Token list length exceeds the maximum allowed number of tokens
+     * - Caller tries to withdraw more that they have in available funds
+     * - There is nothing to withdraw
+     * - Transfer of funds is not succesful
      *
      * @param _tokenList - list of contract addresses of tokens that are being withdrawn
      * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
@@ -145,9 +153,9 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
     }
 
     /**
-     * @notice For a given seller or buyer id it returns the information about the funds that can use as a sellerDeposit and/or be withdrawn
+     * @notice Returns the information about the funds that an entity can use as a sellerDeposit and/or withdraw from the protocol.
      *
-     * @param _entityId - seller or buyer id to check
+     * @param _entityId - id of entity for which availability of funds should be checked
      * @return availableFunds - list of token addresses, token names and amount that can be used as a seller deposit or be withdrawn
      */
     function getAvailableFunds(uint256 _entityId) external view override returns (Funds[] memory availableFunds) {
@@ -180,18 +188,20 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
     }
 
     /**
-     * @notice Withdraw the specified funds
+     * @notice Withdraws the specified funds.
+     *
+     * Emits FundsWithdrawn event if successful.
      *
      * Reverts if:
-     * - caller is not associated with the entity id
-     * - token list length does not match amount list length
-     * - token list length exceeds the maximum allowed number of tokens
-     * - caller tries to withdraw more that they have in available funds
-     * - there is nothing to withdraw
-     * - transfer of funds is not succesful
+     * - Caller is not associated with the entity id
+     * - Token list length does not match amount list length
+     * - Token list length exceeds the maximum allowed number of tokens
+     * - Caller tries to withdraw more that they have in available funds
+     * - There is nothing to withdraw
+     * - Transfer of funds is not succesful
      *
      * @param _destinationAddress - wallet that will receive funds
-     * @param _entityId - seller or buyer id
+     * @param _entityId - entity id
      * @param _tokenList - list of contract addresses of tokens that are being withdrawn
      * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
      */

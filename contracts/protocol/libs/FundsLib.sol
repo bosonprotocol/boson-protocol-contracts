@@ -41,15 +41,17 @@ library FundsLib {
     );
 
     /**
-     * @notice Takes in the offer id and buyer id and encumbers buyer's and seller's funds during the commitToOffer
+     * @notice Takes in the offer id and buyer id and encumbers buyer's and seller's funds during the commitToOffer.
+     *
+     * Emits FundsEncumbered event if successful.
      *
      * Reverts if:
-     * - offer price is in native token and buyer caller does not send enough
-     * - offer price is in some ERC20 token and caller also send native currency
-     * - if contract at token address does not support erc20 function transferFrom
-     * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - if seller has less funds available than sellerDeposit
-     * - received ERC20 token amount differs from the expected value
+     * - Offer price is in native token and buyer caller does not send enough
+     * - Offer price is in some ERC20 token and caller also sends native currency
+     * - Contract at token address does not support ERC20 function transferFrom
+     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - Seller has less funds available than sellerDeposit
+     * - Received ERC20 token amount differs from the expected value
      *
      * @param _offerId - id of the offer with the details
      * @param _buyerId - id of the buyer
@@ -81,15 +83,17 @@ library FundsLib {
     }
 
     /**
-     * @notice Validates that incoming payments matches expectation. If token is a native currency, just make sure
-     * msg.value is correct. If token is ERC20, transfer the value from the sender to the protocol
+     * @notice Validates that incoming payments matches expectation. If token is a native currency, it makes sure
+     * msg.value is correct. If token is ERC20, it transfers the value from the sender to the protocol.
+     *
+     * Emits ERC20 Transfer event in call stack if successful.
      *
      * Reverts if:
-     * - offer price is in native token and buyer caller does not send enough
-     * - offer price is in some ERC20 token and caller also send native currency
-     * - if contract at token address does not support erc20 function transferFrom
-     * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - received ERC20 token amount differs from the expected value
+     * - Offer price is in native token and buyer caller does not send enough
+     * - Offer price is in some ERC20 token and caller also sends native currency
+     * - Contract at token address does not support ERC20 function transferFrom
+     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - Received ERC20 token amount differs from the expected value
      *
      * @param _exchangeToken - address of the token (0x for native currency)
      * @param _value - value expected to receive
@@ -109,7 +113,9 @@ library FundsLib {
 
     /**
      * @notice Takes in the exchange id and releases the funds to buyer and seller, depending on the state of the exchange.
-     * It is called only from finalizeExchange and finalizeDispute
+     * It is called only from finalizeExchange and finalizeDispute.
+     * 
+     * Emits FundsReleased and/or ProtocolFeeCollected event if payoffs are warranted and transaction is successful.
      *
      * @param _exchangeId - exchange id
      */
@@ -210,12 +216,14 @@ library FundsLib {
     }
 
     /**
-     * @notice Tries to transfer tokens from the caller to the protocol
+     * @notice Tries to transfer tokens from the caller to the protocol.
+     *
+     * Emits ERC20 Transfer event in call stack if successful.
      *
      * Reverts if:
-     * - contract at token address does not support erc20 function transferFrom
-     * - calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - received ERC20 token amount differs from the expected value
+     * - Contract at token address does not support ERC20 function transferFrom
+     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - Received ERC20 token amount differs from the expected value
      *
      * @param _tokenAddress - address of the token to be transferred
      * @param _amount - amount to be transferred
@@ -240,12 +248,15 @@ library FundsLib {
     }
 
     /**
-     * @notice Tries to transfer native currency or tokens from the protocol to the recepient
+     * @notice Tries to transfer native currency or tokens from the protocol to the recepient.
+     *
+     * Emits FundsWithdrawn event if successful.
+     * Emits ERC20 Transfer event in call stack if ERC20 token is withdrawn and transfer is successful.
      *
      * Reverts if:
-     * - transfer of native currency is not successulf (i.e. recepient is a contract which reverted)
-     * - contract at token address does not support erc20 function transfer
-     * - available funds is less than amount to be decreased
+     * - Transfer of native currency is not successulf (i.e. recepient is a contract which reverted)
+     * - Contract at token address does not support ERC20 function transfer
+     * - Available funds is less than amount to be decreased
      *
      * @param _tokenAddress - address of the token to be transferred
      * @param _to - address of the recepient
@@ -277,9 +288,9 @@ library FundsLib {
     }
 
     /**
-     * @notice Increases the amount, available to withdraw or use as a seller deposit
+     * @notice Increases the amount, available to withdraw or use as a seller deposit.
      *
-     * @param _entityId - seller or buyer id, or 0 for protocol
+     * @param _entityId - id of entity for which funds should be increased, or 0 for protocol
      * @param _tokenAddress - funds contract address or zero address for native currency
      * @param _amount - amount to be credited
      */
@@ -303,12 +314,12 @@ library FundsLib {
     }
 
     /**
-     * @notice Decreases the amount, available to withdraw or use as a seller deposit
+     * @notice Decreases the amount available to withdraw or use as a seller deposit.
      *
      * Reverts if:
-     * - available funds is less than amount to be decreased
+     * - Available funds is less than amount to be decreased
      *
-     * @param _entityId - seller or buyer id, or 0 for protocol
+     * @param _entityId - id of entity for which funds should be decreased, or 0 for protocol
      * @param _tokenAddress - funds contract address or zero address for native currency
      * @param _amount - amount to be taken away
      */
