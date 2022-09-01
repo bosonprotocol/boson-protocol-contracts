@@ -5,32 +5,32 @@
   "contracts": [
     {
       "name": "AccessController",
-      "address": "0x9687D58352643D8A11453788802EA2E606295c26",
+      "address": "0x5EecE7036064Fe07B7Bf18c3B2A3C69535fb28f0",
       "args": []
     },
     {
       "name": "DiamondLoupeFacet",
-      "address": "0xe138aBd396499B54Bc822292ED59cee8f2Ea853e",
+      "address": "0x67E6400F25F3B8791eaA94059aCD7DAd02219B80",
       "args": []
     },
     {
       "name": "DiamondCutFacet",
-      "address": "0x2181F14394F53206C0722e59DdB3483eB0C42fe0",
+      "address": "0xe6E6721ABb7358642f3A12E07d85bF02b85AB2b9",
       "args": []
     },
     {
       "name": "ERC165Facet",
-      "address": "0x9c32F600418948bC893E4B63E5f4707B758F3bB2",
+      "address": "0x5373F07F9163E061a350a39F319f5BAA739BB641",
       "args": []
     },
     {
       "name": "ProtocolDiamond",
-      "address": "0x3623C20A679C539a41619FbFa810e7a5A3881486",
+      "address": "0x942d419C2fF3b84C0965180290Bf643De5Bc3E70",
       "args": [
-        "0x9687D58352643D8A11453788802EA2E606295c26",
+        "0x5EecE7036064Fe07B7Bf18c3B2A3C69535fb28f0",
         [
           [
-            "0xe138aBd396499B54Bc822292ED59cee8f2Ea853e",
+            "0x67E6400F25F3B8791eaA94059aCD7DAd02219B80",
             0,
             [
               "0xcdffacc6",
@@ -40,14 +40,14 @@
             ]
           ],
           [
-            "0x2181F14394F53206C0722e59DdB3483eB0C42fe0",
+            "0xe6E6721ABb7358642f3A12E07d85bF02b85AB2b9",
             0,
             [
               "0x1f931c1c"
             ]
           ],
           [
-            "0x9c32F600418948bC893E4B63E5f4707B758F3bB2",
+            "0x5373F07F9163E061a350a39F319f5BAA739BB641",
             0,
             [
               "0x01ffc9a7"
@@ -63,101 +63,101 @@
     },
     {
       "name": "ConfigHandlerFacet",
-      "address": "0x07EC4c6fA692cfeCcbDD3E5D1762d5da1173DeB0",
+      "address": "0xC002548BD41d11Ed9C7f22cD7239211E16170348",
       "args": []
     },
     {
       "name": "AccountHandlerFacet",
-      "address": "0x1864faeE267b954902F1b4f82C1DBFbc3a7cbBCA",
+      "address": "0xeF94B3e71c70120d68c55dBE265D69661Ed4C824",
       "args": []
     },
     {
       "name": "SellerHandlerFacet",
-      "address": "0x26B56afa53998397184b019df881aC411005cD44",
+      "address": "0x2242277e401Da1E5E89E3F88E1124378c39c9c2C",
       "args": []
     },
     {
       "name": "BuyerHandlerFacet",
-      "address": "0xa01CF5274892eE531cBBbc29cB81b3522EC56F7b",
+      "address": "0x518C31Aa158c02c6503c38eB4309BD617717D873",
       "args": []
     },
     {
       "name": "DisputeResolverHandlerFacet",
-      "address": "0xE27c2C43545eC260D8c898F66AF903ee98B5c98b",
+      "address": "0x4333bE86914886086E0597682644047075EDB984",
       "args": []
     },
     {
       "name": "AgentHandlerFacet",
-      "address": "0x7e9f3FF92Fb817AB94C76c5b331fb897bD147580",
+      "address": "0xa3e02E460bf71d7d88a2dCc056265FA0503eFe22",
       "args": []
     },
     {
       "name": "BundleHandlerFacet",
-      "address": "0x81489a8f04280Cf0C03D87c2d2170E842e45DE94",
+      "address": "0xcEe1C3122B0Dc432710F75D8ac40d4e450763172",
       "args": []
     },
     {
       "name": "DisputeHandlerFacet",
-      "address": "0x1f009DcedF617FCA2cbC968763B7f6E74024BE41",
+      "address": "0xCC0aDcCF6fC632A56b6DE7bbf276ac9F0A74c718",
       "args": []
     },
     {
       "name": "ExchangeHandlerFacet",
-      "address": "0x558bb8E9202693dcFb2B206ACfBe52153FAA4eb3",
+      "address": "0x3365aF7bB1773423497A6D8472CB05ce408b47b6",
       "args": []
     },
     {
       "name": "FundsHandlerFacet",
-      "address": "0xCbC50bfF681DEd3263F46952b9742fad3d19dEd6",
+      "address": "0x024936287b953965d6C51816436dF811E1308295",
       "args": []
     },
     {
       "name": "GroupHandlerFacet",
-      "address": "0xd9A158Aed56452cf4Bd07F2063F2f2b5a0a67888",
+      "address": "0xBbA58Efe2E8E1cC02590EC4Ec3f54C88CAde5B3d",
       "args": []
     },
     {
       "name": "MetaTransactionsHandlerFacet",
-      "address": "0x13630F7D20bf851d72d0B4d3AAD8E9eB9b792E86",
+      "address": "0xb04B3d30E4acef4e23804d67565C7B07684E0679",
       "args": []
     },
     {
       "name": "OfferHandlerFacet",
-      "address": "0xDF2B7D4Ee8FFAa47FA586735e6aA8E69A119B3F9",
+      "address": "0xA3B439cEf417002d32B3ab1c18391f20dD86174b",
       "args": []
     },
     {
       "name": "OrchestrationHandlerFacet",
-      "address": "0x817da70A406CB44DD5d849b768D374eF8bda41a7",
+      "address": "0x5fFA360a27AA0b9C7a53B6dCE33a420bb2760313",
       "args": []
     },
     {
       "name": "TwinHandlerFacet",
-      "address": "0x1496CC19baF574b1865D701Ee368B2130C755B4e",
+      "address": "0xe9c8A572bc3218602d08b8fba6c6d76229E521dd",
       "args": []
     },
     {
       "name": "PauseHandlerFacet",
-      "address": "0xC6bdf1B13b514De2E4FEBC2b719bB1F79c10F7BF",
+      "address": "0x3da7C421A6EBaf09C856c444d161705f65612ca1",
       "args": []
     },
     {
       "name": "BosonVoucher Logic",
-      "address": "0x7c3c2a8b5bbB91848A0051fe5A52E4ED4A8d1963",
+      "address": "0xC096E4Cb55A87B94Ec27eF6DD8f7E5ec55286b60",
       "args": []
     },
     {
       "name": "BosonVoucher Beacon",
-      "address": "0x346C7713A660e2C128C03A4e21e4A8CeE780702A",
+      "address": "0xF0390baa98BbB7d998D650B9BD35Cf07765ee1e2",
       "args": [
-        "0x9687D58352643D8A11453788802EA2E606295c26",
-        "0x3623C20A679C539a41619FbFa810e7a5A3881486",
-        "0x7c3c2a8b5bbB91848A0051fe5A52E4ED4A8d1963"
+        "0x5EecE7036064Fe07B7Bf18c3B2A3C69535fb28f0",
+        "0x942d419C2fF3b84C0965180290Bf643De5Bc3E70",
+        "0xC096E4Cb55A87B94Ec27eF6DD8f7E5ec55286b60"
       ]
     },
     {
       "name": "BosonVoucher Proxy",
-      "address": "0xa9E9b45E48AcE64DFC288198870f3aC74b2fCd9C",
+      "address": "0xf40402aE973ABd688fA5b042B0603b4993FBEa18",
       "args": []
     }
   ]
