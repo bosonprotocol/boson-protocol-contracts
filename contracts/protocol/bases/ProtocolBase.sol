@@ -32,7 +32,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      *
      * See: {AccessController.hasRole}
      *
-     * @param role - the role to check
+     * @param _role - the role to check
      */
     modifier onlyRole(bytes32 _role) {
         DiamondLib.DiamondStorage storage ds = DiamondLib.diamondStorage();
@@ -43,7 +43,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     /**
      * @dev Get the Protocol Addresses slot
      *
-     * @return pa the Protocol Addresses slot
+     * @return pa - the Protocol Addresses slot
      */
     function protocolAddresses() internal pure returns (ProtocolLib.ProtocolAddresses storage pa) {
         pa = ProtocolLib.protocolAddresses();
@@ -52,7 +52,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     /**
      * @dev Get the Protocol Limits slot
      *
-     * @return pl the Protocol Limits slot
+     * @return pl - the Protocol Limits slot
      */
     function protocolLimits() internal pure returns (ProtocolLib.ProtocolLimits storage pl) {
         pl = ProtocolLib.protocolLimits();
@@ -61,7 +61,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     /**
      * @dev Get the Protocol Entities slot
      *
-     * @return pe the Protocol Entities slot
+     * @return pe - the Protocol Entities slot
      */
     function protocolEntities() internal pure returns (ProtocolLib.ProtocolEntities storage pe) {
         pe = ProtocolLib.protocolEntities();
@@ -70,7 +70,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     /**
      * @dev Get the Protocol Lookups slot
      *
-     * @return pl the Protocol Lookups slot
+     * @return pl - the Protocol Lookups slot
      */
     function protocolLookups() internal pure returns (ProtocolLib.ProtocolLookups storage pl) {
         pl = ProtocolLib.protocolLookups();
@@ -79,7 +79,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     /**
      * @dev Get the Protocol Fees slot
      *
-     * @return pf the Protocol Fees slot
+     * @return pf - the Protocol Fees slot
      */
     function protocolFees() internal pure returns (ProtocolLib.ProtocolFees storage pf) {
         pf = ProtocolLib.protocolFees();

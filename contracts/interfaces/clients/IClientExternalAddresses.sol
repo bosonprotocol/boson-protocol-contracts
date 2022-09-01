@@ -15,44 +15,48 @@ import { IClientExternalAddressesEvents } from "../events/IClientExternalAddress
  */
 interface IClientExternalAddresses is IClientExternalAddressesEvents {
     /**
-     * @dev Set the implementation address
+     * @notice Sets the implementation address.
+     *
+     * @param _implementation - the implementation address
      */
     function setImplementation(address _implementation) external;
 
     /**
-     * @dev Get the implementation address
+     * @notice Gets the implementation address.
+     *
+     * @return the implementation address
      */
     function getImplementation() external view returns (address);
 
     /**
-     * @notice Set the AccessController address
+     * @notice Sets the Boson Protocol AccessController.
      *
      * Emits an AccessControllerAddressChanged event.
      *
-     * @param _accessController - the AccessController address
+     * @param _accessController - the Boson Protocol AccessController address
      */
     function setAccessController(address _accessController) external;
 
     /**
-     * @notice Gets the address of the AccessController.
+     * @notice Gets the address of the Boson Protocol AccessController contract.
      *
-     * @return the address of the AccessController
+     * @return the address of the AccessController contract
      */
     function getAccessController() external view returns (IAccessControlUpgradeable);
 
     /**
-     * @notice Set the ProtocolDiamond address
+     * @notice Set the ProtocolDiamond address.
      *
-     * Emits an ProtocolAddressChanged event.
+     * Emits a ProtocolAddressChanged event.
      *
-     * @param _protocol - the ProtocolDiamond address
+     * @param _protocolAddress - the ProtocolDiamond address
      */
-    function setProtocolAddress(address _protocol) external;
+    function setProtocolAddress(address _protocolAddress) external;
 
     /**
-     * @notice Gets the address of the ProtocolDiamond
+     * @notice Gets the address of the ProtocolDiamond contract.
      *
-     * @return the address of the ProtocolDiamond
+     * @return the ProtocolDiamond address
      */
     function getProtocolAddress() external view returns (address);
 }

@@ -15,26 +15,28 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
  */
 interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, IBosonTwinEvents {
     /**
-     * @notice Commit to an offer (first step of an exchange)
+     * @notice Commits to an offer (first step of an exchange).
      *
-     * Emits an BuyerCommitted event if successful.
+     * Emits a BuyerCommitted event if successful.
      * Issues a voucher to the buyer address.
      *
-     * Reverts if
+     * Reverts if:
      * - The exchanges region of protocol is paused
-     * - offerId is invalid
-     * - offer has been voided
-     * - offer has expired
-     * - offer is not yet available for commits
-     * - offer's quantity available is zero
-     * - buyer address is zero
-     * - buyer account is inactive
-     * - offer price is in native token and buyer caller does not send enough
-     * - offer price is in some ERC20 token and caller also send native currency
-     * - if contract at token address does not support erc20 function transferFrom
-     * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - received ERC20 token amount differs from the expected value
-     * - if seller has less funds available than sellerDeposit
+     * - The buyers region of protocol is paused
+     * - OfferId is invalid
+     * - Offer has been voided
+     * - Offer has expired
+     * - Offer is not yet available for commits
+     * - Offer's quantity available is zero
+     * - Buyer address is zero
+     * - Buyer account is inactive
+     * - Buyer is token-gated (conditional commit requirements not met or already used)
+     * - Offer price is in native token and buyer caller does not send enough
+     * - Offer price is in some ERC20 token and caller also sends native currency
+     * - Contract at token address does not support ERC20 function transferFrom
+     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - Received ERC20 token amount differs from the expected value
+     * - Seller has less funds available than sellerDeposit
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
@@ -42,32 +44,31 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
     function commitToOffer(address payable _buyer, uint256 _offerId) external payable;
 
     /**
-     * @notice Complete an exchange.
+     * @notice Completes an exchange.
+     *
+     * Emits an ExchangeCompleted event if successful.
      *
      * Reverts if
      * - The exchanges region of protocol is paused
      * - Exchange does not exist
-     * - Exchange is not in redeemed state
+     * - Exchange is not in Redeemed state
      * - Caller is not buyer and offer fulfillment period has not elapsed
-     *
-     * Emits
-     * - ExchangeCompleted
      *
      * @param _exchangeId - the id of the exchange to complete
      */
     function completeExchange(uint256 _exchangeId) external;
 
     /**
-     * @notice Complete a batch of exchanges
+     * @notice Completes a batch of exchanges.
      *
-     * Emits a ExchangeCompleted event for every exchange if finalized to the complete state.
+     * Emits an ExchangeCompleted event for every exchange if finalized to the Complete state.
      *
      * Reverts if:
      * - The exchanges region of protocol is paused
      * - Number of exchanges exceeds maximum allowed number per batch
-     * - for any exchange:
+     * - For any exchange:
      *   - Exchange does not exist
-     *   - Exchange is not in redeemed state
+     *   - Exchange is not in Redeemed state
      *   - Caller is not buyer and offer fulfillment period has not elapsed
      *
      * @param _exchangeIds - the array of exchanges ids
@@ -75,65 +76,61 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
     function completeExchangeBatch(uint256[] calldata _exchangeIds) external;
 
     /**
-     * @notice Revoke a voucher.
+     * @notice Revokes a voucher.
+     *
+     * Emits a VoucherRevoked event if successful.
      *
      * Reverts if
      * - The exchanges region of protocol is paused
      * - Exchange does not exist
-     * - Exchange is not in committed state
+     * - Exchange is not in Committed state
      * - Caller is not seller's operator
      *
-     * Emits
-     * - VoucherRevoked
-     *
-     * @param _exchangeId - the id of the exchange to complete
+     * @param _exchangeId - the id of the exchange
      */
     function revokeVoucher(uint256 _exchangeId) external;
 
     /**
-     * @notice Cancel a voucher.
+     * @notice Cancels a voucher.
+     *
+     * Emits a VoucherCanceled event if successful.
      *
      * Reverts if
      * - The exchanges region of protocol is paused
      * - Exchange does not exist
-     * - Exchange is not in committed state
+     * - Exchange is not in Committed state
      * - Caller does not own voucher
-     *
-     * Emits
-     * - VoucherCanceled
      *
      * @param _exchangeId - the id of the exchange
      */
     function cancelVoucher(uint256 _exchangeId) external;
 
     /**
-     * @notice Expire a voucher.
+     * @notice Expires a voucher.
+     *
+     * Emits a VoucherExpired event if successful.
      *
      * Reverts if
      * - The exchanges region of protocol is paused
      * - Exchange does not exist
-     * - Exchange is not in committed state
+     * - Exchange is not in Committed state
      * - Redemption period has not yet elapsed
-     *
-     * Emits
-     * - VoucherExpired
      *
      * @param _exchangeId - the id of the exchange
      */
     function expireVoucher(uint256 _exchangeId) external;
 
     /**
-     * @notice Extend a Voucher's validity period.
+     * @notice Extends a Voucher's validity period.
+     *
+     * Emits a VoucherExtended event if successful.
      *
      * Reverts if
      * - The exchanges region of protocol is paused
      * - Exchange does not exist
-     * - Exchange is not in committed state
+     * - Exchange is not in Committed state
      * - Caller is not seller's operator
      * - New date is not later than the current one
-     *
-     * Emits
-     * - VoucherExtended
      *
      * @param _exchangeId - the id of the exchange
      * @param _validUntilDate - the new voucher expiry date
@@ -141,32 +138,32 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
     function extendVoucher(uint256 _exchangeId, uint256 _validUntilDate) external;
 
     /**
-     * @notice Redeem a voucher.
+     * @notice Redeems a voucher.
+     *
+     * Emits a VoucherRedeemed event if successful.
      *
      * Reverts if
      * - The exchanges region of protocol is paused
-     * - The buyers region of protocol is paused
      * - Exchange does not exist
      * - Exchange is not in committed state
      * - Caller does not own voucher
      * - Current time is prior to offer.voucherRedeemableFromDate
      * - Current time is after voucher.validUntilDate
      *
-     * Emits
-     * - VoucherRedeemed
-     *
      * @param _exchangeId - the id of the exchange
      */
     function redeemVoucher(uint256 _exchangeId) external;
 
     /**
-     * @notice Inform protocol of new buyer associated with an exchange
+     * @notice Informs protocol of new buyer associated with an exchange.
+     * 
+     * Emits a VoucherTransferred event if successful.
      *
      * Reverts if
      * - The buyers region of protocol is paused
      * - Caller is not a clone address associated with the seller
      * - Exchange does not exist
-     * - Exchange is not in committed state
+     * - Exchange is not in Committed state
      * - Voucher has expired
      * - New buyer's existing account is deactivated
      *
@@ -176,7 +173,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
     function onVoucherTransferred(uint256 _exchangeId, address payable _newBuyer) external;
 
     /**
-     * @notice Is the given exchange in a finalized state?
+     * @notice Checks if the given exchange in a finalized state.
      *
      * Returns true if
      * - Exchange state is Revoked, Canceled, or Completed
@@ -188,11 +185,11 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      */
     function isExchangeFinalized(uint256 _exchangeId) external view returns (bool exists, bool isFinalized);
 
-    /**
+   /**
      * @notice Gets the details about a given exchange.
      *
      * @param _exchangeId - the id of the exchange to check
-     * @return exists - the exchange was found
+     * @return exists - true if the exchange exists
      * @return exchange - the exchange details. See {BosonTypes.Exchange}
      * @return voucher - the voucher details. See {BosonTypes.Voucher}
      */
@@ -217,14 +214,14 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
     /**
      * @notice Gets the Id that will be assigned to the next exchange.
      *
-     *  Does not increment the counter.
+     * @dev Does not increment the counter.
      *
      * @return nextExchangeId - the next exchange Id
      */
     function getNextExchangeId() external view returns (uint256 nextExchangeId);
 
     /**
-     * @notice Get exchange receipt
+     * @notice Gets exchange receipt.
      *
      * Reverts if:
      * - Exchange is not in a final state

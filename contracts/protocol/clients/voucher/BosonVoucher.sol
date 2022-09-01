@@ -28,7 +28,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     uint96 private _royaltyPercentage;
 
     /**
-     * @notice Initializeze the voucher.
+     * @notice Initializes the voucher.
      * This function is callable only once.
      */
     function initializeVoucher(

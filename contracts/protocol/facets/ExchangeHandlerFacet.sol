@@ -28,7 +28,7 @@ interface MultiToken {
  */
 contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     /**
-     * @notice Facet Initializer
+     * @notice Initializes facet.
      * This function is callable only once.
      */
     function initialize() public onlyUnInitialized(type(IBosonExchangeHandler).interfaceId) {
@@ -36,28 +36,28 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Commit to an offer (first step of an exchange)
+     * @notice Commits to an offer (first step of an exchange).
      *
-     * Emits an BuyerCommitted event if successful.
+     * Emits a BuyerCommitted event if successful.
      * Issues a voucher to the buyer address.
      *
      * Reverts if:
      * - The exchanges region of protocol is paused
      * - The buyers region of protocol is paused
-     * - offerId is invalid
-     * - offer has been voided
-     * - offer has expired
-     * - offer is not yet available for commits
-     * - offer's quantity available is zero
-     * - buyer address is zero
-     * - buyer account is inactive
-     * - buyer is token-gated (conditional commit requirements not met or already used)
-     * - offer price is in native token and buyer caller does not send enough
-     * - offer price is in some ERC20 token and caller also send native currency
-     * - contract at token address does not support erc20 function transferFrom
-     * - calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - received ERC20 token amount differs from the expected value
-     * - seller has less funds available than sellerDeposit
+     * - OfferId is invalid
+     * - Offer has been voided
+     * - Offer has expired
+     * - Offer is not yet available for commits
+     * - Offer's quantity available is zero
+     * - Buyer address is zero
+     * - Buyer account is inactive
+     * - Buyer is token-gated (conditional commit requirements not met or already used)
+     * - Offer price is in native token and buyer caller does not send enough
+     * - Offer price is in some ERC20 token and caller also sends native currency
+     * - Contract at token address does not support ERC20 function transferFrom
+     * - Calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - Received ERC20 token amount differs from the expected value
+     * - Seller has less funds available than sellerDeposit
      *
      * @param _buyer - the buyer's address (caller can commit on behalf of a buyer)
      * @param _offerId - the id of the offer to commit to
@@ -138,16 +138,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Complete an exchange.
+     * @notice Completes an exchange.
+     *
+     * Emits an ExchangeCompleted event if successful.
      *
      * Reverts if
      * - The exchanges region of protocol is paused
      * - Exchange does not exist
-     * - Exchange is not in redeemed state
+     * - Exchange is not in Redeemed state
      * - Caller is not buyer and offer fulfillment period has not elapsed
-     *
-     * Emits
-     * - ExchangeCompleted
      *
      * @param _exchangeId - the id of the exchange to complete
      */
@@ -183,16 +182,16 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Complete a batch of exchanges
+     * @notice Completes a batch of exchanges.
      *
-     * Emits a ExchangeCompleted event for every exchange if finalized to the complete state.
+     * Emits an ExchangeCompleted event for every exchange if finalized to the Complete state.
      *
      * Reverts if:
      * - The exchanges region of protocol is paused
      * - Number of exchanges exceeds maximum allowed number per batch
-     * - for any exchange:
+     * - For any exchange:
      *   - Exchange does not exist
-     *   - Exchange is not in redeemed state
+     *   - Exchange is not in Redeemed state
      *   - Caller is not buyer and offer fulfillment period has not elapsed
      *
      * @param _exchangeIds - the array of exchanges ids
@@ -208,16 +207,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Revoke a voucher.
+     * @notice Revokes a voucher.
+     *
+     * Emits a VoucherRevoked event if successful.
      *
      * Reverts if
      * - The exchanges region of protocol is paused
      * - Exchange does not exist
-     * - Exchange is not in committed state
+     * - Exchange is not in Committed state
      * - Caller is not seller's operator
-     *
-     * Emits
-     * - VoucherRevoked
      *
      * @param _exchangeId - the id of the exchange
      */
@@ -242,16 +240,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Cancel a voucher.
+     * @notice Cancels a voucher.
+     *
+     * Emits a VoucherCanceled event if successful.
      *
      * Reverts if
      * - The exchanges region of protocol is paused
      * - Exchange does not exist
-     * - Exchange is not in committed state
+     * - Exchange is not in Committed state
      * - Caller does not own voucher
-     *
-     * Emits
-     * - VoucherCanceled
      *
      * @param _exchangeId - the id of the exchange
      */
@@ -270,16 +267,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Expire a voucher.
+     * @notice Expires a voucher.
+     *
+     * Emits a VoucherExpired event if successful.
      *
      * Reverts if
      * - The exchanges region of protocol is paused
      * - Exchange does not exist
-     * - Exchange is not in committed state
+     * - Exchange is not in Committed state
      * - Redemption period has not yet elapsed
-     *
-     * Emits
-     * - VoucherExpired
      *
      * @param _exchangeId - the id of the exchange
      */
@@ -301,17 +297,16 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Extend a Voucher's validity period.
+     * @notice Extends a Voucher's validity period.
+     *
+     * Emits a VoucherExtended event if successful.
      *
      * Reverts if
      * - The exchanges region of protocol is paused
      * - Exchange does not exist
-     * - Exchange is not in committed state
+     * - Exchange is not in Committed state
      * - Caller is not seller's operator
      * - New date is not later than the current one
-     *
-     * Emits
-     * - VoucherExtended
      *
      * @param _exchangeId - the id of the exchange
      * @param _validUntilDate - the new voucher expiry date
@@ -347,7 +342,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Redeem a voucher.
+     * @notice Redeems a voucher.
+     *
+     * Emits a VoucherRedeemed event if successful.
      *
      * Reverts if
      * - The exchanges region of protocol is paused
@@ -356,9 +353,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * - Caller does not own voucher
      * - Current time is prior to offer.voucherRedeemableFromDate
      * - Current time is after voucher.validUntilDate
-     *
-     * Emits
-     * - VoucherRedeemed
      *
      * @param _exchangeId - the id of the exchange
      */
@@ -397,13 +391,15 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Inform protocol of new buyer associated with an exchange
+     * @notice Informs protocol of new buyer associated with an exchange.
+     * 
+     * Emits a VoucherTransferred event if successful.
      *
      * Reverts if
      * - The buyers region of protocol is paused
      * - Caller is not a clone address associated with the seller
      * - Exchange does not exist
-     * - Exchange is not in committed state
+     * - Exchange is not in Committed state
      * - Voucher has expired
      * - New buyer's existing account is deactivated
      *
@@ -444,7 +440,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Is the given exchange in a finalized state?
+     * @notice Checks if the given exchange in a finalized state.
      *
      * Returns true if
      * - Exchange state is Revoked, Canceled, or Completed
@@ -520,7 +516,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     /**
      * @notice Gets the Id that will be assigned to the next exchange.
      *
-     *  Does not increment the counter.
+     * @dev Does not increment the counter.
      *
      * @return nextExchangeId - the next exchange Id
      */
@@ -529,10 +525,13 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Transition exchange to a "finalized" state
+     * @notice Transitions exchange to a "finalized" state
      *
      * Target state must be Completed, Revoked, or Canceled.
      * Sets finalizedDate and releases funds associated with the exchange
+     *
+     * @param _exchange - the exchange to finalize
+     * @param _targetState - the target state to which the exchange should be transitioned
      */
     function finalizeExchange(Exchange storage _exchange, ExchangeState _targetState) internal {
         // Make sure target state is a final state
@@ -556,15 +555,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Revoke a voucher.
+     * @notice Revokes a voucher.
+     *
+     * Emits a VoucherRevoked event if successful.
      *
      * Reverts if
-     * - Exchange is not in committed state
+     * - Exchange is not in Committed state
      *
-     * Emits
-     * - VoucherRevoked
-     *
-     * @param exchange - the exchange
+     * @param exchange - the exchange to revoke
      */
     function revokeVoucherInternal(Exchange storage exchange) internal {
         // Finalize the exchange, burning the voucher
@@ -575,9 +573,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Burn the voucher associated with a given exchange
+     * @notice Burns the voucher associated with a given exchange.
+     * 
+     * Emits ERC721 Transfer event in call stack if successful.
      *
-     * @param _exchange - the pointer to the exchange
+     * @param _exchange - the pointer to the exchange for which voucher should be burned
      */
     function burnVoucher(Exchange storage _exchange) internal {
         // decrease the voucher count
@@ -590,12 +590,14 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Transfer bundled twins associated with an exchange to the buyer
+     * @notice Transfers bundled twins associated with an exchange to the buyer.
+     *
+     * Emits ERC20 Transfer, ERC721 Transfer, or ERC1155 TransferSingle events in call stack if successful.
      *
      * Reverts if
-     * - a twin transfer fails
+     * - A twin transfer fails
      *
-     * @param _exchange - the exchange
+     * @param _exchange - the exchange for which twins should be transferred
      * @return shouldBurnVoucher - whether or not the voucher should be burned
      */
     function transferTwins(Exchange storage _exchange, Voucher storage _voucher)
@@ -717,11 +719,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Transfer the voucher associated with an exchange to the buyer
+     * @notice Checks if buyer exists for buyer address. If not, account is created for buyer address.
      *
-     * Reverts if buyer is inactive
+     * Reverts if buyer exists but is inactive.
      *
-     * @param _buyer - the buyer address
+     * @param _buyer - the buyer address to check
      * @return buyerId - the buyer id
      */
     function getValidBuyer(address payable _buyer) internal returns (uint256 buyerId) {
@@ -744,7 +746,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Authorize the potential buyer to commit to an offer
+     * @notice Authorizes the potential buyer to commit to an offer
      *
      * Anyone can commit to an unconditional offer, and no state change occurs here.
      *
@@ -755,9 +757,9 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * Conditions are associated with offers via groups. One or more offers can be
      * placed in a group and a single condition applied to the entire group. Thus:
      *   - If a buyer commits to one offer in a group with a condition, it counts
-     *     against their allowable commits for the whole group.
+     *     against the buyer's allowable commits for the whole group.
      *   - If the buyer has already committed the maximum number of times for the
-     *     group, they can't commit again to any of its offers.
+     *     group, the buyer can't commit again to any of its offers.
      *
      * The buyer is allowed to commit if no group or condition is set for this offer.
      *
@@ -810,7 +812,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Does the buyer have the required balance of the conditional token?
+     * @notice Checks if the buyer has the required balance of the conditional token.
      *
      * @param _buyer address of potential buyer
      * @param _condition the condition to be evaluated
@@ -827,7 +829,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Does the buyer own a specific non-fungible token Id?
+     * @notice Checks if the buyer own a specific non-fungible token id.
      *
      * @param _buyer  address of potential buyer
      * @param _condition the condition to be evaluated
@@ -839,7 +841,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Verify if a given address is a contract or not (EOA)
+     * @notice Verifies if a given address is a contract or not (EOA).
      *
      * @param _address address to verify
      * @return bool true if _address is a contract
@@ -849,7 +851,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Get exchange receipt
+     * @notice Gets exchange receipt.
      *
      * Reverts if:
      * - Exchange is not in a final state

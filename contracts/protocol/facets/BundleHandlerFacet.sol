@@ -65,7 +65,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
     /**
      * @notice Gets the next bundle id.
      *
-     * Does not increment the counter.
+     * @dev Does not increment the counter.
      *
      * @return nextBundleId - the next bundle id
      */

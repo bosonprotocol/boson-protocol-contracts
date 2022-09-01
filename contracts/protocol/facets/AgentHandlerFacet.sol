@@ -113,7 +113,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @notice Gets the details about an agent.
      *
      * @param _agentId - the id of the agent to check
-     * @return exists - wether the agent was found
+     * @return exists - whether the agent was found
      * @return agent - the agent details. See {BosonTypes.Agent}
      */
     function getAgent(uint256 _agentId) external view returns (bool exists, Agent memory agent) {

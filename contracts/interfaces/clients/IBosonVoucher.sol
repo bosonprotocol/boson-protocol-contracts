@@ -17,7 +17,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     event RoyaltyPercentageChanged(uint96 royaltyPercentage);
 
     /**
-     * @notice Issue a voucher to a buyer
+     * @notice Issues a voucher to a buyer.
      *
      * Minted voucher supply is sent to the buyer.
      * Caller must have PROTOCOL role.
@@ -28,7 +28,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     function issueVoucher(uint256 _exchangeId, address _buyer) external;
 
     /**
-     * @notice Burn a voucher
+     * @notice Burns a voucher.
      *
      * Caller must have PROTOCOL role.
      *
@@ -37,29 +37,31 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     function burnVoucher(uint256 _exchangeId) external;
 
     /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the protocol. Change is done by calling `updateSeller` on the protocol
+     * @notice Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the protocol. Change is done by calling `updateSeller` on the protocol.
+     *
+     * @param newOwner - the address to which ownsership of the voucher contract will be transferred
      */
     function transferOwnership(address newOwner) external;
 
     /**
-     * @notice Returns storefront-level metadata used by OpenSea
+     * @notice Returns storefront-level metadata used by OpenSea.
      *
      * @return Contract metadata URI
      */
     function contractURI() external view returns (string memory);
 
-    /**
-     * @notice Sets new contract URI
-     * Can only be called by the owner or during the initialization
+     /**
+     * @notice Sets new contract URI.
+     * Can only be called by the owner or during the initialization.
      *
-     * @param _newContractURI new contract metadata URI
+     * @param _newContractURI - new contract metadata URI
      */
     function setContractURI(string calldata _newContractURI) external;
 
     /**
-     * @notice Called with the sale price to determine how much royalty
-     *  is owed and to whom.
+     * @notice Provides royalty info. 
+     * Called with the sale price to determine how much royalty is owed and to whom.
      *
      * @param _tokenId - the NFT asset queried for royalty information
      * @param _salePrice - the sale price of the NFT asset specified by _tokenId
@@ -76,9 +78,11 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      * @notice Sets the royalty percentage.
      * Can only be called by the owner or during the initialization
      *
+     * Emits RoyaltyPercentageChanged if succesful.
+     *
      * Reverts if:
-     * - caller is not the owner.
-     * - `royaltyPercentage` is greater than max royalty percentage defined in the protocol
+     * - Caller is not the owner.
+     * - `_newRoyaltyPercentage` is greater than max royalty percentage defined in the protocol
      *
      * @param _newRoyaltyPercentage fee in percentage. e.g. 500 = 5%
      */

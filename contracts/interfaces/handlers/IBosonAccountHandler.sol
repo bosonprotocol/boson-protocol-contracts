@@ -36,9 +36,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     ) external;
 
     /**
-     * @notice Creates a Buyer
+     * @notice Creates a Buyer.
      *
-     * Emits a BuyerCreated event if successful.
+     * Emits an BuyerCreated event if successful.
      *
      * Reverts if:
      * - The buyers region of protocol is paused
@@ -77,7 +77,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     ) external;
 
     /**
-     * @notice Creates a marketplace agent
+     * @notice Creates a marketplace agent.
      *
      * Emits an AgentCreated event if successful.
      *
@@ -152,11 +152,11 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver) external;
 
     /**
-     * @notice Updates an agent except, with the exception of the active flag.
+     * @notice Updates an agent, with the exception of the active flag.
      *         All other fields should be filled, even those staying the same.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
-     * Emits a AgentUpdated event if successful.
+     * Emits an AgentUpdated event if successful.
      *
      * Reverts if:
      * - The agents region of protocol is paused
@@ -321,7 +321,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @notice Gets the details about a buyer.
      *
      * @param _buyerId - the id of the buyer to check
-     * @return exists - the buyer was found
+     * @return exists - whether the buyer was found
      * @return buyer - the buyer details. See {BosonTypes.Buyer}
      */
     function getBuyer(uint256 _buyerId) external view returns (bool exists, BosonTypes.Buyer memory buyer);
@@ -368,7 +368,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @notice Gets the details about an agent.
      *
      * @param _agentId - the id of the agent to check
-     * @return exists - the agent was found
+     * @return exists - whether the agent was found
      * @return agent - the agent details. See {BosonTypes.Agent}
      */
     function getAgent(uint256 _agentId) external view returns (bool exists, BosonTypes.Agent memory agent);
@@ -388,7 +388,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     /**
      * @notice Gets the next account Id that can be assigned to an account.
      *
-     *  Does not increment the counter.
+     * @dev Does not increment the counter.
      *
      * @return nextAccountId - the account Id
      */
