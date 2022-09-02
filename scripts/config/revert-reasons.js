@@ -93,6 +93,7 @@ exports.RevertReasons = {
   INVALID_TWIN_PROPERTY: "Invalid property for selected token type",
   INVALID_TWIN_TOKEN_RANGE: "Token range is already being used in another Twin",
   INVALID_TOKEN_ADDRESS: "Token address is a contract that doesn't implement the interface for selected token type",
+  TWIN_AMOUNT_GREATER_THAN_SUPPLY_AVAILABLE: "Twin amount must be less than or equal to supply available",
 
   // Bundle related
   NO_SUCH_BUNDLE: "No such bundle",
