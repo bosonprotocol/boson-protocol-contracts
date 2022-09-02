@@ -20,6 +20,7 @@ async function deployMockTokens(gasLimit, tokens = ["BosonToken", "Foreign721", 
     let token = tokens.shift();
     let TokenContractFactory = await ethers.getContractFactory(token);
     const tokenContract = await TokenContractFactory.deploy({ gasLimit });
+
     await tokenContract.deployed();
     deployedTokens.push(tokenContract);
   }

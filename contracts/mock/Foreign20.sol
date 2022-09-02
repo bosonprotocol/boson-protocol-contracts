@@ -181,3 +181,14 @@ contract Foreign20WithFee is Foreign20 {
         fee = _newFee;
     }
 }
+
+contract Foreign20TransferReturnFalse is Foreign20 {
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) public virtual override returns (bool) {
+        super.transferFrom(from, to, amount);
+        return false;
+    }
+}

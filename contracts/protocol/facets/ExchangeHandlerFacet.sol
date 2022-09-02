@@ -10,6 +10,7 @@ import { BuyerBase } from "../bases/BuyerBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
+import "hardhat/console.sol";
 
 interface Token {
     function balanceOf(address account) external view returns (uint256); //ERC-721 and ERC-20
@@ -687,7 +688,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 }
 
                 // If token transfer failed
-                if (!success) {
+                if (!success || (result.length > 0 && abi.decode(result, (bool)) == false)) {
                     transferFailed = true;
 
                     emit TwinTransferFailed(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
