@@ -19,6 +19,7 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
      *
      * Reverts if:
      * - Seller does not exist
+     * - Either offer ids or twin ids are empty
      * - any of offers belongs to different seller
      * - any of offers does not exist
      * - offer exists in a different bundle
@@ -40,6 +41,12 @@ contract BundleBase is ProtocolBase, IBosonBundleEvents {
         // get seller id, make sure it exists and store it to incoming struct
         (bool exists, uint256 sellerId) = getSellerIdByOperator(sender);
         require(exists, NOT_OPERATOR);
+
+        // validate that offer ids and twin ids are not empty
+        require(
+            _bundle.offerIds.length > 0 && _bundle.twinIds.length > 0,
+            BUNDLE_REQUIRES_AT_LEAST_ONE_TWIN_AND_ONE_OFFER
+        );
 
         // limit maximum number of offers to avoid running into block gas limit in a loop
         require(_bundle.offerIds.length <= protocolLimits().maxOffersPerBundle, TOO_MANY_OFFERS);

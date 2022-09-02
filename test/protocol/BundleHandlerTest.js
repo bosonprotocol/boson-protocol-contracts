@@ -331,30 +331,6 @@ describe("IBosonBundleHandler", function () {
         expect(exists).to.be.true;
       });
 
-      it("should create bundle without any offer", async function () {
-        bundle.offerIds = [];
-
-        // Create a bundle, testing for the event
-        await bundleHandler.connect(operator).createBundle(bundle);
-
-        let returnedBundle;
-        // bundle should have no offers
-        [, returnedBundle] = await bundleHandler.connect(rando).getBundle(nextBundleId);
-        assert.equal(returnedBundle.offerIds, bundle.offerIds.toString(), "Offer ids should be empty");
-      });
-
-      it("should create bundle without any twin", async function () {
-        bundle.twinIds = [];
-
-        // Create a bundle, testing for the event
-        await bundleHandler.connect(operator).createBundle(bundle);
-
-        let returnedBundle;
-        // bundle should have no twins
-        [, returnedBundle] = await bundleHandler.connect(rando).getBundle(nextBundleId);
-        assert.equal(returnedBundle.twinIds, bundle.twinIds.toString(), "Twin ids should be empty");
-      });
-
       it("should ignore any provided seller and assign seller id of msg.sender", async function () {
         // set some other sellerId
         bundle.sellerId = "123";
@@ -441,6 +417,24 @@ describe("IBosonBundleHandler", function () {
         it("Caller not operator of any seller", async function () {
           // Attempt to Create a bundle, expecting revert
           await expect(bundleHandler.connect(rando).createBundle(bundle)).to.revertedWith(RevertReasons.NOT_OPERATOR);
+        });
+
+        it("Bundle has no offers", async function () {
+          bundle.offerIds = [];
+
+          // Attempt to Create a bundle, expecting revert
+          await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
+            RevertReasons.BUNDLE_REQUIRES_AT_LEAST_ONE_TWIN_AND_ONE_OFFER
+          );
+        });
+
+        it("Bundle has no twins", async function () {
+          bundle.twinIds = [];
+
+          // Attempt to Create a bundle, expecting revert
+          await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
+            RevertReasons.BUNDLE_REQUIRES_AT_LEAST_ONE_TWIN_AND_ONE_OFFER
+          );
         });
 
         it("Caller is not the seller of all offers", async function () {
