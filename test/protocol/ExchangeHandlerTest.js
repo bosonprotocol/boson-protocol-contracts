@@ -2035,6 +2035,49 @@ describe("IBosonExchangeHandler", function () {
           expect(twin.supplyAvailable).to.equal(twin721.supplyAvailable - 1);
         });
 
+        it("Should transfer the twin even if supplyAvailable is equal 1", async function () {
+          await foreign721.connect(operator).mint("10", "2");
+
+          const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+          offer.quantityAvailable = "1";
+
+          // Create a new offer
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+          // Change twin supply to unlimited and token address to the new token
+          // @TODO test case: token id = 10 and supply available is greater than 1 (previuos offer range is [0, 9])
+          //twins token ids will collide as the tokens are transferred in descending order
+          twin721.supplyAvailable = "1";
+          twin721.tokenId = "10";
+          twin721.id = "4";
+
+          // Create a new twin with the new token address
+          await twinHandler.connect(operator).createTwin(twin721.toStruct());
+
+          // Create a new bundle
+          bundle = new Bundle("1", seller.id, [++offerId], [twin721.id]);
+          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+
+          // Commit to offer
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Set time forward to the offer's voucherRedeemableFrom
+          voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          let tokenId = "10";
+          // Redeem the second voucher
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
+            .to.emit(exchangeHandler, "TwinTransferred")
+            .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, "0", buyer.address);
+
+          // Check the buyer owns the last ERC721 of twin range
+          owner = await foreign721.ownerOf(tokenId);
+          expect(owner).to.equal(buyer.address);
+        });
+
         context("Unlimited supply", async function () {
           let other721;
           beforeEach(async function () {
