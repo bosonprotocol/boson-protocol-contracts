@@ -8,6 +8,7 @@ const Twin = require("../../scripts/domain/Twin");
 const Bundle = require("../../scripts/domain/Bundle");
 const PausableRegion = require("../../scripts/domain/PausableRegion.js");
 const TokenType = require("../../scripts/domain/TokenType.js");
+const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
@@ -15,7 +16,15 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { mockSeller, mockTwin, mockAuthToken, mockVoucherInitValues, accountId } = require("../utils/mock");
+const {
+  mockOffer,
+  mockDisputeResolver,
+  mockSeller,
+  mockTwin,
+  mockAuthToken,
+  mockVoucherInitValues,
+  accountId,
+} = require("../utils/mock");
 const { oneMonth } = require("../utils/constants");
 
 /**
@@ -32,6 +41,7 @@ describe("IBosonTwinHandler", function () {
     twinHandler,
     accountHandler,
     bundleHandler,
+    offerHandler,
     pauseHandler,
     twinStruct,
     bosonToken,
@@ -71,9 +81,12 @@ describe("IBosonTwinHandler", function () {
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
+      "AccountHandlerFacet",
       "SellerHandlerFacet",
       "TwinHandlerFacet",
       "BundleHandlerFacet",
+      "OfferHandlerFacet",
+      "DisputeResolverHandlerFacet",
       "PauseHandlerFacet",
     ]);
 
@@ -125,6 +138,9 @@ describe("IBosonTwinHandler", function () {
 
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonOfferHandler
+    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
 
     // Cast Diamond to IBosonTwinHandler
     twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
@@ -701,9 +717,44 @@ describe("IBosonTwinHandler", function () {
         });
 
         it("Bundle for twin exists", async function () {
+          // Create an offer, start by mocking the offer
+          let { offer, offerDates, offerDurations } = await mockOffer();
+          let agentId = "0"; // agent id is optional while creating an offer
+
+          // Check if domains are valid
+          expect(offer.isValid()).is.true;
+          expect(offerDates.isValid()).is.true;
+          expect(offerDurations.isValid()).is.true;
+
+          // Create a valid dispute resolver
+          let id = await accountHandler.connect(rando).getNextAccountId();
+          let disputeResolver = mockDisputeResolver(operator.address, admin.address, clerk.address, treasury.address);
+          disputeResolver.id = id.toString();
+          expect(disputeResolver.isValid()).is.true;
+
+          //Create DisputeResolverFee array so offer creation will succeed
+          let DRFeeNative = "100";
+          let DRFeeToken = "200";
+          let disputeResolverFees = [
+            new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative),
+            new DisputeResolverFee(bosonToken.address, "Boson", DRFeeToken),
+          ];
+
+          // Make empty seller list, so every seller is allowed
+          let sellerAllowList = [];
+          await accountHandler
+            .connect(rando)
+            .createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+          await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+
+          // Create the offer
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+
           // Bundle: Required constructor params
           bundleId = "1";
-          offerIds = [];
+          offerIds = [offer.id]; // createBundle() does not accept empty offer ids.
           twinIds = [twin.id];
 
           // Create a new bundle
