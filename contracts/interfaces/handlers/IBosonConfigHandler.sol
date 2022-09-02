@@ -61,7 +61,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
 
     /**
      * @notice Gets the Boson Voucher beacon contract address.
-     * 
+     *
      * @return the Boson Voucher beacon contract address
      */
     function getVoucherBeaconAddress() external view returns (address);
@@ -70,7 +70,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Sets the Boson Voucher reference proxy implementation address.
      *
      * Emits a BeaconProxyAddressChanged event.
-     * 
+     *
      * @dev Caller must have ADMIN role.
      *
      * @param _beaconProxyAddress - reference proxy implementation address
@@ -137,12 +137,12 @@ interface IBosonConfigHandler is IBosonConfigEvents {
 
     /**
      * @notice Gets the maximum numbers of offers that can be created in a single transaction.
-     * 
+     *
      * @return the maximum numbers of offers that can be created in a single transaction
      */
     function getMaxOffersPerBatch() external view returns (uint16);
 
-     /**
+    /**
      * @notice Sets the maximum numbers of offers that can be added to a group in a single transaction.
      *
      * Emits a MaxOffersPerGroupChanged event.
@@ -191,7 +191,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
 
     /**
      * @notice Gets the maximum numbers of offers that can be added to a bundle in a single transaction.
-     * 
+     *
      * @return the maximum numbers of offers that can be added to a bundle in a single transaction
      */
     function getMaxOffersPerBundle() external view returns (uint16);
@@ -304,7 +304,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
 
     /**
      * @notice Gets the maximum number of seller ids that can be added to or removed from dispute resolver seller allow list in a single transaction.
-     * 
+     *
      * @return the maximum number of seller ids that can be added or removed
      */
     function getMaxAllowedSellers() external view returns (uint16);
@@ -373,7 +373,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      */
     function getMaxExchangesPerBatch() external view returns (uint16);
 
-     /**
+    /**
      * @notice Sets the maximum royalty percentage that can be set by the seller.
      *
      * Emits a MaxRoyaltyPercentageChanged event.

@@ -13,28 +13,28 @@ import { IBosonPauseEvents } from "../events/IBosonPauseEvents.sol";
  */
 interface IBosonPauseHandler is IBosonPauseEvents {
     /**
-     * @notice Pause some or all of the protocol
+     * @notice Pauses some or all of the protocol.
      *
      * Emits a ProtocolPaused event if successful.
      *
      * Reverts if:
-     * - caller does not have PAUSER role
-     * - no regions are specified
-     * - protocol is already paused
-     * - a region is specified more than once
+     * - Caller does not have PAUSER role
+     * - No regions are specified
+     * - Protocol is already paused
+     * - A region is specified more than once
      *
      * @param _regions - an array of regions to pause. See: {BosonTypes.PausableRegion}
      */
     function pause(BosonTypes.PausableRegion[] calldata _regions) external;
 
     /**
-     * @notice Unpauses the protocol
+     * @notice Unpauses the protocol.
      *
      * Emits a ProtocolUnpaused event if successful.
      *
      * Reverts if:
-     * - caller does not have PAUSER role
-     * - protocol is not currently paused
+     * - Caller does not have PAUSER role
+     * - Protocol is not currently paused
      */
     function unpause() external;
 }

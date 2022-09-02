@@ -14,7 +14,7 @@ import "../../domain/BosonConstants.sol";
  */
 contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
     /**
-     * @notice Facet Initializer
+     * @notice Initializes facet.
      * This function is callable only once.
      */
     function initialize() public onlyUnInitialized(type(IBosonTwinHandler).interfaceId) {
@@ -27,10 +27,9 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      * Emits a TwinCreated event if successful.
      *
      * Reverts if:
-     * - The twins region of protocol is paused
-     * - seller does not exist
-     * - Not approved to transfer the seller's token
-     * - supplyAvailable is zero
+     * - Seller does not exist
+     * - Protocol is not approved to transfer the seller's token
+     * - Twin supplyAvailable is zero
      * - Twin is NonFungibleToken and amount was set
      * - Twin is NonFungibleToken and end of range would overflow
      * - Twin is NonFungibleToken with unlimited supply and starting token id is too high
@@ -44,13 +43,13 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
     }
 
     /**
-     * @notice Removes the twin.
+     * @notice Removes a twin.
      *
      * Emits a TwinDeleted event if successful.
      *
      * Reverts if:
      * - The twins region of protocol is paused
-     * - caller is not the seller.
+     * - Caller is not the seller.
      * - Twin does not exist.
      * - Bundle for twin exists
      *
@@ -119,7 +118,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
     /**
      * @notice Gets the next twin id.
      *
-     * Does not increment the counter.
+     * @dev Does not increment the counter.
      *
      * @return nextTwinId - the next twin id
      */

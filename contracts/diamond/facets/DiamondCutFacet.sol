@@ -10,7 +10,7 @@ import { EIP712Lib } from "../../protocol/libs/EIP712Lib.sol";
 /**
  * @title DiamondCutFacet
  *
- * @notice Based on Nick Mudge's gas-optimized diamond-2 reference,
+ * @notice Provides diamond facet management functionality based on Nick Mudge's gas-optimized diamond-2 reference,
  * with modifications to support role-based access and management of
  * supported interfaces. Also added copious code comments throughout.
  *
@@ -30,9 +30,9 @@ contract DiamondCutFacet is IDiamondCut {
      *
      * Reverts if caller does not have UPGRADER role
      *
-     * @param _facetCuts Contains the facet addresses and function selectors
-     * @param _init The address of the contract or facet to execute _calldata
-     * @param _calldata A function call, including function selector and arguments
+     * @param _facetCuts - contains the facet addresses and function selectors
+     * @param _init - the address of the contract or facet to execute _calldata
+     * @param _calldata - a function call, including function selector and arguments
      */
     function diamondCut(
         FacetCut[] calldata _facetCuts,

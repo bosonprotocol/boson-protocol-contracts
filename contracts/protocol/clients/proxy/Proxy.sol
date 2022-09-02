@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 /**
- * @dev This abstract contract provides a fallback function that delegates all calls to another contract using the EVM
+ * @notice This abstract contract provides a fallback function that delegates all calls to another contract using the EVM
  * instruction `delegatecall`. We refer to the second contract as the _implementation_ behind the proxy, and it has to
  * be specified by overriding the virtual {_implementation} function.
  *
@@ -14,9 +14,11 @@ pragma solidity ^0.8.0;
  */
 abstract contract Proxy {
     /**
-     * @dev Delegates the current call to `implementation`.
+     * @notice Delegates the current call to `implementation`.
      *
      * This function does not return to its internall call site, it will return directly to the external caller.
+     *
+     * @param implementation - the address of the implementation to which the call should be delegated
      */
     function _delegate(address implementation) internal virtual {
         assembly {
@@ -44,13 +46,15 @@ abstract contract Proxy {
     }
 
     /**
-     * @dev This is a virtual function that should be overriden so it returns the address to which the fallback function
+     * @notice This is a virtual function that should be overriden so it returns the address to which the fallback function
      * and {_fallback} should delegate.
+     *
+     * @return the address to which the fallback function should delegate
      */
     function _implementation() internal view virtual returns (address);
 
     /**
-     * @dev Delegates the current call to the address returned by `_implementation()`.
+     * @notice Delegates the current call to the address returned by `_implementation()`.
      *
      * This function does not return to its internall call site, it will return directly to the external caller.
      */
@@ -60,7 +64,7 @@ abstract contract Proxy {
     }
 
     /**
-     * @dev Fallback function that delegates calls to the address returned by `_implementation()`. Will run if no other
+     * @notice Fallback function that delegates calls to the address returned by `_implementation()`. Will run if no other
      * function in the contract matches the call data.
      */
     fallback() external payable virtual {
@@ -68,7 +72,7 @@ abstract contract Proxy {
     }
 
     /**
-     * @dev Fallback function that delegates calls to the address returned by `_implementation()`. Will run if call data
+     * @notice Fallback function that delegates calls to the address returned by `_implementation()`. Will run if call data
      * is empty.
      */
     receive() external payable virtual {
@@ -76,7 +80,7 @@ abstract contract Proxy {
     }
 
     /**
-     * @dev Hook that is called before falling back to the implementation. Can happen as part of a manual `_fallback`
+     * @notice Hook that is called before falling back to the implementation. Can happen as part of a manual `_fallback`
      * call, or as part of the Solidity `fallback` or `receive` functions.
      *
      * If overriden should call `super._beforeFallback()`.

@@ -9,7 +9,7 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 /**
  * @title GroupBase
  *
- * @dev Provides methods for group creation that can be shared accross facets
+ * @notice Provides methods for group creation that can be shared accross facets
  */
 contract GroupBase is ProtocolBase, IBosonGroupEvents {
     /**
@@ -18,14 +18,14 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      * Emits a GroupCreated event if successful.
      *
      * Reverts if:
-     *
      * - Caller is not an operator
-     * - any of offers belongs to different seller
-     * - any of offers does not exist
-     * - offer exists in a different group
-     * - number of offers exceeds maximum allowed number per group
+     * - Any of offers belongs to different seller
+     * - Any of offers does not exist
+     * - Offer exists in a different group
+     * - Number of offers exceeds maximum allowed number per group
      *
      * @param _group - the fully populated struct with group id set to 0x0
+     * @param _condition - the fully populated condition struct
      */
     function createGroupInternal(Group memory _group, Condition calldata _condition) internal {
         // get message sender
@@ -75,7 +75,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
     }
 
     /**
-     * @dev Store a condition struct, associated with a given group id
+     * @notice Store a condition struct associated with a given group id.
      *
      * @param _groupId - the group id
      * @param _condition - the condition
@@ -94,8 +94,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
     }
 
     /**
-     * @dev this might change, depending on how checks at the time of the commit will be implemented
-     * @notice Validates that condition parameters make sense
+     * @notice Validates that condition parameters make sense.
      *
      * Reverts if:
      * - EvaluationMethod.None and has fields different from 0
@@ -120,20 +119,19 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
     }
 
     /**
-     * @notice Adds offers to an existing group
+     * @notice Adds offers to an existing group.
      *
      * Emits a GroupUpdated event if successful.
      *
      * Reverts if:
-     *
-     * - caller is not the seller
-     * - offer ids is an empty list
-     * - number of offers exceeds maximum allowed number per group
-     * - group does not exist
-     * - any of offers belongs to different seller
-     * - any of offers does not exist
-     * - offer exists in a different group
-     * - offer ids contains duplicated offers
+     * - Caller is not the seller
+     * - Offer ids param is an empty list
+     * - Number of offers exceeds maximum allowed number per group
+     * - Group does not exist
+     * - Any of offers belongs to different seller
+     * - Any of offers does not exist
+     * - Offer exists in a different group
+     * - Offer ids param contains duplicated offers
      *
      * @param _groupId  - the id of the group to be updated
      * @param _offerIds - array of offer ids to be added to the group
@@ -169,18 +167,17 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
     }
 
     /**
-     * @dev Before performing an update, make sure update can be done
-     * and return seller id and group storage pointer for further use
+     * @notice Checks that update can be done beofre performing an update
+     * and returns seller id and group storage pointer for further use.
      *
      * Reverts if:
-     *
-     * - caller is not the seller
-     * - offer ids is an empty list
-     * - number of offers exceeds maximum allowed number per group
-     * - group does not exist
+     * - Caller is not the seller
+     * - Offer ids param is an empty list
+     * - Number of offers exceeds maximum allowed number per group
+     * - Group does not exist
      *
      * @param _groupId  - the id of the group to be updated
-     * @param _offerIds - array of offer ids to be removed to the group
+     * @param _offerIds - array of offer ids to be added to or removed from the group
      * @return sellerId  - the seller Id
      * @return group - the group details
      */

@@ -27,12 +27,11 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * Emits a GroupCreated event if successful.
      *
      * Reverts if:
-     * - The groups region of protocol is paused
-     * - caller is not an operator
-     * - any of offers belongs to different seller
-     * - any of offers does not exist
-     * - offer exists in a different group
-     * - number of offers exceeds maximum allowed number per group
+     * - Caller is not an operator
+     * - Any of offers belongs to different seller
+     * - Any of offers does not exist
+     * - Offer exists in a different group
+     * - Number of offers exceeds maximum allowed number per group
      *
      * @param _group - the fully populated struct with group id set to 0x0
      * @param _condition - the fully populated condition struct
@@ -47,20 +46,19 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
     }
 
     /**
-     * @notice Adds offers to an existing group
+     * @notice Adds offers to an existing group.
      *
      * Emits a GroupUpdated event if successful.
      *
      * Reverts if:
-     * - The groups region of protocol is paused
-     * - caller is not the seller
-     * - offer ids is an empty list
-     * - number of offers exceeds maximum allowed number per group
-     * - group does not exist
-     * - any of offers belongs to different seller
-     * - any of offers does not exist
-     * - offer exists in a different group
-     * - offer ids contains duplicated offers
+     * - Caller is not the seller
+     * - Offer ids param is an empty list
+     * - Number of offers exceeds maximum allowed number per group
+     * - Group does not exist
+     * - Any of offers belongs to different seller
+     * - Any of offers does not exist
+     * - Offer exists in a different group
+     * - Offer ids param contains duplicated offers
      *
      * @param _groupId  - the id of the group to be updated
      * @param _offerIds - array of offer ids to be added to the group
@@ -75,20 +73,20 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
     }
 
     /**
-     * @notice Removes offers from an existing group
+     * @notice Removes offers from an existing group.
      *
      * Emits a GroupUpdated event if successful.
      *
      * Reverts if:
      * - The groups region of protocol is paused
-     * - caller is not the seller
-     * - offer ids is an empty list
-     * - number of offers exceeds maximum allowed number per group
-     * - group does not exist
-     * - any offer is not part of the group
+     * - Caller is not the seller
+     * - Offer ids param is an empty list
+     * - Number of offers exceeds maximum allowed number per group
+     * - Group does not exist
+     * - Any offer is not part of the group
      *
      * @param _groupId  - the id of the group to be updated
-     * @param _offerIds - array of offer ids to be removed to the group
+     * @param _offerIds - array of offer ids to be removed from the group
      */
     function removeOffersFromGroup(uint256 _groupId, uint256[] calldata _offerIds)
         external
@@ -142,11 +140,11 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      *
      * Reverts if:
      * - The groups region of protocol is paused
-     * - condition includes invalid combination of fields
-     * - seller does not match caller
-     * - group does not exist
+     * - Condition includes invalid combination of fields
+     * - Seller does not match caller
+     * - Group does not exist
      *
-     * @param _groupId - the id of the group to set the condition
+     * @param _groupId - the id of the group whose condition will be set
      * @param _condition - fully populated condition struct
      *
      */
@@ -206,7 +204,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
     /**
      * @notice Gets the next group id.
      *
-     * Does not increment the counter.
+     * @dev Does not increment the counter.
      *
      * @return nextGroupId - the next group id
      */

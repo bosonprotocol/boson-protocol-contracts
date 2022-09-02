@@ -16,6 +16,7 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
      * @notice Checks nonce and returns true if used already.
      *
      * @param _nonce - the nonce that we want to check.
+     * @return true if nonce has already been used
      */
     function isUsedNonce(uint256 _nonce) external view returns (bool);
 
@@ -24,19 +25,19 @@ interface IBosonMetaTransactionsHandler is IBosonMetaTransactionsEvents {
      *
      * Reverts if:
      * - The meta-transactions region of protocol is paused
-     * - nonce is already used by another transaction.
-     * - function signature matches to executeMetaTransaction.
-     * - function name does not match with bytes 4 version of the function signature.
-     * - sender does not match the recovered signer.
-     * - any code executed in the signed transaction reverts.
+     * - Nonce is already used by another transaction
+     * - Function signature matches executeMetaTransaction
+     * - Function name does not match the bytes4 version of the function signature
+     * - sender does not match the recovered signer
+     * - Any code executed in the signed transaction reverts
      *
-     * @param _userAddress - the sender of the transaction.
-     * @param _functionName - the function name that we want to execute.
-     * @param _functionSignature - the function signature.
-     * @param _nonce - the nonce value of the transaction.
-     * @param _sigR - r part of the signer's signature.
-     * @param _sigS - s part of the signer's signature.
-     * @param _sigV - v part of the signer's signature.
+     * @param _userAddress - the sender of the transaction
+     * @param _functionName - the name of the function to be executed
+     * @param _functionSignature - the function signature
+     * @param _nonce - the nonce value of the transaction
+     * @param _sigR - r part of the signer's signature
+     * @param _sigS - s part of the signer's signature
+     * @param _sigV - v part of the signer's signature
      */
     function executeMetaTransaction(
         address _userAddress,

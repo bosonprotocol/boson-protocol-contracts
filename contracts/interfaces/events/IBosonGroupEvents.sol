@@ -6,7 +6,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 /**
  * @title IBosonGroupEvents
  *
- * @notice Events related to management of groups within the protocol.
+ * @notice Defines events related to management of groups within the protocol.
  */
 interface IBosonGroupEvents {
     event GroupCreated(

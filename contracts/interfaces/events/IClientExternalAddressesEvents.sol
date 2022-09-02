@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 /**
  * @title IClientExternalAddressesEvents
  *
- * @notice Events related to management of Boson ClientProxy
+ * @notice Defines events related to management of Boson ClientProxy.
  */
 interface IClientExternalAddressesEvents {
     event Upgraded(address indexed implementation, address indexed executedBy);

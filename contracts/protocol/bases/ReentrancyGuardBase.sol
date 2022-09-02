@@ -6,7 +6,7 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 pragma solidity ^0.8.0;
 
 /**
- * @dev Contract module that helps prevent reentrant calls to a function.
+ * @notice Contract module that helps prevent reentrant calls to a function.
  *
  * The majority of code, comments and general idea is taken from OpenZeppelin implementation.
  * Code was adjusted to work with the storage layout used in the protocol.
@@ -16,7 +16,7 @@ pragma solidity ^0.8.0;
  * available, which can be applied to functions to make sure there are no nested
  * (reentrant) calls to them.
  *
- * Note that because there is a single `nonReentrant` guard, functions marked as
+ * @dev Because there is a single `nonReentrant` guard, functions marked as
  * `nonReentrant` may not call one another. This can be worked around by making
  * those functions `private`, and then adding `external` `nonReentrant` entry
  * points to them.
@@ -27,7 +27,7 @@ pragma solidity ^0.8.0;
  */
 abstract contract ReentrancyGuardBase {
     /**
-     * @dev Prevents a contract from calling itself, directly or indirectly.
+     * @notice Prevents a contract from calling itself, directly or indirectly.
      * Calling a `nonReentrant` function from another `nonReentrant`
      * function is not supported. It is possible to prevent this from happening
      * by making the `nonReentrant` function external, and making it call a

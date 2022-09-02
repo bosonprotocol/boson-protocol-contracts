@@ -129,7 +129,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
 
     /**
      * @notice Gets the Boson Voucher beacon contract address.
-     * 
+     *
      * @return the Boson Voucher beacon contract address
      */
     function getVoucherBeaconAddress() external view override returns (address) {
@@ -140,7 +140,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @notice Sets the Boson Voucher reference proxy implementation address.
      *
      * Emits a BeaconProxyAddressChanged event.
-     * 
+     *
      * @dev Caller must have ADMIN role.
      *
      * @param _beaconProxyAddress - reference proxy implementation address
@@ -282,7 +282,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
 
     /**
      * @notice Gets the maximum numbers of offers that can be added to a bundle in a single transaction.
-     * 
+     *
      * @return the maximum numbers of offers that can be added to a bundle in a single transaction
      */
     function getMaxOffersPerBundle() external view override returns (uint16) {
@@ -305,7 +305,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
 
     /**
      * @notice Gets the maximum numbers of offers that can be created in a single transaction.
-     * 
+     *
      * @return the maximum numbers of offers that can be created in a single transaction
      */
     function getMaxOffersPerBatch() external view override returns (uint16) {
@@ -503,7 +503,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
 
     /**
      * @notice Gets the maximum number of seller ids that can be added to or removed from dispute resolver seller allow list in a single transaction.
-     * 
+     *
      * @return the maximum number of seller ids that can be added or removed
      */
     function getMaxAllowedSellers() external view override returns (uint16) {

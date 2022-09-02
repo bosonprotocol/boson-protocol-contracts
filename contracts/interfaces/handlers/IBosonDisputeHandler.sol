@@ -98,7 +98,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
     function expireDisputeBatch(uint256[] calldata _exchangeIds) external;
 
     /**
-     * @notice Resolves a dispute by providing the information about the funds split. 
+     * @notice Resolves a dispute by providing the information about the funds split.
      * Callable by the buyer or seller, but the caller must provide the resolution signed by the other party.
      *
      * Emits a DisputeResolved event if successful.
@@ -170,7 +170,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
      */
     function decideDispute(uint256 _exchangeId, uint256 _buyerPercent) external;
 
-     /**
+    /**
      * @notice Enables Dispute Resolver to explicity refuse to resolve a dispute in Escalated state and releases the funds.
      *
      * Emits an EscalatedDisputeRefused event if successful.

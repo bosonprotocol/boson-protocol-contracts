@@ -194,7 +194,7 @@ contract BosonVoucher is IBosonVoucher, BeaconClientBase, OwnableUpgradeable, ER
     }
 
     /**
-     * @notice Provides royalty info. 
+     * @notice Provides royalty info.
      * Called with the sale price to determine how much royalty is owed and to whom.
      *
      * @param _tokenId - the NFT asset queried for royalty information

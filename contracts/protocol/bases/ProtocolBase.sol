@@ -16,7 +16,7 @@ import { ReentrancyGuardBase } from "./ReentrancyGuardBase.sol";
  */
 abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     /**
-     * @dev Modifier to protect initializer function from being invoked twice.
+     * @notice Modifier to protect initializer function from being invoked twice.
      */
     modifier onlyUnInitialized(bytes4 interfaceId) {
         ProtocolLib.ProtocolStatus storage ps = protocolStatus();
@@ -26,7 +26,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @dev Modifier that checks that the caller has a specific role.
+     * @notice Modifier that checks that the caller has a specific role.
      *
      * Reverts if caller doesn't have role.
      *
@@ -41,7 +41,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @dev Get the Protocol Addresses slot
+     * @notice Get the Protocol Addresses slot
      *
      * @return pa - the Protocol Addresses slot
      */
@@ -50,7 +50,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @dev Get the Protocol Limits slot
+     * @notice Get the Protocol Limits slot
      *
      * @return pl - the Protocol Limits slot
      */
@@ -59,7 +59,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @dev Get the Protocol Entities slot
+     * @notice Get the Protocol Entities slot
      *
      * @return pe - the Protocol Entities slot
      */
@@ -68,7 +68,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @dev Get the Protocol Lookups slot
+     * @notice Get the Protocol Lookups slot
      *
      * @return pl - the Protocol Lookups slot
      */
@@ -77,7 +77,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @dev Get the Protocol Fees slot
+     * @notice Get the Protocol Fees slot
      *
      * @return pf - the Protocol Fees slot
      */
@@ -86,7 +86,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @dev Get the Protocol Counters slot
+     * @notice Get the Protocol Counters slot
      *
      * @return pc the Protocol Counters slot
      */
@@ -95,7 +95,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @dev Get the Protocol meta-transactions storage slot
+     * @notice Get the Protocol meta-transactions storage slot
      *
      * @return pmti the Protocol meta-transactions storage slot
      */
@@ -104,7 +104,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @dev Get the Protocol Status slot
+     * @notice Get the Protocol Status slot
      *
      * @return ps the Protocol Status slot
      */

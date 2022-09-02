@@ -10,7 +10,7 @@ import { JewelerLib } from "./JewelerLib.sol";
 /**
  * @title ProtocolDiamond
  *
- * @notice Based on Nick Mudge's gas-optimized diamond-2 reference,
+ * @notice Provides Diamond functionality based on Nick Mudge's gas-optimized diamond-2 reference,
  * with modifications to support role-based access and management of
  * supported interfaces. Also added copious code comments throughout.
  *
@@ -24,9 +24,9 @@ contract ProtocolDiamond {
     /**
      * @notice Constructor
      *
-     * - Store the access controller
-     * - Make the initial facet cuts
-     * - Declare support for interfaces
+     * - Stores the access controller
+     * - Makes the initial facet cuts
+     * - Declares support for interfaces
      *
      * @param _accessController - the Boson Protocol AccessController
      * @param _facetCuts - the initial facet cuts to make
@@ -53,9 +53,9 @@ contract ProtocolDiamond {
     }
 
     /**
-     * Fallback function. Called when the specified function doesn't exist
+     * @notice Fallback function. Is called when the specified function doesn't exist.
      *
-     * Find facet for function that is called and execute the
+     * Finds facet for function that is called and executes the
      * function if a facet is found and returns any value.
      */
     fallback() external payable {

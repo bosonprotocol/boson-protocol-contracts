@@ -10,7 +10,7 @@ import { ClientLib } from "../libs/ClientLib.sol";
 /**
  * @title ClientBase
  *
- * @notice Extended by Boson Protocol contracts that need to communicate with the ProtocolDiamond 
+ * @notice Extended by Boson Protocol contracts that need to communicate with the ProtocolDiamond
  * but are NOT facets of the ProtocolDiamond. This is used where it's expected that only one client
  * will use the implementation. If it's expected that multiple clients will use the same implementation, it's recommended
  * to use `BeaconClientBase` instead

@@ -209,7 +209,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
-     * @notice Resolves a dispute by providing the information about the funds split. 
+     * @notice Resolves a dispute by providing the information about the funds split.
      * Callable by the buyer or seller, but the caller must provide the resolution signed by the other party.
      *
      * Emits a DisputeResolved event if successful.

@@ -7,7 +7,7 @@ import { DiamondLib } from "../DiamondLib.sol";
 /**
  * @title DiamondLoupeFacet
  *
- * @notice DiamondCut facet based on Nick Mudge's gas-optimized diamond-2 reference.
+ * @notice Provides Diamond Facet inspection functionality based on Nick Mudge's gas-optimized diamond-2 reference.
  *
  * Reference Implementation  : https://github.com/mudgen/diamond-2-hardhat
  * EIP-2535 Diamond Standard : https://eips.ethereum.org/EIPS/eip-2535
@@ -19,6 +19,7 @@ contract DiamondLoupeFacet is IDiamondLoupe {
 
     /**
      *  @notice Gets all facets and their selectors.
+     *
      *  @return facets_ - array of Facets
      */
     function facets() external view override returns (Facet[] memory facets_) {
@@ -75,8 +76,9 @@ contract DiamondLoupeFacet is IDiamondLoupe {
 
     /**
      * @notice Gets all the function selectors supported by a specific facet.
-     * @param _facet  - the facet address.
-     * @return facetFunctionSelectors_ - the selectors associated with a facet address.
+     *
+     * @param _facet  - the facet address
+     * @return facetFunctionSelectors_ - the selectors associated with a facet address
      */
     function facetFunctionSelectors(address _facet)
         external
@@ -112,6 +114,7 @@ contract DiamondLoupeFacet is IDiamondLoupe {
 
     /**
      * @notice Gets all the facet addresses used by a diamond.
+     *
      * @return facetAddresses_ - array of addresses
      */
     function facetAddresses() external view override returns (address[] memory facetAddresses_) {
@@ -154,6 +157,7 @@ contract DiamondLoupeFacet is IDiamondLoupe {
      * @notice Gets the facet that supports the given selector.
      *
      * @dev If facet is not found return address(0).
+     *
      * @param _functionSelector - the function selector.
      * @return facetAddress_ - the facet address.
      */

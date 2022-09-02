@@ -462,8 +462,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Sets the active flag for this Dispute Resolver to true. 
-     * 
+     * @notice Sets the active flag for this Dispute Resolver to true.
+     *
      * @dev Only callable by the protocol ADMIN role.
      *
      * Emits a DisputeResolverActivated event if successful.

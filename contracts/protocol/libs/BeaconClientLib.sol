@@ -26,7 +26,7 @@ library BeaconClientLib {
 
     /**
      * @notice Returns a `BeaconSlot` with member `value`.
-     * 
+     *
      * @return r - the BeaconSlot storage slot cast to BeaconSlot
      */
     function getBeaconSlot() internal pure returns (BeaconSlot storage r) {

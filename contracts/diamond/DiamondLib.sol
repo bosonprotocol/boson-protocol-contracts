@@ -69,7 +69,7 @@ library DiamondLib {
     }
 
     /**
-     * @notice Checks if a specific interface is supported. 
+     * @notice Checks if a specific interface is supported.
      * Implementation of ERC-165 interface detection standard.
      *
      * @param _interfaceId - the sighash of the given interface

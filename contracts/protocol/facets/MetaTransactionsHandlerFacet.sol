@@ -18,7 +18,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
  */
 contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, ProtocolBase {
     /**
-     * @notice Facet Initializer
+     * @notice Initializes Facet.
      * This function is callable only once.
      */
     function initialize() public onlyUnInitialized(type(IBosonMetaTransactionsHandler).interfaceId) {
@@ -62,9 +62,10 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     }
 
     /**
-     * @notice Returns hashed meta transaction
+     * @notice Returns hashed meta transaction.
      *
      * @param _metaTx - the meta-transaction struct.
+     * @return the hash of the meta-transaction details
      */
     function hashMetaTransaction(MetaTransaction memory _metaTx) internal view returns (bytes32) {
         MetaTxInputType inputType = protocolMetaTxInfo().inputType[_metaTx.functionName];
@@ -86,6 +87,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Returns hashed representation of the generic function signature.
      *
      * @param _functionSignature - the generic function signature
+     * @return the hashed generic function signature
      */
     function hashGenericDetails(bytes memory _functionSignature) internal pure returns (bytes32) {
         return keccak256(_functionSignature);
@@ -95,6 +97,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Returns hashed representation of the offer details struct.
      *
      * @param _offerDetails - the offer details
+     * @return the hashed representation fo the offer details struct
      */
     function hashOfferDetails(bytes memory _offerDetails) internal pure returns (bytes32) {
         (address buyer, uint256 offerId) = abi.decode(_offerDetails, (address, uint256));
@@ -105,6 +108,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Returns hashed representation of the exchange details struct.
      *
      * @param _exchangeDetails - the exchange details
+     * @return the hashed representation of the exchange details struct
      */
     function hashExchangeDetails(bytes memory _exchangeDetails) internal pure returns (bytes32) {
         uint256 exchangeId = abi.decode(_exchangeDetails, (uint256));
@@ -115,6 +119,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Returns hashed representation of the fund details struct.
      *
      * @param _fundDetails - the fund details
+     * @return the hashed representation fo the fund details struct
      */
     function hashFundDetails(bytes memory _fundDetails) internal pure returns (bytes32) {
         (uint256 entityId, address[] memory tokenList, uint256[] memory tokenAmounts) = abi.decode(
@@ -136,6 +141,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Returns hashed representation of the dispute resolution details struct.
      *
      * @param _disputeResolutionDetails - the dispute resolution details
+     * @return the hashed representation fo the dispute resolution details struct
      */
     function hashDisputeResolutionDetails(bytes memory _disputeResolutionDetails) internal pure returns (bytes32) {
         (uint256 exchangeId, uint256 buyerPercent, bytes32 sigR, bytes32 sigS, uint8 sigV) = abi.decode(
@@ -149,6 +155,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Checks nonce and returns true if used already.
      *
      * @param _nonce - the nonce that we want to check.
+     * @return true if nonce has already been used
      */
     function isUsedNonce(uint256 _nonce) external view override returns (bool) {
         return protocolMetaTxInfo().usedNonce[_nonce];
@@ -158,13 +165,13 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Validates the nonce and function signature.
      *
      * Reverts if:
-     * - nonce is already used by another transaction.
-     * - function signature matches to Meta Transaction function.
-     * - function name does not match with bytes 4 version of the function signature.
+     * - Nonce is already used by another transaction
+     * - Function signature matches executeMetaTransaction
+     * - Function name does not match the bytes4 version of the function signature
      *
-     * @param _functionName - the function name that we want to execute.
-     * @param _functionSignature - the function signature.
-     * @param _nonce - the nonce value of the transaction.
+     * @param _functionName - the function name that we want to execute
+     * @param _functionSignature - the function signature
+     * @param _nonce - the nonce value of the transaction
      */
     function validateTx(
         string calldata _functionName,
@@ -183,7 +190,8 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     /**
      * @notice Checks if function name is a special function or a generic function.
      *
-     * @param _functionName - the function name that we want to execute.
+     * @param _functionName - the function name that we want to execute
+     * @return true if the function name is a special function (not the generic meta transaction function)
      */
     function isSpecialFunction(string calldata _functionName) internal view returns (bool) {
         return protocolMetaTxInfo().inputType[_functionName] != MetaTxInputType.Generic;
@@ -192,22 +200,22 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     /**
      * @notice Sets the current transaction sender.
      *
-     * @param _signerAddress - Address of the transaction signer.
+     * @param _signerAddress - Address of the transaction signer
      */
     function setCurrentSenderAddress(address _signerAddress) internal {
         protocolMetaTxInfo().currentSenderAddress = _signerAddress;
     }
 
     /**
-     * @notice Executes the transaction
+     * @notice Executes the meta transaction.
      *
      * Reverts if:
-     * - any code executed in the signed transaction reverts.
+     * - Any code executed in the signed transaction reverts
      *
-     * @param _userAddress - the sender of the transaction.
-     * @param _functionName - the function name that we want to execute.
-     * @param _functionSignature - the function signature.
-     * @param _nonce - the nonce value of the transaction.
+     * @param _userAddress - the sender of the transaction
+     * @param _functionName - the name of the function to be executed
+     * @param _functionSignature - the function signature
+     * @param _nonce - the nonce value of the transaction
      */
     function executeTx(
         address _userAddress,
@@ -242,19 +250,19 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      *
      * Reverts if:
      * - The meta-transactions region of protocol is paused
-     * - nonce is already used by another transaction.
-     * - function signature matches to executeMetaTransaction.
-     * - function name does not match with bytes 4 version of the function signature.
-     * - sender does not match the recovered signer.
-     * - any code executed in the signed transaction reverts.
+     * - Nonce is already used by another transaction
+     * - Function signature matches executeMetaTransaction
+     * - Function name does not match the bytes4 version of the function signature
+     * - sender does not match the recovered signer
+     * - Any code executed in the signed transaction reverts
      *
-     * @param _userAddress - the sender of the transaction.
-     * @param _functionName - the function name that we want to execute.
-     * @param _functionSignature - the function signature.
-     * @param _nonce - the nonce value of the transaction.
-     * @param _sigR - r part of the signer's signature.
-     * @param _sigS - s part of the signer's signature.
-     * @param _sigV - v part of the signer's signature.
+     * @param _userAddress - the sender of the transaction
+     * @param _functionName - the name of the function to be executed
+     * @param _functionSignature - the function signature
+     * @param _nonce - the nonce value of the transaction
+     * @param _sigR - r part of the signer's signature
+     * @param _sigS - s part of the signer's signature
+     * @param _sigV - v part of the signer's signature
      */
     function executeMetaTransaction(
         address _userAddress,

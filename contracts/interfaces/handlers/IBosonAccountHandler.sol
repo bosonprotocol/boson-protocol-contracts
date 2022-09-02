@@ -13,20 +13,20 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
-     * @notice Creates a seller
+     * @notice Creates a seller.
      *
      * Emits a SellerCreated event if successful.
      *
      * Reverts if:
      * - The sellers region of protocol is paused
      * - Address values are zero address
-     * - Active is not true
      * - Addresses are not unique to this seller
+     * - Seller is not active (if active == false)
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
-     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      */
     function createSeller(
@@ -109,7 +109,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - AuthTokenType is not unique to this seller
      *
      * @param _seller - the fully populated seller struct
-     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      */
     function updateSeller(BosonTypes.Seller memory _seller, BosonTypes.AuthToken calldata _authToken) external;
 
@@ -248,8 +248,8 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function removeSellersFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external;
 
     /**
-     * @notice Sets the active flag for this Dispute Resolver to true. 
-     * 
+     * @notice Sets the active flag for this Dispute Resolver to true.
+     *
      * @dev Only callable by the protocol ADMIN role.
      *
      * Emits a DisputeResolverActivated event if successful.
@@ -269,7 +269,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _sellerId - the id of the seller to check
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
-     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
     function getSeller(uint256 _sellerId)
@@ -283,12 +283,13 @@ interface IBosonAccountHandler is IBosonAccountEvents {
 
     /**
      * @notice Gets the details about a seller by an address associated with that seller: operator, admin, or clerk address.
-     *         N.B.: If seller's admin uses NFT Auth they should call `getSellerByAuthToken` instead.
+     * A seller will have either an admin address or an auth token.
+     * If seller's admin uses NFT Auth the seller should call `getSellerByAuthToken` instead.
      *
      * @param _associatedAddress - the address associated with the seller. Must be an operator, admin, or clerk address.
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
-     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
     function getSellerByAddress(address _associatedAddress)
@@ -302,12 +303,14 @@ interface IBosonAccountHandler is IBosonAccountEvents {
 
     /**
      * @notice Gets the details about a seller by an auth token associated with that seller.
-     *         A seller will have either an admin address or an auth token
+     * A seller will have either an admin address or an auth token.
+     * If seller's admin uses an admin address, the seller should call `getSellerByAddress` instead.
+     *
      *
      * @param _associatedAuthToken - the auth token that may be associated with the seller.
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
-     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
     function getSellerByAuthToken(BosonTypes.AuthToken calldata _associatedAuthToken)

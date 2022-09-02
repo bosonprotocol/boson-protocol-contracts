@@ -15,7 +15,7 @@ import { IBosonFundsLibEvents } from "../events/IBosonFundsEvents.sol";
 interface IBosonFundsHandler is IBosonFundsEvents, IBosonFundsLibEvents {
     /**
      * @notice Receives funds from the caller, maps funds to the seller id and stores them so they can be used during the commitToOffer.
-     * 
+     *
      * Emits FundsDeposited event if successful.
      *
      * Reverts if:

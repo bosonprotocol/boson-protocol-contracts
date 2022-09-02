@@ -10,7 +10,7 @@ import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 /**
  * @title TwinBase
  *
- * @dev Provides methods for twin creation that can be shared accross facets
+ * @notice Provides functions for twin creation that can be shared accross facets
  */
 contract TwinBase is ProtocolBase, IBosonTwinEvents {
     /**
@@ -19,9 +19,9 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
      * Emits a TwinCreated event if successful.
      *
      * Reverts if:
-     * - seller does not exist
-     * - Not approved to transfer the seller's token
-     * - supplyAvailable is zero
+     * - Seller does not exist
+     * - Protocol is not approved to transfer the seller's token
+     * - Twin supplyAvailable is zero
      * - Twin is NonFungibleToken and amount was set
      * - Twin is NonFungibleToken and end of range would overflow
      * - Twin is NonFungibleToken with unlimited supply and starting token id is too high
@@ -123,7 +123,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
     }
 
     /**
-     * @notice Check if the contract supports the correct interface for the selected token type.
+     * @notice Checks if the contract supports the correct interface for the selected token type.
      *
      * @param _tokenAddress - the address of the token to check
      * @param _interfaceId - the interface to check for
@@ -138,12 +138,12 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
     }
 
     /**
-     * @notice Check if protocol is approved to transfer the tokens.
+     * @notice Checks if protocol is approved to transfer the tokens.
      *
-     * @param _tokenAddress - the address of the seller's twin token contract.
-     * @param _operator - the seller's operator address.
-     * @param _protocol - the protocol address.
-     * @return _approved - the approve status.
+     * @param _tokenAddress - the address of the seller's twin token contract
+     * @param _operator - the seller's operator address
+     * @param _protocol - the protocol address
+     * @return _approved - the approve status
      */
     function isProtocolApproved(
         address _tokenAddress,

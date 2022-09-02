@@ -20,7 +20,7 @@ import "./diamond/IDiamondLoupe.sol";
 /**
  * @title SupportedInterfaces
  *
- * @notice Allows us to read/verify the interface ids supported by the Boson Protocol
+ * @notice Provides ability to read/verify the interface ids supported by the Boson Protocol
  * contract suite.
  *
  * When you need to add a new interface and find out what its ERC165 interfaceId is,

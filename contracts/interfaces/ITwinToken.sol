@@ -8,7 +8,7 @@ import "./IERC165.sol";
 /**
  * @title ITwinToken
  *
- * @notice The minimum interface a Twin token must expose to be supported by the Boson Protocol
+ * @notice Provides the minimum interface a Twin token must expose to be supported by the Boson Protocol
  */
 interface ITwinToken is IERC165 {
     /**

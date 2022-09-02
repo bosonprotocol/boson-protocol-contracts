@@ -51,7 +51,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
      */
     function contractURI() external view returns (string memory);
 
-     /**
+    /**
      * @notice Sets new contract URI.
      * Can only be called by the owner or during the initialization.
      *
@@ -60,7 +60,7 @@ interface IBosonVoucher is IERC721Upgradeable, IERC721MetadataUpgradeable {
     function setContractURI(string calldata _newContractURI) external;
 
     /**
-     * @notice Provides royalty info. 
+     * @notice Provides royalty info.
      * Called with the sale price to determine how much royalty is owed and to whom.
      *
      * @param _tokenId - the NFT asset queried for royalty information

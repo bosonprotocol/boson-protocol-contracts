@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 /**
  * @title IBosonMetaTransactionsEvents
  *
- * @notice Events related to meta-transactions in the protocol.
+ * @notice Defines events related to meta-transactions in the protocol.
  */
 interface IBosonMetaTransactionsEvents {
     event MetaTransactionExecuted(

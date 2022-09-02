@@ -156,7 +156,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
 
     /**
      * @notice Informs protocol of new buyer associated with an exchange.
-     * 
+     *
      * Emits a VoucherTransferred event if successful.
      *
      * Reverts if
@@ -185,7 +185,7 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
      */
     function isExchangeFinalized(uint256 _exchangeId) external view returns (bool exists, bool isFinalized);
 
-   /**
+    /**
      * @notice Gets the details about a given exchange.
      *
      * @param _exchangeId - the id of the exchange to check

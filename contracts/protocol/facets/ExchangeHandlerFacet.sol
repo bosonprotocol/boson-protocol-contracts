@@ -392,7 +392,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
     /**
      * @notice Informs protocol of new buyer associated with an exchange.
-     * 
+     *
      * Emits a VoucherTransferred event if successful.
      *
      * Reverts if
@@ -574,7 +574,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
     /**
      * @notice Burns the voucher associated with a given exchange.
-     * 
+     *
      * Emits ERC721 Transfer event in call stack if successful.
      *
      * @param _exchange - the pointer to the exchange for which voucher should be burned

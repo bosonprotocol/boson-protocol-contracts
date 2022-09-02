@@ -14,7 +14,7 @@ import { IERC721 } from "../../interfaces/IERC721.sol";
  */
 contract SellerHandlerFacet is SellerBase {
     /**
-     * @notice Facet Initializer
+     * @notice Initializes facet.
      */
     function initialize() public {
         // No-op initializer.
@@ -23,7 +23,7 @@ contract SellerHandlerFacet is SellerBase {
     }
 
     /**
-     * @notice Creates a seller
+     * @notice Creates a seller.
      *
      * Emits a SellerCreated event if successful.
      *
@@ -36,7 +36,7 @@ contract SellerHandlerFacet is SellerBase {
      * - AuthTokenType is not unique to this seller
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
-     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      */
     function createSeller(
@@ -62,7 +62,7 @@ contract SellerHandlerFacet is SellerBase {
      * - AuthTokenType is not unique to this seller
      *
      * @param _seller - the fully populated seller struct
-     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      */
     function updateSeller(Seller memory _seller, AuthToken calldata _authToken) external sellersNotPaused nonReentrant {
         bool exists;
@@ -163,7 +163,7 @@ contract SellerHandlerFacet is SellerBase {
      * @param _sellerId - the id of the seller to check
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
-     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the usellerser can use to do admin functions
      */
     function getSeller(uint256 _sellerId)
         external
@@ -179,12 +179,13 @@ contract SellerHandlerFacet is SellerBase {
 
     /**
      * @notice Gets the details about a seller by an address associated with that seller: operator, admin, or clerk address.
-     *         N.B.: If seller's admin uses NFT Auth they should call `getSellerByAuthToken` instead.
+     * A seller will have either an admin address or an auth token.
+     * If seller's admin uses NFT Auth the seller should call `getSellerByAuthToken` instead.
      *
      * @param _associatedAddress - the address associated with the seller. Must be an operator, admin, or clerk address.
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
-     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
     function getSellerByAddress(address _associatedAddress)
@@ -216,12 +217,14 @@ contract SellerHandlerFacet is SellerBase {
 
     /**
      * @notice Gets the details about a seller by an auth token associated with that seller.
-     *         A seller will have either an admin address or an auth token
+     * A seller will have either an admin address or an auth token.
+     * If seller's admin uses an admin address, the seller should call `getSellerByAddress` instead.
+     *
      *
      * @param _associatedAuthToken - the auth token that may be associated with the seller.
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
-     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
     function getSellerByAuthToken(AuthToken calldata _associatedAuthToken)

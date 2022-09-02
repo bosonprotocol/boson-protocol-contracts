@@ -13,7 +13,7 @@ import "../../domain/BosonConstants.sol";
  */
 contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     /**
-     * @notice Facet Initializer
+     * @notice Initializes facet.
      * This function is callable only once.
      */
     function initialize() public onlyUnInitialized(type(IBosonOfferHandler).interfaceId) {
@@ -72,7 +72,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - The offers region of protocol is paused
      * - Number of offers exceeds maximum allowed number per batch
      * - Number of elements in offers, offerDates and offerDurations do not match
-     * - for any offer:
+     * - For any offer:
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
@@ -125,12 +125,10 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
 
     /**
      * @notice Voids a given offer.
-     *
-     * Emits an OfferVoided event if successful.
-     *
-     * Note:
      * Existing exchanges are not affected.
      * No further vouchers can be issued against a voided offer.
+     *
+     * Emits an OfferVoided event if successful.
      *
      * Reverts if:
      * - The offers region of protocol is paused
@@ -138,7 +136,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Caller is not the operator of the offer
      * - Offer has already been voided
      *
-     * @param _offerId - the id of the offer to check
+     * @param _offerId - the id of the offer to void
      */
     function voidOffer(uint256 _offerId) public override offersNotPaused nonReentrant {
         // Get offer, make sure the caller is the operator
@@ -153,12 +151,10 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
 
     /**
      * @notice  Voids a batch of offers.
-     *
-     * Emits an OfferVoided event for every offer if successful.
-     *
-     * Note:
      * Existing exchanges are not affected.
      * No further vouchers can be issued against a voided offer.
+     *
+     * Emits an OfferVoided event for every offer if successful.
      *
      * Reverts if, for any offer:
      * - The offers region of protocol is paused
@@ -167,7 +163,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - Caller is not the operator of the offer
      * - Offer has already been voided
      *
-     * @param _offerIds - the id of the offer to check
+     * @param _offerIds - list of ids of offers to void
      */
     function voidOfferBatch(uint256[] calldata _offerIds) external override offersNotPaused {
         // limit maximum number of offers to avoid running into block gas limit in a loop
@@ -178,7 +174,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     }
 
     /**
-     * @notice Sets new valid until date
+     * @notice Sets new valid until date.
      *
      * Emits an OfferExtended event if successful.
      *
@@ -189,7 +185,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * - New valid until date is before existing valid until dates
      * - Offer has voucherRedeemableUntil set and new valid until date is greater than that
      *
-     *  @param _offerId - the id of the offer to check
+     *  @param _offerId - the id of the offer to extend
      *  @param _validUntilDate - new valid until date
      */
     function extendOffer(uint256 _offerId, uint256 _validUntilDate) public override offersNotPaused nonReentrant {
@@ -215,9 +211,9 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     }
 
     /**
-     * @notice Sets new valid until date
+     * @notice Sets new valid until date for a batch of offers.
      *
-     * Emits an OfferExtended event if successful.
+     * Emits an OfferExtended event for every offer if successful.
      *
      * Reverts if:
      * - The offers region of protocol is paused
@@ -228,7 +224,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *   - New valid until date is before existing valid until dates
      *   - Offer has voucherRedeemableUntil set and new valid until date is greater than that
      *
-     *  @param _offerIds - list of ids of the offers to extemd
+     *  @param _offerIds - list of ids of the offers to extend
      *  @param _validUntilDate - new valid until date
      */
     function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external override offersNotPaused {
@@ -242,7 +238,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     /**
      * @notice Gets the details about a given offer.
      *
-     * @param _offerId - the id of the offer to check
+     * @param _offerId - the id of the offer to retrieve
      * @return exists - the offer was found
      * @return offer - the offer details. See {BosonTypes.Offer}
      * @return offerDates - the offer dates details. See {BosonTypes.OfferDates}
@@ -275,7 +271,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     /**
      * @notice Gets the next offer id.
      *
-     * Does not increment the counter.
+     * @dev Does not increment the counter.
      *
      * @return nextOfferId - the next offer id
      */
@@ -284,7 +280,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     }
 
     /**
-     * @notice Tells if offer is voided or not
+     * @notice Checks if offer is voided or not.
      *
      * @param _offerId - the id of the offer to check
      * @return exists - the offer was found
@@ -299,9 +295,9 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     /**
      * @notice Gets the agent id for a given offer id.
      *
-     * @param _offerId - the offer Id.
+     * @param _offerId - the offer Id
      * @return exists - whether the agent Id exists
-     * @return agentId - the agent Id.
+     * @return agentId - the agent Id
      */
     function getAgentIdByOffer(uint256 _offerId) external view override returns (bool exists, uint256 agentId) {
         return fetchAgentIdByOffer(_offerId);

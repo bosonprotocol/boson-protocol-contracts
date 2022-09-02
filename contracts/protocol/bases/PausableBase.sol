@@ -8,11 +8,11 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 /**
  * @title PausableBase
  *
- * @dev Provides modifiers for regional pausing
+ * @notice Provides modifiers for regional pausing
  */
 contract PausableBase is BosonTypes {
     /**
-     * @dev Modifier that checks the Offers region is not paused
+     * @notice Modifier that checks the Offers region is not paused
      *
      * Reverts if region is paused
      *
@@ -24,7 +24,7 @@ contract PausableBase is BosonTypes {
     }
 
     /**
-     * @dev Modifier that checks the Twins region is not paused
+     * @notice Modifier that checks the Twins region is not paused
      *
      * Reverts if region is paused
      *
@@ -36,7 +36,7 @@ contract PausableBase is BosonTypes {
     }
 
     /**
-     * @dev Modifier that checks the Bundles region is not paused
+     * @notice Modifier that checks the Bundles region is not paused
      *
      * Reverts if region is paused
      *
@@ -48,7 +48,7 @@ contract PausableBase is BosonTypes {
     }
 
     /**
-     * @dev Modifier that checks the Groups region is not paused
+     * @notice Modifier that checks the Groups region is not paused
      *
      * Reverts if region is paused
      *
@@ -60,7 +60,7 @@ contract PausableBase is BosonTypes {
     }
 
     /**
-     * @dev Modifier that checks the Sellers region is not paused
+     * @notice Modifier that checks the Sellers region is not paused
      *
      * Reverts if region is paused
      *
@@ -72,7 +72,7 @@ contract PausableBase is BosonTypes {
     }
 
     /**
-     * @dev Modifier that checks the Buyers region is not paused
+     * @notice Modifier that checks the Buyers region is not paused
      *
      * Reverts if region is paused
      *
@@ -84,7 +84,7 @@ contract PausableBase is BosonTypes {
     }
 
     /**
-     * @dev Modifier that checks the Agents region is not paused
+     * @notice Modifier that checks the Agents region is not paused
      *
      * Reverts if region is paused
      *
@@ -96,7 +96,7 @@ contract PausableBase is BosonTypes {
     }
 
     /**
-     * @dev Modifier that checks the DisputeResolvers region is not paused
+     * @notice Modifier that checks the DisputeResolvers region is not paused
      *
      * Reverts if region is paused
      *
@@ -108,7 +108,7 @@ contract PausableBase is BosonTypes {
     }
 
     /**
-     * @dev Modifier that checks the Exchanges region is not paused
+     * @notice Modifier that checks the Exchanges region is not paused
      *
      * Reverts if region is paused
      *
@@ -120,7 +120,7 @@ contract PausableBase is BosonTypes {
     }
 
     /**
-     * @dev Modifier that checks the Disputes region is not paused
+     * @notice Modifier that checks the Disputes region is not paused
      *
      * Reverts if region is paused
      *
@@ -132,7 +132,7 @@ contract PausableBase is BosonTypes {
     }
 
     /**
-     * @dev Modifier that checks the Funds region is not paused
+     * @notice Modifier that checks the Funds region is not paused
      *
      * Reverts if region is paused
      *
@@ -144,7 +144,7 @@ contract PausableBase is BosonTypes {
     }
 
     /**
-     * @dev Modifier that checks the Orchestration region is not paused
+     * @notice Modifier that checks the Orchestration region is not paused
      *
      * Reverts if region is paused
      *
@@ -156,7 +156,7 @@ contract PausableBase is BosonTypes {
     }
 
     /**
-     * @dev Modifier that checks the MetaTransaction region is not paused
+     * @notice Modifier that checks the MetaTransaction region is not paused
      *
      * Reverts if region is paused
      *
@@ -168,9 +168,10 @@ contract PausableBase is BosonTypes {
     }
 
     /**
-     * @dev Check if a region of the protocol is paused.
+     * @notice Checks if a region of the protocol is paused.
      *
      * @param _region the region to check pause status for
+     * @return true if the given region is paused
      */
     function paused(PausableRegion _region) internal view returns (bool) {
         // Region enum value must be used as the exponent in a power of 2

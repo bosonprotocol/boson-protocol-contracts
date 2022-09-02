@@ -32,7 +32,7 @@ contract BeaconClientProxy is Proxy {
     }
 
     /**
-     * @dev Modifier to protect initializer function from being invoked twice.
+     * @notice Modifier to protect initializer function from being invoked twice.
      */
     modifier initializer() {
         require(!BeaconClientLib.getBeaconSlot().initialized, "Initializable: contract is already initialized");

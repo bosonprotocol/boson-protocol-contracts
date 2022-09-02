@@ -114,7 +114,7 @@ library FundsLib {
     /**
      * @notice Takes in the exchange id and releases the funds to buyer and seller, depending on the state of the exchange.
      * It is called only from finalizeExchange and finalizeDispute.
-     * 
+     *
      * Emits FundsReleased and/or ProtocolFeeCollected event if payoffs are warranted and transaction is successful.
      *
      * @param _exchangeId - exchange id
