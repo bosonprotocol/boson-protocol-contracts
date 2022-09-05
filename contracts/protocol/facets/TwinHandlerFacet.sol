@@ -35,6 +35,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      * - Twin is NonFungibleToken with unlimited supply and starting token id is too high
      * - Twin is NonFungibleToken and range is already being used in another twin of the seller
      * - Twin is FungibleToken or MultiToken and amount was not set
+     * - Twin is FungibleToken or MultiToken and amount is greater than supply available
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
      */

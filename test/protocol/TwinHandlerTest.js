@@ -426,6 +426,31 @@ describe("IBosonTwinHandler", function () {
           );
         });
 
+        it("Amount is greater than supply available and token type is FungibleToken", async function () {
+          // Approving the twinHandler contract to transfer seller's tokens
+          await bosonToken.connect(operator).approve(twinHandler.address, 1);
+
+          twin.supplyAvailable = "10";
+          twin.amount = "20";
+          twin.tokenAddress = bosonToken.address;
+          twin.tokenType = TokenType.FungibleToken;
+
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(RevertReasons.INVALID_AMOUNT);
+        });
+
+        it("Amount is greater than supply available and token type is MultiToken", async function () {
+          // Mint a token and approve twinHandler contract to transfer it
+          await foreign1155.connect(operator).mint(twin.tokenId, "1");
+          await foreign1155.connect(operator).setApprovalForAll(twinHandler.address, true);
+
+          twin.supplyAvailable = "10";
+          twin.amount = "20";
+          twin.tokenAddress = foreign1155.address;
+          twin.tokenType = TokenType.MultiToken;
+
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(RevertReasons.INVALID_AMOUNT);
+        });
+
         it("Amount is zero and token type is FungibleToken", async function () {
           // Approving the twinHandler contract to transfer seller's tokens
           await bosonToken.connect(operator).approve(twinHandler.address, 1);

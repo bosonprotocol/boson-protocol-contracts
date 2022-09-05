@@ -89,7 +89,7 @@ exports.RevertReasons = {
   UNSUPPORTED_TOKEN: "Unsupported token",
   BUNDLE_FOR_TWIN_EXISTS: "Bundle for twin exists",
   INVALID_SUPPLY_AVAILABLE: "supplyAvailable can't be zero",
-  INVALID_AMOUNT: "Amount must be greater than zero if token is ERC20 or ERC1155",
+  INVALID_AMOUNT: "Invalid twin amount",
   INVALID_TWIN_PROPERTY: "Invalid property for selected token type",
   INVALID_TWIN_TOKEN_RANGE: "Token range is already being used in another Twin",
   INVALID_TOKEN_ADDRESS: "Token address is a contract that doesn't implement the interface for selected token type",
