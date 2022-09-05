@@ -4,7 +4,7 @@
 
 ## [Intro](../README.md) | [Setup](setup.md) | [Tasks](tasks.md) | Local development | [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md)
 
-If you want to develop against the Boson protocol smart contract, you need to set up the local development enviromnent.
+If you want to develop against the Boson protocol smart contracts, you need to set up the local development enviromnent.
 Follow the steps on this page to get the complete set of instructions that will help you set up the environment in no time.
 
 ## Prerequisites
@@ -35,7 +35,7 @@ npm install
   - `DEPLOYER_LOCAL_TXNODE` is the URL of locally run node. In this example we will be using hardhat node, which has the default URL endpoint `http://127.0.0.1:8545`. If you are using default conifugration, you can leave `DEPLOYER_LOCAL_TXNODE` empty. If you are using hardhat (or any other) node with custom configuration, you need to specify its endpoint here.
   - `DEPLOYER_LOCAL_KEY`: If you are using hardhat node as in this example, it will use the mnemonic defined in `DEPLOYER_HARDHAT_MNEMONIC` and ignore the value of `DEPLOYER_LOCAL_KEY` However, if you are using custom node with different key management, you need to provide the private key of the account that will be deploying the contracts. It is necessary that the corresponding address has high enough balance to execute the transactions on your custom node.
   - `ADMIN_ADDRESS_LOCAL`: Boson protocol implements role based access management. Admin is the most important role since it can manage other roles and perform virtually all protocol management, including approving dispute resolvers. Admin is set during the deployment process, so you need to provide the address that will be granted this role.
-  - `AUTH_TOKEN_OWNERS_LOCAL`: Boson protocol allows sellers to authenticate with ENS or LENS if they have one. To simulate this, we prepared a script that deploys mock ENS and LENS on the local node and issue the ENS and LENS authentication tokens to addresses, specified in `AUTH_TOKEN_OWNERS_LOCAL`. You can specify multiple addresses, separated with `", "` (comma and space).
+  - `AUTH_TOKEN_OWNERS_LOCAL`: Boson protocol allows sellers to authenticate with an ENS name or LENS profile if they have one. Both are represented by NFTs. To simulate this, we prepared a script that deploys mock ENS and LENS NFT contracts on the local node and issues the ENS and LENS NFT authentication tokens to the addresses specified in `AUTH_TOKEN_OWNERS_LOCAL`. You can specify multiple addresses, separated with `", "` (comma and space).
 - All other values can be kept as they are, since they are needed only for deploying to other networks.
 
 ### Configure Protocol Parameters
@@ -43,22 +43,22 @@ Boson protocol has variety of different parameters, for protocol fees to various
 
 ### Start the local node
 
-To run the local node, execute the command
+To run the local node, execute the command in a separate terminal.
 
 ```npx hardhat node```
 
 This will start the node and output all the actions that are happening on it (e.g. incoming trasactions or other calls). At the begining it outputs 20 addresses with initial balance of `10000 ETH`. You can use any of this addreses as the admin account of the protocol (refer to the explanation of `ADMIN_ADDRESS_LOCAL` in section [Configure Environment](#configure-Environment)).
 
 ### Deploy authentication token contract mocks
-Boson protocol currently uses two contracts (ENS and LENS), that can be optionaly used as the authentiaction mechanism for seller. On public networks, these contracts are already deployed and you would just use their actual addesses. However, on the test network you need to deploy it yourself to enable protocol full functionality.
+Boson protocol currently uses two NFT contracts (ENS and LENS), that can be optionally used as the authentication mechanism for seller. On public networks, these contracts are already deployed and you would just use their actual addresses. However, on the test network you need to deploy it yourself to enable full protocol functionality.
 
-Script that deploys the authentication token mock contract, also mints tha authentication tokens to addresses, specified in `.env`. (refer to the explanation of `AUTH_TOKEN_OWNERS_LOCAL` in section [Configure Environment](#configure-Environment). These cannot be zero addresses, so you need to populate it with your values or supply an empty value if you don't want that any address gets authentication token.
+The script that deploys the authentication token mock contract also mints the authentication tokens to the addresses specified in `.env`. (refer to the explanation of `AUTH_TOKEN_OWNERS_LOCAL` in section [Configure Environment](#configure-Environment). These cannot be zero addresses, so you need to populate it with your values or supply an empty value if you don't want authentication tokens to be minted to any addresses.
 
 To deploy the authentication token mocks, then run 
 
 ```npm run deploy-mocks:local```
 
-Scripts outputs the addresses of the deployed mock contract. Save them as you will need them for the deployment of the protocol contracts.
+This script outputs the addresses of the deployed mock NFT contracts. Save them, as you will need them for the deployment of the protocol contracts.
 
 **NOTE**: if you do not plan to use this authentication at all you can skip the deployment of the mocks. However, since the deployment of the protocol contract needs the addresses of ENS and LENS to be non-zero value, you'd still need to provide some address in configuration file `scripts/config/auth-token-addresses.js`.
 
