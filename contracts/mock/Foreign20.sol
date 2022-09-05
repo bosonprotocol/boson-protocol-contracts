@@ -191,4 +191,9 @@ contract Foreign20TransferReturnFalse is Foreign20 {
         super.transferFrom(from, to, amount);
         return false;
     }
+
+    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
+        super.transfer(recipient, amount);
+        return false;
+    }
 }

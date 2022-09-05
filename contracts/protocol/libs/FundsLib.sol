@@ -266,10 +266,10 @@ library FundsLib {
             (bool success, ) = _to.call{ value: _amount }("");
             require(success, TOKEN_TRANSFER_FAILED);
         } else {
-            try IERC20(_tokenAddress).transfer(_to, _amount) {} catch (bytes memory error) {
-                string memory reason = error.length == 0 ? TOKEN_TRANSFER_FAILED : string(error);
-                revert(reason);
-            }
+            (bool success, bytes memory result) = _tokenAddress.call(
+                abi.encodeWithSignature("transfer(address,uint256)", _to, _amount)
+            );
+            require(success && (result.length > 0 ? !!abi.decode(result, (bool)) : true), TOKEN_TRANSFER_FAILED);
         }
 
         // notify the external observers

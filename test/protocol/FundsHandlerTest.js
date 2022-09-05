@@ -1071,6 +1071,19 @@ describe("IBosonFundsHandler", function () {
               RevertReasons.ERC20_PAUSED
             );
           });
+
+          it("Transfer of funds failed - return false during ERC20 transfer", async function () {
+            const [foreign20ReturnFalse] = await deployMockTokens(gasLimit, ["Foreign20TransferReturnFalse"]);
+
+            await foreign20ReturnFalse.connect(operator).mint(operator.address, sellerDeposit);
+            await foreign20ReturnFalse.connect(operator).approve(protocolDiamond.address, sellerDeposit);
+
+            await fundsHandler.connect(operator).depositFunds(seller.id, foreign20ReturnFalse.address, sellerDeposit);
+
+            await expect(
+              fundsHandler.connect(clerk).withdrawFunds(seller.id, [foreign20ReturnFalse.address], [sellerDeposit])
+            ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
+          });
         });
       });
 
