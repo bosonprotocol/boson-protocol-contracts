@@ -76,9 +76,9 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
     /**
      * @notice Gets the bundle id for a given offer id.
      *
-     * @param _offerId - the offer Id.
-     * @return exists - whether the bundle Id exists
-     * @return bundleId  - the bundle Id.
+     * @param _offerId - the offer id
+     * @return exists - whether the bundle id exists
+     * @return bundleId  - the bundle id
      */
     function getBundleIdByOffer(uint256 _offerId) external view override returns (bool exists, uint256 bundleId) {
         return fetchBundleIdByOffer(_offerId);
@@ -87,9 +87,9 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
     /**
      * @notice Gets the bundle id for a given twin id.
      *
-     * @param _twinId - the twin Id.
-     * @return exists - whether the bundle Id exist
-     * @return bundleId  - the bundle Id.
+     * @param _twinId - the twin id
+     * @return exists - whether the bundle id exist
+     * @return bundleId  - the bundle id
      */
     function getBundleIdByTwin(uint256 _twinId) external view override returns (bool exists, uint256 bundleId) {
         return fetchBundleIdByTwin(_twinId);

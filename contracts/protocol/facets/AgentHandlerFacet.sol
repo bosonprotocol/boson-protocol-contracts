@@ -42,10 +42,10 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
         //Check active is not set to false
         require(_agent.active, MUST_BE_ACTIVE);
 
-        // Get the next account Id and increment the counter
+        // Get the next account id and increment the counter
         uint256 agentId = protocolCounters().nextAccountId++;
 
-        //check that the wallet address is unique to one agent Id
+        //check that the wallet address is unique to one agent id
         require(protocolLookups().agentIdByWallet[_agent.wallet] == 0, AGENT_ADDRESS_MUST_BE_UNIQUE);
 
         _agent.id = agentId;

@@ -45,7 +45,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             ADMIN_OR_AUTH_TOKEN
         );
 
-        //Check that the addresses are unique to one seller Id, accross all roles. These addresses should always be checked. Treasury is not checked
+        //Check that the addresses are unique to one seller id, accross all roles. These addresses should always be checked. Treasury is not checked
         require(
             protocolLookups().sellerIdByOperator[_seller.operator] == 0 &&
                 protocolLookups().sellerIdByOperator[_seller.clerk] == 0 &&
@@ -64,7 +64,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
                 AUTH_TOKEN_MUST_BE_UNIQUE
             );
         } else {
-            //check that the admin address is unique to one seller Id, accross all roles
+            //check that the admin address is unique to one seller id, accross all roles
             require(
                 protocolLookups().sellerIdByOperator[_seller.admin] == 0 &&
                     protocolLookups().sellerIdByAdmin[_seller.admin] == 0 &&
@@ -73,7 +73,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             );
         }
 
-        // Get the next account Id and increment the counter
+        // Get the next account id and increment the counter
         uint256 sellerId = protocolCounters().nextAccountId++;
         _seller.id = sellerId;
         storeSeller(_seller, _authToken);
@@ -129,7 +129,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             protocolLookups().sellerIdByAdmin[_seller.admin] = _seller.id;
         }
 
-        //Map the seller's other addresses to the seller Id. It's not necessary to map the treasury address, as it only receives funds
+        //Map the seller's other addresses to the seller id. It's not necessary to map the treasury address, as it only receives funds
         protocolLookups().sellerIdByOperator[_seller.operator] = _seller.id;
         protocolLookups().sellerIdByClerk[_seller.clerk] = _seller.id;
     }

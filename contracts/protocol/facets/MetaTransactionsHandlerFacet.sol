@@ -24,10 +24,10 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
     function initialize() public onlyUnInitialized(type(IBosonMetaTransactionsHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonMetaTransactionsHandler).interfaceId);
 
-        // set types for special metatxs
+        // Set types for special metatxs
         ProtocolLib.ProtocolMetaTxInfo storage pmti = protocolMetaTxInfo();
 
-        // set input type for the function name
+        // Set input type for the function name
         pmti.inputType[COMMIT_TO_OFFER] = MetaTxInputType.CommitToOffer;
         pmti.inputType[WITHDRAW_FUNDS] = MetaTxInputType.Funds;
         pmti.inputType[RESOLVE_DISPUTE] = MetaTxInputType.ResolveDispute;
@@ -38,7 +38,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         pmti.inputType[ESCALATE_DISPUTE] = MetaTxInputType.Exchange;
         pmti.inputType[RAISE_DISPUTE] = MetaTxInputType.Exchange;
 
-        // set the hash info to the input type
+        // Set the hash info to the input type
         pmti.hashInfo[MetaTxInputType.Generic] = HashInfo(META_TRANSACTION_TYPEHASH, hashGenericDetails);
         pmti.hashInfo[MetaTxInputType.CommitToOffer] = HashInfo(META_TX_COMMIT_TO_OFFER_TYPEHASH, hashOfferDetails);
         pmti.hashInfo[MetaTxInputType.Funds] = HashInfo(META_TX_FUNDS_TYPEHASH, hashFundDetails);
@@ -97,7 +97,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Returns hashed representation of the offer details struct.
      *
      * @param _offerDetails - the offer details
-     * @return the hashed representation fo the offer details struct
+     * @return the hashed representation of the offer details struct
      */
     function hashOfferDetails(bytes memory _offerDetails) internal pure returns (bytes32) {
         (address buyer, uint256 offerId) = abi.decode(_offerDetails, (address, uint256));
@@ -119,7 +119,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Returns hashed representation of the fund details struct.
      *
      * @param _fundDetails - the fund details
-     * @return the hashed representation fo the fund details struct
+     * @return the hashed representation of the fund details struct
      */
     function hashFundDetails(bytes memory _fundDetails) internal pure returns (bytes32) {
         (uint256 entityId, address[] memory tokenList, uint256[] memory tokenAmounts) = abi.decode(
@@ -141,7 +141,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Returns hashed representation of the dispute resolution details struct.
      *
      * @param _disputeResolutionDetails - the dispute resolution details
-     * @return the hashed representation fo the dispute resolution details struct
+     * @return the hashed representation of the dispute resolution details struct
      */
     function hashDisputeResolutionDetails(bytes memory _disputeResolutionDetails) internal pure returns (bytes32) {
         (uint256 exchangeId, uint256 buyerPercent, bytes32 sigR, bytes32 sigS, uint8 sigV) = abi.decode(
@@ -191,7 +191,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @notice Checks if function name is a special function or a generic function.
      *
      * @param _functionName - the function name that we want to execute
-     * @return true if the function name is a special function (not the generic meta transaction function)
+     * @return true - if the function name is a special function (not the generic meta transaction function)
      */
     function isSpecialFunction(string calldata _functionName) internal view returns (bool) {
         return protocolMetaTxInfo().inputType[_functionName] != MetaTxInputType.Generic;
@@ -230,7 +230,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         setCurrentSenderAddress(_userAddress);
         protocolMetaTxInfo().isMetaTransaction = true;
 
-        // invoke local function with an external call
+        // Invoke local function with an external call
         (bool success, bytes memory returnData) = address(this).call{ value: msg.value }(_functionSignature);
 
         // If error, return error message
@@ -273,8 +273,8 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         bytes32 _sigS,
         uint8 _sigV
     ) external payable override metaTransactionsNotPaused returns (bytes memory) {
-        // make sure that protocol is not reentered throught meta transactions
-        // cannot use modifier `nonReentrant` since it also changes reentrancyStatus to `ENTERED`
+        // Make sure that protocol is not reentered throught meta transactions
+        // Cannot use modifier `nonReentrant` since it also changes reentrancyStatus to `ENTERED`,
         // but that then breaks meta transaction functionality
         require(protocolStatus().reentrancyStatus != ENTERED, REENTRANCY_GUARD);
 

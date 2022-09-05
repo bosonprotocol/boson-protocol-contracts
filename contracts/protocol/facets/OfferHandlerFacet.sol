@@ -84,7 +84,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
-     *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver with unspecified dispute resolver
+     *   - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      *   - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      *   - Seller is not on dispute resolver's seller allow list
      *   - Dispute resolver does not accept fees in the exchange token
@@ -106,9 +106,9 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         uint256[] calldata _disputeResolverIds,
         uint256[] calldata _agentIds
     ) external override offersNotPaused {
-        // limit maximum number of offers to avoid running into block gas limit in a loop
+        // Limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offers.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
-        // number of offer dates structs, offer durations structs and _disputeResolverIds must match the number of offers
+        // Number of offer dates structs, offer durations structs and _disputeResolverIds must match the number of offers
         require(
             _offers.length == _offerDates.length &&
                 _offers.length == _offerDurations.length &&
@@ -118,7 +118,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
         );
 
         for (uint256 i = 0; i < _offers.length; i++) {
-            // create offer and update structs values to represent true state
+            // Create offer and update structs values to represent true state
             createOfferInternal(_offers[i], _offerDates[i], _offerDurations[i], _disputeResolverIds[i], _agentIds[i]);
         }
     }
@@ -132,7 +132,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Offer ID is invalid
+     * - Offer id is invalid
      * - Caller is not the operator of the offer
      * - Offer has already been voided
      *
@@ -159,7 +159,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      * Reverts if, for any offer:
      * - The offers region of protocol is paused
      * - Number of offers exceeds maximum allowed number per batch
-     * - Offer ID is invalid
+     * - Offer id is invalid
      * - Caller is not the operator of the offer
      * - Offer has already been voided
      *
@@ -228,7 +228,7 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
      *  @param _validUntilDate - new valid until date
      */
     function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external override offersNotPaused {
-        // limit maximum number of offers to avoid running into block gas limit in a loop
+        // Limit maximum number of offers to avoid running into block gas limit in a loop
         require(_offerIds.length <= protocolLimits().maxOffersPerBatch, TOO_MANY_OFFERS);
         for (uint256 i = 0; i < _offerIds.length; i++) {
             extendOffer(_offerIds[i], _validUntilDate);
@@ -295,9 +295,9 @@ contract OfferHandlerFacet is IBosonOfferHandler, OfferBase {
     /**
      * @notice Gets the agent id for a given offer id.
      *
-     * @param _offerId - the offer Id
-     * @return exists - whether the agent Id exists
-     * @return agentId - the agent Id
+     * @param _offerId - the offer id
+     * @return exists - whether the agent id exists
+     * @return agentId - the agent id
      */
     function getAgentIdByOffer(uint256 _offerId) external view override returns (bool exists, uint256 agentId) {
         return fetchAgentIdByOffer(_offerId);

@@ -146,16 +146,16 @@ contract OrchestrationHandlerFacet is
         Condition calldata _condition,
         uint256 _agentId
     ) public override offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
-        // create offer and update structs values to represent true state
+        // Create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
-        // construct new group
-        // - groupid is 0, and it is ignored
+        // Construct new group
+        // - group id is 0, and it is ignored
         // - note that _offer fields are updated during createOfferInternal, so they represent correct values
         Group memory _group = Group(0, _offer.sellerId, new uint256[](1));
         _group.offerIds[0] = _offer.id;
 
-        // create group and update structs values to represent true state
+        // Create group and update structs values to represent true state
         createGroupInternal(_group, _condition);
     }
 
@@ -207,10 +207,10 @@ contract OrchestrationHandlerFacet is
         uint256 _groupId,
         uint256 _agentId
     ) external override offersNotPaused groupsNotPaused orchestrationNotPaused nonReentrant {
-        // create offer and update structs values to represent true state
+        // Create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
-        // create an array with offer ids and add it to the group
+        // Create an array with offer ids and add it to the group
         uint256[] memory _offerIds = new uint256[](1);
         _offerIds[0] = _offer.id;
         addOffersToGroupInternal(_groupId, _offerIds);
@@ -270,10 +270,10 @@ contract OrchestrationHandlerFacet is
         Twin memory _twin,
         uint256 _agentId
     ) public override offersNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused nonReentrant {
-        // create offer and update structs values to represent true state
+        // Create offer and update structs values to represent true state
         createOfferInternal(_offer, _offerDates, _offerDurations, _disputeResolverId, _agentId);
 
-        // create twin and pack everything into a bundle
+        // Create twin and pack everything into a bundle
         createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
     }
 
@@ -338,9 +338,9 @@ contract OrchestrationHandlerFacet is
         Twin memory _twin,
         uint256 _agentId
     ) public override offersNotPaused groupsNotPaused twinsNotPaused bundlesNotPaused orchestrationNotPaused {
-        // create offer with condition first
+        // Create offer with condition first
         createOfferWithCondition(_offer, _offerDates, _offerDurations, _disputeResolverId, _condition, _agentId);
-        // create twin and pack everything into a bundle
+        // Create twin and pack everything into a bundle
         createTwinAndBundleAfterOffer(_twin, _offer.id, _offer.sellerId);
     }
 
@@ -632,7 +632,7 @@ contract OrchestrationHandlerFacet is
         // Caller should be the operator, specified in seller
         require(_seller.operator == msgSender(), NOT_OPERATOR);
 
-        // create seller and update structs values to represent true state
+        // Create seller and update structs values to represent true state
         createSellerInternal(_seller, _authToken, _voucherInitValues);
     }
 
@@ -661,11 +661,11 @@ contract OrchestrationHandlerFacet is
         uint256 _offerId,
         uint256 _sellerId
     ) internal {
-        // create twin and update structs values to represent true state
+        // Create twin and update structs values to represent true state
         createTwinInternal(_twin);
 
-        // construct new bundle
-        // - bundleId is 0, and it is ignored
+        // Construct new bundle
+        // - bundle id is 0, and it is ignored
         // - note that _twin fields are updated during createTwinInternal, so they represent correct values
         Bundle memory _bundle = Bundle(0, _sellerId, new uint256[](1), new uint256[](1));
         _bundle.offerIds[0] = _offerId;

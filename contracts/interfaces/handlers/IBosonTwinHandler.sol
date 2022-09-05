@@ -42,7 +42,7 @@ interface IBosonTwinHandler is IBosonTwinEvents {
      * - Twin does not exist.
      * - Bundle for twin exists
      *
-     * @param _twinId - the id of the twin to check.
+     * @param _twinId - the id of the twin to check
      */
     function removeTwin(uint256 _twinId) external;
 

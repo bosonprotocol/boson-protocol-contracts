@@ -60,7 +60,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * - Offer exists in a different group
      * - Offer ids param contains duplicated offers
      *
-     * @param _groupId  - the id of the group to be updated
+     * @param _groupId - the id of the group to be updated
      * @param _offerIds - array of offer ids to be added to the group
      */
     function addOffersToGroup(uint256 _groupId, uint256[] calldata _offerIds)
@@ -85,7 +85,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * - Group does not exist
      * - Any offer is not part of the group
      *
-     * @param _groupId  - the id of the group to be updated
+     * @param _groupId - the id of the group to be updated
      * @param _offerIds - array of offer ids to be removed from the group
      */
     function removeOffersFromGroup(uint256 _groupId, uint256[] calldata _offerIds)
@@ -94,7 +94,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         groupsNotPaused
         nonReentrant
     {
-        // check if group can be updated
+        // Check if group can be updated
         (uint256 sellerId, Group storage group) = preUpdateChecks(_groupId, _offerIds);
 
         for (uint256 i = 0; i < _offerIds.length; i++) {
@@ -104,20 +104,20 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
             (, uint256 groupId) = getGroupIdByOffer(offerId);
             require(_groupId == groupId, OFFER_NOT_IN_GROUP);
 
-            // remove groupIdByOffer mapping
+            // Remove groupIdByOffer mapping
             delete protocolLookups().groupIdByOffer[offerId];
 
             uint256 len = group.offerIds.length;
-            //Get the index in the offerIds array, which is 1 less than the offerIdIndexByGroup index
+            // Get the index in the offerIds array, which is 1 less than the offerIdIndexByGroup index
             uint256 index = protocolLookups().offerIdIndexByGroup[groupId][offerId] - 1;
 
             if (index != len - 1) {
-                // if index == len - 1 then only pop and delete are needed
+                // If index == len - 1 then only pop and delete are needed
                 // Need to fill gap caused by delete if more than one element in storage array
                 uint256 offerIdToMove = group.offerIds[len - 1];
                 // Copy the last token in the array to this index to fill the gap
                 group.offerIds[index] = offerIdToMove;
-                //Reset index mapping. Should be index in offerIds array + 1
+                // Reset index mapping. Should be index in offerIds array + 1
                 protocolLookups().offerIdIndexByGroup[groupId][offerIdToMove] = index + 1;
             }
             // Delete last offer id in the array, which was just moved to fill the gap
@@ -154,14 +154,14 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         groupsNotPaused
         nonReentrant
     {
-        // validate condition parameters
+        // Validate condition parameters
         require(validateCondition(_condition), INVALID_CONDITION_PARAMETERS);
 
-        // verify group exists
+        // Verify group exists
         (bool exists, Group storage group) = fetchGroup(_groupId);
         require(exists, NO_SUCH_GROUP);
 
-        // get message sender
+        // Get message sender
         address sender = msgSender();
 
         // Get seller id, we assume seller id exists if offer exists

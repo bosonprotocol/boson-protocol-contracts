@@ -113,14 +113,14 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @notice Gets a seller Id from storage by operator address
+     * @notice Gets a seller id from storage by operator address
      *
      * @param _operator - the operator address of the seller
-     * @return exists - whether the seller Id exists
-     * @return sellerId  - the seller Id
+     * @return exists - whether the seller id exists
+     * @return sellerId  - the seller id
      */
     function getSellerIdByOperator(address _operator) internal view returns (bool exists, uint256 sellerId) {
-        // Get the seller Id
+        // Get the seller id
         sellerId = protocolLookups().sellerIdByOperator[_operator];
 
         // Determine existence
@@ -128,14 +128,14 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @notice Gets a seller Id from storage by admin address
+     * @notice Gets a seller id from storage by admin address
      *
      * @param _admin - the admin address of the seller
-     * @return exists - whether the seller Id exists
-     * @return sellerId  - the seller Id
+     * @return exists - whether the seller id exists
+     * @return sellerId  - the seller id
      */
     function getSellerIdByAdmin(address _admin) internal view returns (bool exists, uint256 sellerId) {
-        // Get the seller Id
+        // Get the seller id
         sellerId = protocolLookups().sellerIdByAdmin[_admin];
 
         // Determine existence
@@ -143,14 +143,14 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @notice Gets a seller Id from storage by clerk address
+     * @notice Gets a seller id from storage by clerk address
      *
      * @param _clerk - the clerk address of the seller
-     * @return exists - whether the seller Id exists
-     * @return sellerId  - the seller Id
+     * @return exists - whether the seller id exists
+     * @return sellerId  - the seller id
      */
     function getSellerIdByClerk(address _clerk) internal view returns (bool exists, uint256 sellerId) {
-        // Get the seller Id
+        // Get the seller id
         sellerId = protocolLookups().sellerIdByClerk[_clerk];
 
         // Determine existence
@@ -158,18 +158,18 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @notice Gets a seller Id from storage by auth token.  A seller will have either an admin address or an auth token
+     * @notice Gets a seller id from storage by auth token.  A seller will have either an admin address or an auth token
      *
      * @param _authToken - the potential _authToken of the seller.
-     * @return exists - whether the seller Id exists
-     * @return sellerId  - the seller Id
+     * @return exists - whether the seller id exists
+     * @return sellerId  - the seller id
      */
     function getSellerIdByAuthToken(AuthToken calldata _authToken)
         internal
         view
         returns (bool exists, uint256 sellerId)
     {
-        // Get the seller Id
+        // Get the seller id
         sellerId = protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId];
 
         // Determine existence
@@ -180,11 +180,11 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @notice Gets a buyer id from storage by wallet address
      *
      * @param _wallet - the wallet address of the buyer
-     * @return exists - whether the buyer Id exists
-     * @return buyerId  - the buyer Id
+     * @return exists - whether the buyer id exists
+     * @return buyerId  - the buyer id
      */
     function getBuyerIdByWallet(address _wallet) internal view returns (bool exists, uint256 buyerId) {
-        // Get the buyer Id
+        // Get the buyer id
         buyerId = protocolLookups().buyerIdByWallet[_wallet];
 
         // Determine existence
@@ -195,11 +195,11 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @notice Gets a agent id from storage by wallet address
      *
      * @param _wallet - the wallet address of the buyer
-     * @return exists - whether the buyer Id exists
-     * @return agentId  - the buyer Id
+     * @return exists - whether the buyer id exists
+     * @return agentId  - the buyer id
      */
     function getAgentIdByWallet(address _wallet) internal view returns (bool exists, uint256 agentId) {
-        // Get the buyer Id
+        // Get the buyer id
         agentId = protocolLookups().agentIdByWallet[_wallet];
 
         // Determine existence
@@ -207,18 +207,18 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @notice Gets a dispute resolver Id from storage by operator address
+     * @notice Gets a dispute resolver id from storage by operator address
      *
      * @param _operator - the operator address of the dispute resolver
-     * @return exists - whether the dispute resolver Id exists
-     * @return disputeResolverId  - the dispute resolver  Id
+     * @return exists - whether the dispute resolver id exists
+     * @return disputeResolverId  - the dispute resolver  id
      */
     function getDisputeResolverIdByOperator(address _operator)
         internal
         view
         returns (bool exists, uint256 disputeResolverId)
     {
-        // Get the dispute resolver Id
+        // Get the dispute resolver id
         disputeResolverId = protocolLookups().disputeResolverIdByOperator[_operator];
 
         // Determine existence
@@ -226,18 +226,18 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @notice Gets a dispute resolver Id from storage by admin address
+     * @notice Gets a dispute resolver id from storage by admin address
      *
      * @param _admin - the admin address of the dispute resolver
-     * @return exists - whether the dispute resolver Id exists
-     * @return disputeResolverId  - the dispute resolver Id
+     * @return exists - whether the dispute resolver id exists
+     * @return disputeResolverId  - the dispute resolver id
      */
     function getDisputeResolverIdByAdmin(address _admin)
         internal
         view
         returns (bool exists, uint256 disputeResolverId)
     {
-        // Get the dispute resolver Id
+        // Get the dispute resolver id
         disputeResolverId = protocolLookups().disputeResolverIdByAdmin[_admin];
 
         // Determine existence
@@ -245,18 +245,18 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     }
 
     /**
-     * @notice Gets a dispute resolver Id from storage by clerk address
+     * @notice Gets a dispute resolver id from storage by clerk address
      *
      * @param _clerk - the clerk address of the dispute resolver
-     * @return exists - whether the dispute resolver Id exists
-     * @return disputeResolverId  - the dispute resolver Id
+     * @return exists - whether the dispute resolver id exists
+     * @return disputeResolverId  - the dispute resolver id
      */
     function getDisputeResolverIdByClerk(address _clerk)
         internal
         view
         returns (bool exists, uint256 disputeResolverId)
     {
-        // Get the dispute resolver Id
+        // Get the dispute resolver id
         disputeResolverId = protocolLookups().disputeResolverIdByClerk[_clerk];
 
         // Determine existence
@@ -271,7 +271,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
      * @return groupId  - the group id.
      */
     function getGroupIdByOffer(uint256 _offerId) internal view returns (bool exists, uint256 groupId) {
-        // Get the group Id
+        // Get the group id
         groupId = protocolLookups().groupIdByOffer[_offerId];
 
         // Determine existence
@@ -559,12 +559,12 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     /**
      * @notice Gets the bundle id for a given offer id.
      *
-     * @param _offerId - the offer Id.
-     * @return exists - whether the bundle Id exists
-     * @return bundleId  - the bundle Id.
+     * @param _offerId - the offer id.
+     * @return exists - whether the bundle id exists
+     * @return bundleId  - the bundle id.
      */
     function fetchBundleIdByOffer(uint256 _offerId) internal view returns (bool exists, uint256 bundleId) {
-        // Get the bundle Id
+        // Get the bundle id
         bundleId = protocolLookups().bundleIdByOffer[_offerId];
 
         // Determine existence
@@ -574,12 +574,12 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     /**
      * @notice Gets the bundle id for a given twin id.
      *
-     * @param _twinId - the twin Id.
-     * @return exists - whether the bundle Id exist
-     * @return bundleId  - the bundle Id.
+     * @param _twinId - the twin id.
+     * @return exists - whether the bundle id exist
+     * @return bundleId  - the bundle id.
      */
     function fetchBundleIdByTwin(uint256 _twinId) internal view returns (bool exists, uint256 bundleId) {
-        // Get the bundle Id
+        // Get the bundle id
         bundleId = protocolLookups().bundleIdByTwin[_twinId];
 
         // Determine existence
@@ -589,7 +589,7 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     /**
      * @notice Gets the exchange ids for a given offer id.
      *
-     * @param _offerId - the offer Id.
+     * @param _offerId - the offer id.
      * @return exists - whether the exchange Ids exist
      * @return exchangeIds  - the exchange Ids.
      */
@@ -661,12 +661,12 @@ abstract contract ProtocolBase is PausableBase, ReentrancyGuardBase {
     /**
      * @notice Gets the agent id for a given offer id.
      *
-     * @param _offerId - the offer Id.
-     * @return exists - whether the exchange Ids exist
-     * @return agentId - the agent Id.
+     * @param _offerId - the offer id.
+     * @return exists - whether the exchange id exist
+     * @return agentId - the agent id.
      */
     function fetchAgentIdByOffer(uint256 _offerId) internal view returns (bool exists, uint256 agentId) {
-        // Get the exchange Ids
+        // Get the agent id
         agentId = protocolLookups().agentIdByOffer[_offerId];
 
         // Determine existence

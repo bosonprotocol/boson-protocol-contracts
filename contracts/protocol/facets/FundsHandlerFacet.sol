@@ -48,22 +48,22 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         address _tokenAddress,
         uint256 _amount
     ) external payable override fundsNotPaused nonReentrant {
-        //Check Seller exists in sellers mapping
+        // Check seller exists in sellers mapping
         (bool exists, , ) = fetchSeller(_sellerId);
 
-        //Seller must exist
+        // Seller must exist
         require(exists, NO_SUCH_SELLER);
 
         if (msg.value != 0) {
-            // receiving native currency
+            // Receiving native currency
             require(_tokenAddress == address(0), NATIVE_WRONG_ADDRESS);
             require(_amount == msg.value, NATIVE_WRONG_AMOUNT);
         } else {
-            // transfer tokens from the caller
+            // Transfer tokens from the caller
             FundsLib.transferFundsToProtocol(_tokenAddress, _amount);
         }
 
-        // increase available funds
+        // Increase available funds
         FundsLib.increaseAvailableFunds(_sellerId, _tokenAddress, _amount);
 
         emit FundsDeposited(_sellerId, msgSender(), _tokenAddress, _amount);
@@ -92,28 +92,28 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         address[] calldata _tokenList,
         uint256[] calldata _tokenAmounts
     ) external override fundsNotPaused nonReentrant {
-        // address that will receive the funds
+        // Address that will receive the funds
         address payable destinationAddress;
 
-        // first check if the caller is a buyer
+        // First check if the caller is a buyer
         (bool exists, uint256 callerId) = getBuyerIdByWallet(msgSender());
         if (exists && callerId == _entityId) {
-            // caller is a buyer
+            // Caller is a buyer
             destinationAddress = payable(msgSender());
         } else {
-            // check if the caller is a clerk
+            // Check if the caller is a clerk
             (exists, callerId) = getSellerIdByClerk(msgSender());
             if (exists && callerId == _entityId) {
-                // caller is a clerk. In this case funds are transferred to the treasury address
+                // Caller is a clerk. In this case funds are transferred to the treasury address
                 (, Seller storage seller, ) = fetchSeller(callerId);
                 destinationAddress = seller.treasury;
             } else {
                 (exists, callerId) = getAgentIdByWallet(msgSender());
                 if (exists && callerId == _entityId) {
-                    // caller is an agent
+                    // Caller is an agent
                     destinationAddress = payable(msgSender());
                 } else {
-                    // in this branch, caller is neither buyer, clerk or agent or does not match the _entityId
+                    // In this branch, caller is neither buyer, clerk or agent or does not match the _entityId
                     revert(NOT_AUTHORIZED);
                 }
             }
@@ -148,7 +148,7 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         onlyRole(FEE_COLLECTOR)
         nonReentrant
     {
-        // withdraw the funds
+        // Withdraw the funds
         withdrawFundsInternal(payable(msgSender()), 0, _tokenList, _tokenAmounts);
     }
 
@@ -168,10 +168,10 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
             string memory tokenName;
 
             if (tokenAddress == address(0)) {
-                // it tokenAddress is 0, it represents the native currency
+                // If tokenAddress is 0, it represents the native currency
                 tokenName = NATIVE_CURRENCY;
             } else {
-                // try to get token name
+                // Try to get token name
                 try IERC20Metadata(tokenAddress).name() returns (string memory name) {
                     tokenName = name;
                 } catch {
@@ -179,10 +179,10 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
                 }
             }
 
-            // retrieve available amount from the stroage
+            // Retrieve available amount from the stroage
             uint256 availableAmount = protocolLookups().availableFunds[_entityId][tokenAddress];
 
-            // add entry to the return variable
+            // Add entry to the return variable
             availableFunds[i] = Funds(tokenAddress, tokenName, availableAmount);
         }
     }
@@ -211,34 +211,34 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
         address[] calldata _tokenList,
         uint256[] calldata _tokenAmounts
     ) internal {
-        // make sure that the data is complete
+        // Make sure that the data is complete
         require(_tokenList.length == _tokenAmounts.length, TOKEN_AMOUNT_MISMATCH);
 
-        // limit maximum number of tokens to avoid running into block gas limit in a loop
+        // Limit maximum number of tokens to avoid running into block gas limit in a loop
         uint256 maxTokensPerWithdrawal = protocolLimits().maxTokensPerWithdrawal;
         require(_tokenList.length <= maxTokensPerWithdrawal, TOO_MANY_TOKENS);
 
-        // two possible options: withdraw all, or withdraw only specified tokens and amounts
+        // Two possible options: withdraw all, or withdraw only specified tokens and amounts
         if (_tokenList.length == 0) {
-            // withdraw everything
+            // Withdraw everything
 
-            // get list of all user's tokens
+            // Get list of all user's tokens
             address[] memory tokenList = protocolLookups().tokenList[_entityId];
 
-            // make sure that at least something will be withdrawn
+            // Make sure that at least something will be withdrawn
             require(tokenList.length != 0, NOTHING_TO_WITHDRAW);
 
-            // make sure that tokenList is not too long
+            // Make sure that tokenList is not too long
             uint256 len = maxTokensPerWithdrawal <= tokenList.length ? maxTokensPerWithdrawal : tokenList.length;
 
             for (uint256 i = 0; i < len; i++) {
-                // get available funds from storage
+                // Get available funds from storage
                 uint256 availableFunds = protocolLookups().availableFunds[_entityId][tokenList[i]];
                 FundsLib.transferFundsFromProtocol(_entityId, tokenList[i], _destinationAddress, availableFunds);
             }
         } else {
             for (uint256 i = 0; i < _tokenList.length; i++) {
-                // make sure that at least something will be withdrawn
+                // Make sure that at least something will be withdrawn
                 require(_tokenAmounts[i] > 0, NOTHING_TO_WITHDRAW);
                 FundsLib.transferFundsFromProtocol(_entityId, _tokenList[i], _destinationAddress, _tokenAmounts[i]);
             }

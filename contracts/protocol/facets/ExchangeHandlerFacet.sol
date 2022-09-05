@@ -159,7 +159,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         Offer storage offer;
         (, offer) = fetchOffer(offerId);
 
-        // get message sender
+        // Get message sender
         address sender = msgSender();
 
         // Is this the buyer?
@@ -320,7 +320,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
         uint256 offerId = exchange.offerId;
         (, offer) = fetchOffer(offerId);
 
-        // get message sender
+        // Get message sender
         address sender = msgSender();
 
         // Get seller id associated with caller
@@ -514,11 +514,11 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     }
 
     /**
-     * @notice Gets the Id that will be assigned to the next exchange.
+     * @notice Gets the id that will be assigned to the next exchange.
      *
      * @dev Does not increment the counter.
      *
-     * @return nextExchangeId - the next exchange Id
+     * @return nextExchangeId - the next exchange id
      */
     function getNextExchangeId() external view override returns (uint256 nextExchangeId) {
         nextExchangeId = protocolCounters().nextExchangeId;
@@ -580,10 +580,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _exchange - the pointer to the exchange for which voucher should be burned
      */
     function burnVoucher(Exchange storage _exchange) internal {
-        // decrease the voucher count
+        // Decrease the voucher count
         protocolLookups().voucherCount[_exchange.buyerId]--;
 
-        // burn the voucher
+        // Burn the voucher
         (, Offer storage offer) = fetchOffer(_exchange.offerId);
         IBosonVoucher bosonVoucher = IBosonVoucher(protocolLookups().cloneAddress[offer.sellerId]);
         bosonVoucher.burnVoucher(_exchange.id);
@@ -767,7 +767,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      * @param _offer the offer
      * @param exchangeId - the exchange id
      *
-     * @return bool true if buyer is authorized to commit
+     * @return bool - true if buyer is authorized to commit
      */
     function authorizeCommit(
         address _buyer,
@@ -814,10 +814,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     /**
      * @notice Checks if the buyer has the required balance of the conditional token.
      *
-     * @param _buyer address of potential buyer
-     * @param _condition the condition to be evaluated
+     * @param _buyer - address of potential buyer
+     * @param _condition - the condition to be evaluated
      *
-     * @return bool true if buyer meets the condition
+     * @return bool - true if buyer meets the condition
      */
     function holdsThreshold(address _buyer, Condition storage _condition) internal view returns (bool) {
         return
@@ -831,10 +831,10 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     /**
      * @notice Checks if the buyer own a specific non-fungible token id.
      *
-     * @param _buyer  address of potential buyer
-     * @param _condition the condition to be evaluated
+     * @param _buyer - address of potential buyer
+     * @param _condition - the condition to be evaluated
      *
-     * @return bool true if buyer meets the condition
+     * @return bool - true if buyer meets the condition
      */
     function holdsSpecificToken(address _buyer, Condition storage _condition) internal view returns (bool) {
         return (Token(_condition.tokenAddress).ownerOf(_condition.tokenId) == _buyer);
@@ -843,8 +843,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
     /**
      * @notice Verifies if a given address is a contract or not (EOA).
      *
-     * @param _address address to verify
-     * @return bool true if _address is a contract
+     * @param _address - address to verify
+     * @return bool - true if _address is a contract
      */
     function isContract(address _address) private view returns (bool) {
         return _address.code.length > 0;

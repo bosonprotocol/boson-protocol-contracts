@@ -381,7 +381,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         disputesNotPaused
         nonReentrant
     {
-        // buyer should get at most 100%
+        // Buyer should get at most 100%
         require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
 
         // Make sure the dispute is valid and the caller is the dispute resolver
@@ -389,7 +389,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
             _exchangeId
         );
 
-        // finalize the dispute
+        // Finalize the dispute
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Decided, _buyerPercent);
 
         // Notify watchers of state change
@@ -397,7 +397,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
-     * @notice Enables Dispute Resolver to explicity refuse to resolve a dispute in Escalated state and releases the funds.
+     * @notice Enables dispute resolver to explicity refuse to resolve a dispute in Escalated state and releases the funds.
      *
      * Emits an EscalatedDisputeRefused event if successful.
      *

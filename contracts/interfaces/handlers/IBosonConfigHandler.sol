@@ -93,12 +93,12 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      *
      * @dev Caller must have ADMIN role.
      *
-     * @param _feePercentage - the percentage that will be taken as a fee from the net of a Boson Protocol sale or auction (after royalties)
+     * @param _protocolFeePercentage - the percentage that will be taken as a fee from the net of a Boson Protocol sale or auction (after royalties)
      *
      * N.B. Represent percentage value as an unsigned int by multiplying the percentage by 100:
      * e.g, 1.75% = 175, 100% = 10000
      */
-    function setProtocolFeePercentage(uint16 _feePercentage) external;
+    function setProtocolFeePercentage(uint16 _protocolFeePercentage) external;
 
     /**
      * @notice Gets the protocol fee percentage.
@@ -120,7 +120,9 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     function setProtocolFeeFlatBoson(uint256 _protocolFeeFlatBoson) external;
 
     /**
-     * @notice Get the flat protocol fee for exchanges in $BOSON
+     * @notice Getsthe flat protocol fee for exchanges in $BOSON.
+     *
+     * @return the flat fee taken for exchanges in $BOSON
      */
     function getProtocolFeeFlatBoson() external view returns (uint256);
 

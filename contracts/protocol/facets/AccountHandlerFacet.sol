@@ -25,11 +25,11 @@ contract AccountHandlerFacet is ProtocolBase {
     }
 
     /**
-     * @notice Gets the next account Id that can be assigned to an account.
+     * @notice Gets the next account id that can be assigned to an account.
      *
      * @dev Does not increment the counter.
      *
-     * @return nextAccountId - the account Id
+     * @return nextAccountId - the account id
      */
     function getNextAccountId() external view returns (uint256 nextAccountId) {
         nextAccountId = protocolCounters().nextAccountId;

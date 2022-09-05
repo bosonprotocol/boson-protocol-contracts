@@ -31,10 +31,10 @@ contract BuyerBase is ProtocolBase, IBosonAccountEvents {
         //Check active is not set to false
         require(_buyer.active, MUST_BE_ACTIVE);
 
-        // Get the next account Id and increment the counter
+        // Get the next accouni id and increment the counter
         uint256 buyerId = protocolCounters().nextAccountId++;
 
-        //check that the wallet address is unique to one buyer Id
+        //check that the wallet address is unique to one buyer id
         require(protocolLookups().buyerIdByWallet[_buyer.wallet] == 0, BUYER_ADDRESS_MUST_BE_UNIQUE);
 
         _buyer.id = buyerId;
