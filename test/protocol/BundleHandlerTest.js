@@ -613,7 +613,7 @@ describe("IBosonBundleHandler", function () {
         it("Insufficient Twin supply to cover bundle offers", async function () {
           let expectedNewTwinId = "6";
           const newTwin = twin.clone();
-          newTwin.supplyAvailable = "1";
+          newTwin.amount = newTwin.supplyAvailable = "1"; // twin amount can't be greater than supply available.
           await twinHandler.connect(operator).createTwin(newTwin); // creates a twin with id 6
 
           bundle.twinIds = ["1", expectedNewTwinId];
