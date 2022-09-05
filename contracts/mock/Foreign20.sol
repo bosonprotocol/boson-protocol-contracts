@@ -182,6 +182,12 @@ contract Foreign20WithFee is Foreign20 {
     }
 }
 
+/**
+ * @title Foreign20 that return false when transferFrom or transfer is called
+ *
+ *
+ * @notice Mock ERC-(20) for Unit Testing
+ */
 contract Foreign20TransferReturnFalse is Foreign20 {
     function transferFrom(
         address from,
