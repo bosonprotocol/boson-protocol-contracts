@@ -1913,7 +1913,7 @@ describe("IBosonExchangeHandler", function () {
           expect(twin.supplyAvailable).to.equal(twin20.supplyAvailable);
         });
 
-        it("Should transfer the twin even if supplyAvailable is equal amount", async function () {
+        it("Should transfer the twin even if supplyAvailable is equal to amount", async function () {
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "1";
 
@@ -2106,9 +2106,9 @@ describe("IBosonExchangeHandler", function () {
           // Redeem the second voucher
           await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
             .to.emit(exchangeHandler, "TwinTransferred")
-            .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, "0", buyer.address);
+            .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, twin721.amount, buyer.address);
 
-          // Check the buyer owns the last ERC721 of twin range
+          // Check the buyer owns the first ERC721 in twin range
           owner = await foreign721.ownerOf(tokenId);
           expect(owner).to.equal(buyer.address);
 
@@ -2336,7 +2336,7 @@ describe("IBosonExchangeHandler", function () {
           expect(twin.supplyAvailable).to.equal(twin1155.supplyAvailable);
         });
 
-        it("Should transfer the twin even if supplyAvailable is equal amount", async function () {
+        it("Should transfer the twin even if supplyAvailable is equal to amount", async function () {
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
           offer.quantityAvailable = "1";
 
@@ -2513,7 +2513,7 @@ describe("IBosonExchangeHandler", function () {
           expect(balance).to.equal(1);
         });
 
-        it("Should transfer the twin even if supplyAvailable is equal amount", async function () {
+        it("Should transfer the twin even if supplyAvailable is equal to amount", async function () {
           await foreign721.connect(operator).mint("10", "1");
 
           const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
