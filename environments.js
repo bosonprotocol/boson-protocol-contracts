@@ -33,10 +33,9 @@ module.exports = {
     },
 
     // Local node
-    //  - if both mnemonic and keys are specified, mnemonic will be used
+    //  - if you are running hardhat node, do not specify "keys". Use keys only if you run different local node.
     //  - if no DEPLOYER_LOCAL_TXNODE is specified, default "http://127.0.0.1:8545" will be used
     "localhost": {
-        "mnemonic": process.env.DEPLOYER_LOCAL_MNEMONIC,
         "txNode": process.env.DEPLOYER_LOCAL_TXNODE,
         "keys": [process.env.DEPLOYER_LOCAL_KEY],
         "gasLimit": parseInt(process.env.DEPLOYER_GAS_LIMIT_TEST),
