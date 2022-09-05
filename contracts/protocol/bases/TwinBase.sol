@@ -19,7 +19,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
      * Emits a TwinCreated event if successful.
      *
      * Reverts if:
-     * - seller does not exist
+     * - Seller does not exist
      * - Not approved to transfer the seller's token
      * - supplyAvailable is zero
      * - Twin is NonFungibleToken and amount was set
@@ -27,6 +27,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
      * - Twin is NonFungibleToken with unlimited supply and starting token id is too high
      * - Twin is NonFungibleToken and range is already being used in another twin of the seller
      * - Twin is FungibleToken or MultiToken and amount was not set
+     * - Twin is FungibleToken or MultiToken and amount is greater than supply available
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
      */
@@ -94,13 +95,16 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             protocolLookups().twinIdsByTokenAddressAndBySeller[sellerId][_twin.tokenAddress].push(_twin.id);
         } else if (_twin.tokenType == TokenType.MultiToken) {
             // If token is Fungible or MultiToken amount should not be zero
-            require(_twin.amount > 0, INVALID_AMOUNT);
+            // Also, tthe amount of tokens should not be more than the available token supply.
+            require(_twin.amount > 0 && _twin.amount <= _twin.supplyAvailable, INVALID_AMOUNT);
+
             // Not every ERC20 has supportsInterface method so we can't check interface support if token type is NonFungible
             // Check if the token supports IERC1155 interface
             require(contractSupportsInterface(_twin.tokenAddress, 0xd9b67a26), INVALID_TOKEN_ADDRESS);
         } else {
             // If token is Fungible or MultiToken amount should not be zero
-            require(_twin.amount > 0, INVALID_AMOUNT);
+            // Also, tthe amount of tokens should not be more than the available token supply.
+            require(_twin.amount > 0 && _twin.amount <= _twin.supplyAvailable, INVALID_AMOUNT);
         }
 
         // Get the next twinId and increment the counter
