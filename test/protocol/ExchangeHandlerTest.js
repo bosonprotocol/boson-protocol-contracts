@@ -1936,7 +1936,7 @@ describe("IBosonExchangeHandler", function () {
           });
 
           it("should revoke exchange when ERC20 contract transferFrom return false", async function () {
-            const [foreign20ReturnFalse] = await deployMockTokens(gasLimit, ["Foreign20TransferReturnFalse"]);
+            const [foreign20ReturnFalse] = await deployMockTokens(gasLimit, ["Foreign20TransferFromReturnFalse"]);
 
             await foreign20ReturnFalse.connect(operator).mint(operator.address, "500");
             await foreign20ReturnFalse.connect(operator).approve(protocolDiamond.address, "100");

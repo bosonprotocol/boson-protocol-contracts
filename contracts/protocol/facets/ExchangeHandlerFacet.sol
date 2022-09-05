@@ -10,6 +10,7 @@ import { BuyerBase } from "../bases/BuyerBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
 interface Token {
     function balanceOf(address account) external view returns (uint256); //ERC-721 and ERC-20
@@ -27,6 +28,8 @@ interface MultiToken {
  * @notice Handles exchanges associated with offers within the protocol
  */
 contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
+    using Address for address;
+
     /**
      * @notice Facet Initializer
      */
@@ -703,7 +706,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
             if (transferFailed) {
                 // Raise a dispute if caller is a contract
-                if (isContract(sender)) {
+                if (sender.isContract()) {
                     raiseDisputeInternal(_exchange, _voucher, seller.id);
                 } else {
                     // Revoke voucher if caller is an EOA
@@ -835,16 +838,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      */
     function holdsSpecificToken(address _buyer, Condition storage _condition) internal view returns (bool) {
         return (Token(_condition.tokenAddress).ownerOf(_condition.tokenId) == _buyer);
-    }
-
-    /**
-     * @notice Verify if a given address is a contract or not (EOA)
-     *
-     * @param _address address to verify
-     * @return bool true if _address is a contract
-     */
-    function isContract(address _address) private view returns (bool) {
-        return _address.code.length > 0;
     }
 
     /**
