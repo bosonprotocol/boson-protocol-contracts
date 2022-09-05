@@ -437,6 +437,16 @@ describe("IBosonBundleHandler", function () {
           );
         });
 
+        it("Bundle has neither the twins nor the offers", async function () {
+          bundle.twinIds = [];
+          bundle.offerIds = [];
+
+          // Attempt to Create a bundle, expecting revert
+          await expect(bundleHandler.connect(operator).createBundle(bundle)).to.revertedWith(
+            RevertReasons.BUNDLE_REQUIRES_AT_LEAST_ONE_TWIN_AND_ONE_OFFER
+          );
+        });
+
         it("Caller is not the seller of all offers", async function () {
           // create another seller and an offer
           let expectedNewOfferId = "6";
