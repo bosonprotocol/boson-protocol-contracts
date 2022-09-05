@@ -428,9 +428,7 @@ describe("IBosonTwinHandler", function () {
           twin.tokenAddress = bosonToken.address;
           twin.tokenType = TokenType.FungibleToken;
 
-          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
-            RevertReasons.TWIN_AMOUNT_GREATER_THAN_SUPPLY_AVAILABLE
-          );
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(RevertReasons.INVALID_AMOUNT);
         });
 
         it("Amount is greater than supply available and token type is MultiToken", async function () {
@@ -443,9 +441,7 @@ describe("IBosonTwinHandler", function () {
           twin.tokenAddress = foreign1155.address;
           twin.tokenType = TokenType.MultiToken;
 
-          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(
-            RevertReasons.TWIN_AMOUNT_GREATER_THAN_SUPPLY_AVAILABLE
-          );
+          await expect(twinHandler.connect(operator).createTwin(twin)).to.be.revertedWith(RevertReasons.INVALID_AMOUNT);
         });
 
         it("Amount is zero and token type is FungibleToken", async function () {

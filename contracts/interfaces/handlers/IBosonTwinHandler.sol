@@ -19,7 +19,7 @@ interface IBosonTwinHandler is IBosonTwinEvents {
      *
      * Reverts if:
      * - The twins region of protocol is paused
-     * - seller does not exist
+     * - Seller does not exist
      * - Not approved to transfer the seller's token
      * - supplyAvailable is zero
      * - Twin is NonFungibleToken and amount was set

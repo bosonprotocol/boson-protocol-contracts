@@ -19,7 +19,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
      * Emits a TwinCreated event if successful.
      *
      * Reverts if:
-     * - seller does not exist
+     * - Seller does not exist
      * - Not approved to transfer the seller's token
      * - supplyAvailable is zero
      * - Twin is NonFungibleToken and amount was set
@@ -95,20 +95,16 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             protocolLookups().twinIdsByTokenAddressAndBySeller[sellerId][_twin.tokenAddress].push(_twin.id);
         } else if (_twin.tokenType == TokenType.MultiToken) {
             // If token is Fungible or MultiToken amount should not be zero
-            require(_twin.amount > 0, INVALID_AMOUNT);
-
-            // Validate the amount of tokens is not more than the available token supply.
-            require(_twin.amount <= _twin.supplyAvailable, TWIN_AMOUNT_GREATER_THAN_SUPPLY_AVAILABLE);
+            // Also, tthe amount of tokens should not be more than the available token supply.
+            require(_twin.amount > 0 && _twin.amount <= _twin.supplyAvailable, INVALID_AMOUNT);
 
             // Not every ERC20 has supportsInterface method so we can't check interface support if token type is NonFungible
             // Check if the token supports IERC1155 interface
             require(contractSupportsInterface(_twin.tokenAddress, 0xd9b67a26), INVALID_TOKEN_ADDRESS);
         } else {
             // If token is Fungible or MultiToken amount should not be zero
-            require(_twin.amount > 0, INVALID_AMOUNT);
-
-            // Validate the amount of tokens is not more than the available token supply.
-            require(_twin.amount <= _twin.supplyAvailable, TWIN_AMOUNT_GREATER_THAN_SUPPLY_AVAILABLE);
+            // Also, tthe amount of tokens should not be more than the available token supply.
+            require(_twin.amount > 0 && _twin.amount <= _twin.supplyAvailable, INVALID_AMOUNT);
         }
 
         // Get the next twinId and increment the counter

@@ -108,11 +108,10 @@ string constant TWIN_TRANSFER_FAILED = "Twin could not be transferred";
 string constant UNSUPPORTED_TOKEN = "Unsupported token";
 string constant BUNDLE_FOR_TWIN_EXISTS = "Bundle for twin exists";
 string constant INVALID_SUPPLY_AVAILABLE = "supplyAvailable can't be zero";
-string constant INVALID_AMOUNT = "Amount must be greater than zero if token is ERC20 or ERC1155";
+string constant INVALID_AMOUNT = "Invalid twin amount";
 string constant INVALID_TWIN_PROPERTY = "Invalid property for selected token type";
 string constant INVALID_TWIN_TOKEN_RANGE = "Token range is already being used in another Twin";
 string constant INVALID_TOKEN_ADDRESS = "Token address is a contract that doesn't implement the interface for selected token type";
-string constant TWIN_AMOUNT_GREATER_THAN_SUPPLY_AVAILABLE = "Twin amount must be less than or equal to supply available";
 
 // Revert Reasons: Bundle related
 string constant NO_SUCH_BUNDLE = "No such bundle";
