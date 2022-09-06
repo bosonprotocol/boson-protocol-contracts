@@ -1913,6 +1913,44 @@ describe("IBosonExchangeHandler", function () {
           expect(twin.supplyAvailable).to.equal(twin20.supplyAvailable);
         });
 
+        it("Should transfer the twin even if supplyAvailable is equal to amount", async function () {
+          const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+          offer.quantityAvailable = "1";
+
+          // Create a new offer
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+          twin20.supplyAvailable = "3";
+          twin20.id = "4";
+
+          await twinHandler.connect(operator).createTwin(twin20.toStruct());
+
+          // Create a new bundle
+          bundle = new Bundle("1", seller.id, [++offerId], [twin20.id]);
+          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+
+          // Commit to offer
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Set time forward to the offer's voucherRedeemableFrom
+          voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          // Redeem the second voucher
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
+            .to.emit(exchangeHandler, "TwinTransferred")
+            .withArgs(twin20.id, twin20.tokenAddress, exchange.id, "0", twin20.amount, buyer.address);
+
+          // Check the buyer's balance
+          balance = await foreign20.balanceOf(buyer.address);
+          expect(balance).to.equal(3);
+
+          const [, twin] = await twinHandler.getTwin(twin20.id);
+          expect(twin.supplyAvailable).to.equal(0);
+        });
+
         context("Twin transfer fail", async function () {
           it("should revoke exchange when buyer is an EOA", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
@@ -2033,6 +2071,49 @@ describe("IBosonExchangeHandler", function () {
           const [, twin] = await twinHandler.connect(operator).getTwin(twin721.id);
 
           expect(twin.supplyAvailable).to.equal(twin721.supplyAvailable - 1);
+        });
+
+        it("Should transfer the twin even if supplyAvailable is equal to 1", async function () {
+          await foreign721.connect(operator).mint("10", "2");
+
+          const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+          offer.quantityAvailable = "1";
+
+          // Create a new offer
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+          twin721.supplyAvailable = "1";
+          twin721.tokenId = "10";
+          twin721.id = "4";
+
+          // Create a new twin
+          await twinHandler.connect(operator).createTwin(twin721.toStruct());
+
+          // Create a new bundle
+          bundle = new Bundle("1", seller.id, [++offerId], [twin721.id]);
+          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+
+          // Commit to offer
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Set time forward to the offer's voucherRedeemableFrom
+          voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          let tokenId = "10";
+          // Redeem the second voucher
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
+            .to.emit(exchangeHandler, "TwinTransferred")
+            .withArgs(twin721.id, twin721.tokenAddress, exchange.id, tokenId, twin721.amount, buyer.address);
+
+          // Check the buyer owns the first ERC721 in twin range
+          owner = await foreign721.ownerOf(tokenId);
+          expect(owner).to.equal(buyer.address);
+
+          const [, twin] = await twinHandler.getTwin(twin721.id);
+          expect(twin.supplyAvailable).to.equal(0);
         });
 
         context("Unlimited supply", async function () {
@@ -2255,6 +2336,52 @@ describe("IBosonExchangeHandler", function () {
           expect(twin.supplyAvailable).to.equal(twin1155.supplyAvailable);
         });
 
+        it("Should transfer the twin even if supplyAvailable is equal to amount", async function () {
+          const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+          offer.quantityAvailable = "1";
+
+          // Create a new offer
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+          twin1155.supplyAvailable = "1";
+          twin1155.id = "4";
+
+          // Create a new twin
+          await twinHandler.connect(operator).createTwin(twin1155.toStruct());
+
+          // Create a new bundle
+          bundle = new Bundle("1", seller.id, [++offerId], [twin1155.id]);
+          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+
+          // Commit to offer
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Set time forward to the offer's voucherRedeemableFrom
+          voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          // Redeem the second voucher
+          await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
+            .to.emit(exchangeHandler, "TwinTransferred")
+            .withArgs(
+              twin1155.id,
+              twin1155.tokenAddress,
+              exchange.id,
+              twin1155.tokenId,
+              twin1155.amount,
+              buyer.address
+            );
+
+          // Check the buyer's balance
+          balance = await foreign1155.balanceOf(buyer.address, twin1155.tokenId);
+          expect(balance).to.equal(1);
+
+          const [, twin] = await twinHandler.getTwin(twin1155.id);
+          expect(twin.supplyAvailable).to.equal(0);
+        });
+
         context("Twin transfer fail", async function () {
           it("should revoke exchange when buyer is an EOA", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
@@ -2384,6 +2511,87 @@ describe("IBosonExchangeHandler", function () {
           // Check the buyer's balance of the ERC1155
           balance = await foreign1155.balanceOf(buyer.address, tokenIdMultiToken);
           expect(balance).to.equal(1);
+        });
+
+        it("Should transfer the twin even if supplyAvailable is equal to amount", async function () {
+          await foreign721.connect(operator).mint("10", "1");
+
+          const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+          offer.quantityAvailable = "1";
+
+          // Create a new offer
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+          twin1155.supplyAvailable = "1";
+          twin1155.id = "4";
+
+          // Create a new twin
+          await twinHandler.connect(operator).createTwin(twin1155.toStruct());
+
+          twin20.supplyAvailable = "3";
+          twin20.id = "5";
+
+          await twinHandler.connect(operator).createTwin(twin20.toStruct());
+
+          twin721.supplyAvailable = "1";
+          twin721.tokenId = "10";
+          twin721.id = "6";
+
+          await twinHandler.connect(operator).createTwin(twin721.toStruct());
+
+          // Create a new bundle
+          bundle = new Bundle("1", seller.id, [++offerId], [twin1155.id, twin20.id, twin721.id]);
+          await bundleHandler.connect(operator).createBundle(bundle.toStruct());
+
+          // Commit to offer
+          await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+          // Set time forward to the offer's voucherRedeemableFrom
+          voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+          await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+          // Redeem the second voucher
+          const tx = await exchangeHandler.connect(buyer).redeemVoucher(++exchange.id);
+
+          await expect(tx)
+            .to.emit(exchangeHandler, "TwinTransferred")
+            .withArgs(
+              twin1155.id,
+              twin1155.tokenAddress,
+              exchange.id,
+              twin1155.tokenId,
+              twin1155.amount,
+              buyer.address
+            );
+
+          await expect(tx)
+            .and.to.emit(exchangeHandler, "TwinTransferred")
+            .withArgs(twin721.id, twin721.tokenAddress, exchange.id, twin721.tokenId, twin721.amount, buyer.address);
+
+          await expect(tx)
+            .and.to.emit(exchangeHandler, "TwinTransferred")
+            .withArgs(twin20.id, twin20.tokenAddress, exchange.id, "0", twin20.amount, buyer.address);
+
+          // Check the buyer's balance
+          balance = await foreign1155.balanceOf(buyer.address, twin1155.tokenId);
+          expect(balance).to.equal(1);
+
+          balance = await foreign721.balanceOf(buyer.address);
+          expect(balance).to.equal(1);
+
+          balance = await foreign20.balanceOf(buyer.address);
+          expect(balance).to.equal(3);
+
+          let [, twin] = await twinHandler.getTwin(twin1155.id);
+          expect(twin.supplyAvailable).to.equal(0);
+
+          [, twin] = await twinHandler.getTwin(twin721.id);
+          expect(twin.supplyAvailable).to.equal(0);
+
+          [, twin] = await twinHandler.getTwin(twin20.id);
+          expect(twin.supplyAvailable).to.equal(0);
         });
 
         context("Unlimited supply", async function () {

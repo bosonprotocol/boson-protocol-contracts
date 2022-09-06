@@ -241,11 +241,12 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      *
      * Reverts if:
      * - The meta-transactions region of protocol is paused
-     * - nonce is already used by another transaction.
-     * - function signature matches to executeMetaTransaction.
-     * - function name does not match with bytes 4 version of the function signature.
-     * - sender does not match the recovered signer.
-     * - any code executed in the signed transaction reverts.
+     * - Nonce is already used by another transaction.
+     * - Function signature matches to executeMetaTransaction.
+     * - Function name does not match with bytes 4 version of the function signature.
+     * - Sender does not match the recovered signer.
+     * - Any code executed in the signed transaction reverts.
+     * - Signature is invalid.
      *
      * @param _userAddress - the sender of the transaction.
      * @param _functionName - the function name that we want to execute.
