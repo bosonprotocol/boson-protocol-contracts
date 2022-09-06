@@ -1,21 +1,10 @@
 const hre = require("hardhat");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
 
-const interfaces = [
-  "IBosonConfigHandler",
-  "IBosonBundleHandler",
-  "IBosonDisputeHandler",
-  "IBosonExchangeHandler",
-  "IBosonFundsHandler",
-  "IBosonGroupHandler",
-  "IBosonOfferHandler",
-  "IBosonTwinHandler",
-  "IBosonAccountHandler",
-  "IBosonOrchestrationHandler",
-  "IBosonClient",
-  "IDiamondCut",
-  "IDiamondLoupe",
-];
+const prefix = "contracts/interfaces/";
+
+// folders to check. Folder names are relative to "contracts/interfaces"
+const sources = ["clients", "diamond", "handlers"];
 
 async function verifyNatspecIntefaceId() {
   let missingInfo = [];
@@ -28,10 +17,10 @@ async function verifyNatspecIntefaceId() {
   const contractNames = await hre.artifacts.getAllFullyQualifiedNames();
 
   for (let contractName of contractNames) {
-    // skip contracts that are not in the list
-    if (!interfaces.some((m) => contractName.match(m))) continue;
-
     const [source, name] = contractName.split(":");
+
+    // skip contracts that are not in the source folders
+    if (!sources.some((s) => source.startsWith(`${prefix}${s}`))) continue;
 
     const description = JSON.parse(
       (await hre.artifacts.getBuildInfo(contractName)).output.contracts[source][name].metadata
