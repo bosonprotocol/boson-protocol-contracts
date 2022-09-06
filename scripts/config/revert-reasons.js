@@ -103,6 +103,7 @@ exports.RevertReasons = {
   BUNDLE_TWIN_MUST_BE_UNIQUE: "Twin must be unique to a bundle",
   INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS:
     "Insufficient twin supplyAvailable to cover total quantity of bundle offers",
+  BUNDLE_REQUIRES_AT_LEAST_ONE_TWIN_AND_ONE_OFFER: "Bundle must have at least one twin and one offer",
 
   // Exchange related
   NO_SUCH_EXCHANGE: "No such exchange",

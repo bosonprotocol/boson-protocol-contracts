@@ -122,6 +122,7 @@ string constant BUNDLE_OFFER_MUST_BE_UNIQUE = "Offer must be unique to a bundle"
 string constant BUNDLE_TWIN_MUST_BE_UNIQUE = "Twin must be unique to a bundle";
 string constant EXCHANGE_FOR_BUNDLED_OFFERS_EXISTS = "Exchange for the bundled offers exists";
 string constant INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS = "Insufficient twin supplyAvailable to cover total quantity of bundle offers";
+string constant BUNDLE_REQUIRES_AT_LEAST_ONE_TWIN_AND_ONE_OFFER = "Bundle must have at least one twin and one offer";
 
 // Revert Reasons: Funds related
 string constant NATIVE_WRONG_ADDRESS = "Native token address must be 0";

@@ -647,7 +647,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         : twin.supplyAvailable - twin.amount;
                 }
 
-                if (tokenType == TokenType.FungibleToken && twin.supplyAvailable >= twin.amount) {
+                if (tokenType == TokenType.FungibleToken) {
                     // ERC-20 style transfer
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
@@ -657,7 +657,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                             twin.amount
                         )
                     );
-                } else if (tokenType == TokenType.NonFungibleToken && twin.supplyAvailable > 0) {
+                } else if (tokenType == TokenType.NonFungibleToken) {
                     // Token transfer order is ascending to avoid overflow when twin supply is unlimited
                     if (twin.supplyAvailable == type(uint256).max) {
                         twin.tokenId++;
@@ -675,7 +675,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                             ""
                         )
                     );
-                } else if (twin.tokenType == TokenType.MultiToken && twin.supplyAvailable >= twin.amount) {
+                } else if (twin.tokenType == TokenType.MultiToken) {
                     // ERC-1155 style transfer
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
@@ -692,7 +692,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 // If token transfer failed
                 if (!success || (result.length > 0 && !abi.decode(result, (bool)))) {
                     transferFailed = true;
-
                     emit TwinTransferFailed(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 } else {
                     // Store twin receipt on twinReceiptsByExchange
