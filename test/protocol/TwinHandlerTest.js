@@ -15,7 +15,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { mockSeller, mockTwin, mockAuthToken, mockVoucherInitValues, accountId } = require("../utils/mock");
+const { mockOffer, mockSeller, mockTwin, mockAuthToken, mockVoucherInitValues, accountId } = require("../utils/mock");
 const { oneMonth } = require("../utils/constants");
 
 /**
@@ -32,6 +32,7 @@ describe("IBosonTwinHandler", function () {
     twinHandler,
     accountHandler,
     bundleHandler,
+    offerHandler,
     pauseHandler,
     twinStruct,
     bosonToken,
@@ -71,9 +72,12 @@ describe("IBosonTwinHandler", function () {
 
     // Cut the protocol handler facets into the Diamond
     await deployProtocolHandlerFacets(protocolDiamond, [
+      "AccountHandlerFacet",
       "SellerHandlerFacet",
       "TwinHandlerFacet",
       "BundleHandlerFacet",
+      "OfferHandlerFacet",
+      "DisputeResolverHandlerFacet",
       "PauseHandlerFacet",
     ]);
 
@@ -125,6 +129,9 @@ describe("IBosonTwinHandler", function () {
 
     // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
     accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonOfferHandler
+    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
 
     // Cast Diamond to IBosonTwinHandler
     twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
@@ -726,9 +733,27 @@ describe("IBosonTwinHandler", function () {
         });
 
         it("Bundle for twin exists", async function () {
+          // Mock offer
+          let { offer, offerDates, offerDurations } = await mockOffer();
+
+          // Create an absolute zero offer without DR
+          offer.price = offer.sellerDeposit = offer.buyerCancelPenalty = "0";
+          let disputeResolverId = "0";
+          let agentId = "0"; // agent id is optional while creating an offer
+
+          // Check if domains are valid
+          expect(offer.isValid()).is.true;
+          expect(offerDates.isValid()).is.true;
+          expect(offerDurations.isValid()).is.true;
+
+          // Create the offer
+          await offerHandler
+            .connect(operator)
+            .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
           // Bundle: Required constructor params
           bundleId = "1";
-          offerIds = [];
+          offerIds = [offer.id]; // createBundle() does not accept empty offer ids.
           twinIds = [twin.id];
 
           // Create a new bundle

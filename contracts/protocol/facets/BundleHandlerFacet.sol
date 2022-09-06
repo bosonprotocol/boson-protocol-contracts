@@ -32,6 +32,7 @@ contract BundleHandlerFacet is IBosonBundleHandler, BundleBase {
      * Reverts if:
      * - The bundles region of protocol is paused
      * - Seller does not exist
+     * - Either offer ids or twin ids are empty
      * - any of offers belongs to different seller
      * - any of offers does not exist
      * - offer exists in a different bundle
