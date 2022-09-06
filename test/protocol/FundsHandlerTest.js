@@ -415,7 +415,7 @@ describe("IBosonFundsHandler", function () {
           ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
         });
 
-        it("ERC20 transferFrom returning false", async function () {
+        it("ERC20 transferFrom returns false", async function () {
           const [foreign20ReturnFalse] = await deployMockTokens(gasLimit, ["Foreign20TransferFromReturnFalse"]);
 
           await foreign20ReturnFalse.connect(operator).mint(operator.address, depositAmount);
@@ -1083,7 +1083,7 @@ describe("IBosonFundsHandler", function () {
             );
           });
 
-          it("Transfer of funds failed - ERC20 transfer returning false", async function () {
+          it("Transfer of funds failed - ERC20 transfer returns false", async function () {
             const [foreign20ReturnFalse] = await deployMockTokens(gasLimit, ["Foreign20TransferReturnFalse"]);
 
             await foreign20ReturnFalse.connect(operator).mint(operator.address, sellerDeposit);

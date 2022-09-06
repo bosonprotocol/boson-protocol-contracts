@@ -1935,7 +1935,7 @@ describe("IBosonExchangeHandler", function () {
             assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
           });
 
-          it("should revoke exchange when ERC20 contract transferFrom return false", async function () {
+          it("should revoke exchange when ERC20 contract transferFrom returns false", async function () {
             const [foreign20ReturnFalse] = await deployMockTokens(gasLimit, ["Foreign20TransferFromReturnFalse"]);
 
             await foreign20ReturnFalse.connect(operator).mint(operator.address, "500");

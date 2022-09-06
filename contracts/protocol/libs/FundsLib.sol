@@ -5,8 +5,8 @@ import "../../domain/BosonConstants.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20 } from "../../interfaces/IERC20.sol";
+import { SafeERC20 } from "../../libs/SafeERC20.sol";
 
 /**
  * @title FundsLib
@@ -224,18 +224,19 @@ library FundsLib {
      * @param _amount - amount to be transferred
      */
     function transferFundsToProtocol(address _tokenAddress, uint256 _amount) internal {
-        // protocol balance before the transfer
-        uint256 protocolTokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
+        if (_amount > 0) {
+            // protocol balance before the transfer
+            uint256 protocolTokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
 
-        // transfer ERC20 tokens from the caller
-        IERC20(_tokenAddress).safeTransferFrom(EIP712Lib.msgSender(), address(this), _amount);
+            // transfer ERC20 tokens from the caller
+            IERC20(_tokenAddress).safeTransferFrom(EIP712Lib.msgSender(), address(this), _amount);
 
-        // transfer ERC20 tokens from the caller
-        // protocol balance after the transfer
-        uint256 protocolTokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
+            // protocol balance after the transfer
+            uint256 protocolTokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
 
-        // make sure that expected amount of tokens was transferred
-        require(protocolTokenBalanceAfter - protocolTokenBalanceBefore == _amount, INSUFFICIENT_VALUE_RECEIVED);
+            // make sure that expected amount of tokens was transferred
+            require(protocolTokenBalanceAfter - protocolTokenBalanceBefore == _amount, INSUFFICIENT_VALUE_RECEIVED);
+        }
     }
 
     /**
