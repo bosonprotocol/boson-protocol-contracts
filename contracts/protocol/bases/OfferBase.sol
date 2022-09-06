@@ -144,7 +144,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // quantity must be greater than zero
         require(_offer.quantityAvailable > 0, INVALID_QUANTITY_AVAILABLE);
 
-        // specified resolver must be registered and active, except for absolute zero offers with unspecified dispute resolver
+        // Specified resolver must be registered and active, except for absolute zero offers with unspecified dispute resolver.
         // If price and sellerDeposit are 0, seller is not obliged to choose dispute resolver, which is done by setting _disputeResolverId to 0.
         // In this case, there is no need to check the validity of the dispute resolver. However, if one (or more) of {price, sellerDeposit, _disputeResolverId}
         // is different from 0, it must be checked that dispute resolver exists, supports the exchange token and seller is allowed to choose them.
