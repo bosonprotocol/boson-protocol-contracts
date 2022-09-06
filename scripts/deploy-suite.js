@@ -195,12 +195,12 @@ async function main() {
   await writeContracts(contracts);
 
   //Verify on test node if test env
-  if (hre.network.name === "test" || hre.network.name === "localhost") {
+  if (hre.network.name === "localhost") {
     await verifyOnTestEnv(contracts);
   }
 
   // Bail now if deploying locally
-  if (hre.network.name === "hardhat" || hre.network.name === "test" || hre.network.name === "localhost") process.exit();
+  if (hre.network.name === "hardhat" || hre.network.name === "localhost") process.exit();
 
   // Wait a minute after deployment completes and then verify contracts on block exporer
   console.log("⏲ Pause one minute, allowing deployments to propagate before verifying..");
