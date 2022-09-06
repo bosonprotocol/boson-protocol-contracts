@@ -1249,6 +1249,11 @@ describe("IBosonDisputeHandler", function () {
                 .connect(operator)
                 .resolveDispute(exchangeId, buyerPercent, ethers.utils.hexZeroPad("0x", 32), s, v)
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
+            await expect(
+              disputeHandler
+                .connect(operator)
+                .resolveDispute(exchangeId, buyerPercent, r, ethers.constants.MaxUint256, v)
+            ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
           });
 
           it("dispute state is neither resolving or escalated", async function () {

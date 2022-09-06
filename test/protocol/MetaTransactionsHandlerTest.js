@@ -580,6 +580,79 @@ describe("IBosonMetaTransactionsHandler", function () {
               )
             ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
           });
+
+          it("Should fail if signature is invalid", async function () {
+            // Prepare the function signature for the facet function.
+            functionSignature = accountHandler.interface.encodeFunctionData("createSeller", [
+              seller,
+              emptyAuthToken,
+              voucherInitValues,
+            ]);
+
+            // Prepare the message
+            message.functionSignature = functionSignature;
+
+            // Collect the signature components
+            let { r, s, v } = await prepareDataSignatureParameters(
+              operator,
+              customTransactionType,
+              "MetaTransaction",
+              message,
+              metaTransactionsHandler.address
+            );
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTransaction(
+                operator.address,
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                s,
+                "0" // invalid v signature component
+              )
+            ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTransaction(
+                operator.address,
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                ethers.constants.MaxUint256, // invalid s signature component
+                v
+              )
+            ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTransaction(
+                operator.address,
+                message.functionName,
+                functionSignature,
+                nonce,
+                r,
+                ethers.utils.hexZeroPad("0x", 32), // invalid s signature component
+                v
+              )
+            ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
+
+            // Execute meta transaction, expecting revert.
+            await expect(
+              metaTransactionsHandler.executeMetaTransaction(
+                operator.address,
+                message.functionName,
+                functionSignature,
+                nonce,
+                ethers.utils.hexZeroPad("0x", 32), // invalid r signature component
+                s,
+                v
+              )
+            ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
+          });
         });
       });
 
