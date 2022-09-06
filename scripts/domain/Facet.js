@@ -1,5 +1,5 @@
 const ethers = require("ethers");
-const eip55 = require("eip55");
+const { addressIsValid } = require("../util/validations.js");
 
 /**
  * Diamond Standard Domain Entity: Facet
@@ -52,12 +52,7 @@ class Facet {
    * @returns {boolean}
    */
   facetAddressIsValid() {
-    let { facetAddress } = this;
-    let valid = false;
-    try {
-      valid = eip55.verify(eip55.encode(facetAddress));
-    } catch (e) {}
-    return valid;
+    return addressIsValid(this.facetAddress);
   }
 
   /**

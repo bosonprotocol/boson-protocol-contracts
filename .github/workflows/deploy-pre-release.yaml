@@ -48,11 +48,13 @@ jobs:
           rsync -av --exclude='*.dbg.json' artifacts/contracts/interfaces addresses/abis/mumbai/
       - name: Commit auto-generated files
         run: |
+          RELEASE_BRANCH=pre-release-${GITHUB_REF_NAME}
           git config --local user.email "bsn-ci@users.noreply.github.com"
           git config --local user.name "GitHub Actions Bot"
+          git checkout -b $RELEASE_BRANCH
           git add addresses/ logs/
           git commit -a \
             -m "[skip ci] Add json file with addresses for staging environment" \
             -m "[Staging Environment] New deployed addresses" \
             -m "This is an auto-generated commit. This commit contains addresses generated after deploy to the staging environment."
-          git push
+          git push origin $RELEASE_BRANCH
