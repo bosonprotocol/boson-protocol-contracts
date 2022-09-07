@@ -9,7 +9,7 @@ import { IBosonPauseEvents } from "../events/IBosonPauseEvents.sol";
  *
  * @notice Handles pausing all or part of the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x????????
+ * The ERC-165 identifier for this interface is: 0x9ddb8ca6
  */
 interface IBosonPauseHandler is IBosonPauseEvents {
     /**
