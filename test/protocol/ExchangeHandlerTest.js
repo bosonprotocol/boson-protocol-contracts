@@ -1973,6 +1973,47 @@ describe("IBosonExchangeHandler", function () {
             assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
           });
 
+          it("should revoke exchange when ERC20 contract transferFrom returns false", async function () {
+            const [foreign20ReturnFalse] = await deployMockTokens(gasLimit, ["Foreign20TransferFromReturnFalse"]);
+
+            await foreign20ReturnFalse.connect(operator).mint(operator.address, "500");
+            await foreign20ReturnFalse.connect(operator).approve(protocolDiamond.address, "100");
+
+            // Create a new ERC20 twin
+            twin20 = mockTwin(foreign20ReturnFalse.address, TokenType.FungibleToken);
+            twin20.id = "4";
+
+            // Create a new twin
+            await twinHandler.connect(operator).createTwin(twin20.toStruct());
+
+            // Create a new offer
+            const { offer, offerDates, offerDurations, disputeResolverId } = await mockOffer();
+
+            await offerHandler
+              .connect(operator)
+              .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
+
+            // Set time forward to the offer's voucherRedeemableFrom
+            voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+            await setNextBlockTimestamp(Number(voucherRedeemableFrom));
+
+            // Create a new bundle
+            await bundleHandler.connect(operator).createBundle(new Bundle("1", seller.id, [++offerId], [twin20.id]));
+
+            // Commit to offer
+            await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
+
+            await expect(exchangeHandler.connect(buyer).redeemVoucher(++exchange.id))
+              .to.emit(exchangeHandler, "TwinTransferFailed")
+              .withArgs(twin20.id, twin20.tokenAddress, exchange.id, "0", twin20.amount, buyer.address);
+
+            // Get the exchange state
+            [, response] = await exchangeHandler.connect(rando).getExchangeState(exchange.id);
+
+            // It should match ExchangeState.Revoked
+            assert.equal(response, ExchangeState.Revoked, "Exchange state is incorrect");
+          });
+
           it("should raise a dispute when buyer account is a contract", async function () {
             // Remove the approval for the protocal to transfer the seller's tokens
             await foreign20.connect(operator).approve(protocolDiamond.address, "0");
