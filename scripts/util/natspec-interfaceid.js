@@ -1,5 +1,6 @@
 const hre = require("hardhat");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
+const fs = require("fs");
 
 const prefix = "contracts/interfaces/";
 
@@ -9,6 +10,8 @@ const sources = ["clients", "diamond", "handlers"];
 async function verifyNatspecIntefaceId() {
   let missingInfo = [];
   let wrongIntefaceId = [];
+
+  const tryToFix = process.argv[2] === "--fix";
 
   // get all interface ids
   const InterfaceIds = await getInterfaceIds();
@@ -45,7 +48,12 @@ async function verifyNatspecIntefaceId() {
     );
 
     if (erc165identifier !== InterfaceIds[name]) {
-      wrongIntefaceId.push({ name, natspecInfo: erc165identifier, trueInterfaceId: InterfaceIds[name] });
+      if (tryToFix) {
+        replaceStringInFile(source, erc165identifier, InterfaceIds[name]);
+        console.log(`Updated ${source}`);
+      } else {
+        wrongIntefaceId.push({ name, natspecInfo: erc165identifier, trueInterfaceId: InterfaceIds[name] });
+      }
     }
   }
 
@@ -65,6 +73,12 @@ async function verifyNatspecIntefaceId() {
   } else {
     process.exit(1);
   }
+}
+
+function replaceStringInFile(filePath, textToReplace, newText) {
+  let data = fs.readFileSync(filePath, { encoding: "utf8", flag: "r" });
+  let result = data.replace(textToReplace, newText);
+  fs.writeFileSync(filePath, result, { encoding: "utf8", flag: "w" });
 }
 
 verifyNatspecIntefaceId();
