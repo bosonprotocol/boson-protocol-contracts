@@ -52,15 +52,15 @@ module.exports = {
     apiKey: {
       mainnet: environments.etherscan.apiKey,
       polygonMumbai: environments.polygonscan.apiKey,
-      test: environments.blockscout.apiKey,
+      test: environments.blockscout.apiKey
     },
     customChains: [
       {
         network: "test",
         chainId: 1234,
         urls: {
-          apiURL: "https://explorer.bsn-development-potassium.bosonportal.io//api",
-          browserURL: "https://explorer.bsn-development-potassium.bosonportal.io"
+          apiURL: environments.blockscout.apiURL,
+          browserURL: environments.blockscout.browserURL
         }
       }
     ]

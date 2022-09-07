@@ -21,14 +21,18 @@ module.exports = {
     },
 
     // Needed for verifying contract code on Blockscout (test env). Blockscout does not require an API KEY, 
-    // but hardhat config requires a non-empty value. DEPLOYER_ETHERSCAN_API_KEY is being used asa a dummy value.
+    //so the default dummy value in .env.example can be used.
      "blockscout": {
-        "apiKey": process.env.DEPLOYER_ETHERSCAN_API_KEY
+        "apiKey": process.env.BLOCKSCOUT_API_KEY,
+        "apiURL": process.env.BLOCKSCOUT_API,
+        "browserURL": process.env.BLOCKSCOUT_BROWSER_URL
+
     },
 
     // Needed for Gas Reporter
     "coinmarketcap": {
         "apiKey": process.env.GAS_REPORTER_COINMARKETCAP_API_KEY
+        
     },
 
     // Hardhat testnet
