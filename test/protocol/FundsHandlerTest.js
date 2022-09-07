@@ -375,7 +375,7 @@ describe("IBosonFundsHandler", function () {
           // Attempt to deposit the funds, expecting revert
           await expect(
             fundsHandler.connect(rando).depositFunds(seller.id, bosonToken.address, depositAmount)
-          ).to.revertedWith(RevertReasons.TOKEN_TRANSFER_FAILED);
+          ).to.revertedWith(RevertReasons.SAFE_ERC20_LOW_LEVEL_CALL);
         });
 
         it("Token address is not a contract", async function () {
@@ -413,6 +413,17 @@ describe("IBosonFundsHandler", function () {
           await expect(
             fundsHandler.connect(operator).depositFunds(seller.id, Foreign20WithFee.address, depositAmount)
           ).to.revertedWith(RevertReasons.INSUFFICIENT_VALUE_RECEIVED);
+        });
+
+        it("ERC20 transferFrom returns false", async function () {
+          const [foreign20ReturnFalse] = await deployMockTokens(gasLimit, ["Foreign20TransferFromReturnFalse"]);
+
+          await foreign20ReturnFalse.connect(operator).mint(operator.address, depositAmount);
+          await foreign20ReturnFalse.connect(operator).approve(protocolDiamond.address, depositAmount);
+
+          await expect(
+            fundsHandler.connect(operator).depositFunds(seller.id, foreign20ReturnFalse.address, depositAmount)
+          ).to.revertedWith(RevertReasons.SAFE_ERC20_NOT_SUCCEEDED);
         });
       });
     });
@@ -1059,7 +1070,7 @@ describe("IBosonFundsHandler", function () {
             await mockToken.destruct();
 
             await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, [], [])).to.revertedWith(
-              RevertReasons.EOA_FUNCTION_CALL
+              RevertReasons.EOA_FUNCTION_CALL_SAFE_ERC20
             );
           });
 
@@ -1070,6 +1081,19 @@ describe("IBosonFundsHandler", function () {
             await expect(fundsHandler.connect(clerk).withdrawFunds(seller.id, [], [])).to.revertedWith(
               RevertReasons.ERC20_PAUSED
             );
+          });
+
+          it("Transfer of funds failed - ERC20 transfer returns false", async function () {
+            const [foreign20ReturnFalse] = await deployMockTokens(gasLimit, ["Foreign20TransferReturnFalse"]);
+
+            await foreign20ReturnFalse.connect(operator).mint(operator.address, sellerDeposit);
+            await foreign20ReturnFalse.connect(operator).approve(protocolDiamond.address, sellerDeposit);
+
+            await fundsHandler.connect(operator).depositFunds(seller.id, foreign20ReturnFalse.address, sellerDeposit);
+
+            await expect(
+              fundsHandler.connect(clerk).withdrawFunds(seller.id, [foreign20ReturnFalse.address], [sellerDeposit])
+            ).to.revertedWith(RevertReasons.SAFE_ERC20_NOT_SUCCEEDED);
           });
         });
       });
@@ -1453,7 +1477,7 @@ describe("IBosonFundsHandler", function () {
             await mockToken.destruct();
 
             await expect(fundsHandler.connect(feeCollector).withdrawProtocolFees([], [])).to.revertedWith(
-              RevertReasons.EOA_FUNCTION_CALL
+              RevertReasons.EOA_FUNCTION_CALL_SAFE_ERC20
             );
           });
 
@@ -1869,7 +1893,7 @@ describe("IBosonFundsHandler", function () {
 
           // Attempt to commit to an offer, expecting revert
           await expect(exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerToken.id)).to.revertedWith(
-            RevertReasons.TOKEN_TRANSFER_FAILED
+            RevertReasons.SAFE_ERC20_LOW_LEVEL_CALL
           );
         });
 
