@@ -59,3 +59,15 @@ This runs the `scripts/manage-roles.js` script against mumbai.
 This runs the `scripts/manage-roles.js` script against mainnet.
 
 ```npm run manage-roles:mainnet```
+
+
+### Verify natspec interface ids
+Builds the contract and checks that interface ids, written in the natespec in interface files, match the actual interface ids.
+It outputs the list of files with errors of two types:
+- MISSING INTERFACE IDS: interface is missing a line ` * The ERC-165 identifier for this interface is: 0xXXXXXXXX`
+- WRONG INTERFACE IDS: interface has wrong interface specified
+
+```npm run natspec-interface-id```
+
+Script will try to automatically fix the wrong interfaces if you run it with
+```npm run natspec-interface-id:fix```, however this cannot fix the missing interface ids.

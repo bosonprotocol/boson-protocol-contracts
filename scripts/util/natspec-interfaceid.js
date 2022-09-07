@@ -1,25 +1,17 @@
 const hre = require("hardhat");
 const { getInterfaceIds } = require("../../scripts/config/supported-interfaces.js");
+const fs = require("fs");
 
-const interfaces = [
-  "IBosonConfigHandler",
-  "IBosonBundleHandler",
-  "IBosonDisputeHandler",
-  "IBosonExchangeHandler",
-  "IBosonFundsHandler",
-  "IBosonGroupHandler",
-  "IBosonOfferHandler",
-  "IBosonTwinHandler",
-  "IBosonAccountHandler",
-  "IBosonOrchestrationHandler",
-  "IBosonClient",
-  "IDiamondCut",
-  "IDiamondLoupe",
-];
+const prefix = "contracts/interfaces/";
+
+// folders to check. Folder names are relative to "contracts/interfaces"
+const sources = ["clients", "diamond", "handlers"];
 
 async function verifyNatspecIntefaceId() {
   let missingInfo = [];
   let wrongIntefaceId = [];
+
+  const tryToFix = process.argv[2] === "--fix";
 
   // get all interface ids
   const InterfaceIds = await getInterfaceIds();
@@ -28,10 +20,10 @@ async function verifyNatspecIntefaceId() {
   const contractNames = await hre.artifacts.getAllFullyQualifiedNames();
 
   for (let contractName of contractNames) {
-    // skip contracts that are not in the list
-    if (!interfaces.some((m) => contractName.match(m))) continue;
-
     const [source, name] = contractName.split(":");
+
+    // skip contracts that are not in the source folders
+    if (!sources.some((s) => source.startsWith(`${prefix}${s}`))) continue;
 
     const description = JSON.parse(
       (await hre.artifacts.getBuildInfo(contractName)).output.contracts[source][name].metadata
@@ -56,7 +48,12 @@ async function verifyNatspecIntefaceId() {
     );
 
     if (erc165identifier !== InterfaceIds[name]) {
-      wrongIntefaceId.push({ name, natspecInfo: erc165identifier, trueInterfaceId: InterfaceIds[name] });
+      if (tryToFix) {
+        replaceStringInFile(source, erc165identifier, InterfaceIds[name]);
+        console.log(`Updated ${source}`);
+      } else {
+        wrongIntefaceId.push({ name, natspecInfo: erc165identifier, trueInterfaceId: InterfaceIds[name] });
+      }
     }
   }
 
@@ -76,6 +73,12 @@ async function verifyNatspecIntefaceId() {
   } else {
     process.exit(1);
   }
+}
+
+function replaceStringInFile(filePath, textToReplace, newText) {
+  let data = fs.readFileSync(filePath, { encoding: "utf8", flag: "r" });
+  let result = data.replace(textToReplace, newText);
+  fs.writeFileSync(filePath, result, { encoding: "utf8", flag: "w" });
 }
 
 verifyNatspecIntefaceId();
