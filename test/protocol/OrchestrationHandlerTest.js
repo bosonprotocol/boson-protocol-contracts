@@ -1353,9 +1353,9 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
-        it("Fulfillment period is set to zero", async function () {
-          // Set fulfilment period to 0
-          offerDurations.fulfillmentPeriod = "0";
+        it("Fulfillment period is less than minimum fulfillment period", async function () {
+          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
+          offerDurations.fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -2179,9 +2179,9 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
-        it("Fulfillment period is set to zero", async function () {
-          // Set fulfilment period to 0
-          offerDurations.fulfillmentPeriod = "0";
+        it("Fulfillment period is less than minimum fulfillment period", async function () {
+          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
+          offerDurations.fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
@@ -2963,9 +2963,9 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
-        it("Fulfillment period is set to zero", async function () {
-          // Set fulfilment period to 0
-          offerDurations.fulfillmentPeriod = "0";
+        it("Fulfillment period is less than minimum fulfillment period", async function () {
+          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
+          offerDurations.fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
@@ -3759,9 +3759,9 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
-        it("Fulfillment period is set to zero", async function () {
-          // Set fulfilment period to 0
-          offerDurations.fulfillmentPeriod = "0";
+        it("Fulfillment period is less than minimum fulfillment period", async function () {
+          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
+          offerDurations.fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(
