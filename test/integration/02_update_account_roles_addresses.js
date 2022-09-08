@@ -20,7 +20,7 @@ const { oneMonth } = require("../utils/constants");
 const { setNextBlockTimestamp, calculateContractAddress } = require("../../scripts/util/test-utils.js");
 
 describe.only("Update account roles addresses", function () {
-  let accountHandler, offerHandler, exchangeHandler, fundsHandler;
+  let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
   let expectedCloneAddress, emptyAuthToken, voucherInitValues;
   let gasLimit;
   let deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR;
@@ -49,6 +49,7 @@ describe.only("Update account roles addresses", function () {
       "OfferHandlerFacet",
       "ExchangeHandlerFacet",
       "FundsHandlerFacet",
+      "DisputeHandlerFacet",
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -109,6 +110,9 @@ describe.only("Update account roles addresses", function () {
     // Cast Diamond to IBosonFundsHandler.
     fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
 
+    // Cast Diamond to IBosonDisputeHandler.
+    disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
+
     // expected address of the first clone
     expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
     emptyAuthToken = mockAuthToken();
@@ -119,10 +123,12 @@ describe.only("Update account roles addresses", function () {
   context("Buyer", function () {
     let buyerAccount;
     let offer, offerDates;
+    let exchangeId;
+    let seller;
 
-    before(async function () {
+    beforeEach(async function () {
       // Create a seller account
-      let seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+      seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
       expect(await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues))
         .to.emit(accountHandler, "SellerCreated")
         .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, emptyAuthToken.toStruct(), admin.address);
@@ -172,17 +178,17 @@ describe.only("Update account roles addresses", function () {
       expect(await accountHandler.createBuyer(buyerAccount))
         .to.emit(accountHandler, "BuyerCreated")
         .withArgs(buyerAccount.id, buyerAccount.toStruct(), buyer.address);
-    });
 
-    it("should be able to withdraw funds after change the wallet address", async function () {
       // Set time forward to the offer's voucherRedeemableFrom
       await setNextBlockTimestamp(Number(offerDates.voucherRedeemableFrom));
 
       // Commit to offer
       await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
 
-      let exchangeId = "1";
+      exchangeId = "1";
+    });
 
+    it("should be able to withdraw funds after change the wallet address", async function () {
       // Cancel the voucher, so buyer have something to withdraw
       await exchangeHandler.connect(buyer).cancelVoucher(exchangeId);
 
@@ -208,6 +214,29 @@ describe.only("Update account roles addresses", function () {
       )
         .to.emit(fundsHandler, "FundsWithdrawn")
         .withArgs(buyerAccount.id, rando.address, ethers.constants.AddressZero, buyerPayoff, rando.address);
+    });
+
+    it.only("should be able to raise a dispute after change the wallet address", async function () {
+      // Redeem the voucher so that buyer can update the wallet
+      await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+
+      buyerAccount.wallet = rando.address;
+      expect(buyerAccount.isValid()).is.true;
+
+      // Update the buyer wallet, testing for the event
+      expect(await accountHandler.connect(buyer).updateBuyer(buyerAccount))
+        .to.emit(accountHandler, "BuyerUpdated")
+        .withArgs(buyer.id, buyerAccount.toStruct(), buyer.address);
+
+      // Attempt to raise a dispute with old buyer wallet, should fail
+      await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWith(
+        RevertReasons.NOT_VOUCHER_HOLDER
+      );
+
+      // Attempt to raise a dispute with new buyer wallet, should succeed
+      await expect(disputeHandler.connect(rando).raiseDispute(exchangeId))
+        .to.emit(disputeHandler, "DisputeRaised")
+        .withArgs(exchangeId, buyerAccount.id, seller.id, rando.address);
     });
   });
 });
