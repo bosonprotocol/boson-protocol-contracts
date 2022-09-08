@@ -27,7 +27,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { getEvent, applyPercentage, calculateContractAddress } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../utils/constants");
+const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../utils/constants");
 const {
   mockTwin,
   mockOffer,
@@ -187,6 +187,7 @@ describe("IBosonOrchestrationHandler", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
+        minFulfillmentPeriod: oneWeek,
       },
       // Protocol fees
       {
@@ -1352,9 +1353,9 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
-        it("Fulfillment period is set to zero", async function () {
-          // Set fulfilment period to 0
-          offerDurations.fulfillmentPeriod = "0";
+        it("Fulfillment period is less than minimum fulfillment period", async function () {
+          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
+          offerDurations.fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to create a seller and an offer, expecting revert
           await expect(
@@ -2178,9 +2179,9 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
-        it("Fulfillment period is set to zero", async function () {
-          // Set fulfilment period to 0
-          offerDurations.fulfillmentPeriod = "0";
+        it("Fulfillment period is less than minimum fulfillment period", async function () {
+          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
+          offerDurations.fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to create an offer with condition, expecting revert
           await expect(
@@ -2962,9 +2963,9 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
-        it("Fulfillment period is set to zero", async function () {
-          // Set fulfilment period to 0
-          offerDurations.fulfillmentPeriod = "0";
+        it("Fulfillment period is less than minimum fulfillment period", async function () {
+          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
+          offerDurations.fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to create an offer and add it to the group, expecting revert
           await expect(
@@ -3758,9 +3759,9 @@ describe("IBosonOrchestrationHandler", function () {
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
-        it("Fulfillment period is set to zero", async function () {
-          // Set fulfilment period to 0
-          offerDurations.fulfillmentPeriod = "0";
+        it("Fulfillment period is less than minimum fulfillment period", async function () {
+          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
+          offerDurations.fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to create an offer, twin and bundle, expecting revert
           await expect(

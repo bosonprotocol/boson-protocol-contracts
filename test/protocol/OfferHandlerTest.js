@@ -182,6 +182,7 @@ describe("IBosonOfferHandler", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
+        minFulfillmentPeriod: oneWeek,
       },
       // Protocol fees
       {
@@ -708,9 +709,9 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
-        it("Fulfillment period is set to zero", async function () {
-          // Set fulfilment period to 0
-          offerDurations.fulfillmentPeriod = "0";
+        it("Fulfillment period is less than minimum fulfillment period", async function () {
+          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
+          offerDurations.fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(
@@ -2052,9 +2053,9 @@ describe("IBosonOfferHandler", function () {
           ).to.revertedWith(RevertReasons.REDEMPTION_PERIOD_INVALID);
         });
 
-        it("For some offer, fulfillment period is set to zero", async function () {
-          // Set fulfilment period to 0
-          offerDurationsList[1].fulfillmentPeriod = "0";
+        it("For some offer, Fulfillment period is less than minimum fulfillment period", async function () {
+          // Set fulfilment period to less than minFulfillmentPeriod (oneWeek)
+          offerDurationsList[1].fulfillmentPeriod = ethers.BigNumber.from(oneWeek).sub(1000).toString();
 
           // Attempt to Create an offer, expecting revert
           await expect(

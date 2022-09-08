@@ -51,6 +51,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         setMaxTotalOfferFeePercentage(_limits.maxTotalOfferFeePercentage);
         setMaxRoyaltyPecentage(_limits.maxRoyaltyPecentage);
         setMaxResolutionPeriod(_limits.maxResolutionPeriod);
+        setMinFulfillmentPeriod(_limits.minFulfillmentPeriod);
 
         // Initialize protocol counters
         ProtocolLib.ProtocolCounters storage pc = protocolCounters();
@@ -543,5 +544,24 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getMaxResolutionPeriod() external view override returns (uint256) {
         return protocolLimits().maxResolutionPeriod;
+    }
+
+    /**
+     * @notice Sets the minimum fulfillment period a seller can specify.
+     *
+     * Emits a MinFulfillmentPeriodChanged event.
+     *
+     * @param _minFulfillmentPeriod - the minimum resolution period that a {BosonTypes.Seller} can specify
+     */
+    function setMinFulfillmentPeriod(uint256 _minFulfillmentPeriod) public override onlyRole(ADMIN) nonReentrant {
+        protocolLimits().minFulfillmentPeriod = _minFulfillmentPeriod;
+        emit MinFulfillmentPeriodChanged(_minFulfillmentPeriod, msgSender());
+    }
+
+    /**
+     * @notice Gets the minimum fulfillment period a seller can specify.
+     */
+    function getMinFulfillmentPeriod() external view override returns (uint256) {
+        return protocolLimits().minFulfillmentPeriod;
     }
 }

@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const { oneMonth } = require("../../test/utils/constants");
+const { oneWeek, oneMonth } = require("../../test/utils/constants");
 
 /**
  *  Protocol config parameters, used during the deployment
@@ -27,6 +27,7 @@ module.exports = {
     maxTotalOfferFeePercentage: 4000, // 40%
     maxRoyaltyPecentage: 1000, //10%
     maxResolutionPeriod: oneMonth,
+    minFulfillmentPeriod: oneWeek,
   },
   buyerEscalationDepositPercentage: "100", // 1%
 

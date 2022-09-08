@@ -13,7 +13,7 @@ const { mockOffer } = require("../../utils/mock.js");
 const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
 const { assert, expect } = require("chai");
 const { RevertReasons } = require("../../../scripts/config/revert-reasons");
-const { oneMonth } = require("../../utils/constants");
+const { oneWeek, oneMonth } = require("../../utils/constants");
 const {
   mockDisputeResolver,
   mockSeller,
@@ -113,6 +113,7 @@ describe("IBosonVoucher", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
+        minFulfillmentPeriod: oneWeek,
       },
       //Protocol fees
       {

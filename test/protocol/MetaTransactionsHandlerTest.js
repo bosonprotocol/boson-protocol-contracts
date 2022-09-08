@@ -28,7 +28,7 @@ const {
   accountId,
   mockExchange,
 } = require("../utils/mock");
-const { oneMonth } = require("../utils/constants");
+const { oneWeek, oneMonth } = require("../utils/constants");
 /**
  *  Test the Boson Meta transactions Handler interface
  */
@@ -162,6 +162,7 @@ describe("IBosonMetaTransactionsHandler", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
+        minFulfillmentPeriod: oneWeek,
       },
       // Protocol fees
       {
