@@ -6,7 +6,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IERC20 } from "../../interfaces/IERC20.sol";
-import { SafeERC20 } from "../../libs/SafeERC20.sol";
+import { SafeERC20 } from "../../ext_libs/SafeERC20.sol";
 
 /**
  * @title FundsLib
