@@ -2893,7 +2893,6 @@ describe("IBosonExchangeHandler", function () {
           // Pause the exchanges region of the protocol
           await pauseHandler.connect(pauser).pause([PausableRegion.Exchanges]);
 
-          console.log(id);
           // Attempt to complete an exchange, expecting revert
           await expect(exchangeHandler.connect(operator).extendVoucher(exchange.id, validUntilDate)).to.revertedWith(
             RevertReasons.REGION_PAUSED
@@ -3225,12 +3224,12 @@ describe("IBosonExchangeHandler", function () {
         });
 
         it("should return true if exchange has a dispute in Resolved state", async function () {
-          const buyerPercent = "5566"; // 55.66%
+          const buyerPercentBasisPoints = "5566"; // 55.66%
 
           // Set the message Type, needed for signature
           const resolutionType = [
             { name: "exchangeId", type: "uint256" },
-            { name: "buyerPercent", type: "uint256" },
+            { name: "buyerPercentBasisPoints", type: "uint256" },
           ];
 
           const customSignatureType = {
@@ -3239,7 +3238,7 @@ describe("IBosonExchangeHandler", function () {
 
           const message = {
             exchangeId: exchange.id,
-            buyerPercent,
+            buyerPercentBasisPoints,
           };
 
           // Collect the signature components
@@ -3252,7 +3251,7 @@ describe("IBosonExchangeHandler", function () {
           );
 
           // Resolve Dispute
-          await disputeHandler.connect(operator).resolveDispute(exchange.id, buyerPercent, r, s, v);
+          await disputeHandler.connect(operator).resolveDispute(exchange.id, buyerPercentBasisPoints, r, s, v);
 
           // Now in Resolved state, ask if exchange is finalized
           [exists, response] = await exchangeHandler.connect(rando).isExchangeFinalized(exchange.id);
