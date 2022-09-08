@@ -25,7 +25,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Neither of voucher expiration date and voucher expiraton period are defined
      * - Voucher redeemable period is fixed, but it ends before it starts
      * - Voucher redeemable period is fixed, but it ends before offer expires
-     * - Fulfillment period is set to zero
+     * - Fulfillment period is less than minimum fulfillment period
      * - Resolution period is set to zero
      * - Voided is set to true
      * - Available quantity is set to zero
@@ -85,7 +85,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Neither of fixed voucher expiration date and voucher redemption duration are defined
      * - Voucher redeemable period is fixed, but it ends before it starts
      * - Voucher redeemable period is fixed, but it ends before offer expires
-     * - Fulfillment period is set to zero
+     * - Fulfillment period is less than minimum fulfillment period
      * - Resolution period is set to zero
      * - Voided is set to true
      * - Available quantity is set to zero
@@ -128,8 +128,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             require(_offerDurations.voucherValid > 0, AMBIGUOUS_VOUCHER_EXPIRY);
         }
 
-        // fulfillment period must be greater than zero
-        require(_offerDurations.fulfillmentPeriod > 0, INVALID_FULFILLMENT_PERIOD);
+        // fulfillment period must be greater than minimum fulfillment period
+        require(_offerDurations.fulfillmentPeriod >= protocolLimits().minFulfillmentPeriod, INVALID_FULFILLMENT_PERIOD);
 
         // dispute duration must be greater than zero
         require(

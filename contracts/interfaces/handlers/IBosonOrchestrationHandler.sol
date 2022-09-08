@@ -53,7 +53,7 @@ interface IBosonOrchestrationHandler is
      *   - Neither of voucher expiration date and voucher expiraton period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
-     *   - Fulfillment period is set to zero
+     *   - Fulfillment period is less than minimum fulfillment period
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
@@ -103,7 +103,7 @@ interface IBosonOrchestrationHandler is
      *   - Neither of voucher expiration date and voucher expiraton period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
-     *   - Fulfillment period is set to zero
+     *   - Fulfillment period is less than minimum fulfillment period
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
@@ -150,7 +150,7 @@ interface IBosonOrchestrationHandler is
      *   - Neither of voucher expiration date and voucher expiraton period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
-     *   - Fulfillment period is set to zero
+     *   - Fulfillment period is less than minimum fulfillment period
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
@@ -199,7 +199,7 @@ interface IBosonOrchestrationHandler is
      *   - Neither of voucher expiration date and voucher expiraton period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
-     *   - Fulfillment period is set to zero
+     *   - Fulfillment period is less than minimum fulfillment period
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
@@ -249,7 +249,7 @@ interface IBosonOrchestrationHandler is
      *   - Neither of voucher expiration date and voucher expiraton period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
-     *   - Fulfillment period is set to zero
+     *   - Fulfillment period is less than minimum fulfillment period
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
@@ -316,7 +316,7 @@ interface IBosonOrchestrationHandler is
      *   - Neither of voucher expiration date and voucher expiraton period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
-     *   - Fulfillment period is set to zero
+     *   - Fulfillment period is less than minimum fulfillment period
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
@@ -386,7 +386,7 @@ interface IBosonOrchestrationHandler is
      *   - Neither of voucher expiration date and voucher expiraton period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
-     *   - Fulfillment period is set to zero
+     *   - Fulfillment period is less than minimum fulfillment period
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
@@ -458,7 +458,7 @@ interface IBosonOrchestrationHandler is
      *   - Neither of voucher expiration date and voucher expiraton period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
-     *   - Fulfillment period is set to zero
+     *   - Fulfillment period is less than minimum fulfillment period
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
