@@ -331,7 +331,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     function getMaxResolutionPeriod() external view returns (uint256);
 
     /**
-     * @notice Sets the minimum fulfillment period a seller can specify
+     * @notice Sets the minimum fulfillment period a seller can specify..
      *
      * Emits a MinFulfillmentPeriodChanged event.
      *
@@ -340,7 +340,7 @@ interface IBosonConfigHandler is IBosonConfigEvents {
     function setMinFulfillmentPeriod(uint256 _minFulfillmentPeriod) external;
 
     /**
-     * @notice Get the minimum fulfillment period a seller can specify
+     * @notice Gets the minimum fulfillment period a seller can specify.
      */
     function getMinFulfillmentPeriod() external view returns (uint256);
 }

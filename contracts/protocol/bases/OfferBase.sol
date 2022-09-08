@@ -128,7 +128,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             require(_offerDurations.voucherValid > 0, AMBIGUOUS_VOUCHER_EXPIRY);
         }
 
-        // fulfillment period must be greater than minimum fulfillment period
+        // fulfillment period must be greater than or equal to the minimum fulfillment period
         require(_offerDurations.fulfillmentPeriod >= protocolLimits().minFulfillmentPeriod, INVALID_FULFILLMENT_PERIOD);
 
         // dispute duration must be greater than zero

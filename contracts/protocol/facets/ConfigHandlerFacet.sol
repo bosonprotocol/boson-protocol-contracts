@@ -547,7 +547,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     }
 
     /**
-     * @notice Sets the minimum fulfillment period a seller can specify
+     * @notice Sets the minimum fulfillment period a seller can specify..
      *
      * Emits a MinFulfillmentPeriodChanged event.
      *
@@ -559,7 +559,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     }
 
     /**
-     * @notice Get the minimum fulfillment period a seller can specify
+     * @notice Gets the minimum fulfillment period a seller can specify.
      */
     function getMinFulfillmentPeriod() external view override returns (uint256) {
         return protocolLimits().minFulfillmentPeriod;
