@@ -84,7 +84,7 @@ describe("IBosonExchangeHandler", function () {
     configHandler;
   let bosonVoucher, voucherImplementation;
   let bosonVoucherClone, bosonVoucherCloneAddress;
-  let id, buyerId, offerId, seller, nextExchangeId, nextAccountId, disputeResolverId;
+  let buyerId, offerId, seller, nextExchangeId, nextAccountId, disputeResolverId;
   let block, blockNumber, tx, txReceipt, event;
   let support, newTime;
   let price, sellerPool;
