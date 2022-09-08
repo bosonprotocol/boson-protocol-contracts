@@ -2,7 +2,7 @@
 
 <h1 align="center">Boson Protocol V2</h1>
 
-## [Intro](../README.md) | [Setup](setup.md) | Tasks |  [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md)
+## [Intro](../README.md) | [Setup](setup.md) | Tasks | [Local development](local-development.md) |  [Architecture](architecture.md) | [Domain Model](domain.md) | [State Machines](state-machines.md)
 ## Development Tasks
 Everything required to build, test, analyse, and deploy is available as an NPM script.
 * Scripts are defined in [`package.json`](../package.json).
@@ -16,49 +16,73 @@ This creates the build artifacts for deployment or testing
 ```npm run build```
 
 ### Test the contracts
-This builds the contracts and runs the unit tests.
+This builds the contracts and runs the unit tests. It also runs the gas reporter and it outputs the report at the end of the tests.
 
 ```npm run test```
 
-### Deploy to Hardhat network
-This deploys the built contracts to local network (mainly to test deployment script). Deployed contracts are discarded afterwards.
+### Run the code coverage
+This builds the contracts and runs the code coverage. This is slower than testing since it makes sure that every line of our contracts is tested. It outputs the report in folder `coverage`.
 
+```npm run coverage```
+
+### Deploy suite
+Deploy suite deploys protocol diamond, all facets, client and beacon, and initializes protcol diamond. We provide different npm scripts for different use cases.
+
+- **Hardhat network**. This deploys the built contracts to local network (mainly to test deployment script). Deployed contracts are discarded afterwards.  
 ```npm run deploy-suite:hardhat```
-
-### Deploy to local network
-This deploys the built contracts to independent instance of local network (e.g. `npx hardhat node`), so the deployed contracts can be used with other contracts/dapps in development
-
+- **local network**. This deploys the built contracts to independent instance of local network (e.g. `npx hardhat node`), so the deployed contracts can be used with other contracts/dapps in development. Step-by-step manual to use it is available [here](local-development.md).  
 ```npm run deploy-suite:local```
-
-### Deploy to internal test node
-This deploys the built contracts to an internal geth node used as a test environment
-
+- **internal test node**. This deploys the built contracts to custom test network. You need to modifiy `.env` with appropriate values for this to work.  
 ```npm run deploy-suite:test```
-
-### Deploy to Mumbai
-This deploys the built contracts to Mumbai
-
+- **Mumbai**. This deploys the built contracts to Mumbai.  
 ```npm run deploy-suite:mumbai```
-
-### Deploy to Mainnet
-This deploys the built contracts to Mainnet
-
+- **Mainnet**. This deploys the built contracts to Mainnet.
 ```npm run deploy-suite:mainnet```
 
-### Manage Roles on local network
-This runs the `scripts/manage-roles.js` script against independent instance of local network (e.g. `npx hardhat node`)
+### Deploy mock authentiacion token
+Boson protocol support LENS and ENS as authentication method for seller's admin account. Public networks have LENS and ENS already deployed, but to use that funcionality on custom local or test nodes, you need to deploy the mock contract first. We provide the scripts for the following networks:
 
+- **Hardhat network**. This deploys the built contracts to local network (mainly to test deployment script). Deployed contracts are discarded afterwards.  
+```npm run deploy-mocks:hardhat```
+- **local network**. This deploys the built contracts to independent instance of local network (e.g. `npx hardhat node`), so the deployed contracts can be used with other contracts/dapps in development. Step-by-step manual to use it is available [here](local-development.md).  
+```npm run deploy-mocks:local```
+- **internal test node**. This deploys the built contracts to custom test network. You need to modifiy `.env` with appropriate values for this to work.  
+```npm run deploy-mocks:test```
+
+### Manage Roles 
+This runs the `scripts/manage-roles.js` script against the chosen network. It works in collaboration with `scripts/config/role-assignments.js` where you can specify which address should be granted or revoked the specified role. Currently supported roles are `ADMIN`,`UPGRADER`,`PAUSER`,`PROTOCOL`,`CLIENT` and `FEE_COLLECTOR`.
+You cannot run this script agains `hardhat` network, all other networks are supported.
+
+- **local network**. This deploys the built contracts to independent instance of local network (e.g. `npx hardhat node`), so the deployed contracts can be used with other contracts/dapps in development. Step-by-step manual to use it is available [here](local-development.md).  
 ```npm run manage-roles:local```
-
-### Manage Roles on Mumbai
-This runs the `scripts/manage-roles.js` script against mumbai.
-
+- **internal test node**. This runs the management script against the custom test network. You need to modifiy `.env` with appropriate values for this to work. 
+```npm run manage-roles:test```
+- **Mumbai**. This runs the management script against the Mumbai. You need to modifiy `.env` with appropriate values for this to work.  
 ```npm run manage-roles:mumbai```
-
-### Manage Roles on Mainnet
-This runs the `scripts/manage-roles.js` script against mainnet.
-
+- **Mainnet**. This runs the management script against the Mainnet. You need to modifiy `.env` with appropriate values for this to work.  
 ```npm run manage-roles:mainnet```
+
+### Linting and tidying
+Contracts and scripts are linted using `solhint` and `eslint` respectively and prettified using `prettier`. There are two types of npm scripts:
+- only check if there are any problems in contracts/scripts
+  ```
+  npm run check:contracts
+  npm run check:scripts
+  ```
+- check and try to fix problems in contracts/scripts. This overwrites existing files.
+   ```
+  npm run tidy:contracts
+  npm run tidy:scripts
+  ```
+
+**NOTE**: If you want to contribute to this repository by opening a PR, make sure that this scripts are run first, otherwise PR checks will fail.
+
+### Size the contracts
+This builds the contracts calculates their byte size. Useful to make sure the contracts are not over the limit of 24kb.
+
+```npm run size```
+
+
 
 
 ### Verify natspec interface ids
