@@ -182,6 +182,7 @@ describe("IBosonOfferHandler", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
+        minFulfillmentPeriod: oneWeek,
       },
       // Protocol fees
       {

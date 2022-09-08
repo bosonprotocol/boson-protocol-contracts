@@ -27,7 +27,7 @@ const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protoco
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { getEvent, applyPercentage, calculateContractAddress } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
-const { oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../utils/constants");
+const { oneWeek, oneMonth, VOUCHER_NAME, VOUCHER_SYMBOL } = require("../utils/constants");
 const {
   mockTwin,
   mockOffer,
@@ -187,6 +187,7 @@ describe("IBosonOrchestrationHandler", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
+        minFulfillmentPeriod: oneWeek,
       },
       // Protocol fees
       {

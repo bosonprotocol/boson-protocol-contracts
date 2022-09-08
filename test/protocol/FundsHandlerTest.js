@@ -20,7 +20,7 @@ const {
   prepareDataSignatureParameters,
   applyPercentage,
 } = require("../../scripts/util/test-utils.js");
-const { oneMonth } = require("../utils/constants");
+const { oneWeek, oneMonth } = require("../utils/constants");
 const {
   mockOffer,
   mockDisputeResolver,
@@ -186,6 +186,7 @@ describe("IBosonFundsHandler", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
+        minFulfillmentPeriod: oneWeek,
       },
       // Protocol fees
       {

@@ -17,7 +17,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { getEvent } = require("../../scripts/util/test-utils.js");
-const { oneMonth } = require("../utils/constants");
+const { oneWeek, oneMonth } = require("../utils/constants");
 const {
   mockOffer,
   mockDisputeResolver,
@@ -113,6 +113,7 @@ describe("IBosonGroupHandler", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
+        minFulfillmentPeriod: oneWeek,
       },
       // Protocol fees
       {
