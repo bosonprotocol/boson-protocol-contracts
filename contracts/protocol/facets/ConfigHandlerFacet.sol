@@ -547,7 +547,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
     }
 
     /**
-     * @notice Sets the minimum fulfillment period a seller can specify..
+     * @notice Sets the minimum fulfillment period a seller can specify.
      *
      * Emits a MinFulfillmentPeriodChanged event.
      *
