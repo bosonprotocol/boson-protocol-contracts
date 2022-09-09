@@ -16,7 +16,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
  */
 contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     bytes32 private constant RESOLUTION_TYPEHASH =
-        keccak256(bytes("Resolution(uint256 exchangeId,uint256 buyerPercent)")); // needed for verification during the resolveDispute
+        keccak256(bytes("Resolution(uint256 exchangeId,uint256 buyerPercentBasisPoints)")); // needed for verification during the resolveDispute
 
     /**
      * @notice Facet Initializer
