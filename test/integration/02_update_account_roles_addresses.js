@@ -21,6 +21,7 @@ const {
   setNextBlockTimestamp,
   calculateContractAddress,
   prepareDataSignatureParameters,
+  applyPercentage,
 } = require("../../scripts/util/test-utils.js");
 
 describe.only("Update account roles addresses", function () {
@@ -28,6 +29,7 @@ describe.only("Update account roles addresses", function () {
   let expectedCloneAddress, emptyAuthToken, voucherInitValues;
   let gasLimit;
   let deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR;
+  let buyerEscalationDepositPercentage;
 
   before(async function () {
     // Make accounts available
@@ -65,7 +67,7 @@ describe.only("Update account roles addresses", function () {
     // set protocolFees
     const protocolFeePercentage = "200"; // 2 %
     const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
-    const buyerEscalationDepositPercentage = "1000"; // 10%
+    buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
     const protocolConfig = [
@@ -125,9 +127,10 @@ describe.only("Update account roles addresses", function () {
   });
 
   context("Exchange related actions", function () {
-    let buyerAccount, seller;
+    let buyerAccount, seller, disputeResolver;
     let offer, offerDates, offerDurations, disputeResolverId;
     let exchangeId;
+    let disputeResolverFeeNative;
 
     beforeEach(async function () {
       // Create a seller account
@@ -136,9 +139,8 @@ describe.only("Update account roles addresses", function () {
         .to.emit(accountHandler, "SellerCreated")
         .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, emptyAuthToken.toStruct(), admin.address);
 
-      console.log("aq");
       // Create a dispute resolver
-      const disputeResolver = mockDisputeResolver(
+      disputeResolver = mockDisputeResolver(
         operatorDR.address,
         adminDR.address,
         clerkDR.address,
@@ -148,7 +150,10 @@ describe.only("Update account roles addresses", function () {
       expect(disputeResolver.isValid()).is.true;
 
       //Create DisputeResolverFee array so offer creation will succeed
-      const disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "0")];
+      disputeResolverFeeNative = ethers.utils.parseUnits("1", "ether").toString();
+      const disputeResolverFees = [
+        new DisputeResolverFee(ethers.constants.AddressZero, "Native", disputeResolverFeeNative),
+      ];
 
       // Make empty seller list, so every seller is allowed
       const sellerAllowList = [];
@@ -246,7 +251,7 @@ describe.only("Update account roles addresses", function () {
       });
     });
 
-    context.only("Dispute actions", async function () {
+    context("Dispute actions", async function () {
       beforeEach(async function () {
         // Redeem the voucher so that buyer can update the wallet
         await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
@@ -272,10 +277,10 @@ describe.only("Update account roles addresses", function () {
           .withArgs(exchangeId, buyerAccount.id, seller.id, rando.address);
       });
 
-      context.only("Resolve dispute", async function () {
+      context("Resolve dispute", async function () {
         let message, customSignatureType, resolutionType, buyerPercent;
+
         beforeEach(async function () {
-          // Raise a dispute, testing for the event
           await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
           buyerPercent = "1234";
@@ -326,7 +331,7 @@ describe.only("Update account roles addresses", function () {
         });
 
         it("Buyer should be able to resolve a dispute after change the wallet address", async function () {
-          buyer.wallet = rando.address;
+          buyerAccount.wallet = rando.address;
           expect(buyerAccount.isValid()).is.true;
 
           // Update the buyer wallet, testing for the event
@@ -351,6 +356,43 @@ describe.only("Update account roles addresses", function () {
           // Attempt to resolve a dispute with new buyer wallet, should succeed
           await expect(disputeHandler.connect(rando).resolveDispute(exchangeId, buyerPercent, r, s, v))
             .to.emit(disputeHandler, "DisputeResolved")
+            .withArgs(exchangeId, buyerPercent, rando.address);
+        });
+      });
+
+      context("Decide dispute", async function () {
+        beforeEach(async function () {
+          // Raise a dispute
+          await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+
+          const buyerEscalationDepositNative = applyPercentage(
+            disputeResolverFeeNative,
+            buyerEscalationDepositPercentage
+          );
+
+          // Escalate the dispute
+          await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+        });
+
+        it("Dispute resolver should be able to decide a dispute after change the operator address", async function () {
+          disputeResolver.operator = rando.address;
+          expect(disputeResolver.isValid()).is.true;
+
+          // Update the dispute resolver operator, testing for the event
+          expect(await accountHandler.connect(adminDR).updateDisputeResolver(disputeResolver))
+            .to.emit(accountHandler, "DisputeResolverUpdated")
+            .withArgs(disputeResolver.id, disputeResolver.toStruct(), adminDR.address);
+
+          const buyerPercent = "1234";
+
+          // Attempt to decide a dispute with old dispute resolver operator, should fail
+          await expect(disputeHandler.connect(operator).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
+            RevertReasons.NOT_DISPUTE_RESOLVER_OPERATOR
+          );
+
+          // Attempt to decide a dispute with new dispute resolver operator, should fail
+          await expect(disputeHandler.connect(rando).decideDispute(exchangeId, buyerPercent))
+            .to.emit(disputeHandler, "DisputeDecided")
             .withArgs(exchangeId, buyerPercent, rando.address);
         });
       });
