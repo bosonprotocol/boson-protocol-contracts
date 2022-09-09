@@ -12,7 +12,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { calculateContractAddress } = require("../../scripts/util/test-utils.js");
-const { oneMonth } = require("../utils/constants");
+const { oneWeek, oneMonth } = require("../utils/constants");
 const {
   mockOffer,
   mockSeller,
@@ -113,6 +113,7 @@ describe("BuyerHandler", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
+        minFulfillmentPeriod: oneWeek,
       },
       // Protocol fees
       {

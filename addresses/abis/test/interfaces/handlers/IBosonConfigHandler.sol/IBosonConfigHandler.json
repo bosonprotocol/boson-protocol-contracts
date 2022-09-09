@@ -319,6 +319,25 @@
         {
           "indexed": false,
           "internalType": "uint256",
+          "name": "minFulfillmentPeriod",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MinFulfillmentPeriodChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
           "name": "feeFlatBoson",
           "type": "uint256"
         },
@@ -624,6 +643,19 @@
     },
     {
       "inputs": [],
+      "name": "getMinFulfillmentPeriod",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "getProtocolFeeFlatBoson",
       "outputs": [
         {
@@ -896,6 +928,19 @@
         }
       ],
       "name": "setMaxTwinsPerBundle",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_minFulfillmentPeriod",
+          "type": "uint256"
+        }
+      ],
+      "name": "setMinFulfillmentPeriod",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

@@ -28,6 +28,8 @@ jobs:
       - run: npm run build
       - run: npm run check:contracts
       - run: npm run check:scripts
+      - name: verify interface ids
+        run: npm run natspec-interface-id
 
   test:
     needs: build

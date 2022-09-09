@@ -2,7 +2,7 @@
 
 <h1 align="center">Boson Protocol V2</h1>
 
-## Intro | [Setup](docs/setup.md) | [Tasks](docs/tasks.md) |  [Architecture](docs/architecture.md) | [Domain Model](docs/domain.md) | [State Machines](docs/state-machines.md)
+## Intro | [Setup](docs/setup.md) | [Tasks](docs/tasks.md) | [Local development](docs/local-development.md) | [Architecture](docs/architecture.md) | [Domain Model](docs/domain.md) | [State Machines](docs/state-machines.md)
 
 ## Status
 Done or in progress are:
