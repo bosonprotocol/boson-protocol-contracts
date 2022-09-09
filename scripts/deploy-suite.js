@@ -14,12 +14,14 @@ const { deployProtocolClients } = require("./util/deploy-protocol-clients.js");
 const { deployProtocolConfigFacet } = require("./util/deploy-protocol-config-facet.js");
 const { deployProtocolHandlerFacets } = require("./util/deploy-protocol-handler-facets.js");
 const {
-  delay,
-  deploymentComplete,
   verifyOnBlockExplorer,
   verifyOnTestEnv,
-  writeContracts,
 } = require("./util/report-verify-deployments");
+const {
+  delay,
+  deploymentComplete,
+  writeContracts,
+} = require("./util/utils");
 const AuthTokenType = require("../scripts/domain/AuthTokenType");
 
 /**

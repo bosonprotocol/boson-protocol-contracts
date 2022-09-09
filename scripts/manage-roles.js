@@ -1,8 +1,9 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const network = hre.network.name;
-const { ContractAddresses } = require("./config/contract-addresses");
 const { RoleAssignments } = require("./config/role-assignments");
+const { readContracts } = require("./util/utils");
+const environments = require("../environments");
 const Role = require("./domain/Role");
 
 /**
@@ -27,8 +28,11 @@ const Role = require("./domain/Role");
  *  3. Save changes to the repo as a record of who has what roles
  */
 async function main() {
-  // Bail now if local network
+  // Bail now if hardhat network
   if (network === "hardhat") process.exit();
+
+  const chainId = (await hre.ethers.provider.getNetwork()).chainId;
+  const contractsFile = readContracts(chainId, network);
 
   const divider = "-".repeat(80);
   console.log(`${divider}\nBoson Protocol Contract Suite Role Manager\n${divider}`);
@@ -42,16 +46,25 @@ async function main() {
 
   console.log(`🔑 Confirming roles...`);
 
+  const accessControllerInfo = contractsFile.contracts.find(i => i.name==="AccessController");
+
   // Get AccessController abstraction
-  const accessController = await ethers.getContractAt("AccessController", ContractAddresses[network].AccessController);
+  const accessController = await ethers.getContractAt("AccessController", accessControllerInfo.address);
 
   // Loop through assignments for this network
   const assignments = Object.entries(RoleAssignments[network]);
+
   for (let i = 0; i < assignments.length; i++) {
     // Get the assignment and break into name / config
     const assignment = assignments[i];
     const [name, config] = assignment;
+
     console.log(`\n🔍 ${name}`);
+   
+    let contractInfo;
+    contractInfo = contractsFile.contracts.find(i => i.name===name);
+    name === "AdminAddress" ? config.address = environments[network].adminAddress : config.address = contractInfo.address;
+
     console.log(`   👉 ${config.address}`);
 
     // Loop through assigned roles for address
@@ -71,6 +84,7 @@ async function main() {
 
     // Make sure previously assigned but now unassigned roles are removed
     const unassigned = Role.Names.filter((name) => !config.roles.includes(Role[name]));
+
     for (let j = 0; j < unassigned.length; j++) {
       // Check if role currently assigned
       const role = Role[unassigned[j]];
