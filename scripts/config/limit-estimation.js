@@ -4,20 +4,24 @@
  *
  * If a new limit is added to the smart contracts, this list should be updated.
  */
-exports.limits = {
-    safeGasLimitPercent: 60,
-    limits: [
-        { limit: "maxExchangesPerBatch", methods: ["completeExchangeBatch"] },
-        { limit: "maxOffersPerGroup", methods: ["createGroup", "addOffersToGroup", "removeOffersFromGroup"] },
-        { limit: "maxOffersPerBundle", methods: ["createBundle"] },
-        { limit: "maxTwinsPerBundle", methods: ["createBundle"] },
-        { limit: "maxOffersPerBatch", methods: ["createOfferBatch", "voidOfferBatch", "extendOfferBatch"] },
-        { limit: "maxTokensPerWithdrawal", methods: ["withdrawFunds", "withdrawProtocolFees"] },
-        { limit: "maxFeesPerDisputeResolver", methods: ["createDisputeResolver", "addFeesToDisputeResolver", "removeFeesFromDisputeResolver"] },
-        { limit: "maxDisputesPerBatch", methods: ["expireDisputeBatch"] },
-        { limit: "maxAllowedSellers", methods: ["createDisputeResolver", "addSellersToAllowList", "removeSellersFromAllowList"] },
-    ]
-}
-
-
-
+exports.limitsToEstimate = {
+  safeGasLimitPercent: 60,
+  limits: [
+    // { name: "maxExchangesPerBatch", methods: ["completeExchangeBatch"] },
+    // { name: "maxOffersPerGroup", methods: ["createGroup", "addOffersToGroup", "removeOffersFromGroup"] },
+    // { name: "maxOffersPerBundle", methods: ["createBundle"] },
+    // { name: "maxTwinsPerBundle", methods: ["createBundle"] },
+    // { name: "maxOffersPerBatch", methods: ["createOfferBatch", "voidOfferBatch", "extendOfferBatch"] },
+    // { name: "maxTokensPerWithdrawal", methods: ["withdrawFunds", "withdrawProtocolFees"] },
+    // { name: "maxFeesPerDisputeResolver", methods: ["createDisputeResolver", "addFeesToDisputeResolver", "removeFeesFromDisputeResolver"] },
+    // { name: "maxDisputesPerBatch", methods: ["expireDisputeBatch"] },
+    {
+      name: "maxAllowedSellers",
+      methods: {
+        createDisputeResolver: "IBosonAccountHandler",
+        addSellersToAllowList: "IBosonAccountHandler",
+        removeSellersFromAllowList: "IBosonAccountHandler",
+      },
+    },
+  ],
+};
