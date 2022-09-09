@@ -1,6 +1,8 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const gasLimit = hre.network.config.blockGasLimit;
+const simpleStatistic = require("simple-statistics");
+const fs = require("fs");
 
 const { limitsToEstimate } = require("../config/limit-estimation");
 
@@ -18,13 +20,14 @@ let deployer, pauser, operator, admin, clerk, treasury, other1, other2, other3, 
 let protocolDiamond, accessController, accountHandler;
 let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
 let handlers = {};
+let result = {};
 
 let setupEnvironment = {};
 setupEnvironment["maxAllowedSellers"] = async function () {
   // AuthToken
   const emptyAuthToken = mockAuthToken();
   const voucherInitValues = mockVoucherInitValues();
-  const sellerCount = 100;
+  const sellerCount = 10;
 
   for (let i = 0; i < sellerCount; i++) {
     const wallet = ethers.Wallet.createRandom();
@@ -52,11 +55,13 @@ async function estimateLimits() {
   await setupCommonEnvironment();
   for (const limit of limitsToEstimate.limits) {
     const inputs = await setupEnvironment[limit.name]();
-    await estimateLimit(limit, inputs);
+    await estimateLimit(limit, inputs, limitsToEstimate.safeGasLimitPercent);
   }
+  fs.writeFileSync(__dirname + "/limit_estimates.json", JSON.stringify(result));
 }
 
-async function estimateLimit(limit, inputs) {
+async function estimateLimit(limit, inputs, safeGasLimitPercent) {
+  result[limit.name] = {};
   for (const [method, handler] of Object.entries(limit.methods)) {
     const methodInputs = inputs[method];
     if (methodInputs === undefined) {
@@ -65,8 +70,8 @@ async function estimateLimit(limit, inputs) {
     }
 
     const maxArrayLength = methodInputs.args[methodInputs.arrayIndex].length;
-    // let gasEstimates = [];
-    for (let o = 0; Math.pow(10, o) < maxArrayLength; o++) {
+    let gasEstimates = [];
+    for (let o = 0; Math.pow(10, o) <= maxArrayLength; o++) {
       console.log("order", o);
       for (let i = 1; i < 10; i++) {
         let arrayLength = i * Math.pow(10, o);
@@ -79,13 +84,24 @@ async function estimateLimit(limit, inputs) {
           ...args.slice(methodInputs.arrayIndex + 1),
         ];
 
-        const gasEstimate = await handlers[handler].estimateGas[method](...adjustedArgs);
+        const gasEstimate = await handlers[handler].estimateGas[method](...adjustedArgs, { gasLimit });
         console.log(arrayLength, gasEstimate);
-        // gasEstimates.push({ offerIdCount, gasEstimate: gasEstimate.toString() });
+        gasEstimates.push([gasEstimate.toNumber(), arrayLength]);
         if (arrayLength == maxArrayLength) break;
       }
     }
+    const { maxNumber, safeNumber } = calculateLimit(gasEstimates, safeGasLimitPercent);
+    result[limit.name][method] = { gasEstimates, maxNumber, safeNumber };
   }
+}
+
+function calculateLimit(gasEstimates, safeGasLimitPercent) {
+  const regCoef = simpleStatistic.linearRegression(gasEstimates);
+  const line = simpleStatistic.linearRegressionLine(regCoef);
+
+  const maxNumber = Math.floor(line(gasLimit));
+  const safeNumber = Math.floor(line((gasLimit * safeGasLimitPercent) / 100));
+  return { maxNumber, safeNumber };
 }
 
 async function setupCommonEnvironment() {
