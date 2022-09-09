@@ -8,6 +8,7 @@ const {
   mockVoucherInitValues,
   mockOffer,
   mockDisputeResolver,
+  mockAgent,
 } = require("../utils/mock");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const Role = require("../../scripts/domain/Role");
@@ -28,12 +29,12 @@ describe.only("Update account roles addresses", function () {
   let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
   let expectedCloneAddress, emptyAuthToken, voucherInitValues;
   let gasLimit;
-  let deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR;
+  let deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR, agent;
   let buyerEscalationDepositPercentage;
 
   before(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR] =
+    [deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR, agent] =
       await ethers.getSigners();
 
     // Deploy the Protocol Diamond
@@ -126,7 +127,7 @@ describe.only("Update account roles addresses", function () {
     expect(emptyAuthToken.isValid()).is.true;
   });
 
-  context("Exchange related actions", function () {
+  context("After commit actions", function () {
     let buyerAccount, seller, disputeResolver;
     let offer, offerDates, offerDurations, disputeResolverId;
     let exchangeId;
@@ -162,6 +163,12 @@ describe.only("Update account roles addresses", function () {
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
+      agentAccount = mockAgent(agent.address);
+      expect(agentAccount.isValid()).is.true;
+
+      // Create an agent
+      await accountHandler.connect(rando).createAgent(agentAccount);
+
       // Create a seller account
       ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
 
@@ -171,7 +178,9 @@ describe.only("Update account roles addresses", function () {
       expect(offerDurations.isValid()).is.true;
 
       // Create the offer
-      await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
+      await offerHandler
+        .connect(operator)
+        .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentAccount.id);
 
       // Deposit seller funds so the commit will succeed
       await fundsHandler
@@ -194,7 +203,7 @@ describe.only("Update account roles addresses", function () {
       exchangeId = "1";
     });
 
-    context("Withdraw actions", function () {
+    context("After cancel actions", function () {
       let buyerPayoff, sellerPayoff;
       beforeEach(async function () {
         // Cancel the voucher, so buyer have something to withdraw
@@ -228,7 +237,7 @@ describe.only("Update account roles addresses", function () {
           .withArgs(buyerAccount.id, rando.address, ethers.constants.AddressZero, buyerPayoff, rando.address);
       });
 
-      it("Seller should be able to withdraw funds after change the wallet address", async function () {
+      it("Seller should be able to withdraw funds after change the clerk address", async function () {
         seller.clerk = rando.address;
         expect(seller.isValid()).is.true;
 
@@ -251,10 +260,37 @@ describe.only("Update account roles addresses", function () {
       });
     });
 
-    context("Dispute actions", async function () {
+    context("After redeem actions", async function () {
       beforeEach(async function () {
         // Redeem the voucher so that buyer can update the wallet
         await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+      });
+
+      it("Agent should be able to withdraw funds after change the wallet address", async function () {
+        // Complete the exchange
+        await exchangeHandler.connect(buyer).completeExchange(exchangeId);
+
+        agentAccount.wallet = rando.address;
+        expect(agentAccount.isValid()).is.true;
+
+        // Update the agent wallet, testing for the event
+        expect(await accountHandler.connect(agent).updateAgent(agentAccount))
+          .to.emit(accountHandler, "AgentUpdated")
+          .withArgs(agentAccount.id, agentAccount.toStruct(), agent.address);
+
+        const agentPayoff = applyPercentage(offer.price, agentAccount.feePercentage);
+
+        // Attempt to withdraw funds with old agent wallet, should fail
+        await expect(
+          fundsHandler.connect(agent).withdrawFunds(agentAccount.id, [ethers.constants.AddressZero], [agentPayoff])
+        ).to.revertedWith(RevertReasons.NOT_AUTHORIZED);
+
+        // Attempt to withdraw funds with new agent wallet, should fail
+        await expect(
+          fundsHandler.connect(rando).withdrawFunds(agentAccount.id, [ethers.constants.AddressZero], [agentPayoff])
+        )
+          .to.emit(fundsHandler, "FundsWithdrawn")
+          .withArgs(agentAccount.id, rando.address, ethers.constants.AddressZero, agentPayoff, rando.address);
       });
 
       it("Buyer should be able to raise a dispute after change the wallet address", async function () {
@@ -360,46 +396,38 @@ describe.only("Update account roles addresses", function () {
         });
       });
 
-      context("Decide dispute", async function () {
-        beforeEach(async function () {
-          // Raise a dispute
-          await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+      it("Dispute resolver should be able to decide a dispute after change the operator address", async function () {
+        // Raise a dispute
+        await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
-          const buyerEscalationDepositNative = applyPercentage(
-            disputeResolverFeeNative,
-            buyerEscalationDepositPercentage
-          );
+        const buyerEscalationDepositNative = applyPercentage(
+          disputeResolverFeeNative,
+          buyerEscalationDepositPercentage
+        );
 
-          // Escalate the dispute
-          await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
-        });
+        // Escalate the dispute
+        await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
-        it("Dispute resolver should be able to decide a dispute after change the operator address", async function () {
-          disputeResolver.operator = rando.address;
-          expect(disputeResolver.isValid()).is.true;
+        disputeResolver.operator = rando.address;
+        expect(disputeResolver.isValid()).is.true;
 
-          // Update the dispute resolver operator, testing for the event
-          expect(await accountHandler.connect(adminDR).updateDisputeResolver(disputeResolver))
-            .to.emit(accountHandler, "DisputeResolverUpdated")
-            .withArgs(disputeResolver.id, disputeResolver.toStruct(), adminDR.address);
+        // Update the dispute resolver operator, testing for the event
+        expect(await accountHandler.connect(adminDR).updateDisputeResolver(disputeResolver))
+          .to.emit(accountHandler, "DisputeResolverUpdated")
+          .withArgs(disputeResolver.id, disputeResolver.toStruct(), adminDR.address);
 
-          const buyerPercent = "1234";
+        const buyerPercent = "1234";
 
-          // Attempt to decide a dispute with old dispute resolver operator, should fail
-          await expect(disputeHandler.connect(operator).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
-            RevertReasons.NOT_DISPUTE_RESOLVER_OPERATOR
-          );
+        // Attempt to decide a dispute with old dispute resolver operator, should fail
+        await expect(disputeHandler.connect(operator).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
+          RevertReasons.NOT_DISPUTE_RESOLVER_OPERATOR
+        );
 
-          // Attempt to decide a dispute with new dispute resolver operator, should fail
-          await expect(disputeHandler.connect(rando).decideDispute(exchangeId, buyerPercent))
-            .to.emit(disputeHandler, "DisputeDecided")
-            .withArgs(exchangeId, buyerPercent, rando.address);
-        });
+        // Attempt to decide a dispute with new dispute resolver operator, should fail
+        await expect(disputeHandler.connect(rando).decideDispute(exchangeId, buyerPercent))
+          .to.emit(disputeHandler, "DisputeDecided")
+          .withArgs(exchangeId, buyerPercent, rando.address);
       });
     });
-  });
-
-  context("Seller", async function () {
-    it("Should be able to create new offers after change the wallet address", async function () {});
   });
 });
