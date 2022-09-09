@@ -7,17 +7,27 @@ const fs = require("fs");
 const { limitsToEstimate } = require("../config/limit-estimation");
 
 const Role = require("../domain/Role");
+const Group = require("../domain/Group");
+const EvaluationMethod = require("../domain/EvaluationMethod");
 const { DisputeResolverFee } = require("../domain/DisputeResolverFee");
 const { deployProtocolDiamond } = require("../util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../util/deploy-protocol-clients");
 const { oneWeek, oneMonth } = require("../../test/utils/constants");
-const { mockSeller, mockDisputeResolver, mockVoucherInitValues, mockAuthToken } = require("../../test/utils/mock");
+const {
+  mockSeller,
+  mockDisputeResolver,
+  mockVoucherInitValues,
+  mockAuthToken,
+  mockCondition,
+  mockOffer,
+  accountId,
+} = require("../../test/utils/mock");
 
 // Common vars
-let deployer, pauser, dr1, dr2, dr3, other1, other2, other3, protocolAdmin;
-let protocolDiamond, accessController, accountHandler;
+let deployer, pauser, sellerWallet1, sellerWallet2, sellerWallet3, dr1, dr2, dr3, other1, other2, other3, protocolAdmin;
+let protocolDiamond, accessController, accountHandler, groupHandler, offerHandler;
 let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
 let handlers = {};
 let result = {};
@@ -33,6 +43,14 @@ Invocation details contain
 - account: account that calls the method (important if access is restiricted)
 - args: array of arguments that needs to be passed into method
 - arrayIndex: index that tells which parameter's length should be varied during the estimation
+- structField: if array is part of a struct, specify the field name
+*/
+
+/*
+Setup the environment for "maxAllowedSellers". The following functions depend on it:
+- createDisputeResolver
+- addSellersToAllowList
+- removeSellersFromAllowList
 */
 setupEnvironment["maxAllowedSellers"] = async function () {
   // AuthToken
@@ -79,17 +97,116 @@ setupEnvironment["maxAllowedSellers"] = async function () {
 };
 
 /*
+Setup the environment for "maxOffersPerGroup". The following functions depend on it:
+- createGroup
+- addOffersToGroup
+- removeOffersFromGroup
+*/
+setupEnvironment["maxOffersPerGroup"] = async function () {
+  // create a seller
+  // Required constructor params
+  const groupId = "1"; // argument sent to contract for createSeller will be ignored
+  const agentId = "0"; // agent id is optional while creating an offer
+
+  const seller1 = mockSeller(
+    sellerWallet1.address,
+    sellerWallet1.address,
+    sellerWallet1.address,
+    sellerWallet1.address
+  );
+  const voucherInitValues = mockVoucherInitValues();
+  const emptyAuthToken = mockAuthToken();
+
+  await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
+
+  // Seller 2 - used in "addOffersToGroup"
+  const seller2 = mockSeller(
+    sellerWallet2.address,
+    sellerWallet2.address,
+    sellerWallet2.address,
+    sellerWallet2.address
+  );
+  await accountHandler.connect(sellerWallet2).createSeller(seller2, emptyAuthToken, voucherInitValues);
+
+  // Seller 3 - used in "removeOffersFromGroup"
+
+  const seller3 = mockSeller(
+    sellerWallet3.address,
+    sellerWallet3.address,
+    sellerWallet3.address,
+    sellerWallet3.address
+  );
+  await accountHandler.connect(sellerWallet3).createSeller(seller3, emptyAuthToken, voucherInitValues);
+
+  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address);
+  await accountHandler.createDisputeResolver(
+    disputeResolver,
+    [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "100")],
+    []
+  );
+  await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+
+  const offerCount = 10;
+
+  for (let i = 0; i < offerCount; i++) {
+    // Mock offer, offerDates and offerDurations
+    const { offer, offerDates, offerDurations } = await mockOffer();
+
+    // Create the offer
+    await offerHandler
+      .connect(sellerWallet1)
+      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+    await offerHandler
+      .connect(sellerWallet2)
+      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+    await offerHandler
+      .connect(sellerWallet3)
+      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+  }
+
+  const offerIds = [...Array(offerCount + 1).keys()].slice(1);
+  const condition = mockCondition({ method: EvaluationMethod.None, threshold: "0", maxCommits: "0" });
+
+  const group = new Group(groupId, seller1.id, offerIds);
+
+  let group1 = group.clone();
+  group1.offerIds = offerIds.map((offerId) => 3 * offerId - 2);
+  const args_1 = [group1, condition];
+  const arrayIndex_1 = 0;
+  const structField_1 = "offerIds";
+
+  let group2 = group.clone();
+  group2.offerIds = [];
+  await groupHandler.connect(sellerWallet2).createGroup(group2, condition);
+  const args_2 = ["1", offerIds.map((offerId) => 3 * offerId - 1)];
+  const arrayIndex_2 = 1;
+
+  let group3 = group.clone();
+  group3.offerIds = offerIds.map((offerId) => 3 * offerId);
+  await groupHandler.connect(sellerWallet3).createGroup(group3, condition);
+  const args_3 = ["2", group3.offerIds];
+  const arrayIndex_3 = 1;
+
+  return {
+    createGroup: { account: sellerWallet1, args: args_1, arrayIndex: arrayIndex_1, structField: structField_1 },
+    addOffersToGroup: { account: sellerWallet2, args: args_2, arrayIndex: arrayIndex_2 },
+    removeOffersFromGroup: { account: sellerWallet3, args: args_3, arrayIndex: arrayIndex_3 },
+  };
+};
+
+/*
 Invoke the methods that setup the environment and iterate over all limits and pass them to estimation.
 At the end it writes the results to json file.
 */
 async function estimateLimits() {
-  await setupCommonEnvironment();
   for (const limit of limitsToEstimate.limits) {
     console.log(`## ${limit.name} ##`);
     console.log(`Setting up the environment`);
+    await setupCommonEnvironment();
     const inputs = await setupEnvironment[limit.name]();
     console.log(`Estimating the limit`);
     await estimateLimit(limit, inputs, limitsToEstimate.safeGasLimitPercent);
+    accountId.next(true);
   }
   fs.writeFileSync(__dirname + "/limit_estimates.json", JSON.stringify(result));
 }
@@ -110,7 +227,9 @@ async function estimateLimit(limit, inputs, safeGasLimitPercent) {
       continue;
     }
 
-    const maxArrayLength = methodInputs.args[methodInputs.arrayIndex].length;
+    const maxArrayLength = methodInputs.structField
+      ? methodInputs.args[methodInputs.arrayIndex][methodInputs.structField].length
+      : methodInputs.args[methodInputs.arrayIndex].length;
     let gasEstimates = [];
     for (let o = 0; Math.pow(10, o) <= maxArrayLength; o++) {
       for (let i = 1; i < 10; i++) {
@@ -118,11 +237,14 @@ async function estimateLimit(limit, inputs, safeGasLimitPercent) {
         if (arrayLength > maxArrayLength) arrayLength = maxArrayLength;
 
         const args = methodInputs.args;
-        const adjustedArgs = [
-          ...args.slice(0, methodInputs.arrayIndex),
-          args[methodInputs.arrayIndex].slice(0, arrayLength),
-          ...args.slice(methodInputs.arrayIndex + 1),
-        ];
+        let adjustedArgs = [...args];
+        if (methodInputs.structField) {
+          adjustedArgs[methodInputs.arrayIndex][methodInputs.structField] = args[methodInputs.arrayIndex][
+            methodInputs.structField
+          ].slice(0, arrayLength);
+        } else {
+          adjustedArgs[methodInputs.arrayIndex] = args[methodInputs.arrayIndex].slice(0, arrayLength);
+        }
 
         const gasEstimate = await handlers[handler]
           .connect(methodInputs.account)
@@ -157,7 +279,20 @@ Deploys protocol contracts, casts facets to interfaces and makes accounts availa
 */
 async function setupCommonEnvironment() {
   // Make accounts available
-  [deployer, pauser, dr1, dr2, dr3, other1, other2, other3, protocolAdmin] = await ethers.getSigners();
+  [
+    deployer,
+    pauser,
+    sellerWallet1,
+    sellerWallet2,
+    sellerWallet3,
+    dr1,
+    dr2,
+    dr3,
+    other1,
+    other2,
+    other3,
+    protocolAdmin,
+  ] = await ethers.getSigners();
 
   // Deploy the Protocol Diamond
   [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -178,9 +313,10 @@ async function setupCommonEnvironment() {
   // Cut the protocol handler facets into the Diamond
   await deployProtocolHandlerFacets(protocolDiamond, [
     "AccountHandlerFacet",
-    "SellerHandlerFacet",
     "DisputeResolverHandlerFacet",
-    "PauseHandlerFacet",
+    "GroupHandlerFacet",
+    "OfferHandlerFacet",
+    "SellerHandlerFacet",
   ]);
 
   // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -230,19 +366,14 @@ async function setupCommonEnvironment() {
 
   await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
 
-  // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
+  // Cast Diamond to handlers
   accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
-
-  // //Cast Diamond to IBosonConfigHancler
-  // configHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
-
-  // // Cast Diamond to IBosonPauseHandler
-  // pauseHandler = await ethers.getContractAt("IBosonPauseHandler", protocolDiamond.address);
-
-  // console.log("done common setup")
+  offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
+  groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamond.address);
 
   handlers = {
     IBosonAccountHandler: accountHandler,
+    IBosonGroupHandler: groupHandler,
   };
 }
 

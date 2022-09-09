@@ -8,7 +8,14 @@ exports.limitsToEstimate = {
   safeGasLimitPercent: 60,
   limits: [
     // { name: "maxExchangesPerBatch", methods: ["completeExchangeBatch"] },
-    // { name: "maxOffersPerGroup", methods: ["createGroup", "addOffersToGroup", "removeOffersFromGroup"] },
+    {
+      name: "maxOffersPerGroup",
+      methods: {
+        createGroup: "IBosonGroupHandler",
+        addOffersToGroup: "IBosonGroupHandler",
+        removeOffersFromGroup: "IBosonGroupHandler",
+      },
+    },
     // { name: "maxOffersPerBundle", methods: ["createBundle"] },
     // { name: "maxTwinsPerBundle", methods: ["createBundle"] },
     // { name: "maxOffersPerBatch", methods: ["createOfferBatch", "voidOfferBatch", "extendOfferBatch"] },
