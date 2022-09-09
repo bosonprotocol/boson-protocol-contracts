@@ -1,6 +1,8 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
+
+const { gasLimit } = require("../../environments");
 const {
   mockBuyer,
   mockSeller,
@@ -18,7 +20,7 @@ const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-proto
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
-const { oneMonth } = require("../utils/constants");
+const { oneMonth, oneWeek } = require("../utils/constants");
 const {
   setNextBlockTimestamp,
   calculateContractAddress,
@@ -26,10 +28,9 @@ const {
   applyPercentage,
 } = require("../../scripts/util/test-utils.js");
 
-describe("Update account roles addresses", function () {
+describe.only("Update account roles addresses", function () {
   let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
   let expectedCloneAddress, emptyAuthToken, voucherInitValues;
-  let gasLimit;
   let deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR, agent;
   let buyerEscalationDepositPercentage;
 
@@ -95,6 +96,7 @@ describe("Update account roles addresses", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
+        minFulfillmentPeriod: oneWeek,
       },
       // Protocol fees
       {
@@ -129,7 +131,7 @@ describe("Update account roles addresses", function () {
   });
 
   context("After commit actions", function () {
-    let buyerAccount, seller, disputeResolver;
+    let buyerAccount, seller, disputeResolver, agentAccount;
     let offer, offerDates, offerDurations, disputeResolverId;
     let exchangeId;
     let disputeResolverFeeNative;
