@@ -30,7 +30,8 @@ describe("IBosonConfigHandler", function () {
     buyerEscalationDepositPercentage,
     maxTotalOfferFeePercentage,
     maxRoyaltyPecentage,
-    maxResolutionPeriod;
+    maxResolutionPeriod,
+    minFulfillmentPeriod;
   let protocolFeePercentage, protocolFeeFlatBoson;
   let erc165, protocolDiamond, accessController, configHandler, gasLimit;
   let authTokenContract;
@@ -73,6 +74,7 @@ describe("IBosonConfigHandler", function () {
     maxTotalOfferFeePercentage = 4000; // 40%
     maxRoyaltyPecentage = 1000; // 10%
     maxResolutionPeriod = oneMonth;
+    minFulfillmentPeriod = oneWeek;
 
     // Cast Diamond to IERC165
     erc165 = await ethers.getContractAt("ERC165Facet", protocolDiamond.address);
@@ -107,6 +109,7 @@ describe("IBosonConfigHandler", function () {
             maxTotalOfferFeePercentage,
             maxRoyaltyPecentage,
             maxResolutionPeriod,
+            minFulfillmentPeriod,
           },
           //Protocol fees
           {
@@ -193,6 +196,10 @@ describe("IBosonConfigHandler", function () {
         await expect(cutTransaction)
           .to.emit(configHandler, "MaxResolutionPeriodChanged")
           .withArgs(maxResolutionPeriod, deployer.address);
+
+        await expect(cutTransaction)
+          .to.emit(configHandler, "MinFulfillmentPeriodChanged")
+          .withArgs(minFulfillmentPeriod, deployer.address);
       });
     });
   });
@@ -223,6 +230,7 @@ describe("IBosonConfigHandler", function () {
           maxTotalOfferFeePercentage,
           maxRoyaltyPecentage,
           maxResolutionPeriod,
+          minFulfillmentPeriod,
         },
         // Protocol fees
         {
@@ -957,6 +965,37 @@ describe("IBosonConfigHandler", function () {
           });
         });
       });
+
+      context("👉 setMinFulfillmentPeriod()", async function () {
+        beforeEach(async function () {
+          // set new value
+          minFulfillmentPeriod = ethers.BigNumber.from(oneMonth).sub(oneWeek);
+        });
+
+        it("should emit a MinFulfillmentPeriodChanged event", async function () {
+          // Set new minumum fulfillment period
+          await expect(configHandler.connect(deployer).setMinFulfillmentPeriod(minFulfillmentPeriod))
+            .to.emit(configHandler, "MinFulfillmentPeriodChanged")
+            .withArgs(minFulfillmentPeriod, deployer.address);
+        });
+
+        it("should update state", async function () {
+          // Set new minumum fulfillment period
+          await configHandler.connect(deployer).setMinFulfillmentPeriod(minFulfillmentPeriod);
+
+          // Verify that new value is stored
+          expect(await configHandler.connect(rando).getMinFulfillmentPeriod()).to.equal(minFulfillmentPeriod);
+        });
+
+        context("💔 Revert Reasons", async function () {
+          it("caller is not the admin", async function () {
+            // Attempt to set new value, expecting revert
+            await expect(configHandler.connect(rando).setMinFulfillmentPeriod(minFulfillmentPeriod)).to.revertedWith(
+              RevertReasons.ACCESS_DENIED
+            );
+          });
+        });
+      });
     });
 
     context("📋 Getters", async function () {
@@ -1046,6 +1085,10 @@ describe("IBosonConfigHandler", function () {
         expect(await configHandler.connect(rando).getMaxResolutionPeriod()).to.equal(
           maxResolutionPeriod,
           "Invalid max resolution period"
+        );
+        expect(await configHandler.connect(rando).getMinFulfillmentPeriod()).to.equal(
+          minFulfillmentPeriod,
+          "Invalid min fulfillment period"
         );
       });
     });

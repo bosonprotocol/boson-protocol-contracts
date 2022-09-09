@@ -319,6 +319,25 @@
         {
           "indexed": false,
           "internalType": "uint256",
+          "name": "minFulfillmentPeriod",
+          "type": "uint256"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "executedBy",
+          "type": "address"
+        }
+      ],
+      "name": "MinFulfillmentPeriodChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
           "name": "feeFlatBoson",
           "type": "uint256"
         },

@@ -24,7 +24,7 @@ const {
   mockAuthToken,
   accountId,
 } = require("../utils/mock");
-const { oneMonth } = require("../utils/constants");
+const { oneWeek, oneMonth } = require("../utils/constants");
 
 /**
  *  Test the Boson Bundle Handler interface
@@ -144,6 +144,7 @@ describe("IBosonBundleHandler", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
+        minFulfillmentPeriod: oneWeek,
       },
       // Protocol fees
       {

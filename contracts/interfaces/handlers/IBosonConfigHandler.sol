@@ -9,7 +9,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x3ea0fe68
+ * The ERC-165 identifier for this interface is: 0x5bf232b9
  */
 interface IBosonConfigHandler is IBosonConfigEvents {
     /**
@@ -329,4 +329,18 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Get the maximum resolution period a seller can specify
      */
     function getMaxResolutionPeriod() external view returns (uint256);
+
+    /**
+     * @notice Sets the minimum fulfillment period a seller can specify.
+     *
+     * Emits a MinFulfillmentPeriodChanged event.
+     *
+     * @param _minFulfillmentPeriod - the minimum resolution period that a {BosonTypes.Seller} can specify
+     */
+    function setMinFulfillmentPeriod(uint256 _minFulfillmentPeriod) external;
+
+    /**
+     * @notice Gets the minimum fulfillment period a seller can specify.
+     */
+    function getMinFulfillmentPeriod() external view returns (uint256);
 }
