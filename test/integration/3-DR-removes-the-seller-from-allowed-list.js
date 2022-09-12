@@ -34,14 +34,13 @@ describe("DR removes sellers from the approved seller list", function () {
     rando,
     buyer,
     other1,
-    other2,
     operatorDR,
     adminDR,
     clerkDR,
     treasuryDR;
   let protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, fundsHandler, disputeHandler;
   let bosonToken, gasLimit;
-  let offer, offerId, seller, seller2, seller3;
+  let offer, offerId, seller, seller2;
   let price, quantityAvailable, sellerDeposit;
   let voucherRedeemableFrom, offerDates, offerDurations;
   let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
@@ -66,7 +65,6 @@ describe("DR removes sellers from the approved seller list", function () {
       buyer,
       rando,
       other1,
-      other2,
       operatorDR,
       adminDR,
       clerkDR,
@@ -177,9 +175,6 @@ describe("DR removes sellers from the approved seller list", function () {
       seller2 = mockSeller(other1.address, other1.address, other1.address, other1.address);
       expect(seller2.isValid()).is.true;
 
-      seller3 = mockSeller(other2.address, other2.address, other2.address, other2.address);
-      expect(seller3.isValid()).is.true;
-
       // VoucherInitValues
       voucherInitValues = mockVoucherInitValues();
       expect(voucherInitValues.isValid()).is.true;
@@ -194,9 +189,6 @@ describe("DR removes sellers from the approved seller list", function () {
       // Create seller with id 2
       await accountHandler.connect(other1).createSeller(seller2, emptyAuthToken, voucherInitValues);
 
-      // Create seller with id 3
-      await accountHandler.connect(other2).createSeller(seller3, emptyAuthToken, voucherInitValues);
-
       // Create a valid dispute resolver
       disputeResolver = mockDisputeResolver(operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address);
       expect(disputeResolver.isValid()).is.true;
@@ -206,7 +198,7 @@ describe("DR removes sellers from the approved seller list", function () {
       disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative)];
 
       // Make a sellerAllowList
-      sellerAllowList = ["3", "1"];
+      sellerAllowList = ["2", "1"];
 
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
@@ -288,7 +280,7 @@ describe("DR removes sellers from the approved seller list", function () {
           .withArgs(exchangeId, buyerPercentBasisPoints, operatorDR.address);
 
         // Remove an approved seller
-        allowedSellersToRemove = ["3"];
+        allowedSellersToRemove = ["2"];
         exchangeId = 3;
         await accountHandler.connect(adminDR).removeSellersFromAllowList(disputeResolverId, allowedSellersToRemove);
         // Decide the dispute
@@ -326,7 +318,7 @@ describe("DR removes sellers from the approved seller list", function () {
           .withArgs(exchangeId, operatorDR.address);
 
         // Remove an approved seller
-        allowedSellersToRemove = ["3"];
+        allowedSellersToRemove = ["2"];
         exchangeId = 3;
         await accountHandler.connect(adminDR).removeSellersFromAllowList(disputeResolverId, allowedSellersToRemove);
         // Refuse the escalated dispute, testing for the event
