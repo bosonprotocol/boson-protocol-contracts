@@ -122,6 +122,97 @@ setupEnvironment["maxAllowedSellers"] = async function () {
 };
 
 /*
+Setup the environment for "maxOffersPerBatch". The following functions depend on it:
+- createOfferBatch
+- voidOfferBatch
+- extendOfferBatch
+*/
+setupEnvironment["maxOffersPerBatch"] = async function () {
+  // create a seller
+  // Required constructor params
+  const agentId = "0"; // agent id is optional while creating an offer
+
+  const seller1 = mockSeller(
+    sellerWallet1.address,
+    sellerWallet1.address,
+    sellerWallet1.address,
+    sellerWallet1.address
+  );
+  const voucherInitValues = mockVoucherInitValues();
+  const emptyAuthToken = mockAuthToken();
+
+  await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
+
+  // Seller 2 - used in "voidOfferBatch"
+  const seller2 = mockSeller(
+    sellerWallet2.address,
+    sellerWallet2.address,
+    sellerWallet2.address,
+    sellerWallet2.address
+  );
+  await accountHandler.connect(sellerWallet2).createSeller(seller2, emptyAuthToken, voucherInitValues);
+
+  // Seller 3 - used in "extendOfferBatch"
+  const seller3 = mockSeller(
+    sellerWallet3.address,
+    sellerWallet3.address,
+    sellerWallet3.address,
+    sellerWallet3.address
+  );
+  await accountHandler.connect(sellerWallet3).createSeller(seller3, emptyAuthToken, voucherInitValues);
+
+  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address);
+  await accountHandler.createDisputeResolver(
+    disputeResolver,
+    [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "100")],
+    []
+  );
+  await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+
+  const offerCount = 10;
+
+  const { offer, offerDates, offerDurations } = await mockOffer();
+  const offers = new Array(offerCount).fill(offer);
+  const offerDatesList = new Array(offerCount).fill(offerDates);
+  const offerDurationsList = new Array(offerCount).fill(offerDurations);
+  const disputeResolverIds = new Array(offerCount).fill(disputeResolver.id);
+  const agentIds = new Array(offerCount).fill(agentId);
+
+  for (let i = 0; i < offerCount; i++) {
+    // Mock offer, offerDates and offerDurations
+    const { offer, offerDates, offerDurations } = await mockOffer();
+
+    // Create the offers for voiding/extending
+    await offerHandler
+      .connect(sellerWallet2)
+      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+    await offerHandler
+      .connect(sellerWallet3)
+      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+  }
+
+  const offerIds = [...Array(offerCount + 1).keys()].slice(1);
+
+  const args_1 = [offers, offerDatesList, offerDurationsList, disputeResolverIds, agentIds];
+  const arrayIndex_1 = [0, 1, 2, 3, 4]; // adjusting length of all arguments simultaneously
+
+  // voidOfferBatch inputs
+  const args_2 = [offerIds.map((offerId) => 2 * offerId - 1)];
+  const arrayIndex_2 = 0;
+
+  // extendOfferBatch
+  const newValidUntilDate = ethers.BigNumber.from(offerDates.validUntil).add("10000").toString();
+  const args_3 = [offerIds.map((offerId) => 2 * offerId), newValidUntilDate];
+  const arrayIndex_3 = 0;
+
+  return {
+    createOfferBatch: { account: sellerWallet1, args: args_1, arrayIndex: arrayIndex_1 },
+    voidOfferBatch: { account: sellerWallet2, args: args_2, arrayIndex: arrayIndex_2 },
+    extendOfferBatch: { account: sellerWallet3, args: args_3, arrayIndex: arrayIndex_3 },
+  };
+};
+
+/*
 Setup the environment for "maxOffersPerGroup". The following functions depend on it:
 - createGroup
 - addOffersToGroup
@@ -448,7 +539,8 @@ async function estimateLimit(limit, inputs, safeGasLimitPercent) {
 
     const maxArrayLength = methodInputs.structField
       ? methodInputs.args[methodInputs.arrayIndex][methodInputs.structField].length
-      : methodInputs.args[methodInputs.arrayIndex].length;
+      : methodInputs.args[Array.isArray(methodInputs.arrayIndex) ? methodInputs.arrayIndex[0] : methodInputs.arrayIndex]
+          .length;
     let gasEstimates = [];
     for (let o = 0; Math.pow(10, o) <= maxArrayLength; o++) {
       for (let i = 1; i < 10; i++) {
@@ -464,7 +556,13 @@ async function estimateLimit(limit, inputs, safeGasLimitPercent) {
             methodInputs.structField
           ].slice(0, arrayLength);
         } else {
-          adjustedArgs[methodInputs.arrayIndex] = args[methodInputs.arrayIndex].slice(0, arrayLength);
+          if (Array.isArray(methodInputs.arrayIndex)) {
+            for (const ai of methodInputs.arrayIndex) {
+              adjustedArgs[ai] = args[ai].slice(0, arrayLength);
+            }
+          } else {
+            adjustedArgs[methodInputs.arrayIndex] = args[methodInputs.arrayIndex].slice(0, arrayLength);
+          }
         }
 
         const gasEstimate = await handlers[handler]
@@ -607,6 +705,7 @@ async function setupCommonEnvironment() {
     IBosonBundleHandler: bundleHandler,
     IBosonExchangeHandler: exchangeHandler,
     IBosonGroupHandler: groupHandler,
+    IBosonOfferHandler: offerHandler,
   };
 }
 
