@@ -2,10 +2,10 @@ name: Contracts CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
-    types: [ opened, reopened, synchronize, ready_for_review ]
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
 
 jobs:
   build:
@@ -13,13 +13,16 @@ jobs:
     if: ${{ !github.event.pull_request.draft }}
     name: build
     steps:
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.BSNORG_ACTIONS_SECRET }}
       - name: Checkout repository
         uses: actions/checkout@v2.4.0
       - name: Setup node
         uses: actions/setup-node@v2.5.1
         with:
-          node-version: '16.14.x'
-          cache: 'npm'
+          node-version: "16.14.x"
+          cache: "npm"
       - run: npm install
       - name: Prepare Environment
         shell: bash
@@ -39,13 +42,16 @@ jobs:
       GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
     name: test
     steps:
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.BSNORG_ACTIONS_SECRET }}
       - name: Checkout repository
         uses: actions/checkout@v2.4.0
       - name: Setup node
         uses: actions/setup-node@v2.5.1
         with:
-          node-version: '16.14.x'
-          cache: 'npm'
+          node-version: "16.14.x"
+          cache: "npm"
       - name: Install Dependencies
         run: npm install
       - name: Prepare Environment
@@ -63,15 +69,18 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: ${{ !github.event.pull_request.draft }}
-    name: "deploy: dry run" 
+    name: "deploy: dry run"
     steps:
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.BSNORG_ACTIONS_SECRET }}
       - name: Checkout repository
         uses: actions/checkout@v2.4.0
       - name: Setup node
         uses: actions/setup-node@v2.5.1
         with:
-          node-version: '16.14.x'
-          cache: 'npm'
+          node-version: "16.14.x"
+          cache: "npm"
       - name: Install Dependencies
         run: npm install
       - name: Prepare Environment
