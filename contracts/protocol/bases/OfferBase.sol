@@ -92,7 +92,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
      * - Seller is not on dispute resolver's seller allow list
-     * - Seller is not on dispute resolver's seller allow list
      * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price
      * - When agent id is non zero:

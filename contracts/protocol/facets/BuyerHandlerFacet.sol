@@ -8,7 +8,7 @@ import { ProtocolLib } from "../libs/ProtocolLib.sol";
 /**
  * @title BuyerHandlerFacet
  *
- * @notice Handles Buyer account management requests and queries
+ * @notice Handles buyer account management requests and queries
  */
 contract BuyerHandlerFacet is BuyerBase {
     /**
@@ -21,7 +21,7 @@ contract BuyerHandlerFacet is BuyerBase {
     }
 
     /**
-     * @notice Creates a Buyer.
+     * @notice Creates a buyer.
      *
      * Emits an BuyerCreated event if successful.
      *
@@ -55,40 +55,40 @@ contract BuyerHandlerFacet is BuyerBase {
      * @param _buyer - the fully populated buyer struct
      */
     function updateBuyer(Buyer memory _buyer) external buyersNotPaused nonReentrant {
-        //Check for zero address
+        // Check for zero address
         require(_buyer.wallet != address(0), INVALID_ADDRESS);
 
         bool exists;
         Buyer storage buyer;
 
-        //Check Buyer exists in buyers mapping
+        // Check Buyer exists in buyers mapping
         (exists, buyer) = fetchBuyer(_buyer.id);
 
-        //Buyer must already exist
+        // Buyer must already exist
         require(exists, NO_SUCH_BUYER);
 
-        // get message sender
+        // Get message sender
         address sender = msgSender();
 
-        //Check that msg.sender is the wallet address for this buyer
+        // Check that msg.sender is the wallet address for this buyer
         require(buyer.wallet == sender, NOT_BUYER_WALLET);
 
-        //Check that current wallet address does not own any vouchers, if changing wallet address
+        // Check that current wallet address does not own any vouchers, if changing wallet address
         if (buyer.wallet != _buyer.wallet) {
             require(protocolLookups().voucherCount[_buyer.id] == 0, WALLET_OWNS_VOUCHERS);
         }
 
-        //check that the wallet address is unique to one buyer Id if new
+        // Check that the wallet address is unique to one buyer id if new
         require(
             protocolLookups().buyerIdByWallet[_buyer.wallet] == 0 ||
                 protocolLookups().buyerIdByWallet[_buyer.wallet] == _buyer.id,
             BUYER_ADDRESS_MUST_BE_UNIQUE
         );
 
-        //Delete current mappings
+        // Delete current mappings
         delete protocolLookups().buyerIdByWallet[sender];
 
-        //Ignore active flag passed in by caller and set to value in storage.
+        // Ignore active flag passed in by caller and set to value in storage.
         _buyer.active = buyer.active;
         storeBuyer(_buyer);
 

@@ -176,7 +176,7 @@ library ProtocolLib {
         mapping(uint256 => mapping(uint256 => uint256)) offerIdIndexByGroup;
     }
 
-    // Incrementing ID counters
+    // Incrementing id counters
     struct ProtocolCounters {
         // Next account id
         uint256 nextAccountId;

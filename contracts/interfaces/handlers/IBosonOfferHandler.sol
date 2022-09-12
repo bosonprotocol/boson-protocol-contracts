@@ -32,13 +32,14 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     * - Seller is not on dispute resolver's seller allow list
      * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
-     * @param _offer - the fully populated struct with offer id set to 0x0
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
@@ -105,7 +106,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Offer ID is invalid
+     * - Offer id is invalid
      * - Caller is not the operator of the offer
      * - Offer has already been voided
      *
@@ -123,7 +124,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * Reverts if, for any offer:
      * - The offers region of protocol is paused
      * - Number of offers exceeds maximum allowed number per batch
-     * - Offer ID is invalid
+     * - Offer id is invalid
      * - Caller is not the operator of the offer
      * - Offer has already been voided
      *
@@ -211,9 +212,9 @@ interface IBosonOfferHandler is IBosonOfferEvents {
     /**
      * @notice Gets the agent id for a given offer id.
      *
-     * @param _offerId - the offer Id
-     * @return exists - whether the agent Id exists
-     * @return agentId - the agent Id
+     * @param _offerId - the offer id
+     * @return exists - whether the agent id exists
+     * @return agentId - the agent id
      */
     function getAgentIdByOffer(uint256 _offerId) external view returns (bool exists, uint256 agentId);
 }

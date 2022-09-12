@@ -212,11 +212,11 @@ interface IBosonExchangeHandler is IBosonExchangeEvents, IBosonFundsLibEvents, I
     function getExchangeState(uint256 _exchangeId) external view returns (bool exists, BosonTypes.ExchangeState state);
 
     /**
-     * @notice Gets the Id that will be assigned to the next exchange.
+     * @notice Gets the id that will be assigned to the next exchange.
      *
      * @dev Does not increment the counter.
      *
-     * @return nextExchangeId - the next exchange Id
+     * @return nextExchangeId - the next exchange id
      */
     function getNextExchangeId() external view returns (uint256 nextExchangeId);
 

@@ -54,14 +54,14 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      * - Twin does not exist.
      * - Bundle for twin exists
      *
-     * @param _twinId - the id of the twin to check.
+     * @param _twinId - the id of the twin to check
      */
     function removeTwin(uint256 _twinId) external override twinsNotPaused nonReentrant {
         // Get storage location for twin
         (bool exists, Twin memory twin) = fetchTwin(_twinId);
         require(exists, NO_SUCH_TWIN);
 
-        // get message sender
+        // Get message sender
         address sender = msgSender();
 
         // Get seller id
@@ -73,7 +73,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         (bool bundleForTwinExist, ) = fetchBundleIdByTwin(_twinId);
         require(!bundleForTwinExist, BUNDLE_FOR_TWIN_EXISTS);
 
-        // delete struct
+        // Delete struct
         delete protocolEntities().twins[_twinId];
 
         // Also remove from twinRangesBySeller mapping
@@ -85,15 +85,15 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
             uint256 lastIndex = twinRanges.length - 1;
             for (uint256 index = 0; index <= lastIndex; index++) {
                 if (twinRanges[index].start == twin.tokenId) {
-                    // update twin ranges and twinIdsByTokenAddressAndBySeller
+                    // Update twin ranges and twinIdsByTokenAddressAndBySeller
 
-                    // if not removing last element, move the last to the removed index
+                    // If not removing last element, move the last to the removed index
                     if (index != lastIndex) {
                         twinRanges[index] = twinRanges[lastIndex];
                         twinIdsByTokenAddressAndBySeller[index] = twinIdsByTokenAddressAndBySeller[lastIndex];
                     }
 
-                    // remove last element
+                    // Remove last element
                     twinRanges.pop();
                     twinIdsByTokenAddressAndBySeller.pop();
                     break;

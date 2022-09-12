@@ -171,7 +171,7 @@ interface IBosonDisputeHandler is IBosonDisputeEvents, IBosonFundsLibEvents {
     function decideDispute(uint256 _exchangeId, uint256 _buyerPercent) external;
 
     /**
-     * @notice Enables Dispute Resolver to explicity refuse to resolve a dispute in Escalated state and releases the funds.
+     * @notice Enables dispute resolver to explicity refuse to resolve a dispute in Escalated state and releases the funds.
      *
      * Emits an EscalatedDisputeRefused event if successful.
      *

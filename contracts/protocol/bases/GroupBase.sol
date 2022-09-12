@@ -178,7 +178,7 @@ contract GroupBase is ProtocolBase, IBosonGroupEvents {
      *
      * @param _groupId  - the id of the group to be updated
      * @param _offerIds - array of offer ids to be added to or removed from the group
-     * @return sellerId  - the seller Id
+     * @return sellerId  - the seller id
      * @return group - the group details
      */
     function preUpdateChecks(uint256 _groupId, uint256[] memory _offerIds)
