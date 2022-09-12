@@ -7,11 +7,15 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
-//import { IERC721 } from "../../interfaces/IERC721.sol";
-
+/**
+ * @title AccountHandlerFacet
+ *
+ * @notice Registers the IBosonAccountHandler interface and exposes the next account id
+ */
 contract AccountHandlerFacet is ProtocolBase {
     /**
      * @notice Facet Initializer
+     * This function is callable only once.
      */
     function initialize() public onlyUnInitialized(type(IBosonAccountHandler).interfaceId) {
         // The IBosonAccountHandler interface is contributed to by multiple facets which don't have their own interfaces.
@@ -21,9 +25,11 @@ contract AccountHandlerFacet is ProtocolBase {
     }
 
     /**
-     * @notice Gets the next account Id that can be assigned to an account.
+     * @notice Gets the next account id that can be assigned to an account.
      *
-     * @return nextAccountId - the account Id
+     * @dev Does not increment the counter.
+     *
+     * @return nextAccountId - the account id
      */
     function getNextAccountId() external view returns (uint256 nextAccountId) {
         nextAccountId = protocolCounters().nextAccountId;

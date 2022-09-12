@@ -30,8 +30,10 @@ contract ClientProxy is ClientExternalAddressesBase, Proxy {
     ) payable ClientExternalAddressesBase(_accessController, _protocolAddress, _impl) {}
 
     /**
-     * @dev Returns the address to which the fallback function
+     * @notice Returns the address to which the fallback function
      * and {_fallback} should delegate.
+     *
+     * @return address of the client implementation
      */
     function _implementation() internal view override(ClientExternalAddressesBase, Proxy) returns (address) {
         // Get the ProxyStorage struct

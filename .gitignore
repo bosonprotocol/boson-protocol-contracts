@@ -27,3 +27,6 @@ coverage*
 
 ## addresses for test environment
 /addresses/31337*
+
+## generated contract docs
+/contract_docs/**

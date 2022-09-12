@@ -13,7 +13,7 @@ import { IBosonBundleEvents } from "../events/IBosonBundleEvents.sol";
  */
 interface IBosonBundleHandler is IBosonBundleEvents {
     /**
-     * @notice Creates a bundle.
+     * @notice Creates a Bundle.
      *
      * Emits a BundleCreated event if successful.
      *
@@ -21,15 +21,17 @@ interface IBosonBundleHandler is IBosonBundleEvents {
      * - The bundles region of protocol is paused
      * - Seller does not exist
      * - Either offer ids or twin ids are empty
-     * - any of offers belongs to different seller
-     * - any of offers does not exist
-     * - offer exists in a different bundle
-     * - number of offers exceeds maximum allowed number per bundle
-     * - any of twins belongs to different seller
-     * - any of twins does not exist
-     * - number of twins exceeds maximum allowed number per bundle
-     * - duplicate twins added in same bundle
-     * - exchange already exists for the offer id in bundle
+     * - Any of the offers belongs to different seller
+     * - Any of the offers does not exist
+     * - Offer exists in a different bundle
+     * - Number of offers exceeds maximum allowed number per bundle
+     * - Any of the twins belongs to different seller
+     * - Any of the twins does not exist
+     * - Number of twins exceeds maximum allowed number per bundle
+     * - Duplicate twins added in same bundle
+     * - Exchange already exists for the offer id in bundle
+     * - Offers' total quantity is greater than twin supply when token is nonfungible
+     * - Offers' total quantity multiplied by twin amount is greater than twin supply when token is fungible or multitoken
      *
      * @param _bundle - the fully populated struct with bundle id set to 0x0
      */
@@ -47,7 +49,7 @@ interface IBosonBundleHandler is IBosonBundleEvents {
     /**
      * @notice Gets the next bundle id.
      *
-     * Does not increment the counter.
+     * @dev Does not increment the counter.
      *
      * @return nextBundleId - the next bundle id
      */
@@ -56,18 +58,18 @@ interface IBosonBundleHandler is IBosonBundleEvents {
     /**
      * @notice Gets the bundle id for a given offer id.
      *
-     * @param _offerId - the offer Id.
-     * @return exists - whether the bundle Id exists
-     * @return bundleId  - the bundle Id.
+     * @param _offerId - the offer id.
+     * @return exists - whether the bundle id exists
+     * @return bundleId  - the bundle id.
      */
     function getBundleIdByOffer(uint256 _offerId) external view returns (bool exists, uint256 bundleId);
 
     /**
      * @notice Gets the bundle id for a given twin id.
      *
-     * @param _twinId - the twin Id.
-     * @return exists - whether the bundle Id exist
-     * @return bundleId  - the bundle Id.
+     * @param _twinId - the twin id.
+     * @return exists - whether the bundle id exist
+     * @return bundleId  - the bundle id.
      */
     function getBundleIdByTwin(uint256 _twinId) external view returns (bool exists, uint256 bundleId);
 }
