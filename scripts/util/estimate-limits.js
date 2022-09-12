@@ -7,6 +7,7 @@ const fs = require("fs");
 const { limitsToEstimate } = require("../config/limit-estimation");
 
 const Role = require("../domain/Role");
+const Bundle = require("../domain/Bundle");
 const Group = require("../domain/Group");
 const EvaluationMethod = require("../domain/EvaluationMethod");
 const { DisputeResolverFee } = require("../domain/DisputeResolverFee");
@@ -14,6 +15,7 @@ const { deployProtocolDiamond } = require("../util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../util/deploy-protocol-clients");
+const { deployMockTokens } = require("../util/deploy-mock-tokens");
 const { oneWeek, oneMonth } = require("../../test/utils/constants");
 const {
   mockSeller,
@@ -22,6 +24,7 @@ const {
   mockAuthToken,
   mockCondition,
   mockOffer,
+  mockTwin,
   accountId,
 } = require("../../test/utils/mock");
 const { setNextBlockTimestamp } = require("../util/test-utils.js");
@@ -41,7 +44,15 @@ let deployer,
   other2,
   other3,
   protocolAdmin;
-let protocolDiamond, accessController, accountHandler, exchangeHandler, fundsHandler, groupHandler, offerHandler;
+let protocolDiamond,
+  accessController,
+  accountHandler,
+  bundleHandler,
+  exchangeHandler,
+  fundsHandler,
+  groupHandler,
+  offerHandler,
+  twinHandler;
 let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
 let handlers = {};
 let result = {};
@@ -209,6 +220,71 @@ setupEnvironment["maxOffersPerGroup"] = async function () {
 };
 
 /*
+Setup the environment for "maxOffersPerBundle". The following functions depend on it:
+- createBundle
+*/
+setupEnvironment["maxOffersPerBundle"] = async function () {
+  // create a seller
+  // Required constructor params
+  const agentId = "0"; // agent id is optional while creating an offer
+
+  const seller1 = mockSeller(
+    sellerWallet1.address,
+    sellerWallet1.address,
+    sellerWallet1.address,
+    sellerWallet1.address
+  );
+  const voucherInitValues = mockVoucherInitValues();
+  const emptyAuthToken = mockAuthToken();
+
+  await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
+
+  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address);
+  await accountHandler.createDisputeResolver(
+    disputeResolver,
+    [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "100")],
+    []
+  );
+  await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+
+  const offerCount = 10;
+
+  for (let i = 0; i < offerCount; i++) {
+    // Mock offer, offerDates and offerDurations
+    const { offer, offerDates, offerDurations } = await mockOffer();
+
+    // Create the offer
+    await offerHandler
+      .connect(sellerWallet1)
+      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+  }
+
+  // Create a valid twin.
+  const [bosonToken] = await deployMockTokens(gasLimit);
+  const twin = mockTwin(bosonToken.address);
+  twin.supplyAvailable = ethers.BigNumber.from(twin.amount).mul(offerCount);
+
+  // Approving the twinHandler contract to transfer seller's tokens
+  await bosonToken.connect(sellerWallet1).approve(twinHandler.address, twin.supplyAvailable); // approving the twin handler
+
+  // Create a twin.
+  await twinHandler.connect(sellerWallet1).createTwin(twin);
+  const twinIds = ["1"];
+
+  const offerIds = [...Array(offerCount + 1).keys()].slice(1);
+
+  const bundle = new Bundle("1", seller1.id, offerIds, twinIds);
+
+  const args_1 = [bundle];
+  const arrayIndex_1 = 0;
+  const structField_1 = "offerIds";
+
+  return {
+    createBundle: { account: sellerWallet1, args: args_1, arrayIndex: arrayIndex_1, structField: structField_1 },
+  };
+};
+
+/*
 Setup the environment for "maxExchangesPerBatch". The following functions depend on it:
 - completeExchangeBatch
 */
@@ -319,7 +395,9 @@ async function estimateLimit(limit, inputs, safeGasLimitPercent) {
 
         const args = methodInputs.args;
         let adjustedArgs = [...args];
+
         if (methodInputs.structField) {
+          adjustedArgs[methodInputs.arrayIndex] = { ...adjustedArgs[methodInputs.arrayIndex] };
           adjustedArgs[methodInputs.arrayIndex][methodInputs.structField] = args[methodInputs.arrayIndex][
             methodInputs.structField
           ].slice(0, arrayLength);
@@ -396,12 +474,14 @@ async function setupCommonEnvironment() {
   // Cut the protocol handler facets into the Diamond
   await deployProtocolHandlerFacets(protocolDiamond, [
     "AccountHandlerFacet",
+    "BundleHandlerFacet",
     "DisputeResolverHandlerFacet",
     "ExchangeHandlerFacet",
     "FundsHandlerFacet",
     "GroupHandlerFacet",
     "OfferHandlerFacet",
     "SellerHandlerFacet",
+    "TwinHandlerFacet",
   ]);
 
   // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
@@ -453,13 +533,16 @@ async function setupCommonEnvironment() {
 
   // Cast Diamond to handlers
   accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+  bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
   exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
   fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
   groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamond.address);
   offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
+  twinHandler = await ethers.getContractAt("IBosonTwinHandler", protocolDiamond.address);
 
   handlers = {
     IBosonAccountHandler: accountHandler,
+    IBosonBundleHandler: bundleHandler,
     IBosonExchangeHandler: exchangeHandler,
     IBosonGroupHandler: groupHandler,
   };
