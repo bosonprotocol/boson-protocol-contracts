@@ -7,28 +7,30 @@
 exports.limitsToEstimate = {
   safeGasLimitPercent: 60,
   limits: [
-    // { name: "maxExchangesPerBatch", methods: ["completeExchangeBatch"] },
-    {
-      name: "maxOffersPerGroup",
-      methods: {
-        createGroup: "IBosonGroupHandler",
-        addOffersToGroup: "IBosonGroupHandler",
-        removeOffersFromGroup: "IBosonGroupHandler",
-      },
-    },
+    { name: "maxExchangesPerBatch", methods: { completeExchangeBatch: "IBosonExchangeHandler" } },
+    // {
+    //   name: "maxOffersPerGroup",
+    //   methods: {
+    //     createGroup: "IBosonGroupHandler",
+    //     addOffersToGroup: "IBosonGroupHandler",
+    //     removeOffersFromGroup: "IBosonGroupHandler",
+    //   },
+    // },
+
     // { name: "maxOffersPerBundle", methods: ["createBundle"] },
     // { name: "maxTwinsPerBundle", methods: ["createBundle"] },
     // { name: "maxOffersPerBatch", methods: ["createOfferBatch", "voidOfferBatch", "extendOfferBatch"] },
     // { name: "maxTokensPerWithdrawal", methods: ["withdrawFunds", "withdrawProtocolFees"] },
     // { name: "maxFeesPerDisputeResolver", methods: ["createDisputeResolver", "addFeesToDisputeResolver", "removeFeesFromDisputeResolver"] },
     // { name: "maxDisputesPerBatch", methods: ["expireDisputeBatch"] },
-    {
-      name: "maxAllowedSellers",
-      methods: {
-        createDisputeResolver: "IBosonAccountHandler",
-        addSellersToAllowList: "IBosonAccountHandler",
-        removeSellersFromAllowList: "IBosonAccountHandler",
-      },
-    },
+
+    // {
+    //   name: "maxAllowedSellers",
+    //   methods: {
+    //     createDisputeResolver: "IBosonAccountHandler",
+    //     addSellersToAllowList: "IBosonAccountHandler",
+    //     removeSellersFromAllowList: "IBosonAccountHandler",
+    //   },
+    // },
   ],
 };
