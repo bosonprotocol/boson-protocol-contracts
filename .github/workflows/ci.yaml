@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: webfactory/ssh-agent@v0.5.4
         with:
-          ssh-private-key: ${{ secrets.BSNORG_ACTIONS_SECRET }}
+          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
       - name: Checkout repository
         uses: actions/checkout@v2.4.0
       - name: Setup node
@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: webfactory/ssh-agent@v0.5.4
         with:
-          ssh-private-key: ${{ secrets.BSNORG_ACTIONS_SECRET }}
+          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
       - name: Checkout repository
         uses: actions/checkout@v2.4.0
       - name: Setup node
@@ -73,7 +73,7 @@ jobs:
     steps:
       - uses: webfactory/ssh-agent@v0.5.4
         with:
-          ssh-private-key: ${{ secrets.BSNORG_ACTIONS_SECRET }}
+          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
       - name: Checkout repository
         uses: actions/checkout@v2.4.0
       - name: Setup node
