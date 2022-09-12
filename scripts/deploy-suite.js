@@ -158,7 +158,6 @@ async function main() {
   // Cast Diamond to the IBosonConfigHandler interface for further interaction with it
   const bosonConfigHandler = await ethers.getContractAt("IBosonConfigHandler", protocolDiamond.address);
 
- 
   // Add Voucher NFT addresses to protocol config
   transactionResponse = await bosonConfigHandler.setVoucherBeaconAddress(bosonClientBeacon.address);
   await transactionResponse.wait(confirmations);
@@ -178,17 +177,17 @@ async function main() {
 
   console.log(`✅ ConfigHandlerFacet updated with remaining post-initialization config.`);
 
-   // Renounce temporarily granted UPGRADER role for deployer account
-   transactionResponse = await accessController.renounceRole(Role.UPGRADER, deployer.address);
-   await transactionResponse.wait(confirmations);
- 
+  // Renounce temporarily granted UPGRADER role for deployer account
+  transactionResponse = await accessController.renounceRole(Role.UPGRADER, deployer.address);
+  await transactionResponse.wait(confirmations);
+
   // Grant PROTOCOL role to the ProtocolDiamond contract
   transactionResponse = await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
   await transactionResponse.wait(confirmations);
 
-   // Grant ADMIN role to the specified admin address
-   transactionResponse = await accessController.grantRole(Role.ADMIN, environments[network].adminAddress);
-   await transactionResponse.wait(confirmations);
+  // Grant ADMIN role to the specified admin address
+  transactionResponse = await accessController.grantRole(Role.ADMIN, environments[network].adminAddress);
+  await transactionResponse.wait(confirmations);
 
   console.log(`✅ Granted roles to appropriate contract and addresses.`);
 
