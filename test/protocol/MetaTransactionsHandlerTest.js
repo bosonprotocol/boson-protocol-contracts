@@ -80,7 +80,7 @@ describe("IBosonMetaTransactionsHandler", function () {
     expectedBuyerAvailableFunds,
     tokenListBuyer,
     tokenAmountsBuyer;
-  let buyerPercent, validDisputeResolutionDetails, signatureSplits;
+  let buyerPercentBasisPoints, validDisputeResolutionDetails, signatureSplits;
   let sellerAllowList;
   let voucherInitValues;
   let emptyAuthToken;
@@ -2322,12 +2322,12 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               await disputeHandler.connect(buyer).raiseDispute(exchange.id);
 
-              buyerPercent = "1234";
+              buyerPercentBasisPoints = "1234";
 
               // Set the message Type, needed for signature
               let resolutionType = [
                 { name: "exchangeId", type: "uint256" },
-                { name: "buyerPercent", type: "uint256" },
+                { name: "buyerPercentBasisPoints", type: "uint256" },
               ];
 
               let customSignatureType2 = {
@@ -2336,7 +2336,7 @@ describe("IBosonMetaTransactionsHandler", function () {
 
               let message2 = {
                 exchangeId: exchange.id,
-                buyerPercent,
+                buyerPercentBasisPoints,
               };
 
               // Collect the signature components
@@ -2351,7 +2351,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // prepare validDisputeResolutionDetails
               validDisputeResolutionDetails = {
                 exchangeId: exchange.id,
-                buyerPercent: buyerPercent,
+                buyerPercentBasisPoints,
                 sigR: signatureSplits.r,
                 sigS: signatureSplits.s,
                 sigV: signatureSplits.v.toString(),
@@ -2360,7 +2360,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // Set the Dispute Resolution Type
               let disputeResolutionType = [
                 { name: "exchangeId", type: "uint256" },
-                { name: "buyerPercent", type: "uint256" },
+                { name: "buyerPercentBasisPoints", type: "uint256" },
                 { name: "sigR", type: "bytes32" },
                 { name: "sigS", type: "bytes32" },
                 { name: "sigV", type: "uint8" },
@@ -2399,7 +2399,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // Prepare the function signature
               functionSignature = disputeHandler.interface.encodeFunctionData("resolveDispute", [
                 validDisputeResolutionDetails.exchangeId,
-                validDisputeResolutionDetails.buyerPercent,
+                validDisputeResolutionDetails.buyerPercentBasisPoints,
                 validDisputeResolutionDetails.sigR,
                 validDisputeResolutionDetails.sigS,
                 validDisputeResolutionDetails.sigV,
@@ -2434,12 +2434,12 @@ describe("IBosonMetaTransactionsHandler", function () {
 
             it("does not modify revert reasons", async function () {
               // Set buyer percent above 100%
-              buyerPercent = "12000"; // 120%
+              buyerPercentBasisPoints = "12000"; // 120%
 
               // prepare validDisputeResolutionDetails
               validDisputeResolutionDetails = {
                 exchangeId: exchange.id,
-                buyerPercent: buyerPercent,
+                buyerPercentBasisPoints,
                 sigR: signatureSplits.r,
                 sigS: signatureSplits.s,
                 sigV: signatureSplits.v.toString(),
@@ -2460,7 +2460,7 @@ describe("IBosonMetaTransactionsHandler", function () {
               // Prepare the function signature
               functionSignature = disputeHandler.interface.encodeFunctionData("resolveDispute", [
                 validDisputeResolutionDetails.exchangeId,
-                validDisputeResolutionDetails.buyerPercent,
+                validDisputeResolutionDetails.buyerPercentBasisPoints,
                 validDisputeResolutionDetails.sigR,
                 validDisputeResolutionDetails.sigS,
                 validDisputeResolutionDetails.sigV,
@@ -2485,7 +2485,7 @@ describe("IBosonMetaTransactionsHandler", function () {
                 // Prepare the function signature
                 functionSignature = disputeHandler.interface.encodeFunctionData("resolveDispute", [
                   validDisputeResolutionDetails.exchangeId,
-                  validDisputeResolutionDetails.buyerPercent,
+                  validDisputeResolutionDetails.buyerPercentBasisPoints,
                   validDisputeResolutionDetails.sigR,
                   validDisputeResolutionDetails.sigS,
                   validDisputeResolutionDetails.sigV,
