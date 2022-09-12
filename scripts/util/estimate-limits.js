@@ -48,6 +48,7 @@ let protocolDiamond,
   accessController,
   accountHandler,
   bundleHandler,
+  disputeHandler,
   exchangeHandler,
   fundsHandler,
   groupHandler,
@@ -545,6 +546,76 @@ setupEnvironment["maxExchangesPerBatch"] = async function () {
 };
 
 /*
+Setup the environment for "maxDisputesPerBatch". The following functions depend on it:
+- expireDisputeBatch
+*/
+setupEnvironment["maxDisputesPerBatch"] = async function () {
+  // create a seller
+  // Required constructor params
+  const agentId = "0"; // agent id is optional while creating an offer
+
+  const seller1 = mockSeller(
+    sellerWallet1.address,
+    sellerWallet1.address,
+    sellerWallet1.address,
+    sellerWallet1.address
+  );
+  const voucherInitValues = mockVoucherInitValues();
+  const emptyAuthToken = mockAuthToken();
+
+  await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
+
+  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address);
+  await accountHandler.createDisputeResolver(
+    disputeResolver,
+    [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "100")],
+    []
+  );
+  await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+
+  const exchangesCount = 10;
+
+  // create an offer with big enough quantity
+  const { offer, offerDates, offerDurations } = await mockOffer();
+  offer.quantityAvailable = exchangesCount;
+  // Create the offer
+  await offerHandler.connect(sellerWallet1).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+
+  // Deposit seller funds so the commit will succeed
+  const sellerPool = ethers.BigNumber.from(offer.price).mul(exchangesCount);
+  await fundsHandler
+    .connect(sellerWallet1)
+    .depositFunds(seller1.id, ethers.constants.AddressZero, sellerPool, { value: sellerPool });
+
+  await setNextBlockTimestamp(Number(offerDates.voucherRedeemableFrom));
+  for (let i = 1; i < exchangesCount + 1; i++) {
+    // Commit to offer, creating a new exchange
+    await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
+
+    // Redeem voucher
+    await exchangeHandler.connect(buyer).redeemVoucher(i);
+
+    // Raise dispute
+    await disputeHandler.connect(buyer).raiseDispute(i);
+  }
+
+  // Set time forward to run out the fulfillment period
+  const blockNumber = await ethers.provider.getBlockNumber();
+  const block = await ethers.provider.getBlock(blockNumber);
+  const newTime = ethers.BigNumber.from(block.timestamp).add(offerDurations.resolutionPeriod).add(1).toNumber();
+  await setNextBlockTimestamp(newTime);
+
+  const exchangeIds = [...Array(exchangesCount + 1).keys()].slice(1);
+
+  const args_1 = [exchangeIds];
+  const arrayIndex_1 = 0;
+
+  return {
+    expireDisputeBatch: { account: rando, args: args_1, arrayIndex: arrayIndex_1 },
+  };
+};
+
+/*
 Invoke the methods that setup the environment and iterate over all limits and pass them to estimation.
 At the end it writes the results to json file.
 */
@@ -675,6 +746,7 @@ async function setupCommonEnvironment() {
   await deployProtocolHandlerFacets(protocolDiamond, [
     "AccountHandlerFacet",
     "BundleHandlerFacet",
+    "DisputeHandlerFacet",
     "DisputeResolverHandlerFacet",
     "ExchangeHandlerFacet",
     "FundsHandlerFacet",
@@ -734,6 +806,7 @@ async function setupCommonEnvironment() {
   // Cast Diamond to handlers
   accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
   bundleHandler = await ethers.getContractAt("IBosonBundleHandler", protocolDiamond.address);
+  disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
   exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
   fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
   groupHandler = await ethers.getContractAt("IBosonGroupHandler", protocolDiamond.address);
@@ -743,6 +816,7 @@ async function setupCommonEnvironment() {
   handlers = {
     IBosonAccountHandler: accountHandler,
     IBosonBundleHandler: bundleHandler,
+    IBosonDisputeHandler: disputeHandler,
     IBosonExchangeHandler: exchangeHandler,
     IBosonGroupHandler: groupHandler,
     IBosonOfferHandler: offerHandler,

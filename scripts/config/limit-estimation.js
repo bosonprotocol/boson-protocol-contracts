@@ -28,17 +28,16 @@ exports.limitsToEstimate = {
     // },
 
     // { name: "maxTokensPerWithdrawal", methods: ["withdrawFunds", "withdrawProtocolFees"] },
-    {
-      name: "maxFeesPerDisputeResolver",
-      methods: {
-        createDisputeResolver: "IBosonAccountHandler",
-        addFeesToDisputeResolver: "IBosonAccountHandler",
-        removeFeesFromDisputeResolver: "IBosonAccountHandler",
-      },
-    },
 
-    // { name: "maxDisputesPerBatch", methods: ["expireDisputeBatch"] },
-
+    // {
+    //   name: "maxFeesPerDisputeResolver",
+    //   methods: {
+    //     createDisputeResolver: "IBosonAccountHandler",
+    //     addFeesToDisputeResolver: "IBosonAccountHandler",
+    //     removeFeesFromDisputeResolver: "IBosonAccountHandler",
+    //   },
+    // },
+    { name: "maxDisputesPerBatch", methods: { expireDisputeBatch: "IBosonDisputeHandler" } },
     // {
     //   name: "maxAllowedSellers",
     //   methods: {
