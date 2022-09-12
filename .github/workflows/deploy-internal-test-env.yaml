@@ -59,11 +59,4 @@ jobs:
             -m "[Test Environment] New deployed addresses" \
             -m "This is an auto-generated commit. This commit contains addresses generated after deploy to the internal test environment."
           git push
-      - name: Call manage-roles script to grant or revoke roles
-        run: npm run manage-roles:test
-      - name: Upload manage roles output
-        uses: actions/upload-artifact@v2
-        with:
-          name: test-manage-roles-logs
-          path: logs/test.manage.roles.txt
        
