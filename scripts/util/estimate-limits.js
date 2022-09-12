@@ -31,7 +31,6 @@ const { setNextBlockTimestamp } = require("../util/test-utils.js");
 
 // Common vars
 let deployer,
-  pauser,
   sellerWallet1,
   sellerWallet2,
   sellerWallet3,
@@ -43,7 +42,8 @@ let deployer,
   other1,
   other2,
   other3,
-  protocolAdmin;
+  protocolAdmin,
+  feeCollector;
 let protocolDiamond,
   accessController,
   accountHandler,
@@ -220,9 +220,6 @@ setupEnvironment["maxOffersPerBatch"] = async function () {
   const agentIds = new Array(offerCount).fill(agentId);
 
   for (let i = 0; i < offerCount; i++) {
-    // Mock offer, offerDates and offerDurations
-    const { offer, offerDates, offerDurations } = await mockOffer();
-
     // Create the offers for voiding/extending
     await offerHandler
       .connect(sellerWallet2)
@@ -305,10 +302,10 @@ setupEnvironment["maxOffersPerGroup"] = async function () {
 
   const offerCount = 10;
 
-  for (let i = 0; i < offerCount; i++) {
-    // Mock offer, offerDates and offerDurations
-    const { offer, offerDates, offerDurations } = await mockOffer();
+  // Mock offer, offerDates and offerDurations
+  const { offer, offerDates, offerDurations } = await mockOffer();
 
+  for (let i = 0; i < offerCount; i++) {
     // Create the offer
     await offerHandler
       .connect(sellerWallet1)
@@ -381,10 +378,10 @@ setupEnvironment["maxOffersPerBundle"] = async function () {
 
   const offerCount = 10;
 
-  for (let i = 0; i < offerCount; i++) {
-    // Mock offer, offerDates and offerDurations
-    const { offer, offerDates, offerDurations } = await mockOffer();
+  // Mock offer, offerDates and offerDurations
+  const { offer, offerDates, offerDurations } = await mockOffer();
 
+  for (let i = 0; i < offerCount; i++) {
     // Create the offer
     await offerHandler
       .connect(sellerWallet1)
@@ -447,7 +444,7 @@ setupEnvironment["maxTwinsPerBundle"] = async function () {
   const twinCount = 10;
 
   for (let i = 0; i < twinCount; i++) {
-    const [twinContract] = await deployMockTokens(gasLimit);
+    const [twinContract] = await deployMockTokens(gasLimit, ["Foreign20"]);
     const twin = mockTwin(twinContract.address);
 
     // Approving the twinHandler contract to transfer seller's tokens
@@ -616,6 +613,89 @@ setupEnvironment["maxDisputesPerBatch"] = async function () {
 };
 
 /*
+Setup the environment for "maxDisputesPerBatch". The following functions depend on it:
+- expireDisputeBatch
+*/
+setupEnvironment["maxTokensPerWithdrawal"] = async function () {
+  // create a seller
+  // Required constructor params
+  const agentId = "0"; // agent id is optional while creating an offer
+
+  const seller1 = mockSeller(
+    sellerWallet1.address,
+    sellerWallet1.address,
+    sellerWallet1.address,
+    sellerWallet1.address
+  );
+  const voucherInitValues = mockVoucherInitValues();
+  const emptyAuthToken = mockAuthToken();
+
+  await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
+
+  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address);
+  await accountHandler.createDisputeResolver(
+    disputeResolver,
+    [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "100")],
+    []
+  );
+  await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+
+  const tokenCount = 10;
+
+  const { offer, offerDates, offerDurations } = await mockOffer();
+  offerDates.voucherRedeemableFrom = offerDates.validFrom;
+  let tokenAddresses = [];
+  for (let i = 1; i < tokenCount + 1; i++) {
+    // create a token
+    const [tokenContract] = await deployMockTokens(gasLimit, ["Foreign20"]);
+    tokenAddresses.push(tokenContract.address);
+
+    offer.exchangeToken = tokenContract.address;
+    await tokenContract.mint(sellerWallet1.address, offer.sellerDeposit);
+    await tokenContract.mint(buyer.address, offer.price);
+    await tokenContract.connect(sellerWallet1).approve(protocolDiamond.address, offer.sellerDeposit);
+    await tokenContract.connect(buyer).approve(protocolDiamond.address, offer.price);
+    await fundsHandler.connect(sellerWallet1).depositFunds(seller1.id, tokenContract.address, offer.sellerDeposit);
+
+    // add token to DR accepted tokens
+    await accountHandler
+      .connect(dr1)
+      .addFeesToDisputeResolver(disputeResolver.id, [new DisputeResolverFee(tokenContract.address, `Token${i}`, "1")]);
+
+    // create the offer
+    await offerHandler
+      .connect(sellerWallet1)
+      .createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+
+    // Commit to offer, creating a new exchange
+    await exchangeHandler.connect(buyer).commitToOffer(buyer.address, i);
+
+    // Redeem voucher
+    await exchangeHandler.connect(buyer).redeemVoucher(i);
+
+    // Raise dispute
+    await exchangeHandler.connect(buyer).completeExchange(i);
+  }
+
+  // seller withdrawal
+  const tokenAmounts_1 = new Array(tokenCount).fill(offer.price);
+  const args_1 = [seller1.id, tokenAddresses, tokenAmounts_1];
+  const arrayIndex_1 = [1, 2];
+
+  // protocol fee withdrawal
+  await accessController.grantRole(Role.FEE_COLLECTOR, feeCollector.address);
+  const protocolFee = ethers.BigNumber.from(offer.price).mul(protocolFeePercentage).div(10000);
+  const tokenAmounts_2 = new Array(tokenCount).fill(protocolFee);
+  const args_2 = [tokenAddresses, tokenAmounts_2];
+  const arrayIndex_2 = [0, 1];
+
+  return {
+    withdrawFunds: { account: sellerWallet1, args: args_1, arrayIndex: arrayIndex_1 },
+    withdrawProtocolFees: { account: feeCollector, args: args_2, arrayIndex: arrayIndex_2 },
+  };
+};
+
+/*
 Invoke the methods that setup the environment and iterate over all limits and pass them to estimation.
 At the end it writes the results to json file.
 */
@@ -711,7 +791,6 @@ async function setupCommonEnvironment() {
   // Make accounts available
   [
     deployer,
-    pauser,
     sellerWallet1,
     sellerWallet2,
     sellerWallet3,
@@ -724,6 +803,7 @@ async function setupCommonEnvironment() {
     other2,
     other3,
     protocolAdmin,
+    feeCollector,
   ] = await ethers.getSigners();
 
   // Deploy the Protocol Diamond
@@ -738,9 +818,6 @@ async function setupCommonEnvironment() {
   //Grant ADMIN role to and address that can call restricted functions.
   //This ADMIN role is a protocol-level role. It is not the same an admin address for an account type
   await accessController.grantRole(Role.ADMIN, protocolAdmin.address);
-
-  // Temporarily grant PAUSER role to pauser account
-  await accessController.grantRole(Role.PAUSER, pauser.address);
 
   // Cut the protocol handler facets into the Diamond
   await deployProtocolHandlerFacets(protocolDiamond, [
@@ -818,6 +895,7 @@ async function setupCommonEnvironment() {
     IBosonBundleHandler: bundleHandler,
     IBosonDisputeHandler: disputeHandler,
     IBosonExchangeHandler: exchangeHandler,
+    IBosonFundsHandler: fundsHandler,
     IBosonGroupHandler: groupHandler,
     IBosonOfferHandler: offerHandler,
   };

@@ -7,44 +7,45 @@
 exports.limitsToEstimate = {
   safeGasLimitPercent: 60,
   limits: [
-    // { name: "maxExchangesPerBatch", methods: { completeExchangeBatch: "IBosonExchangeHandler" } },
-    // {
-    //   name: "maxOffersPerGroup",
-    //   methods: {
-    //     createGroup: "IBosonGroupHandler",
-    //     addOffersToGroup: "IBosonGroupHandler",
-    //     removeOffersFromGroup: "IBosonGroupHandler",
-    //   },
-    // },
-    // { name: "maxOffersPerBundle", methods: { createBundle: "IBosonBundleHandler" } },
-    // { name: "maxTwinsPerBundle", methods: { createBundle: "IBosonBundleHandler" } },
-    // {
-    //   name: "maxOffersPerBatch",
-    //   methods: {
-    //     createOfferBatch: "IBosonOfferHandler",
-    //     voidOfferBatch: "IBosonOfferHandler",
-    //     extendOfferBatch: "IBosonOfferHandler",
-    //   },
-    // },
-
-    // { name: "maxTokensPerWithdrawal", methods: ["withdrawFunds", "withdrawProtocolFees"] },
-
-    // {
-    //   name: "maxFeesPerDisputeResolver",
-    //   methods: {
-    //     createDisputeResolver: "IBosonAccountHandler",
-    //     addFeesToDisputeResolver: "IBosonAccountHandler",
-    //     removeFeesFromDisputeResolver: "IBosonAccountHandler",
-    //   },
-    // },
+    { name: "maxExchangesPerBatch", methods: { completeExchangeBatch: "IBosonExchangeHandler" } },
+    {
+      name: "maxOffersPerGroup",
+      methods: {
+        createGroup: "IBosonGroupHandler",
+        addOffersToGroup: "IBosonGroupHandler",
+        removeOffersFromGroup: "IBosonGroupHandler",
+      },
+    },
+    { name: "maxOffersPerBundle", methods: { createBundle: "IBosonBundleHandler" } },
+    { name: "maxTwinsPerBundle", methods: { createBundle: "IBosonBundleHandler" } },
+    {
+      name: "maxOffersPerBatch",
+      methods: {
+        createOfferBatch: "IBosonOfferHandler",
+        voidOfferBatch: "IBosonOfferHandler",
+        extendOfferBatch: "IBosonOfferHandler",
+      },
+    },
+    {
+      name: "maxTokensPerWithdrawal",
+      methods: { withdrawFunds: "IBosonFundsHandler", withdrawProtocolFees: "IBosonFundsHandler" },
+    },
+    {
+      name: "maxFeesPerDisputeResolver",
+      methods: {
+        createDisputeResolver: "IBosonAccountHandler",
+        addFeesToDisputeResolver: "IBosonAccountHandler",
+        removeFeesFromDisputeResolver: "IBosonAccountHandler",
+      },
+    },
     { name: "maxDisputesPerBatch", methods: { expireDisputeBatch: "IBosonDisputeHandler" } },
-    // {
-    //   name: "maxAllowedSellers",
-    //   methods: {
-    //     createDisputeResolver: "IBosonAccountHandler",
-    //     addSellersToAllowList: "IBosonAccountHandler",
-    //     removeSellersFromAllowList: "IBosonAccountHandler",
-    //   },
-    // },
+    {
+      name: "maxAllowedSellers",
+      methods: {
+        createDisputeResolver: "IBosonAccountHandler",
+        addSellersToAllowList: "IBosonAccountHandler",
+        removeSellersFromAllowList: "IBosonAccountHandler",
+      },
+    },
   ],
 };
