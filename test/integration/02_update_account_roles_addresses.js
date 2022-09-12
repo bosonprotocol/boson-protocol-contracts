@@ -30,7 +30,6 @@ const {
 
 describe("Update account roles addresses", function () {
   let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
-  let expectedCloneAddress, emptyAuthToken, voucherInitValues;
   let deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR, agent;
   let buyerEscalationDepositPercentage;
 
@@ -122,12 +121,6 @@ describe("Update account roles addresses", function () {
 
     // Cast Diamond to IBosonDisputeHandler.
     disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
-
-    expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
-    emptyAuthToken = mockAuthToken();
-    expect(emptyAuthToken.isValid()).is.true;
-    voucherInitValues = mockVoucherInitValues();
-    expect(voucherInitValues.isValid()).is.true;
   });
 
   context("After commit actions", function () {
@@ -135,11 +128,18 @@ describe("Update account roles addresses", function () {
     let offer, offerDates, offerDurations, disputeResolverId;
     let exchangeId;
     let disputeResolverFeeNative;
+    let expectedCloneAddress, emptyAuthToken, voucherInitValues;
 
     beforeEach(async function () {
+      expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
+      emptyAuthToken = mockAuthToken();
+      expect(emptyAuthToken.isValid()).is.true;
+      voucherInitValues = mockVoucherInitValues();
+      expect(voucherInitValues.isValid()).is.true;
+
       // Create a seller account
       seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
-      expect(await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues))
+      await expect(accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues))
         .to.emit(accountHandler, "SellerCreated")
         .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, emptyAuthToken.toStruct(), admin.address);
 
@@ -149,7 +149,7 @@ describe("Update account roles addresses", function () {
         adminDR.address,
         clerkDR.address,
         treasuryDR.address,
-        false
+        true
       );
       expect(disputeResolver.isValid()).is.true;
 
@@ -174,6 +174,8 @@ describe("Update account roles addresses", function () {
 
       // Create an offer
       ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+
+      offerDurations.fulfillmentPeriod = (oneMonth * 6).toString();
 
       // Check if domains are valid
       expect(offer.isValid()).is.true;
@@ -211,6 +213,37 @@ describe("Update account roles addresses", function () {
       accountId.next(true);
     });
 
+    it("Seller should be able to revoke the voucher after updating operator address", async function () {
+      seller.operator = rando.address;
+      expect(seller.isValid()).is.true;
+
+      // Update the seller wallet, testing for the event
+      await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
+        .to.emit(accountHandler, "SellerUpdated")
+        .withArgs(seller.id, seller.toStruct(), emptyAuthToken.toStruct(), admin.address);
+
+      // Revoke the voucher
+      await expect(exchangeHandler.connect(rando).revokeVoucher(exchangeId))
+        .to.emit(exchangeHandler, "VoucherRevoked")
+        .withArgs(offer.id, exchangeId, rando.address);
+    });
+
+    it("Seller should be able to extend the voucher after updating operator address", async function () {
+      seller.operator = rando.address;
+      expect(seller.isValid()).is.true;
+
+      // Update the seller wallet, testing for the event
+      await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
+        .to.emit(accountHandler, "SellerUpdated")
+        .withArgs(seller.id, seller.toStruct(), emptyAuthToken.toStruct(), admin.address);
+
+      // Extend the voucher
+      const newValidUntil = offerDates.validUntil * 12;
+      await expect(exchangeHandler.connect(rando).extendVoucher(exchangeId, newValidUntil))
+        .to.emit(exchangeHandler, "VoucherExtended")
+        .withArgs(offer.id, exchangeId, newValidUntil, rando.address);
+    });
+
     context("After cancel actions", function () {
       let buyerPayoff, sellerPayoff;
       beforeEach(async function () {
@@ -228,9 +261,9 @@ describe("Update account roles addresses", function () {
         expect(buyerAccount.isValid()).is.true;
 
         // Update the buyer wallet, testing for the event
-        expect(await accountHandler.connect(buyer).updateBuyer(buyerAccount))
+        await expect(accountHandler.connect(buyer).updateBuyer(buyerAccount))
           .to.emit(accountHandler, "BuyerUpdated")
-          .withArgs(buyer.id, buyerAccount.toStruct(), buyer.address);
+          .withArgs(buyerAccount.id, buyerAccount.toStruct(), buyer.address);
 
         // Attempt to withdraw funds with old buyer wallet, should fail
         await expect(
@@ -282,7 +315,7 @@ describe("Update account roles addresses", function () {
         expect(agentAccount.isValid()).is.true;
 
         // Update the agent wallet, testing for the event
-        expect(await accountHandler.connect(agent).updateAgent(agentAccount))
+        await expect(accountHandler.connect(agent).updateAgent(agentAccount))
           .to.emit(accountHandler, "AgentUpdated")
           .withArgs(agentAccount.id, agentAccount.toStruct(), agent.address);
 
@@ -306,9 +339,9 @@ describe("Update account roles addresses", function () {
         expect(buyerAccount.isValid()).is.true;
 
         // Update the buyer wallet, testing for the event
-        expect(await accountHandler.connect(buyer).updateBuyer(buyerAccount))
+        await expect(accountHandler.connect(buyer).updateBuyer(buyerAccount))
           .to.emit(accountHandler, "BuyerUpdated")
-          .withArgs(buyer.id, buyerAccount.toStruct(), buyer.address);
+          .withArgs(buyerAccount.id, buyerAccount.toStruct(), buyer.address);
 
         // Attempt to raise a dispute with old buyer wallet, should fail
         await expect(disputeHandler.connect(buyer).raiseDispute(exchangeId)).to.revertedWith(
@@ -319,6 +352,28 @@ describe("Update account roles addresses", function () {
         await expect(disputeHandler.connect(rando).raiseDispute(exchangeId))
           .to.emit(disputeHandler, "DisputeRaised")
           .withArgs(exchangeId, buyerAccount.id, seller.id, rando.address);
+      });
+
+      it("Buyer should be able to complete exchange before fulfillment period is over after updating wallet address", async function () {
+        buyerAccount.wallet = rando.address;
+        expect(buyerAccount.isValid()).is.true;
+
+        // Update the buyer wallet, testing for the event
+        await expect(accountHandler.connect(buyer).updateBuyer(buyerAccount))
+          .to.emit(accountHandler, "BuyerUpdated")
+          .withArgs(buyerAccount.id, buyerAccount.toStruct(), buyer.address);
+
+        // Complete the exchange, expecting event
+        const tx = await exchangeHandler.connect(rando).completeExchange(exchangeId);
+        await expect(tx)
+          .to.emit(exchangeHandler, "ExchangeCompleted")
+          .withArgs(offer.id, buyerAccount.id, exchangeId, rando.address);
+
+        const block = await ethers.provider.getBlock(tx.blockNumber);
+        const fulfillmentPeriod = Number(offerDurations.fulfillmentPeriod);
+
+        // Expect the fulfillment period to not be over
+        expect(block.timestamp).to.be.at.most(fulfillmentPeriod);
       });
 
       context("After raise dispute actions", async function () {
@@ -332,7 +387,7 @@ describe("Update account roles addresses", function () {
           // Set the message Type, needed for signature
           resolutionType = [
             { name: "exchangeId", type: "uint256" },
-            { name: "buyerPercent", type: "uint256" },
+            { name: "buyerPercentBasisPoints", type: "uint256" },
           ];
 
           customSignatureType = {
@@ -341,7 +396,7 @@ describe("Update account roles addresses", function () {
 
           message = {
             exchangeId: exchangeId,
-            buyerPercent,
+            buyerPercentBasisPoints: buyerPercent,
           };
         });
 
@@ -350,9 +405,9 @@ describe("Update account roles addresses", function () {
           expect(seller.isValid()).is.true;
 
           // Update the seller wallet, testing for the event
-          expect(await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
+          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
             .to.emit(accountHandler, "SellerUpdated")
-            .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, rando.address);
+            .withArgs(seller.id, seller.toStruct(), emptyAuthToken.toStruct(), admin.address);
 
           // Collect the signature components
           const { r, s, v } = await prepareDataSignatureParameters(
@@ -379,9 +434,9 @@ describe("Update account roles addresses", function () {
           expect(buyerAccount.isValid()).is.true;
 
           // Update the buyer wallet, testing for the event
-          expect(await accountHandler.connect(buyer).updateBuyer(buyerAccount))
+          await expect(accountHandler.connect(buyer).updateBuyer(buyerAccount))
             .to.emit(accountHandler, "BuyerUpdated")
-            .withArgs(buyer.id, buyerAccount.toStruct(), buyer.address);
+            .withArgs(buyerAccount.id, buyerAccount.toStruct(), buyer.address);
 
           // Collect the signature components
           const { r, s, v } = await prepareDataSignatureParameters(
@@ -403,6 +458,54 @@ describe("Update account roles addresses", function () {
             .withArgs(exchangeId, buyerPercent, rando.address);
         });
 
+        it("If the buyer wallet address was changed, the seller should not be able to resolve a dispute with the old signature", async function () {
+          buyerAccount.wallet = rando.address;
+          expect(buyerAccount.isValid()).is.true;
+
+          // Update the buyer wallet, testing for the event
+          await expect(accountHandler.connect(buyer).updateBuyer(buyerAccount))
+            .to.emit(accountHandler, "BuyerUpdated")
+            .withArgs(buyerAccount.id, buyerAccount.toStruct(), buyer.address);
+
+          // Collect the signature components
+          const { r, s, v } = await prepareDataSignatureParameters(
+            buyer, // When buyer is the caller, seller should be the signer
+            customSignatureType,
+            "Resolution",
+            message,
+            disputeHandler.address
+          );
+
+          // Attempt to resolve a dispute with old buyer wallet, should fail
+          await expect(
+            disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v)
+          ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
+        });
+
+        it("If the seller operator address was changed, the buyer should not be able to resolve a dispute with the old signature", async function () {
+          seller.operator = rando.address;
+          expect(seller.isValid()).is.true;
+
+          // Update the seller wallet, testing for the event
+          await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
+            .to.emit(accountHandler, "SellerUpdated")
+            .withArgs(seller.id, seller.toStruct(), emptyAuthToken.toStruct(), admin.address);
+
+          // Collect the signature components
+          const { r, s, v } = await prepareDataSignatureParameters(
+            operator, // When buyer is the caller, seller should be the signer
+            customSignatureType,
+            "Resolution",
+            message,
+            disputeHandler.address
+          );
+
+          // Attempt to resolve a dispute with old buyer wallet, should fail
+          await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v)).to.revertedWith(
+            RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH
+          );
+        });
+
         it("Dispute resolver should be able to decide a dispute after change the operator address", async function () {
           const buyerEscalationDepositNative = applyPercentage(
             disputeResolverFeeNative,
@@ -416,7 +519,7 @@ describe("Update account roles addresses", function () {
           expect(disputeResolver.isValid()).is.true;
 
           // Update the dispute resolver operator, testing for the event
-          expect(await accountHandler.connect(adminDR).updateDisputeResolver(disputeResolver))
+          await expect(accountHandler.connect(adminDR).updateDisputeResolver(disputeResolver))
             .to.emit(accountHandler, "DisputeResolverUpdated")
             .withArgs(disputeResolver.id, disputeResolver.toStruct(), adminDR.address);
 
