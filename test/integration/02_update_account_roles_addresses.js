@@ -28,7 +28,7 @@ const {
   applyPercentage,
 } = require("../../scripts/util/test-utils.js");
 
-describe.only("Update account roles addresses", function () {
+describe("Update account roles addresses", function () {
   let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
   let expectedCloneAddress, emptyAuthToken, voucherInitValues;
   let deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR, agent;
@@ -172,7 +172,7 @@ describe.only("Update account roles addresses", function () {
       // Create an agent
       await accountHandler.connect(rando).createAgent(agentAccount);
 
-      // Create a seller account
+      // Create an offer
       ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
 
       // Check if domains are valid
@@ -180,7 +180,7 @@ describe.only("Update account roles addresses", function () {
       expect(offerDates.isValid()).is.true;
       expect(offerDurations.isValid()).is.true;
 
-      // Create the offer
+      // Register the offer
       await offerHandler
         .connect(operator)
         .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentAccount.id);
@@ -250,9 +250,9 @@ describe.only("Update account roles addresses", function () {
         expect(seller.isValid()).is.true;
 
         // Update the seller wallet, testing for the event
-        expect(await accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
+        await expect(accountHandler.connect(admin).updateSeller(seller, emptyAuthToken))
           .to.emit(accountHandler, "SellerUpdated")
-          .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, rando.address);
+          .withArgs(seller.id, seller.toStruct(), emptyAuthToken.toStruct(), admin.address);
 
         // Attempt to withdraw funds with old seller clerk, should fail
         await expect(
