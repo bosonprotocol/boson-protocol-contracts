@@ -7,7 +7,7 @@ const environments = require("../environments");
 const Role = require("./domain/Role");
 
 /**
- * Manage roles for access control in the Boson Protocol contract suite
+ * Manage roles for access control in the Boson Protocol contract suite.
  *
  * This script:
  *   - is idempotent, i.e., running twice with same assignment config
@@ -17,14 +17,14 @@ const Role = require("./domain/Role");
  *     fewest number of transactions to make granted roles match
  *     the assignments.
  *
- * Preparation:
- *  1.  Edit scripts/config/role-assignments.js
- *  1a. Add new address / role assignments following existing config
- *  1b. To remove an existing role assignment, delete role from addresses' roles array
- *  1b. If removing all roles from a previously roled address,
- *      - remove roles from addresses' role array but not the address configuration.
- *      = the script will only act on addresses listed in RoleAssignments
- *  2. Run this script with the appropriate npm script in package.json to log the output
+ * Process:
+ *  1.  Edit scripts/config/role-assignments.js. Addresses will be pulled from /addresses/<chainId>-<network>.json or environments file
+ *  1a. Add role assignments following existing config
+ *  1b. To remove an existing role assignment, delete role from entry's role array
+ *  1b. If removing all roles from a previously-roled entry,
+ *      - Remove roles from an entry's role array. Do not remove the entry's config from this file.
+ *      - The script will only act on entries listed in RoleAssignments
+ *  2. Run the appropriate npm script in package.json to manage roles for a given network
  *  3. Save changes to the repo as a record of who has what roles
  */
 async function main() {
