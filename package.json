@@ -22,7 +22,8 @@
   ],
   "scripts": {
     "build": "npx hardhat compile",
-    "test": "npx hardhat test",
+    "test": "npx hardhat test test/domain/** test/access/** test/protocol/**.js test/protocol/clients/**",
+    "integration-tests": "npx hardhat test test/integration/**",
     "check:contracts": "solhint 'contracts/**/*.sol' && prettier --list-different contracts/**",
     "check:scripts": "eslint test/** && prettier --list-different test/** && eslint scripts/** && prettier --list-different scripts/**",
     "docgen": "npx truffle compile && npx solidoc && rm -rf build",
