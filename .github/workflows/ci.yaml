@@ -65,6 +65,30 @@ jobs:
       - name: Unit tests
         run: npm run test
 
+  integration-test:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
+    env:
+      GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
+    name: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2.4.0
+      - name: Setup node
+        uses: actions/setup-node@v2.5.1
+        with:
+          node-version: '16.14.x'
+          cache: 'npm'
+      - name: Install Dependencies
+        run: npm install
+      - name: Prepare Environment
+        shell: bash
+        run: |
+          cp .env.example .env
+      - name: Integration tests
+        run: npm run integration-tests
+
   deploy-dry-run:
     needs: build
     runs-on: ubuntu-latest
