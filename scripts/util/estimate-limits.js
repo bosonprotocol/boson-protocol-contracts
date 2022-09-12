@@ -122,6 +122,46 @@ setupEnvironment["maxAllowedSellers"] = async function () {
 };
 
 /*
+Setup the environment for "maxFeesPerDisputeResolver". The following functions depend on it:
+- createDisputeResolver
+- addFeesToDisputeResolver
+- removeFeesFromDisputeResolver
+*/
+setupEnvironment["maxFeesPerDisputeResolver"] = async function () {
+  const feesCount = 10;
+
+  //Create DisputeResolverFee array
+  let disputeResolverFees = [];
+  for (let i = 0; i < feesCount; i++) {
+    const wallet = ethers.Wallet.createRandom();
+    disputeResolverFees.push(new DisputeResolverFee(wallet.address, `MockToken${i}`, "100"));
+  }
+
+  // Dispute resolver 2 - used in "addFeesToDisputeResolver"
+  const disputeResolver2 = mockDisputeResolver(dr2.address, dr2.address, dr2.address, dr2.address);
+  await accountHandler.createDisputeResolver(disputeResolver2, [], []);
+  const args_2 = [disputeResolver2.id, disputeResolverFees];
+  const arrayIndex_2 = 1;
+
+  // Dispute resolver 3 - used in "removeFeesFromDisputeResolver"
+  const disputeResolver3 = mockDisputeResolver(dr3.address, dr3.address, dr3.address, dr3.address);
+  await accountHandler.createDisputeResolver(disputeResolver3, disputeResolverFees, []);
+  const feeTokenAddressesToRemove = disputeResolverFees.map((DRfee) => DRfee.tokenAddress);
+  const args_3 = [disputeResolver3.id, feeTokenAddressesToRemove];
+  const arrayIndex_3 = 1;
+
+  const disputeResolver1 = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address);
+  const args_1 = [disputeResolver1, disputeResolverFees, []];
+  const arrayIndex_1 = 1;
+
+  return {
+    createDisputeResolver: { account: dr1, args: args_1, arrayIndex: arrayIndex_1 },
+    addFeesToDisputeResolver: { account: dr2, args: args_2, arrayIndex: arrayIndex_2 },
+    removeFeesFromDisputeResolver: { account: dr3, args: args_3, arrayIndex: arrayIndex_3 },
+  };
+};
+
+/*
 Setup the environment for "maxOffersPerBatch". The following functions depend on it:
 - createOfferBatch
 - voidOfferBatch
