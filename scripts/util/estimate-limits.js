@@ -285,6 +285,68 @@ setupEnvironment["maxOffersPerBundle"] = async function () {
 };
 
 /*
+Setup the environment for "maxTwinsPerBundle". The following functions depend on it:
+- createBundle
+*/
+setupEnvironment["maxTwinsPerBundle"] = async function () {
+  // create a seller
+  // Required constructor params
+  const agentId = "0"; // agent id is optional while creating an offer
+
+  const seller1 = mockSeller(
+    sellerWallet1.address,
+    sellerWallet1.address,
+    sellerWallet1.address,
+    sellerWallet1.address
+  );
+  const voucherInitValues = mockVoucherInitValues();
+  const emptyAuthToken = mockAuthToken();
+
+  await accountHandler.connect(sellerWallet1).createSeller(seller1, emptyAuthToken, voucherInitValues);
+
+  const disputeResolver = mockDisputeResolver(dr1.address, dr1.address, dr1.address, dr1.address);
+  await accountHandler.createDisputeResolver(
+    disputeResolver,
+    [new DisputeResolverFee(ethers.constants.AddressZero, "Native", "100")],
+    []
+  );
+  await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+
+  const twinCount = 10;
+
+  for (let i = 0; i < twinCount; i++) {
+    const [twinContract] = await deployMockTokens(gasLimit);
+    const twin = mockTwin(twinContract.address);
+
+    // Approving the twinHandler contract to transfer seller's tokens
+    await twinContract.connect(sellerWallet1).approve(twinHandler.address, twin.supplyAvailable); // approving the twin handler
+
+    // Create a twin.
+    await twinHandler.connect(sellerWallet1).createTwin(twin);
+  }
+
+  // Create a valid offer.
+  // Mock offer, offerDates and offerDurations
+  const { offer, offerDates, offerDurations } = await mockOffer();
+
+  // Create the offer
+  await offerHandler.connect(sellerWallet1).createOffer(offer, offerDates, offerDurations, disputeResolver.id, agentId);
+
+  const offerIds = ["1"];
+  const twinIds = [...Array(twinCount + 1).keys()].slice(1);
+
+  const bundle = new Bundle("1", seller1.id, offerIds, twinIds);
+
+  const args_1 = [bundle];
+  const arrayIndex_1 = 0;
+  const structField_1 = "twinIds";
+
+  return {
+    createBundle: { account: sellerWallet1, args: args_1, arrayIndex: arrayIndex_1, structField: structField_1 },
+  };
+};
+
+/*
 Setup the environment for "maxExchangesPerBatch". The following functions depend on it:
 - completeExchangeBatch
 */

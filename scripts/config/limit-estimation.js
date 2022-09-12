@@ -16,9 +16,9 @@ exports.limitsToEstimate = {
     //     removeOffersFromGroup: "IBosonGroupHandler",
     //   },
     // },
-    { name: "maxOffersPerBundle", methods: { createBundle: "IBosonBundleHandler" } },
+    // { name: "maxOffersPerBundle", methods: { createBundle: "IBosonBundleHandler" } },
+    { name: "maxTwinsPerBundle", methods: { createBundle: "IBosonBundleHandler" } },
 
-    // { name: "maxTwinsPerBundle", methods: {"createBundle":"IBosonBundleHandler"} },
     // { name: "maxOffersPerBatch", methods: ["createOfferBatch", "voidOfferBatch", "extendOfferBatch"] },
     // { name: "maxTokensPerWithdrawal", methods: ["withdrawFunds", "withdrawProtocolFees"] },
     // { name: "maxFeesPerDisputeResolver", methods: ["createDisputeResolver", "addFeesToDisputeResolver", "removeFeesFromDisputeResolver"] },
