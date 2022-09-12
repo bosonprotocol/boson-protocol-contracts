@@ -89,7 +89,7 @@ exports.RevertReasons = {
   UNSUPPORTED_TOKEN: "Unsupported token",
   BUNDLE_FOR_TWIN_EXISTS: "Bundle for twin exists",
   INVALID_SUPPLY_AVAILABLE: "supplyAvailable can't be zero",
-  INVALID_AMOUNT: "Amount must be greater than zero if token is ERC20 or ERC1155",
+  INVALID_AMOUNT: "Invalid twin amount",
   INVALID_TWIN_PROPERTY: "Invalid property for selected token type",
   INVALID_TWIN_TOKEN_RANGE: "Token range is already being used in another Twin",
   INVALID_TOKEN_ADDRESS: "Token address is a contract that doesn't implement the interface for selected token type",
@@ -103,6 +103,7 @@ exports.RevertReasons = {
   BUNDLE_TWIN_MUST_BE_UNIQUE: "Twin must be unique to a bundle",
   INSUFFICIENT_TWIN_SUPPLY_TO_COVER_BUNDLE_OFFERS:
     "Insufficient twin supplyAvailable to cover total quantity of bundle offers",
+  BUNDLE_REQUIRES_AT_LEAST_ONE_TWIN_AND_ONE_OFFER: "Bundle must have at least one twin and one offer",
 
   // Exchange related
   NO_SUCH_EXCHANGE: "No such exchange",
@@ -132,9 +133,12 @@ exports.RevertReasons = {
   ERC20_INSUFFICIENT_ALLOWANCE: "ERC20: insufficient allowance",
   ERC20_PAUSED: "ERC20Pausable: token transfer while paused",
   EOA_FUNCTION_CALL: "Transaction reverted: function call to a non-contract account",
+  EOA_FUNCTION_CALL_SAFE_ERC20: "Address: call to non-contract",
   ERC721_NON_EXISTENT: "ERC721: invalid token ID",
   OWNABLE_NOT_OWNER: "Ownable: caller is not the owner",
   OWNABLE_ZERO_ADDRESS: "Ownable: new owner is the zero address",
+  SAFE_ERC20_LOW_LEVEL_CALL: "SafeERC20: low-level call failed",
+  SAFE_ERC20_NOT_SUCCEEDED: "SafeERC20: ERC20 operation did not succeed",
 
   // Meta-Transactions related
   NONCE_USED_ALREADY: "Nonce used already",

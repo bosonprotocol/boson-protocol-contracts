@@ -20,6 +20,7 @@ interface IBosonBundleHandler is IBosonBundleEvents {
      * Reverts if:
      * - The bundles region of protocol is paused
      * - Seller does not exist
+     * - Either offer ids or twin ids are empty
      * - Any of the offers belongs to different seller
      * - Any of the offers does not exist
      * - Offer exists in a different bundle

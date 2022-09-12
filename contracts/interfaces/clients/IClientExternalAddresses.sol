@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
+import { IAccessControlUpgradeable } from "../IAccessControlUpgradeable.sol";
 import { IClientExternalAddressesEvents } from "../events/IClientExternalAddressesEvents.sol";
 
 /**

@@ -8,24 +8,20 @@ exports.ContractAddresses = {
   mumbai: {
     AccessController: "",
     ProtocolDiamond: "",
-    VoucherProxy: "",
   },
 
   mainnet: {
     AccessController: "",
     ProtocolDiamond: "",
-    VoucherProxy: "",
   },
 
   test: {
     AccessController: "",
     ProtocolDiamond: "",
-    VoucherProxy: "",
   },
 
   localhost: {
     AccessController: "",
     ProtocolDiamond: "",
-    VoucherProxy: "",
   },
 };

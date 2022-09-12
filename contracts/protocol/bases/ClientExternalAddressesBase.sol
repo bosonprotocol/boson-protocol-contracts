@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "../../domain/BosonConstants.sol";
-import { IAccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol";
+import { IAccessControlUpgradeable } from "../../interfaces/IAccessControlUpgradeable.sol";
 import { IClientExternalAddresses } from "../../interfaces/clients/IClientExternalAddresses.sol";
 import { ClientLib } from "../libs/ClientLib.sol";
 

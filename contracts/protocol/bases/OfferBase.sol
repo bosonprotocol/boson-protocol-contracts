@@ -25,7 +25,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Neither of voucher expiration date and voucher expiraton period are defined
      * - Voucher redeemable period is fixed, but it ends before it starts
      * - Voucher redeemable period is fixed, but it ends before offer expires
-     * - Fulfillment period is set to zero
+     * - Fulfillment period is less than minimum fulfillment period
      * - Resolution period is set to zero
      * - Voided is set to true
      * - Available quantity is set to zero
@@ -85,7 +85,7 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Neither of fixed voucher expiration date and voucher redemption duration are defined
      * - Voucher redeemable period is fixed, but it ends before it starts
      * - Voucher redeemable period is fixed, but it ends before offer expires
-     * - Fulfillment period is set to zero
+     * - Fulfillment period is less than minimum fulfillment period
      * - Resolution period is set to zero
      * - Voided is set to true
      * - Available quantity is set to zero
@@ -128,8 +128,8 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             require(_offerDurations.voucherValid > 0, AMBIGUOUS_VOUCHER_EXPIRY);
         }
 
-        // fulfillment period must be greater than zero
-        require(_offerDurations.fulfillmentPeriod > 0, INVALID_FULFILLMENT_PERIOD);
+        // fulfillment period must be greater than or equal to the minimum fulfillment period
+        require(_offerDurations.fulfillmentPeriod >= protocolLimits().minFulfillmentPeriod, INVALID_FULFILLMENT_PERIOD);
 
         // dispute duration must be greater than zero
         require(
@@ -144,7 +144,10 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
         // quantity must be greater than zero
         require(_offer.quantityAvailable > 0, INVALID_QUANTITY_AVAILABLE);
 
-        // specified resolver must be registered and active, except for absolute zero offers with unspecified dispute resolver
+        // Specified resolver must be registered and active, except for absolute zero offers with unspecified dispute resolver.
+        // If price and sellerDeposit are 0, seller is not obliged to choose dispute resolver, which is done by setting _disputeResolverId to 0.
+        // In this case, there is no need to check the validity of the dispute resolver. However, if one (or more) of {price, sellerDeposit, _disputeResolverId}
+        // is different from 0, it must be checked that dispute resolver exists, supports the exchange token and seller is allowed to choose them.
         DisputeResolutionTerms memory disputeResolutionTerms;
         if (_offer.price != 0 || _offer.sellerDeposit != 0 || _disputeResolverId != 0) {
             (

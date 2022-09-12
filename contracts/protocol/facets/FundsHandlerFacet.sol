@@ -8,8 +8,8 @@ import { PausableBase } from "../bases/ProtocolBase.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { IERC20 } from "../../interfaces/IERC20.sol";
+import { IERC20Metadata } from "../../interfaces/IERC20Metadata.sol";
 
 /**
  * @title FundsHandlerFacet

@@ -5,7 +5,8 @@ import "../../domain/BosonConstants.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { EIP712Lib } from "../libs/EIP712Lib.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20 } from "../../interfaces/IERC20.sol";
+import { SafeERC20 } from "../../ext_libs/SafeERC20.sol";
 
 /**
  * @title FundsLib
@@ -13,6 +14,8 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * @dev
  */
 library FundsLib {
+    using SafeERC20 for IERC20;
+
     event FundsEncumbered(
         uint256 indexed entityId,
         address indexed exchangeToken,
@@ -229,22 +232,19 @@ library FundsLib {
      * @param _amount - amount to be transferred
      */
     function transferFundsToProtocol(address _tokenAddress, uint256 _amount) internal {
-        // protocol balance before the transfer
-        uint256 protocolTokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
+        if (_amount > 0) {
+            // protocol balance before the transfer
+            uint256 protocolTokenBalanceBefore = IERC20(_tokenAddress).balanceOf(address(this));
 
-        // transfer ERC20 tokens from the caller
-        try IERC20(_tokenAddress).transferFrom(EIP712Lib.msgSender(), address(this), _amount) {} catch (
-            bytes memory error
-        ) {
-            string memory reason = error.length == 0 ? TOKEN_TRANSFER_FAILED : string(error);
-            revert(reason);
+            // transfer ERC20 tokens from the caller
+            IERC20(_tokenAddress).safeTransferFrom(EIP712Lib.msgSender(), address(this), _amount);
+
+            // protocol balance after the transfer
+            uint256 protocolTokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
+
+            // make sure that expected amount of tokens was transferred
+            require(protocolTokenBalanceAfter - protocolTokenBalanceBefore == _amount, INSUFFICIENT_VALUE_RECEIVED);
         }
-
-        // protocol balance after the transfer
-        uint256 protocolTokenBalanceAfter = IERC20(_tokenAddress).balanceOf(address(this));
-
-        // make sure that expected amount of tokens was transferred
-        require(protocolTokenBalanceAfter - protocolTokenBalanceBefore == _amount, INSUFFICIENT_VALUE_RECEIVED);
     }
 
     /**
@@ -277,10 +277,8 @@ library FundsLib {
             (bool success, ) = _to.call{ value: _amount }("");
             require(success, TOKEN_TRANSFER_FAILED);
         } else {
-            try IERC20(_tokenAddress).transfer(_to, _amount) {} catch (bytes memory error) {
-                string memory reason = error.length == 0 ? TOKEN_TRANSFER_FAILED : string(error);
-                revert(reason);
-            }
+            // transfer ERC20 tokens
+            IERC20(_tokenAddress).safeTransfer(_to, _amount);
         }
 
         // notify the external observers

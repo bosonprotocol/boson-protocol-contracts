@@ -255,6 +255,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * - Function name does not match the bytes4 version of the function signature
      * - sender does not match the recovered signer
      * - Any code executed in the signed transaction reverts
+     * - Signature is invalid
      *
      * @param _userAddress - the sender of the transaction
      * @param _functionName - the name of the function to be executed

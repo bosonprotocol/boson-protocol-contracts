@@ -10,6 +10,7 @@ import { BuyerBase } from "../bases/BuyerBase.sol";
 import { DisputeBase } from "../bases/DisputeBase.sol";
 import { FundsLib } from "../libs/FundsLib.sol";
 import "../../domain/BosonConstants.sol";
+import { Address } from "../../ext_libs/Address.sol";
 
 interface Token {
     function balanceOf(address account) external view returns (uint256); //ERC-721 and ERC-20
@@ -27,6 +28,8 @@ interface MultiToken {
  * @notice Handles exchanges associated with offers within the protocol
  */
 contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
+    using Address for address;
+
     /**
      * @notice Initializes facet.
      * This function is callable only once.
@@ -647,7 +650,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                         : twin.supplyAvailable - twin.amount;
                 }
 
-                if (tokenType == TokenType.FungibleToken && twin.supplyAvailable >= twin.amount) {
+                if (tokenType == TokenType.FungibleToken) {
                     // ERC-20 style transfer
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
@@ -657,7 +660,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                             twin.amount
                         )
                     );
-                } else if (tokenType == TokenType.NonFungibleToken && twin.supplyAvailable > 0) {
+                } else if (tokenType == TokenType.NonFungibleToken) {
                     // Token transfer order is ascending to avoid overflow when twin supply is unlimited
                     if (twin.supplyAvailable == type(uint256).max) {
                         twin.tokenId++;
@@ -675,7 +678,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                             ""
                         )
                     );
-                } else if (twin.tokenType == TokenType.MultiToken && twin.supplyAvailable >= twin.amount) {
+                } else if (twin.tokenType == TokenType.MultiToken) {
                     // ERC-1155 style transfer
                     (success, result) = twin.tokenAddress.call(
                         abi.encodeWithSignature(
@@ -690,9 +693,8 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
                 }
 
                 // If token transfer failed
-                if (!success) {
+                if (!success || (result.length > 0 && !abi.decode(result, (bool)))) {
                     transferFailed = true;
-
                     emit TwinTransferFailed(twin.id, twin.tokenAddress, exchangeId, tokenId, twin.amount, sender);
                 } else {
                     // Store twin receipt on twinReceiptsByExchange
@@ -706,7 +708,7 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
 
             if (transferFailed) {
                 // Raise a dispute if caller is a contract
-                if (isContract(sender)) {
+                if (sender.isContract()) {
                     raiseDisputeInternal(_exchange, _voucher, seller.id);
                 } else {
                     // Revoke voucher if caller is an EOA
@@ -838,16 +840,6 @@ contract ExchangeHandlerFacet is IBosonExchangeHandler, BuyerBase, DisputeBase {
      */
     function holdsSpecificToken(address _buyer, Condition storage _condition) internal view returns (bool) {
         return (Token(_condition.tokenAddress).ownerOf(_condition.tokenId) == _buyer);
-    }
-
-    /**
-     * @notice Verifies if a given address is a contract or not (EOA).
-     *
-     * @param _address address to verify
-     * @return bool true if _address is a contract
-     */
-    function isContract(address _address) private view returns (bool) {
-        return _address.code.length > 0;
     }
 
     /**

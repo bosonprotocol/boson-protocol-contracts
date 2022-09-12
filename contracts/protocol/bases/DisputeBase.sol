@@ -30,7 +30,7 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
         Voucher storage _voucher,
         uint256 _sellerId
     ) internal {
-        // Make sure the fulfillment period has elapsed
+        // Make sure the fulfillment period has not elapsed
         uint256 elapsed = block.timestamp - _voucher.redeemedDate;
         require(elapsed < fetchOfferDurations(_exchange.offerId).fulfillmentPeriod, FULFILLMENT_PERIOD_HAS_ELAPSED);
 

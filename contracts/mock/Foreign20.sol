@@ -181,3 +181,33 @@ contract Foreign20WithFee is Foreign20 {
         fee = _newFee;
     }
 }
+
+/**
+ * @title Foreign20 that return false when transfer is called
+ *
+ *
+ * @notice Mock ERC-(20) for Unit Testing
+ */
+contract Foreign20TransferReturnFalse is Foreign20 {
+    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
+        super.transfer(recipient, amount);
+        return false;
+    }
+}
+
+/**
+ * @title Foreign20 that return false when transferFrom is called
+ *
+ *
+ * @notice Mock ERC-(20) for Unit Testing
+ */
+contract Foreign20TransferFromReturnFalse is Foreign20 {
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) public virtual override returns (bool) {
+        super.transferFrom(sender, recipient, amount);
+        return false;
+    }
+}

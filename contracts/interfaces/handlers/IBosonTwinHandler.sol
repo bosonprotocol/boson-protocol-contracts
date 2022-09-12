@@ -18,6 +18,7 @@ interface IBosonTwinHandler is IBosonTwinEvents {
      * Emits a TwinCreated event if successful.
      *
      * Reverts if:
+     * - The twins region of protocol is paused
      * - Seller does not exist
      * - Protocol is not approved to transfer the seller's token
      * - Twin supplyAvailable is zero
@@ -26,6 +27,7 @@ interface IBosonTwinHandler is IBosonTwinEvents {
      * - Twin is NonFungibleToken with unlimited supply and starting token id is too high
      * - Twin is NonFungibleToken and range is already being used in another twin of the seller
      * - Twin is FungibleToken or MultiToken and amount was not set
+     * - Twin is FungibleToken or MultiToken and amount is greater than supply available
      *
      * @param _twin - the fully populated struct with twin id set to 0x0
      */

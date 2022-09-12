@@ -61,6 +61,13 @@ library EIP712Lib {
         bytes32 _sigS,
         uint8 _sigV
     ) internal view returns (bool) {
+        // Ensure signature is unique
+        // See https://github.com/OpenZeppelin/openzeppelin-contracts/blob/04695aecbd4d17dddfd55de766d10e3805d6f42f/contracts/cryptography/ECDSA.sol#63
+        require(
+            uint256(_sigS) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0 &&
+                (_sigV == 27 || _sigV == 28),
+            INVALID_SIGNATURE
+        );
         address signer = ecrecover(toTypedMessageHash(_hashedMetaTx), _sigV, _sigR, _sigS);
         require(signer != address(0), INVALID_SIGNATURE);
         return signer == _user;
