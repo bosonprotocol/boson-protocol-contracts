@@ -71,7 +71,7 @@ jobs:
     if: ${{ !github.event.pull_request.draft }}
     env:
       GAS_REPORTER_COINMARKETCAP_API_KEY: ${{ secrets.COINMARKETCAP_API_KEY }}
-    name: test
+    name: integration-tests
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2.4.0
