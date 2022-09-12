@@ -46,7 +46,7 @@ async function main() {
 
   console.log(`🔑 Confirming roles...`);
 
-  const accessControllerInfo = contractsFile.contracts.find(i => i.name==="AccessController");
+  const accessControllerInfo = contractsFile.contracts.find((i) => i.name === "AccessController");
 
   // Get AccessController abstraction
   const accessController = await ethers.getContractAt("AccessController", accessControllerInfo.address);
@@ -60,10 +60,12 @@ async function main() {
     const [name, config] = assignment;
 
     console.log(`\n🔍 ${name}`);
-   
+
     let contractInfo;
-    contractInfo = contractsFile.contracts.find(i => i.name===name);
-    name === "AdminAddress" ? config.address = environments[network].adminAddress : config.address = contractInfo.address;
+    contractInfo = contractsFile.contracts.find((i) => i.name === name);
+    name === "AdminAddress"
+      ? (config.address = environments[network].adminAddress)
+      : (config.address = contractInfo.address);
 
     console.log(`   👉 ${config.address}`);
 

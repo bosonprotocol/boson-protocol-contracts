@@ -13,15 +13,8 @@ const { deployProtocolDiamond } = require("./util/deploy-protocol-diamond.js");
 const { deployProtocolClients } = require("./util/deploy-protocol-clients.js");
 const { deployProtocolConfigFacet } = require("./util/deploy-protocol-config-facet.js");
 const { deployProtocolHandlerFacets } = require("./util/deploy-protocol-handler-facets.js");
-const {
-  verifyOnBlockExplorer,
-  verifyOnTestEnv,
-} = require("./util/report-verify-deployments");
-const {
-  delay,
-  deploymentComplete,
-  writeContracts,
-} = require("./util/utils");
+const { verifyOnBlockExplorer, verifyOnTestEnv } = require("./util/report-verify-deployments");
+const { delay, deploymentComplete, writeContracts } = require("./util/utils");
 const AuthTokenType = require("../scripts/domain/AuthTokenType");
 
 /**

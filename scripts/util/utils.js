@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const fs = require('fs');
+const fs = require("fs");
 const packageFile = require("../../package.json");
 
 const addressesDirPath = __dirname + `/../../addresses`;
@@ -41,14 +41,8 @@ async function writeContracts(contracts) {
 }
 
 function readContracts(chainId, env) {
-  return JSON.parse(
-    fs.readFileSync(
-      getAddressesFilePath(chainId, env),
-      'utf-8'
-    )
-  );
+  return JSON.parse(fs.readFileSync(getAddressesFilePath(chainId, env), "utf-8"));
 }
-
 
 exports.getAddressesFilePath = getAddressesFilePath;
 exports.writeContracts = writeContracts;
