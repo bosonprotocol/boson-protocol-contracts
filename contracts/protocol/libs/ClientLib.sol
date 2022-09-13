@@ -8,6 +8,7 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
 /**
  * @title ClientLib
  *
+ * @notice
  * - Defines storage slot structure
  * - Provides slot accessor
  * - Defines hasRole function
@@ -31,7 +32,7 @@ library ClientLib {
     bytes32 internal constant PROXY_SLOT = keccak256("Boson.Protocol.ClientProxy");
 
     /**
-     * @notice Get the Proxy storage slot
+     * @notice Gets the Proxy storage slot.
      *
      * @return ps - Proxy storage slot cast to ProxyStorage
      */
@@ -43,11 +44,13 @@ library ClientLib {
     }
 
     /**
-     * @dev Checks that the caller has a specific role.
+     * @notice Checks that the caller has a specific role.
      *
      * Reverts if caller doesn't have role.
      *
      * See: {AccessController.hasRole}
+     *
+     * @param role - the role to check
      */
     function hasRole(bytes32 role) internal view returns (bool) {
         ProxyStorage storage ps = proxyStorage();

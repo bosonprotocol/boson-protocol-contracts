@@ -10,11 +10,12 @@ import "../../domain/BosonConstants.sol";
 /**
  * @title GroupHandlerFacet
  *
- * @notice Handles groups within the protocol
+ * @notice Handles grouping of offers and conditions
  */
 contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
     /**
      * @notice Facet Initializer
+     * This function is callable only once.
      */
     function initialize() public onlyUnInitialized(type(IBosonGroupHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonGroupHandler).interfaceId);
@@ -26,12 +27,11 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      * Emits a GroupCreated event if successful.
      *
      * Reverts if:
-     * - The groups region of protocol is paused
-     * - caller is not an operator
-     * - any of offers belongs to different seller
-     * - any of offers does not exist
-     * - offer exists in a different group
-     * - number of offers exceeds maximum allowed number per group
+     * - Caller is not an operator
+     * - Any of offers belongs to different seller
+     * - Any of offers does not exist
+     * - Offer exists in a different group
+     * - Number of offers exceeds maximum allowed number per group
      *
      * @param _group - the fully populated struct with group id set to 0x0
      * @param _condition - the fully populated condition struct
@@ -46,22 +46,21 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
     }
 
     /**
-     * @notice Adds offers to an existing group
+     * @notice Adds offers to an existing group.
      *
      * Emits a GroupUpdated event if successful.
      *
      * Reverts if:
-     * - The groups region of protocol is paused
-     * - caller is not the seller
-     * - offer ids is an empty list
-     * - number of offers exceeds maximum allowed number per group
-     * - group does not exist
-     * - any of offers belongs to different seller
-     * - any of offers does not exist
-     * - offer exists in a different group
-     * - offer ids contains duplicated offers
+     * - Caller is not the seller
+     * - Offer ids param is an empty list
+     * - Number of offers exceeds maximum allowed number per group
+     * - Group does not exist
+     * - Any of offers belongs to different seller
+     * - Any of offers does not exist
+     * - Offer exists in a different group
+     * - Offer ids param contains duplicated offers
      *
-     * @param _groupId  - the id of the group to be updated
+     * @param _groupId - the id of the group to be updated
      * @param _offerIds - array of offer ids to be added to the group
      */
     function addOffersToGroup(uint256 _groupId, uint256[] calldata _offerIds)
@@ -74,20 +73,20 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
     }
 
     /**
-     * @notice Removes offers from an existing group
+     * @notice Removes offers from an existing group.
      *
      * Emits a GroupUpdated event if successful.
      *
      * Reverts if:
      * - The groups region of protocol is paused
-     * - caller is not the seller
-     * - offer ids is an empty list
-     * - number of offers exceeds maximum allowed number per group
-     * - group does not exist
-     * - any offer is not part of the group
+     * - Caller is not the seller
+     * - Offer ids param is an empty list
+     * - Number of offers exceeds maximum allowed number per group
+     * - Group does not exist
+     * - Any offer is not part of the group
      *
-     * @param _groupId  - the id of the group to be updated
-     * @param _offerIds - array of offer ids to be removed to the group
+     * @param _groupId - the id of the group to be updated
+     * @param _offerIds - array of offer ids to be removed from the group
      */
     function removeOffersFromGroup(uint256 _groupId, uint256[] calldata _offerIds)
         external
@@ -95,7 +94,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         groupsNotPaused
         nonReentrant
     {
-        // check if group can be updated
+        // Check if group can be updated
         (uint256 sellerId, Group storage group) = preUpdateChecks(_groupId, _offerIds);
 
         for (uint256 i = 0; i < _offerIds.length; i++) {
@@ -105,20 +104,20 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
             (, uint256 groupId) = getGroupIdByOffer(offerId);
             require(_groupId == groupId, OFFER_NOT_IN_GROUP);
 
-            // remove groupIdByOffer mapping
+            // Remove groupIdByOffer mapping
             delete protocolLookups().groupIdByOffer[offerId];
 
             uint256 len = group.offerIds.length;
-            //Get the index in the offerIds array, which is 1 less than the offerIdIndexByGroup index
+            // Get the index in the offerIds array, which is 1 less than the offerIdIndexByGroup index
             uint256 index = protocolLookups().offerIdIndexByGroup[groupId][offerId] - 1;
 
             if (index != len - 1) {
-                // if index == len - 1 then only pop and delete are needed
+                // If index == len - 1 then only pop and delete are needed
                 // Need to fill gap caused by delete if more than one element in storage array
                 uint256 offerIdToMove = group.offerIds[len - 1];
                 // Copy the last token in the array to this index to fill the gap
                 group.offerIds[index] = offerIdToMove;
-                //Reset index mapping. Should be index in offerIds array + 1
+                // Reset index mapping. Should be index in offerIds array + 1
                 protocolLookups().offerIdIndexByGroup[groupId][offerIdToMove] = index + 1;
             }
             // Delete last offer id in the array, which was just moved to fill the gap
@@ -141,11 +140,11 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
      *
      * Reverts if:
      * - The groups region of protocol is paused
-     * - condition includes invalid combination of fields
-     * - seller does not match caller
-     * - group does not exist
+     * - Condition includes invalid combination of fields
+     * - Seller does not match caller
+     * - Group does not exist
      *
-     * @param _groupId - the id of the group to set the condition
+     * @param _groupId - the id of the group whose condition will be set
      * @param _condition - fully populated condition struct
      *
      */
@@ -155,14 +154,14 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
         groupsNotPaused
         nonReentrant
     {
-        // validate condition parameters
+        // Validate condition parameters
         require(validateCondition(_condition), INVALID_CONDITION_PARAMETERS);
 
-        // verify group exists
+        // Verify group exists
         (bool exists, Group storage group) = fetchGroup(_groupId);
         require(exists, NO_SUCH_GROUP);
 
-        // get message sender
+        // Get message sender
         address sender = msgSender();
 
         // Get seller id, we assume seller id exists if offer exists
@@ -205,7 +204,7 @@ contract GroupHandlerFacet is IBosonGroupHandler, GroupBase {
     /**
      * @notice Gets the next group id.
      *
-     * Does not increment the counter.
+     * @dev Does not increment the counter.
      *
      * @return nextGroupId - the next group id
      */

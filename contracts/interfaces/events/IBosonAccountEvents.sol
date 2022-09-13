@@ -6,7 +6,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 /**
  * @title IBosonAccountEvents
  *
- * @notice Events related to management of accounts within the protocol.
+ * @notice Defines events related to management of accounts within the protocol.
  */
 interface IBosonAccountEvents {
     event SellerCreated(

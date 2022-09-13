@@ -6,7 +6,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 /**
  * @title IBosonFundsEvents
  *
- * @notice Events related to management of funds within the protocol.
+ * @notice Defines events related to management of funds within the protocol.
  */
 interface IBosonFundsEvents {
     event FundsDeposited(

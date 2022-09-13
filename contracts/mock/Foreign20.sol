@@ -20,7 +20,7 @@ contract Foreign20 is ERC20Pausable {
     constructor() ERC20(TOKEN_NAME, TOKEN_SYMBOL) {}
 
     /**
-     * Mint some tokens
+     * Mints some tokens
      * @param _account - address that gets the tokens
      * @param _amount - amount to mint
      */
@@ -29,7 +29,7 @@ contract Foreign20 is ERC20Pausable {
     }
 
     /**
-     * Pause the token transfers
+     * Pauses the token transfers
      */
     function pause() public {
         _pause();

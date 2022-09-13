@@ -7,9 +7,9 @@ import { IClientExternalAddresses } from "../../interfaces/clients/IClientExtern
 import { ClientLib } from "../libs/ClientLib.sol";
 
 /**
- * @title Beacon
+ * @title ClientExternalAddressesBase
  *
- * @notice Helps minimal proxies
+ * @notice Helps minimal proxies.
  */
 contract ClientExternalAddressesBase is IClientExternalAddresses {
     /**
@@ -18,12 +18,21 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
      * Reverts if caller doesn't have role.
      *
      * See: {AccessController.hasRole}
+     *
+     * @param role - the role to check
      */
     modifier onlyRole(bytes32 role) {
         require(ClientLib.hasRole(role), "Access denied, caller doesn't have role");
         _;
     }
 
+    /**
+     * @notice Instantiates the contract.
+     *
+     * @param _accessController - the Boson Protocol AccessController address
+     * @param _protocolAddress - the ProtocolDiamond address
+     * @param _impl - the implementation address
+     */
     constructor(
         address _accessController,
         address _protocolAddress,
@@ -43,8 +52,10 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
     }
 
     /**
-     * @dev Returns the address to which the fallback function
+     * @notice Returns the address to which the fallback function
      * and {_fallback} should delegate.
+     *
+     * @return the implementation address
      */
     function _implementation() internal view virtual returns (address) {
         // Get the ProxyStorage struct
@@ -55,7 +66,9 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
     }
 
     /**
-     * @dev Set the implementation address
+     * @notice Sets the implementation address.
+     *
+     * @param _impl - the implementation address
      */
     function setImplementation(address _impl) external override onlyRole(UPGRADER) {
         // Get the ProxyStorage struct
@@ -69,14 +82,16 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
     }
 
     /**
-     * @dev Get the implementation address
+     * @notice Gets the implementation address.
+     *
+     * @return the implementation address
      */
     function getImplementation() external view override returns (address) {
         return _implementation();
     }
 
     /**
-     * @notice Set the Boson Protocol AccessController
+     * @notice Sets the Boson Protocol AccessController.
      *
      * Emits an AccessControllerAddressChanged event.
      *
@@ -107,9 +122,9 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
     }
 
     /**
-     * @notice Set the ProtocolDiamond address
+     * @notice Set the ProtocolDiamond address.
      *
-     * Emits an ProtocolAddressChanged event.
+     * Emits a ProtocolAddressChanged event.
      *
      * @param _protocolAddress - the ProtocolDiamond address
      */
@@ -127,7 +142,7 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
     /**
      * @notice Gets the address of the ProtocolDiamond contract.
      *
-     * @return the address of the ProtocolDiamond contract
+     * @return the ProtocolDiamond address
      */
     function getProtocolAddress() public view override returns (address) {
         // Get the ProxyStorage struct

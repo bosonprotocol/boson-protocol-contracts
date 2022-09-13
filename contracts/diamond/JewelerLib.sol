@@ -7,7 +7,7 @@ import { IDiamondCut } from "../interfaces/diamond/IDiamondCut.sol";
 /**
  * @title JewelerLib
  *
- * @notice Facet management functions
+ * @notice Provides facet management functions
  *
  * @notice Based on Nick Mudge's gas-optimized diamond-2 reference,
  * with modifications to support role-based access and management of
@@ -30,15 +30,15 @@ library JewelerLib {
     bytes32 internal constant CLEAR_SELECTOR_MASK = bytes32(uint256(0xffffffff << 224));
 
     /**
-     * @notice Cut facets of the Diamond
+     * @notice Cuts facets of the Diamond
      *
-     * Add/replace/remove any number of function selectors
+     * Adds/replacse/removes any number of function selectors
      *
      * If populated, _calldata is executed with delegatecall on _init
      *
-     * @param _facetCuts Contains the facet addresses and function selectors
-     * @param _init The address of the contract or facet to execute _calldata
-     * @param _calldata A function call, including function selector and arguments
+     * @param _facetCuts - contains the facet addresses and function selectors
+     * @param _init - the address of the contract or facet to execute _calldata
+     * @param _calldata - a function call, including function selector and arguments
      */
     function diamondCut(
         IDiamondCut.FacetCut[] memory _facetCuts,
@@ -92,7 +92,7 @@ library JewelerLib {
     }
 
     /**
-     * @notice Maintain the selectors in a FacetCut
+     * @notice Maintains the selectors in a FacetCut
      *
      * N.B. This method is unbelievably long and dense.
      * It hails from the diamond-2 reference and works
@@ -263,10 +263,10 @@ library JewelerLib {
     }
 
     /**
-     * @notice Call a facet's initializer
+     * @notice Calls a facet's initializer.
      *
      * @param _init - the address of the facet to be initialized
-     * @param _calldata - the
+     * @param _calldata - the initializer function call, including function selector and arguments
      */
     function initializeDiamondCut(address _init, bytes memory _calldata) internal {
         // If _init is not populated, then _calldata must also be unpopulated
@@ -297,7 +297,7 @@ library JewelerLib {
     }
 
     /**
-     * @notice make sure the given address has code
+     * @notice Checks that the given address has code.
      *
      * Reverts if address has no contract code
      *

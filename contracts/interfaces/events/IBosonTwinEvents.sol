@@ -6,7 +6,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 /**
  * @title IBosonTwinEvents
  *
- * @notice Events related to management of twins within the protocol.
+ * @notice Defines events related to management of twins within the protocol.
  */
 interface IBosonTwinEvents {
     event TwinCreated(

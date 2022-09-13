@@ -6,7 +6,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 /**
  * @title IBosonBundleEvents
  *
- * @notice Events related to management of bundles within the protocol
+ * @notice Defines events related to management of bundles within the protocol.
  */
 interface IBosonBundleEvents {
     event BundleCreated(

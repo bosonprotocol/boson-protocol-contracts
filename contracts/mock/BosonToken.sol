@@ -24,6 +24,8 @@ contract BosonToken {
 
     /**
      * @notice The faux ERC-20 balanceOf implementation
+     *
+     * @return the address's balance
      */
     function balanceOf(address _holder) external view returns (uint256) {
         return balances[_holder];
@@ -31,6 +33,8 @@ contract BosonToken {
 
     /**
      * @notice The faux ERC-20 allowance implementation
+     *
+     * @return the spender's allowance for this owner
      */
     function allowance(address _owner, address _spender) public view returns (uint256) {
         return allowances[_owner][_spender];
@@ -38,6 +42,8 @@ contract BosonToken {
 
     /**
      * @notice The faux ERC-20 approve implementation
+     *
+     * @return true if the caller was successfully approved
      */
     function approve(address spender, uint256 amount) public virtual returns (bool) {
         address owner = msg.sender;
