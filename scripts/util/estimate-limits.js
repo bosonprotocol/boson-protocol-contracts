@@ -82,7 +82,7 @@ setupEnvironment["maxAllowedSellers"] = async function () {
   // AuthToken
   const emptyAuthToken = mockAuthToken();
   const voucherInitValues = mockVoucherInitValues();
-  const sellerCount = 10;
+  const sellerCount = 50;
 
   for (let i = 0; i < sellerCount; i++) {
     const wallet = ethers.Wallet.createRandom();
@@ -709,7 +709,8 @@ async function estimateLimits() {
     await estimateLimit(limit, inputs, limitsToEstimate.safeGasLimitPercent);
     accountId.next(true);
   }
-  fs.writeFileSync(__dirname + "/limit_estimates.json", JSON.stringify(result));
+  fs.writeFileSync(__dirname + "/../../logs/limit_estimates.json", JSON.stringify(result));
+  makeReport(result);
 }
 
 /*
@@ -899,6 +900,45 @@ async function setupCommonEnvironment() {
     IBosonGroupHandler: groupHandler,
     IBosonOfferHandler: offerHandler,
   };
+}
+
+function makeReport(res) {
+  let header = `| # |`;
+  let alignment = `|--| `;
+  let row0 = `|  |`;
+  let rows = [];
+  let maxArrayLength = 50;
+  let numberOfRows = 0;
+
+  for (let o = 0; Math.pow(10, o) <= maxArrayLength; o++) {
+    for (let i = 1; i < 10; i++) {
+      let arrayLength = i * Math.pow(10, o);
+      if (arrayLength > maxArrayLength) arrayLength = maxArrayLength;
+      rows.push(`| ${arrayLength} |`);
+      numberOfRows++;
+      if (arrayLength == maxArrayLength) break;
+    }
+  }
+
+  let maxNumber = `| **max** |`;
+  let safeNumber = `| safe |`;
+
+  for (const [limit, result] of Object.entries(res)) {
+    for (const [method, estimates] of Object.entries(result)) {
+      header = `${header} ${limit} |`;
+      alignment = `${alignment} ---:|`;
+      row0 = `${row0} ${method} |`;
+      for (let i = 0; i < numberOfRows; i++) {
+        rows[i] = `${rows[i]} ${estimates.gasEstimates[i] ? estimates.gasEstimates[i][0] : " "} |`;
+      }
+      maxNumber = `${maxNumber} **${estimates.maxNumber}** |`;
+      safeNumber = `${safeNumber} ${estimates.safeNumber} |`;
+    }
+  }
+
+  const output = [header, alignment, row0, ...rows, maxNumber, safeNumber].join(`\n`);
+
+  fs.writeFileSync(__dirname + "/../../logs/limit_estimates.md", output);
 }
 
 estimateLimits();
