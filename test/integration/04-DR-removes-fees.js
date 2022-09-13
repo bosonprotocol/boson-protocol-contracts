@@ -1,0 +1,312 @@
+const hre = require("hardhat");
+const ethers = hre.ethers;
+const { expect } = require("chai");
+
+const { gasLimit } = require("../../environments");
+const {
+  mockBuyer,
+  mockSeller,
+  mockAuthToken,
+  mockVoucherInitValues,
+  mockOffer,
+  mockDisputeResolver,
+  mockAgent,
+  accountId,
+} = require("../utils/mock");
+const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
+const Role = require("../../scripts/domain/Role");
+const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
+const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
+const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
+const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
+const { oneMonth, oneWeek } = require("../utils/constants");
+const {
+  setNextBlockTimestamp,
+  calculateContractAddress,
+  prepareDataSignatureParameters,
+  applyPercentage,
+} = require("../../scripts/util/test-utils.js");
+
+describe.only("Update account roles addresses", function () {
+  let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
+  let expectedCloneAddress, emptyAuthToken, voucherInitValues;
+  let deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR, agent;
+  let buyerEscalationDepositPercentage;
+  let buyerAccount, seller, disputeResolver, agentAccount;
+  let offer, offerDates, offerDurations, disputeResolverId;
+  let exchangeId;
+  let disputeResolverFeeNative;
+
+  beforeEach(async function () {
+    // Make accounts available
+    [deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR, agent] =
+      await ethers.getSigners();
+
+    // Deploy the Protocol Diamond
+    const [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
+
+    // Temporarily grant UPGRADER role to deployer account
+    await accessController.grantRole(Role.UPGRADER, deployer.address);
+
+    // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
+    await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
+
+    // Cut the protocol handler facets into the Diamond
+    await deployProtocolHandlerFacets(protocolDiamond, [
+      "AccountHandlerFacet",
+      "SellerHandlerFacet",
+      "BuyerHandlerFacet",
+      "DisputeResolverHandlerFacet",
+      "AgentHandlerFacet",
+      "OfferHandlerFacet",
+      "ExchangeHandlerFacet",
+      "FundsHandlerFacet",
+      "DisputeHandlerFacet",
+    ]);
+
+    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
+    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [beacon] = beacons;
+    const [proxy] = proxies;
+
+    // set protocolFees
+    const protocolFeePercentage = "200"; // 2 %
+    const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    buyerEscalationDepositPercentage = "1000"; // 10%
+
+    // Add config Handler, so ids start at 1, and so voucher address can be found
+    const protocolConfig = [
+      // Protocol addresses
+      {
+        treasury: ethers.constants.AddressZero,
+        token: ethers.constants.AddressZero,
+        voucherBeacon: beacon.address,
+        beaconProxy: proxy.address,
+      },
+      // Protocol limits
+      {
+        maxExchangesPerBatch: 0,
+        maxOffersPerGroup: 0,
+        maxTwinsPerBundle: 0,
+        maxOffersPerBundle: 0,
+        maxOffersPerBatch: 0,
+        maxTokensPerWithdrawal: 1,
+        maxFeesPerDisputeResolver: 100,
+        maxEscalationResponsePeriod: oneMonth,
+        maxDisputesPerBatch: 0,
+        maxAllowedSellers: 100,
+        maxTotalOfferFeePercentage: 4000, //40%
+        maxRoyaltyPecentage: 1000, //10%
+        maxResolutionPeriod: oneMonth,
+        minFulfillmentPeriod: oneWeek,
+      },
+      // Protocol fees
+      {
+        percentage: protocolFeePercentage,
+        flatBoson: protocolFeeFlatBoson,
+      },
+      buyerEscalationDepositPercentage,
+    ];
+
+    await deployProtocolConfigFacet(protocolDiamond, protocolConfig, gasLimit);
+
+    // Cast Diamond to IBosonAccountHandler. Use this interface to call all individual account handlers
+    accountHandler = await ethers.getContractAt("IBosonAccountHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonOfferHandler.
+    offerHandler = await ethers.getContractAt("IBosonOfferHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonExchangeHandler.
+    exchangeHandler = await ethers.getContractAt("IBosonExchangeHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonFundsHandler.
+    fundsHandler = await ethers.getContractAt("IBosonFundsHandler", protocolDiamond.address);
+
+    // Cast Diamond to IBosonDisputeHandler.
+    disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
+
+    expectedCloneAddress = calculateContractAddress(accountHandler.address, "1");
+    emptyAuthToken = mockAuthToken();
+    expect(emptyAuthToken.isValid()).is.true;
+    voucherInitValues = mockVoucherInitValues();
+    expect(voucherInitValues.isValid()).is.true;
+
+    // Create a seller account
+    seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
+    expect(await accountHandler.connect(admin).createSeller(seller, emptyAuthToken, voucherInitValues))
+      .to.emit(accountHandler, "SellerCreated")
+      .withArgs(seller.id, seller.toStruct(), expectedCloneAddress, emptyAuthToken.toStruct(), admin.address);
+
+    // Create a dispute resolver
+    disputeResolver = mockDisputeResolver(
+      operatorDR.address,
+      adminDR.address,
+      clerkDR.address,
+      treasuryDR.address,
+      false
+    );
+    expect(disputeResolver.isValid()).is.true;
+
+    //Create DisputeResolverFee array so offer creation will succeed
+    disputeResolverFeeNative = ethers.utils.parseUnits("1", "ether").toString();
+    const disputeResolverFees = [
+      new DisputeResolverFee(ethers.constants.AddressZero, "Native", disputeResolverFeeNative),
+    ];
+
+    // Make empty seller list, so every seller is allowed
+    const sellerAllowList = [];
+
+    // Register and activate the dispute resolver
+    await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
+    await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
+
+    agentAccount = mockAgent(agent.address);
+    expect(agentAccount.isValid()).is.true;
+
+    // Create an agent
+    await accountHandler.connect(rando).createAgent(agentAccount);
+
+    // Create a seller account
+    ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
+    offer.quantityAvailable = "3";
+
+    // Check if domains are valid
+    expect(offer.isValid()).is.true;
+    expect(offerDates.isValid()).is.true;
+    expect(offerDurations.isValid()).is.true;
+
+    // Create the offer
+    await offerHandler
+      .connect(operator)
+      .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentAccount.id);
+
+    // Deposit seller funds so the commit will succeed
+    const fundsToDeposit = ethers.BigNumber.from(offer.sellerDeposit).mul(offer.quantityAvailable);
+    await fundsHandler.connect(operator).depositFunds(seller.id, ethers.constants.AddressZero, fundsToDeposit, {
+      value: fundsToDeposit,
+    });
+
+    // Create a buyer account
+    buyerAccount = mockBuyer(buyer.address);
+
+    expect(await accountHandler.createBuyer(buyerAccount))
+      .to.emit(accountHandler, "BuyerCreated")
+      .withArgs(buyerAccount.id, buyerAccount.toStruct(), buyer.address);
+
+    // Set time forward to the offer's voucherRedeemableFrom
+    await setNextBlockTimestamp(Number(offerDates.voucherRedeemableFrom));
+
+    for (exchangeId = 1; exchangeId <= 3; exchangeId++) {
+      // Commit to offer, creating a new exchange
+      await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
+
+      // Redeem voucher
+      await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
+    }
+  });
+
+  afterEach(async function () {
+    // Reset the accountId iterator
+    accountId.next(true);
+  });
+
+  context("👉 After raise dispute actions", async function () {
+    beforeEach(async function () {
+      for (exchangeId = 1; exchangeId <= 2; exchangeId++) {
+        // Raise a dispute
+        await disputeHandler.connect(buyer).raiseDispute(exchangeId);
+      }
+    });
+
+    it("Buyer should be able to escalate a dispute even when DR removes fee", async function () {
+      const buyerEscalationDepositNative = applyPercentage(disputeResolverFeeNative, buyerEscalationDepositPercentage);
+
+      // Escalate dispute before removing fee
+      exchangeId = "1";
+      await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative }))
+        .to.emit(disputeHandler, "DisputeEscalated")
+        .withArgs(exchangeId, disputeResolver.id, buyer.address);
+
+      // Removes fee
+      await expect(
+        accountHandler
+          .connect(adminDR)
+          .removeFeesFromDisputeResolver(disputeResolver.id, [ethers.constants.AddressZero])
+      )
+        .to.emit(accountHandler, "DisputeResolverFeesRemoved")
+        .withArgs(disputeResolver.id, [ethers.constants.AddressZero], adminDR.address);
+
+      // Escalate dispute after removing fee
+      exchangeId = "2";
+      await expect(disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative }))
+        .to.emit(disputeHandler, "DisputeEscalated")
+        .withArgs(exchangeId, disputeResolver.id, buyer.address);
+    });
+
+    context("👉 After escalate dispute actions", async function () {
+      let buyerPercentBasisPoints;
+      beforeEach(async function () {
+        const buyerEscalationDepositNative = applyPercentage(
+          disputeResolverFeeNative,
+          buyerEscalationDepositPercentage
+        );
+
+        for (exchangeId = 1; exchangeId <= 2; exchangeId++) {
+          // Escalate the dispute
+          await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+        }
+
+        // Buyer percent used in tests
+        buyerPercentBasisPoints = "4321";
+      });
+
+      it("DR should be able to decide dispute even when DR removes fee", async function () {
+        exchangeId = "1";
+        // Decide the dispute befor removing fee
+        await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints))
+          .to.emit(disputeHandler, "DisputeDecided")
+          .withArgs(exchangeId, buyerPercentBasisPoints, operatorDR.address);
+
+        // Removes fee
+        await expect(
+          accountHandler
+            .connect(adminDR)
+            .removeFeesFromDisputeResolver(disputeResolver.id, [ethers.constants.AddressZero])
+        )
+          .to.emit(accountHandler, "DisputeResolverFeesRemoved")
+          .withArgs(disputeResolver.id, [ethers.constants.AddressZero], adminDR.address);
+
+        // Decide the dispute after removing fee
+        exchangeId = "2";
+        await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints))
+          .to.emit(disputeHandler, "DisputeDecided")
+          .withArgs(exchangeId, buyerPercentBasisPoints, operatorDR.address);
+      });
+
+      it("DR should be able to refuse to decide dispute even when DR removes fee", async function () {
+        // Refuse to decide the dispute before removing fee
+        exchangeId = "1";
+        await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId))
+          .to.emit(disputeHandler, "EscalatedDisputeRefused")
+          .withArgs(exchangeId, operatorDR.address);
+
+        // Removes fee
+        await expect(
+          accountHandler
+            .connect(adminDR)
+            .removeFeesFromDisputeResolver(disputeResolver.id, [ethers.constants.AddressZero])
+        )
+          .to.emit(accountHandler, "DisputeResolverFeesRemoved")
+          .withArgs(disputeResolver.id, [ethers.constants.AddressZero], adminDR.address);
+
+        // Refuse to decide the dispute after removing fee
+        exchangeId = "2";
+        await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId))
+          .to.emit(disputeHandler, "EscalatedDisputeRefused")
+          .withArgs(exchangeId, operatorDR.address);
+      });
+    });
+  });
+});
