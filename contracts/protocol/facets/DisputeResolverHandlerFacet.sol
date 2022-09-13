@@ -7,9 +7,14 @@ import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
+/**
+ * @title DisputeResolverHandlerFacet
+ *
+ * @notice Handles dispute resolver account management requests and queries
+ */
 contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**
-     * @notice Facet Initializer
+     * @notice Initializes facet.
      */
     function initialize() public {
         // No-op initializer.
@@ -18,7 +23,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Creates a Dispute Resolver. Dispute Resolver must be activated before it can participate in the protocol.
+     * @notice Creates a dispute resolver. Dispute resolver must be activated before it can participate in the protocol.
      *
      * Emits a DisputeResolverCreated event if successful.
      *
@@ -42,7 +47,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         DisputeResolverFee[] calldata _disputeResolverFees,
         uint256[] calldata _sellerAllowList
     ) external disputeResolversNotPaused nonReentrant {
-        //Check for zero address
+        // Check for zero address
         require(
             _disputeResolver.admin != address(0) &&
                 _disputeResolver.operator != address(0) &&
@@ -54,10 +59,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Make sure the gas block limit is not hit
         require(_sellerAllowList.length <= protocolLimits().maxAllowedSellers, INVALID_AMOUNT_ALLOWED_SELLERS);
 
-        // Get the next account Id and increment the counter
+        // Get the next account id and increment the counter
         uint256 disputeResolverId = protocolCounters().nextAccountId++;
 
-        //check that the addresses are unique to one dispute resolver Id, across all rolls
+        //check that the addresses are unique to one dispute resolver id, across all rolls
         require(
             protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] == 0 &&
                 protocolLookups().disputeResolverIdByOperator[_disputeResolver.admin] == 0 &&
@@ -82,7 +87,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         // Get storage location for dispute resolver fees
         (, , DisputeResolverFee[] storage disputeResolverFees) = fetchDisputeResolver(_disputeResolver.id);
 
-        //Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
+        // Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
         for (uint256 i = 0; i < _disputeResolverFees.length; i++) {
             require(
                 protocolLookups().disputeResolverFeeTokenIndex[_disputeResolver.id][
@@ -99,16 +104,16 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             );
             protocolLookups().disputeResolverFeeTokenIndex[_disputeResolver.id][
                 _disputeResolverFees[i].tokenAddress
-            ] = disputeResolverFees.length; //Set index mapping. Should be index in disputeResolverFees array + 1
+            ] = disputeResolverFees.length; // Set index mapping. Should be index in disputeResolverFees array + 1
         }
 
-        //Ignore supplied active flag and set to false. Dispute Resolver must be activated by protocol.
+        // Ignore supplied active flag and set to false. Dispute resolver must be activated by protocol.
         _disputeResolver.active = false;
 
         storeDisputeResolver(_disputeResolver);
         storeSellerAllowList(disputeResolverId, _sellerAllowList);
 
-        //Notify watchers of state change
+        // Notify watchers of state change
         emit DisputeResolverCreated(
             _disputeResolver.id,
             _disputeResolver,
@@ -121,7 +126,8 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**
      * @notice Updates a dispute resolver, not including DisputeResolverFees, allowed seller list or active flag.
      *         All DisputeResolver fields should be filled, even those staying the same.
-     *         Use removeFeesFromDisputeResolver
+     *         Use removeFeesFromDisputeResolver and addFeesToDisputeResolver to add and remove fees.
+     *         Use addSellersToAllowList and removeSellersFromAllowList to add and remove allowed sellers.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a DisputeResolverUpdated event if successful.
@@ -152,16 +158,16 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         bool exists;
         DisputeResolver storage disputeResolver;
 
-        //Check Dispute Resolver and Dispute Resolver Fees from  disputeResolvers and disputeResolverFees mappings
+        // Check dispute resolver and dispute resolver Fees from disputeResolvers and disputeResolverFees mappings
         (exists, disputeResolver, ) = fetchDisputeResolver(_disputeResolver.id);
 
-        //Dispute Resolver  must already exist
+        // Dispute resolver must already exist
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
 
-        // get message sender
+        // Get message sender
         address sender = msgSender();
 
-        //Check that msg.sender is the admin address for this dispute resolver
+        // Check that msg.sender is the admin address for this dispute resolver
         require(disputeResolver.admin == sender, NOT_ADMIN);
 
         //check that the addresses are unique to one dispute resolverId if new, across all roles
@@ -187,12 +193,12 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             DISPUTE_RESOLVER_ADDRESS_MUST_BE_UNIQUE
         );
 
-        //Delete current mappings
+        // Delete current mappings
         delete protocolLookups().disputeResolverIdByOperator[disputeResolver.operator];
         delete protocolLookups().disputeResolverIdByAdmin[disputeResolver.admin];
         delete protocolLookups().disputeResolverIdByClerk[disputeResolver.clerk];
 
-        //Ignore supplied active flag and keep value already stored. Dispute Resolver cannot self-activate.
+        // Ignore supplied active flag and keep value already stored. Dispute resolver cannot self-activate.
         _disputeResolver.active = disputeResolver.active;
         storeDisputeResolver(_disputeResolver);
 
@@ -201,7 +207,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Add DisputeResolverFees to an existing dispute resolver
+     * @notice Adds DisputeResolverFees to an existing dispute resolver.
      *
      * Emits a DisputeResolverFeesAdded event if successful.
      *
@@ -213,7 +219,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - Number of DisputeResolverFee structs in array is zero
      * - DisputeResolverFee array contains duplicates
      *
-     * @param _disputeResolverId - Id of the dispute resolver
+     * @param _disputeResolverId - id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      */
     function addFeesToDisputeResolver(uint256 _disputeResolverId, DisputeResolverFee[] calldata _disputeResolverFees)
@@ -225,16 +231,16 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         DisputeResolver storage disputeResolver;
         DisputeResolverFee[] storage disputeResolverFees;
 
-        //Check Dispute Resolver and Dispute Resolver Fees from  disputeResolvers and disputeResolverFees mappings
+        // Check dispute resolver and dispute resolver Fees from disputeResolvers and disputeResolverFees mappings
         (exists, disputeResolver, disputeResolverFees) = fetchDisputeResolver(_disputeResolverId);
 
-        //Dispute Resolver  must already exist
+        // Dispute resolver must already exist
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
 
-        // get message sender
+        // Get message sender
         address sender = msgSender();
 
-        //Check that msg.sender is the admin address for this dispute resolver
+        // Check that msg.sender is the admin address for this dispute resolver
         require(disputeResolver.admin == sender, NOT_ADMIN);
 
         // At least one fee must be specified and the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
@@ -244,7 +250,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             INVALID_AMOUNT_DISPUTE_RESOLVER_FEES
         );
 
-        //Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
+        // Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
         for (uint256 i = 0; i < _disputeResolverFees.length; i++) {
             require(
                 protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][
@@ -261,14 +267,14 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             );
             protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][
                 _disputeResolverFees[i].tokenAddress
-            ] = disputeResolverFees.length; //Set index mapping. Should be index in disputeResolverFees array + 1
+            ] = disputeResolverFees.length; // Set index mapping. Should be index in disputeResolverFees array + 1
         }
 
         emit DisputeResolverFeesAdded(_disputeResolverId, _disputeResolverFees, sender);
     }
 
     /**
-     * @notice Remove DisputeResolverFees from  an existing dispute resolver
+     * @notice Removes DisputeResolverFees from  an existing dispute resolver.
      *
      * Emits a DisputeResolverFeesRemoved event if successful.
      *
@@ -280,7 +286,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - Number of DisputeResolverFee structs in array is zero
      * - DisputeResolverFee does not exist for the dispute resolver
      *
-     * @param _disputeResolverId - Id of the dispute resolver
+     * @param _disputeResolverId - id of the dispute resolver
      * @param _feeTokenAddresses - list of adddresses of dispute resolver fee tokens to remove
      */
     function removeFeesFromDisputeResolver(uint256 _disputeResolverId, address[] calldata _feeTokenAddresses)
@@ -292,16 +298,16 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         DisputeResolver storage disputeResolver;
         DisputeResolverFee[] storage disputeResolverFees;
 
-        //Check Dispute Resolver and Dispute Resolver Fees from  disputeResolvers and disputeResolverFees mappings
+        // Check dispute resolver and dispute resolver fees from disputeResolvers and disputeResolverFees mappings
         (exists, disputeResolver, disputeResolverFees) = fetchDisputeResolver(_disputeResolverId);
 
-        //Dispute Resolver must already exist
+        // Dispute resolver must already exist
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
 
-        // get message sender
+        // Get message sender
         address sender = msgSender();
 
-        //Check that msg.sender is the admin address for this dispute resolver
+        // Check that msg.sender is the admin address for this dispute resolver
         require(disputeResolver.admin == sender, NOT_ADMIN);
 
         // At least one fee must be specified and the number of fees cannot exceed the maximum number of dispute resolver fees to avoid running into block gas limit in a loop
@@ -310,7 +316,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             INVALID_AMOUNT_DISPUTE_RESOLVER_FEES
         );
 
-        //Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
+        // Set dispute resolver fees. Must loop because calldata structs cannot be converted to storage structs
         for (uint256 i = 0; i < _feeTokenAddresses.length; i++) {
             require(
                 protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_feeTokenAddresses[i]] != 0,
@@ -323,24 +329,24 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
             uint256 lastTokenIndex = disputeResolverFees.length - 1;
             if (disputeResolverFeeArrayIndex != lastTokenIndex) {
                 // if index == len - 1 then only pop and delete are needed
-                //Need to fill gap caused by delete if more than one element in storage array
+                // Need to fill gap caused by delete if more than one element in storage array
                 DisputeResolverFee memory disputeResolverFeeToMove = disputeResolverFees[lastTokenIndex];
-                disputeResolverFees[disputeResolverFeeArrayIndex] = disputeResolverFeeToMove; //Copy the last DisputeResolverFee struct in the array to this index to fill the gap
+                disputeResolverFees[disputeResolverFeeArrayIndex] = disputeResolverFeeToMove; // Copy the last DisputeResolverFee struct in the array to this index to fill the gap
                 protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][
                     disputeResolverFeeToMove.tokenAddress
-                ] = disputeResolverFeeArrayIndex + 1; //Reset index mapping. Should be index in disputeResolverFees array + 1
+                ] = disputeResolverFeeArrayIndex + 1; // Reset index mapping. Should be index in disputeResolverFees array + 1
             }
             disputeResolverFees.pop(); // Delete last DisputeResolverFee struct in the array, which was just moved to fill the gap
-            delete protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_feeTokenAddresses[i]]; //Delete from index mapping
+            delete protocolLookups().disputeResolverFeeTokenIndex[_disputeResolverId][_feeTokenAddresses[i]]; // Delete from index mapping
         }
 
         emit DisputeResolverFeesRemoved(_disputeResolverId, _feeTokenAddresses, sender);
     }
 
     /**
-     * @notice Add seller ids to set of ids allowed to chose the given dispute resolver
+     * @notice Adds seller ids to set of ids allowed to choose the given dispute resolver for an offer.
      *
-     * Emits a AllowedSellersAdded event if successful.
+     * Emits an AllowedSellersAdded event if successful.
      *
      * Reverts if:
      * - The dispute resolvers region of protocol is paused
@@ -351,7 +357,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - Some seller does not exist
      * - Seller id is already approved
      *
-     * @param _disputeResolverId - Id of the dispute resolver
+     * @param _disputeResolverId - id of the dispute resolver
      * @param _sellerAllowList - List of seller ids to add to allowed list
      */
     function addSellersToAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList)
@@ -368,16 +374,16 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         bool exists;
         DisputeResolver storage disputeResolver;
 
-        //Check Dispute Resolver from disputeResolvers
+        // Check dispute Resolver from disputeResolvers
         (exists, disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
 
-        //Dispute Resolver  must already exist
+        // Dispute resolver must already exist
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
 
-        // get message sender
+        // Get message sender
         address sender = msgSender();
 
-        //Check that msg.sender is the admin address for this dispute resolver
+        // Check that msg.sender is the admin address for this dispute resolver
         require(disputeResolver.admin == sender, NOT_ADMIN);
 
         storeSellerAllowList(_disputeResolverId, _sellerAllowList);
@@ -386,9 +392,9 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Remove seller ids from set of ids allowed to chose the given dispute resolver
+     * @notice Removes seller ids from set of ids allowed to choose the given dispute resolver for an offer.
      *
-     * Emits a AllowedSellersRemoved event if successful.
+     * Emits an AllowedSellersRemoved event if successful.
      *
      * Reverts if:
      * - The dispute resolvers region of protocol is paused
@@ -398,7 +404,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - Number of seller ids structs in array is zero
      * - Seller id is not approved
      *
-     * @param _disputeResolverId - Id of the dispute resolver
+     * @param _disputeResolverId - id of the dispute resolver
      * @param _sellerAllowList - list of seller ids to remove from allowed list
      */
     function removeSellersFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList)
@@ -415,16 +421,16 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         bool exists;
         DisputeResolver storage disputeResolver;
 
-        //Check Dispute Resolver from disputeResolvers
+        // Check dispute resolver from disputeResolvers
         (exists, disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
 
-        //Dispute Resolver  must already exist
+        // Dispute resolver must already exist
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
 
-        // get message sender
+        // Get message sender
         address sender = msgSender();
 
-        //Check that msg.sender is the admin address for this dispute resolver
+        // Check that msg.sender is the admin address for this dispute resolver
         require(disputeResolver.admin == sender, NOT_ADMIN);
 
         ProtocolLib.ProtocolLookups storage pl = protocolLookups();
@@ -456,7 +462,9 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Set the active flag for this Dispute Resolver to true. Only callable by the protocol ADMIN role.
+     * @notice Sets the active flag for this dispute resolver to true.
+     *
+     * @dev Only callable by the protocol ADMIN role.
      *
      * Emits a DisputeResolverActivated event if successful.
      *
@@ -465,7 +473,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * - Caller does not have the ADMIN role
      * - Dispute resolver does not exist
      *
-     * @param _disputeResolverId - Id of the dispute resolver
+     * @param _disputeResolverId - id of the dispute resolver
      */
     function activateDisputeResolver(uint256 _disputeResolverId)
         external
@@ -476,10 +484,10 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         bool exists;
         DisputeResolver storage disputeResolver;
 
-        //Check Dispute Resolver and Dispute Resolver Fees from  disputeResolvers and disputeResolverFees mappings
+        // Check dispute resolver and dispute resolver fees from disputeResolvers and disputeResolverFees mappings
         (exists, disputeResolver, ) = fetchDisputeResolver(_disputeResolverId);
 
-        //Dispute Resolver  must already exist
+        // Dispute resolver must already exist
         require(exists, NO_SUCH_DISPUTE_RESOLVER);
 
         disputeResolver.active = true;
@@ -490,11 +498,11 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**
      * @notice Gets the details about a dispute resolver.
      *
-     * @param _disputeResolverId - the id of the rdispute esolver to check
+     * @param _disputeResolverId - the id of the dispute resolver to check
      * @return exists - the dispute resolver was found
      * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
-     * @return sellerAllowList - list of sellers that are allowed to chose this dispute resolver
+     * @return sellerAllowList - list of sellers that are allowed to choose this dispute resolver
      */
     function getDisputeResolver(uint256 _disputeResolverId)
         public
@@ -550,11 +558,11 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Returns the inforamtion if given sellers are allowed to chose the given dispute resolver
+     * @notice Checks whether given sellers are allowed to choose the given dispute resolver.
      *
      * @param _disputeResolverId - id of dispute resolver to check
-     * @param _sellerIds - list of sellers ids to check
-     * @return sellerAllowed - array with indicator (true/false) if seller is allowed to chose the dispute resolver. Index in this array corresponds to indices of the incoming _sellerIds
+     * @param _sellerIds - list of seller ids to check
+     * @return sellerAllowed - array with indicator (true/false) if seller is allowed to choose the dispute resolver. Index in this array corresponds to indices of the incoming _sellerIds
      */
     function areSellersAllowed(uint256 _disputeResolverId, uint256[] calldata _sellerIds)
         external
@@ -566,7 +574,7 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
 
         (bool exists, , ) = fetchDisputeResolver(_disputeResolverId);
 
-        // we populate sellerAllowed only if id really belongs to DR, otherwise return array filled with false
+        // We populate sellerAllowed only if id really belongs to DR, otherwise return array filled with false
         if (exists) {
             if (pl.allowedSellers[_disputeResolverId].length == 0) {
                 // DR allows everyone, just make sure ids really belong to the sellers
@@ -584,12 +592,15 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Stores DisputeResolver struct in storage
+     * @notice Stores DisputeResolver struct in storage.
+     *
+     * Reverts if:
+     * - Escalation period is greater than the max escalaction period
      *
      * @param _disputeResolver - the fully populated struct with dispute resolver id set
      */
     function storeDisputeResolver(DisputeResolver memory _disputeResolver) internal {
-        // escalation period must be greater than zero and less than or equal to the max allowed
+        // Escalation period must be greater than zero and less than or equal to the max allowed
         require(
             _disputeResolver.escalationResponsePeriod > 0 &&
                 _disputeResolver.escalationResponsePeriod <= protocolLimits().maxEscalationResponsePeriod,
@@ -609,14 +620,14 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
         disputeResolver.metadataUri = _disputeResolver.metadataUri;
         disputeResolver.active = _disputeResolver.active;
 
-        //Map the dispute resolver's addresses to the dispute resolver Id.
+        // Map the dispute resolver's addresses to the dispute resolver id.
         protocolLookups().disputeResolverIdByOperator[_disputeResolver.operator] = _disputeResolver.id;
         protocolLookups().disputeResolverIdByAdmin[_disputeResolver.admin] = _disputeResolver.id;
         protocolLookups().disputeResolverIdByClerk[_disputeResolver.clerk] = _disputeResolver.id;
     }
 
     /**
-     * @notice Stores seller id to allowed list mapping in storage
+     * @notice Stores seller id to allowed list mapping in storage.
      *
      * Reverts if:
      * - Some seller does not exist
@@ -628,19 +639,19 @@ contract DisputeResolverHandlerFacet is IBosonAccountEvents, ProtocolBase {
     function storeSellerAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) internal {
         ProtocolLib.ProtocolLookups storage pl = protocolLookups();
 
-        // loop over incoming seller ids and store them to the mapping
+        // Loop over incoming seller ids and store them to the mapping
         for (uint256 i = 0; i < _sellerAllowList.length; i++) {
             uint256 sellerId = _sellerAllowList[i];
-            //Check Seller exists in sellers mapping
+            // Check Seller exists in sellers mapping
             (bool exists, , ) = fetchSeller(sellerId);
 
-            //Seller must already exist
+            // Seller must already exist
             require(exists, NO_SUCH_SELLER);
 
-            //Seller should not be approved already
+            // Seller should not be approved already
             require(pl.allowedSellerIndex[_disputeResolverId][sellerId] == 0, SELLER_ALREADY_APPROVED);
 
-            //Update the mappings
+            // Update the mappings
             pl.allowedSellers[_disputeResolverId].push(sellerId);
             pl.allowedSellerIndex[_disputeResolverId][sellerId] = pl.allowedSellers[_disputeResolverId].length; //Set index mapping. Should be index in allowedSellers array + 1
         }

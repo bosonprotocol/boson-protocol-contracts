@@ -6,7 +6,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 /**
  * @title IBosonPauseEvents
  *
- * @notice Events related to pausing of the protocol
+ * @notice Defines events related to pausing of the protocol.
  */
 interface IBosonPauseEvents {
     event ProtocolPaused(BosonTypes.PausableRegion[] regions, address executedBy);

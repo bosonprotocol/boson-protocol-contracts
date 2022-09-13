@@ -10,11 +10,12 @@ import "../../domain/BosonConstants.sol";
 /**
  * @title TwinHandlerFacet
  *
- * @notice Manages digital twinning associated with exchanges within the protocol
+ * @notice Manages twin managment requests and queries
  */
 contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
     /**
-     * @notice Facet Initializer
+     * @notice Initializes facet.
+     * This function is callable only once.
      */
     function initialize() public onlyUnInitialized(type(IBosonTwinHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonTwinHandler).interfaceId);
@@ -26,10 +27,9 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
      * Emits a TwinCreated event if successful.
      *
      * Reverts if:
-     * - The twins region of protocol is paused
-     * - seller does not exist
-     * - Not approved to transfer the seller's token
-     * - supplyAvailable is zero
+     * - Seller does not exist
+     * - Protocol is not approved to transfer the seller's token
+     * - Twin supplyAvailable is zero
      * - Twin is NonFungibleToken and amount was set
      * - Twin is NonFungibleToken and end of range would overflow
      * - Twin is NonFungibleToken with unlimited supply and starting token id is too high
@@ -44,24 +44,24 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
     }
 
     /**
-     * @notice Removes the twin.
+     * @notice Removes a twin.
      *
      * Emits a TwinDeleted event if successful.
      *
      * Reverts if:
      * - The twins region of protocol is paused
-     * - caller is not the seller.
+     * - Caller is not the seller.
      * - Twin does not exist.
      * - Bundle for twin exists
      *
-     * @param _twinId - the id of the twin to check.
+     * @param _twinId - the id of the twin to check
      */
     function removeTwin(uint256 _twinId) external override twinsNotPaused nonReentrant {
         // Get storage location for twin
         (bool exists, Twin memory twin) = fetchTwin(_twinId);
         require(exists, NO_SUCH_TWIN);
 
-        // get message sender
+        // Get message sender
         address sender = msgSender();
 
         // Get seller id
@@ -73,7 +73,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
         (bool bundleForTwinExist, ) = fetchBundleIdByTwin(_twinId);
         require(!bundleForTwinExist, BUNDLE_FOR_TWIN_EXISTS);
 
-        // delete struct
+        // Delete struct
         delete protocolEntities().twins[_twinId];
 
         // Also remove from twinRangesBySeller mapping
@@ -85,15 +85,15 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
             uint256 lastIndex = twinRanges.length - 1;
             for (uint256 index = 0; index <= lastIndex; index++) {
                 if (twinRanges[index].start == twin.tokenId) {
-                    // update twin ranges and twinIdsByTokenAddressAndBySeller
+                    // Update twin ranges and twinIdsByTokenAddressAndBySeller
 
-                    // if not removing last element, move the last to the removed index
+                    // If not removing last element, move the last to the removed index
                     if (index != lastIndex) {
                         twinRanges[index] = twinRanges[lastIndex];
                         twinIdsByTokenAddressAndBySeller[index] = twinIdsByTokenAddressAndBySeller[lastIndex];
                     }
 
-                    // remove last element
+                    // Remove last element
                     twinRanges.pop();
                     twinIdsByTokenAddressAndBySeller.pop();
                     break;
@@ -119,7 +119,7 @@ contract TwinHandlerFacet is IBosonTwinHandler, TwinBase {
     /**
      * @notice Gets the next twin id.
      *
-     * Does not increment the counter.
+     * @dev Does not increment the counter.
      *
      * @return nextTwinId - the next twin id
      */

@@ -10,21 +10,22 @@ import { ClientLib } from "../libs/ClientLib.sol";
 /**
  * @title ClientBase
  *
- * @notice Extended by Boson Protocol contracts that need to communicate with the
- * ProtocolDiamond, but are NOT facets of the ProtocolDiamond. This is used where it's expected that only one client
- * will use the implementation. If it's expected that multiple client will use the same implementation, it's recommended
+ * @notice Extended by Boson Protocol contracts that need to communicate with the ProtocolDiamond
+ * but are NOT facets of the ProtocolDiamond. This is used where it's expected that only one client
+ * will use the implementation. If it's expected that multiple clients will use the same implementation, it's recommended
  * to use `BeaconClientBase` instead
  *
- * Boson client contracts include XXX
  */
 abstract contract ClientBase is BosonTypes {
     /**
      * @dev Modifier that checks that the caller has a specific role.
      *
      * Reverts if:
-     * - caller doesn't have role
+     * - Caller doesn't have role
      *
      * See: {AccessController.hasRole}
+     *
+     * @param role - the role to check
      */
     modifier onlyRole(bytes32 role) {
         require(ClientLib.hasRole(role), ACCESS_DENIED);
@@ -32,7 +33,7 @@ abstract contract ClientBase is BosonTypes {
     }
 
     /**
-     * @notice Get the info about the offer associated with a voucher's exchange
+     * @notice Gets the info about the offer associated with a voucher's exchange
      *
      * @param _exchangeId - the id of the exchange
      * @return exists - the offer was found

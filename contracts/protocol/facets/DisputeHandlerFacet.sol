@@ -19,23 +19,21 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         keccak256(bytes("Resolution(uint256 exchangeId,uint256 buyerPercentBasisPoints)")); // needed for verification during the resolveDispute
 
     /**
-     * @notice Facet Initializer
+     * @notice Initializes Facet.
+     * This function is callable only once.
      */
     function initialize() public onlyUnInitialized(type(IBosonDisputeHandler).interfaceId) {
         DiamondLib.addSupportedInterface(type(IBosonDisputeHandler).interfaceId);
     }
 
     /**
-     * @notice Raise a dispute
-     *
-     * Emits a DisputeRaised event if successful.
+     * @notice Raises a dispute.
      *
      * Reverts if:
-     * - The disputes region of protocol is paused
-     * - caller does not hold a voucher for the given exchange id
-     * - exchange does not exist
-     * - exchange is not in a redeemed state
-     * - fulfillment period has elapsed already
+     * - Caller does not hold a voucher for the given exchange id
+     * - Exchange does not exist
+     * - Exchange is not in a Redeemed state
+     * - Fulfillment period has elapsed already
      *
      * @param _exchangeId - the id of the associated exchange
      */
@@ -51,17 +49,17 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
-     * @notice Retract the dispute and release the funds
+     * @notice Retracts the dispute and release the funds.
      *
      * Emits a DisputeRetracted event if successful.
      *
      * Reverts if:
      * - The disputes region of protocol is paused
-     * - exchange does not exist
-     * - exchange is not in a disputed state
-     * - caller is not the buyer for the given exchange id
-     * - dispute is in some state other than resolving or escalated
-     * - dispute was escalated and escalation period has elapsed
+     * - Exchange does not exist
+     * - Exchange is not in a Disputed state
+     * - Caller is not the buyer for the given exchange id
+     * - Dispute is in some state other than Resolving or Escalated
+     * - Dispute was escalated and escalation period has elapsed
      *
      * @param _exchangeId - the id of the associated exchange
      */
@@ -92,19 +90,19 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
-     * @notice Extend the dispute timeout, allowing more time for mutual resolution.
-     * As a consequnece also buyer gets more time to escalate the dispute
+     * @notice Extends the dispute timeout, allowing more time for mutual resolution.
+     * As a consequnece also buyer gets more time to escalate the dispute.
      *
      * Emits a DisputeTimeoutExtened event if successful.
      *
      * Reverts if:
      * - The disputes region of protocol is paused
-     * - exchange does not exist
-     * - exchange is not in a disputed state
-     * - caller is not the seller
-     * - dispute has expired already
-     * - new dispute timeout is before the current dispute timeout
-     * - dispute is in some state other than resolving
+     * - Exchange does not exist
+     * - Exchange is not in a Disputed state
+     * - Caller is not the seller
+     * - Dispute has expired already
+     * - New dispute timeout is before the current dispute timeout
+     * - Dispute is in some state other than Resolving
      *
      * @param _exchangeId - the id of the associated exchange
      * @param _newDisputeTimeout - new date when resolution period ends
@@ -151,16 +149,16 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
-     * @notice Expire the dispute and release the funds
+     * @notice Expires the dispute and releases the funds.
      *
      * Emits a DisputeExpired event if successful.
      *
      * Reverts if:
      * - The disputes region of protocol is paused
-     * - exchange does not exist
-     * - exchange is not in a disputed state
-     * - dispute is still valid
-     * - dispute is in some state other than resolving
+     * - Exchange does not exist
+     * - Exchange is not in a Disputed state
+     * - Dispute is still valid
+     * - Dispute is in some state other than Resolving
      *
      * @param _exchangeId - the id of the associated exchange
      */
@@ -185,18 +183,18 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
-     * @notice Expire a batch of disputes and release the funds
+     * @notice Expires a batch of disputes and releases the funds.
      *
      * Emits a DisputeExpired event for every dispute if successful.
      *
      * Reverts if:
      * - The disputes region of protocol is paused
      * - Number of disputes exceeds maximum allowed number per batch
-     * - for any dispute:
-     *   - exchange does not exist
-     *   - exchange is not in a disputed state
-     *   - dispute is still valid
-     *   - dispute is in some state other than resolving
+     * - For any dispute:
+     *   - Exchange does not exist
+     *   - Exchange is not in a Disputed state
+     *   - Dispute is still valid
+     *   - Dispute is in some state other than Resolving
      *
      * @param _exchangeIds - the array of ids of the associated exchanges
      */
@@ -211,26 +209,27 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
-     * @notice Resolve a dispute by providing the information about the split. Callable by the buyer or seller, but they must provide the resolution signed by the other party
+     * @notice Resolves a dispute by providing the information about the funds split.
+     * Callable by the buyer or seller, but the caller must provide the resolution signed by the other party.
      *
      * Emits a DisputeResolved event if successful.
      *
      * Reverts if:
      * - The disputes region of protocol is paused
-     * - specified buyer percent exceeds 100%
-     * - dispute has expired (resolution period has ended and dispute was not escalated)
-     * - exchange does not exist
-     * - exchange is not in the disputed state
-     * - caller is neither the seller nor the buyer
-     * - signature does not belong to the address of the other party
-     * - dispute state is neither resolving nor escalated
-     * - dispute was escalated and escalation period has elapsed
+     * - Specified buyer percent exceeds 100%
+     * - Dispute has expired (resolution period has ended and dispute was not escalated)
+     * - Exchange does not exist
+     * - Exchange is not in the Disputed state
+     * - Caller is neither the seller nor the buyer
+     * - Signature does not belong to the address of the other party
+     * - Dispute state is neither Resolving nor escalated
+     * - Dispute was escalated and escalation period has elapsed
      *
-     * @param _exchangeId  - exchange id to resolve dispute
+     * @param _exchangeId  - the id of the associated exchange
      * @param _buyerPercent - percentage of the pot that goes to the buyer
-     * @param _sigR - r part of the signer's signature.
-     * @param _sigS - s part of the signer's signature.
-     * @param _sigV - v part of the signer's signature.
+     * @param _sigR - r part of the signer's signature
+     * @param _sigS - s part of the signer's signature
+     * @param _sigV - v part of the signer's signature
      */
     function resolveDispute(
         uint256 _exchangeId,
@@ -297,23 +296,23 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
-     * @notice Puts the dispute into escalated state
+     * @notice Puts the dispute into the Escalated state.
      *
      * Emits a DisputeEscalated event if successful.
      *
      * Reverts if:
      * - The disputes region of protocol is paused
-     * - exchange does not exist
-     * - exchange is not in a disputed state
-     * - caller is not the buyer
-     * - dispute is already expired
-     * - dispute is not in a resolving state
-     * - dispute resolver is not specified (absolute zero offer)
-     * - offer price is in native token and buyer caller does not send enough
-     * - offer price is in some ERC20 token and caller also send native currency
-     * - if contract at token address does not support erc20 function transferFrom
-     * - if calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
-     * - received ERC20 token amount differs from the expected value
+     * - Exchange does not exist
+     * - Exchange is not in a Disputed state
+     * - Caller is not the buyer
+     * - Dispute is already expired
+     * - Dispute is not in a Resolving state
+     * - Dispute resolver is not specified (absolute zero offer)
+     * - Offer price is in native token and buyer caller does not send enough
+     * - Offer price is in some ERC20 token and caller also sends native currency
+     * - If contract at token address does not support ERC20 function transferFrom
+     * - If calling transferFrom on token fails for some reason (e.g. protocol is not approved to transfer)
+     * - Received ERC20 token amount differs from the expected value
      *
      * @param _exchangeId - the id of the associated exchange
      */
@@ -360,20 +359,20 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
-     * @notice Decide a dispute by providing the information about the split. Callable by the dispute resolver, specified in the offer
+     * @notice Decides a dispute by providing the information about the funds split. Callable by the dispute resolver specified in the offer.
      *
      * Emits a DisputeDecided event if successful.
      *
      * Reverts if:
      * - The disputes region of protocol is paused
-     * - specified buyer percent exceeds 100%
-     * - exchange does not exist
-     * - exchange is not in the disputed state
-     * - caller is not the dispute resolver for this dispute
-     * - dispute state is not escalated
-     * - dispute escalation response period has elapsed
+     * - Specified buyer percent exceeds 100%
+     * - Exchange does not exist
+     * - Exchange is not in the Disputed state
+     * - Caller is not the dispute resolver for this dispute
+     * - Dispute state is not Escalated
+     * - Dispute escalation response period has elapsed
      *
-     * @param _exchangeId  - exchange id to resolve dispute
+     * @param _exchangeId  - the id of the associated exchange
      * @param _buyerPercent - percentage of the pot that goes to the buyer
      */
     function decideDispute(uint256 _exchangeId, uint256 _buyerPercent)
@@ -382,7 +381,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
         disputesNotPaused
         nonReentrant
     {
-        // buyer should get at most 100%
+        // Buyer should get at most 100%
         require(_buyerPercent <= 10000, INVALID_BUYER_PERCENT);
 
         // Make sure the dispute is valid and the caller is the dispute resolver
@@ -390,7 +389,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
             _exchangeId
         );
 
-        // finalize the dispute
+        // Finalize the dispute
         finalizeDispute(_exchangeId, exchange, dispute, disputeDates, DisputeState.Decided, _buyerPercent);
 
         // Notify watchers of state change
@@ -398,17 +397,17 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
-     * @notice Explicity refuse to resolve a dispute in escalated state and release the funds
+     * @notice Enables dispute resolver to explicity refuse to resolve a dispute in Escalated state and releases the funds.
      *
-     * Emits a EscalatedDisputeRefused event if successful.
+     * Emits an EscalatedDisputeRefused event if successful.
      *
      * Reverts if:
      * - The disputes region of protocol is paused
-     * - exchange does not exist
-     * - exchange is not in a disputed state
-     * - dispute is in some state other than escalated
-     * - dispute escalation response period has elapsed
-     * - caller is not the dispute resolver for this dispute
+     * - Exchange does not exist
+     * - Exchange is not in a Eisputed state
+     * - Dispute is in some state other than Escalated
+     * - Dispute escalation response period has elapsed
+     * - Caller is not the dispute resolver for this dispute
      *
      * @param _exchangeId - the id of the associated exchange
      */
@@ -426,16 +425,16 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
-     * @notice Expire the dispute in escalated state and release the funds
+     * @notice Expires the dispute in escalated state and release the funds.
      *
      * Emits a EscalatedDisputeExpired event if successful.
      *
      * Reverts if:
      * - The disputes region of protocol is paused
-     * - exchange does not exist
-     * - exchange is not in a disputed state
-     * - dispute is in some state other than escalated
-     * - dispute escalation period has not passed yet
+     * - Exchange does not exist
+     * - Exchange is not in a Disputed state
+     * - Dispute is in some state other than Escalated
+     * - Dispute escalation period has not passed yet
      *
      * @param _exchangeId - the id of the associated exchange
      */
@@ -460,14 +459,14 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
-     * @notice Transition dispute to a "finalized" state
+     * @notice Transitions a dispute to a "finalized" state.
      *
      * Target state must be Retracted, Resolved, or Decided.
-     * Sets finalized date for exchange and dispute, store the resolution if exists and releases the funds
+     * Sets finalized date for exchange and dispute, stores the resolution if exists and releases the funds
      *
-     * Reverts if the current dispute state is not resolving or escalated.
+     * Reverts if the current dispute state is not Resolving or Escalated.
      *
-     * @param _exchangeId  - exchange id to resolve dispute
+     * @param _exchangeId  - the id of the associated exchange
      * @param _exchange - pointer to exchange storage slot
      * @param _dispute - pointer to dispute storage slot
      * @param _disputeDates - pointer to disputeDates storage slot
@@ -499,7 +498,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     /**
      * @notice Gets the details about a given dispute.
      *
-     * @param _exchangeId - the id of the exchange to check
+     * @param _exchangeId - the id of the associated exchange
      * @return exists - true if the dispute exists
      * @return dispute - the dispute details. See {BosonTypes.Dispute}
      * @return disputeDates - the dispute dates details {BosonTypes.DisputeDates}
@@ -520,7 +519,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     /**
      * @notice Gets the state of a given dispute.
      *
-     * @param _exchangeId - the id of the exchange to check
+     * @param _exchangeId - the id of the associated exchange
      * @return exists - true if the dispute exists
      * @return state - the dispute state. See {BosonTypes.DisputeState}
      */
@@ -533,7 +532,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     /**
      * @notice Gets the timeout of a given dispute.
      *
-     * @param _exchangeId - the id of the exchange to check
+     * @param _exchangeId - the id of the associated exchange
      * @return exists - true if the dispute exists
      * @return timeout - the end of resolution period
      */
@@ -544,12 +543,12 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
-     * @notice Is the given dispute in a finalized state?
+     * @notice Checks if the given dispute in a Finalized state.
      *
      * Returns true if
      * - Dispute state is Retracted, Resolved, Decided or Refused
      *
-     * @param _exchangeId - the id of the exchange to check
+     * @param _exchangeId - the id of the associated exchange
      * @return exists - true if the dispute exists
      * @return isFinalized - true if the dispute is finalized
      */
@@ -570,14 +569,14 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     }
 
     /**
-     * @notice Validates that exchange and dispute are in the correct state and that the caller is the dispute resolver for this dispute
+     * @notice Validates that exchange and dispute are in the correct state and that the caller is the dispute resolver for this dispute.
      *
      * Reverts if:
-     * - exchange does not exist
-     * - exchange is not in a disputed state
-     * - dispute is in some state other than escalated
-     * - dispute escalation response period has elapsed
-     * - caller is not the dispute resolver for this dispute
+     * - Exchange does not exist
+     * - Exchange is not in a Disputed state
+     * - Dispute is in some state other than Escalated
+     * - Dispute escalation response period has elapsed
+     * - Caller is not the dispute resolver for this dispute
      *
      * @param _exchangeId - the id of the associated exchange
      */
@@ -616,7 +615,7 @@ contract DisputeHandlerFacet is DisputeBase, IBosonDisputeHandler {
     /**
      * @notice Returns hashed resolution information. Needed for the verfication in resolveDispute.
      *
-     * @param _exchangeId - if of the exchange for which dispute was resolved
+     * @param _exchangeId - the id of the associated exchange
      * @param _buyerPercent - percentage of the pot that goes to the buyer
      */
     function hashResolution(uint256 _exchangeId, uint256 _buyerPercent) internal pure returns (bytes32) {

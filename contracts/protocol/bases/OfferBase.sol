@@ -13,7 +13,7 @@ import "./../../domain/BosonConstants.sol";
  */
 contract OfferBase is ProtocolBase, IBosonOfferEvents {
     /**
-     * @dev Internal helper to create offer, which can be reused among different facets
+     * @notice Creates offer. Can be reused among different facets.
      *
      * Emits an OfferCreated event if successful.
      *
@@ -64,9 +64,9 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
     }
 
     /**
-     * @notice Validates offer struct and store it to storage
+     * @notice Validates offer struct and store it to storage.
      *
-     * @dev Rationale for the checks that are not obvious.
+     * @dev Rationale for the checks that are not obvious:
      * 1. voucher expiration date is either
      *   -  _offerDates.voucherRedeemableUntil  [fixed voucher expiration date]
      *   - max([commitment time], _offerDates.voucherRedeemableFrom) + offerDurations.voucherValid [fixed voucher expiration duration]
@@ -91,7 +91,6 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
-     * - Seller is not on dispute resolver's seller allow list
      * - Seller is not on dispute resolver's seller allow list
      * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price

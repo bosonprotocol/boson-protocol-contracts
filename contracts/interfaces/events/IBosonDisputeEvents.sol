@@ -6,7 +6,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 /**
  * @title IBosonDisputeEvents
  *
- * @notice Events related to disputes within the protocol.
+ * @notice Defines events related to disputes within the protocol.
  */
 interface IBosonDisputeEvents {
     event DisputeRaised(

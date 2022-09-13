@@ -6,9 +6,14 @@ import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
 
+/**
+ * @title AgentHandlerFacet
+ *
+ * @notice Handles Agent account management requests and queries
+ */
 contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
     /**
-     * @notice Facet Initializer
+     * @notice Initializes facet.
      */
     function initialize() public {
         // No-op initializer.
@@ -17,7 +22,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Creates a marketplace agent
+     * @notice Creates a marketplace agent.
      *
      * Emits an AgentCreated event if successful.
      *
@@ -37,10 +42,10 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
         //Check active is not set to false
         require(_agent.active, MUST_BE_ACTIVE);
 
-        // Get the next account Id and increment the counter
+        // Get the next account id and increment the counter
         uint256 agentId = protocolCounters().nextAccountId++;
 
-        //check that the wallet address is unique to one agent Id
+        //check that the wallet address is unique to one agent id
         require(protocolLookups().agentIdByWallet[_agent.wallet] == 0, AGENT_ADDRESS_MUST_BE_UNIQUE);
 
         _agent.id = agentId;
@@ -51,11 +56,11 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
     }
 
     /**
-     * @notice Updates an agent except, with the exception of the active flag.
+     * @notice Updates an agent, with the exception of the active flag.
      *         All other fields should be filled, even those staying the same.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
-     * Emits a AgentUpdated event if successful.
+     * Emits an AgentUpdated event if successful.
      *
      * Reverts if:
      * - The agents region of protocol is paused
@@ -80,13 +85,13 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
         //Agent must already exist
         require(exists, NO_SUCH_AGENT);
 
-        // get message sender
+        //Get message sender
         address sender = msgSender();
 
         //Check that msg.sender is the wallet address for this agent
         require(agent.wallet == sender, NOT_AGENT_WALLET);
 
-        //check that the wallet address is unique to one agent Id if new
+        //Check that the wallet address is not associated with another agent or is already associated with the agent passed in
         require(
             protocolLookups().agentIdByWallet[_agent.wallet] == 0 ||
                 protocolLookups().agentIdByWallet[_agent.wallet] == _agent.id,
@@ -100,7 +105,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
         _agent.active = agent.active;
         storeAgent(_agent);
 
-        // Notify watchers of state change
+        //Notify watchers of state change
         emit AgentUpdated(_agent.id, _agent, sender);
     }
 
@@ -108,7 +113,7 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @notice Gets the details about an agent.
      *
      * @param _agentId - the id of the agent to check
-     * @return exists - the agent was found
+     * @return exists - whether the agent was found
      * @return agent - the agent details. See {BosonTypes.Agent}
      */
     function getAgent(uint256 _agentId) external view returns (bool exists, Agent memory agent) {

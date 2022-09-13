@@ -11,6 +11,11 @@ import { IBosonFundsHandler } from "../interfaces/handlers/IBosonFundsHandler.so
 contract WithoutFallbackError {
     /**
      * @notice Function to call withdrawFunds on funds handler, contract being the buyer
+     *
+     * @param _fundsHandlerAddress - address of the funds handler facet
+     * @param _buyerId - id of entity for which funds should be withdrawn
+     * @param _tokenList - list of contract addresses of tokens that are being withdrawn
+     * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
      */
     function withdrawFunds(
         address _fundsHandlerAddress,
@@ -23,6 +28,10 @@ contract WithoutFallbackError {
 
     /**
      * @notice Function to call withdrawFunds on funds handler, contract being the fee collector
+     *
+     * @param _fundsHandlerAddress - address of the funds handler facet
+     * @param _tokenList - list of contract addresses of tokens that are being withdrawn
+     * @param _tokenAmounts - list of amounts to be withdrawn, corresponding to tokens in tokenList
      */
     function withdrawProtocolFees(
         address _fundsHandlerAddress,

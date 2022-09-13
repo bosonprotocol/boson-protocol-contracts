@@ -6,7 +6,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 /**
  * @title IBosonConfigEvents
  *
- * @notice Events related to management of configuration within the protocol.
+ * @notice Defines events related to management of configuration within the protocol.
  */
 interface IBosonConfigEvents {
     event TokenAddressChanged(address indexed tokenAddress, address indexed executedBy);

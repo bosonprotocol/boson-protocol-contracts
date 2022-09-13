@@ -6,8 +6,8 @@ import { ClientExternalAddressesBase } from "./../../bases/ClientExternalAddress
 /**
  * @title Beacon
  *
- * @notice Works together with BeaconClientProxy, which call this contract to find out what
- * the implementation address is. It also supplies the addess of AccessController and ProtocolDiamond
+ * @notice Works together with BeaconClientProxy, which calls this contract to find out what
+ * the implementation address is. It also supplies the address of AccessController and ProtocolDiamond
  * to implementations behind the beacon proxy
  */
 contract BosonClientBeacon is ClientExternalAddressesBase {
