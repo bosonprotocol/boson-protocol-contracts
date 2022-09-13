@@ -36,13 +36,12 @@ First we identify which limits we use at the moment and which functions (or chai
 ## Estimation config
 
 Config file is placed in `scripts/config/limit-estimation.js`. It has the following fields:
-
-- `blockGasLimit`: block gas limit agains which you want to make the estimate
-- `safeGasLimitPercent`: percent of total gas blco limit that you consider safe for transaction to actually be included in the block. For example if `blockGasLimit` is `30M` and you don't want your transaction to exceed `15M`, set `safeGasLimitPercent` to `50`.
+- `blockGasLimit`: block gas limit against which you want to make the estimate
+- `safeGasLimitPercent`: percent of total gas block limit that you consider safe for a transaction to actually be included in the block. For example if `blockGasLimit` is `30M` and you don't want your transaction to exceed `15M`, set `safeGasLimitPercent` to `50`.
 - `maxArrayLength`: maximum length of the array used during the estimation. This value is typically smaller than actual limits calcualted at the end. Increasing this value makes estimation more precise, however it also takes more time. Improvment in the estimate is increasing slower than run time, so setting this to `100` should be more than enough. If you want to speed up the proces, setting this to `10` will still give you very good results.
 - `limits`: list of limits you want to estimate. Each limit is an object with fields:
   - `name`: name of the limit
-  - `methods`: object of pairs `"methodName":"handlerName"` where `methodName` is the name of external function that uses the limit and `handlerName` is the name of the handler where this function is implemented. Example for limit `maxOffersPerGroup`:
+  - `methods`: object of pairs `"methodName":"handlerName"` where `methodName` is the name of the external function that uses the limit and `handlerName` is the name of the handler where this function is implemented. Example for limit `maxOffersPerGroup`:
     ``` 
     {
       name: "maxOffersPerGroup",
@@ -56,9 +55,9 @@ Config file is placed in `scripts/config/limit-estimation.js`. It has the follow
 
 ## Setting up the environment
 
-For each of the limits you must prepare an evironment, before it can be tested. For example, before `maxOffersPerGroup` can be tested, protocol contracts must be deployed and enough offers must be created so the limit can actuall be tested. Similar setup is needed for all other methods.
+For each of the limits you must prepare an evironment, before it can be tested. For example, before `maxOffersPerGroup` can be tested, protocol contracts must be deployed and enough offers must be created so the limit can actuall be tested. A similar setup is needed for all other methods.
 
-This is done in file `scripts/util/estimate-limits.js`. Each of limits must have a setup function which accepts `maxArrayLength`, prepares the environment and returns the invocation details that can be then used when invoking the `methods` during the estimation.
+This is done in file `scripts/util/estimate-limits.js`. Each of the limits must have a setup function which accepts `maxArrayLength`, prepares the environment and returns the invocation details that can be then used when invoking the `methods` during the estimation.
 
 Invocation details contain 
 - `account`: account that calls the method (important if access is restiricted)

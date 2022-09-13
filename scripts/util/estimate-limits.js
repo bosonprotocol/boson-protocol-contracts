@@ -63,7 +63,7 @@ let setupEnvironment = {};
 
 /*
 For each limit from limitsToEstimate, a full setup is needed before a function that depends on a limit can be estimated.
-Function that prepares an environment must return the object with invocation details for all methods that depened on a limit.
+The function that prepares an environment must return the object with invocation details for all methods that depend on a limit.
 { method_1: invocationDetails_1, method_2: invocationDetails_2, ..., method_n: invocationDetails_2}
 
 Invocation details contain 
