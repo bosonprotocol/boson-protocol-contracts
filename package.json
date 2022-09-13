@@ -43,7 +43,8 @@
     "manage-roles:local": "npx hardhat --network localhost run scripts/manage-roles.js >> logs/localhost.manage.roles.txt",
     "manage-roles:test": "npx hardhat --network test run scripts/manage-roles.js >> logs/test.manage.roles.txt",
     "natspec-interface-id": "npx hardhat compile && node scripts/util/natspec-interfaceid.js",
-    "natspec-interface-id:fix": "npx hardhat compile && node scripts/util/natspec-interfaceid.js --fix"
+    "natspec-interface-id:fix": "npx hardhat compile && node scripts/util/natspec-interfaceid.js --fix",
+    "estimate-limits": "npx hardhat estimate-limits"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.1",
