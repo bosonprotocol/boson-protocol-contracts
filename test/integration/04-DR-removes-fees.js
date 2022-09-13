@@ -12,6 +12,8 @@ const {
   mockDisputeResolver,
   mockAgent,
   accountId,
+  mockExchange,
+  mockVoucher,
 } = require("../utils/mock");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
 const Role = require("../../scripts/domain/Role");
@@ -19,16 +21,18 @@ const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-di
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
 const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
-const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { oneMonth, oneWeek } = require("../utils/constants");
 const {
   setNextBlockTimestamp,
   calculateContractAddress,
-  prepareDataSignatureParameters,
   applyPercentage,
 } = require("../../scripts/util/test-utils.js");
 
-describe.only("Update account roles addresses", function () {
+/**
+ *  Integration test case - exchange and offer operations should remain possible even when token fees are removed from the DR fee list 
+
+ */
+describe("DR removes fee", function () {
   let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
   let expectedCloneAddress, emptyAuthToken, voucherInitValues;
   let deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR, agent;
@@ -162,12 +166,6 @@ describe.only("Update account roles addresses", function () {
     await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
     await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
-    agentAccount = mockAgent(agent.address);
-    expect(agentAccount.isValid()).is.true;
-
-    // Create an agent
-    await accountHandler.connect(rando).createAgent(agentAccount);
-
     // Create a seller account
     ({ offer, offerDates, offerDurations, disputeResolverId } = await mockOffer());
     offer.quantityAvailable = "3";
@@ -178,9 +176,7 @@ describe.only("Update account roles addresses", function () {
     expect(offerDurations.isValid()).is.true;
 
     // Create the offer
-    await offerHandler
-      .connect(operator)
-      .createOffer(offer, offerDates, offerDurations, disputeResolverId, agentAccount.id);
+    await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, "0");
 
     // Deposit seller funds so the commit will succeed
     const fundsToDeposit = ethers.BigNumber.from(offer.sellerDeposit).mul(offer.quantityAvailable);
@@ -198,7 +194,7 @@ describe.only("Update account roles addresses", function () {
     // Set time forward to the offer's voucherRedeemableFrom
     await setNextBlockTimestamp(Number(offerDates.voucherRedeemableFrom));
 
-    for (exchangeId = 1; exchangeId <= 3; exchangeId++) {
+    for (exchangeId = 1; exchangeId <= 2; exchangeId++) {
       // Commit to offer, creating a new exchange
       await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
 
@@ -210,6 +206,35 @@ describe.only("Update account roles addresses", function () {
   afterEach(async function () {
     // Reset the accountId iterator
     accountId.next(true);
+  });
+
+  it("Buyer should be able to commit to offer even when DR removes fee", async function () {
+    // Removes fee
+    await expect(
+      accountHandler.connect(adminDR).removeFeesFromDisputeResolver(disputeResolver.id, [ethers.constants.AddressZero])
+    )
+      .to.emit(accountHandler, "DisputeResolverFeesRemoved")
+      .withArgs(disputeResolver.id, [ethers.constants.AddressZero], adminDR.address);
+
+    // Commit to offer
+    const tx = await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offer.id, { value: offer.price });
+    const blockTimestamp = (await ethers.provider.getBlock(tx.blockNumber)).timestamp;
+
+    // Mock voucher
+    const voucher = mockVoucher({
+      committedDate: blockTimestamp.toString(),
+      validUntilDate: (blockTimestamp + Number(offerDurations.voucherValid)).toString(),
+      redeemedDate: "0",
+    });
+
+    exchangeId = "3";
+    // Mock exchange
+    const exchange = mockExchange({ id: exchangeId, buyerId: buyerAccount.id, finalizedDate: "0" });
+
+    // Check if offer was committed
+    await expect(tx)
+      .to.emit(exchangeHandler, "BuyerCommitted")
+      .withArgs(offer.id, buyerAccount.id, exchangeId, exchange.toStruct(), voucher.toStruct(), buyer.address);
   });
 
   context("👉 After raise dispute actions", async function () {
