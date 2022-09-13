@@ -35,6 +35,9 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         AuthToken calldata _authToken,
         VoucherInitValues calldata _voucherInitValues
     ) internal {
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
         //Check active is not set to false
         require(_seller.active, MUST_BE_ACTIVE);
 
@@ -47,12 +50,12 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         //Check that the addresses are unique to one seller id, accross all roles. These addresses should always be checked. Treasury is not checked
         require(
-            protocolLookups().sellerIdByOperator[_seller.operator] == 0 &&
-                protocolLookups().sellerIdByOperator[_seller.clerk] == 0 &&
-                protocolLookups().sellerIdByAdmin[_seller.operator] == 0 &&
-                protocolLookups().sellerIdByAdmin[_seller.clerk] == 0 &&
-                protocolLookups().sellerIdByClerk[_seller.operator] == 0 &&
-                protocolLookups().sellerIdByClerk[_seller.clerk] == 0,
+            lookups.sellerIdByOperator[_seller.operator] == 0 &&
+                lookups.sellerIdByOperator[_seller.clerk] == 0 &&
+                lookups.sellerIdByAdmin[_seller.operator] == 0 &&
+                lookups.sellerIdByAdmin[_seller.clerk] == 0 &&
+                lookups.sellerIdByClerk[_seller.operator] == 0 &&
+                lookups.sellerIdByClerk[_seller.clerk] == 0,
             SELLER_ADDRESS_MUST_BE_UNIQUE
         );
 
@@ -60,15 +63,17 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         if (_seller.admin == address(0)) {
             //Check that auth token is unique to this seller
             require(
-                protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == 0,
+                lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == 0,
                 AUTH_TOKEN_MUST_BE_UNIQUE
             );
         } else {
             //check that the admin address is unique to one seller id, accross all roles
             require(
-                protocolLookups().sellerIdByOperator[_seller.admin] == 0 &&
-                    protocolLookups().sellerIdByAdmin[_seller.admin] == 0 &&
-                    protocolLookups().sellerIdByClerk[_seller.admin] == 0,
+                lookups.sellerIdByOperator[_seller.admin] == 0 &&
+                    lookups.sellerIdByAdmin[_seller.admin] == 0 &&
+                    lookups.sellerIdByOperator[_seller.admin] == 0 &&
+                    lookups.sellerIdByAdmin[_seller.admin] == 0 &&
+                    lookups.sellerIdByClerk[_seller.admin] == 0,
                 SELLER_ADDRESS_MUST_BE_UNIQUE
             );
         }
@@ -80,7 +85,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
 
         // create clone and store its address cloneAddress
         address voucherCloneAddress = cloneBosonVoucher(sellerId, _seller.operator, _voucherInitValues);
-        protocolLookups().cloneAddress[sellerId] = voucherCloneAddress;
+        lookups.cloneAddress[sellerId] = voucherCloneAddress;
 
         // Notify watchers of state change
         emit SellerCreated(sellerId, _seller, voucherCloneAddress, _authToken, msgSender());
@@ -98,7 +103,10 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      */
 
     function storeSeller(Seller memory _seller, AuthToken calldata _authToken) internal {
-        //Check for zero address
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        // Check for zero address
         require(
             _seller.operator != address(0) && _seller.clerk != address(0) && _seller.treasury != address(0),
             INVALID_ADDRESS
@@ -122,16 +130,16 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             authToken.tokenType = _authToken.tokenType;
 
             // Store seller by auth token reference
-            protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] = _seller.id;
+            lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] = _seller.id;
         } else {
             // Empty auth token passed in
             // Store admin address reference
-            protocolLookups().sellerIdByAdmin[_seller.admin] = _seller.id;
+            lookups.sellerIdByAdmin[_seller.admin] = _seller.id;
         }
 
-        //Map the seller's other addresses to the seller id. It's not necessary to map the treasury address, as it only receives funds
-        protocolLookups().sellerIdByOperator[_seller.operator] = _seller.id;
-        protocolLookups().sellerIdByClerk[_seller.clerk] = _seller.id;
+        // Map the seller's other addresses to the seller id. It's not necessary to map the treasury address, as it only receives funds
+        lookups.sellerIdByOperator[_seller.operator] = _seller.id;
+        lookups.sellerIdByClerk[_seller.clerk] = _seller.id;
     }
 
     /**

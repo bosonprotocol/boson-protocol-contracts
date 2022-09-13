@@ -32,6 +32,9 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
      * @param _twin - the fully populated struct with twin id set to 0x0
      */
     function createTwinInternal(Twin memory _twin) internal {
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
         // get message sender
         address sender = msgSender();
 
@@ -64,9 +67,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             }
 
             // Get all seller twin ids that belong to the same token address of the new twin to validate if they have not unlimited supply since ranges can overlaps each other
-            uint256[] storage twinIds = protocolLookups().twinIdsByTokenAddressAndBySeller[sellerId][
-                _twin.tokenAddress
-            ];
+            uint256[] storage twinIds = lookups.twinIdsByTokenAddressAndBySeller[sellerId][_twin.tokenAddress];
 
             for (uint256 i = 0; i < twinIds.length; i++) {
                 // Get storage location for looped twin
@@ -79,7 +80,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             }
 
             // Get all ranges of twins that belong to the seller and to the same token address of the new twin to validate if range is available
-            TokenRange[] storage twinRanges = protocolLookups().twinRangesBySeller[sellerId][_twin.tokenAddress];
+            TokenRange[] storage twinRanges = lookups.twinRangesBySeller[sellerId][_twin.tokenAddress];
 
             // Checks if token range isn't being used in any other twin of seller
             for (uint256 i = 0; i < twinRanges.length; i++) {
@@ -90,9 +91,9 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             }
 
             // Add range to twinRangesBySeller mapping
-            protocolLookups().twinRangesBySeller[sellerId][_twin.tokenAddress].push(TokenRange(tokenId, lastTokenId));
+            lookups.twinRangesBySeller[sellerId][_twin.tokenAddress].push(TokenRange(tokenId, lastTokenId));
             // Add twin id to twinIdsByTokenAddressAndBySeller mapping
-            protocolLookups().twinIdsByTokenAddressAndBySeller[sellerId][_twin.tokenAddress].push(_twin.id);
+            lookups.twinIdsByTokenAddressAndBySeller[sellerId][_twin.tokenAddress].push(_twin.id);
         } else if (_twin.tokenType == TokenType.MultiToken) {
             // If token is Fungible or MultiToken amount should not be zero
             // Also, tthe amount of tokens should not be more than the available token supply.
