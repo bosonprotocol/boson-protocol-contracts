@@ -1,6 +1,8 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const { expect } = require("chai");
+const environments = require("../../environments");
+const network = hre.network.name;
 
 const Role = require("../../scripts/domain/Role");
 const { DisputeResolverFee } = require("../../scripts/domain/DisputeResolverFee");
@@ -39,19 +41,14 @@ describe("DR removes sellers from the approved seller list", function () {
     clerkDR,
     treasuryDR;
   let protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, fundsHandler, disputeHandler;
-  let bosonToken, gasLimit;
-  let offer, offerId, seller, seller2;
-  let price, quantityAvailable, sellerDeposit;
-  let voucherRedeemableFrom, offerDates, offerDurations;
-  let protocolFeePercentage, protocolFeeFlatBoson, buyerEscalationDepositPercentage;
+  let offer, seller;
+  let offerDates, offerDurations;
+  let buyerEscalationDepositPercentage;
   let exchangeId;
-  let disputeResolver, disputeResolverFees, disputeResolverId;
+  let disputeResolver, disputeResolverId;
   let buyerPercentBasisPoints;
-  let DRFeeNative, buyerEscalationDepositNative;
-  let voucherInitValues;
+  let buyerEscalationDepositNative;
   let emptyAuthToken;
-  let agentId;
-  let sellerAllowList, allowedSellersToRemove;
 
   beforeEach(async function () {
     // Make accounts available
@@ -96,16 +93,17 @@ describe("DR removes sellers from the approved seller list", function () {
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
     const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    const gasLimit = environments[network].gasLimit;
     const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
     const [beacon] = beacons;
     const [proxy] = proxies;
 
     // Deploy the boson token
-    [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
+    const [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
 
-    // set protocolFees
-    protocolFeePercentage = "200"; // 2 %
-    protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
+    // Set protocolFees
+    const protocolFeePercentage = "200"; // 2 %
+    const protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
     buyerEscalationDepositPercentage = "1000"; // 10%
 
     // Add config Handler, so ids start at 1, and so voucher address can be found
@@ -165,18 +163,18 @@ describe("DR removes sellers from the approved seller list", function () {
   context("📋 Dispute Handler Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
-      offerId = "1";
-      agentId = "0"; // agent id is optional while creating an offer
+      const offerId = "1";
+      const agentId = "0"; // agent id is optional while creating an offer
 
       // Create a valid seller
       seller = mockSeller(operator.address, admin.address, clerk.address, treasury.address);
       expect(seller.isValid()).is.true;
 
-      seller2 = mockSeller(other1.address, other1.address, other1.address, other1.address);
+      const seller2 = mockSeller(other1.address, other1.address, other1.address, other1.address);
       expect(seller2.isValid()).is.true;
 
       // VoucherInitValues
-      voucherInitValues = mockVoucherInitValues();
+      const voucherInitValues = mockVoucherInitValues();
       expect(voucherInitValues.isValid()).is.true;
 
       // AuthToken
@@ -193,18 +191,18 @@ describe("DR removes sellers from the approved seller list", function () {
       disputeResolver = mockDisputeResolver(operatorDR.address, adminDR.address, clerkDR.address, treasuryDR.address);
       expect(disputeResolver.isValid()).is.true;
 
-      //Create DisputeResolverFee array so offer creation will succeed
-      DRFeeNative = ethers.utils.parseUnits("1", "ether").toString();
-      disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative)];
+      // Create DisputeResolverFee array so offer creation will succeed
+      const DRFeeNative = ethers.utils.parseUnits("1", "ether").toString();
+      const disputeResolverFees = [new DisputeResolverFee(ethers.constants.AddressZero, "Native", DRFeeNative)];
 
       // Make a sellerAllowList
-      sellerAllowList = ["2", "1"];
+      const sellerAllowList = ["2", "1"];
 
       // Register and activate the dispute resolver
       await accountHandler.connect(rando).createDisputeResolver(disputeResolver, disputeResolverFees, sellerAllowList);
       await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
-      // buyer escalation deposit used in multiple tests
+      // Buyer escalation deposit used in multiple tests
       buyerEscalationDepositNative = applyPercentage(DRFeeNative, buyerEscalationDepositPercentage);
 
       // Mock offer
@@ -221,10 +219,10 @@ describe("DR removes sellers from the approved seller list", function () {
       await offerHandler.connect(operator).createOffer(offer, offerDates, offerDurations, disputeResolverId, agentId);
 
       // Set used variables
-      price = offer.price;
-      quantityAvailable = offer.quantityAvailable;
-      sellerDeposit = offer.sellerDeposit;
-      voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
+      const price = offer.price;
+      const quantityAvailable = offer.quantityAvailable;
+      const sellerDeposit = offer.sellerDeposit;
+      const voucherRedeemableFrom = offerDates.voucherRedeemableFrom;
 
       // Deposit seller funds so the commit will succeed
       const fundsToDeposit = ethers.BigNumber.from(sellerDeposit).mul(quantityAvailable);
@@ -271,18 +269,30 @@ describe("DR removes sellers from the approved seller list", function () {
           .withArgs(exchangeId, buyerPercentBasisPoints, operatorDR.address);
 
         // Remove an approved seller
-        allowedSellersToRemove = ["1"];
+        let allowedSellersToRemove = ["1"];
         exchangeId = 2;
-        await accountHandler.connect(adminDR).removeSellersFromAllowList(disputeResolverId, allowedSellersToRemove);
+
+        await expect(
+          accountHandler.connect(adminDR).removeSellersFromAllowList(disputeResolverId, allowedSellersToRemove)
+        )
+          .to.emit(accountHandler, "AllowedSellersRemoved")
+          .withArgs(disputeResolverId, allowedSellersToRemove, adminDR.address);
+
         // Decide the dispute
         await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints))
           .to.emit(disputeHandler, "DisputeDecided")
           .withArgs(exchangeId, buyerPercentBasisPoints, operatorDR.address);
 
-        // Remove an approved seller
+        // Remove another approved seller
         allowedSellersToRemove = ["2"];
         exchangeId = 3;
-        await accountHandler.connect(adminDR).removeSellersFromAllowList(disputeResolverId, allowedSellersToRemove);
+
+        await expect(
+          accountHandler.connect(adminDR).removeSellersFromAllowList(disputeResolverId, allowedSellersToRemove)
+        )
+          .to.emit(accountHandler, "AllowedSellersRemoved")
+          .withArgs(disputeResolverId, allowedSellersToRemove, adminDR.address);
+
         // Decide the dispute
         await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints))
           .to.emit(disputeHandler, "DisputeDecided")
@@ -309,18 +319,30 @@ describe("DR removes sellers from the approved seller list", function () {
           .withArgs(exchangeId, operatorDR.address);
 
         // Remove an approved seller
-        allowedSellersToRemove = ["1"];
+        let allowedSellersToRemove = ["1"];
         exchangeId = 2;
-        await accountHandler.connect(adminDR).removeSellersFromAllowList(disputeResolverId, allowedSellersToRemove);
+
+        await expect(
+          accountHandler.connect(adminDR).removeSellersFromAllowList(disputeResolverId, allowedSellersToRemove)
+        )
+          .to.emit(accountHandler, "AllowedSellersRemoved")
+          .withArgs(disputeResolverId, allowedSellersToRemove, adminDR.address);
+
         // Refuse the escalated dispute, testing for the event
         await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId))
           .to.emit(disputeHandler, "EscalatedDisputeRefused")
           .withArgs(exchangeId, operatorDR.address);
 
-        // Remove an approved seller
+        // Remove another approved seller
         allowedSellersToRemove = ["2"];
         exchangeId = 3;
-        await accountHandler.connect(adminDR).removeSellersFromAllowList(disputeResolverId, allowedSellersToRemove);
+
+        await expect(
+          accountHandler.connect(adminDR).removeSellersFromAllowList(disputeResolverId, allowedSellersToRemove)
+        )
+          .to.emit(accountHandler, "AllowedSellersRemoved")
+          .withArgs(disputeResolverId, allowedSellersToRemove, adminDR.address);
+
         // Refuse the escalated dispute, testing for the event
         await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId))
           .to.emit(disputeHandler, "EscalatedDisputeRefused")
