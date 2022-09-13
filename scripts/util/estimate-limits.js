@@ -78,11 +78,10 @@ Setup the environment for "maxAllowedSellers". The following functions depend on
 - addSellersToAllowList
 - removeSellersFromAllowList
 */
-setupEnvironment["maxAllowedSellers"] = async function () {
+setupEnvironment["maxAllowedSellers"] = async function (sellerCount = 10) {
   // AuthToken
   const emptyAuthToken = mockAuthToken();
   const voucherInitValues = mockVoucherInitValues();
-  const sellerCount = 50;
 
   for (let i = 0; i < sellerCount; i++) {
     const wallet = ethers.Wallet.createRandom();
@@ -128,9 +127,7 @@ Setup the environment for "maxFeesPerDisputeResolver". The following functions d
 - addFeesToDisputeResolver
 - removeFeesFromDisputeResolver
 */
-setupEnvironment["maxFeesPerDisputeResolver"] = async function () {
-  const feesCount = 10;
-
+setupEnvironment["maxFeesPerDisputeResolver"] = async function (feesCount = 10) {
   //Create DisputeResolverFee array
   let disputeResolverFees = [];
   for (let i = 0; i < feesCount; i++) {
@@ -146,7 +143,7 @@ setupEnvironment["maxFeesPerDisputeResolver"] = async function () {
 
   // Dispute resolver 3 - used in "removeFeesFromDisputeResolver"
   const disputeResolver3 = mockDisputeResolver(dr3.address, dr3.address, dr3.address, dr3.address);
-  await accountHandler.createDisputeResolver(disputeResolver3, disputeResolverFees, []);
+  await accountHandler.createDisputeResolver(disputeResolver3, disputeResolverFees, [], { gasLimit });
   const feeTokenAddressesToRemove = disputeResolverFees.map((DRfee) => DRfee.tokenAddress);
   const args_3 = [disputeResolver3.id, feeTokenAddressesToRemove];
   const arrayIndex_3 = 1;
@@ -168,7 +165,7 @@ Setup the environment for "maxOffersPerBatch". The following functions depend on
 - voidOfferBatch
 - extendOfferBatch
 */
-setupEnvironment["maxOffersPerBatch"] = async function () {
+setupEnvironment["maxOffersPerBatch"] = async function (offerCount = 10) {
   // create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
@@ -209,8 +206,6 @@ setupEnvironment["maxOffersPerBatch"] = async function () {
     []
   );
   await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
-
-  const offerCount = 10;
 
   const { offer, offerDates, offerDurations } = await mockOffer();
   const offers = new Array(offerCount).fill(offer);
@@ -256,7 +251,7 @@ Setup the environment for "maxOffersPerGroup". The following functions depend on
 - addOffersToGroup
 - removeOffersFromGroup
 */
-setupEnvironment["maxOffersPerGroup"] = async function () {
+setupEnvironment["maxOffersPerGroup"] = async function (offerCount = 10) {
   // create a seller
   // Required constructor params
   const groupId = "1"; // argument sent to contract for createSeller will be ignored
@@ -283,7 +278,6 @@ setupEnvironment["maxOffersPerGroup"] = async function () {
   await accountHandler.connect(sellerWallet2).createSeller(seller2, emptyAuthToken, voucherInitValues);
 
   // Seller 3 - used in "removeOffersFromGroup"
-
   const seller3 = mockSeller(
     sellerWallet3.address,
     sellerWallet3.address,
@@ -299,8 +293,6 @@ setupEnvironment["maxOffersPerGroup"] = async function () {
     []
   );
   await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
-
-  const offerCount = 10;
 
   // Mock offer, offerDates and offerDurations
   const { offer, offerDates, offerDurations } = await mockOffer();
@@ -337,7 +329,7 @@ setupEnvironment["maxOffersPerGroup"] = async function () {
 
   let group3 = group.clone();
   group3.offerIds = offerIds.map((offerId) => 3 * offerId);
-  await groupHandler.connect(sellerWallet3).createGroup(group3, condition);
+  await groupHandler.connect(sellerWallet3).createGroup(group3, condition, { gasLimit });
   const args_3 = ["2", group3.offerIds];
   const arrayIndex_3 = 1;
 
@@ -352,7 +344,7 @@ setupEnvironment["maxOffersPerGroup"] = async function () {
 Setup the environment for "maxOffersPerBundle". The following functions depend on it:
 - createBundle
 */
-setupEnvironment["maxOffersPerBundle"] = async function () {
+setupEnvironment["maxOffersPerBundle"] = async function (offerCount = 10) {
   // create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
@@ -375,8 +367,6 @@ setupEnvironment["maxOffersPerBundle"] = async function () {
     []
   );
   await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
-
-  const offerCount = 10;
 
   // Mock offer, offerDates and offerDurations
   const { offer, offerDates, offerDurations } = await mockOffer();
@@ -417,7 +407,7 @@ setupEnvironment["maxOffersPerBundle"] = async function () {
 Setup the environment for "maxTwinsPerBundle". The following functions depend on it:
 - createBundle
 */
-setupEnvironment["maxTwinsPerBundle"] = async function () {
+setupEnvironment["maxTwinsPerBundle"] = async function (twinCount = 10) {
   // create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
@@ -440,8 +430,6 @@ setupEnvironment["maxTwinsPerBundle"] = async function () {
     []
   );
   await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
-
-  const twinCount = 10;
 
   for (let i = 0; i < twinCount; i++) {
     const [twinContract] = await deployMockTokens(gasLimit, ["Foreign20"]);
@@ -479,7 +467,7 @@ setupEnvironment["maxTwinsPerBundle"] = async function () {
 Setup the environment for "maxExchangesPerBatch". The following functions depend on it:
 - completeExchangeBatch
 */
-setupEnvironment["maxExchangesPerBatch"] = async function () {
+setupEnvironment["maxExchangesPerBatch"] = async function (exchangesCount = 10) {
   // create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
@@ -502,8 +490,6 @@ setupEnvironment["maxExchangesPerBatch"] = async function () {
     []
   );
   await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
-
-  const exchangesCount = 10;
 
   // create an offer with big enough quantity
   const { offer, offerDates, offerDurations } = await mockOffer();
@@ -546,7 +532,7 @@ setupEnvironment["maxExchangesPerBatch"] = async function () {
 Setup the environment for "maxDisputesPerBatch". The following functions depend on it:
 - expireDisputeBatch
 */
-setupEnvironment["maxDisputesPerBatch"] = async function () {
+setupEnvironment["maxDisputesPerBatch"] = async function (exchangesCount = 10) {
   // create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
@@ -569,8 +555,6 @@ setupEnvironment["maxDisputesPerBatch"] = async function () {
     []
   );
   await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
-
-  const exchangesCount = 10;
 
   // create an offer with big enough quantity
   const { offer, offerDates, offerDurations } = await mockOffer();
@@ -616,7 +600,7 @@ setupEnvironment["maxDisputesPerBatch"] = async function () {
 Setup the environment for "maxDisputesPerBatch". The following functions depend on it:
 - expireDisputeBatch
 */
-setupEnvironment["maxTokensPerWithdrawal"] = async function () {
+setupEnvironment["maxTokensPerWithdrawal"] = async function (tokenCount = 10) {
   // create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
@@ -639,8 +623,6 @@ setupEnvironment["maxTokensPerWithdrawal"] = async function () {
     []
   );
   await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
-
-  const tokenCount = 10;
 
   const { offer, offerDates, offerDurations } = await mockOffer();
   offerDates.voucherRedeemableFrom = offerDates.validFrom;
@@ -704,13 +686,12 @@ async function estimateLimits() {
     console.log(`## ${limit.name} ##`);
     console.log(`Setting up the environment`);
     await setupCommonEnvironment();
-    const inputs = await setupEnvironment[limit.name]();
+    const inputs = await setupEnvironment[limit.name](limitsToEstimate.maxArrayLength);
     console.log(`Estimating the limit`);
     await estimateLimit(limit, inputs, limitsToEstimate.safeGasLimitPercent);
     accountId.next(true);
   }
-  fs.writeFileSync(__dirname + "/../../logs/limit_estimates.json", JSON.stringify(result));
-  makeReport(result);
+  makeReport(result, limitsToEstimate.maxArrayLength);
 }
 
 /*
@@ -757,11 +738,16 @@ async function estimateLimit(limit, inputs, safeGasLimitPercent) {
           }
         }
 
-        const gasEstimate = await handlers[handler]
-          .connect(methodInputs.account)
-          .estimateGas[method](...adjustedArgs, { gasLimit });
-        console.log(arrayLength, gasEstimate);
-        gasEstimates.push([gasEstimate.toNumber(), arrayLength]);
+        try {
+          const gasEstimate = await handlers[handler]
+            .connect(methodInputs.account)
+            .estimateGas[method](...adjustedArgs, { gasLimit });
+          console.log(arrayLength, gasEstimate);
+          gasEstimates.push([gasEstimate.toNumber(), arrayLength]);
+        } catch (e) {
+          console.log("Block gas limit already hit");
+          break;
+        }
         if (arrayLength == maxArrayLength) break;
       }
     }
@@ -902,12 +888,11 @@ async function setupCommonEnvironment() {
   };
 }
 
-function makeReport(res) {
+function makeReport(res, maxArrayLength) {
   let header = `| # |`;
   let alignment = `|--| `;
   let row0 = `|  |`;
   let rows = [];
-  let maxArrayLength = 50;
   let numberOfRows = 0;
 
   for (let o = 0; Math.pow(10, o) <= maxArrayLength; o++) {
@@ -939,6 +924,7 @@ function makeReport(res) {
   const output = [header, alignment, row0, ...rows, maxNumber, safeNumber].join(`\n`);
 
   fs.writeFileSync(__dirname + "/../../logs/limit_estimates.md", output);
+  fs.writeFileSync(__dirname + "/../../logs/limit_estimates.json", JSON.stringify(result));
 }
 
 estimateLimits();

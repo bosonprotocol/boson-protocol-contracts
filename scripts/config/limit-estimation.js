@@ -6,6 +6,7 @@
  */
 exports.limitsToEstimate = {
   safeGasLimitPercent: 60,
+  maxArrayLength: 100, // length of the array used during the estimation.
   limits: [
     { name: "maxExchangesPerBatch", methods: { completeExchangeBatch: "IBosonExchangeHandler" } },
     {
