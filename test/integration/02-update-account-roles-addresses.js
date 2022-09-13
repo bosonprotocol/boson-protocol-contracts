@@ -28,6 +28,9 @@ const {
   applyPercentage,
 } = require("../../scripts/util/test-utils.js");
 
+/**
+ *  Integration test case - operations should remain possible after updating account roles addresses.
+ */
 describe("Update account roles addresses", function () {
   let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
   let deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR, agent;
