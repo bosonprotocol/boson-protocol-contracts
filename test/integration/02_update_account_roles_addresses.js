@@ -334,7 +334,7 @@ describe("Update account roles addresses", function () {
           .withArgs(agentAccount.id, rando.address, ethers.constants.AddressZero, agentPayoff, rando.address);
       });
 
-      it("Buyer should be able to raise a dispute after updating wallet address", async function () {
+      it("Buyer should be able to raise dispute after updating wallet address", async function () {
         buyerAccount.wallet = rando.address;
         expect(buyerAccount.isValid()).is.true;
 
@@ -400,7 +400,7 @@ describe("Update account roles addresses", function () {
           };
         });
 
-        it("Seller should be able to resolve a dispute after updating operator address", async function () {
+        it("Seller should be able to resolve dispute after updating operator address", async function () {
           seller.operator = rando.address;
           expect(seller.isValid()).is.true;
 
@@ -429,7 +429,7 @@ describe("Update account roles addresses", function () {
             .withArgs(exchangeId, buyerPercent, rando.address);
         });
 
-        it("Buyer should be able to resolve a dispute after updating wallet address", async function () {
+        it("Buyer should be able to resolve dispute after updating wallet address", async function () {
           buyerAccount.wallet = rando.address;
           expect(buyerAccount.isValid()).is.true;
 
@@ -506,34 +506,70 @@ describe("Update account roles addresses", function () {
           );
         });
 
-        it("Dispute resolver should be able to decide a dispute after change the operator address", async function () {
-          const buyerEscalationDepositNative = applyPercentage(
-            disputeResolverFeeNative,
-            buyerEscalationDepositPercentage
+        it("Buyer should be able to retract dispute after updating wallet address", async function () {
+          buyerAccount.wallet = rando.address;
+          expect(buyerAccount.isValid()).is.true;
+
+          // Update the buyer wallet, testing for the event
+          await expect(accountHandler.connect(buyer).updateBuyer(buyerAccount))
+            .to.emit(accountHandler, "BuyerUpdated")
+            .withArgs(buyerAccount.id, buyerAccount.toStruct(), buyer.address);
+
+          // Attempt to retract a dispute with old buyer, should fail
+          await expect(disputeHandler.connect(buyer).retractDispute(exchangeId)).to.be.revertedWith(
+            RevertReasons.NOT_VOUCHER_HOLDER
           );
 
-          // Escalate the dispute
-          await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
+          // Attempt to retract a dispute with new buyer, should succeed
+          await expect(disputeHandler.connect(rando).retractDispute(exchangeId))
+            .to.emit(disputeHandler, "DisputeRetracted")
+            .withArgs(exchangeId, rando.address);
+        });
 
-          disputeResolver.operator = rando.address;
-          expect(disputeResolver.isValid()).is.true;
+        context("After escalte dispute actions", function () {
+          beforeEach(async function () {
+            const buyerEscalationDepositNative = applyPercentage(
+              disputeResolverFeeNative,
+              buyerEscalationDepositPercentage
+            );
 
-          // Update the dispute resolver operator, testing for the event
-          await expect(accountHandler.connect(adminDR).updateDisputeResolver(disputeResolver))
-            .to.emit(accountHandler, "DisputeResolverUpdated")
-            .withArgs(disputeResolver.id, disputeResolver.toStruct(), adminDR.address);
+            // Escalate the dispute
+            await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
-          const buyerPercent = "1234";
+            disputeResolver.operator = rando.address;
+            expect(disputeResolver.isValid()).is.true;
 
-          // Attempt to decide a dispute with old dispute resolver operator, should fail
-          await expect(disputeHandler.connect(operator).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
-            RevertReasons.NOT_DISPUTE_RESOLVER_OPERATOR
-          );
+            // Update the dispute resolver operator, testing for the event
+            await expect(accountHandler.connect(adminDR).updateDisputeResolver(disputeResolver))
+              .to.emit(accountHandler, "DisputeResolverUpdated")
+              .withArgs(disputeResolver.id, disputeResolver.toStruct(), adminDR.address);
+          });
 
-          // Attempt to decide a dispute with new dispute resolver operator, should fail
-          await expect(disputeHandler.connect(rando).decideDispute(exchangeId, buyerPercent))
-            .to.emit(disputeHandler, "DisputeDecided")
-            .withArgs(exchangeId, buyerPercent, rando.address);
+          it("Dispute resolver should be able to decide dispute after change the operator address", async function () {
+            const buyerPercent = "1234";
+
+            // Attempt to decide a dispute with old dispute resolver operator, should fail
+            await expect(disputeHandler.connect(operator).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
+              RevertReasons.NOT_DISPUTE_RESOLVER_OPERATOR
+            );
+
+            // Attempt to decide a dispute with new dispute resolver operator, should fail
+            await expect(disputeHandler.connect(rando).decideDispute(exchangeId, buyerPercent))
+              .to.emit(disputeHandler, "DisputeDecided")
+              .withArgs(exchangeId, buyerPercent, rando.address);
+          });
+
+          it("Dispute resolver should be able to refuse to decide a dispute after change the operator address", async function () {
+            // Attempt to refuse to decide a dispute with old dispute resolver operator, should fail
+            await expect(disputeHandler.connect(operator).refuseEscalatedDispute(exchangeId)).to.revertedWith(
+              RevertReasons.NOT_DISPUTE_RESOLVER_OPERATOR
+            );
+
+            // Attempt to refuse a dispute with new dispute resolver operator, should fail
+            await expect(disputeHandler.connect(rando).refuseEscalatedDispute(exchangeId))
+              .to.emit(disputeHandler, "EscalatedDisputeRefused")
+              .withArgs(exchangeId, rando.address);
+          });
         });
       });
     });
