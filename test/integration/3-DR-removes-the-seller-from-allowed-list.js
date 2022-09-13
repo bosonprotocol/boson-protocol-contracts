@@ -159,7 +159,6 @@ describe("DR removes sellers from the approved seller list", function () {
     disputeHandler = await ethers.getContractAt("IBosonDisputeHandler", protocolDiamond.address);
   });
 
-  // All supported Dispute methods - single
   context("📋 Dispute Handler Methods", async function () {
     beforeEach(async function () {
       // Initial ids for all the things
