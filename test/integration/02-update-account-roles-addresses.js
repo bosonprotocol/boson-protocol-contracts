@@ -552,7 +552,7 @@ describe("Update account roles addresses", function () {
             const buyerPercent = "1234";
 
             // Attempt to decide a dispute with old dispute resolver operator, should fail
-            await expect(disputeHandler.connect(operator).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
+            await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
               RevertReasons.NOT_DISPUTE_RESOLVER_OPERATOR
             );
 
@@ -564,7 +564,7 @@ describe("Update account roles addresses", function () {
 
           it("Dispute resolver should be able to refuse to decide a dispute after change the operator address", async function () {
             // Attempt to refuse to decide a dispute with old dispute resolver operator, should fail
-            await expect(disputeHandler.connect(operator).refuseEscalatedDispute(exchangeId)).to.revertedWith(
+            await expect(disputeHandler.connect(operatorDR).refuseEscalatedDispute(exchangeId)).to.revertedWith(
               RevertReasons.NOT_DISPUTE_RESOLVER_OPERATOR
             );
 
