@@ -5,6 +5,7 @@
  * If a new limit is added to the smart contracts, this list should be updated.
  */
 exports.limitsToEstimate = {
+  blockGasLimit: 60000000,
   safeGasLimitPercent: 60,
   maxArrayLength: 100, // length of the array used during the estimation.
   limits: [

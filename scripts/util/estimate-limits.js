@@ -1,10 +1,11 @@
 const hre = require("hardhat");
 const ethers = hre.ethers;
-const gasLimit = hre.network.config.blockGasLimit;
 const simpleStatistic = require("simple-statistics");
 const fs = require("fs");
 
 const { limitsToEstimate } = require("../config/limit-estimation");
+const gasLimit = limitsToEstimate.blockGasLimit;
+hre.network.config.blockGasLimit = gasLimit;
 
 const Role = require("../domain/Role");
 const Bundle = require("../domain/Bundle");
@@ -682,6 +683,11 @@ Invoke the methods that setup the environment and iterate over all limits and pa
 At the end it writes the results to json file.
 */
 async function estimateLimits() {
+  if (hre.network.name !== "hardhat") {
+    console.log("Unsupported network");
+    process.exit(1);
+  }
+
   for (const limit of limitsToEstimate.limits) {
     console.log(`## ${limit.name} ##`);
     console.log(`Setting up the environment`);
@@ -742,7 +748,7 @@ async function estimateLimit(limit, inputs, safeGasLimitPercent) {
           const gasEstimate = await handlers[handler]
             .connect(methodInputs.account)
             .estimateGas[method](...adjustedArgs, { gasLimit });
-          console.log(arrayLength, gasEstimate);
+          console.log("Length:", arrayLength, "Gas:", gasEstimate.toNumber());
           gasEstimates.push([gasEstimate.toNumber(), arrayLength]);
         } catch (e) {
           console.log("Block gas limit already hit");
@@ -943,4 +949,4 @@ function makeReport(res, maxArrayLength) {
   fs.writeFileSync(__dirname + "/../../logs/limit_estimates.json", JSON.stringify(result));
 }
 
-estimateLimits();
+exports.estimateLimits = estimateLimits;
