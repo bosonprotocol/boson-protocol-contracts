@@ -29,17 +29,20 @@ interface IDiamondCut {
     }
 
     /**
-     * @notice Add/replace/remove any number of functions and
-     * optionally execute a function with delegatecall
+     * @notice Cuts facets of the Diamond
      *
-     * _calldata is executed with delegatecall on _init
+     * Adds/replacse/removes any number of function selectors
      *
-     * @param _diamondCut Contains the facet addresses and function selectors
-     * @param _init The address of the contract or facet to execute _calldata
-     * @param _calldata A function call, including function selector and arguments
+     * If populated, _calldata is executed with delegatecall on _init
+     *
+     * Reverts if caller does not have UPGRADER role
+     *
+     * @param _facetCuts - contains the facet addresses and function selectors
+     * @param _init - the address of the contract or facet to execute _calldata
+     * @param _calldata - a function call, including function selector and arguments
      */
     function diamondCut(
-        FacetCut[] calldata _diamondCut,
+        FacetCut[] calldata _facetCuts,
         address _init,
         bytes calldata _calldata
     ) external;

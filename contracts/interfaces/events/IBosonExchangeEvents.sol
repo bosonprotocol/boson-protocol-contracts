@@ -6,7 +6,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 /**
  * @title IBosonExchangeEvents
  *
- * @notice Events related to exchanges within the protocol.
+ * @notice Defines events related to exchanges within the protocol.
  */
 interface IBosonExchangeEvents {
     event BuyerCommitted(

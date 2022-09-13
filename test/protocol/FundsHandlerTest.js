@@ -20,7 +20,7 @@ const {
   prepareDataSignatureParameters,
   applyPercentage,
 } = require("../../scripts/util/test-utils.js");
-const { oneMonth } = require("../utils/constants");
+const { oneWeek, oneMonth } = require("../utils/constants");
 const {
   mockOffer,
   mockDisputeResolver,
@@ -80,7 +80,7 @@ describe("IBosonFundsHandler", function () {
   let tokenListSeller, tokenListBuyer, tokenAmountsSeller, tokenAmountsBuyer, tokenList, tokenAmounts;
   let tx, txReceipt, txCost, event;
   let disputeResolverFees, disputeResolver, disputeResolverId;
-  let buyerPercent;
+  let buyerPercentBasisPoints;
   let resolutionType, customSignatureType, message, r, s, v;
   let disputedDate, escalatedDate, timeout;
   let voucherInitValues;
@@ -186,6 +186,7 @@ describe("IBosonFundsHandler", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
+        minFulfillmentPeriod: oneWeek,
       },
       // Protocol fees
       {
@@ -2616,7 +2617,6 @@ describe("IBosonFundsHandler", function () {
               buyer.address,
             ]);
             expect(match).to.be.false;
-            console.log("match in test case when false is expected ", match);
           });
 
           it("should update state", async function () {
@@ -2955,13 +2955,13 @@ describe("IBosonFundsHandler", function () {
 
         context("Final state DISPUTED - RESOLVED", async function () {
           beforeEach(async function () {
-            buyerPercent = "5566"; // 55.66%
+            buyerPercentBasisPoints = "5566"; // 55.66%
 
             // expected payoffs
             // buyer: (price + sellerDeposit)*buyerPercentage
             buyerPayoff = ethers.BigNumber.from(offerToken.price)
               .add(offerToken.sellerDeposit)
-              .mul(buyerPercent)
+              .mul(buyerPercentBasisPoints)
               .div("10000")
               .toString();
 
@@ -2977,7 +2977,7 @@ describe("IBosonFundsHandler", function () {
             // Set the message Type, needed for signature
             resolutionType = [
               { name: "exchangeId", type: "uint256" },
-              { name: "buyerPercent", type: "uint256" },
+              { name: "buyerPercentBasisPoints", type: "uint256" },
             ];
 
             customSignatureType = {
@@ -2986,7 +2986,7 @@ describe("IBosonFundsHandler", function () {
 
             message = {
               exchangeId: exchangeId,
-              buyerPercent,
+              buyerPercentBasisPoints,
             };
 
             // Collect the signature components
@@ -3001,7 +3001,9 @@ describe("IBosonFundsHandler", function () {
 
           it("should emit a FundsReleased event", async function () {
             // Resolve the dispute, expecting event
-            const tx = await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v);
+            const tx = await disputeHandler
+              .connect(operator)
+              .resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, operator.address);
@@ -3034,7 +3036,7 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
             // Resolve the dispute, so the funds are released
-            await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v);
+            await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
 
             // Available funds should be increased for
             // buyer: (price + sellerDeposit)*buyerPercentage
@@ -3076,13 +3078,13 @@ describe("IBosonFundsHandler", function () {
               // raise the dispute
               await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
-              buyerPercent = "5566"; // 55.66%
+              buyerPercentBasisPoints = "5566"; // 55.66%
 
               // expected payoffs
               // buyer: (price + sellerDeposit)*buyerPercentage
               buyerPayoff = ethers.BigNumber.from(agentOffer.price)
                 .add(agentOffer.sellerDeposit)
-                .mul(buyerPercent)
+                .mul(buyerPercentBasisPoints)
                 .div("10000")
                 .toString();
 
@@ -3098,7 +3100,7 @@ describe("IBosonFundsHandler", function () {
               // Set the message Type, needed for signature
               resolutionType = [
                 { name: "exchangeId", type: "uint256" },
-                { name: "buyerPercent", type: "uint256" },
+                { name: "buyerPercentBasisPoints", type: "uint256" },
               ];
 
               customSignatureType = {
@@ -3107,7 +3109,7 @@ describe("IBosonFundsHandler", function () {
 
               message = {
                 exchangeId: exchangeId,
-                buyerPercent,
+                buyerPercentBasisPoints,
               };
 
               // Collect the signature components
@@ -3140,7 +3142,7 @@ describe("IBosonFundsHandler", function () {
               expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
               // Resolve the dispute, so the funds are released
-              await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v);
+              await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
 
               // Available funds should be increased for
               // buyer: (price + sellerDeposit)*buyerPercentage
@@ -3342,14 +3344,14 @@ describe("IBosonFundsHandler", function () {
 
         context("Final state DISPUTED - ESCALATED - RESOLVED", async function () {
           beforeEach(async function () {
-            buyerPercent = "5566"; // 55.66%
+            buyerPercentBasisPoints = "5566"; // 55.66%
 
             // expected payoffs
             // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
             buyerPayoff = ethers.BigNumber.from(offerToken.price)
               .add(offerToken.sellerDeposit)
               .add(buyerEscalationDeposit)
-              .mul(buyerPercent)
+              .mul(buyerPercentBasisPoints)
               .div("10000")
               .toString();
 
@@ -3366,7 +3368,7 @@ describe("IBosonFundsHandler", function () {
             // Set the message Type, needed for signature
             resolutionType = [
               { name: "exchangeId", type: "uint256" },
-              { name: "buyerPercent", type: "uint256" },
+              { name: "buyerPercentBasisPoints", type: "uint256" },
             ];
 
             customSignatureType = {
@@ -3375,7 +3377,7 @@ describe("IBosonFundsHandler", function () {
 
             message = {
               exchangeId: exchangeId,
-              buyerPercent,
+              buyerPercentBasisPoints,
             };
 
             // Collect the signature components
@@ -3393,7 +3395,9 @@ describe("IBosonFundsHandler", function () {
 
           it("should emit a FundsReleased event", async function () {
             // Resolve the dispute, expecting event
-            const tx = await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v);
+            const tx = await disputeHandler
+              .connect(operator)
+              .resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, operator.address);
@@ -3426,7 +3430,7 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
             // Resolve the dispute, so the funds are released
-            await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v);
+            await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
 
             // Available funds should be increased for
             // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
@@ -3471,14 +3475,14 @@ describe("IBosonFundsHandler", function () {
               // raise the dispute
               await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
-              buyerPercent = "5566"; // 55.66%
+              buyerPercentBasisPoints = "5566"; // 55.66%
 
               // expected payoffs
               // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
               buyerPayoff = ethers.BigNumber.from(agentOffer.price)
                 .add(agentOffer.sellerDeposit)
                 .add(buyerEscalationDeposit)
-                .mul(buyerPercent)
+                .mul(buyerPercentBasisPoints)
                 .div("10000")
                 .toString();
 
@@ -3495,7 +3499,7 @@ describe("IBosonFundsHandler", function () {
               // Set the message Type, needed for signature
               resolutionType = [
                 { name: "exchangeId", type: "uint256" },
-                { name: "buyerPercent", type: "uint256" },
+                { name: "buyerPercentBasisPoints", type: "uint256" },
               ];
 
               customSignatureType = {
@@ -3504,7 +3508,7 @@ describe("IBosonFundsHandler", function () {
 
               message = {
                 exchangeId: exchangeId,
-                buyerPercent,
+                buyerPercentBasisPoints,
               };
 
               // Collect the signature components
@@ -3542,7 +3546,7 @@ describe("IBosonFundsHandler", function () {
               expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
               // Resolve the dispute, so the funds are released
-              await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v);
+              await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
 
               // Available funds should be increased for
               // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
@@ -3568,14 +3572,14 @@ describe("IBosonFundsHandler", function () {
 
         context("Final state DISPUTED - ESCALATED - DECIDED", async function () {
           beforeEach(async function () {
-            buyerPercent = "5566"; // 55.66%
+            buyerPercentBasisPoints = "5566"; // 55.66%
 
             // expected payoffs
             // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
             buyerPayoff = ethers.BigNumber.from(offerToken.price)
               .add(offerToken.sellerDeposit)
               .add(buyerEscalationDeposit)
-              .mul(buyerPercent)
+              .mul(buyerPercentBasisPoints)
               .div("10000")
               .toString();
 
@@ -3595,7 +3599,7 @@ describe("IBosonFundsHandler", function () {
 
           it("should emit a FundsReleased event", async function () {
             // Decide the dispute, expecting event
-            const tx = await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent);
+            const tx = await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints);
             await expect(tx)
               .to.emit(disputeHandler, "FundsReleased")
               .withArgs(exchangeId, seller.id, offerToken.exchangeToken, sellerPayoff, operatorDR.address);
@@ -3628,7 +3632,7 @@ describe("IBosonFundsHandler", function () {
             expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
             // Decide the dispute, so the funds are released
-            await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent);
+            await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints);
 
             // Available funds should be increased for
             // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
@@ -3679,14 +3683,14 @@ describe("IBosonFundsHandler", function () {
               disputedDate = block.timestamp.toString();
               timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
 
-              buyerPercent = "5566"; // 55.66%
+              buyerPercentBasisPoints = "5566"; // 55.66%
 
               // expected payoffs
               // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage
               buyerPayoff = ethers.BigNumber.from(agentOffer.price)
                 .add(agentOffer.sellerDeposit)
                 .add(buyerEscalationDeposit)
-                .mul(buyerPercent)
+                .mul(buyerPercentBasisPoints)
                 .div("10000")
                 .toString();
 
@@ -3726,7 +3730,7 @@ describe("IBosonFundsHandler", function () {
               expect(agentAvailableFunds).to.eql(expectedAgentAvailableFunds);
 
               // Decide the dispute, so the funds are released
-              await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent);
+              await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints);
 
               // Available funds should be increased for
               // buyer: (price + sellerDeposit + buyerEscalationDeposit)*buyerPercentage

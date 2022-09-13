@@ -9,17 +9,17 @@ import "../../domain/BosonConstants.sol";
 /**
  *
  * @title DisputeBase
- * @dev Provides methods for dispute that can be shared accross facets
+ * @notice Provides methods for dispute that can be shared accross facets
  */
 contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
     /**
-     * @dev Raise a dispute
+     * @notice Raises a dispute
      *
      * Reverts if:
-     * - caller does not hold a voucher for the given exchange id
-     * - exchange does not exist
-     * - exchange is not in a redeemed state
-     * - fulfillment period has elapsed already
+     * - Caller does not hold a voucher for the given exchange id
+     * - Exchange does not exist
+     * - Exchange is not in a redeemed state
+     * - Fulfillment period has elapsed already
      *
      * @param _exchange - the exchange
      * @param _voucher - the associated voucher
@@ -30,7 +30,7 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
         Voucher storage _voucher,
         uint256 _sellerId
     ) internal {
-        // Make sure the fulfillment period has elapsed
+        // Make sure the fulfillment period has not elapsed
         uint256 elapsed = block.timestamp - _voucher.redeemedDate;
         require(elapsed < fetchOfferDurations(_exchange.offerId).fulfillmentPeriod, FULFILLMENT_PERIOD_HAS_ELAPSED);
 

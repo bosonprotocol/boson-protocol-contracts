@@ -13,7 +13,7 @@ import { IBosonOfferEvents } from "../events/IBosonOfferEvents.sol";
  */
 interface IBosonOfferHandler is IBosonOfferEvents {
     /**
-     * @notice Creates an offer
+     * @notice Creates an offer.
      *
      * Emits an OfferCreated event if successful.
      *
@@ -26,19 +26,20 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - Neither of voucher expiration date and voucher expiraton period are defined
      * - Voucher redeemable period is fixed, but it ends before it starts
      * - Voucher redeemable period is fixed, but it ends before offer expires
-     * - Fulfillment period is set to zero
+     * - Fulfillment period is less than minimum fulfillment period
      * - Resolution period is set to zero
      * - Voided is set to true
      * - Available quantity is set to zero
      * - Dispute resolver wallet is not registered, except for absolute zero offers with unspecified dispute resolver
      * - Dispute resolver is not active, except for absolute zero offers with unspecified dispute resolver
+     * - Seller is not on dispute resolver's seller allow list
      * - Dispute resolver does not accept fees in the exchange token
      * - Buyer cancel penalty is greater than price
      * - When agent id is non zero:
      *   - If Agent does not exist
      *   - If the sum of Agent fee amount and protocol fee amount is greater than the offer fee limit
      *
-     * @param _offer - the fully populated struct with offer id set to 0x0
+     * @param _offer - the fully populated struct with offer id set to 0x0 and voided set to false
      * @param _offerDates - the fully populated offer dates struct
      * @param _offerDurations - the fully populated offer durations struct
      * @param _disputeResolverId - the id of chosen dispute resolver (can be 0)
@@ -61,7 +62,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - The offers region of protocol is paused
      * - Number of offers exceeds maximum allowed number per batch
      * - Number of elements in offers, offerDates and offerDurations do not match
-     * - for any offer:
+     * - For any offer:
      *   - Caller is not an operator
      *   - Valid from date is greater than valid until date
      *   - Valid until date is not in the future
@@ -69,7 +70,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *   - Neither of voucher expiration date and voucher expiraton period are defined
      *   - Voucher redeemable period is fixed, but it ends before it starts
      *   - Voucher redeemable period is fixed, but it ends before offer expires
-     *   - Fulfillment period is set to zero
+     *   - Fulfillment period is less than minimum fulfillment period
      *   - Resolution period is set to zero
      *   - Voided is set to true
      *   - Available quantity is set to zero
@@ -97,17 +98,15 @@ interface IBosonOfferHandler is IBosonOfferEvents {
     ) external;
 
     /**
-     * @notice Voids a given offer
-     *
-     * Emits an OfferVoided event if successful.
-     *
-     * Note:
+     * @notice Voids a given offer.
      * Existing exchanges are not affected.
      * No further vouchers can be issued against a voided offer.
      *
+     * Emits an OfferVoided event if successful.
+     *
      * Reverts if:
      * - The offers region of protocol is paused
-     * - Offer ID is invalid
+     * - Offer id is invalid
      * - Caller is not the operator of the offer
      * - Offer has already been voided
      *
@@ -117,26 +116,24 @@ interface IBosonOfferHandler is IBosonOfferEvents {
 
     /**
      * @notice  Voids a batch of offers.
-     *
-     * Emits an OfferVoided event for every offer if successful.
-     *
-     * Note:
      * Existing exchanges are not affected.
      * No further vouchers can be issued against a voided offer.
+     *
+     * Emits an OfferVoided event for every offer if successful.
      *
      * Reverts if, for any offer:
      * - The offers region of protocol is paused
      * - Number of offers exceeds maximum allowed number per batch
-     * - Offer ID is invalid
+     * - Offer id is invalid
      * - Caller is not the operator of the offer
      * - Offer has already been voided
      *
-     * @param _offerIds - list of offer ids of the void
+     * @param _offerIds - list of ids of offers to void
      */
     function voidOfferBatch(uint256[] calldata _offerIds) external;
 
     /**
-     * @notice Extends an Offer's validity period.
+     * @notice Sets new valid until date.
      *
      * Emits an OfferExtended event if successful.
      *
@@ -144,7 +141,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      * - The offers region of protocol is paused
      * - Offer does not exist
      * - Caller is not the operator of the offer
-     * - New valid until date is before existing valid until date
+     * - New valid until date is before existing valid until dates
      * - Offer has voucherRedeemableUntil set and new valid until date is greater than that
      *
      *  @param _offerId - the id of the offer to extend
@@ -153,9 +150,9 @@ interface IBosonOfferHandler is IBosonOfferEvents {
     function extendOffer(uint256 _offerId, uint256 _validUntilDate) external;
 
     /**
-     * @notice Sets new valid until date
+     * @notice Sets new valid until date for a batch of offers.
      *
-     * Emits an OfferExtended event if successful.
+     * Emits an OfferExtended event for every offer if successful.
      *
      * Reverts if:
      * - The offers region of protocol is paused
@@ -166,7 +163,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
      *   - New valid until date is before existing valid until dates
      *   - Offer has voucherRedeemableUntil set and new valid until date is greater than that
      *
-     *  @param _offerIds - list of ids of the offers to extemd
+     *  @param _offerIds - list of ids of the offers to extend
      *  @param _validUntilDate - new valid until date
      */
     function extendOfferBatch(uint256[] calldata _offerIds, uint256 _validUntilDate) external;
@@ -174,7 +171,7 @@ interface IBosonOfferHandler is IBosonOfferEvents {
     /**
      * @notice Gets the details about a given offer.
      *
-     * @param _offerId - the id of the offer to check
+     * @param _offerId - the id of the offer to retrieve
      * @return exists - the offer was found
      * @return offer - the offer details. See {BosonTypes.Offer}
      * @return offerDates - the offer dates details. See {BosonTypes.OfferDates}
@@ -197,14 +194,14 @@ interface IBosonOfferHandler is IBosonOfferEvents {
     /**
      * @notice Gets the next offer id.
      *
-     * Does not increment the counter.
+     * @dev Does not increment the counter.
      *
      * @return nextOfferId - the next offer id
      */
     function getNextOfferId() external view returns (uint256 nextOfferId);
 
     /**
-     * @notice Tells if offer is voided or not
+     * @notice Checks if offer is voided or not.
      *
      * @param _offerId - the id of the offer to check
      * @return exists - the offer was found
@@ -215,9 +212,9 @@ interface IBosonOfferHandler is IBosonOfferEvents {
     /**
      * @notice Gets the agent id for a given offer id.
      *
-     * @param _offerId - the offer Id.
-     * @return exists - whether the agent Id exists
-     * @return agentId - the agent Id.
+     * @param _offerId - the offer id
+     * @return exists - whether the agent id exists
+     * @return agentId - the agent id
      */
     function getAgentIdByOffer(uint256 _offerId) external view returns (bool exists, uint256 agentId);
 }

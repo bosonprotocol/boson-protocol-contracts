@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 /**
  * @title IDiamondLoupe
  *
- * @notice Diamond Facet inspection
+ * @notice Provides Diamond Facet inspection functionality
  *
  * Reference Implementation  : https://github.com/mudgen/diamond-2-hardhat
  * EIP-2535 Diamond Standard : https://eips.ethereum.org/EIPS/eip-2535
@@ -19,22 +19,35 @@ interface IDiamondLoupe {
         bytes4[] functionSelectors;
     }
 
-    /// @notice Gets all facet addresses and their four byte function selectors.
-    /// @return facets_ Facet
+    /**
+     *  @notice Gets all facets and their selectors.
+     *
+     *  @return facets_ - array of Facets
+     */
     function facets() external view returns (Facet[] memory facets_);
 
-    /// @notice Gets all the function selectors supported by a specific facet.
-    /// @param _facet The facet address.
-    /// @return facetFunctionSelectors_
+    /**
+     * @notice Gets all the function selectors supported by a specific facet.
+     *
+     * @param _facet  - the facet address
+     * @return facetFunctionSelectors_ - the selectors associated with a facet address
+     */
     function facetFunctionSelectors(address _facet) external view returns (bytes4[] memory facetFunctionSelectors_);
 
-    /// @notice Get all the facet addresses used by a diamond.
-    /// @return facetAddresses_
+    /**
+     * @notice Gets all the facet addresses used by a diamond.
+     *
+     * @return facetAddresses_ - array of addresses
+     */
     function facetAddresses() external view returns (address[] memory facetAddresses_);
 
-    /// @notice Gets the facet that supports the given selector.
-    /// @dev If facet is not found return address(0).
-    /// @param _functionSelector The function selector.
-    /// @return facetAddress_ The facet address.
+    /**
+     * @notice Gets the facet that supports the given selector.
+     *
+     * @dev If facet is not found return address(0).
+     *
+     * @param _functionSelector - the function selector.
+     * @return facetAddress_ - the facet address.
+     */
     function facetAddress(bytes4 _functionSelector) external view returns (address facetAddress_);
 }

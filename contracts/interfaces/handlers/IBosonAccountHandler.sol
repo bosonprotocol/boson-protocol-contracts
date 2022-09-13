@@ -13,20 +13,20 @@ import { IBosonAccountEvents } from "../events/IBosonAccountEvents.sol";
  */
 interface IBosonAccountHandler is IBosonAccountEvents {
     /**
-     * @notice Creates a seller
+     * @notice Creates a seller.
      *
      * Emits a SellerCreated event if successful.
      *
      * Reverts if:
      * - The sellers region of protocol is paused
      * - Address values are zero address
-     * - Active is not true
      * - Addresses are not unique to this seller
+     * - Seller is not active (if active == false)
      * - Admin address is zero address and AuthTokenType == None
      * - AuthTokenType is not unique to this seller
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
-     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      */
     function createSeller(
@@ -36,9 +36,9 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     ) external;
 
     /**
-     * @notice Creates a Buyer
+     * @notice Creates a buyer.
      *
-     * Emits a BuyerCreated event if successful.
+     * Emits an BuyerCreated event if successful.
      *
      * Reverts if:
      * - The buyers region of protocol is paused
@@ -51,7 +51,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function createBuyer(BosonTypes.Buyer memory _buyer) external;
 
     /**
-     * @notice Creates a Dispute Resolver. Dispute Resolver must be activated before it can participate in the protocol.
+     * @notice Creates a dispute resolver. Dispute resolver must be activated before it can participate in the protocol.
      *
      * Emits a DisputeResolverCreated event if successful.
      *
@@ -77,7 +77,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     ) external;
 
     /**
-     * @notice Creates a marketplace agent
+     * @notice Creates a marketplace agent.
      *
      * Emits an AgentCreated event if successful.
      *
@@ -109,7 +109,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - AuthTokenType is not unique to this seller
      *
      * @param _seller - the fully populated seller struct
-     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      */
     function updateSeller(BosonTypes.Seller memory _seller, BosonTypes.AuthToken calldata _authToken) external;
 
@@ -135,7 +135,8 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     /**
      * @notice Updates a dispute resolver, not including DisputeResolverFees, allowed seller list or active flag.
      *         All DisputeResolver fields should be filled, even those staying the same.
-     *         Use removeFeesFromDisputeResolver
+     *         Use removeFeesFromDisputeResolver and addFeesToDisputeResolver to add and remove fees.
+     *         Use addSellersToAllowList and removeSellersFromAllowList to add and remove allowed sellers.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
      * Emits a DisputeResolverUpdated event if successful.
@@ -147,16 +148,16 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Any address is not unique to this dispute resolver
      * - Dispute resolver does not exist
      *
-     * @param _disputeResolver - the fully populated dispute resolver struct
+     * @param _disputeResolver - the fully populated buydispute resolver struct
      */
     function updateDisputeResolver(BosonTypes.DisputeResolver memory _disputeResolver) external;
 
     /**
-     * @notice Updates an agent except, with the exception of the active flag.
+     * @notice Updates an agent, with the exception of the active flag.
      *         All other fields should be filled, even those staying the same.
      * @dev    Active flag passed in by caller will be ignored. The value from storage will be used.
      *
-     * Emits a AgentUpdated event if successful.
+     * Emits an AgentUpdated event if successful.
      *
      * Reverts if:
      * - The agents region of protocol is paused
@@ -171,7 +172,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     function updateAgent(BosonTypes.Agent memory _agent) external;
 
     /**
-     * @notice Add DisputeResolverFees to an existing dispute resolver
+     * @notice Adds DisputeResolverFees to an existing dispute resolver.
      *
      * Emits a DisputeResolverFeesAdded event if successful.
      *
@@ -179,11 +180,11 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
-     * - Number of DisputeResolverFee structs in array is zero
      * - Number of DisputeResolverFee structs in array exceeds max
+     * - Number of DisputeResolverFee structs in array is zero
      * - DisputeResolverFee array contains duplicates
      *
-     * @param _disputeResolverId - Id of the dispute resolver
+     * @param _disputeResolverId - id of the dispute resolver
      * @param _disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      */
     function addFeesToDisputeResolver(
@@ -192,7 +193,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     ) external;
 
     /**
-     * @notice Remove DisputeResolverFees from  an existing dispute resolver
+     * @notice Removes DisputeResolverFees from  an existing dispute resolver.
      *
      * Emits a DisputeResolverFeesRemoved event if successful.
      *
@@ -200,19 +201,19 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - The dispute resolvers region of protocol is paused
      * - Caller is not the admin address associated with the dispute resolver account
      * - Dispute resolver does not exist
-     * - Number of DisputeResolverFee structs in array is zero
      * - Number of DisputeResolverFee structs in array exceeds max
+     * - Number of DisputeResolverFee structs in array is zero
      * - DisputeResolverFee does not exist for the dispute resolver
      *
-     * @param _disputeResolverId - Id of the dispute resolver
+     * @param _disputeResolverId - id of the dispute resolver
      * @param _feeTokenAddresses - list of adddresses of dispute resolver fee tokens to remove
      */
     function removeFeesFromDisputeResolver(uint256 _disputeResolverId, address[] calldata _feeTokenAddresses) external;
 
     /**
-     * @notice Add seller ids to set of ids allowed to chose the given dispute resolver
+     * @notice Adds seller ids to set of ids allowed to choose the given dispute resolver for an offer.
      *
-     * Emits a AllowedSellersAdded event if successful.
+     * Emits an AllowedSellersAdded event if successful.
      *
      * Reverts if:
      * - The dispute resolvers region of protocol is paused
@@ -221,17 +222,17 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Number of seller ids in array exceeds max
      * - Number of seller ids in array is zero
      * - Some seller does not exist
-     * - Some seller id is already approved
+     * - Seller id is already approved
      *
-     * @param _disputeResolverId - Id of the dispute resolver
+     * @param _disputeResolverId - id of the dispute resolver
      * @param _sellerAllowList - List of seller ids to add to allowed list
      */
     function addSellersToAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external;
 
     /**
-     * @notice Remove seller ids from set of ids allowed to chose the given dispute resolver
+     * @notice Removes seller ids from set of ids allowed to choose the given dispute resolver for an offer.
      *
-     * Emits a AllowedSellersRemoved event if successful.
+     * Emits an AllowedSellersRemoved event if successful.
      *
      * Reverts if:
      * - The dispute resolvers region of protocol is paused
@@ -239,16 +240,17 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Dispute resolver does not exist
      * - Number of seller ids in array exceeds max
      * - Number of seller ids structs in array is zero
-     * - Some seller does not exist
-     * - Some seller id is not approved
+     * - Seller id is not approved
      *
-     * @param _disputeResolverId - Id of the dispute resolver
+     * @param _disputeResolverId - id of the dispute resolver
      * @param _sellerAllowList - list of seller ids to remove from allowed list
      */
     function removeSellersFromAllowList(uint256 _disputeResolverId, uint256[] calldata _sellerAllowList) external;
 
     /**
-     * @notice Set the active flag for this Dispute Resolver to true. Only callable by the protocol ADMIN role.
+     * @notice Sets the active flag for this dispute resolver to true.
+     *
+     * @dev Only callable by the protocol ADMIN role.
      *
      * Emits a DisputeResolverActivated event if successful.
      *
@@ -257,7 +259,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * - Caller does not have the ADMIN role
      * - Dispute resolver does not exist
      *
-     * @param _disputeResolverId - Id of the dispute resolver
+     * @param _disputeResolverId - id of the dispute resolver
      */
     function activateDisputeResolver(uint256 _disputeResolverId) external;
 
@@ -267,7 +269,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @param _sellerId - the id of the seller to check
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
-     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
     function getSeller(uint256 _sellerId)
@@ -281,12 +283,13 @@ interface IBosonAccountHandler is IBosonAccountEvents {
 
     /**
      * @notice Gets the details about a seller by an address associated with that seller: operator, admin, or clerk address.
-     *         N.B.: If seller's admin uses NFT Auth they should call `getSellerByAuthToken` instead.
+     * A seller will have either an admin address or an auth token.
+     * If seller's admin uses NFT Auth the seller should call `getSellerByAuthToken` instead.
      *
      * @param _associatedAddress - the address associated with the seller. Must be an operator, admin, or clerk address.
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
-     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
     function getSellerByAddress(address _associatedAddress)
@@ -300,12 +303,14 @@ interface IBosonAccountHandler is IBosonAccountEvents {
 
     /**
      * @notice Gets the details about a seller by an auth token associated with that seller.
-     *         A seller will have either an admin address or an auth token
+     * A seller will have either an admin address or an auth token.
+     * If seller's admin uses an admin address, the seller should call `getSellerByAddress` instead.
+     *
      *
      * @param _associatedAuthToken - the auth token that may be associated with the seller.
      * @return exists - the seller was found
      * @return seller - the seller details. See {BosonTypes.Seller}
-     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @return authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      *                     See {BosonTypes.AuthToken}
      */
     function getSellerByAuthToken(BosonTypes.AuthToken calldata _associatedAuthToken)
@@ -321,7 +326,7 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @notice Gets the details about a buyer.
      *
      * @param _buyerId - the id of the buyer to check
-     * @return exists - the buyer was found
+     * @return exists - whether the buyer was found
      * @return buyer - the buyer details. See {BosonTypes.Buyer}
      */
     function getBuyer(uint256 _buyerId) external view returns (bool exists, BosonTypes.Buyer memory buyer);
@@ -329,11 +334,11 @@ interface IBosonAccountHandler is IBosonAccountEvents {
     /**
      * @notice Gets the details about a dispute resolver.
      *
-     * @param _disputeResolverId - the id of the resolver to check
-     * @return exists - the resolver was found
-     * @return disputeResolver - the resolver details. See {BosonTypes.DisputeResolver}
+     * @param _disputeResolverId - the id of the dispute resolver to check
+     * @return exists - the dispute resolver was found
+     * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
-     * @return sellerAllowList - list of sellers that are allowed to chose this dispute resolver
+     * @return sellerAllowList - list of sellers that are allowed to choose this dispute resolver
      */
     function getDisputeResolver(uint256 _disputeResolverId)
         external
@@ -346,10 +351,10 @@ interface IBosonAccountHandler is IBosonAccountEvents {
         );
 
     /**
-     * @notice Gets the details about a dispute resolver by an address associated with that seller: operator, admin, or clerk address.
+     * @notice Gets the details about a dispute resolver by an address associated with that dispute resolver: operator, admin, or clerk address.
      *
      * @param _associatedAddress - the address associated with the dispute resolver. Must be an operator, admin, or clerk address.
-     * @return exists - the dispute resolver was found
+     * @return exists - the dispute resolver  was found
      * @return disputeResolver - the dispute resolver details. See {BosonTypes.DisputeResolver}
      * @return disputeResolverFees - list of fees dispute resolver charges per token type. Zero address is native currency. See {BosonTypes.DisputeResolverFee}
      * @return sellerAllowList - list of sellers that are allowed to chose this dispute resolver
@@ -368,17 +373,17 @@ interface IBosonAccountHandler is IBosonAccountEvents {
      * @notice Gets the details about an agent.
      *
      * @param _agentId - the id of the agent to check
-     * @return exists - the agent was found
+     * @return exists - whether the agent was found
      * @return agent - the agent details. See {BosonTypes.Agent}
      */
     function getAgent(uint256 _agentId) external view returns (bool exists, BosonTypes.Agent memory agent);
 
     /**
-     * @notice Returns the inforamtion if given sellers are allowed to chose the given dispute resolver
+     * @notice Checks whether given sellers are allowed to choose the given dispute resolver.
      *
      * @param _disputeResolverId - id of dispute resolver to check
-     * @param _sellerIds - list of sellers ids to check
-     * @return sellerAllowed - array with indicator (true/false) if seller is allowed to chose the dispute resolver. Index in this array corresponds to indices of the incoming _sellerIds
+     * @param _sellerIds - list of seller ids to check
+     * @return sellerAllowed - array with indicator (true/false) if seller is allowed to choose the dispute resolver. Index in this array corresponds to indices of the incoming _sellerIds
      */
     function areSellersAllowed(uint256 _disputeResolverId, uint256[] calldata _sellerIds)
         external
@@ -386,11 +391,11 @@ interface IBosonAccountHandler is IBosonAccountEvents {
         returns (bool[] memory sellerAllowed);
 
     /**
-     * @notice Gets the next account Id that can be assigned to an account.
+     * @notice Gets the next account id that can be assigned to an account.
      *
-     *  Does not increment the counter.
+     * @dev Does not increment the counter.
      *
-     * @return nextAccountId - the account Id
+     * @return nextAccountId - the account id
      */
     function getNextAccountId() external view returns (uint256 nextAccountId);
 }

@@ -6,7 +6,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 /**
  * @title IBosonConfigEvents
  *
- * @notice Events related to management of configuration within the protocol.
+ * @notice Defines events related to management of configuration within the protocol.
  */
 interface IBosonConfigEvents {
     event TokenAddressChanged(address indexed tokenAddress, address indexed executedBy);
@@ -34,4 +34,5 @@ interface IBosonConfigEvents {
     event MaxTotalOfferFeePercentageChanged(uint16 maxTotalOfferFeePercentage, address indexed executedBy);
     event MaxRoyaltyPercentageChanged(uint16 maxRoyaltyPecentage, address indexed executedBy);
     event MaxResolutionPeriodChanged(uint256 maxResolutionPeriod, address indexed executedBy);
+    event MinFulfillmentPeriodChanged(uint256 minFulfillmentPeriod, address indexed executedBy);
 }

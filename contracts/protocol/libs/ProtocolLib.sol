@@ -6,7 +6,7 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
 /**
  * @title ProtocolLib
  *
- * @dev Provides access to the Protocol Storage, Counters, and Initializer slots for Facets
+ * @notice Provides access to the Protocol Storage, Counters, and Initializer slots for Facets
  */
 library ProtocolLib {
     bytes32 internal constant PROTOCOL_ADDRESSES_POSITION = keccak256("boson.protocol.addresses");
@@ -36,6 +36,8 @@ library ProtocolLib {
         uint256 maxResolutionPeriod;
         // limit on the escalation response period that a dispute resolver can specify
         uint256 maxEscalationResponsePeriod;
+        // lower limit for fulfullment period
+        uint256 minFulfillmentPeriod;
         // limit how many exchanges can be processed in single batch transaction
         uint16 maxExchangesPerBatch;
         // limit how many offers can be added to the group
@@ -174,7 +176,7 @@ library ProtocolLib {
         mapping(uint256 => mapping(uint256 => uint256)) offerIdIndexByGroup;
     }
 
-    // Incrementing ID counters
+    // Incrementing id counters
     struct ProtocolCounters {
         // Next account id
         uint256 nextAccountId;
@@ -217,9 +219,9 @@ library ProtocolLib {
     }
 
     /**
-     * @dev Get the protocol addresses slot
+     * @dev Gets the protocol addresses slot
      *
-     * @return pa the protocol addresses slot
+     * @return pa - the protocol addresses slot
      */
     function protocolAddresses() internal pure returns (ProtocolAddresses storage pa) {
         bytes32 position = PROTOCOL_ADDRESSES_POSITION;
@@ -229,9 +231,9 @@ library ProtocolLib {
     }
 
     /**
-     * @dev Get the protocol limits slot
+     * @notice Gets the protocol limits slot
      *
-     * @return pl the protocol limits slot
+     * @return pl - the protocol limits slot
      */
     function protocolLimits() internal pure returns (ProtocolLimits storage pl) {
         bytes32 position = PROTOCOL_LIMITS_POSITION;
@@ -241,9 +243,9 @@ library ProtocolLib {
     }
 
     /**
-     * @dev Get the protocol entities slot
+     * @notice Gets the protocol entities slot
      *
-     * @return pe the protocol entities slot
+     * @return pe - the protocol entities slot
      */
     function protocolEntities() internal pure returns (ProtocolEntities storage pe) {
         bytes32 position = PROTOCOL_ENTITIES_POSITION;
@@ -253,9 +255,9 @@ library ProtocolLib {
     }
 
     /**
-     * @dev Get the protocol lookups slot
+     * @notice Gets the protocol lookups slot
      *
-     * @return pl the protocol lookups slot
+     * @return pl - the protocol lookups slot
      */
     function protocolLookups() internal pure returns (ProtocolLookups storage pl) {
         bytes32 position = PROTOCOL_LOOKUPS_POSITION;
@@ -265,9 +267,9 @@ library ProtocolLib {
     }
 
     /**
-     * @dev Get the protocol fees slot
+     * @notice Gets the protocol fees slot
      *
-     * @return pf the protocol fees slot
+     * @return pf - the protocol fees slot
      */
     function protocolFees() internal pure returns (ProtocolFees storage pf) {
         bytes32 position = PROTOCOL_FEES_POSITION;
@@ -277,9 +279,9 @@ library ProtocolLib {
     }
 
     /**
-     * @dev Get the protocol counters slot
+     * @notice Gets the protocol counters slot
      *
-     * @return pc the protocol counters slot
+     * @return pc - the protocol counters slot
      */
     function protocolCounters() internal pure returns (ProtocolCounters storage pc) {
         bytes32 position = PROTOCOL_COUNTERS_POSITION;
@@ -289,9 +291,9 @@ library ProtocolLib {
     }
 
     /**
-     * @dev Get the protocol meta-transactions storage slot
+     * @notice Gets the protocol meta-transactions storage slot
      *
-     * @return pmti the protocol meta-transactions storage slot
+     * @return pmti - the protocol meta-transactions storage slot
      */
     function protocolMetaTxInfo() internal pure returns (ProtocolMetaTxInfo storage pmti) {
         bytes32 position = PROTOCOL_META_TX_POSITION;
@@ -301,9 +303,9 @@ library ProtocolLib {
     }
 
     /**
-     * @dev Get the protocol status slot
+     * @notice Gets the protocol status slot
      *
-     * @return ps the the protocol status slot
+     * @return ps - the the protocol status slot
      */
     function protocolStatus() internal pure returns (ProtocolStatus storage ps) {
         bytes32 position = PROTOCOL_STATUS_POSITION;

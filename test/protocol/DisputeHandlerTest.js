@@ -80,7 +80,7 @@ describe("IBosonDisputeHandler", function () {
   let disputeDates, disputeDatesStruct;
   let exists, response;
   let disputeResolver, disputeResolverFees, disputeResolverId;
-  let buyerPercent;
+  let buyerPercentBasisPoints;
   let resolutionType, customSignatureType, message, r, s, v;
   let returnedDispute, returnedDisputeDates;
   let DRFeeNative, DRFeeToken, buyerEscalationDepositNative, buyerEscalationDepositToken;
@@ -174,6 +174,7 @@ describe("IBosonDisputeHandler", function () {
         maxTotalOfferFeePercentage: 4000, //40%
         maxRoyaltyPecentage: 1000, //10%
         maxResolutionPeriod: oneMonth,
+        minFulfillmentPeriod: oneWeek,
       },
       // Protocol fees
       {
@@ -309,7 +310,7 @@ describe("IBosonDisputeHandler", function () {
         await exchangeHandler.connect(buyer).redeemVoucher(exchangeId);
 
         // Set the buyer percent
-        buyerPercent = "0";
+        buyerPercentBasisPoints = "0";
       });
 
       context("👉 raiseDispute()", async function () {
@@ -331,7 +332,7 @@ describe("IBosonDisputeHandler", function () {
           timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
 
           // expected values
-          dispute = new Dispute(exchangeId, DisputeState.Resolving, buyerPercent);
+          dispute = new Dispute(exchangeId, DisputeState.Resolving, buyerPercentBasisPoints);
           disputeDates = new DisputeDates(disputedDate, "0", "0", timeout);
 
           // Get the dispute as a struct
@@ -446,7 +447,7 @@ describe("IBosonDisputeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
           finalizedDate = block.timestamp.toString();
 
-          dispute = new Dispute(exchangeId, DisputeState.Retracted, buyerPercent);
+          dispute = new Dispute(exchangeId, DisputeState.Retracted, buyerPercentBasisPoints);
           disputeDates = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
 
           // Get the dispute as a struct
@@ -732,7 +733,7 @@ describe("IBosonDisputeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
           finalizedDate = block.timestamp.toString();
 
-          dispute = new Dispute(exchangeId, DisputeState.Retracted, buyerPercent);
+          dispute = new Dispute(exchangeId, DisputeState.Retracted, buyerPercentBasisPoints);
           disputeDates = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
 
           // Get the dispute as a struct
@@ -848,12 +849,12 @@ describe("IBosonDisputeHandler", function () {
           disputedDate = block.timestamp.toString();
           timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
 
-          buyerPercent = "1234";
+          buyerPercentBasisPoints = "1234";
 
           // Set the message Type, needed for signature
           resolutionType = [
             { name: "exchangeId", type: "uint256" },
-            { name: "buyerPercent", type: "uint256" },
+            { name: "buyerPercentBasisPoints", type: "uint256" },
           ];
 
           customSignatureType = {
@@ -862,7 +863,7 @@ describe("IBosonDisputeHandler", function () {
 
           message = {
             exchangeId: exchangeId,
-            buyerPercent,
+            buyerPercentBasisPoints,
           };
         });
 
@@ -880,21 +881,21 @@ describe("IBosonDisputeHandler", function () {
 
           it("should emit a DisputeResolved event", async function () {
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v))
+            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercent, buyer.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, buyer.address);
           });
 
           it("should update state", async function () {
             // Resolve the dispute
-            tx = await disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v);
+            tx = await disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
 
             // Get the block timestamp of the confirmed tx and set finalizedDate
             blockNumber = tx.blockNumber;
             block = await ethers.provider.getBlock(blockNumber);
             finalizedDate = block.timestamp.toString();
 
-            dispute = new Dispute(exchangeId, DisputeState.Resolved, buyerPercent);
+            dispute = new Dispute(exchangeId, DisputeState.Resolved, buyerPercentBasisPoints);
             disputeDates = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
 
             // Get the dispute as a struct
@@ -937,9 +938,9 @@ describe("IBosonDisputeHandler", function () {
             await accountHandler.connect(buyer).createSeller(seller, emptyAuthToken, voucherInitValues);
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v))
+            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercent, buyer.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, buyer.address);
           });
 
           it("Dispute can be mutually resolved even if it's in escalated state", async function () {
@@ -947,9 +948,9 @@ describe("IBosonDisputeHandler", function () {
             await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v))
+            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercent, buyer.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, buyer.address);
           });
 
           it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
@@ -967,9 +968,9 @@ describe("IBosonDisputeHandler", function () {
             await setNextBlockTimestamp(Number(timeout) + 10);
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v))
+            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercent, buyer.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, buyer.address);
           });
 
           it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function () {
@@ -982,9 +983,9 @@ describe("IBosonDisputeHandler", function () {
             await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v))
+            await expect(disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercent, buyer.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, buyer.address);
           });
         });
 
@@ -1002,21 +1003,21 @@ describe("IBosonDisputeHandler", function () {
 
           it("should emit a DisputeResolved event", async function () {
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v))
+            await expect(disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercent, operator.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, operator.address);
           });
 
           it("should update state", async function () {
             // Resolve the dispute
-            tx = await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v);
+            tx = await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
 
             // Get the block timestamp of the confirmed tx and set finalizedDate
             blockNumber = tx.blockNumber;
             block = await ethers.provider.getBlock(blockNumber);
             finalizedDate = block.timestamp.toString();
 
-            dispute = new Dispute(exchangeId, DisputeState.Resolved, buyerPercent);
+            dispute = new Dispute(exchangeId, DisputeState.Resolved, buyerPercentBasisPoints);
             disputeDates = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
 
             // Get the dispute as a struct
@@ -1058,9 +1059,9 @@ describe("IBosonDisputeHandler", function () {
             await accountHandler.connect(operator).createBuyer(buyer);
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v))
+            await expect(disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercent, operator.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, operator.address);
           });
 
           it("Dispute can be mutually resolved even if it's in escalated state", async function () {
@@ -1068,9 +1069,9 @@ describe("IBosonDisputeHandler", function () {
             await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v))
+            await expect(disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercent, operator.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, operator.address);
           });
 
           it("Dispute can be mutually resolved even if it's in escalated state and past the resolution period", async function () {
@@ -1088,9 +1089,9 @@ describe("IBosonDisputeHandler", function () {
             await setNextBlockTimestamp(Number(timeout) + 10);
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v))
+            await expect(disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercent, operator.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, operator.address);
           });
 
           it("Dispute can be mutually resolved if it's past original timeout, but it was extended", async function () {
@@ -1103,9 +1104,9 @@ describe("IBosonDisputeHandler", function () {
             await setNextBlockTimestamp(Number(timeout) + Number(oneWeek));
 
             // Resolve the dispute, testing for the event
-            await expect(disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v))
+            await expect(disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v))
               .to.emit(disputeHandler, "DisputeResolved")
-              .withArgs(exchangeId, buyerPercent, operator.address);
+              .withArgs(exchangeId, buyerPercentBasisPoints, operator.address);
           });
         });
 
@@ -1127,17 +1128,17 @@ describe("IBosonDisputeHandler", function () {
 
             // Attempt to resolve a dispute, expecting revert
             await expect(
-              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v)
+              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
             ).to.revertedWith(RevertReasons.REGION_PAUSED);
           });
 
           it("Specified buyer percent exceeds 100%", async function () {
             // Set buyer percent above 100%
-            buyerPercent = "12000"; // 120%
+            buyerPercentBasisPoints = "12000"; // 120%
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v)
+              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
             ).to.revertedWith(RevertReasons.INVALID_BUYER_PERCENT);
           });
 
@@ -1147,7 +1148,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v)
+              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
             ).to.revertedWith(RevertReasons.DISPUTE_HAS_EXPIRED);
           });
 
@@ -1157,7 +1158,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v)
+              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
             ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
           });
 
@@ -1169,7 +1170,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v)
+              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
             ).to.revertedWith(RevertReasons.INVALID_STATE);
           });
 
@@ -1177,7 +1178,7 @@ describe("IBosonDisputeHandler", function () {
             // Wallet without any account
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(rando).resolveDispute(exchangeId, buyerPercent, r, s, v)
+              disputeHandler.connect(rando).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
             ).to.revertedWith(RevertReasons.NOT_BUYER_OR_SELLER);
 
             // Wallet with seller account, but not the seller in this exchange
@@ -1188,7 +1189,7 @@ describe("IBosonDisputeHandler", function () {
             await accountHandler.connect(other1).createSeller(seller, emptyAuthToken, voucherInitValues);
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(other1).resolveDispute(exchangeId, buyerPercent, r, s, v)
+              disputeHandler.connect(other1).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
             ).to.revertedWith(RevertReasons.NOT_BUYER_OR_SELLER);
 
             // Wallet with buyer account, but not the buyer in this exchange
@@ -1199,7 +1200,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(other2).resolveDispute(exchangeId, buyerPercent, r, s, v)
+              disputeHandler.connect(other2).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
             ).to.revertedWith(RevertReasons.NOT_BUYER_OR_SELLER);
           });
 
@@ -1215,44 +1216,44 @@ describe("IBosonDisputeHandler", function () {
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v)
+              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
             ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v)
+              disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
             ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
           });
 
-          it("signature resolution does not match input buyerPercent ", async function () {
+          it("signature resolution does not match input buyerPercentBasisPoints ", async function () {
             // Set different buyer percentage
-            buyerPercent = (Number(buyerPercent) + 1000).toString(); // add 10%
+            buyerPercentBasisPoints = (Number(buyerPercentBasisPoints) + 1000).toString(); // add 10%
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v)
+              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
             ).to.revertedWith(RevertReasons.SIGNER_AND_SIGNATURE_DO_NOT_MATCH);
           });
 
           it("signature has invalid field", async function () {
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, "0")
+              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, "0")
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
             await expect(
               disputeHandler
                 .connect(operator)
-                .resolveDispute(exchangeId, buyerPercent, r, ethers.utils.hexZeroPad("0x", 32), v)
+                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, ethers.utils.hexZeroPad("0x", 32), v)
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
             await expect(
               disputeHandler
                 .connect(operator)
-                .resolveDispute(exchangeId, buyerPercent, ethers.utils.hexZeroPad("0x", 32), s, v)
+                .resolveDispute(exchangeId, buyerPercentBasisPoints, ethers.utils.hexZeroPad("0x", 32), s, v)
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
             await expect(
               disputeHandler
                 .connect(operator)
-                .resolveDispute(exchangeId, buyerPercent, r, ethers.constants.MaxUint256, v)
+                .resolveDispute(exchangeId, buyerPercentBasisPoints, r, ethers.constants.MaxUint256, v)
             ).to.revertedWith(RevertReasons.INVALID_SIGNATURE);
           });
 
@@ -1262,7 +1263,7 @@ describe("IBosonDisputeHandler", function () {
 
             // Attempt to resolve the dispute, expecting revert
             await expect(
-              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v)
+              disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v)
             ).to.revertedWith(RevertReasons.INVALID_STATE);
           });
         });
@@ -1588,26 +1589,26 @@ describe("IBosonDisputeHandler", function () {
           timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
 
           // buyer percent used in tests
-          buyerPercent = "4321";
+          buyerPercentBasisPoints = "4321";
         });
 
         it("should emit a DisputeDecided event", async function () {
           // Escalate the dispute, testing for the event
-          await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent))
+          await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints))
             .to.emit(disputeHandler, "DisputeDecided")
-            .withArgs(exchangeId, buyerPercent, operatorDR.address);
+            .withArgs(exchangeId, buyerPercentBasisPoints, operatorDR.address);
         });
 
         it("should update state", async function () {
           // Decide the dispute
-          tx = await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent);
+          tx = await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints);
 
           // Get the block timestamp of the confirmed tx and set finalizedDate
           blockNumber = tx.blockNumber;
           block = await ethers.provider.getBlock(blockNumber);
           finalizedDate = block.timestamp.toString();
 
-          dispute = new Dispute(exchangeId, DisputeState.Decided, buyerPercent);
+          dispute = new Dispute(exchangeId, DisputeState.Decided, buyerPercentBasisPoints);
           disputeDates = new DisputeDates(disputedDate, escalatedDate, finalizedDate, timeout);
 
           // Get the dispute as a struct
@@ -1638,19 +1639,19 @@ describe("IBosonDisputeHandler", function () {
             await pauseHandler.connect(pauser).pause([PausableRegion.Disputes]);
 
             // Attempt to decide a dispute, expecting revert
-            await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
-              RevertReasons.REGION_PAUSED
-            );
+            await expect(
+              disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints)
+            ).to.revertedWith(RevertReasons.REGION_PAUSED);
           });
 
           it("Specified buyer percent exceeds 100%", async function () {
             // Set buyer percent above 100%
-            buyerPercent = "12000"; // 120%
+            buyerPercentBasisPoints = "12000"; // 120%
 
             // Attempt to decide the dispute, expecting revert
-            await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
-              RevertReasons.INVALID_BUYER_PERCENT
-            );
+            await expect(
+              disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints)
+            ).to.revertedWith(RevertReasons.INVALID_BUYER_PERCENT);
           });
 
           it("Exchange does not exist", async function () {
@@ -1658,9 +1659,9 @@ describe("IBosonDisputeHandler", function () {
             const exchangeId = "666";
 
             // Attempt to decide the dispute, expecting revert
-            await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
-              RevertReasons.NO_SUCH_EXCHANGE
-            );
+            await expect(
+              disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints)
+            ).to.revertedWith(RevertReasons.NO_SUCH_EXCHANGE);
           });
 
           it("Exchange is not in a disputed state", async function () {
@@ -1670,16 +1671,16 @@ describe("IBosonDisputeHandler", function () {
             await exchangeHandler.connect(buyer).commitToOffer(buyer.address, offerId, { value: price });
 
             // Attempt to decide the dispute, expecting revert
-            await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
-              RevertReasons.INVALID_STATE
-            );
+            await expect(
+              disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints)
+            ).to.revertedWith(RevertReasons.INVALID_STATE);
           });
 
           it("Caller is not the dispute resolver for this dispute", async function () {
             // Attempt to decide the dispute, expecting revert
-            await expect(disputeHandler.connect(rando).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
-              RevertReasons.NOT_DISPUTE_RESOLVER_OPERATOR
-            );
+            await expect(
+              disputeHandler.connect(rando).decideDispute(exchangeId, buyerPercentBasisPoints)
+            ).to.revertedWith(RevertReasons.NOT_DISPUTE_RESOLVER_OPERATOR);
           });
 
           it("Dispute state is not escalated", async function () {
@@ -1695,9 +1696,9 @@ describe("IBosonDisputeHandler", function () {
             await disputeHandler.connect(buyer).raiseDispute(exchangeId);
 
             // Attempt to decide the dispute, expecting revert
-            await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
-              RevertReasons.INVALID_STATE
-            );
+            await expect(
+              disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints)
+            ).to.revertedWith(RevertReasons.INVALID_STATE);
           });
 
           it("Dispute escalation response period has elapsed", async function () {
@@ -1705,9 +1706,9 @@ describe("IBosonDisputeHandler", function () {
             await setNextBlockTimestamp(Number(escalatedDate) + Number(escalationPeriod));
 
             // Attempt to decide the dispute, expecting revert
-            await expect(disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent)).to.revertedWith(
-              RevertReasons.DISPUTE_HAS_EXPIRED
-            );
+            await expect(
+              disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints)
+            ).to.revertedWith(RevertReasons.DISPUTE_HAS_EXPIRED);
           });
         });
       });
@@ -1754,7 +1755,7 @@ describe("IBosonDisputeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
           finalizedDate = block.timestamp.toString();
 
-          dispute = new Dispute(exchangeId, DisputeState.Refused, buyerPercent);
+          dispute = new Dispute(exchangeId, DisputeState.Refused, buyerPercentBasisPoints);
           disputeDates = new DisputeDates(disputedDate, escalatedDate, finalizedDate, timeout);
 
           // Get the dispute as a struct
@@ -1897,7 +1898,7 @@ describe("IBosonDisputeHandler", function () {
           block = await ethers.provider.getBlock(blockNumber);
           finalizedDate = block.timestamp.toString();
 
-          dispute = new Dispute(exchangeId, DisputeState.Refused, buyerPercent);
+          dispute = new Dispute(exchangeId, DisputeState.Refused, buyerPercentBasisPoints);
           disputeDates = new DisputeDates(disputedDate, escalatedDate, finalizedDate, timeout);
 
           // Get the dispute as a struct
@@ -2023,7 +2024,7 @@ describe("IBosonDisputeHandler", function () {
           timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
 
           // Expected value for dispute
-          dispute = new Dispute(exchangeId, DisputeState.Resolving, buyerPercent);
+          dispute = new Dispute(exchangeId, DisputeState.Resolving, buyerPercentBasisPoints);
           disputeDates = new DisputeDates(disputedDate, "0", "0", timeout);
         });
 
@@ -2165,12 +2166,12 @@ describe("IBosonDisputeHandler", function () {
           disputedDate = block.timestamp.toString();
           timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
 
-          buyerPercent = "1234";
+          buyerPercentBasisPoints = "1234";
 
           // Set the message Type, needed for signature
           resolutionType = [
             { name: "exchangeId", type: "uint256" },
-            { name: "buyerPercent", type: "uint256" },
+            { name: "buyerPercentBasisPoints", type: "uint256" },
           ];
 
           customSignatureType = {
@@ -2179,7 +2180,7 @@ describe("IBosonDisputeHandler", function () {
 
           message = {
             exchangeId: exchangeId,
-            buyerPercent,
+            buyerPercentBasisPoints,
           };
 
           // Collect the signature components
@@ -2192,7 +2193,7 @@ describe("IBosonDisputeHandler", function () {
           ));
 
           // Buyer resolves dispute
-          await disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercent, r, s, v);
+          await disputeHandler.connect(buyer).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
 
           // Get the dispute state
           [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
@@ -2223,10 +2224,10 @@ describe("IBosonDisputeHandler", function () {
           timeout = ethers.BigNumber.from(escalatedDate).add(escalationPeriod).toString();
 
           // buyer percent used in tests
-          buyerPercent = "4321";
+          buyerPercentBasisPoints = "4321";
 
           // Decide dispute
-          await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent);
+          await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints);
 
           // Get the dispute state
           [exists, response] = await disputeHandler.connect(rando).getDisputeState(exchangeId);
@@ -2334,12 +2335,12 @@ describe("IBosonDisputeHandler", function () {
           });
 
           it("should return true if dispute is in Resolved state", async function () {
-            buyerPercent = "1234";
+            buyerPercentBasisPoints = "1234";
 
             // Set the message Type, needed for signature
             resolutionType = [
               { name: "exchangeId", type: "uint256" },
-              { name: "buyerPercent", type: "uint256" },
+              { name: "buyerPercentBasisPoints", type: "uint256" },
             ];
 
             customSignatureType = {
@@ -2348,7 +2349,7 @@ describe("IBosonDisputeHandler", function () {
 
             message = {
               exchangeId: exchangeId,
-              buyerPercent,
+              buyerPercentBasisPoints,
             };
 
             // Collect the signature components
@@ -2361,7 +2362,7 @@ describe("IBosonDisputeHandler", function () {
             ));
 
             // Retract dispute
-            await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercent, r, s, v);
+            await disputeHandler.connect(operator).resolveDispute(exchangeId, buyerPercentBasisPoints, r, s, v);
 
             // Dispute in resolved state, ask if exchange is finalized
             [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchangeId);
@@ -2372,13 +2373,13 @@ describe("IBosonDisputeHandler", function () {
           });
 
           it("should return true if dispute is in Decided state", async function () {
-            buyerPercent = "1234";
+            buyerPercentBasisPoints = "1234";
 
             // Escalate dispute
             await disputeHandler.connect(buyer).escalateDispute(exchangeId, { value: buyerEscalationDepositNative });
 
             // Decide dispute
-            await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercent);
+            await disputeHandler.connect(operatorDR).decideDispute(exchangeId, buyerPercentBasisPoints);
 
             // Dispute in decided state, ask if exchange is finalized
             [exists, response] = await disputeHandler.connect(rando).isDisputeFinalized(exchangeId);
@@ -2432,7 +2433,7 @@ describe("IBosonDisputeHandler", function () {
       context("👉 expireDisputeBatch()", async function () {
         beforeEach(async function () {
           // Set the buyer percent
-          buyerPercent = "0";
+          buyerPercentBasisPoints = "0";
 
           disputesToExpire = ["2", "3", "4"];
           dispute = {};
@@ -2448,7 +2449,7 @@ describe("IBosonDisputeHandler", function () {
             disputedDate = block.timestamp.toString();
             timeout = ethers.BigNumber.from(disputedDate).add(resolutionPeriod).toString();
 
-            dispute[exchangeId] = new Dispute(exchangeId, DisputeState.Retracted, buyerPercent);
+            dispute[exchangeId] = new Dispute(exchangeId, DisputeState.Retracted, buyerPercentBasisPoints);
             disputeDates[exchangeId] = new DisputeDates(disputedDate, "0", finalizedDate, timeout);
           }
         });

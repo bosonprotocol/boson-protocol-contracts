@@ -14,11 +14,12 @@ import { BosonTypes } from "../../domain/BosonTypes.sol";
  */
 contract SellerBase is ProtocolBase, IBosonAccountEvents {
     /**
-     * @notice Creates a seller
+     * @notice Creates a seller.
      *
      * Emits a SellerCreated event if successful.
      *
      * Reverts if:
+     * - The sellers region of protocol is paused
      * - Address values are zero address
      * - Addresses are not unique to this seller
      * - Seller is not active (if active == false)
@@ -26,7 +27,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
      * - AuthTokenType is not unique to this seller
      *
      * @param _seller - the fully populated struct with seller id set to 0x0
-     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      * @param _voucherInitValues - the fully populated BosonTypes.VoucherInitValues struct
      */
     function createSellerInternal(
@@ -44,7 +45,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             ADMIN_OR_AUTH_TOKEN
         );
 
-        //Check that the addresses are unique to one seller Id, accross all roles. These addresses should always be checked. Treasury is not checked
+        //Check that the addresses are unique to one seller id, accross all roles. These addresses should always be checked. Treasury is not checked
         require(
             protocolLookups().sellerIdByOperator[_seller.operator] == 0 &&
                 protocolLookups().sellerIdByOperator[_seller.clerk] == 0 &&
@@ -63,7 +64,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
                 AUTH_TOKEN_MUST_BE_UNIQUE
             );
         } else {
-            //check that the admin address is unique to one seller Id, accross all roles
+            //check that the admin address is unique to one seller id, accross all roles
             require(
                 protocolLookups().sellerIdByOperator[_seller.admin] == 0 &&
                     protocolLookups().sellerIdByAdmin[_seller.admin] == 0 &&
@@ -72,7 +73,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             );
         }
 
-        // Get the next account Id and increment the counter
+        // Get the next account id and increment the counter
         uint256 sellerId = protocolCounters().nextAccountId++;
         _seller.id = sellerId;
         storeSeller(_seller, _authToken);
@@ -86,14 +87,14 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
     }
 
     /**
-     * @notice Validates seller struct and stores it to storage, along with auth token if present
+     * @notice Validates seller struct and stores it to storage, along with auth token if present.
      *
      * Reverts if:
      * - Address values are zero address
      * - Addresses are not unique to this seller
      *
      * @param _seller - the fully populated struct with seller id set
-     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the user can use to do admin functions
+     * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      */
 
     function storeSeller(Seller memory _seller, AuthToken calldata _authToken) internal {
@@ -128,13 +129,13 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             protocolLookups().sellerIdByAdmin[_seller.admin] = _seller.id;
         }
 
-        //Map the seller's other addresses to the seller Id. It's not necessary to map the treasury address, as it only receives funds
+        //Map the seller's other addresses to the seller id. It's not necessary to map the treasury address, as it only receives funds
         protocolLookups().sellerIdByOperator[_seller.operator] = _seller.id;
         protocolLookups().sellerIdByClerk[_seller.clerk] = _seller.id;
     }
 
     /**
-     * @notice Creates a minimal clone of the Boson Voucher Contract
+     * @notice Creates a minimal clone of the Boson Voucher Contract.
      *
      * @param _sellerId - id of the seller
      * @param _operator - address of the operator
