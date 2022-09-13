@@ -889,17 +889,23 @@ async function setupCommonEnvironment() {
 }
 
 function makeReport(res, maxArrayLength) {
-  let header = `| # |`;
-  let alignment = `|--| `;
+  // TABLE 1: suggested values
+  let header1 = `| limit | max value | safe value |`;
+  let alignment1 = `| :-- | --: | --: |`;
+  let rows1 = [];
+
+  // TABLE 2: all estimates
+  let header2 = `| # |`;
+  let alignment2 = `|--| `;
   let row0 = `|  |`;
-  let rows = [];
+  let rows2 = [];
   let numberOfRows = 0;
 
   for (let o = 0; Math.pow(10, o) <= maxArrayLength; o++) {
     for (let i = 1; i < 10; i++) {
       let arrayLength = i * Math.pow(10, o);
       if (arrayLength > maxArrayLength) arrayLength = maxArrayLength;
-      rows.push(`| ${arrayLength} |`);
+      rows2.push(`| ${arrayLength} |`);
       numberOfRows++;
       if (arrayLength == maxArrayLength) break;
     }
@@ -909,19 +915,29 @@ function makeReport(res, maxArrayLength) {
   let safeNumber = `| safe |`;
 
   for (const [limit, result] of Object.entries(res)) {
+    let mn = Number.MAX_SAFE_INTEGER;
+    let sn = Number.MAX_SAFE_INTEGER;
     for (const [method, estimates] of Object.entries(result)) {
-      header = `${header} ${limit} |`;
-      alignment = `${alignment} ---:|`;
+      header2 = `${header2} ${limit} |`;
+      alignment2 = `${alignment2} ---:|`;
       row0 = `${row0} ${method} |`;
       for (let i = 0; i < numberOfRows; i++) {
-        rows[i] = `${rows[i]} ${estimates.gasEstimates[i] ? estimates.gasEstimates[i][0] : " "} |`;
+        rows2[i] = `${rows2[i]} ${estimates.gasEstimates[i] ? estimates.gasEstimates[i][0] : " "} |`;
       }
       maxNumber = `${maxNumber} **${estimates.maxNumber}** |`;
       safeNumber = `${safeNumber} ${estimates.safeNumber} |`;
+
+      mn = Math.min(mn, estimates.maxNumber);
+      sn = Math.min(sn, estimates.safeNumber);
     }
+
+    rows1.push(`| ${limit} | ${mn} | ${sn} |`);
   }
 
-  const output = [header, alignment, row0, ...rows, maxNumber, safeNumber].join(`\n`);
+  const table1 = [header1, alignment1, ...rows1].join(`\n`);
+  const table2 = [header2, alignment2, row0, ...rows2, maxNumber, safeNumber].join(`\n`);
+
+  const output = `${table1}\n\n${table2}`;
 
   fs.writeFileSync(__dirname + "/../../logs/limit_estimates.md", output);
   fs.writeFileSync(__dirname + "/../../logs/limit_estimates.json", JSON.stringify(result));
