@@ -10,7 +10,6 @@ const {
   mockVoucherInitValues,
   mockOffer,
   mockDisputeResolver,
-  mockAgent,
   accountId,
   mockExchange,
   mockVoucher,
@@ -35,16 +34,16 @@ const {
 describe("DR removes fee", function () {
   let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
   let expectedCloneAddress, emptyAuthToken, voucherInitValues;
-  let deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR, agent;
+  let deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR;
   let buyerEscalationDepositPercentage;
-  let buyerAccount, seller, disputeResolver, agentAccount;
+  let buyerAccount, seller, disputeResolver;
   let offer, offerDates, offerDurations, disputeResolverId;
   let exchangeId;
   let disputeResolverFeeNative;
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR, agent] =
+    [deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR] =
       await ethers.getSigners();
 
     // Deploy the Protocol Diamond
