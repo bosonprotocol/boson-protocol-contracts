@@ -63,9 +63,7 @@ async function main() {
 
     let contractInfo;
     contractInfo = contractsFile.contracts.find((i) => i.name === name);
-    name === "AdminAddress"
-      ? (config.address = environments[network].adminAddress)
-      : (config.address = contractInfo.address);
+    config.address = name === "AdminAddress" ? environments[network].adminAddress : contractInfo.address;
 
     console.log(`   👉 ${config.address}`);
 
