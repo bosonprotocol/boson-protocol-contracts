@@ -38,7 +38,7 @@ First we identify which limits we use at the moment and which functions (or chai
 Config file is placed in `scripts/config/limit-estimation.js`. It has the following fields:
 - `blockGasLimit`: block gas limit against which you want to make the estimate
 - `safeGasLimitPercent`: percent of total gas block limit that you consider safe for a transaction to actually be included in the block. For example if `blockGasLimit` is `30M` and you don't want your transaction to exceed `15M`, set `safeGasLimitPercent` to `50`.
-- `maxArrayLength`: maximum length of the array used during the estimation. This value is typically smaller than actual limits calcualted at the end. Increasing this value makes estimation more precise, however it also takes more time. Improvment in the estimate is increasing slower than run time, so setting this to `100` should be more than enough. If you want to speed up the proces, setting this to `10` will still give you very good results.
+- `maxArrayLength`: maximum length of the array used during the estimation. This value is typically smaller than actual limits calculated at the end. Increasing this value makes estimation more precise, however it also takes more time. Improvement in the estimate is increasing slower than run time, so setting this to `100` should be more than enough. If you want to speed up the process, setting this to `10` will still give you very good results.
 - `limits`: list of limits you want to estimate. Each limit is an object with fields:
   - `name`: name of the limit
   - `methods`: object of pairs `"methodName":"handlerName"` where `methodName` is the name of the external function that uses the limit and `handlerName` is the name of the handler where this function is implemented. Example for limit `maxOffersPerGroup`:
@@ -60,7 +60,7 @@ For each of the limits you must prepare an evironment, before it can be tested. 
 This is done in file `scripts/util/estimate-limits.js`. Each of the limits must have a setup function which accepts `maxArrayLength`, prepares the environment and returns the invocation details that can be then used when invoking the `methods` during the estimation.
 
 Invocation details contain 
-- `account`: account that calls the method (important if access is restiricted)
+- `account`: account that calls the method (important if access is restricted)
 - `args`: array of arguments that needs to be passed into method
 - `arrayIndex`: index that tells which parameter's length should be varied during the estimation
 - `structField`: if array is part of a struct, specify the field name

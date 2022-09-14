@@ -167,7 +167,7 @@ Setup the environment for "maxOffersPerBatch". The following functions depend on
 - extendOfferBatch
 */
 setupEnvironment["maxOffersPerBatch"] = async function (offerCount = 10) {
-  // create a seller
+  // Create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
 
@@ -253,7 +253,7 @@ Setup the environment for "maxOffersPerGroup". The following functions depend on
 - removeOffersFromGroup
 */
 setupEnvironment["maxOffersPerGroup"] = async function (offerCount = 10) {
-  // create a seller
+  // Create a seller
   // Required constructor params
   const groupId = "1"; // argument sent to contract for createSeller will be ignored
   const agentId = "0"; // agent id is optional while creating an offer
@@ -346,7 +346,7 @@ Setup the environment for "maxOffersPerBundle". The following functions depend o
 - createBundle
 */
 setupEnvironment["maxOffersPerBundle"] = async function (offerCount = 10) {
-  // create a seller
+  // Create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
 
@@ -409,7 +409,7 @@ Setup the environment for "maxTwinsPerBundle". The following functions depend on
 - createBundle
 */
 setupEnvironment["maxTwinsPerBundle"] = async function (twinCount = 10) {
-  // create a seller
+  // Create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
 
@@ -469,7 +469,7 @@ Setup the environment for "maxExchangesPerBatch". The following functions depend
 - completeExchangeBatch
 */
 setupEnvironment["maxExchangesPerBatch"] = async function (exchangesCount = 10) {
-  // create a seller
+  // Create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
 
@@ -492,7 +492,7 @@ setupEnvironment["maxExchangesPerBatch"] = async function (exchangesCount = 10) 
   );
   await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
-  // create an offer with big enough quantity
+  // Create an offer with big enough quantity
   const { offer, offerDates, offerDurations } = await mockOffer();
   offer.quantityAvailable = exchangesCount;
   // Create the offer
@@ -534,7 +534,7 @@ Setup the environment for "maxDisputesPerBatch". The following functions depend 
 - expireDisputeBatch
 */
 setupEnvironment["maxDisputesPerBatch"] = async function (exchangesCount = 10) {
-  // create a seller
+  // Create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
 
@@ -557,7 +557,7 @@ setupEnvironment["maxDisputesPerBatch"] = async function (exchangesCount = 10) {
   );
   await accountHandler.connect(deployer).activateDisputeResolver(disputeResolver.id);
 
-  // create an offer with big enough quantity
+  // Create an offer with big enough quantity
   const { offer, offerDates, offerDurations } = await mockOffer();
   offer.quantityAvailable = exchangesCount;
   // Create the offer
@@ -602,7 +602,7 @@ Setup the environment for "maxDisputesPerBatch". The following functions depend 
 - expireDisputeBatch
 */
 setupEnvironment["maxTokensPerWithdrawal"] = async function (tokenCount = 10) {
-  // create a seller
+  // Create a seller
   // Required constructor params
   const agentId = "0"; // agent id is optional while creating an offer
 
@@ -808,8 +808,8 @@ async function setupCommonEnvironment() {
   // Grant PROTOCOL role to ProtocolDiamond address and renounces admin
   await accessController.grantRole(Role.PROTOCOL, protocolDiamond.address);
 
-  //Grant ADMIN role to and address that can call restricted functions.
-  //This ADMIN role is a protocol-level role. It is not the same an admin address for an account type
+  // Grant ADMIN role to and address that can call restricted functions.
+  // This ADMIN role is a protocol-level role. It is not the same an admin address for an account type
   await accessController.grantRole(Role.ADMIN, protocolAdmin.address);
 
   // Cut the protocol handler facets into the Diamond
@@ -832,7 +832,7 @@ async function setupCommonEnvironment() {
   const [beacon] = beacons;
   const [proxy] = proxies;
 
-  // set protocolFees
+  // Set protocolFees
   protocolFeePercentage = "200"; // 2 %
   protocolFeeFlatBoson = ethers.utils.parseUnits("0.01", "ether").toString();
   buyerEscalationDepositPercentage = "1000"; // 10%
