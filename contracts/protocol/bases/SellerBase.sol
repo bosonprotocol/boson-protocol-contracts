@@ -38,17 +38,17 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         // Cache protocol lookups for reference
         ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-        //Check active is not set to false
+        // Check active is not set to false
         require(_seller.active, MUST_BE_ACTIVE);
 
-        //Admin address or AuthToken data must be present. A seller can have one or the other
+        // Admin address or AuthToken data must be present. A seller can have one or the other
         require(
             (_seller.admin == address(0) && _authToken.tokenType != AuthTokenType.None) ||
                 (_seller.admin != address(0) && _authToken.tokenType == AuthTokenType.None),
             ADMIN_OR_AUTH_TOKEN
         );
 
-        //Check that the addresses are unique to one seller id, accross all roles. These addresses should always be checked. Treasury is not checked
+        // Check that the addresses are unique to one seller id, accross all roles. These addresses should always be checked. Treasury is not checked
         require(
             lookups.sellerIdByOperator[_seller.operator] == 0 &&
                 lookups.sellerIdByOperator[_seller.clerk] == 0 &&
@@ -59,19 +59,17 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
             SELLER_ADDRESS_MUST_BE_UNIQUE
         );
 
-        //Do other uniqueness checks based on auth type
+        // Do other uniqueness checks based on auth type
         if (_seller.admin == address(0)) {
-            //Check that auth token is unique to this seller
+            // Check that auth token is unique to this seller
             require(
                 lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == 0,
                 AUTH_TOKEN_MUST_BE_UNIQUE
             );
         } else {
-            //check that the admin address is unique to one seller id, accross all roles
+            // Check that the admin address is unique to one seller id, accross all roles
             require(
                 lookups.sellerIdByOperator[_seller.admin] == 0 &&
-                    lookups.sellerIdByAdmin[_seller.admin] == 0 &&
-                    lookups.sellerIdByOperator[_seller.admin] == 0 &&
                     lookups.sellerIdByAdmin[_seller.admin] == 0 &&
                     lookups.sellerIdByClerk[_seller.admin] == 0,
                 SELLER_ADDRESS_MUST_BE_UNIQUE
@@ -83,7 +81,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         _seller.id = sellerId;
         storeSeller(_seller, _authToken);
 
-        // create clone and store its address cloneAddress
+        // Create clone and store its address cloneAddress
         address voucherCloneAddress = cloneBosonVoucher(sellerId, _seller.operator, _voucherInitValues);
         lookups.cloneAddress[sellerId] = voucherCloneAddress;
 

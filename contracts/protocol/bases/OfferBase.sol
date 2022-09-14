@@ -127,15 +127,20 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             require(_offerDurations.voucherValid > 0, AMBIGUOUS_VOUCHER_EXPIRY);
         }
 
-        // fulfillment period must be greater than or equal to the minimum fulfillment period
-        require(_offerDurations.fulfillmentPeriod >= protocolLimits().minFulfillmentPeriod, INVALID_FULFILLMENT_PERIOD);
+        // Operate in a block to avoid "stack too deep" error
+        {
+            // Cache protocol limits for reference
+            ProtocolLib.ProtocolLimits storage limits = protocolLimits();
 
-        // dispute duration must be greater than zero
-        require(
-            _offerDurations.resolutionPeriod > 0 &&
-                _offerDurations.resolutionPeriod <= protocolLimits().maxResolutionPeriod,
-            INVALID_DISPUTE_DURATION
-        );
+            // fulfillment period must be greater than or equal to the minimum fulfillment period
+            require(_offerDurations.fulfillmentPeriod >= limits.minFulfillmentPeriod, INVALID_FULFILLMENT_PERIOD);
+
+            // dispute duration must be greater than zero
+            require(
+                _offerDurations.resolutionPeriod > 0 && _offerDurations.resolutionPeriod <= limits.maxResolutionPeriod,
+                INVALID_DISPUTE_DURATION
+            );
+        }
 
         // when creating offer, it cannot be set to voided
         require(!_offer.voided, OFFER_MUST_BE_ACTIVE);
@@ -156,29 +161,33 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             ) = fetchDisputeResolver(_disputeResolverId);
             require(exists && disputeResolver.active, INVALID_DISPUTE_RESOLVER);
 
-            ProtocolLib.ProtocolLookups storage pl = protocolLookups();
+            // Operate in a block to avoid "stack too deep" error
+            {
+                // Cache protocol lookups for reference
+                ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
 
-            // check that seller is on the DR allow list
-            if (pl.allowedSellers[_disputeResolverId].length > 0) {
-                // if length == 0, dispute resolver allows any seller
-                // if length > 0, we check that it is on allow list
-                require(pl.allowedSellerIndex[_disputeResolverId][_offer.sellerId] > 0, SELLER_NOT_APPROVED);
+                // check that seller is on the DR allow list
+                if (lookups.allowedSellers[_disputeResolverId].length > 0) {
+                    // if length == 0, dispute resolver allows any seller
+                    // if length > 0, we check that it is on allow list
+                    require(lookups.allowedSellerIndex[_disputeResolverId][_offer.sellerId] > 0, SELLER_NOT_APPROVED);
+                }
+
+                // get the index of DisputeResolverFee and make sure DR supports the exchangeToken
+                uint256 feeIndex = lookups.disputeResolverFeeTokenIndex[_disputeResolverId][_offer.exchangeToken];
+                require(feeIndex > 0, DR_UNSUPPORTED_FEE);
+
+                uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
+
+                // store DR terms
+                disputeResolutionTerms = DisputeResolutionTerms(
+                    _disputeResolverId,
+                    disputeResolver.escalationResponsePeriod,
+                    feeAmount,
+                    (feeAmount * lookups.buyerEscalationDepositPercentage) / 10000
+                );
+                protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
             }
-
-            // get the index of DisputeResolverFee and make sure DR supports the exchangeToken
-            uint256 feeIndex = pl.disputeResolverFeeTokenIndex[_disputeResolverId][_offer.exchangeToken];
-            require(feeIndex > 0, DR_UNSUPPORTED_FEE);
-
-            uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
-
-            // store DR terms
-            disputeResolutionTerms = DisputeResolutionTerms(
-                _disputeResolverId,
-                disputeResolver.escalationResponsePeriod,
-                feeAmount,
-                (feeAmount * pl.buyerEscalationDepositPercentage) / 10000
-            );
-            protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
         }
 
         // Get storage location for offer fees
@@ -186,11 +195,12 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
 
         // Get the agent
         (bool agentExists, Agent storage agent) = fetchAgent(_agentId);
+
         // Make sure agent exists if _agentId is not zero.
         require(_agentId == 0 || agentExists, NO_SUCH_AGENT);
 
+        // Operate in a block to avoid "stack too deep" error
         {
-            // scope to avoid stack too deep errors
             // Set variable to eliminate multiple SLOAD
             uint256 offerPrice = _offer.price;
 
