@@ -129,7 +129,7 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "_protocol",
+          "name": "_protocolAddress",
           "type": "address"
         }
       ],

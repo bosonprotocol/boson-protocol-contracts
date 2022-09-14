@@ -962,7 +962,7 @@
       "inputs": [
         {
           "internalType": "uint16",
-          "name": "_feePercentage",
+          "name": "_protocolFeePercentage",
           "type": "uint16"
         }
       ],
