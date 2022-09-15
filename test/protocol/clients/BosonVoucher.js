@@ -40,7 +40,9 @@ describe("IBosonVoucher", function () {
     adminDR,
     clerkDR,
     treasuryDR,
-    seller;
+    seller, 
+    protocolTreasury, 
+    bosonToken;
   let disputeResolver, disputeResolverFees;
   let emptyAuthToken;
   let agentId;
@@ -54,7 +56,7 @@ describe("IBosonVoucher", function () {
 
   beforeEach(async function () {
     // Set signers (fake protocol address to test issue and burn voucher without protocol dependencie)
-    [deployer, protocol, buyer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR] =
+    [deployer, protocol, buyer, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR, protocolTreasury, bosonToken] =
       await ethers.getSigners();
 
     // Deploy diamond
@@ -93,8 +95,8 @@ describe("IBosonVoucher", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasury: ethers.constants.AddressZero,
-        token: ethers.constants.AddressZero,
+        treasury: protocolTreasury.address,
+        token: bosonToken.address,
         voucherBeacon: beacon.address,
         beaconProxy: proxy.address,
       },

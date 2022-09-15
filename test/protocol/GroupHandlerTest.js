@@ -34,7 +34,7 @@ const {
 describe("IBosonGroupHandler", function () {
   // Common vars
   let InterfaceIds;
-  let accounts, deployer, pauser, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR;
+  let accounts, deployer, pauser, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR, protocolTreasury;
   let erc165, protocolDiamond, accessController, accountHandler, offerHandler, groupHandler, pauseHandler;
   let bosonToken, key, value;
   let offer, support, expected, exists;
@@ -59,7 +59,7 @@ describe("IBosonGroupHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, pauser, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR] =
+    [deployer, pauser, rando, operator, admin, clerk, treasury, operatorDR, adminDR, clerkDR, treasuryDR, protocolTreasury] =
       await ethers.getSigners();
     accounts = await ethers.getSigners();
 
@@ -93,7 +93,7 @@ describe("IBosonGroupHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasury: ethers.constants.AddressZero,
+        treasury: protocolTreasury.address,
         token: bosonToken.address,
         voucherBeacon: ethers.constants.AddressZero,
         beaconProxy: ethers.constants.AddressZero,

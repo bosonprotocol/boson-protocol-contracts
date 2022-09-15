@@ -47,7 +47,8 @@ describe("IBosonOfferHandler", function () {
     clerkDR,
     treasuryDR,
     other,
-    protocolAdmin;
+    protocolAdmin,
+    protocolTreasury;
   let erc165,
     protocolDiamond,
     accessController,
@@ -117,6 +118,7 @@ describe("IBosonOfferHandler", function () {
       treasuryDR,
       other,
       protocolAdmin,
+      protocolTreasury
     ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
@@ -162,7 +164,7 @@ describe("IBosonOfferHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasury: ethers.constants.AddressZero,
+        treasury: protocolTreasury.address,
         token: bosonToken.address,
         voucherBeacon: beacon.address,
         beaconProxy: proxy.address,

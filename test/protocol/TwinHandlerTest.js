@@ -24,7 +24,7 @@ const { oneWeek, oneMonth } = require("../utils/constants");
 describe("IBosonTwinHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, pauser, rando, operator, admin, clerk, treasury;
+  let deployer, pauser, rando, operator, admin, clerk, treasury, protocolTreasury;
   let seller;
   let erc165,
     protocolDiamond,
@@ -59,7 +59,7 @@ describe("IBosonTwinHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, pauser, operator, admin, clerk, treasury, rando] = await ethers.getSigners();
+    [deployer, pauser, operator, admin, clerk, treasury, rando, protocolTreasury] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -93,7 +93,7 @@ describe("IBosonTwinHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasury: ethers.constants.AddressZero,
+        treasury: protocolTreasury.address,
         token: bosonToken.address,
         voucherBeacon: ethers.constants.AddressZero,
         beaconProxy: ethers.constants.AddressZero,
