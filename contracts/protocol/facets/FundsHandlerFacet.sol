@@ -179,11 +179,10 @@ contract FundsHandlerFacet is IBosonFundsHandler, ProtocolBase {
                 }
             }
 
-            // Retrieve available amount from the stroage
-            uint256 availableAmount = protocolLookups().availableFunds[_entityId][tokenAddress];
-
             // Add entry to the return variable
-            availableFunds[i] = Funds(tokenAddress, tokenName, availableAmount);
+            availableFunds[i].tokenAddress = tokenAddress;
+            availableFunds[i].tokenName = tokenName;
+            availableFunds[i].availableAmount = protocolLookups().availableFunds[_entityId][tokenAddress];
         }
     }
 

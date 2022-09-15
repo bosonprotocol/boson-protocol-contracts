@@ -172,12 +172,11 @@ contract OfferBase is ProtocolBase, IBosonOfferEvents {
             uint256 feeAmount = disputeResolverFees[feeIndex - 1].feeAmount;
 
             // store DR terms
-            disputeResolutionTerms = DisputeResolutionTerms(
-                _disputeResolverId,
-                disputeResolver.escalationResponsePeriod,
-                feeAmount,
-                (feeAmount * pl.buyerEscalationDepositPercentage) / 10000
-            );
+            disputeResolutionTerms.disputeResolverId = _disputeResolverId;
+            disputeResolutionTerms.escalationResponsePeriod = disputeResolver.escalationResponsePeriod;
+            disputeResolutionTerms.feeAmount = feeAmount;
+            disputeResolutionTerms.buyerEscalationDeposit = (feeAmount * pl.buyerEscalationDepositPercentage) / 10000;
+
             protocolEntities().disputeResolutionTerms[_offer.id] = disputeResolutionTerms;
         }
 

@@ -92,7 +92,10 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
             }
 
             // Add range to twinRangesBySeller mapping
-            protocolLookups().twinRangesBySeller[sellerId][_twin.tokenAddress].push(TokenRange(tokenId, lastTokenId));
+            TokenRange storage tokenRange = protocolLookups().twinRangesBySeller[sellerId][_twin.tokenAddress].push();
+            tokenRange.start = tokenId;
+            tokenRange.end = lastTokenId;
+
             // Add twin id to twinIdsByTokenAddressAndBySeller mapping
             protocolLookups().twinIdsByTokenAddressAndBySeller[sellerId][_twin.tokenAddress].push(_twin.id);
         } else if (_twin.tokenType == TokenType.MultiToken) {
