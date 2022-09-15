@@ -17,6 +17,9 @@ jobs:
       CONFIRMATIONS: ${{ secrets.CONFIRMATIONS }}
     name: mumbai_deploy
     steps:
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_GITHUB_SOLIDOC }}
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
