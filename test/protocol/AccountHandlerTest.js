@@ -48,7 +48,8 @@ describe("IBosonAccountHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, rando, other1, other2, other3, protocolTreasury, bosonToken] = await ethers.getSigners();
+    [deployer, operator, admin, clerk, treasury, rando, other1, other2, other3, protocolTreasury, bosonToken] =
+      await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();

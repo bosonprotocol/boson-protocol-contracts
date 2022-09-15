@@ -68,8 +68,8 @@ describe("IBosonExchangeHandler", function () {
     operatorDR,
     adminDR,
     clerkDR,
-    treasuryDR, 
-    protocolTreasury, 
+    treasuryDR,
+    protocolTreasury,
     bosonToken;
   let erc165,
     protocolDiamond,
@@ -129,8 +129,8 @@ describe("IBosonExchangeHandler", function () {
       adminDR,
       clerkDR,
       treasuryDR,
-      protocolTreasury, 
-      bosonToken
+      protocolTreasury,
+      bosonToken,
     ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond

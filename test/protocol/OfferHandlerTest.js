@@ -118,7 +118,7 @@ describe("IBosonOfferHandler", function () {
       treasuryDR,
       other,
       protocolAdmin,
-      protocolTreasury
+      protocolTreasury,
     ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond

@@ -122,7 +122,7 @@ describe("IBosonOrchestrationHandler", function () {
       clerkDR,
       treasuryDR,
       protocolAdmin,
-      protocolTreasury
+      protocolTreasury,
     ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond

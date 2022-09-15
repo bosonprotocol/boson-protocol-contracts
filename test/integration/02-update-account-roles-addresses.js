@@ -33,13 +33,40 @@ const {
  */
 describe("Update account roles addresses", function () {
   let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
-  let deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR, agent, protocolTreasury, bosonToken;
+  let deployer,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    buyer,
+    rando,
+    operatorDR,
+    adminDR,
+    clerkDR,
+    treasuryDR,
+    agent,
+    protocolTreasury,
+    bosonToken;
   let buyerEscalationDepositPercentage;
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR, agent, protocolTreasury, bosonToken] =
-      await ethers.getSigners();
+    [
+      deployer,
+      operator,
+      admin,
+      clerk,
+      treasury,
+      buyer,
+      rando,
+      operatorDR,
+      adminDR,
+      clerkDR,
+      treasuryDR,
+      agent,
+      protocolTreasury,
+      bosonToken,
+    ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     const [protocolDiamond, , , , accessController] = await deployProtocolDiamond();

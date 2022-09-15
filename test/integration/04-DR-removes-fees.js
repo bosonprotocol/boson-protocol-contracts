@@ -34,7 +34,19 @@ const {
 describe("DR removes fee", function () {
   let accountHandler, offerHandler, exchangeHandler, fundsHandler, disputeHandler;
   let expectedCloneAddress, emptyAuthToken, voucherInitValues;
-  let deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR, protocolTreasury, bosonToken;
+  let deployer,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    buyer,
+    rando,
+    operatorDR,
+    adminDR,
+    clerkDR,
+    treasuryDR,
+    protocolTreasury,
+    bosonToken;
   let buyerEscalationDepositPercentage;
   let buyerAccount, seller, disputeResolver;
   let offer, offerDates, offerDurations, disputeResolverId;
@@ -43,8 +55,21 @@ describe("DR removes fee", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, operator, admin, clerk, treasury, buyer, rando, operatorDR, adminDR, clerkDR, treasuryDR, protocolTreasury, bosonToken] =
-      await ethers.getSigners();
+    [
+      deployer,
+      operator,
+      admin,
+      clerk,
+      treasury,
+      buyer,
+      rando,
+      operatorDR,
+      adminDR,
+      clerkDR,
+      treasuryDR,
+      protocolTreasury,
+      bosonToken,
+    ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     const [protocolDiamond, , , , accessController] = await deployProtocolDiamond();

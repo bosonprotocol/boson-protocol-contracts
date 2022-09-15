@@ -37,7 +37,7 @@ describe("SellerHandler", function () {
     other7,
     other8,
     authTokenOwner,
-    protocolTreasury, 
+    protocolTreasury,
     bosonToken;
   let protocolDiamond, accessController, accountHandler, exchangeHandler, configHandler, pauseHandler, gasLimit;
   let seller, sellerStruct, seller2, seller3, seller4, expectedSeller, expectedSellerStruct;
@@ -68,8 +68,8 @@ describe("SellerHandler", function () {
       other7,
       other8,
       authTokenOwner,
-      protocolTreasury, 
-      bosonToken
+      protocolTreasury,
+      bosonToken,
     ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
@@ -112,7 +112,7 @@ describe("SellerHandler", function () {
       // Protocol addresses
       {
         treasury: protocolTreasury.address,
-		    token: bosonToken.address,
+        token: bosonToken.address,
         voucherBeacon: beacon.address,
         beaconProxy: proxy.address,
       },

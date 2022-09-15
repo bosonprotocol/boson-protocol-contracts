@@ -51,7 +51,7 @@ describe("IBosonDisputeHandler", function () {
     operatorDR,
     adminDR,
     clerkDR,
-    treasuryDR, 
+    treasuryDR,
     protocolTreasury;
   let erc165,
     protocolDiamond,
@@ -111,7 +111,7 @@ describe("IBosonDisputeHandler", function () {
       adminDR,
       clerkDR,
       treasuryDR,
-      protocolTreasury
+      protocolTreasury,
     ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond

@@ -39,7 +39,7 @@ describe("DR removes sellers from the approved seller list", function () {
     operatorDR,
     adminDR,
     clerkDR,
-    treasuryDR, 
+    treasuryDR,
     protocolTreasury;
   let protocolDiamond, accessController, accountHandler, exchangeHandler, offerHandler, fundsHandler, disputeHandler;
   let offer, seller;
@@ -67,7 +67,7 @@ describe("DR removes sellers from the approved seller list", function () {
       adminDR,
       clerkDR,
       treasuryDR,
-      protocolTreasury
+      protocolTreasury,
     ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond

@@ -122,7 +122,7 @@ describe("IBosonFundsHandler", function () {
       clerkDR,
       treasuryDR,
       other,
-      protocolTreasury
+      protocolTreasury,
     ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond

@@ -20,7 +20,21 @@ const { mockSeller, mockDisputeResolver, mockVoucherInitValues, mockAuthToken, a
  */
 describe("DisputeResolverHandler", function () {
   // Common vars
-  let deployer, pauser, rando, operator, admin, clerk, treasury, other1, other2, other3, other4, other5, protocolAdmin, protocolTreasury, bosonToken;
+  let deployer,
+    pauser,
+    rando,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    other1,
+    other2,
+    other3,
+    other4,
+    other5,
+    protocolAdmin,
+    protocolTreasury,
+    bosonToken;
   let protocolDiamond, accessController, accountHandler, configHandler, pauseHandler, gasLimit;
   let seller, seller2;
   let emptyAuthToken;
@@ -92,8 +106,23 @@ describe("DisputeResolverHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, pauser, operator, admin, clerk, treasury, rando, other1, other2, other3, other4, other5, protocolAdmin, protocolTreasury, bosonToken] =
-      await ethers.getSigners();
+    [
+      deployer,
+      pauser,
+      operator,
+      admin,
+      clerk,
+      treasury,
+      rando,
+      other1,
+      other2,
+      other3,
+      other4,
+      other5,
+      protocolAdmin,
+      protocolTreasury,
+      bosonToken,
+    ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
