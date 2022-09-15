@@ -55,6 +55,9 @@ contract BuyerHandlerFacet is BuyerBase {
      * @param _buyer - the fully populated buyer struct
      */
     function updateBuyer(Buyer memory _buyer) external buyersNotPaused nonReentrant {
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
         // Check for zero address
         require(_buyer.wallet != address(0), INVALID_ADDRESS);
 
@@ -75,18 +78,17 @@ contract BuyerHandlerFacet is BuyerBase {
 
         // Check that current wallet address does not own any vouchers, if changing wallet address
         if (buyer.wallet != _buyer.wallet) {
-            require(protocolLookups().voucherCount[_buyer.id] == 0, WALLET_OWNS_VOUCHERS);
+            require(lookups.voucherCount[_buyer.id] == 0, WALLET_OWNS_VOUCHERS);
         }
 
         // Check that the wallet address is unique to one buyer id if new
         require(
-            protocolLookups().buyerIdByWallet[_buyer.wallet] == 0 ||
-                protocolLookups().buyerIdByWallet[_buyer.wallet] == _buyer.id,
+            lookups.buyerIdByWallet[_buyer.wallet] == 0 || lookups.buyerIdByWallet[_buyer.wallet] == _buyer.id,
             BUYER_ADDRESS_MUST_BE_UNIQUE
         );
 
         // Delete current mappings
-        delete protocolLookups().buyerIdByWallet[sender];
+        delete lookups.buyerIdByWallet[sender];
 
         // Ignore active flag passed in by caller and set to value in storage.
         _buyer.active = buyer.active;
