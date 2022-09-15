@@ -6,6 +6,8 @@ import { IBosonTwinEvents } from "../../interfaces/events/IBosonTwinEvents.sol";
 import { ITwinToken } from "../../interfaces/ITwinToken.sol";
 import { ProtocolBase } from "./../bases/ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
+import { IERC721 } from "../../interfaces/IERC721.sol";
+import { IERC1155 } from "../../interfaces/IERC1155.sol";
 
 /**
  * @title TwinBase
@@ -47,7 +49,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
 
         if (_twin.tokenType == TokenType.NonFungibleToken) {
             // Check if the token supports IERC721 interface
-            require(contractSupportsInterface(_twin.tokenAddress, 0x80ac58cd), INVALID_TOKEN_ADDRESS);
+            require(contractSupportsInterface(_twin.tokenAddress, type(IERC721).interfaceId), INVALID_TOKEN_ADDRESS);
 
             // If token is NonFungible amount should be zero
             require(_twin.amount == 0, INVALID_TWIN_PROPERTY);
@@ -100,7 +102,7 @@ contract TwinBase is ProtocolBase, IBosonTwinEvents {
 
             // Not every ERC20 has supportsInterface method so we can't check interface support if token type is NonFungible
             // Check if the token supports IERC1155 interface
-            require(contractSupportsInterface(_twin.tokenAddress, 0xd9b67a26), INVALID_TOKEN_ADDRESS);
+            require(contractSupportsInterface(_twin.tokenAddress, type(IERC1155).interfaceId), INVALID_TOKEN_ADDRESS);
         } else {
             // If token is Fungible or MultiToken amount should not be zero
             // Also, tthe amount of tokens should not be more than the available token supply.
