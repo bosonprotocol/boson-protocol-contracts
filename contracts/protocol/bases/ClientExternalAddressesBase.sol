@@ -38,6 +38,9 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
         address _protocolAddress,
         address _impl
     ) payable {
+        // Not checking _accessController because this parameter will be removed in favor of a lookup. Remove this comment after this is done
+        require(_protocolAddress != address(0) && _impl != address(0), INVALID_ADDRESS);
+
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
 

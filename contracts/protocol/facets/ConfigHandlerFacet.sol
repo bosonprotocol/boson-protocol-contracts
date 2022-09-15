@@ -78,6 +78,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _tokenAddress - the Boson Token (ERC-20 contract) address
      */
     function setTokenAddress(address payable _tokenAddress) public override onlyRole(ADMIN) nonReentrant {
+        require(_tokenAddress != address(0), INVALID_ADDRESS);
         protocolAddresses().token = _tokenAddress;
         emit TokenAddressChanged(_tokenAddress, msgSender());
     }
@@ -101,6 +102,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _treasuryAddress - the the multi-sig wallet address
      */
     function setTreasuryAddress(address payable _treasuryAddress) public override onlyRole(ADMIN) nonReentrant {
+        require(_treasuryAddress != address(0), INVALID_ADDRESS);
         protocolAddresses().treasury = _treasuryAddress;
         emit TreasuryAddressChanged(_treasuryAddress, msgSender());
     }
@@ -124,6 +126,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _voucherBeaconAddress - the Boson Voucher beacon contract address
      */
     function setVoucherBeaconAddress(address _voucherBeaconAddress) public override onlyRole(ADMIN) nonReentrant {
+        require(_voucherBeaconAddress != address(0), INVALID_ADDRESS);
         protocolAddresses().voucherBeacon = _voucherBeaconAddress;
         emit VoucherBeaconAddressChanged(_voucherBeaconAddress, msgSender());
     }
@@ -147,6 +150,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _beaconProxyAddress - reference proxy implementation address
      */
     function setBeaconProxyAddress(address _beaconProxyAddress) public override onlyRole(ADMIN) nonReentrant {
+        require(_beaconProxyAddress != address(0), INVALID_ADDRESS);
         protocolAddresses().beaconProxy = _beaconProxyAddress;
         emit BeaconProxyAddressChanged(_beaconProxyAddress, msgSender());
     }
