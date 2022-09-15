@@ -30,9 +30,12 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
         Voucher storage _voucher,
         uint256 _sellerId
     ) internal {
+        // Fetch offer durations
+        OfferDurations storage offerDurations = fetchOfferDurations(_exchange.offerId);
+
         // Make sure the fulfillment period has not elapsed
         uint256 elapsed = block.timestamp - _voucher.redeemedDate;
-        require(elapsed < fetchOfferDurations(_exchange.offerId).fulfillmentPeriod, FULFILLMENT_PERIOD_HAS_ELAPSED);
+        require(elapsed < offerDurations.fulfillmentPeriod, FULFILLMENT_PERIOD_HAS_ELAPSED);
 
         // Make sure the caller is buyer associated with the exchange
         checkBuyer(_exchange.buyerId);
@@ -49,7 +52,7 @@ contract DisputeBase is ProtocolBase, IBosonDisputeEvents {
 
         // Update the disputeDates
         disputeDates.disputed = block.timestamp;
-        disputeDates.timeout = block.timestamp + fetchOfferDurations(_exchange.offerId).resolutionPeriod;
+        disputeDates.timeout = block.timestamp + offerDurations.resolutionPeriod;
 
         // Notify watchers of state change
         emit DisputeRaised(_exchange.id, _exchange.buyerId, _sellerId, msgSender());

@@ -68,8 +68,11 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
      * @return the hash of the meta-transaction details
      */
     function hashMetaTransaction(MetaTransaction memory _metaTx) internal view returns (bytes32) {
-        MetaTxInputType inputType = protocolMetaTxInfo().inputType[_metaTx.functionName];
-        HashInfo memory hi = protocolMetaTxInfo().hashInfo[inputType];
+        // Cache protocol meta-tx info for reference
+        ProtocolLib.ProtocolMetaTxInfo storage metaTxInfo = protocolMetaTxInfo();
+
+        MetaTxInputType inputType = metaTxInfo.inputType[_metaTx.functionName];
+        HashInfo memory hi = metaTxInfo.hashInfo[inputType];
         return
             keccak256(
                 abi.encode(
@@ -223,12 +226,15 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
         bytes calldata _functionSignature,
         uint256 _nonce
     ) internal returns (bytes memory) {
+        // Cache protocol meta-tx info for reference
+        ProtocolLib.ProtocolMetaTxInfo storage metaTxInfo = protocolMetaTxInfo();
+
         // Store the nonce provided to avoid playback of the same tx
-        protocolMetaTxInfo().usedNonce[_nonce] = true;
+        metaTxInfo.usedNonce[_nonce] = true;
 
         // Set the current transaction signer and transaction type.
         setCurrentSenderAddress(_userAddress);
-        protocolMetaTxInfo().isMetaTransaction = true;
+        metaTxInfo.isMetaTransaction = true;
 
         // Invoke local function with an external call
         (bool success, bytes memory returnData) = address(this).call{ value: msg.value }(_functionSignature);
@@ -239,7 +245,7 @@ contract MetaTransactionsHandlerFacet is IBosonMetaTransactionsHandler, Protocol
 
         // Reset current transaction signer and transaction type.
         setCurrentSenderAddress(address(0));
-        protocolMetaTxInfo().isMetaTransaction = false;
+        metaTxInfo.isMetaTransaction = false;
 
         emit MetaTransactionExecuted(_userAddress, msg.sender, _functionName, _nonce);
         return returnData;
