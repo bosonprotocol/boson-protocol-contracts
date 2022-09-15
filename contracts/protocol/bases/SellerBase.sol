@@ -6,6 +6,7 @@ import { IBosonAccountEvents } from "../../interfaces/events/IBosonAccountEvents
 import { ProtocolBase } from "./ProtocolBase.sol";
 import { ProtocolLib } from "./../libs/ProtocolLib.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
+import { IInitializableVoucherClone } from "../../interfaces/IInitializableVoucherClone.sol";
 
 /**
  * @title SellerBase
@@ -163,17 +164,7 @@ contract SellerBase is ProtocolBase, IBosonAccountEvents {
         }
 
         // Initialize the clone
-        IInitializableClone(cloneAddress).initialize(pa.voucherBeacon);
-        IInitializableClone(cloneAddress).initializeVoucher(_sellerId, _operator, _voucherInitValues);
+        IInitializableVoucherClone(cloneAddress).initialize(pa.voucherBeacon);
+        IInitializableVoucherClone(cloneAddress).initializeVoucher(_sellerId, _operator, _voucherInitValues);
     }
-}
-
-interface IInitializableClone {
-    function initialize(address _beaconAddress) external;
-
-    function initializeVoucher(
-        uint256 _sellerId,
-        address _newOwner,
-        BosonTypes.VoucherInitValues calldata _voucherInitValues
-    ) external;
 }
