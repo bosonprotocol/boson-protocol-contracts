@@ -146,9 +146,9 @@ describe("IClientExternalAddresses", function () {
 
           // Deploy the ClientBeacon for BosonVoucher
           const ClientBeacon = await ethers.getContractFactory("BosonClientBeacon");
-          await expect(ClientBeacon.deploy(...protocolClientArgs, ethers.constants.AddressZero, { gasLimit })).to.revertedWith(
-            RevertReasons.INVALID_ADDRESS
-          );
+          await expect(
+            ClientBeacon.deploy(...protocolClientArgs, ethers.constants.AddressZero, { gasLimit })
+          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
       });
     });

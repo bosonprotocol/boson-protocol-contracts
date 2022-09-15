@@ -481,9 +481,9 @@ describe("IBosonConfigHandler", function () {
 
           it("treasury address is the zero address", async function () {
             // Attempt to set new treasury address, expecting revert
-            await expect(configHandler.connect(deployer).setTreasuryAddress(ethers.constants.AddressZero)).to.revertedWith(
-              RevertReasons.INVALID_ADDRESS
-            );
+            await expect(
+              configHandler.connect(deployer).setTreasuryAddress(ethers.constants.AddressZero)
+            ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
           });
         });
       });
@@ -519,9 +519,9 @@ describe("IBosonConfigHandler", function () {
 
           it("voucher beacon address is the zero address", async function () {
             // Attempt to set new beacon address, expecting revert
-            await expect(configHandler.connect(deployer).setVoucherBeaconAddress(ethers.constants.AddressZero)).to.revertedWith(
-              RevertReasons.INVALID_ADDRESS
-            );
+            await expect(
+              configHandler.connect(deployer).setVoucherBeaconAddress(ethers.constants.AddressZero)
+            ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
           });
         });
       });
@@ -557,9 +557,9 @@ describe("IBosonConfigHandler", function () {
 
           it("beacon proxy address is the zero address", async function () {
             // Attempt to set new proxy address, expecting revert
-            await expect(configHandler.connect(deployer).setBeaconProxyAddress(ethers.constants.AddressZero)).to.revertedWith(
-              RevertReasons.INVALID_ADDRESS
-            );
+            await expect(
+              configHandler.connect(deployer).setBeaconProxyAddress(ethers.constants.AddressZero)
+            ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
           });
         });
       });
