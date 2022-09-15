@@ -82,8 +82,10 @@ This builds the contracts calculates their byte size. Useful to make sure the co
 
 ```npm run size```
 
+### Estimate protocol config limits
+Estimate the maximum value for protocol config values. Detailed description of the estimation is avaialbe on [limit estimation](limit-estimation.md).
 
-
+```npm run estimate-limits```
 
 ### Verify natspec interface ids
 Builds the contract and checks that interface ids, written in the natespec in interface files, match the actual interface ids.
