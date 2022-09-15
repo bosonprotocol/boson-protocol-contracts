@@ -13,6 +13,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockOffer, mockSeller, mockTwin, mockAuthToken, mockVoucherInitValues, accountId } = require("../utils/mock");
@@ -81,6 +82,12 @@ describe("IBosonTwinHandler", function () {
       "PauseHandlerFacet",
     ]);
 
+    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
+    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [beacon] = beacons;
+    const [proxy] = proxies;
+
     // Deploy the mock tokens
     [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens(gasLimit);
 
@@ -95,8 +102,8 @@ describe("IBosonTwinHandler", function () {
       {
         treasury: protocolTreasury.address,
         token: bosonToken.address,
-        voucherBeacon: ethers.constants.AddressZero,
-        beaconProxy: ethers.constants.AddressZero,
+        voucherBeacon: beacon.address,
+        beaconProxy: proxy.address,
       },
       // Protocol limits
       {

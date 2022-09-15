@@ -15,6 +15,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { oneWeek, oneMonth } = require("../utils/constants");
@@ -105,6 +106,12 @@ describe("IBosonGroupHandler", function () {
       "PauseHandlerFacet",
     ]);
 
+    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
+    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [beacon] = beacons;
+    const [proxy] = proxies;
+
     // Deploy the boson token
     [bosonToken] = await deployMockTokens(gasLimit, ["BosonToken"]);
 
@@ -119,8 +126,8 @@ describe("IBosonGroupHandler", function () {
       {
         treasury: protocolTreasury.address,
         token: bosonToken.address,
-        voucherBeacon: ethers.constants.AddressZero,
-        beaconProxy: ethers.constants.AddressZero,
+        voucherBeacon: beacon.address,
+        beaconProxy: proxy.address,
       },
       // Protocol limits
       {
