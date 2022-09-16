@@ -44,7 +44,8 @@
     "manage-roles:local": "npx hardhat --network localhost run scripts/manage-roles.js >> logs/localhost.manage.roles.txt",
     "manage-roles:test": "npx hardhat --network test run scripts/manage-roles.js >> logs/test.manage.roles.txt",
     "natspec-interface-id": "npx hardhat compile && node scripts/util/natspec-interfaceid.js",
-    "natspec-interface-id:fix": "npx hardhat compile && node scripts/util/natspec-interfaceid.js --fix"
+    "natspec-interface-id:fix": "npx hardhat compile && node scripts/util/natspec-interfaceid.js --fix",
+    "estimate-limits": "npx hardhat estimate-limits"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.7.1",
@@ -69,6 +70,7 @@
     "hardhat-gas-reporter": "^1.0.7",
     "prettier": "^2.6.1",
     "prettier-plugin-solidity": "^1.0.0-beta.19",
+    "simple-statistics": "^7.7.6",
     "solhint": "^3.3.7",
     "solidity-coverage": "^0.7.18-eip165.0",
     "truffle": "^5.5.23",

@@ -20,6 +20,12 @@ task("deploy-mock-nft-auth", "Deploy mock NFT Auth tokens and mint tokens to add
 		await deployAndMintMockNFTAuthTokens();
 	})
 
+task("estimate-limits", "Estimates the maximum values for limits in protocol config")
+	.setAction( async () => {
+    const { estimateLimits } = await lazyImport('./scripts/util/estimate-limits')
+		await estimateLimits();
+	})
+
 module.exports = {
   defaultNetwork: "hardhat",
   networks: {

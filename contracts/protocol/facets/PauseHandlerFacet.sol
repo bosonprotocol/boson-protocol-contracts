@@ -4,6 +4,7 @@ import "../../domain/BosonConstants.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { BosonTypes } from "../../domain/BosonTypes.sol";
 import { ProtocolBase } from "../bases/OfferBase.sol";
+import { ProtocolLib } from "../libs/ProtocolLib.sol";
 import { IBosonPauseHandler } from "../../interfaces/handlers/IBosonPauseHandler.sol";
 
 /**
@@ -34,11 +35,14 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
      * @param _regions - an array of regions to pause. See: {BosonTypes.PausableRegion}
      */
     function pause(BosonTypes.PausableRegion[] calldata _regions) external onlyRole(PAUSER) nonReentrant {
+        // Cache protocol status for reference
+        ProtocolLib.ProtocolStatus storage status = protocolStatus();
+
         // Make sure at least one region is specified
         require(_regions.length > 0, NO_REGIONS_SPECIFIED);
 
         // Make sure the protocol isn't already paused
-        require(protocolStatus().pauseScenario == 0, ALREADY_PAUSED);
+        require(status.pauseScenario == 0, ALREADY_PAUSED);
 
         // Build the pause scenario by summing the supplied
         // enum values, first converted to powers of two
@@ -60,7 +64,7 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
         }
 
         // Store the pause scenario
-        protocolStatus().pauseScenario = scenario;
+        status.pauseScenario = scenario;
 
         // Notify watchers of state change
         emit ProtocolPaused(_regions, msgSender());
@@ -76,11 +80,14 @@ contract PauseHandlerFacet is ProtocolBase, IBosonPauseHandler {
      * - Protocol is not currently paused
      */
     function unpause() external onlyRole(PAUSER) nonReentrant {
+        // Cache protocol status for reference
+        ProtocolLib.ProtocolStatus storage status = protocolStatus();
+
         // Make sure the protocol is already paused
-        require(protocolStatus().pauseScenario > 0, NOT_PAUSED);
+        require(status.pauseScenario > 0, NOT_PAUSED);
 
         // Clear the pause scenario
-        protocolStatus().pauseScenario = 0;
+        status.pauseScenario = 0;
 
         // Notify watchers of state change
         emit ProtocolUnpaused(msgSender());

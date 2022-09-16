@@ -68,6 +68,9 @@ contract SellerHandlerFacet is SellerBase {
      * @param _authToken - optional AuthToken struct that specifies an AuthToken type and tokenId that the seller can use to do admin functions
      */
     function updateSeller(Seller memory _seller, AuthToken calldata _authToken) external sellersNotPaused nonReentrant {
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
         bool exists;
         Seller storage seller;
         AuthToken storage authToken;
@@ -90,7 +93,7 @@ contract SellerHandlerFacet is SellerBase {
 
         // Check that caller is authorized to call this function
         if (seller.admin == address(0)) {
-            address authTokenContract = protocolLookups().authTokenContracts[authToken.tokenType];
+            address authTokenContract = lookups.authTokenContracts[authToken.tokenType];
             address tokenIdOwner = IERC721(authTokenContract).ownerOf(authToken.tokenId);
             require(tokenIdOwner == sender, NOT_ADMIN);
         } else {
@@ -100,18 +103,16 @@ contract SellerHandlerFacet is SellerBase {
         // Check that the passed in addresses are unique to one seller id across all roles -- not used or are used by this seller id.
         // Checking this seller id is necessary because one or more addresses may not change
         require(
-            (protocolLookups().sellerIdByOperator[_seller.operator] == 0 ||
-                protocolLookups().sellerIdByOperator[_seller.operator] == _seller.id) &&
-                (protocolLookups().sellerIdByOperator[_seller.clerk] == 0 ||
-                    protocolLookups().sellerIdByOperator[_seller.clerk] == _seller.id) &&
-                (protocolLookups().sellerIdByAdmin[_seller.operator] == 0 ||
-                    protocolLookups().sellerIdByAdmin[_seller.operator] == _seller.id) &&
-                (protocolLookups().sellerIdByAdmin[_seller.clerk] == 0 ||
-                    protocolLookups().sellerIdByAdmin[_seller.clerk] == _seller.id) &&
-                (protocolLookups().sellerIdByClerk[_seller.operator] == 0 ||
-                    protocolLookups().sellerIdByClerk[_seller.operator] == _seller.id) &&
-                (protocolLookups().sellerIdByClerk[_seller.clerk] == 0 ||
-                    protocolLookups().sellerIdByClerk[_seller.clerk] == _seller.id),
+            (lookups.sellerIdByOperator[_seller.operator] == 0 ||
+                lookups.sellerIdByOperator[_seller.operator] == _seller.id) &&
+                (lookups.sellerIdByOperator[_seller.clerk] == 0 ||
+                    lookups.sellerIdByOperator[_seller.clerk] == _seller.id) &&
+                (lookups.sellerIdByAdmin[_seller.operator] == 0 ||
+                    lookups.sellerIdByAdmin[_seller.operator] == _seller.id) &&
+                (lookups.sellerIdByAdmin[_seller.clerk] == 0 || lookups.sellerIdByAdmin[_seller.clerk] == _seller.id) &&
+                (lookups.sellerIdByClerk[_seller.operator] == 0 ||
+                    lookups.sellerIdByClerk[_seller.operator] == _seller.id) &&
+                (lookups.sellerIdByClerk[_seller.clerk] == 0 || lookups.sellerIdByClerk[_seller.clerk] == _seller.id),
             SELLER_ADDRESS_MUST_BE_UNIQUE
         );
 
@@ -119,29 +120,29 @@ contract SellerHandlerFacet is SellerBase {
         if (_seller.admin == address(0)) {
             // Check that auth token is unique to this seller
             require(
-                protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == 0 ||
-                    protocolLookups().sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == _seller.id,
+                lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == 0 ||
+                    lookups.sellerIdByAuthToken[_authToken.tokenType][_authToken.tokenId] == _seller.id,
                 AUTH_TOKEN_MUST_BE_UNIQUE
             );
         } else {
             // Check that the admin address is unique to one seller id across all roles -- not used or is used by this seller id.
 
             require(
-                (protocolLookups().sellerIdByOperator[_seller.admin] == 0 ||
-                    protocolLookups().sellerIdByOperator[_seller.admin] == _seller.id) &&
-                    (protocolLookups().sellerIdByAdmin[_seller.admin] == 0 ||
-                        protocolLookups().sellerIdByAdmin[_seller.admin] == _seller.id) &&
-                    (protocolLookups().sellerIdByClerk[_seller.admin] == 0 ||
-                        protocolLookups().sellerIdByClerk[_seller.admin] == _seller.id),
+                (lookups.sellerIdByOperator[_seller.admin] == 0 ||
+                    lookups.sellerIdByOperator[_seller.admin] == _seller.id) &&
+                    (lookups.sellerIdByAdmin[_seller.admin] == 0 ||
+                        lookups.sellerIdByAdmin[_seller.admin] == _seller.id) &&
+                    (lookups.sellerIdByClerk[_seller.admin] == 0 ||
+                        lookups.sellerIdByClerk[_seller.admin] == _seller.id),
                 SELLER_ADDRESS_MUST_BE_UNIQUE
             );
         }
 
         // Delete current mappings
-        delete protocolLookups().sellerIdByOperator[seller.operator];
-        delete protocolLookups().sellerIdByAdmin[seller.admin];
-        delete protocolLookups().sellerIdByClerk[seller.clerk];
-        delete protocolLookups().sellerIdByAuthToken[authToken.tokenType][authToken.tokenId];
+        delete lookups.sellerIdByOperator[seller.operator];
+        delete lookups.sellerIdByAdmin[seller.admin];
+        delete lookups.sellerIdByClerk[seller.clerk];
+        delete lookups.sellerIdByAuthToken[authToken.tokenType][authToken.tokenId];
         delete protocolEntities().authTokens[seller.id];
 
         // Store this address of existing seller operator to check if you have to transfer the ownership later
@@ -153,7 +154,7 @@ contract SellerHandlerFacet is SellerBase {
 
         // If operator changed, transfer the ownership of NFT voucher
         if (oldSellerOperator != _seller.operator) {
-            IBosonVoucher(protocolLookups().cloneAddress[seller.id]).transferOwnership(_seller.operator);
+            IBosonVoucher(lookups.cloneAddress[seller.id]).transferOwnership(_seller.operator);
         }
 
         // Notify watchers of state change

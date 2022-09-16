@@ -73,39 +73,41 @@ contract AgentHandlerFacet is IBosonAccountEvents, ProtocolBase {
      * @param _agent - the fully populated agent struct
      */
     function updateAgent(Agent memory _agent) external agentsNotPaused nonReentrant {
-        //Check for zero address
+        // Cache protocol lookups for reference
+        ProtocolLib.ProtocolLookups storage lookups = protocolLookups();
+
+        // Check for zero address
         require(_agent.wallet != address(0), INVALID_ADDRESS);
 
         bool exists;
         Agent storage agent;
 
-        //Check Agent exists in agents mapping
+        // Check Agent exists in agents mapping
         (exists, agent) = fetchAgent(_agent.id);
 
-        //Agent must already exist
+        // Agent must already exist
         require(exists, NO_SUCH_AGENT);
 
-        //Get message sender
+        // Get message sender
         address sender = msgSender();
 
-        //Check that msg.sender is the wallet address for this agent
+        // Check that msg.sender is the wallet address for this agent
         require(agent.wallet == sender, NOT_AGENT_WALLET);
 
-        //Check that the wallet address is not associated with another agent or is already associated with the agent passed in
+        // Check that the wallet address is not associated with another agent or is already associated with the agent passed in
         require(
-            protocolLookups().agentIdByWallet[_agent.wallet] == 0 ||
-                protocolLookups().agentIdByWallet[_agent.wallet] == _agent.id,
+            lookups.agentIdByWallet[_agent.wallet] == 0 || lookups.agentIdByWallet[_agent.wallet] == _agent.id,
             AGENT_ADDRESS_MUST_BE_UNIQUE
         );
 
-        //Delete current mappings
-        delete protocolLookups().agentIdByWallet[sender];
+        // Delete current mappings
+        delete lookups.agentIdByWallet[sender];
 
-        //Ignore active flag passed in by caller and set to value in storage.
+        // Ignore active flag passed in by caller and set to value in storage.
         _agent.active = agent.active;
         storeAgent(_agent);
 
-        //Notify watchers of state change
+        // Notify watchers of state change
         emit AgentUpdated(_agent.id, _agent, sender);
     }
 
