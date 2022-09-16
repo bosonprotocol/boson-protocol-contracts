@@ -37,7 +37,7 @@ contract ProtocolDiamond {
         IAccessControlUpgradeable _accessController,
         IDiamondCut.FacetCut[] memory _facetCuts,
         bytes4[] memory _interfaceIds
-    ) payable {
+    ) {
         require(address(_accessController) != address(0), INVALID_ADDRESS);
 
         // Get the DiamondStorage struct
