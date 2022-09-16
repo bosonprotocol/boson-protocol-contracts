@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "../../domain/BosonConstants.sol";
 import { IAccessControlUpgradeable } from "../../interfaces/IAccessControlUpgradeable.sol";
 import { IClientExternalAddresses } from "../../interfaces/clients/IClientExternalAddresses.sol";
+import { IBosonConfigHandler } from "../../interfaces/handlers/IBosonConfigHandler.sol";
 import { ClientLib } from "../libs/ClientLib.sol";
 
 /**
@@ -29,20 +30,15 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
     /**
      * @notice Instantiates the contract.
      *
-     * @param _accessController - the Boson Protocol AccessController address
      * @param _protocolAddress - the ProtocolDiamond address
      * @param _impl - the implementation address
      */
     constructor(
-        address _accessController,
         address _protocolAddress,
         address _impl
-    ) payable {
+    ) {
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
-
-        // Store the AccessController address
-        ps.accessController = IAccessControlUpgradeable(_accessController);
 
         // Store the Protocol Diamond address
         ps.protocolDiamond = _protocolAddress;
@@ -91,24 +87,6 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
     }
 
     /**
-     * @notice Sets the Boson Protocol AccessController.
-     *
-     * Emits an AccessControllerAddressChanged event.
-     *
-     * @param _accessController - the Boson Protocol AccessController address
-     */
-    function setAccessController(address _accessController) external override onlyRole(UPGRADER) {
-        // Get the ProxyStorage struct
-        ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
-
-        // Store the AccessController address
-        ps.accessController = IAccessControlUpgradeable(_accessController);
-
-        // Notify watchers of state change
-        emit AccessControllerAddressChanged(_accessController, msg.sender);
-    }
-
-    /**
      * @notice Gets the address of the Boson Protocol AccessController contract.
      *
      * @return the address of the AccessController contract
@@ -118,7 +96,7 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
 
         // Return the current AccessController address
-        return ps.accessController;
+        return IAccessControlUpgradeable(IBosonConfigHandler(ps.protocolDiamond).getAccessControllerAddress());
     }
 
     /**

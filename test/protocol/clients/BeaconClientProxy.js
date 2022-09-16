@@ -6,15 +6,15 @@ const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol
 const { expect } = require("chai");
 
 describe("BeaconClientProxy", function () {
-  let protocol, accessController, rando;
+  let protocol, rando;
   let proxy;
 
   beforeEach(async function () {
     // Set signers (fake protocol address to test issue and burn voucher without protocol dependencie)
-    [protocol, accessController, rando] = await ethers.getSigners();
+    [protocol, rando] = await ethers.getSigners();
 
     // deploy proxy
-    const protocolClientArgs = [accessController.address, protocol.address];
+    const protocolClientArgs = [protocol.address];
     const [, , proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
     [proxy] = proxies;
   });

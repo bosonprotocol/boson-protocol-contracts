@@ -159,7 +159,7 @@ describe("IBosonExchangeHandler", function () {
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    const protocolClientArgs = [protocolDiamond.address];
     const [implementations, beacons, proxies, clients] = await deployProtocolClients(protocolClientArgs, gasLimit);
     [bosonVoucher] = clients;
     const [beacon] = beacons;

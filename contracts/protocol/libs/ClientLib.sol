@@ -15,8 +15,6 @@ import { EIP712Lib } from "../libs/EIP712Lib.sol";
  */
 library ClientLib {
     struct ProxyStorage {
-        // The AccessController address
-        IAccessControlUpgradeable accessController;
         // The ProtocolDiamond address
         address protocolDiamond;
         // The client implementation address
@@ -54,6 +52,7 @@ library ClientLib {
      */
     function hasRole(bytes32 role) internal view returns (bool) {
         ProxyStorage storage ps = proxyStorage();
-        return ps.accessController.hasRole(role, EIP712Lib.msgSender());
+        IAccessControlUpgradeable accessController = IAccessControlUpgradeable(IBosonConfigHandler(ps.protocolDiamond).getAccessControllerAddress());
+        return accessController.hasRole(role, EIP712Lib.msgSender());
     }
 }

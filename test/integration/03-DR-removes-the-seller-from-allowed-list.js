@@ -92,7 +92,7 @@ describe("DR removes sellers from the approved seller list", function () {
     ]);
 
     // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
-    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    const protocolClientArgs = [protocolDiamond.address];
     const gasLimit = environments[network].gasLimit;
     const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
     const [beacon] = beacons;

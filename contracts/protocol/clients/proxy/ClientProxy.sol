@@ -24,10 +24,9 @@ import { ClientExternalAddressesBase } from "./../../bases/ClientExternalAddress
  */
 contract ClientProxy is ClientExternalAddressesBase, Proxy {
     constructor(
-        address _accessController,
         address _protocolAddress,
         address _impl
-    ) payable ClientExternalAddressesBase(_accessController, _protocolAddress, _impl) {}
+    ) payable ClientExternalAddressesBase(_protocolAddress, _impl) {}
 
     /**
      * @notice Returns the address to which the fallback function

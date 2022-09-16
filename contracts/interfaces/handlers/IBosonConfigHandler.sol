@@ -9,7 +9,7 @@ import { IBosonConfigEvents } from "../events/IBosonConfigEvents.sol";
  *
  * @notice Handles management of configuration within the protocol.
  *
- * The ERC-165 identifier for this interface is: 0x5bf232b9
+ * The ERC-165 identifier for this interface is: 0x5e06db4a
  */
 interface IBosonConfigHandler is IBosonConfigEvents {
     /**

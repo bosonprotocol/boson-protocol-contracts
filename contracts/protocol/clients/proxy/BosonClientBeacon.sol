@@ -12,8 +12,7 @@ import { ClientExternalAddressesBase } from "./../../bases/ClientExternalAddress
  */
 contract BosonClientBeacon is ClientExternalAddressesBase {
     constructor(
-        address _accessController,
         address _protocolAddress,
         address _impl
-    ) payable ClientExternalAddressesBase(_accessController, _protocolAddress, _impl) {}
+    ) ClientExternalAddressesBase( _protocolAddress, _impl) {}
 }
