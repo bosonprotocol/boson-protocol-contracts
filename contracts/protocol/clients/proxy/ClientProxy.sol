@@ -26,7 +26,7 @@ contract ClientProxy is ClientExternalAddressesBase, Proxy {
     constructor(
         address _protocolAddress,
         address _impl
-    ) payable ClientExternalAddressesBase(_protocolAddress, _impl) {}
+    ) ClientExternalAddressesBase(_protocolAddress, _impl) {}
 
     /**
      * @notice Returns the address to which the fallback function
