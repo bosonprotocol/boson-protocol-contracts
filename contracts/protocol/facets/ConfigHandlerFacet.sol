@@ -309,7 +309,7 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Offer[]}
      */
     function setMaxOffersPerBatch(uint16 _maxOffersPerBatch) public override onlyRole(ADMIN) nonReentrant {
-       // Make sure _maxOffersPerBatch is greater than 0
+        // Make sure _maxOffersPerBatch is greater than 0
         require(_maxOffersPerBatch > 0, VALUE_ZERO_NOT_ALLOWED);
 
         protocolLimits().maxOffersPerBatch = _maxOffersPerBatch;
