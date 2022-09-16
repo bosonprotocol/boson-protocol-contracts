@@ -13,6 +13,7 @@ const { RevertReasons } = require("../../scripts/config/revert-reasons.js");
 const { deployProtocolDiamond } = require("../../scripts/util/deploy-protocol-diamond.js");
 const { deployProtocolHandlerFacets } = require("../../scripts/util/deploy-protocol-handler-facets.js");
 const { deployProtocolConfigFacet } = require("../../scripts/util/deploy-protocol-config-facet.js");
+const { deployProtocolClients } = require("../../scripts/util/deploy-protocol-clients");
 const { getEvent } = require("../../scripts/util/test-utils.js");
 const { deployMockTokens } = require("../../scripts/util/deploy-mock-tokens");
 const { mockOffer, mockSeller, mockTwin, mockAuthToken, mockVoucherInitValues, accountId } = require("../utils/mock");
@@ -24,7 +25,7 @@ const { oneWeek, oneMonth } = require("../utils/constants");
 describe("IBosonTwinHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, pauser, rando, operator, admin, clerk, treasury;
+  let deployer, pauser, rando, operator, admin, clerk, treasury, protocolTreasury;
   let seller;
   let erc165,
     protocolDiamond,
@@ -59,7 +60,7 @@ describe("IBosonTwinHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, pauser, operator, admin, clerk, treasury, rando] = await ethers.getSigners();
+    [deployer, pauser, operator, admin, clerk, treasury, rando, protocolTreasury] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -81,6 +82,12 @@ describe("IBosonTwinHandler", function () {
       "PauseHandlerFacet",
     ]);
 
+    // Deploy the Protocol client implementation/proxy pairs (currently just the Boson Voucher)
+    const protocolClientArgs = [accessController.address, protocolDiamond.address];
+    const [, beacons, proxies] = await deployProtocolClients(protocolClientArgs, gasLimit);
+    const [beacon] = beacons;
+    const [proxy] = proxies;
+
     // Deploy the mock tokens
     [bosonToken, foreign721, foreign1155, fallbackError] = await deployMockTokens(gasLimit);
 
@@ -93,10 +100,10 @@ describe("IBosonTwinHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasury: ethers.constants.AddressZero,
+        treasury: protocolTreasury.address,
         token: bosonToken.address,
-        voucherBeacon: ethers.constants.AddressZero,
-        beaconProxy: ethers.constants.AddressZero,
+        voucherBeacon: beacon.address,
+        beaconProxy: proxy.address,
       },
       // Protocol limits
       {
