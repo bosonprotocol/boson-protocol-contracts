@@ -314,7 +314,8 @@ describe("IBosonExchangeHandler", function () {
       ({ offerDates, offerDurations } = mo);
       offer = mo.offer;
       offerFees = mo.offerFees;
-      offerFees.protocolFee = protocolFeeFlatBoson;
+      offerFees.protocolFee = applyPercentage(offer.price, protocolFeePercentage);
+
       offer.quantityAvailable = "10";
       disputeResolverId = mo.disputeResolverId;
 
