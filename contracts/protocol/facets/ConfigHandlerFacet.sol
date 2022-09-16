@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "../../domain/BosonConstants.sol";
 import { IBosonConfigHandler } from "../../interfaces/handlers/IBosonConfigHandler.sol";
+import { IAccessControlUpgradeable } from "../../interfaces/IAccessControlUpgradeable.sol";
 import { DiamondLib } from "../../diamond/DiamondLib.sol";
 import { ProtocolBase } from "../bases/ProtocolBase.sol";
 import { ProtocolLib } from "../libs/ProtocolLib.sol";
@@ -648,5 +649,31 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      */
     function getMinFulfillmentPeriod() external view override returns (uint256) {
         return protocolLimits().minFulfillmentPeriod;
+    }
+
+    /**
+     * @notice Sets the access controller address.
+     *
+     * Emits an AccessControllerAddressChanged event.
+     * 
+     * Reverts if _accessControllerAddress is the zero address
+     *
+     * @dev Caller must have ADMIN role.
+     *
+     * @param _accessControllerAddress - access controller address
+     */
+    function setAccessControllerAddress(address _accessControllerAddress) external override onlyRole(ADMIN) nonReentrant {
+        require(_accessControllerAddress != address(0), INVALID_ADDRESS);
+        DiamondLib.diamondStorage().accessController = IAccessControlUpgradeable(_accessControllerAddress);
+        emit AccessControllerAddressChanged(_accessControllerAddress, msgSender());
+    }
+
+    /**
+     * @notice Gets the access controller address.
+     *
+     * @return the access controller address
+     */
+    function getAccessControllerAddress() external view returns (address) {
+        return address(DiamondLib.diamondStorage().accessController);
     }
 }

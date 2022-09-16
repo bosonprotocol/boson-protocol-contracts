@@ -429,4 +429,24 @@ interface IBosonConfigHandler is IBosonConfigEvents {
      * @notice Gets the minimum fulfillment period a seller can specify.
      */
     function getMinFulfillmentPeriod() external view returns (uint256);
+
+    /**
+     * @notice Sets the access controller address.
+     *
+     * Emits an AccessControllerAddressChanged event.
+     *
+     * Reverts if _accessControllerAddress is the zero address
+     *
+     * @dev Caller must have ADMIN role.
+     *
+     * @param _accessControllerAddress - access controller address
+     */
+    function setAccessControllerAddress(address _accessControllerAddress) external;
+
+    /**
+     * @notice Gets the access controller address.
+     *
+     * @return the access controller address
+     */
+    function getAccessControllerAddress() external view returns (address);
 }
