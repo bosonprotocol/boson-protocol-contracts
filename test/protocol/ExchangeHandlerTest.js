@@ -3109,13 +3109,6 @@ describe("IBosonExchangeHandler", function () {
             exchangeHandler.connect(fauxClient).onVoucherTransferred(exchangeId, newOwner.address)
           ).to.revertedWith(RevertReasons.VOUCHER_HAS_EXPIRED);
         });
-
-        it("To is zero address", async function () {
-          // Transfer voucher, expecting event
-          await expect(
-            bosonVoucherClone.connect(buyer).transferFrom(buyer.address, ethers.constants.AddressZero, exchange.id)
-          ).to.revertedWith(RevertReasons.ERC721_TRANSFER_TO_ZERO_ADDRESS);
-        });
       });
     });
 
