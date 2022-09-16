@@ -231,6 +231,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _maxOffersPerGroup - the maximum length of {BosonTypes.Group.offerIds}
      */
     function setMaxOffersPerGroup(uint16 _maxOffersPerGroup) public override onlyRole(ADMIN) nonReentrant {
+        // Make sure _maxOffersPerGroup is greater than 0
+        require(_maxOffersPerGroup > 0, VALUE_ZERO_NOT_ALLOWED);
+
         protocolLimits().maxOffersPerGroup = _maxOffersPerGroup;
         emit MaxOffersPerGroupChanged(_maxOffersPerGroup, msgSender());
     }
@@ -254,6 +257,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _maxTwinsPerBundle - the maximum length of {BosonTypes.Bundle.twinIds}
      */
     function setMaxTwinsPerBundle(uint16 _maxTwinsPerBundle) public override onlyRole(ADMIN) nonReentrant {
+        // Make sure _maxTwinsPerBundle is greater than 0
+        require(_maxTwinsPerBundle > 0, VALUE_ZERO_NOT_ALLOWED);
+
         protocolLimits().maxTwinsPerBundle = _maxTwinsPerBundle;
         emit MaxTwinsPerBundleChanged(_maxTwinsPerBundle, msgSender());
     }
@@ -277,6 +283,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _maxOffersPerBundle - the maximum length of {BosonTypes.Bundle.offerIds}
      */
     function setMaxOffersPerBundle(uint16 _maxOffersPerBundle) public override onlyRole(ADMIN) nonReentrant {
+        // Make sure _maxOffersPerBundle is greater than 0
+        require(_maxOffersPerBundle > 0, VALUE_ZERO_NOT_ALLOWED);
+
         protocolLimits().maxOffersPerBundle = _maxOffersPerBundle;
         emit MaxOffersPerBundleChanged(_maxOffersPerBundle, msgSender());
     }
@@ -300,6 +309,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _maxOffersPerBatch - the maximum length of {BosonTypes.Offer[]}
      */
     function setMaxOffersPerBatch(uint16 _maxOffersPerBatch) public override onlyRole(ADMIN) nonReentrant {
+       // Make sure _maxOffersPerBatch is greater than 0
+        require(_maxOffersPerBatch > 0, VALUE_ZERO_NOT_ALLOWED);
+
         protocolLimits().maxOffersPerBatch = _maxOffersPerBatch;
         emit MaxOffersPerBatchChanged(_maxOffersPerBatch, msgSender());
     }
@@ -323,6 +335,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _maxTokensPerWithdrawal - the maximum length of token list when calling {FundsHandlerFacet.withdraw}
      */
     function setMaxTokensPerWithdrawal(uint16 _maxTokensPerWithdrawal) public override onlyRole(ADMIN) nonReentrant {
+        // Make sure _maxTokensPerWithdrawal is greater than 0
+        require(_maxTokensPerWithdrawal > 0, VALUE_ZERO_NOT_ALLOWED);
+
         protocolLimits().maxTokensPerWithdrawal = _maxTokensPerWithdrawal;
         emit MaxTokensPerWithdrawalChanged(_maxTokensPerWithdrawal, msgSender());
     }
@@ -351,6 +366,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         onlyRole(ADMIN)
         nonReentrant
     {
+        // Make sure _maxFeesPerDisputeResolver is greater than 0
+        require(_maxFeesPerDisputeResolver > 0, VALUE_ZERO_NOT_ALLOWED);
+
         protocolLimits().maxFeesPerDisputeResolver = _maxFeesPerDisputeResolver;
         emit MaxFeesPerDisputeResolverChanged(_maxFeesPerDisputeResolver, msgSender());
     }
@@ -379,6 +397,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         onlyRole(ADMIN)
         nonReentrant
     {
+        // Make sure _maxEscalationResponsePeriod is greater than 0
+        require(_maxEscalationResponsePeriod > 0, VALUE_ZERO_NOT_ALLOWED);
+
         protocolLimits().maxEscalationResponsePeriod = _maxEscalationResponsePeriod;
         emit MaxEscalationResponsePeriodChanged(_maxEscalationResponsePeriod, msgSender());
     }
@@ -402,6 +423,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _maxDisputesPerBatch - the maximum number of disputes that can be expired
      */
     function setMaxDisputesPerBatch(uint16 _maxDisputesPerBatch) public override onlyRole(ADMIN) nonReentrant {
+        // Make sure _maxDisputesPerBatch is greater than 0
+        require(_maxDisputesPerBatch > 0, VALUE_ZERO_NOT_ALLOWED);
+
         protocolLimits().maxDisputesPerBatch = _maxDisputesPerBatch;
         emit MaxDisputesPerBatchChanged(_maxDisputesPerBatch, msgSender());
     }
@@ -435,6 +459,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         onlyRole(ADMIN)
         nonReentrant
     {
+        // Make sure percentage is greater than 0
+        require(_maxTotalOfferFeePercentage > 0, VALUE_ZERO_NOT_ALLOWED);
+
         // Make sure percentage is less than 10000
         require(_maxTotalOfferFeePercentage <= 10000, FEE_PERCENTAGE_INVALID);
 
@@ -469,6 +496,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * e.g, 1.75% = 175, 100% = 10000
      */
     function setMaxRoyaltyPecentage(uint16 _maxRoyaltyPecentage) public override onlyRole(ADMIN) nonReentrant {
+        // Make sure percentage is greater than 0
+        require(_maxRoyaltyPecentage > 0, VALUE_ZERO_NOT_ALLOWED);
+
         // Make sure percentage is less than 10000
         require(_maxRoyaltyPecentage <= 10000, FEE_PERCENTAGE_INVALID);
 
@@ -498,6 +528,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _maxAllowedSellers - the maximum number of seller ids that can be added or removed
      */
     function setMaxAllowedSellers(uint16 _maxAllowedSellers) public override onlyRole(ADMIN) nonReentrant {
+        // Make sure _maxAllowedSellers  greater than 0
+        require(_maxAllowedSellers > 0, VALUE_ZERO_NOT_ALLOWED);
+
         protocolLimits().maxAllowedSellers = _maxAllowedSellers;
         emit MaxAllowedSellersChanged(_maxAllowedSellers, msgSender());
     }
@@ -531,6 +564,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
         onlyRole(ADMIN)
         nonReentrant
     {
+        // Make sure percentage is greater than 0
+        require(_buyerEscalationDepositPercentage > 0, VALUE_ZERO_NOT_ALLOWED);
+
         // Make sure percentage is less than 10000
         require(_buyerEscalationDepositPercentage <= 10000, FEE_PERCENTAGE_INVALID);
 
@@ -595,6 +631,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _maxExchangesPerBatch - the maximum length of {BosonTypes.Exchange[]}
      */
     function setMaxExchangesPerBatch(uint16 _maxExchangesPerBatch) public override onlyRole(ADMIN) nonReentrant {
+        // Make sure _maxExchangePerBatch is greater than 0
+        require(_maxExchangesPerBatch > 0, VALUE_ZERO_NOT_ALLOWED);
+
         protocolLimits().maxExchangesPerBatch = _maxExchangesPerBatch;
         emit MaxExchangesPerBatchChanged(_maxExchangesPerBatch, msgSender());
     }
@@ -618,6 +657,9 @@ contract ConfigHandlerFacet is IBosonConfigHandler, ProtocolBase {
      * @param _maxResolutionPeriod - the maximum resolution period that a {BosonTypes.Seller} can specify
      */
     function setMaxResolutionPeriod(uint256 _maxResolutionPeriod) public override onlyRole(ADMIN) nonReentrant {
+        // Make sure _maxResolutionPeriod is greater than 0
+        require(_maxResolutionPeriod > 0, VALUE_ZERO_NOT_ALLOWED);
+
         protocolLimits().maxResolutionPeriod = _maxResolutionPeriod;
         emit MaxResolutionPeriodChanged(_maxResolutionPeriod, msgSender());
     }
