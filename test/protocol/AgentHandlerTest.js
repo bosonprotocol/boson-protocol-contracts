@@ -18,7 +18,7 @@ const { mockAgent, accountId } = require("../utils/mock");
  */
 describe("AgentHandler", function () {
   // Common vars
-  let deployer, pauser, rando, other1, other2, other3;
+  let deployer, pauser, rando, other1, other2, other3, protocolTreasury, bosonToken;
   let protocolDiamond, accessController, accountHandler, pauseHandler, gasLimit;
   let agent, agentStruct, agent2, agent2Struct, expectedAgent, expectedAgentStruct;
   let nextAccountId;
@@ -27,7 +27,7 @@ describe("AgentHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, pauser, rando, other1, other2, other3] = await ethers.getSigners();
+    [deployer, pauser, rando, other1, other2, other3, protocolTreasury, bosonToken] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -63,8 +63,8 @@ describe("AgentHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasury: ethers.constants.AddressZero,
-        token: ethers.constants.AddressZero,
+        treasury: protocolTreasury.address,
+        token: bosonToken.address,
         voucherBeacon: beacon.address,
         beaconProxy: proxy.address,
       },

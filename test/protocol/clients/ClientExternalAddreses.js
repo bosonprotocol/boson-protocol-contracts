@@ -4,6 +4,8 @@ const ethers = hre.ethers;
 const { gasLimit } = require("../../../environments");
 const { deployProtocolClients } = require("../../../scripts/util/deploy-protocol-clients");
 const { deployProtocolDiamond } = require("../../../scripts/util/deploy-protocol-diamond.js");
+const { deployProtocolClientImpls } = require("../../../scripts/util/deploy-protocol-client-impls.js");
+const { deployProtocolClientBeacons } = require("../../../scripts/util/deploy-protocol-client-beacons.js");
 const { deployProtocolConfigFacet } = require("../../../scripts/util/deploy-protocol-config-facet.js");
 const Role = require("../../../scripts/domain/Role");
 const { expect } = require("chai");
@@ -134,6 +136,32 @@ describe("IClientExternalAddresses", function () {
           await expect(beacon.connect(rando).setProtocolAddress(protocolAddress)).to.revertedWith(
             RevertReasons.ACCESS_DENIED
           );
+        });
+      });
+    });
+
+    context("👉 constructor", async function () {
+      context("💔 Revert Reasons", async function () {
+        it("_protocolAddress address is the zero address", async function () {
+          // Deploy Protocol Client implementation contracts
+          const protocolClientImpls = await deployProtocolClientImpls(gasLimit);
+
+          // Deploy Protocol Client beacon contracts
+          const protocolClientArgs = [ethers.constants.AddressZero];
+          await expect(deployProtocolClientBeacons(protocolClientImpls, protocolClientArgs, gasLimit)).to.revertedWith(
+            RevertReasons.INVALID_ADDRESS
+          );
+        });
+
+        it("_impl address is the zero address", async function () {
+          // Client args
+          const protocolClientArgs = [protocolDiamond.address];
+
+          // Deploy the ClientBeacon for BosonVoucher
+          const ClientBeacon = await ethers.getContractFactory("BosonClientBeacon");
+          await expect(
+            ClientBeacon.deploy(...protocolClientArgs, ethers.constants.AddressZero, { gasLimit })
+          ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
         });
       });
     });

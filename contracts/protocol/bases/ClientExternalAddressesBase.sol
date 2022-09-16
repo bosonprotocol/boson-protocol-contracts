@@ -33,7 +33,12 @@ contract ClientExternalAddressesBase is IClientExternalAddresses {
      * @param _protocolAddress - the ProtocolDiamond address
      * @param _impl - the implementation address
      */
-    constructor(address _protocolAddress, address _impl) {
+    constructor(
+        address _protocolAddress,
+        address _impl
+    ) {
+        require(_protocolAddress != address(0) && _impl != address(0), INVALID_ADDRESS);
+
         // Get the ProxyStorage struct
         ClientLib.ProxyStorage storage ps = ClientLib.proxyStorage();
 

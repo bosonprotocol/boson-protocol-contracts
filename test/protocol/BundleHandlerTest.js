@@ -32,7 +32,19 @@ const { oneWeek, oneMonth } = require("../utils/constants");
 describe("IBosonBundleHandler", function () {
   // Common vars
   let InterfaceIds;
-  let deployer, pauser, rando, operator, admin, clerk, treasury, buyer, operatorDR, adminDR, clerkDR, treasuryDR;
+  let deployer,
+    pauser,
+    rando,
+    operator,
+    admin,
+    clerk,
+    treasury,
+    buyer,
+    operatorDR,
+    adminDR,
+    clerkDR,
+    treasuryDR,
+    protocolTreasury;
   let erc165,
     protocolDiamond,
     accessController,
@@ -79,8 +91,21 @@ describe("IBosonBundleHandler", function () {
 
   beforeEach(async function () {
     // Make accounts available
-    [deployer, pauser, operator, admin, clerk, treasury, rando, buyer, operatorDR, adminDR, clerkDR, treasuryDR] =
-      await ethers.getSigners();
+    [
+      deployer,
+      pauser,
+      operator,
+      admin,
+      clerk,
+      treasury,
+      rando,
+      buyer,
+      operatorDR,
+      adminDR,
+      clerkDR,
+      treasuryDR,
+      protocolTreasury,
+    ] = await ethers.getSigners();
 
     // Deploy the Protocol Diamond
     [protocolDiamond, , , , accessController] = await deployProtocolDiamond();
@@ -124,7 +149,7 @@ describe("IBosonBundleHandler", function () {
     const protocolConfig = [
       // Protocol addresses
       {
-        treasury: ethers.constants.AddressZero,
+        treasury: protocolTreasury.address,
         token: bosonToken.address,
         voucherBeacon: beacon.address,
         beaconProxy: proxy.address,

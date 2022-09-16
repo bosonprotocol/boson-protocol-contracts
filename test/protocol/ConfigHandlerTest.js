@@ -440,6 +440,13 @@ describe("IBosonConfigHandler", function () {
               RevertReasons.ACCESS_DENIED
             );
           });
+
+          it("token address is the zero address", async function () {
+            // Attempt to set new token address, expecting revert
+            await expect(configHandler.connect(deployer).setTokenAddress(ethers.constants.AddressZero)).to.revertedWith(
+              RevertReasons.INVALID_ADDRESS
+            );
+          });
         });
       });
 
@@ -470,6 +477,13 @@ describe("IBosonConfigHandler", function () {
             await expect(configHandler.connect(rando).setTreasuryAddress(treasury.address)).to.revertedWith(
               RevertReasons.ACCESS_DENIED
             );
+          });
+
+          it("treasury address is the zero address", async function () {
+            // Attempt to set new treasury address, expecting revert
+            await expect(
+              configHandler.connect(deployer).setTreasuryAddress(ethers.constants.AddressZero)
+            ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
           });
         });
       });
@@ -502,6 +516,13 @@ describe("IBosonConfigHandler", function () {
               RevertReasons.ACCESS_DENIED
             );
           });
+
+          it("voucher beacon address is the zero address", async function () {
+            // Attempt to set new beacon address, expecting revert
+            await expect(
+              configHandler.connect(deployer).setVoucherBeaconAddress(ethers.constants.AddressZero)
+            ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
+          });
         });
       });
 
@@ -532,6 +553,13 @@ describe("IBosonConfigHandler", function () {
             await expect(configHandler.connect(rando).setBeaconProxyAddress(proxy.address)).to.revertedWith(
               RevertReasons.ACCESS_DENIED
             );
+          });
+
+          it("beacon proxy address is the zero address", async function () {
+            // Attempt to set new proxy address, expecting revert
+            await expect(
+              configHandler.connect(deployer).setBeaconProxyAddress(ethers.constants.AddressZero)
+            ).to.revertedWith(RevertReasons.INVALID_ADDRESS);
           });
         });
       });
